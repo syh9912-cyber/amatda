@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(uuid())
+  email            String?  @unique
+  passwordHash     String?
+  authProvider     String   @default("LOCAL")
+  subscriptionTier String   @default("FREE")
+  children         Child[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Child {
+  id             String         @id @default(uuid())
+  userId         String
+  name           String
+  gender         String
+  birthDate      DateTime
+  birthTime      String
+  innateData     String
+  baseline       String?
+  observedTraits String?
+  observations   Observation[]
+  subscriptions  Subscription[]
+  user           User           @relation(fields: [userId], references: [id])
+}
+
+model Observation {
+  id              String   @id @default(uuid())
+  childId         String
+  type            String   @default("TEXT")
+  rawContent      String
+  extractedTraits String
+  createdAt       DateTime @default(now())
+  child           Child    @relation(fields: [childId], references: [id])
+}
+
+model Academy {
+  id             String @id @default(uuid())
+  name           String
+  category       String
+  minAge         Int
+  maxAge         Int
+  lat            Float
+  lng            Float
+  suitableTraits String
+}
+
+model QuestionBank {
+  id           String @id @default(uuid())
+  targetAgeMin Int
+  targetAgeMax Int
+  sajuType     String
+  questionText String
+  options      String
+}
+
+model FoodGuideDict {
+  id           String @id @default(uuid())
+  targetAgeMin Int
+  targetAgeMax Int
+  suitableType String
+  foods        String
+}
+
+model Subscription {
+  id               String   @id @default(uuid())
+  userId           String
+  childId          String
+  kitType          String
+  status           String   @default("ACTIVE")
+  nextDeliveryDate DateTime
+  child            Child    @relation(fields: [childId], references: [id])
+}
+
+model AICSChatLog {
+  id        String   @id @default(uuid())
+  userId    String
+  message   String
+  isUser    Boolean
+  createdAt DateTime @default(now())
+}
