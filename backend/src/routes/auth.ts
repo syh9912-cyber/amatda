@@ -22,6 +22,10 @@ router.post('/register', async (req: Request, res: Response) => {
       error(res, '이메일과 비밀번호를 입력해주세요');
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      error(res, '올바른 이메일 형식을 입력해주세요');
+      return;
+    }
     if (password.length < 6) {
       error(res, '비밀번호는 6자 이상이어야 합니다');
       return;
