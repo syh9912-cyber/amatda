@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { success, error } from '../utils/response';
+import { verifySocialToken, SocialProvider } from '../services/social.auth';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -91,6 +92,64 @@ router.post('/refresh', async (req: Request, res: Response) => {
     success(res, tokens);
   } catch (e) {
     error(res, '유효하지 않은 리프레시 토큰입니다', 401);
+  }
+});
+
+// POST /api/auth/social
+router.post('/social', async (req: Request, res: Response) => {
+  try {
+    const { provider, accessToken } = req.body;
+    if (!provider || !accessToken) {
+      error(res, 'provider와 accessToken이 필요합니다');
+      return;
+    }
+
+    const validProviders: SocialProvider[] = ['GOOGLE', 'KAKAO', 'NAVER'];
+    const upperProvider = provider.toUpperCase() as SocialProvider;
+    if (!validProviders.includes(upperProvider)) {
+      error(res, '지원하지 않는 소셜 로그인입니다. (GOOGLE, KAKAO, NAVER)');
+      return;
+    }
+
+    // 소셜 토큰 검증 → 유저 정보 획득
+    const socialUser = await verifySocialToken(upperProvider, accessToken);
+
+    // 기존 유저 찾기 (socialId 우선, email 차선)
+    let user = await prisma.user.findFirst({
+      where: { socialId: socialUser.socialId, authProvider: upperProvider },
+    });
+
+    if (!user && socialUser.email) {
+      user = await prisma.user.findUnique({ where: { email: socialUser.email } });
+      if (user) {
+        // 기존 이메일 계정에 소셜 연동
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { socialId: socialUser.socialId, authProvider: upperProvider },
+        });
+      }
+    }
+
+    // 신규 유저 자동 가입
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: socialUser.email,
+          authProvider: upperProvider,
+          socialId: socialUser.socialId,
+        },
+      });
+    }
+
+    const tokens = generateTokens(user.id);
+    success(res, {
+      user: { id: user.id, email: user.email, authProvider: user.authProvider },
+      ...tokens,
+      isNewUser: !user.children?.length,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '소셜 로그인 처리 중 오류가 발생했습니다';
+    error(res, msg, 500);
   }
 });
 

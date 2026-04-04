@@ -12,6 +12,7 @@ model User {
   email            String?  @unique
   passwordHash     String?
   authProvider     String   @default("LOCAL")
+  socialId         String?
   subscriptionTier String   @default("FREE")
   children         Child[]
   createdAt        DateTime @default(now())
