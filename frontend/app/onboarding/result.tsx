@@ -68,9 +68,21 @@ export default function ResultScreen() {
 
       <TouchableOpacity
         style={styles.button}
+        onPress={() =>
+          router.replace({
+            pathname: '/onboarding/intake-form',
+            params: { childId: childId },
+          })
+        }
+      >
+        <Text style={styles.buttonText}>성향 질문 시작</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.skipLink}
         onPress={() => router.replace('/(main)/home')}
       >
-        <Text style={styles.buttonText}>홈으로 이동</Text>
+        <Text style={styles.skipText}>건너뛰고 홈으로</Text>
       </TouchableOpacity>
     </View>
   );
@@ -156,4 +168,6 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xl,
   },
   buttonText: { color: '#FFFFFF', fontSize: FONT_SIZE.lg, fontWeight: '600' },
+  skipLink: { alignItems: 'center', marginTop: SPACING.md },
+  skipText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
 });

@@ -8,8 +8,8 @@
 - [x] **Phase 2**: Core API (Auth JWT, Children CRUD, Questions, Food)
 - [x] **Phase 3**: 프론트 Core (로그인, 온보딩, 홈 화면)
 - [x] **Phase 4**: AI 연동 (관찰 일기, Mock AI 성향 추출, 교차검증 리포트)
-- [ ] **Phase 5**: LBS (지도, pgvector, 구독, 기질 날씨)
-- [ ] **Phase 6**: Polish (OAuth, 푸시, CS 챗봇, 다자녀 궁합)
+- [x] **Phase 5**: LBS 학원 추천, 구독 API, 기질 날씨 위젯, 온보딩 질문
+- [x] **Phase 6**: 다자녀 궁합, CS 챗봇(FAQ+AI), 프로필 상세
 
 ## 실행 방법
 

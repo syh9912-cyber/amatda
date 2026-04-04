@@ -88,4 +88,39 @@ export const observationApi = {
     api.get(`/observations/report/${childId}`),
 };
 
+// Academies
+export const academyApi = {
+  list: (lat: number, lng: number, ageMonths: number, type?: string, radius = 5) => {
+    const params: Record<string, string> = {
+      lat: String(lat), lng: String(lng),
+      ageMonths: String(ageMonths), radius: String(radius),
+    };
+    if (type) params.type = type;
+    return api.get('/academies', { params });
+  },
+};
+
+// Weather
+export const weatherApi = {
+  get: (childId: string) => api.get(`/weather/${childId}`),
+};
+
+// Subscriptions
+export const subscriptionApi = {
+  list: (childId: string) => api.get(`/subscriptions/${childId}`),
+  create: (childId: string, kitType: string) =>
+    api.post('/subscriptions', { childId, kitType }),
+};
+
+// Siblings
+export const siblingApi = {
+  compatibility: () => api.get('/siblings/compatibility'),
+};
+
+// Chatbot
+export const chatbotApi = {
+  send: (message: string) => api.post('/chatbot', { message }),
+  history: () => api.get('/chatbot/history'),
+};
+
 export default api;

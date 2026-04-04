@@ -15,6 +15,7 @@ import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { ChildSelector } from '../../components/home/ChildSelector';
 import { TraitSummary } from '../../components/home/TraitSummary';
 import { AgeCards } from '../../components/home/AgeCards';
+import { WeatherWidget } from '../../components/home/WeatherWidget';
 
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
@@ -79,6 +80,9 @@ export default function HomeScreen() {
 
       {selectedChild && (
         <>
+          {/* 기질 날씨 위젯 */}
+          <WeatherWidget childId={selectedChild.id} />
+
           {/* 기질 요약 */}
           <TraitSummary child={selectedChild} />
 

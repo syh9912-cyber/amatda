@@ -4,7 +4,8 @@ import { COLORS } from '../../constants/theme';
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   const icons: Record<string, string> = {
-    '홈': '🏠', '일기': '📝', '영양': '🥗', '리포트': '📊', '프로필': '👤',
+    '홈': '🏠', '일기': '📝', '영양': '🥗', '리포트': '📊',
+    '궁합': '💕', '상담': '💬', '프로필': '👤',
   };
   return (
     <Text style={{ fontSize: focused ? 22 : 20, opacity: focused ? 1 : 0.5 }}>
@@ -52,6 +53,20 @@ export default function MainLayout() {
         options={{
           title: '리포트',
           tabBarIcon: ({ focused }) => <TabIcon label="리포트" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="compatibility"
+        options={{
+          title: '궁합',
+          tabBarIcon: ({ focused }) => <TabIcon label="궁합" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="chatbot"
+        options={{
+          title: '상담',
+          tabBarIcon: ({ focused }) => <TabIcon label="상담" focused={focused} />,
         }}
       />
       <Tabs.Screen
