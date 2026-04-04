@@ -1,4 +1,5 @@
 import express from 'express';
+import * as functions from 'firebase-functions';
 import { env } from './config/env';
 import { setupSecurity } from './middleware/security';
 import authRoutes from './routes/auth';
@@ -16,11 +17,9 @@ import adRoutes from './routes/ad';
 
 const app = express();
 
-// Middleware
 app.use(express.json());
 setupSecurity(app);
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/children', childRoutes);
 app.use('/api/questions', questionRoutes);
@@ -34,13 +33,21 @@ app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/mates', mateRoutes);
 app.use('/api/ads', adRoutes);
 
-// Health check
 app.get('/api/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } });
 });
 
-app.listen(env.PORT, () => {
-  console.log(`🚀 아맞다 Backend running on http://localhost:${env.PORT}`);
-});
 
-export default app;
+// Firebase Functions export (public access)
+export const api = functions.https.onRequest(
+  { cors: true, invoker: 'public' },
+  app
+);
+
+// 로컬 개발용 (firebase deploy 시에는 실행하지 않음)
+const isFirebase = process.env.FUNCTIONS_EMULATOR || process.env.GCLOUD_PROJECT || process.env.K_SERVICE;
+if (!isFirebase && require.main === module) {
+  app.listen(env.PORT, () => {
+    console.log(`아맞다 Backend running on http://localhost:${env.PORT}`);
+  });
+}

@@ -1,60 +1,38 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
+import { collections } from '../services/firestore';
 
 const router = Router();
-const prisma = new PrismaClient();
 
-// GET /api/ads?type=academy&ageMonths=100&trait=조화형
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
     const type = req.query.type as string | undefined;
     const limit = parseInt(req.query.limit as string, 10) || 5;
 
-    const where: Record<string, unknown> = { isActive: true };
-    if (type) where.type = type;
-
-    const ads = await prisma.ad.findMany({
-      where,
-      orderBy: { priority: 'desc' },
-      take: limit,
-    });
-
-    // 조회수 증가
-    for (const ad of ads) {
-      await prisma.ad.update({
-        where: { id: ad.id },
-        data: { viewCount: { increment: 1 } },
-      });
+    let snap;
+    if (type) {
+      snap = await collections.ads.where('type', '==', type).where('isActive', '==', true).orderBy('priority', 'desc').limit(limit).get();
+    } else {
+      snap = await collections.ads.where('isActive', '==', true).orderBy('priority', 'desc').limit(limit).get();
     }
 
-    success(res, ads.map((a) => ({
-      id: a.id,
-      type: a.type,
-      title: a.title,
-      description: a.description,
-      imageUrl: a.imageUrl,
-      linkUrl: a.linkUrl,
-      sponsor: a.sponsor,
-      isAd: true,
-    })));
-  } catch (e) {
-    error(res, '광고 조회 중 오류가 발생했습니다', 500);
-  }
+    success(res, snap.docs.map((d) => {
+      const a = d.data();
+      return { id: d.id, type: a.type, title: a.title, description: a.description, imageUrl: a.imageUrl, linkUrl: a.linkUrl, sponsor: a.sponsor, isAd: true };
+    }));
+  } catch { error(res, '광고 조회 중 오류가 발생했습니다', 500); }
 });
 
-// POST /api/ads/:id/click
 router.post('/:id/click', authMiddleware, async (req: Request, res: Response) => {
   try {
-    await prisma.ad.update({
-      where: { id: req.params.id as string },
-      data: { clickCount: { increment: 1 } },
-    });
+    const doc = await collections.ads.doc(req.params.id as string).get();
+    if (doc.exists) {
+      const current = doc.data()!.clickCount ?? 0;
+      await collections.ads.doc(req.params.id as string).update({ clickCount: current + 1 });
+    }
     success(res, { clicked: true });
-  } catch (e) {
-    error(res, '클릭 기록 중 오류가 발생했습니다', 500);
-  }
+  } catch { error(res, '클릭 기록 중 오류가 발생했습니다', 500); }
 });
 
 export default router;

@@ -2,10 +2,16 @@
   "name": "amatda-backend",
   "version": "1.0.0",
   "private": true,
+  "main": "dist/src/index.js",
+  "engines": {
+    "node": "22"
+  },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "deploy": "npm run build && cd .. && firebase deploy --only functions",
+    "seed:firestore": "ts-node prisma/seed-firestore.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -16,8 +22,10 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "helmet": "^8.0.0",
     "express-rate-limit": "^7.5.0",
+    "firebase-admin": "^13.7.0",
+    "firebase-functions": "^7.2.3",
+    "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "korean-lunar-calendar": "^0.3.6"
   },
