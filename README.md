@@ -4,9 +4,9 @@
 
 ## Phase 체크리스트
 
-- [ ] **Phase 1**: 프로젝트 초기화, Prisma 스키마, Seed, 사주 연산기
-- [ ] **Phase 2**: Core API (Auth JWT, Children CRUD, Questions, Food)
-- [ ] **Phase 3**: 프론트 Core (로그인, 온보딩, 홈 화면)
+- [x] **Phase 1**: 프로젝트 초기화, Prisma 스키마, Seed, 사주 연산기
+- [x] **Phase 2**: Core API (Auth JWT, Children CRUD, Questions, Food)
+- [x] **Phase 3**: 프론트 Core (로그인, 온보딩, 홈 화면)
 - [ ] **Phase 4**: AI 연동 (관찰 일기, Whisper, GPT-4o)
 - [ ] **Phase 5**: LBS (지도, pgvector, 구독, 기질 날씨)
 - [ ] **Phase 6**: Polish (OAuth, 푸시, CS 챗봇, 다자녀 궁합)

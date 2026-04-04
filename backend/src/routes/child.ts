@@ -76,7 +76,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const child = await prisma.child.findFirst({
-      where: { id: req.params.id, userId: req.userId },
+      where: { id: req.params.id as string, userId: req.userId },
     });
     if (!child) {
       error(res, '자녀를 찾을 수 없습니다', 404);
@@ -98,7 +98,7 @@ router.post('/:id/baseline', authMiddleware, async (req: Request, res: Response)
     }
 
     const child = await prisma.child.findFirst({
-      where: { id: req.params.id, userId: req.userId },
+      where: { id: req.params.id as string, userId: req.userId },
     });
     if (!child) {
       error(res, '자녀를 찾을 수 없습니다', 404);
@@ -106,7 +106,7 @@ router.post('/:id/baseline', authMiddleware, async (req: Request, res: Response)
     }
 
     const updated = await prisma.child.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { baseline: JSON.stringify({ answers, completedAt: new Date().toISOString() }) },
     });
 

@@ -4,7 +4,9 @@
       "Bash(git init:*)",
       "Bash(npm install:*)",
       "Bash(npx prisma:*)",
-      "Bash(npx ts-node:*)"
+      "Bash(npx ts-node:*)",
+      "Bash(npx create-expo-app@latest frontend --template blank-typescript)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
