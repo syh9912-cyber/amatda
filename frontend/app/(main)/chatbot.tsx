@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,9 @@ import {
 import { Stack } from 'expo-router';
 import { chatbotApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import { MessageBubble } from '../../components/chatbot/MessageBubble';
+import { QuickReplies } from '../../components/chatbot/QuickReplies';
+import { TypingIndicator } from '../../components/chatbot/TypingIndicator';
 
 interface ChatMessage {
   id: string;
@@ -39,23 +42,26 @@ export default function ChatbotScreen() {
     }
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || sending) return;
-    const text = input.trim();
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+  }, []);
+
+  const sendMessage = useCallback(async (text: string) => {
+    if (!text.trim() || sending) return;
     setInput('');
     setSending(true);
 
-    // 즉시 유저 메시지 표시
     const userMsg: ChatMessage = {
       id: `u-${Date.now()}`,
-      message: text,
+      message: text.trim(),
       isUser: true,
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, userMsg]);
+    scrollToBottom();
 
     try {
-      const res = await chatbotApi.send(text);
+      const res = await chatbotApi.send(text.trim());
       const botMsg: ChatMessage = {
         id: `b-${Date.now()}`,
         message: res.data.data.reply,
@@ -73,9 +79,19 @@ export default function ChatbotScreen() {
       setMessages((prev) => [...prev, errMsg]);
     } finally {
       setSending(false);
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+      scrollToBottom();
     }
-  };
+  }, [sending, scrollToBottom]);
+
+  const handleSend = useCallback(() => {
+    sendMessage(input);
+  }, [input, sendMessage]);
+
+  const handleQuickReply = useCallback((text: string) => {
+    sendMessage(text);
+  }, [sendMessage]);
+
+  const isEmpty = messages.length === 0;
 
   return (
     <KeyboardAvoidingView
@@ -88,27 +104,35 @@ export default function ChatbotScreen() {
         ref={scrollRef}
         style={styles.messageList}
         contentContainerStyle={styles.messageContent}
-        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+        onContentSizeChange={scrollToBottom}
       >
-        {messages.length === 0 && (
+        {isEmpty && !sending && (
           <View style={styles.welcomeCard}>
-            <Text style={styles.welcomeEmoji}>👋</Text>
+            <Text style={styles.welcomeEmoji}>{'👋'}</Text>
+            <Text style={styles.welcomeTitle}>육아 상담 챗봇</Text>
             <Text style={styles.welcomeText}>
-              안녕하세요! 육아 관련 궁금한 점이나{'\n'}교구 배송/구독 문의를 해주세요.
+              안녕하세요! 육아 관련 궁금한 점이나{'\n'}
+              교구 배송/구독 문의를 해주세요.
             </Text>
+            <QuickReplies onSelect={handleQuickReply} />
           </View>
         )}
         {messages.map((msg) => (
-          <View
+          <MessageBubble
             key={msg.id}
-            style={[styles.bubble, msg.isUser ? styles.userBubble : styles.botBubble]}
-          >
-            <Text style={[styles.bubbleText, msg.isUser && styles.userText]}>
-              {msg.message}
-            </Text>
-          </View>
+            message={msg.message}
+            isUser={msg.isUser}
+            createdAt={msg.createdAt}
+          />
         ))}
+        {sending && <TypingIndicator />}
       </ScrollView>
+
+      {!isEmpty && !sending && (
+        <View style={styles.quickReplyBar}>
+          <QuickReplies onSelect={handleQuickReply} />
+        </View>
+      )}
 
       <View style={styles.inputRow}>
         <TextInput
@@ -125,7 +149,9 @@ export default function ChatbotScreen() {
           onPress={handleSend}
           disabled={sending}
         >
-          <Text style={styles.sendText}>{sending ? '...' : '전송'}</Text>
+          <Text style={styles.sendText}>
+            {sending ? '...' : '전송'}
+          </Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -135,43 +161,59 @@ export default function ChatbotScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   messageList: { flex: 1 },
-  messageContent: { padding: SPACING.md, paddingBottom: SPACING.lg },
+  messageContent: {
+    padding: SPACING.md,
+    paddingBottom: SPACING.lg,
+    flexGrow: 1,
+  },
   welcomeCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
-    padding: SPACING.xl, alignItems: 'center', marginBottom: SPACING.lg,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.xl,
+    alignItems: 'center',
+    marginTop: SPACING.xl,
   },
-  welcomeEmoji: { fontSize: 36, marginBottom: SPACING.md },
+  welcomeEmoji: { fontSize: 40, marginBottom: SPACING.sm },
+  welcomeTitle: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
   welcomeText: {
-    fontSize: FONT_SIZE.md, color: COLORS.textSecondary,
-    textAlign: 'center', lineHeight: 22,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: SPACING.md,
   },
-  bubble: {
-    maxWidth: '80%', borderRadius: RADIUS.lg,
-    padding: SPACING.md, marginBottom: SPACING.sm,
+  quickReplyBar: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    backgroundColor: COLORS.background,
   },
-  userBubble: {
-    backgroundColor: COLORS.primary, alignSelf: 'flex-end',
-    borderBottomRightRadius: 4,
-  },
-  botBubble: {
-    backgroundColor: COLORS.surface, alignSelf: 'flex-start',
-    borderBottomLeftRadius: 4,
-  },
-  bubbleText: { fontSize: FONT_SIZE.sm, color: COLORS.text, lineHeight: 20 },
-  userText: { color: '#FFF' },
   inputRow: {
-    flexDirection: 'row', padding: SPACING.sm,
-    borderTopWidth: 1, borderTopColor: COLORS.border,
-    backgroundColor: COLORS.surface, gap: SPACING.sm,
+    flexDirection: 'row',
+    padding: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    gap: SPACING.sm,
   },
   input: {
-    flex: 1, backgroundColor: COLORS.background,
-    borderRadius: RADIUS.md, padding: SPACING.md,
-    fontSize: FONT_SIZE.md, color: COLORS.text,
+    flex: 1,
+    backgroundColor: COLORS.background,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text,
   },
   sendBtn: {
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.lg, justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.lg,
+    justifyContent: 'center',
   },
   sendDisabled: { opacity: 0.5 },
   sendText: { color: '#FFF', fontWeight: '600' },

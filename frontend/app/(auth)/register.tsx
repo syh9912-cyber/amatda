@@ -2,17 +2,19 @@ import { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
-  StyleSheet,
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { authApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
-import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import { AuthHeader } from '../../components/ui/AuthHeader';
+import { AuthInput } from '../../components/ui/AuthInput';
+import { AuthBottomWave } from '../../components/ui/AuthBottomWave';
+import { styles } from './register.styles';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -53,104 +55,59 @@ export default function RegisterScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.inner}>
-        <Text style={styles.title}>회원가입</Text>
-        <Text style={styles.subtitle}>아맞다에 오신 것을 환영합니다</Text>
-
-        <View style={styles.form}>
-          <TextInput
-            style={styles.input}
-            placeholder="이메일"
-            placeholderTextColor={COLORS.textLight}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="비밀번호 (6자 이상)"
-            placeholderTextColor={COLORS.textLight}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="비밀번호 확인"
-            placeholderTextColor={COLORS.textLight}
-            value={confirm}
-            onChangeText={setConfirm}
-            secureTextEntry
-          />
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+      >
+        <AuthHeader title="회원가입" subtitle="아맞다에 오신 것을 환영합니다" />
+        <View style={styles.body}>
+          <View style={styles.form}>
+            <AuthInput
+              icon={'\u{1F4E7}'}
+              placeholder="이메일"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <AuthInput
+              icon={'\u{1F512}'}
+              placeholder="비밀번호 (6자 이상)"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+            <AuthInput
+              icon={'\u{1F512}'}
+              placeholder="비밀번호 확인"
+              value={confirm}
+              onChangeText={setConfirm}
+              secureTextEntry
+            />
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleRegister}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.buttonText}>
+                {loading ? '가입 중...' : '가입하기'}
+              </Text>
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleRegister}
-            disabled={loading}
+            style={styles.loginLink}
+            onPress={() => router.back()}
           >
-            <Text style={styles.buttonText}>
-              {loading ? '가입 중...' : '가입하기'}
+            <Text style={styles.loginText}>
+              {'이미 계정이 있으신가요? '}
+              <Text style={styles.loginBold}>로그인</Text>
             </Text>
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.loginLink}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.loginText}>
-            이미 계정이 있으신가요? <Text style={styles.loginBold}>로그인</Text>
-          </Text>
-        </TouchableOpacity>
-      </View>
+        <AuthBottomWave />
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  inner: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: SPACING.xl,
-  },
-  title: {
-    fontSize: FONT_SIZE.xxl,
-    fontWeight: '700',
-    color: COLORS.text,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.xl,
-  },
-  form: { gap: SPACING.md },
-  input: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    fontSize: FONT_SIZE.md,
-    color: COLORS.text,
-  },
-  button: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    alignItems: 'center',
-    marginTop: SPACING.sm,
-  },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: FONT_SIZE.lg,
-    fontWeight: '600',
-  },
-  loginLink: { marginTop: SPACING.lg, alignItems: 'center' },
-  loginText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
-  loginBold: { color: COLORS.primary, fontWeight: '600' },
-});

@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   Alert,
@@ -13,6 +11,8 @@ import { Stack } from 'expo-router';
 import { observationApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import { WriteArea } from '../../components/diary/WriteArea';
+import { ObservationCard } from '../../components/diary/ObservationCard';
 
 interface ObservationItem {
   id: string;
@@ -77,58 +77,48 @@ export default function DiaryScreen() {
       <Stack.Screen options={{ title: '관찰 일기', headerShown: true }} />
 
       {selectedChild && (
-        <Text style={styles.childLabel}>{selectedChild.name}의 관찰 일기</Text>
+        <Text style={styles.childLabel}>
+          {selectedChild.name}의 관찰 일기
+        </Text>
       )}
 
-      {/* 작성 영역 */}
-      <View style={styles.writeCard}>
-        <TextInput
-          style={styles.textArea}
-          placeholder="오늘 아이의 모습을 자유롭게 기록해주세요..."
-          placeholderTextColor={COLORS.textLight}
-          value={content}
-          onChangeText={setContent}
-          multiline
-          numberOfLines={5}
-          textAlignVertical="top"
-        />
-        <TouchableOpacity
-          style={[styles.submitBtn, loading && styles.btnDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          <Text style={styles.submitText}>
-            {loading ? '분석 중...' : '기록하기'}
-          </Text>
-        </TouchableOpacity>
+      <WriteArea
+        content={content}
+        onChangeContent={setContent}
+        onSubmit={handleSubmit}
+        loading={loading}
+      />
+
+      <View style={styles.listHeader}>
+        <Text style={styles.sectionTitle}>이전 기록</Text>
+        {observations.length > 0 && (
+          <Text style={styles.countBadge}>{observations.length}건</Text>
+        )}
       </View>
 
-      {/* 기록 목록 */}
-      <Text style={styles.sectionTitle}>이전 기록</Text>
       {listLoading ? (
-        <ActivityIndicator color={COLORS.primary} />
+        <ActivityIndicator color={COLORS.primary} style={styles.loader} />
       ) : observations.length === 0 ? (
-        <Text style={styles.emptyText}>아직 작성된 관찰 일기가 없습니다</Text>
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyEmoji}>{'📝'}</Text>
+          <Text style={styles.emptyText}>
+            아직 작성된 관찰 일기가 없습니다
+          </Text>
+          <Text style={styles.emptyHint}>
+            위에서 아이의 모습을 기록해보세요
+          </Text>
+        </View>
       ) : (
         observations.map((obs) => (
-          <View key={obs.id} style={styles.entryCard}>
-            <Text style={styles.entryDate}>
-              {new Date(obs.createdAt).toLocaleDateString('ko-KR')}
-            </Text>
-            <Text style={styles.entryContent}>{obs.rawContent}</Text>
-            <View style={styles.traitRow}>
-              {obs.extractedTraits.emotions.map((e, i) => (
-                <View key={i} style={styles.traitBadge}>
-                  <Text style={styles.traitText}>{e}</Text>
-                </View>
-              ))}
-              {obs.extractedTraits.interests.map((e, i) => (
-                <View key={`i${i}`} style={[styles.traitBadge, styles.interestBadge]}>
-                  <Text style={styles.traitText}>{e}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
+          <ObservationCard
+            key={obs.id}
+            rawContent={obs.rawContent}
+            createdAt={obs.createdAt}
+            emotions={obs.extractedTraits.emotions}
+            interests={obs.extractedTraits.interests}
+            socialStyle={obs.extractedTraits.socialStyle}
+            summary={obs.extractedTraits.summary}
+          />
         ))
       )}
     </ScrollView>
@@ -140,61 +130,44 @@ const styles = StyleSheet.create({
   content: { padding: SPACING.lg, paddingTop: SPACING.md },
   childLabel: {
     fontSize: FONT_SIZE.lg,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.text,
     marginBottom: SPACING.md,
   },
-  writeCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  textArea: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.text,
-    minHeight: 120,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  submitBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
+  listHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.md,
   },
-  btnDisabled: { opacity: 0.6 },
-  submitText: { color: '#FFF', fontSize: FONT_SIZE.md, fontWeight: '600' },
   sectionTitle: {
     fontSize: FONT_SIZE.md,
     fontWeight: '600',
     color: COLORS.text,
-    marginBottom: SPACING.md,
   },
-  emptyText: { color: COLORS.textLight, textAlign: 'center', padding: SPACING.xl },
-  entryCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  entryDate: { fontSize: FONT_SIZE.xs, color: COLORS.textLight, marginBottom: SPACING.xs },
-  entryContent: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.text,
-    lineHeight: 20,
-    marginBottom: SPACING.sm,
-  },
-  traitRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs },
-  traitBadge: {
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: RADIUS.sm,
+  countBadge: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    backgroundColor: COLORS.border,
+    borderRadius: RADIUS.full,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 2,
   },
-  interestBadge: { backgroundColor: COLORS.secondaryLight },
-  traitText: { fontSize: FONT_SIZE.xs, color: COLORS.text },
+  loader: { marginTop: SPACING.xl },
+  emptyWrap: {
+    alignItems: 'center',
+    padding: SPACING.xl,
+    marginTop: SPACING.md,
+  },
+  emptyEmoji: { fontSize: 36, marginBottom: SPACING.sm },
+  emptyText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.md,
+    fontWeight: '500',
+  },
+  emptyHint: {
+    color: COLORS.textLight,
+    fontSize: FONT_SIZE.sm,
+    marginTop: SPACING.xs,
+  },
 });

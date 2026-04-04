@@ -1,29 +1,35 @@
-export const COLORS = {
-  // 파스텔톤 기본 컬러
-  primary: '#7C9EF5',
-  primaryLight: '#B8CFF9',
-  secondary: '#F5A07C',
-  secondaryLight: '#F9D4B8',
-  background: '#FAFBFE',
-  surface: '#FFFFFF',
-  text: '#2D3748',
-  textSecondary: '#718096',
-  textLight: '#A0AEC0',
-  border: '#E2E8F0',
-  error: '#FC8181',
-  success: '#68D391',
+// 모든 테마 값을 하나의 진입점에서 re-export
+export { COLORS, GRADIENTS } from './theme.colors';
 
-  // 기질별 컬러
-  wood: '#81C784',
-  fire: '#FF8A80',
-  earth: '#FFD54F',
-  metal: '#90CAF9',
-  water: '#80CBC4',
+export const SHADOWS = {
+  soft: {
+    shadowColor: '#1A2138',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  medium: {
+    shadowColor: '#1A2138',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  elevated: {
+    shadowColor: '#1A2138',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+};
 
-  // 연령별 테마
-  infant: '#FFE0B2',
-  toddler: '#C8E6C9',
-  elementary: '#BBDEFB',
+export const FONT_WEIGHT = {
+  regular: '400' as const,
+  medium: '500' as const,
+  semibold: '600' as const,
+  bold: '700' as const,
 };
 
 export const FONT_SIZE = {
@@ -48,4 +54,5 @@ export const RADIUS = {
   md: 12,
   lg: 16,
   xl: 24,
+  full: 9999,
 };

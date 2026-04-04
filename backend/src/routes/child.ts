@@ -88,6 +88,70 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+// PUT /api/children/:id
+router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const child = await prisma.child.findFirst({
+      where: { id: req.params.id as string, userId: req.userId },
+    });
+    if (!child) {
+      error(res, '자녀를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const { name, gender, birthDate, birthTime } = req.body;
+    if (!name && !gender && !birthDate && !birthTime) {
+      error(res, '수정할 항목을 입력해주세요');
+      return;
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (name) updateData.name = name;
+    if (gender) updateData.gender = gender;
+
+    // 생년월일 또는 출생시각 변경 시 사주 재계산
+    const newBirthDate = birthDate ? new Date(birthDate) : child.birthDate;
+    const newBirthTime = birthTime ?? child.birthTime;
+    if (birthDate || birthTime) {
+      updateData.birthDate = newBirthDate;
+      updateData.birthTime = newBirthTime;
+      const innateData = calculateSaju(newBirthDate, newBirthTime);
+      updateData.innateData = JSON.stringify(innateData);
+    }
+
+    const updated = await prisma.child.update({
+      where: { id: req.params.id as string },
+      data: updateData,
+    });
+
+    success(res, formatChild(updated));
+  } catch (e) {
+    error(res, '자녀 정보 수정 중 오류가 발생했습니다', 500);
+  }
+});
+
+// DELETE /api/children/:id
+router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const child = await prisma.child.findFirst({
+      where: { id: req.params.id as string, userId: req.userId },
+    });
+    if (!child) {
+      error(res, '자녀를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    // Cascade: 관찰일기, 구독 삭제 후 자녀 삭제
+    await prisma.observation.deleteMany({ where: { childId: child.id } });
+    await prisma.subscription.deleteMany({ where: { childId: child.id } });
+    await prisma.child.delete({ where: { id: child.id } });
+
+    success(res, { id: child.id, message: '자녀가 삭제되었습니다' });
+  } catch (e) {
+    error(res, '자녀 삭제 중 오류가 발생했습니다', 500);
+  }
+});
+
 // POST /api/children/:id/baseline
 router.post('/:id/baseline', authMiddleware, async (req: Request, res: Response) => {
   try {

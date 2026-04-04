@@ -18,6 +18,14 @@ import { TraitSummary } from '../../components/home/TraitSummary';
 import { AgeCards } from '../../components/home/AgeCards';
 import { WeatherWidget } from '../../components/home/WeatherWidget';
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 6) return '편안한 밤이에요';
+  if (hour < 12) return '좋은 아침이에요';
+  if (hour < 18) return '좋은 오후에요';
+  return '좋은 저녁이에요';
+}
+
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -58,7 +66,9 @@ export default function HomeScreen() {
       <View style={styles.center}>
         <Text style={styles.emptyEmoji}>👶</Text>
         <Text style={styles.emptyText}>등록된 자녀가 없습니다</Text>
-        <Text style={styles.emptySubtext}>자녀를 등록하고 기질을 분석해보세요</Text>
+        <Text style={styles.emptySubtext}>
+          자녀를 등록하고 기질을 분석해보세요
+        </Text>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => router.push('/onboarding/child-info')}
@@ -74,13 +84,25 @@ export default function HomeScreen() {
       style={styles.container}
       contentContainerStyle={styles.content}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={COLORS.primary}
+        />
       }
     >
       {/* 헤더 */}
       <View style={styles.header}>
-        <Text style={styles.appTitle}>아맞다</Text>
-        <TouchableOpacity onPress={() => { logout(); router.replace('/'); }}>
+        <View>
+          <Text style={styles.greeting}>{getGreeting()}</Text>
+          <Text style={styles.appTitle}>아맞다</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => {
+            logout();
+            router.replace('/');
+          }}
+        >
           <Text style={styles.logoutText}>로그아웃</Text>
         </TouchableOpacity>
       </View>
@@ -102,10 +124,18 @@ export default function HomeScreen() {
           {/* 기질 요약 */}
           <TraitSummary child={selectedChild} />
 
+          {/* 섹션: 오늘의 추천 */}
+          <Text style={styles.sectionTitle}>오늘의 추천</Text>
+
           {/* 연령별 카드 */}
           <AgeCards child={selectedChild} />
 
-          {/* 퀵 액션 그리드 */}
+          {/* 섹션: 바로가기 */}
+          <Text style={[styles.sectionTitle, { marginTop: SPACING.xl }]}>
+            바로가기
+          </Text>
+
+          {/* 퀵 액션 그리드 (3열) */}
           <View style={styles.quickGrid}>
             <TouchableOpacity
               style={styles.quickItem}
@@ -170,39 +200,102 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { padding: SPACING.lg, paddingTop: SPACING.xl + 20 },
   center: {
-    flex: 1, justifyContent: 'center', alignItems: 'center',
-    backgroundColor: COLORS.background, padding: SPACING.xl,
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    padding: SPACING.xl,
   },
   header: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: SPACING.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: SPACING.lg + 4,
   },
-  appTitle: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.primary },
-  logoutText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
+  greeting: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginBottom: 2,
+  },
+  appTitle: {
+    fontSize: FONT_SIZE.xxl,
+    fontWeight: '800',
+    color: COLORS.primary,
+    letterSpacing: -0.5,
+  },
+  logoutText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
+  },
+  sectionTitle: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.md,
+    marginTop: SPACING.sm,
+  },
   emptyEmoji: { fontSize: 48, marginBottom: SPACING.md },
-  emptyText: { fontSize: FONT_SIZE.lg, color: COLORS.text, fontWeight: '600', marginBottom: SPACING.xs },
-  emptySubtext: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginBottom: SPACING.lg },
-  addButton: {
-    backgroundColor: COLORS.primary, borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md,
+  emptyText: {
+    fontSize: FONT_SIZE.lg,
+    color: COLORS.text,
+    fontWeight: '600',
+    marginBottom: SPACING.xs,
   },
-  addButtonText: { color: '#FFF', fontSize: FONT_SIZE.md, fontWeight: '600' },
+  emptySubtext: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.lg,
+  },
+  addButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+  },
+  addButtonText: {
+    color: '#FFF',
+    fontSize: FONT_SIZE.md,
+    fontWeight: '600',
+  },
   quickGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md,
-    marginTop: SPACING.lg,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm + 2,
   },
   quickItem: {
-    flex: 1, minWidth: '45%', backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md, padding: SPACING.md, alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+    width: '31%',
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    paddingVertical: SPACING.md + 2,
+    paddingHorizontal: SPACING.sm,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 1,
   },
-  quickEmoji: { fontSize: 28, marginBottom: SPACING.xs },
-  quickLabel: { fontSize: FONT_SIZE.sm, color: COLORS.text, fontWeight: '500' },
+  quickEmoji: { fontSize: 26, marginBottom: SPACING.xs },
+  quickLabel: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.text,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
   addMore: {
-    borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed',
-    borderRadius: RADIUS.md, padding: SPACING.md, alignItems: 'center',
-    marginTop: SPACING.lg, marginBottom: SPACING.xl,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    alignItems: 'center',
+    marginTop: SPACING.xl,
+    marginBottom: SPACING.xl,
   },
-  addMoreText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.md },
+  addMoreText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.md,
+    fontWeight: '500',
+  },
 });

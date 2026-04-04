@@ -1,0 +1,29 @@
+- generic [ref=e2]:
+  - generic [ref=e14]:
+    - generic [ref=e20]:
+      - generic [ref=e22]: 🌱
+      - generic [ref=e23]: 아맞다
+      - generic [ref=e24]: 아이의 고유한 기질을 발견하세요
+    - generic [ref=e25]:
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e28]: 📧
+          - textbox "이메일" [ref=e29]
+        - generic [ref=e30]:
+          - generic [ref=e31]: 🔒
+          - textbox "비밀번호" [ref=e32]
+        - generic [ref=e34] [cursor=pointer]: 로그인
+      - generic [ref=e37]: 또는
+      - generic [ref=e39]:
+        - generic [ref=e40] [cursor=pointer]:
+          - generic [ref=e42]: G
+          - generic [ref=e43]: Google로 계속하기
+        - generic [ref=e44] [cursor=pointer]:
+          - generic [ref=e46]: "N"
+          - generic [ref=e47]: 네이버로 계속하기
+        - generic [ref=e48] [cursor=pointer]:
+          - generic [ref=e50]: K
+          - generic [ref=e51]: 카카오로 계속하기
+      - generic [ref=e53] [cursor=pointer]: 계정이 없으신가요? 회원가입
+  - generic:
+    - img

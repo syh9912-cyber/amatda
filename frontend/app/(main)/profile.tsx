@@ -1,16 +1,12 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { useChildStore } from '../../stores/childStore';
+import { useChildStore, Child } from '../../stores/childStore';
 import { useAuthStore } from '../../stores/authStore';
-import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
-
-const ELEMENT_LABELS: Record<string, string> = {
-  wood: '탐구', fire: '활동', earth: '안정', metal: '분석', water: '감성',
-};
-const ELEMENT_COLORS: Record<string, string> = {
-  wood: COLORS.wood, fire: COLORS.fire, earth: COLORS.earth,
-  metal: COLORS.metal, water: COLORS.water,
-};
+import { childApi } from '../../services/api';
+import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { UserAvatar } from '../../components/profile/UserAvatar';
+import { EnergyChart } from '../../components/profile/EnergyChart';
+import { SettingsSection } from '../../components/profile/SettingsSection';
 
 const MENU_ITEMS = [
   { label: '영양 가이드', emoji: '🥗', route: '/(main)/nutrition' },
@@ -33,86 +29,31 @@ export default function ProfileScreen() {
     router.replace('/');
   };
 
+  const settingsItems = [
+    { emoji: '🔑', label: '비밀번호 변경', onPress: () => {} },
+    { emoji: '🔔', label: '알림 설정', onPress: () => {} },
+    { emoji: 'ℹ️', label: '앱 정보', onPress: () => {} },
+    { emoji: '🚪', label: '로그아웃', onPress: handleLogout, isDestructive: true },
+  ];
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: '프로필', headerShown: true }} />
 
-      {/* 유저 정보 */}
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>내 정보</Text>
-        <Text style={styles.infoText}>{email ?? '이메일 없음'}</Text>
-        <Text style={styles.infoSub}>자녀 {children.length}명 등록</Text>
-      </View>
+      <UserAvatar email={email} childrenCount={children.length} />
 
-      {/* 선택된 자녀 상세 */}
       {selectedChild && (
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>{selectedChild.name}의 기질 프로필</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>성별</Text>
-            <Text style={styles.infoValue}>
-              {selectedChild.gender === 'F' ? '여아' : '남아'}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>생년월일</Text>
-            <Text style={styles.infoValue}>{selectedChild.birthDate}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>출생시각</Text>
-            <Text style={styles.infoValue}>{selectedChild.birthTime}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>연령 구간</Text>
-            <Text style={styles.infoValue}>
-              {selectedChild.ageInfo.label} ({selectedChild.ageInfo.months}개월)
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>기질 유형</Text>
-            <Text style={[styles.infoValue, { color: COLORS.primary, fontWeight: '600' }]}>
-              {selectedChild.innateData.dominantType}
-            </Text>
-          </View>
-
-          <Text style={[styles.sectionTitle, { marginTop: SPACING.lg }]}>에너지 분포</Text>
-          {Object.entries(selectedChild.innateData.fiveElements).map(([key, val]) => (
-            <View key={key} style={styles.barRow}>
-              <Text style={styles.barLabel}>{ELEMENT_LABELS[key]}</Text>
-              <View style={styles.barBg}>
-                <View
-                  style={[
-                    styles.barFill,
-                    { width: `${val}%`, backgroundColor: ELEMENT_COLORS[key] },
-                  ]}
-                />
-              </View>
-              <Text style={styles.barVal}>{val}</Text>
-            </View>
-          ))}
+          <Text style={styles.sectionTitle}>
+            {selectedChild.name}의 기질 프로필
+          </Text>
+          <ChildInfoRows child={selectedChild} />
+          <EnergyChart fiveElements={selectedChild.innateData.fiveElements} />
         </View>
       )}
 
-      {/* 전체 자녀 목록 */}
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>등록된 자녀</Text>
-        {children.map((child) => (
-          <View key={child.id} style={styles.childRow}>
-            <Text style={styles.childName}>{child.name}</Text>
-            <Text style={styles.childInfo}>
-              {child.innateData.dominantType} · {child.ageInfo.label}
-            </Text>
-          </View>
-        ))}
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => router.push('/onboarding/child-info')}
-        >
-          <Text style={styles.addBtnText}>+ 자녀 추가</Text>
-        </TouchableOpacity>
-      </View>
+      <ChildrenListCard children={children} />
 
-      {/* 메뉴 바로가기 */}
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>더 보기</Text>
         {MENU_ITEMS.map((item) => (
@@ -123,16 +64,93 @@ export default function ProfileScreen() {
           >
             <Text style={styles.menuEmoji}>{item.emoji}</Text>
             <Text style={styles.menuLabel}>{item.label}</Text>
-            <Text style={styles.menuArrow}>›</Text>
+            <Text style={styles.menuArrow}>{'\u203A'}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* 로그아웃 */}
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-        <Text style={styles.logoutText}>로그아웃</Text>
-      </TouchableOpacity>
+      <SettingsSection items={settingsItems} />
     </ScrollView>
+  );
+}
+
+function ChildInfoRows({ child }: { child: Child }) {
+  const rows = [
+    { label: '성별', value: child.gender === 'F' ? '여아' : '남아' },
+    { label: '생년월일', value: child.birthDate },
+    { label: '출생시각', value: child.birthTime },
+    { label: '연령 구간', value: `${child.ageInfo.label} (${child.ageInfo.months}개월)` },
+  ];
+
+  return (
+    <View>
+      {rows.map((r) => (
+        <View key={r.label} style={styles.infoRow}>
+          <Text style={styles.infoLabel}>{r.label}</Text>
+          <Text style={styles.infoValue}>{r.value}</Text>
+        </View>
+      ))}
+      <View style={styles.infoRow}>
+        <Text style={styles.infoLabel}>기질 유형</Text>
+        <Text style={[styles.infoValue, styles.dominantType]}>
+          {child.innateData.dominantType}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function ChildrenListCard({ children }: { children: Child[] }) {
+  const removeChild = useChildStore((s) => s.removeChild);
+
+  const handleDelete = (childId: string, childName: string) => {
+    Alert.alert(
+      '자녀 삭제',
+      `${childName}의 모든 정보(관찰일기, 구독 포함)가 삭제됩니다. 정말 삭제하시겠습니까?`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await childApi.delete(childId);
+              removeChild(childId);
+            } catch {
+              Alert.alert('오류', '자녀 삭제에 실패했습니다');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.sectionTitle}>등록된 자녀</Text>
+      {children.map((child) => (
+        <View key={child.id} style={styles.childRow}>
+          <View style={styles.childTextWrap}>
+            <Text style={styles.childName}>{child.name}</Text>
+            <Text style={styles.childInfo}>
+              {child.innateData.dominantType} · {child.ageInfo.label}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => handleDelete(child.id, child.name)}
+            style={styles.deleteBtn}
+          >
+            <Text style={styles.deleteBtnText}>삭제</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
+      <TouchableOpacity
+        style={styles.addBtn}
+        onPress={() => router.push('/onboarding/child-info')}
+      >
+        <Text style={styles.addBtnText}>+ 자녀 추가</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -142,36 +160,38 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
     padding: SPACING.lg, marginBottom: SPACING.md,
+    ...SHADOWS.soft,
   },
   sectionTitle: {
     fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.text,
     marginBottom: SPACING.md,
   },
-  infoText: { fontSize: FONT_SIZE.md, color: COLORS.text },
-  infoSub: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: SPACING.xs },
   infoRow: {
     flexDirection: 'row', justifyContent: 'space-between',
-    paddingVertical: SPACING.xs, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    paddingVertical: SPACING.xs + 2, borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
   infoLabel: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
   infoValue: { fontSize: FONT_SIZE.sm, color: COLORS.text },
-  barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
-  barLabel: { width: 36, fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
-  barBg: {
-    flex: 1, height: 10, backgroundColor: COLORS.border,
-    borderRadius: 5, overflow: 'hidden', marginHorizontal: SPACING.sm,
-  },
-  barFill: { height: '100%', borderRadius: 5 },
-  barVal: { width: 28, fontSize: FONT_SIZE.sm, color: COLORS.text, textAlign: 'right' },
+  dominantType: { color: COLORS.primary, fontWeight: '600' },
   childRow: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: SPACING.sm, borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
+  childTextWrap: { flex: 1 },
   childName: { fontSize: FONT_SIZE.md, fontWeight: '500', color: COLORS.text },
   childInfo: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
+  deleteBtn: {
+    paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.sm, backgroundColor: COLORS.error + '18',
+    marginLeft: SPACING.sm,
+  },
+  deleteBtnText: { fontSize: FONT_SIZE.sm, color: COLORS.error, fontWeight: '500' },
   addBtn: {
     borderWidth: 1, borderStyle: 'dashed', borderColor: COLORS.border,
-    borderRadius: RADIUS.md, padding: SPACING.md, alignItems: 'center', marginTop: SPACING.md,
+    borderRadius: RADIUS.md, padding: SPACING.md, alignItems: 'center',
+    marginTop: SPACING.md,
   },
   addBtnText: { color: COLORS.textSecondary },
   menuRow: {
@@ -181,9 +201,4 @@ const styles = StyleSheet.create({
   menuEmoji: { fontSize: 20, marginRight: SPACING.md },
   menuLabel: { flex: 1, fontSize: FONT_SIZE.md, color: COLORS.text },
   menuArrow: { fontSize: 20, color: COLORS.textLight },
-  logoutBtn: {
-    borderRadius: RADIUS.md, padding: SPACING.md, alignItems: 'center',
-    backgroundColor: COLORS.error, marginTop: SPACING.sm,
-  },
-  logoutText: { color: '#FFF', fontWeight: '600' },
 });

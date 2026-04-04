@@ -50,6 +50,8 @@ export const authApi = {
     api.post('/auth/register', { email, password }),
   socialLogin: (provider: string, accessToken: string) =>
     api.post('/auth/social', { provider, accessToken }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.post('/auth/change-password', { currentPassword, newPassword }),
 };
 
 // Children
@@ -58,6 +60,9 @@ export const childApi = {
   get: (id: string) => api.get(`/children/${id}`),
   create: (data: { name: string; gender: string; birthDate: string; birthTime: string }) =>
     api.post('/children', data),
+  update: (id: string, data: { name?: string; gender?: string; birthDate?: string; birthTime?: string }) =>
+    api.put(`/children/${id}`, data),
+  delete: (id: string) => api.delete(`/children/${id}`),
   saveBaseline: (id: string, answers: unknown[]) =>
     api.post(`/children/${id}/baseline`, { answers }),
 };
@@ -86,6 +91,8 @@ export const observationApi = {
     api.post('/observations', { childId, content, type }),
   list: (childId: string) =>
     api.get(`/observations/${childId}`),
+  delete: (id: string) =>
+    api.delete(`/observations/${id}`),
   report: (childId: string) =>
     api.get(`/observations/report/${childId}`),
 };
@@ -112,6 +119,7 @@ export const subscriptionApi = {
   list: (childId: string) => api.get(`/subscriptions/${childId}`),
   create: (childId: string, kitType: string) =>
     api.post('/subscriptions', { childId, kitType }),
+  cancel: (id: string) => api.put(`/subscriptions/${id}/cancel`),
 };
 
 // Siblings

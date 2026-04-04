@@ -110,12 +110,16 @@ export function AgeCards({ child }: Props) {
           onPress={() => card.route && router.push(card.route as never)}
           activeOpacity={0.7}
         >
-          <View style={[styles.dot, { backgroundColor: card.color }]} />
+          <View
+            style={[styles.accentBar, { backgroundColor: card.color }]}
+          />
           <View style={styles.cardBody}>
             <Text style={styles.cardTitle}>{card.title}</Text>
             <Text style={styles.cardDesc}>{card.description}</Text>
           </View>
-          <Text style={styles.arrow}>›</Text>
+          <View style={styles.chevronWrap}>
+            <Text style={styles.chevron}>&#8250;</Text>
+          </View>
         </TouchableOpacity>
       ))}
     </View>
@@ -123,41 +127,45 @@ export function AgeCards({ child }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { gap: SPACING.md },
+  container: { gap: SPACING.sm + 2 },
   card: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.md,
-    padding: SPACING.md,
+    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginTop: 2,
-    marginRight: SPACING.md,
+  accentBar: {
+    width: 4,
   },
-  cardBody: { flex: 1 },
+  cardBody: {
+    flex: 1,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.md,
+  },
   cardTitle: {
     fontSize: FONT_SIZE.md,
     fontWeight: '600',
     color: COLORS.text,
-    marginBottom: 2,
+    marginBottom: 3,
   },
   cardDesc: {
     fontSize: FONT_SIZE.sm,
     color: COLORS.textSecondary,
     lineHeight: 18,
   },
-  arrow: {
-    fontSize: 20,
+  chevronWrap: {
+    justifyContent: 'center',
+    paddingRight: SPACING.md,
+  },
+  chevron: {
+    fontSize: 22,
     color: COLORS.textLight,
-    marginLeft: SPACING.sm,
+    fontWeight: '300',
   },
 });

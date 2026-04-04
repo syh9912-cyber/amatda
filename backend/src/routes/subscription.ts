@@ -64,4 +64,35 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+// PUT /api/subscriptions/:id/cancel
+router.put('/:id/cancel', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const sub = await prisma.subscription.findUnique({
+      where: { id: req.params.id as string },
+    });
+    if (!sub || sub.userId !== req.userId) {
+      error(res, '구독을 찾을 수 없습니다', 404);
+      return;
+    }
+    if (sub.status === 'CANCELLED') {
+      error(res, '이미 해지된 구독입니다');
+      return;
+    }
+
+    const updated = await prisma.subscription.update({
+      where: { id: sub.id },
+      data: { status: 'CANCELLED' },
+    });
+
+    success(res, {
+      id: updated.id,
+      kitType: updated.kitType,
+      status: updated.status,
+      nextDeliveryDate: updated.nextDeliveryDate.toISOString().split('T')[0],
+    });
+  } catch (e) {
+    error(res, '구독 해지 중 오류가 발생했습니다', 500);
+  }
+});
+
 export default router;

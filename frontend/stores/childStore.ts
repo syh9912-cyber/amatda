@@ -31,6 +31,7 @@ interface ChildState {
   setChildren: (children: Child[]) => void;
   selectChild: (id: string) => void;
   addChild: (child: Child) => void;
+  removeChild: (id: string) => void;
 }
 
 export const useChildStore = create<ChildState>((set, get) => ({
@@ -51,5 +52,10 @@ export const useChildStore = create<ChildState>((set, get) => ({
   addChild: (child) => {
     const updated = [...get().children, child];
     set({ children: updated, selectedChild: child, selectedChildId: child.id });
+  },
+  removeChild: (id) => {
+    const updated = get().children.filter((c) => c.id !== id);
+    const selected = updated[0] ?? null;
+    set({ children: updated, selectedChild: selected, selectedChildId: selected?.id ?? null });
   },
 }));

@@ -100,6 +100,26 @@ router.get('/:childId', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+// DELETE /api/observations/:id
+router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const observation = await prisma.observation.findUnique({
+      where: { id: req.params.id as string },
+      include: { child: true },
+    });
+    if (!observation || observation.child.userId !== req.userId) {
+      error(res, '관찰 일기를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    await prisma.observation.delete({ where: { id: observation.id } });
+
+    success(res, { id: observation.id, message: '관찰 일기가 삭제되었습니다' });
+  } catch (e) {
+    error(res, '관찰 일기 삭제 중 오류가 발생했습니다', 500);
+  }
+});
+
 // GET /api/children/:id/report
 router.get('/report/:childId', authMiddleware, async (req: Request, res: Response) => {
   try {

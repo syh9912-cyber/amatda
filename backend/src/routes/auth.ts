@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { success, error } from '../utils/response';
 import { verifySocialToken, SocialProvider } from '../services/social.auth';
+import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -71,8 +72,21 @@ router.post('/login', async (req: Request, res: Response) => {
       return;
     }
 
+    const childrenCount = await prisma.child.count({ where: { userId: user.id } });
+    const activeSubCount = await prisma.subscription.count({
+      where: { userId: user.id, status: 'ACTIVE' },
+    });
+
     const tokens = generateTokens(user.id);
-    success(res, { user: { id: user.id, email: user.email }, ...tokens });
+    success(res, {
+      user: {
+        id: user.id,
+        email: user.email,
+        childrenCount,
+        hasActiveSubscription: activeSubCount > 0,
+      },
+      ...tokens,
+    });
   } catch (e) {
     error(res, '로그인 처리 중 오류가 발생했습니다', 500);
   }
@@ -150,6 +164,43 @@ router.post('/social', async (req: Request, res: Response) => {
   } catch (e) {
     const msg = e instanceof Error ? e.message : '소셜 로그인 처리 중 오류가 발생했습니다';
     error(res, msg, 500);
+  }
+});
+
+// POST /api/auth/change-password
+router.post('/change-password', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      error(res, '현재 비밀번호와 새 비밀번호를 입력해주세요');
+      return;
+    }
+    if (newPassword.length < 6) {
+      error(res, '새 비밀번호는 6자 이상이어야 합니다');
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (!user || !user.passwordHash) {
+      error(res, '비밀번호 변경이 불가능한 계정입니다', 400);
+      return;
+    }
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      error(res, '현재 비밀번호가 올바르지 않습니다', 401);
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: req.userId },
+      data: { passwordHash },
+    });
+
+    success(res, { message: '비밀번호가 변경되었습니다' });
+  } catch (e) {
+    error(res, '비밀번호 변경 중 오류가 발생했습니다', 500);
   }
 });
 
