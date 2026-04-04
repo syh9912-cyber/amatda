@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 import { Child } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
@@ -27,10 +28,17 @@ export function TraitSummary({ child }: Props) {
   const maxVal = Math.max(...Object.values(fiveElements), 1);
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.headline}>
-        {child.name} · {dominantType} · {child.ageInfo.label}
-      </Text>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => router.push('/(main)/trait-detail')}
+      activeOpacity={0.7}
+    >
+      <View style={styles.headRow}>
+        <Text style={styles.headline}>
+          {child.name} · {dominantType} · {child.ageInfo.label}
+        </Text>
+        <Text style={styles.detailLink}>상세 ›</Text>
+      </View>
       <View style={styles.barsRow}>
         {Object.entries(fiveElements).map(([key, value]) => {
           const ratio = value / maxVal;
@@ -54,7 +62,7 @@ export function TraitSummary({ child }: Props) {
           );
         })}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -67,11 +75,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F0F0F0',
   },
+  headRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: SPACING.sm + 2,
+  },
   headline: {
     fontSize: FONT_SIZE.sm,
     fontWeight: '600',
     color: COLORS.text,
-    marginBottom: SPACING.sm + 2,
+  },
+  detailLink: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   barsRow: {
     gap: 6,

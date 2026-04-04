@@ -192,6 +192,9 @@ export default function HomeScreen() {
       >
         <Text style={styles.addMoreText}>+ 자녀 추가</Text>
       </TouchableOpacity>
+
+      {/* 버전 */}
+      <Text style={styles.version}>아맞다 v1.0.0</Text>
     </ScrollView>
   );
 }
@@ -297,5 +300,12 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.md,
     fontWeight: '500',
+  },
+  version: {
+    textAlign: 'center' as const,
+    fontSize: 11,
+    color: COLORS.textLight,
+    marginBottom: SPACING.xl * 2,
+    marginTop: SPACING.sm,
   },
 });

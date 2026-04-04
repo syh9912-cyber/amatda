@@ -77,6 +77,7 @@ export default function MainLayout() {
       <Tabs.Screen name="compatibility" options={{ href: null }} />
       <Tabs.Screen name="timer" options={{ href: null }} />
       <Tabs.Screen name="mates" options={{ href: null }} />
+      <Tabs.Screen name="trait-detail" options={{ href: null }} />
     </Tabs>
   );
 }

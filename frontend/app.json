@@ -29,7 +29,15 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-web-browser"
-    ]
+      "expo-web-browser",
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "owner": "song9912",
+    "extra": {
+      "eas": {
+        "projectId": "fe4c99cb-994f-4905-93f3-99aa93aea6ab"
+      }
+    }
   }
 }

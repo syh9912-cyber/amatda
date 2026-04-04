@@ -34,9 +34,8 @@ app.use('/api/mates', mateRoutes);
 app.use('/api/ads', adRoutes);
 
 app.get('/api/health', (_req, res) => {
-  res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } });
+  res.json({ success: true, data: { status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() } });
 });
-
 
 // Firebase Functions export (public access)
 export const api = functions.https.onRequest(
