@@ -1,0 +1,96 @@
+- generic [ref=e26]:
+  - generic [ref=e33]:
+    - generic [ref=e34]:
+      - generic [ref=e35]: 아맞다
+      - generic [ref=e37] [cursor=pointer]: 로그아웃
+    - generic [ref=e39]:
+      - generic [ref=e40] [cursor=pointer]:
+        - generic [ref=e41]: 📚
+        - generic [ref=e42]: 승하
+        - generic [ref=e43]: 초등
+      - generic [ref=e44] [cursor=pointer]:
+        - generic [ref=e45]: 👶
+        - generic [ref=e46]: 윤도
+        - generic [ref=e47]: 영아
+      - generic [ref=e48] [cursor=pointer]:
+        - generic [ref=e49]: 🧒
+        - generic [ref=e50]: �׽�Ʈ
+        - generic [ref=e51]: 유아
+    - generic [ref=e52]:
+      - generic [ref=e53]: ☁️
+      - generic [ref=e54]:
+        - generic [ref=e55]: 가족과 함께하는 따뜻한 날
+        - generic [ref=e56]: 함께 요리하거나 보드게임해요
+    - generic [ref=e57]:
+      - generic [ref=e58]:
+        - generic [ref=e59]: 승하
+        - generic [ref=e60]: 초등
+      - generic [ref=e61]: 조화형
+      - generic [ref=e62]: 안정적이고 조화를 중시하며 배려심이 깊은 조화형 기질
+    - generic [ref=e63]:
+      - generic [ref=e64] [cursor=pointer]:
+        - generic [ref=e66]:
+          - generic [ref=e67]: 학습 성향 분석
+          - generic [ref=e68]: 기질에 맞는 학습 방법을 알아보세요
+        - generic [ref=e69]: ›
+      - generic [ref=e70] [cursor=pointer]:
+        - generic [ref=e72]:
+          - generic [ref=e73]: 학원 추천
+          - generic [ref=e74]: 우리 동네 기질 맞춤 학원을 찾아보세요
+        - generic [ref=e75]: ›
+      - generic [ref=e76] [cursor=pointer]:
+        - generic [ref=e78]:
+          - generic [ref=e79]: 두뇌 영양 가이드
+          - generic [ref=e80]: 집중력과 두뇌 발달을 위한 영양 식단
+        - generic [ref=e81]: ›
+      - generic [ref=e82] [cursor=pointer]:
+        - generic [ref=e84]:
+          - generic [ref=e85]: 교구 구독
+          - generic [ref=e86]: 사고력 향상을 위한 월간 교구
+        - generic [ref=e87]: ›
+    - generic [ref=e88]:
+      - generic [ref=e89] [cursor=pointer]:
+        - generic [ref=e90]: 📊
+        - generic [ref=e91]: 리포트
+      - generic [ref=e92] [cursor=pointer]:
+        - generic [ref=e93]: 💕
+        - generic [ref=e94]: 형제 궁합
+      - generic [ref=e95] [cursor=pointer]:
+        - generic [ref=e96]: 🏫
+        - generic [ref=e97]: 학원
+      - generic [ref=e98] [cursor=pointer]:
+        - generic [ref=e99]: 📦
+        - generic [ref=e100]: 교구
+      - generic [ref=e101] [cursor=pointer]:
+        - generic [ref=e102]: ⏱️
+        - generic [ref=e103]: Quality Time
+      - generic [ref=e104] [cursor=pointer]:
+        - generic [ref=e105]: 👫
+        - generic [ref=e106]: 기질 메이트
+    - generic [ref=e108] [cursor=pointer]: + 자녀 추가
+  - tablist [ref=e110]:
+    - tab "🏠 🏠 홈" [selected] [ref=e112] [cursor=pointer]:
+      - generic [ref=e113]:
+        - generic [ref=e115]: 🏠
+        - generic [ref=e117]: 🏠
+      - generic [ref=e118]: 홈
+    - tab "📝 📝 일기" [ref=e120] [cursor=pointer]:
+      - generic [ref=e121]:
+        - generic [ref=e123]: 📝
+        - generic [ref=e125]: 📝
+      - generic [ref=e126]: 일기
+    - tab "📊 📊 리포트" [ref=e128] [cursor=pointer]:
+      - generic [ref=e129]:
+        - generic [ref=e131]: 📊
+        - generic [ref=e133]: 📊
+      - generic [ref=e134]: 리포트
+    - tab "💬 💬 상담" [ref=e136] [cursor=pointer]:
+      - generic [ref=e137]:
+        - generic [ref=e139]: 💬
+        - generic [ref=e141]: 💬
+      - generic [ref=e142]: 상담
+    - tab "👤 👤 프로필" [ref=e144] [cursor=pointer]:
+      - generic [ref=e145]:
+        - generic [ref=e147]: 👤
+        - generic [ref=e149]: 👤
+      - generic [ref=e150]: 프로필

@@ -1,0 +1,178 @@
+- generic [ref=e26]:
+  - generic [ref=e27]:
+    - generic [ref=e33]:
+      - generic [ref=e34]:
+        - generic [ref=e35]: 아맞다
+        - generic [ref=e37] [cursor=pointer]: 로그아웃
+      - generic [ref=e39]:
+        - generic [ref=e40] [cursor=pointer]:
+          - generic [ref=e41]: 📚
+          - generic [ref=e42]: 승하
+          - generic [ref=e43]: 초등
+        - generic [ref=e44] [cursor=pointer]:
+          - generic [ref=e45]: 👶
+          - generic [ref=e46]: 윤도
+          - generic [ref=e47]: 영아
+        - generic [ref=e48] [cursor=pointer]:
+          - generic [ref=e49]: 🧒
+          - generic [ref=e50]: �׽�Ʈ
+          - generic [ref=e51]: 유아
+      - generic [ref=e52]:
+        - generic [ref=e53]: ☁️
+        - generic [ref=e54]:
+          - generic [ref=e55]: 가족과 함께하는 따뜻한 날
+          - generic [ref=e56]: 함께 요리하거나 보드게임해요
+      - generic [ref=e57]:
+        - generic [ref=e58]:
+          - generic [ref=e59]: 승하
+          - generic [ref=e60]: 초등
+        - generic [ref=e61]: 조화형
+        - generic [ref=e62]: 안정적이고 조화를 중시하며 배려심이 깊은 조화형 기질
+      - generic [ref=e63]:
+        - generic [ref=e64] [cursor=pointer]:
+          - generic [ref=e66]:
+            - generic [ref=e67]: 학습 성향 분석
+            - generic [ref=e68]: 기질에 맞는 학습 방법을 알아보세요
+          - generic [ref=e69]: ›
+        - generic [ref=e70] [cursor=pointer]:
+          - generic [ref=e72]:
+            - generic [ref=e73]: 학원 추천
+            - generic [ref=e74]: 우리 동네 기질 맞춤 학원을 찾아보세요
+          - generic [ref=e75]: ›
+        - generic [ref=e76] [cursor=pointer]:
+          - generic [ref=e78]:
+            - generic [ref=e79]: 두뇌 영양 가이드
+            - generic [ref=e80]: 집중력과 두뇌 발달을 위한 영양 식단
+          - generic [ref=e81]: ›
+        - generic [ref=e82] [cursor=pointer]:
+          - generic [ref=e84]:
+            - generic [ref=e85]: 교구 구독
+            - generic [ref=e86]: 사고력 향상을 위한 월간 교구
+          - generic [ref=e87]: ›
+      - generic [ref=e88]:
+        - generic [ref=e89] [cursor=pointer]:
+          - generic [ref=e90]: 📊
+          - generic [ref=e91]: 리포트
+        - generic [ref=e92] [cursor=pointer]:
+          - generic [ref=e93]: 💕
+          - generic [ref=e94]: 형제 궁합
+        - generic [ref=e95] [cursor=pointer]:
+          - generic [ref=e96]: 🏫
+          - generic [ref=e97]: 학원
+        - generic [ref=e98] [cursor=pointer]:
+          - generic [ref=e99]: 📦
+          - generic [ref=e100]: 교구
+        - generic [ref=e101] [cursor=pointer]:
+          - generic [ref=e102]: ⏱️
+          - generic [ref=e103]: Quality Time
+        - generic [ref=e104] [cursor=pointer]:
+          - generic [ref=e105]: 👫
+          - generic [ref=e106]: 기질 메이트
+      - generic [ref=e108] [cursor=pointer]: + 자녀 추가
+    - generic [ref=e152]:
+      - heading [level=1] [ref=e217]: 관찰 일기
+      - generic [ref=e157]:
+        - generic [ref=e158]: 승하의 관찰 일기
+        - generic [ref=e159]:
+          - textbox [ref=e218]:
+            - /placeholder: 오늘 아이의 모습을 자유롭게 기록해주세요...
+          - generic [ref=e162] [cursor=pointer]: 기록하기
+        - generic [ref=e163]: 이전 기록
+        - generic [ref=e164]:
+          - generic [ref=e165]: 2026. 4. 5.
+          - generic [ref=e166]: ���̰� ���� ģ���� �Բ� �׸��� �׷Ⱦ��. ������ ��Ư�ϰ� â�����̿���.
+          - generic [ref=e167]:
+            - generic [ref=e169]: 안정적
+            - generic [ref=e171]: 탐색활동
+        - generic [ref=e172]:
+          - generic [ref=e173]: 2026. 4. 5.
+          - generic [ref=e174]: ���� ���̰� ���� ���̸� �ϸ鼭 ���߷��� ��������. ���ο� ������ ������� ��� �õ��߽��ϴ�.
+          - generic [ref=e175]:
+            - generic [ref=e177]: 안정적
+            - generic [ref=e179]: 탐색활동
+        - generic [ref=e180]:
+          - generic [ref=e181]: 2026. 4. 5.
+          - generic [ref=e182]: 학교에서 발표를 했는데 긴장은 했지만 준비를 많이 해서 잘 해냈대요. 집에 와서 뿌듯해했어요.
+          - generic [ref=e183]:
+            - generic [ref=e185]: 집중적
+            - generic [ref=e187]: 뿌듯함
+            - generic [ref=e189]: 과학
+            - generic [ref=e191]: 탐색활동
+        - generic [ref=e192]:
+          - generic [ref=e193]: 2026. 4. 5.
+          - generic [ref=e194]: 친구들과 공원에서 놀았는데, 혼자 벌레를 관찰하며 시간을 보냈어요. 친구가 불러도 잘 안 돌아왔어요.
+          - generic [ref=e195]:
+            - generic [ref=e197]: 집중적
+            - generic [ref=e199]: 뿌듯함
+            - generic [ref=e201]: 과학
+            - generic [ref=e203]: 탐색활동
+        - generic [ref=e204]:
+          - generic [ref=e205]: 2026. 4. 5.
+          - generic [ref=e206]: 오늘 승하가 새로 산 과학 실험 키트를 2시간 동안 집중해서 했어요. 설명서를 꼼꼼히 읽고 순서대로 진행하는 모습이 인상적이었어요.
+          - generic [ref=e207]:
+            - generic [ref=e209]: 집중적
+            - generic [ref=e211]: 뿌듯함
+            - generic [ref=e213]: 과학
+            - generic [ref=e215]: 탐색활동
+    - generic [ref=e220]:
+      - heading [level=1] [ref=e252]: 교차검증 리포트
+      - generic [ref=e225]:
+        - generic [ref=e226]:
+          - generic [ref=e227]: 승하
+          - generic [ref=e228]: "기질: 조화형"
+          - generic [ref=e230]: 일치도 높음
+        - generic [ref=e231]:
+          - generic [ref=e232]: 관찰 요약
+          - generic [ref=e233]: "관찰된 감정: 안정적. 관심사: 탐색활동. 사회성: 관찰형."
+        - generic [ref=e234]:
+          - generic [ref=e235]: 분석 인사이트
+          - generic [ref=e236]:
+            - generic [ref=e237]: •
+            - generic [ref=e238]: 기질 분석(조화형)과 관찰 데이터가 잘 일치합니다.
+          - generic [ref=e239]:
+            - generic [ref=e240]: •
+            - generic [ref=e241]: 관찰형 성향이 기질 특성과 부합합니다.
+          - generic [ref=e242]:
+            - generic [ref=e243]: •
+            - generic [ref=e244]: "주요 관심사: 탐색활동"
+        - generic [ref=e245]:
+          - generic [ref=e246]: 추천 활동
+          - generic [ref=e248]: 또래와 어울릴 기회를 자주 만들어주세요.
+          - generic [ref=e250]: 갈등 상황에서 스스로 해결할 기회를 주세요.
+    - generic [ref=e254]:
+      - heading "육아 상담" [level=1] [ref=e256]
+      - generic [ref=e258]:
+        - generic [ref=e260]:
+          - generic [ref=e262]: ���� ��� ���� ���
+          - generic [ref=e264]: 육아 관련 질문이시군요! 아이의 기질에 맞는 활동을 추천해드릴 수 있어요. 더 구체적으로 알려주시면 맞춤 조언을 드릴게요.
+          - generic [ref=e266]: ���̰� ���� �� �� �ڿ�. ��� �ؾ� �ϳ���?
+          - generic [ref=e268]: 육아 관련 질문이시군요! 아이의 기질에 맞는 활동을 추천해드릴 수 있어요. 더 구체적으로 알려주시면 맞춤 조언을 드릴게요.
+        - generic [ref=e269]:
+          - textbox "메시지를 입력하세요..." [ref=e270]
+          - generic [ref=e272] [cursor=pointer]: 전송
+  - tablist [ref=e110]:
+    - tab "🏠 🏠 홈" [ref=e112] [cursor=pointer]:
+      - generic [ref=e113]:
+        - generic [ref=e115]: 🏠
+        - generic [ref=e117]: 🏠
+      - generic [ref=e118]: 홈
+    - tab "📝 📝 관찰 일기" [ref=e216] [cursor=pointer]:
+      - generic [ref=e121]:
+        - generic [ref=e123]: 📝
+        - generic [ref=e125]: 📝
+      - generic [ref=e126]: 관찰 일기
+    - tab "📊 📊 교차검증 리포트" [ref=e251] [cursor=pointer]:
+      - generic [ref=e129]:
+        - generic [ref=e131]: 📊
+        - generic [ref=e133]: 📊
+      - generic [ref=e134]: 교차검증 리포트
+    - tab "💬 💬 육아 상담" [active] [selected] [ref=e273] [cursor=pointer]:
+      - generic [ref=e137]:
+        - generic [ref=e139]: 💬
+        - generic [ref=e141]: 💬
+      - generic [ref=e142]: 육아 상담
+    - tab "👤 👤 프로필" [ref=e144] [cursor=pointer]:
+      - generic [ref=e145]:
+        - generic [ref=e147]: 👤
+        - generic [ref=e149]: 👤
+      - generic [ref=e150]: 프로필

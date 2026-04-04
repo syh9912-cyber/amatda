@@ -1,0 +1,8 @@
+- generic [ref=e13]:
+  - generic [ref=e14]: 아맞다
+  - generic [ref=e15]: 아이의 고유한 기질을 발견하세요
+  - generic [ref=e16]:
+    - textbox "이메일" [ref=e17]
+    - textbox "비밀번호" [ref=e18]
+    - generic [ref=e20] [cursor=pointer]: 로그인
+  - generic [ref=e22] [cursor=pointer]: 계정이 없으신가요? 회원가입

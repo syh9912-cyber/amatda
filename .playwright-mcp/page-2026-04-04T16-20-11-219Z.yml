@@ -1,0 +1,29 @@
+- generic [ref=e8]:
+  - progressbar [ref=e14]:
+    - img [ref=e16]
+  - tablist [ref=e20]:
+    - tab "🏠 🏠 홈" [selected] [ref=e22] [cursor=pointer]:
+      - generic [ref=e23]:
+        - generic [ref=e25]: 🏠
+        - generic [ref=e27]: 🏠
+      - generic [ref=e28]: 홈
+    - tab "📝 📝 일기" [ref=e30] [cursor=pointer]:
+      - generic [ref=e31]:
+        - generic [ref=e33]: 📝
+        - generic [ref=e35]: 📝
+      - generic [ref=e36]: 일기
+    - tab "📊 📊 리포트" [ref=e38] [cursor=pointer]:
+      - generic [ref=e39]:
+        - generic [ref=e41]: 📊
+        - generic [ref=e43]: 📊
+      - generic [ref=e44]: 리포트
+    - tab "💬 💬 상담" [ref=e46] [cursor=pointer]:
+      - generic [ref=e47]:
+        - generic [ref=e49]: 💬
+        - generic [ref=e51]: 💬
+      - generic [ref=e52]: 상담
+    - tab "👤 👤 프로필" [ref=e54] [cursor=pointer]:
+      - generic [ref=e55]:
+        - generic [ref=e57]: 👤
+        - generic [ref=e59]: 👤
+      - generic [ref=e60]: 프로필

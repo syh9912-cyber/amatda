@@ -1,0 +1,200 @@
+- generic [ref=e8]:
+  - generic [ref=e9]:
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]: 아맞다
+        - generic [ref=e19] [cursor=pointer]: 로그아웃
+      - generic [ref=e21]:
+        - generic [ref=e22] [cursor=pointer]:
+          - generic [ref=e23]: 📚
+          - generic [ref=e24]: 승하
+          - generic [ref=e25]: 초등
+        - generic [ref=e26] [cursor=pointer]:
+          - generic [ref=e27]: 👶
+          - generic [ref=e28]: 윤도
+          - generic [ref=e29]: 영아
+      - generic [ref=e124]:
+        - generic [ref=e125]: ☁️
+        - generic [ref=e126]:
+          - generic [ref=e127]: 가족과 함께하는 따뜻한 날
+          - generic [ref=e128]: 함께 요리하거나 보드게임해요
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e32]: 승하
+          - generic [ref=e33]: 초등
+        - generic [ref=e34]: 조화형
+        - generic [ref=e35]: 안정적이고 조화를 중시하며 배려심이 깊은 조화형 기질
+      - generic [ref=e36]:
+        - generic [ref=e37] [cursor=pointer]:
+          - generic [ref=e39]:
+            - generic [ref=e40]: 학습 성향 분석
+            - generic [ref=e41]: 기질에 맞는 학습 방법을 알아보세요
+          - generic [ref=e42]: ›
+        - generic [active] [ref=e43] [cursor=pointer]:
+          - generic [ref=e45]:
+            - generic [ref=e46]: 학원 추천
+            - generic [ref=e47]: 우리 동네 기질 맞춤 학원을 찾아보세요
+          - generic [ref=e48]: ›
+        - generic [ref=e49] [cursor=pointer]:
+          - generic [ref=e51]:
+            - generic [ref=e52]: 두뇌 영양 가이드
+            - generic [ref=e53]: 집중력과 두뇌 발달을 위한 영양 식단
+          - generic [ref=e54]: ›
+        - generic [ref=e55] [cursor=pointer]:
+          - generic [ref=e57]:
+            - generic [ref=e58]: 교구 구독
+            - generic [ref=e59]: 사고력 향상을 위한 월간 교구
+          - generic [ref=e60]: ›
+      - generic [ref=e61]:
+        - generic [ref=e62] [cursor=pointer]:
+          - generic [ref=e63]: 📊
+          - generic [ref=e64]: 리포트
+        - generic [ref=e65] [cursor=pointer]:
+          - generic [ref=e66]: 💕
+          - generic [ref=e67]: 형제 궁합
+        - generic [ref=e68] [cursor=pointer]:
+          - generic [ref=e69]: 🏫
+          - generic [ref=e70]: 학원
+        - generic [ref=e71] [cursor=pointer]:
+          - generic [ref=e72]: 📦
+          - generic [ref=e73]: 교구
+        - generic [ref=e74] [cursor=pointer]:
+          - generic [ref=e75]: ⏱️
+          - generic [ref=e76]: Quality Time
+        - generic [ref=e77] [cursor=pointer]:
+          - generic [ref=e78]: 👫
+          - generic [ref=e79]: 기질 메이트
+      - generic [ref=e81] [cursor=pointer]: + 자녀 추가
+    - generic [ref=e130]:
+      - heading "학원 추천" [level=1] [ref=e132]
+      - generic [ref=e135]:
+        - generic [ref=e136]: 승하(조화형)에게 맞는 학원
+        - generic [ref=e137]: 반경 5km 내 추천 (12곳)
+        - generic [ref=e138]:
+          - generic [ref=e139]:
+            - generic [ref=e140]: 남악 웅변학원
+            - generic [ref=e142]: 기질 적합
+          - generic [ref=e143]:
+            - generic [ref=e145]: 웅변
+            - generic [ref=e146]: 0.52km
+          - generic [ref=e147]:
+            - generic [ref=e148]: 활동형
+            - generic [ref=e149]: 조화형
+        - generic [ref=e150]:
+          - generic [ref=e151]:
+            - generic [ref=e152]: 남악 축구클럽
+            - generic [ref=e154]: 기질 적합
+          - generic [ref=e155]:
+            - generic [ref=e157]: 축구
+            - generic [ref=e158]: 0.56km
+          - generic [ref=e159]:
+            - generic [ref=e160]: 활동형
+            - generic [ref=e161]: 조화형
+        - generic [ref=e162]:
+          - generic [ref=e163]:
+            - generic [ref=e164]: 무안 태권도장
+            - generic [ref=e166]: 기질 적합
+          - generic [ref=e167]:
+            - generic [ref=e169]: 태권도
+            - generic [ref=e170]: 0.58km
+          - generic [ref=e171]:
+            - generic [ref=e172]: 활동형
+            - generic [ref=e173]: 조화형
+        - generic [ref=e174]:
+          - generic [ref=e176]: 남악 잉글리시 아카데미
+          - generic [ref=e177]:
+            - generic [ref=e179]: 영어
+            - generic [ref=e180]: 0km
+          - generic [ref=e181]:
+            - generic [ref=e182]: 탐구형
+            - generic [ref=e183]: 분석형
+        - generic [ref=e184]:
+          - generic [ref=e186]: 드림 피아노 학원
+          - generic [ref=e187]:
+            - generic [ref=e189]: 피아노
+            - generic [ref=e190]: 0.21km
+          - generic [ref=e191]:
+            - generic [ref=e192]: 감성형
+            - generic [ref=e193]: 분석형
+        - generic [ref=e194]:
+          - generic [ref=e196]: 리틀 발레리나
+          - generic [ref=e197]:
+            - generic [ref=e199]: 발레
+            - generic [ref=e200]: 0.24km
+          - generic [ref=e201]:
+            - generic [ref=e202]: 감성형
+            - generic [ref=e203]: 활동형
+        - generic [ref=e204]:
+          - generic [ref=e206]: 남악 수학의 정석
+          - generic [ref=e207]:
+            - generic [ref=e209]: 수학
+            - generic [ref=e210]: 0.29km
+          - generic [ref=e211]:
+            - generic [ref=e212]: 분석형
+            - generic [ref=e213]: 탐구형
+        - generic [ref=e214]:
+          - generic [ref=e216]: 남악 미술 아틀리에
+          - generic [ref=e217]:
+            - generic [ref=e219]: 미술
+            - generic [ref=e220]: 0.38km
+          - generic [ref=e221]:
+            - generic [ref=e222]: 감성형
+            - generic [ref=e223]: 탐구형
+        - generic [ref=e224]:
+          - generic [ref=e226]: 남악 독서논술
+          - generic [ref=e227]:
+            - generic [ref=e229]: 국어
+            - generic [ref=e230]: 0.38km
+          - generic [ref=e231]:
+            - generic [ref=e232]: 탐구형
+            - generic [ref=e233]: 감성형
+        - generic [ref=e234]:
+          - generic [ref=e236]: 무안 코딩교실
+          - generic [ref=e237]:
+            - generic [ref=e239]: 코딩
+            - generic [ref=e240]: 0.43km
+          - generic [ref=e241]:
+            - generic [ref=e242]: 탐구형
+            - generic [ref=e243]: 분석형
+        - generic [ref=e244]:
+          - generic [ref=e246]: 무안 과학탐구교실
+          - generic [ref=e247]:
+            - generic [ref=e249]: 과학
+            - generic [ref=e250]: 0.86km
+          - generic [ref=e251]:
+            - generic [ref=e252]: 탐구형
+            - generic [ref=e253]: 분석형
+        - generic [ref=e254]:
+          - generic [ref=e256]: 무안 로봇과학교실
+          - generic [ref=e257]:
+            - generic [ref=e259]: 로봇
+            - generic [ref=e260]: 0.92km
+          - generic [ref=e261]:
+            - generic [ref=e262]: 탐구형
+            - generic [ref=e263]: 분석형
+  - tablist [ref=e83]:
+    - tab "🏠 🏠 홈" [ref=e85] [cursor=pointer]:
+      - generic [ref=e86]:
+        - generic [ref=e88]: 🏠
+        - generic [ref=e90]: 🏠
+      - generic [ref=e91]: 홈
+    - tab "📝 📝 일기" [ref=e93] [cursor=pointer]:
+      - generic [ref=e94]:
+        - generic [ref=e96]: 📝
+        - generic [ref=e98]: 📝
+      - generic [ref=e99]: 일기
+    - tab "📊 📊 리포트" [ref=e101] [cursor=pointer]:
+      - generic [ref=e102]:
+        - generic [ref=e104]: 📊
+        - generic [ref=e106]: 📊
+      - generic [ref=e107]: 리포트
+    - tab "💬 💬 상담" [ref=e109] [cursor=pointer]:
+      - generic [ref=e110]:
+        - generic [ref=e112]: 💬
+        - generic [ref=e114]: 💬
+      - generic [ref=e115]: 상담
+    - tab "👤 👤 프로필" [ref=e117] [cursor=pointer]:
+      - generic [ref=e118]:
+        - generic [ref=e120]: 👤
+        - generic [ref=e122]: 👤
+      - generic [ref=e123]: 프로필
