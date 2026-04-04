@@ -137,6 +137,20 @@ export default function HomeScreen() {
               <Text style={styles.quickEmoji}>📦</Text>
               <Text style={styles.quickLabel}>교구</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.quickItem}
+              onPress={() => router.push('/(main)/timer')}
+            >
+              <Text style={styles.quickEmoji}>⏱️</Text>
+              <Text style={styles.quickLabel}>Quality Time</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.quickItem}
+              onPress={() => router.push('/(main)/mates')}
+            >
+              <Text style={styles.quickEmoji}>👫</Text>
+              <Text style={styles.quickLabel}>기질 메이트</Text>
+            </TouchableOpacity>
           </View>
         </>
       )}

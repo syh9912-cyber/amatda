@@ -7,21 +7,43 @@ import { success, error } from '../utils/response';
 const router = Router();
 const prisma = new PrismaClient();
 
-// 간단한 FAQ DB
-const FAQ: Record<string, string> = {
-  '배송': '교구 배송은 매월 1일에 출발하며 2~3일 내 도착합니다.',
-  '구독': '구독은 프로필 > 교구 구독에서 관리할 수 있습니다.',
-  '해지': '구독 해지는 다음 결제일 3일 전까지 가능합니다.',
-  '환불': '미개봉 교구는 수령 후 7일 이내 환불 가능합니다.',
-  '기질': '기질 분석은 아이의 생년월일시를 기반으로 합니다. 관찰 일기를 작성하면 더 정확해져요.',
-  '일기': '관찰 일기는 탭 바의 일기 메뉴에서 작성할 수 있습니다.',
-};
-
-function findFaqAnswer(message: string): string | null {
-  for (const [keyword, answer] of Object.entries(FAQ)) {
-    if (message.includes(keyword)) return answer;
+/** DB에서 FAQ 검색 — 키워드 매칭 */
+async function findFaqAnswer(message: string): Promise<string | null> {
+  const faqs = await prisma.fAQ.findMany();
+  // 질문 텍스트와 유사도 체크 (키워드 포함)
+  for (const faq of faqs) {
+    // 카테고리 키워드 매칭
+    const keywords = extractKeywords(faq.question);
+    const matchCount = keywords.filter((k) => message.includes(k)).length;
+    if (matchCount >= 2) return faq.answer;
   }
+  // 카테고리 단일 키워드 매칭
+  const categoryKeywords: Record<string, string[]> = {
+    '배송': ['배송', '택배', '도착', '수령', '분실'],
+    '구독': ['구독', '플랜', '결제', '정지', '해지'],
+    '환불': ['환불', '반품', '교환', '취소'],
+    '기질': ['기질', '성향', '분석', '유형', '날씨', '궁합', '일기', '관찰', '리포트'],
+    '앱': ['회원', '가입', '로그인', '비밀번호', '설정', '알림', '업데이트', '탈퇴'],
+    '영양': ['영양', '이유식', '음식', '간식', '식단', '알레르기', '편식'],
+    '교육': ['학원', '교육', '추천', '온라인', '학습'],
+    '개인정보': ['개인정보', '보안', '데이터', '삭제', '위치'],
+  };
+
+  for (const [category, kws] of Object.entries(categoryKeywords)) {
+    if (kws.some((k) => message.includes(k))) {
+      const matched = faqs.find((f) => f.category === category);
+      if (matched) return matched.answer;
+    }
+  }
+
   return null;
+}
+
+function extractKeywords(text: string): string[] {
+  return text
+    .replace(/[?？은는이가을를에서도의]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length >= 2);
 }
 
 async function getAiResponse(message: string): Promise<string> {
@@ -70,8 +92,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
       data: { userId: req.userId!, message, isUser: true },
     });
 
-    // FAQ 먼저 확인
-    const faqAnswer = findFaqAnswer(message);
+    // FAQ DB 먼저 확인
+    const faqAnswer = await findFaqAnswer(message);
     const reply = faqAnswer ?? await getAiResponse(message);
 
     // 봇 응답 저장

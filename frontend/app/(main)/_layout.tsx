@@ -66,6 +66,8 @@ export default function MainLayout() {
       <Tabs.Screen name="academy" options={{ href: null }} />
       <Tabs.Screen name="subscription" options={{ href: null }} />
       <Tabs.Screen name="compatibility" options={{ href: null }} />
+      <Tabs.Screen name="timer" options={{ href: null }} />
+      <Tabs.Screen name="mates" options={{ href: null }} />
     </Tabs>
   );
 }

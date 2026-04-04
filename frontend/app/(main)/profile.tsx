@@ -18,6 +18,8 @@ const MENU_ITEMS = [
   { label: '교구 구독', emoji: '📦', route: '/(main)/subscription' },
   { label: '형제자매 궁합', emoji: '💕', route: '/(main)/compatibility' },
   { label: '육아 상담', emoji: '💬', route: '/(main)/chatbot' },
+  { label: 'Quality Time', emoji: '⏱️', route: '/(main)/timer' },
+  { label: '동네 기질 메이트', emoji: '👫', route: '/(main)/mates' },
 ];
 
 export default function ProfileScreen() {

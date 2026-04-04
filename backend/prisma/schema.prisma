@@ -88,3 +88,10 @@ model AICSChatLog {
   isUser    Boolean
   createdAt DateTime @default(now())
 }
+
+model FAQ {
+  id       String @id @default(uuid())
+  category String
+  question String
+  answer   String
+}

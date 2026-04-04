@@ -1,4 +1,5 @@
 import KoreanLunarCalendar from 'korean-lunar-calendar';
+import { getPreciseSajuMonth, SOLAR_TERMS } from './solar-terms';
 
 // 천간 (Heavenly Stems)
 const HEAVENLY_STEMS = ['갑', '을', '병', '정', '무', '기', '경', '신', '임', '계'] as const;
@@ -92,18 +93,20 @@ function getYearPillar(lunarYear: number): { stem: string; branch: string } {
   };
 }
 
-function getMonthPillar(
-  lunarMonth: number,
+function getMonthPillarByTerm(
+  sajuMonth: number,
   yearStemIdx: number
 ): { stem: string; branch: string } {
-  // 월지: 인(1월)~축(12월)
-  const branchIdx = (lunarMonth + 1) % 12;
+  // 절기 기반 월지: 사주 월 1=인 ~ 12=축
+  const term = SOLAR_TERMS.find((t) => t.month === sajuMonth);
+  const branch = term?.branch ?? '인';
+  const branchIdx = EARTHLY_BRANCHES.indexOf(branch as typeof EARTHLY_BRANCHES[number]);
   // 월간: 년간 기준 계산
   const baseIdx = (yearStemIdx % 5) * 2;
-  const stemIdx = (baseIdx + lunarMonth - 1) % 10;
+  const stemIdx = (baseIdx + sajuMonth - 1) % 10;
   return {
     stem: HEAVENLY_STEMS[stemIdx],
-    branch: EARTHLY_BRANCHES[branchIdx],
+    branch: EARTHLY_BRANCHES[branchIdx >= 0 ? branchIdx : 0],
   };
 }
 
@@ -199,8 +202,9 @@ export function calculateSaju(
   const yearPillar = getYearPillar(lunarYear);
   const yearStemIdx = HEAVENLY_STEMS.indexOf(yearPillar.stem as typeof HEAVENLY_STEMS[number]);
 
-  // 월주
-  const monthPillar = getMonthPillar(lunarMonth, yearStemIdx);
+  // 월주 (절기 기반)
+  const sajuMonth = getPreciseSajuMonth(solarYear, solarMonth, solarDay);
+  const monthPillar = getMonthPillarByTerm(sajuMonth, yearStemIdx);
 
   // 일주
   const dayPillar = getDayPillar(solarYear, solarMonth, solarDay);
