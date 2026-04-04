@@ -1,5 +1,5 @@
 import { View, TextInput, Text, StyleSheet, TextInputProps } from 'react-native';
-import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
 
 interface AuthInputProps extends TextInputProps {
   icon: string;
@@ -25,13 +25,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
+    borderRadius: 16,
     paddingHorizontal: SPACING.md,
-    height: 52,
+    height: 56,
   },
   icon: {
     fontSize: 18,
-    marginRight: SPACING.sm,
+    marginRight: 12,
     width: 24,
     textAlign: 'center',
   },

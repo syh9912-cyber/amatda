@@ -155,15 +155,68 @@ router.post('/social', async (req: Request, res: Response) => {
       });
     }
 
+    const childCount = await prisma.child.count({ where: { userId: user.id } });
     const tokens = generateTokens(user.id);
     success(res, {
       user: { id: user.id, email: user.email, authProvider: user.authProvider },
       ...tokens,
-      isNewUser: !user.children?.length,
+      isNewUser: childCount === 0,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : '소셜 로그인 처리 중 오류가 발생했습니다';
     error(res, msg, 500);
+  }
+});
+
+// GET /api/auth/me
+router.get('/me', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      include: { _count: { select: { children: true } } },
+    });
+    if (!user) {
+      error(res, '사용자를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    success(res, {
+      id: user.id,
+      email: user.email,
+      subscriptionTier: user.subscriptionTier,
+      childrenCount: user._count.children,
+      createdAt: user.createdAt,
+    });
+  } catch (e) {
+    error(res, '사용자 정보 조회 중 오류가 발생했습니다', 500);
+  }
+});
+
+// POST /api/auth/upgrade
+router.post('/upgrade', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { tier } = req.body;
+    const validTiers = ['FREE', 'PREMIUM', 'FAMILY'];
+    if (!tier || !validTiers.includes(tier)) {
+      error(res, '유효한 구독 등급을 선택해주세요 (FREE, PREMIUM, FAMILY)');
+      return;
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.userId },
+      data: { subscriptionTier: tier },
+      include: { _count: { select: { children: true } } },
+    });
+
+    success(res, {
+      id: user.id,
+      email: user.email,
+      subscriptionTier: user.subscriptionTier,
+      childrenCount: user._count.children,
+      createdAt: user.createdAt,
+    });
+  } catch (e) {
+    error(res, '구독 등급 변경 중 오류가 발생했습니다', 500);
   }
 });
 

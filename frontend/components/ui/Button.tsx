@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   View,
 } from 'react-native';
-import { SHADOWS } from '../../constants/theme';
 import type { ButtonProps } from './Button.types';
 import {
   styles,
@@ -29,23 +28,21 @@ export function Button({
   const bg = VARIANT_BG[variant];
   const textColor = VARIANT_TEXT[variant];
   const isDisabled = disabled || loading;
-  const hasShadow = variant === 'primary' || variant === 'secondary';
 
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.75}
+      activeOpacity={0.85}
       style={[
         styles.base,
         {
           backgroundColor: bg,
-          paddingVertical: sizeConf.paddingV,
+          height: sizeConf.height,
           paddingHorizontal: sizeConf.paddingH,
         },
         variant === 'outline' && styles.outline,
         variant === 'social' && styles.social,
-        hasShadow && SHADOWS.soft,
         isDisabled && styles.disabled,
         style,
       ]}

@@ -1,5 +1,4 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
 
 interface AuthDividerProps {
   label?: string;
@@ -19,17 +18,16 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: SPACING.lg,
   },
   line: {
     flex: 1,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: COLORS.border,
+    backgroundColor: '#E8E5E0',
   },
   text: {
-    marginHorizontal: SPACING.md,
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textLight,
-    fontWeight: '500',
+    marginHorizontal: 12,
+    fontSize: 13,
+    color: '#9CA3AF',
+    fontWeight: '400',
   },
 });

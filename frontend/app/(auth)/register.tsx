@@ -7,14 +7,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
 } from 'react-native';
 import { router } from 'expo-router';
 import { authApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
-import { AuthHeader } from '../../components/ui/AuthHeader';
 import { AuthInput } from '../../components/ui/AuthInput';
-import { AuthBottomWave } from '../../components/ui/AuthBottomWave';
-import { styles } from './register.styles';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
@@ -60,7 +58,14 @@ export default function RegisterScreen() {
         keyboardShouldPersistTaps="handled"
         bounces={false}
       >
-        <AuthHeader title="회원가입" subtitle="아맞다에 오신 것을 환영합니다" />
+        <View style={styles.header}>
+          <Text style={styles.emoji}>{'\u{1F33F}'}</Text>
+          <Text style={styles.title}>회원가입</Text>
+          <Text style={styles.subtitle}>
+            아맞다에 오신 것을 환영합니다
+          </Text>
+        </View>
+
         <View style={styles.body}>
           <View style={styles.form}>
             <AuthInput
@@ -85,17 +90,19 @@ export default function RegisterScreen() {
               onChangeText={setConfirm}
               secureTextEntry
             />
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleRegister}
-              disabled={loading}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.buttonText}>
-                {loading ? '가입 중...' : '가입하기'}
-              </Text>
-            </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleRegister}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.buttonText}>
+              {loading ? '가입 중...' : '가입하기'}
+            </Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.loginLink}
             onPress={() => router.back()}
@@ -106,8 +113,75 @@ export default function RegisterScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-        <AuthBottomWave />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FAFAF8',
+  },
+  scroll: {
+    flexGrow: 1,
+  },
+  header: {
+    paddingTop: 100,
+    alignItems: 'center',
+  },
+  emoji: {
+    fontSize: 32,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginTop: 12,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 8,
+    fontWeight: '400',
+  },
+  body: {
+    paddingHorizontal: 32,
+    marginTop: 40,
+    flex: 1,
+  },
+  form: {
+    gap: 12,
+  },
+  button: {
+    backgroundColor: '#4338CA',
+    borderRadius: 14,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  loginLink: {
+    marginTop: 24,
+    marginBottom: 32,
+    alignItems: 'center',
+  },
+  loginText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+  },
+  loginBold: {
+    color: '#4338CA',
+    fontWeight: '600',
+  },
+});

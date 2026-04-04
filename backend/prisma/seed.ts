@@ -5,6 +5,7 @@ import { QUESTIONS } from './seed-data/questions';
 import { FOOD_GUIDES } from './seed-data/food-guides';
 import { FAQ_DATA } from './seed-data/faq';
 import { ACADEMIES } from './seed-data/academies';
+import { ADS } from './seed-data/ads';
 
 const prisma = new PrismaClient();
 
@@ -12,6 +13,7 @@ async function main() {
   console.log('🌱 Seeding database (full data)...');
 
   // 기존 데이터 클리어
+  await prisma.ad.deleteMany();
   await prisma.aICSChatLog.deleteMany();
   await prisma.fAQ.deleteMany();
   await prisma.observation.deleteMany();
@@ -171,11 +173,19 @@ async function main() {
     },
   });
 
+  // 10. 광고 (15개)
+  let adCount = 0;
+  for (const ad of ADS) {
+    await prisma.ad.create({ data: ad });
+    adCount++;
+  }
+  console.log(`✅ Ads: ${adCount}개`);
+
   console.log('');
   console.log('🎉 Seed 완료!');
   console.log(`   Users: 1 | Children: 2 | Questions: ${qCount}`);
   console.log(`   FoodGuides: ${fCount} | Academies: ${aCount} | FAQ: ${faqCount}`);
-  console.log(`   Observations: ${sampleObs.length}`);
+  console.log(`   Observations: ${sampleObs.length} | Ads: ${adCount}`);
 }
 
 main()

@@ -5,15 +5,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StyleSheet,
 } from 'react-native';
 import { router } from 'expo-router';
-import { AuthHeader } from '../../components/ui/AuthHeader';
 import { AuthInput } from '../../components/ui/AuthInput';
 import { AuthDivider } from '../../components/ui/AuthDivider';
 import { SocialLoginButtons } from '../../components/ui/SocialLoginButtons';
-import { AuthBottomWave } from '../../components/ui/AuthBottomWave';
 import { useLoginHandlers } from './useLoginHandlers';
-import { styles } from './login.styles';
 
 export default function LoginScreen() {
   const h = useLoginHandlers();
@@ -28,7 +26,14 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         bounces={false}
       >
-        <AuthHeader title="아맞다" subtitle="아이의 고유한 기질을 발견하세요" />
+        <View style={styles.header}>
+          <Text style={styles.emoji}>{'\u{1F33F}'}</Text>
+          <Text style={styles.title}>아맞다</Text>
+          <Text style={styles.subtitle}>
+            아이의 고유한 기질을 발견하세요
+          </Text>
+        </View>
+
         <View style={styles.body}>
           <View style={styles.form}>
             <AuthInput
@@ -46,22 +51,28 @@ export default function LoginScreen() {
               onChangeText={h.setPassword}
               secureTextEntry
             />
-            <TouchableOpacity
-              style={[styles.button, h.loading && styles.buttonDisabled]}
-              onPress={h.handleLogin}
-              disabled={h.loading}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.buttonText}>
-                {h.loading ? '로그인 중...' : '로그인'}
-              </Text>
-            </TouchableOpacity>
           </View>
-          <AuthDivider />
+
+          <TouchableOpacity
+            style={[styles.button, h.loading && styles.buttonDisabled]}
+            onPress={h.handleLogin}
+            disabled={h.loading}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.buttonText}>
+              {h.loading ? '로그인 중...' : '로그인'}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.dividerWrap}>
+            <AuthDivider />
+          </View>
+
           <SocialLoginButtons
             onPress={h.handleSocialLogin}
             loadingProvider={h.socialLoading}
           />
+
           <TouchableOpacity
             style={styles.registerLink}
             onPress={() => router.push('/(auth)/register')}
@@ -72,8 +83,79 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-        <AuthBottomWave />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FAFAF8',
+  },
+  scroll: {
+    flexGrow: 1,
+  },
+  header: {
+    paddingTop: 100,
+    alignItems: 'center',
+  },
+  emoji: {
+    fontSize: 32,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginTop: 12,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 8,
+    fontWeight: '400',
+  },
+  body: {
+    paddingHorizontal: 32,
+    marginTop: 40,
+    flex: 1,
+  },
+  form: {
+    gap: 12,
+  },
+  button: {
+    backgroundColor: '#4338CA',
+    borderRadius: 14,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  dividerWrap: {
+    marginTop: 28,
+    marginBottom: 16,
+  },
+  registerLink: {
+    marginTop: 24,
+    marginBottom: 32,
+    alignItems: 'center',
+  },
+  registerText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+  },
+  registerBold: {
+    color: '#4338CA',
+    fontWeight: '600',
+  },
+});

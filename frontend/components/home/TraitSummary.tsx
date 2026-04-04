@@ -6,12 +6,6 @@ interface Props {
   child: Child;
 }
 
-const AGE_BG: Record<string, string> = {
-  infant: COLORS.infant,
-  toddler: COLORS.toddler,
-  elementary: COLORS.elementary,
-};
-
 const ELEMENT_COLORS: Record<string, string> = {
   wood: COLORS.wood,
   fire: COLORS.fire,
@@ -28,127 +22,81 @@ const ELEMENT_LABELS: Record<string, string> = {
   water: '수',
 };
 
-function ElementBar({
-  elements,
-}: {
-  elements: Record<string, number>;
-}) {
-  const maxVal = Math.max(...Object.values(elements), 1);
-
-  return (
-    <View style={barStyles.container}>
-      {Object.entries(elements).map(([key, value]) => {
-        const ratio = value / maxVal;
-        const size = 6 + ratio * 10;
-        return (
-          <View key={key} style={barStyles.item}>
-            <View
-              style={[
-                barStyles.dot,
-                {
-                  width: size,
-                  height: size,
-                  borderRadius: size / 2,
-                  backgroundColor: ELEMENT_COLORS[key],
-                  opacity: 0.4 + ratio * 0.6,
-                },
-              ]}
-            />
-            <Text style={barStyles.label}>
-              {ELEMENT_LABELS[key] ?? key}
-            </Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-const barStyles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: SPACING.md,
-    marginTop: SPACING.md,
-  },
-  item: {
-    alignItems: 'center',
-    gap: 3,
-  },
-  dot: {},
-  label: {
-    fontSize: 9,
-    color: COLORS.textLight,
-    fontWeight: '500',
-  },
-});
-
 export function TraitSummary({ child }: Props) {
-  const { dominantType, label, fiveElements } = child.innateData;
-  const bg = AGE_BG[child.ageInfo.group] ?? COLORS.surface;
+  const { dominantType, fiveElements } = child.innateData;
+  const maxVal = Math.max(...Object.values(fiveElements), 1);
 
   return (
-    <View style={[styles.card, { backgroundColor: bg }]}>
-      <View style={styles.topRow}>
-        <View style={styles.nameCol}>
-          <Text style={styles.name}>{child.name}</Text>
-          <Text style={styles.labelText}>{label}</Text>
-        </View>
-        <View style={styles.badgeOuter}>
-          <Text style={styles.badgeText}>
-            {child.ageInfo.label}
-          </Text>
-        </View>
+    <View style={styles.card}>
+      <Text style={styles.headline}>
+        {child.name} · {dominantType} · {child.ageInfo.label}
+      </Text>
+      <View style={styles.barsRow}>
+        {Object.entries(fiveElements).map(([key, value]) => {
+          const ratio = value / maxVal;
+          return (
+            <View key={key} style={styles.barItem}>
+              <Text style={styles.barLabel}>
+                {ELEMENT_LABELS[key] ?? key}
+              </Text>
+              <View style={styles.barTrack}>
+                <View
+                  style={[
+                    styles.barFill,
+                    {
+                      width: `${Math.round(ratio * 100)}%`,
+                      backgroundColor: ELEMENT_COLORS[key] ?? COLORS.primary,
+                    },
+                  ]}
+                />
+              </View>
+            </View>
+          );
+        })}
       </View>
-      <Text style={styles.type}>{dominantType}</Text>
-      <ElementBar elements={fiveElements} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
+    padding: SPACING.md,
     marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
   },
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.sm,
-  },
-  nameCol: {
-    flex: 1,
-  },
-  name: {
-    fontSize: FONT_SIZE.md,
+  headline: {
+    fontSize: FONT_SIZE.sm,
     fontWeight: '600',
     color: COLORS.text,
-    marginBottom: 2,
+    marginBottom: SPACING.sm + 2,
   },
-  labelText: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    lineHeight: 20,
+  barsRow: {
+    gap: 6,
   },
-  badgeOuter: {
-    backgroundColor: 'rgba(255,255,255,0.75)',
-    paddingHorizontal: SPACING.sm + 2,
-    paddingVertical: SPACING.xs,
-    borderRadius: RADIUS.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
+  barItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  badgeText: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
+  barLabel: {
+    fontSize: 10,
+    color: COLORS.textLight,
+    fontWeight: '500',
+    width: 16,
+    textAlign: 'center',
   },
-  type: {
-    fontSize: FONT_SIZE.xxl,
-    fontWeight: '800',
-    color: COLORS.primary,
-    letterSpacing: -0.5,
+  barTrack: {
+    flex: 1,
+    height: 6,
+    backgroundColor: '#F0F0F0',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: 6,
+    borderRadius: 3,
   },
 });

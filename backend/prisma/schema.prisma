@@ -96,3 +96,20 @@ model FAQ {
   question String
   answer   String
 }
+
+model Ad {
+  id          String   @id @default(uuid())
+  type        String
+  title       String
+  description String
+  imageUrl    String?
+  linkUrl     String
+  sponsor     String
+  targetAge   String?
+  targetTrait String?
+  priority    Int      @default(0)
+  isActive    Boolean  @default(true)
+  clickCount  Int      @default(0)
+  viewCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+}

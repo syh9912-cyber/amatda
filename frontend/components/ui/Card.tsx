@@ -44,6 +44,8 @@ const styles = StyleSheet.create({
   base: {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     overflow: 'hidden',
   },
   outlined: {
@@ -52,7 +54,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   gradient: {
-    backgroundColor: COLORS.primaryLight,
-    ...SHADOWS.medium,
+    backgroundColor: COLORS.surface,
+    ...SHADOWS.soft,
   },
 });

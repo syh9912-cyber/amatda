@@ -12,6 +12,7 @@ import weatherRoutes from './routes/weather';
 import siblingRoutes from './routes/sibling';
 import chatbotRoutes from './routes/chatbot';
 import mateRoutes from './routes/mate';
+import adRoutes from './routes/ad';
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use('/api/weather', weatherRoutes);
 app.use('/api/siblings', siblingRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/mates', mateRoutes);
+app.use('/api/ads', adRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

@@ -3,24 +3,24 @@ export { COLORS, GRADIENTS } from './theme.colors';
 
 export const SHADOWS = {
   soft: {
-    shadowColor: '#1A2138',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowColor: '#1E1E2E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
     elevation: 2,
   },
   medium: {
-    shadowColor: '#1A2138',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    shadowColor: '#1E1E2E',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
     elevation: 4,
   },
   elevated: {
-    shadowColor: '#1A2138',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.14,
-    shadowRadius: 20,
+    shadowColor: '#1E1E2E',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 32,
     elevation: 8,
   },
 };
@@ -51,8 +51,8 @@ export const SPACING = {
 
 export const RADIUS = {
   sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
+  md: 14,
+  lg: 20,
+  xl: 28,
   full: 9999,
 };

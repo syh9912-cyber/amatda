@@ -133,4 +133,13 @@ export const chatbotApi = {
   history: () => api.get('/chatbot/history'),
 };
 
+// Ads
+export const adApi = {
+  list: (type?: string, limit = 3) => {
+    const params: Record<string, string> = { limit: String(limit) };
+    if (type) params.type = type;
+    return api.get('/ads', { params });
+  },
+};
+
 export default api;

@@ -1,21 +1,11 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Child } from '../../stores/childStore';
-import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
 
 interface Props {
   children: Child[];
   selectedId: string;
   onSelect: (id: string) => void;
-}
-
-const AGE_EMOJI: Record<string, string> = {
-  infant: '👶',
-  toddler: '🧒',
-  elementary: '📚',
-};
-
-function genderEmoji(gender: 'M' | 'F'): string {
-  return gender === 'F' ? '👧' : '👦';
 }
 
 export function ChildSelector({ children, selectedId, onSelect }: Props) {
@@ -31,23 +21,14 @@ export function ChildSelector({ children, selectedId, onSelect }: Props) {
         return (
           <TouchableOpacity
             key={child.id}
-            style={[styles.chip, active && styles.chipActive]}
+            style={styles.pill}
             onPress={() => onSelect(child.id)}
             activeOpacity={0.7}
           >
-            <Text style={styles.emoji}>
-              {genderEmoji(child.gender)}
+            <Text style={[styles.name, active && styles.nameActive]}>
+              {child.name}
             </Text>
-            <View style={styles.textCol}>
-              <Text style={[styles.name, active && styles.nameActive]}>
-                {child.name}
-              </Text>
-              <Text style={[styles.age, active && styles.ageActive]}>
-                {AGE_EMOJI[child.ageInfo.group] ?? '👶'}{' '}
-                {child.ageInfo.label}
-              </Text>
-            </View>
-            {active && <View style={styles.indicator} />}
+            {active && <View style={styles.underline} />}
           </TouchableOpacity>
         );
       })}
@@ -57,51 +38,25 @@ export function ChildSelector({ children, selectedId, onSelect }: Props) {
 
 const styles = StyleSheet.create({
   container: { marginBottom: SPACING.lg },
-  content: { gap: SPACING.sm },
-  chip: {
-    flexDirection: 'row',
+  content: { gap: SPACING.lg, paddingHorizontal: 2 },
+  pill: {
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    gap: SPACING.sm,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  chipActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary,
-  },
-  emoji: { fontSize: 20 },
-  textCol: {
-    gap: 1,
+    paddingBottom: 6,
   },
   name: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.text,
-    fontWeight: '500',
+    fontSize: FONT_SIZE.md,
+    color: COLORS.textLight,
+    fontWeight: '400',
   },
   nameActive: {
-    color: '#FFFFFF',
+    color: '#6366F1',
     fontWeight: '700',
   },
-  age: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textLight,
-  },
-  ageActive: {
-    color: 'rgba(255,255,255,0.8)',
-  },
-  indicator: {
-    position: 'absolute',
-    bottom: 0,
-    left: SPACING.md,
-    right: SPACING.md,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.5)',
+  underline: {
+    marginTop: 4,
+    height: 2,
+    width: '100%',
+    backgroundColor: '#6366F1',
+    borderRadius: 1,
   },
 });
