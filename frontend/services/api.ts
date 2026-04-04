@@ -78,4 +78,14 @@ export const foodApi = {
   },
 };
 
+// Observations
+export const observationApi = {
+  create: (childId: string, content: string, type = 'TEXT') =>
+    api.post('/observations', { childId, content, type }),
+  list: (childId: string) =>
+    api.get(`/observations/${childId}`),
+  report: (childId: string) =>
+    api.get(`/observations/report/${childId}`),
+};
+
 export default api;

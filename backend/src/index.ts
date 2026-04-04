@@ -5,6 +5,7 @@ import authRoutes from './routes/auth';
 import childRoutes from './routes/child';
 import questionRoutes from './routes/question';
 import foodRoutes from './routes/food';
+import observationRoutes from './routes/observation';
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/children', childRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/food-guide', foodRoutes);
+app.use('/api/observations', observationRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
