@@ -4,8 +4,7 @@ import { COLORS } from '../../constants/theme';
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   const icons: Record<string, string> = {
-    '홈': '🏠', '일기': '📝', '영양': '🥗', '리포트': '📊',
-    '궁합': '💕', '상담': '💬', '프로필': '👤',
+    '홈': '🏠', '일기': '📝', '리포트': '📊', '상담': '💬', '프로필': '👤',
   };
   return (
     <Text style={{ fontSize: focused ? 22 : 20, opacity: focused ? 1 : 0.5 }}>
@@ -42,24 +41,10 @@ export default function MainLayout() {
         }}
       />
       <Tabs.Screen
-        name="nutrition"
-        options={{
-          title: '영양',
-          tabBarIcon: ({ focused }) => <TabIcon label="영양" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
         name="report"
         options={{
           title: '리포트',
           tabBarIcon: ({ focused }) => <TabIcon label="리포트" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="compatibility"
-        options={{
-          title: '궁합',
-          tabBarIcon: ({ focused }) => <TabIcon label="궁합" focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -76,6 +61,11 @@ export default function MainLayout() {
           tabBarIcon: ({ focused }) => <TabIcon label="프로필" focused={focused} />,
         }}
       />
+      {/* 탭바에 숨기는 화면들 — 홈 카드에서 이동 */}
+      <Tabs.Screen name="nutrition" options={{ href: null }} />
+      <Tabs.Screen name="academy" options={{ href: null }} />
+      <Tabs.Screen name="subscription" options={{ href: null }} />
+      <Tabs.Screen name="compatibility" options={{ href: null }} />
     </Tabs>
   );
 }

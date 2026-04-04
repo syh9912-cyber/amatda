@@ -12,6 +12,14 @@ const ELEMENT_COLORS: Record<string, string> = {
   metal: COLORS.metal, water: COLORS.water,
 };
 
+const MENU_ITEMS = [
+  { label: '영양 가이드', emoji: '🥗', route: '/(main)/nutrition' },
+  { label: '학원 추천', emoji: '🏫', route: '/(main)/academy' },
+  { label: '교구 구독', emoji: '📦', route: '/(main)/subscription' },
+  { label: '형제자매 궁합', emoji: '💕', route: '/(main)/compatibility' },
+  { label: '육아 상담', emoji: '💬', route: '/(main)/chatbot' },
+];
+
 export default function ProfileScreen() {
   const selectedChild = useChildStore((s) => s.selectedChild);
   const children = useChildStore((s) => s.children);
@@ -65,7 +73,6 @@ export default function ProfileScreen() {
             </Text>
           </View>
 
-          {/* 오행 바 차트 */}
           <Text style={[styles.sectionTitle, { marginTop: SPACING.lg }]}>에너지 분포</Text>
           {Object.entries(selectedChild.innateData.fiveElements).map(([key, val]) => (
             <View key={key} style={styles.barRow}>
@@ -103,6 +110,22 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* 메뉴 바로가기 */}
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>더 보기</Text>
+        {MENU_ITEMS.map((item) => (
+          <TouchableOpacity
+            key={item.route}
+            style={styles.menuRow}
+            onPress={() => router.push(item.route as never)}
+          >
+            <Text style={styles.menuEmoji}>{item.emoji}</Text>
+            <Text style={styles.menuLabel}>{item.label}</Text>
+            <Text style={styles.menuArrow}>›</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {/* 로그아웃 */}
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
         <Text style={styles.logoutText}>로그아웃</Text>
@@ -113,27 +136,20 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: SPACING.lg },
+  content: { padding: SPACING.lg, paddingBottom: SPACING.xl * 2 },
   card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+    padding: SPACING.lg, marginBottom: SPACING.md,
   },
   sectionTitle: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: '600',
-    color: COLORS.text,
+    fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.text,
     marginBottom: SPACING.md,
   },
   infoText: { fontSize: FONT_SIZE.md, color: COLORS.text },
   infoSub: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: SPACING.xs },
   infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: SPACING.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingVertical: SPACING.xs, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   infoLabel: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
   infoValue: { fontSize: FONT_SIZE.sm, color: COLORS.text },
@@ -146,11 +162,8 @@ const styles = StyleSheet.create({
   barFill: { height: '100%', borderRadius: 5 },
   barVal: { width: 28, fontSize: FONT_SIZE.sm, color: COLORS.text, textAlign: 'right' },
   childRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingVertical: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
   childName: { fontSize: FONT_SIZE.md, fontWeight: '500', color: COLORS.text },
   childInfo: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
@@ -159,6 +172,13 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md, padding: SPACING.md, alignItems: 'center', marginTop: SPACING.md,
   },
   addBtnText: { color: COLORS.textSecondary },
+  menuRow: {
+    flexDirection: 'row', alignItems: 'center', paddingVertical: SPACING.sm,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  menuEmoji: { fontSize: 20, marginRight: SPACING.md },
+  menuLabel: { flex: 1, fontSize: FONT_SIZE.md, color: COLORS.text },
+  menuArrow: { fontSize: 20, color: COLORS.textLight },
   logoutBtn: {
     borderRadius: RADIUS.md, padding: SPACING.md, alignItems: 'center',
     backgroundColor: COLORS.error, marginTop: SPACING.sm,

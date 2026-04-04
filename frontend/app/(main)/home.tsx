@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
 import { childApi } from '../../services/api';
-import { useChildStore, Child } from '../../stores/childStore';
+import { useChildStore } from '../../stores/childStore';
 import { useAuthStore } from '../../stores/authStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { ChildSelector } from '../../components/home/ChildSelector';
@@ -19,6 +20,7 @@ import { WeatherWidget } from '../../components/home/WeatherWidget';
 
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const { children, selectedChild, setChildren, selectChild } = useChildStore();
   const logout = useAuthStore((s) => s.logout);
 
@@ -37,6 +39,12 @@ export default function HomeScreen() {
     }
   };
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadChildren();
+    setRefreshing(false);
+  }, []);
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -48,7 +56,9 @@ export default function HomeScreen() {
   if (children.length === 0) {
     return (
       <View style={styles.center}>
+        <Text style={styles.emptyEmoji}>👶</Text>
         <Text style={styles.emptyText}>등록된 자녀가 없습니다</Text>
+        <Text style={styles.emptySubtext}>자녀를 등록하고 기질을 분석해보세요</Text>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => router.push('/onboarding/child-info')}
@@ -60,7 +70,13 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+      }
+    >
       {/* 헤더 */}
       <View style={styles.header}>
         <Text style={styles.appTitle}>아맞다</Text>
@@ -88,6 +104,40 @@ export default function HomeScreen() {
 
           {/* 연령별 카드 */}
           <AgeCards child={selectedChild} />
+
+          {/* 퀵 액션 그리드 */}
+          <View style={styles.quickGrid}>
+            <TouchableOpacity
+              style={styles.quickItem}
+              onPress={() => router.push('/(main)/report')}
+            >
+              <Text style={styles.quickEmoji}>📊</Text>
+              <Text style={styles.quickLabel}>리포트</Text>
+            </TouchableOpacity>
+            {children.length > 1 && (
+              <TouchableOpacity
+                style={styles.quickItem}
+                onPress={() => router.push('/(main)/compatibility')}
+              >
+                <Text style={styles.quickEmoji}>💕</Text>
+                <Text style={styles.quickLabel}>형제 궁합</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.quickItem}
+              onPress={() => router.push('/(main)/academy')}
+            >
+              <Text style={styles.quickEmoji}>🏫</Text>
+              <Text style={styles.quickLabel}>학원</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.quickItem}
+              onPress={() => router.push('/(main)/subscription')}
+            >
+              <Text style={styles.quickEmoji}>📦</Text>
+              <Text style={styles.quickLabel}>교구</Text>
+            </TouchableOpacity>
+          </View>
         </>
       )}
 
@@ -106,43 +156,39 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { padding: SPACING.lg, paddingTop: SPACING.xl + 20 },
   center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
+    flex: 1, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: COLORS.background, padding: SPACING.xl,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: SPACING.lg,
   },
-  appTitle: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
+  appTitle: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.primary },
   logoutText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
-  emptyText: {
-    fontSize: FONT_SIZE.lg,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.lg,
-  },
+  emptyEmoji: { fontSize: 48, marginBottom: SPACING.md },
+  emptyText: { fontSize: FONT_SIZE.lg, color: COLORS.text, fontWeight: '600', marginBottom: SPACING.xs },
+  emptySubtext: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginBottom: SPACING.lg },
   addButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md,
   },
   addButtonText: { color: '#FFF', fontSize: FONT_SIZE.md, fontWeight: '600' },
-  addMore: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderStyle: 'dashed',
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    alignItems: 'center',
+  quickGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md,
     marginTop: SPACING.lg,
+  },
+  quickItem: {
+    flex: 1, minWidth: '45%', backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md, padding: SPACING.md, alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+  },
+  quickEmoji: { fontSize: 28, marginBottom: SPACING.xs },
+  quickLabel: { fontSize: FONT_SIZE.sm, color: COLORS.text, fontWeight: '500' },
+  addMore: {
+    borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed',
+    borderRadius: RADIUS.md, padding: SPACING.md, alignItems: 'center',
+    marginTop: SPACING.lg, marginBottom: SPACING.xl,
   },
   addMoreText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.md },
 });
