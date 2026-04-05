@@ -22,6 +22,11 @@ export interface ReportReasons {
   foods: string;
 }
 
+export interface DetailItem {
+  item: string;
+  reason: string;
+}
+
 export interface AnalysisReport {
   summary: string;
   personality: string[];
@@ -37,6 +42,13 @@ export interface AnalysisReport {
   specialTalent: string;
   parentingTip: string;
   reasons?: ReportReasons;
+  strengthsDetail?: DetailItem[];
+  weaknessesDetail?: DetailItem[];
+  doList?: string[];
+  dontList?: string[];
+  dailyRoutineTip?: string;
+  socialTip?: string;
+  emotionalTip?: string;
 }
 
 export interface Child {

@@ -1,7 +1,10 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useChildStore, AnalysisReport, ReportReasons } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const reportHeaderImg = require('../../assets/report-header.png');
 
 /** Maps section keys to reason keys */
 const REASON_KEY_MAP: Partial<Record<keyof AnalysisReport, keyof ReportReasons>> = {

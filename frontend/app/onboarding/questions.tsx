@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity,
   ActivityIndicator, Animated,
@@ -13,6 +13,7 @@ import {
   getAgeGroup,
   type OnboardingQuestion,
 } from './questions.helpers';
+import { AnalyzingScreen } from '../../components/onboarding/AnalyzingScreen';
 
 export default function QuestionsScreen() {
   const { childId } = useLocalSearchParams<{ childId: string }>();
@@ -77,30 +78,37 @@ export default function QuestionsScreen() {
     }
   };
 
+  const apiDoneRef = useRef(false);
+
   const submitAnswers = async (finalAnswers: Record<string, number>) => {
     setAnalyzing(true);
-    try {
-      const answerList = questions.map((q) => ({
-        questionId: q.id,
-        answer: finalAnswers[q.id] ?? 0,
-      }));
-      const res = await childApi.analyze(childId!, answerList);
-      const updatedChild = res.data.data;
-      if (updatedChild) {
-        updateChild(updatedChild);
+    apiDoneRef.current = false;
+
+    // Fire API call immediately (runs during loading animation)
+    const apiCall = (async () => {
+      try {
+        const answerList = questions.map((q) => ({
+          questionId: q.id,
+          answer: finalAnswers[q.id] ?? 0,
+        }));
+        const res = await childApi.analyze(childId!, answerList);
+        const updatedChild = res.data.data;
+        if (updatedChild) updateChild(updatedChild);
+      } catch {
+        // navigate anyway after timer
+      } finally {
+        apiDoneRef.current = true;
       }
-      await new Promise((r) => setTimeout(r, 2000));
-      router.replace({
-        pathname: '/onboarding/analysis-report',
-        params: { childId },
-      });
-    } catch {
-      await new Promise((r) => setTimeout(r, 1500));
-      router.replace({
-        pathname: '/onboarding/analysis-report',
-        params: { childId },
-      });
-    }
+    })();
+
+    // Wait minimum 15 seconds for premium feel, then navigate
+    const timer = new Promise((r) => setTimeout(r, 15000));
+    await Promise.all([apiCall, timer]);
+
+    router.replace({
+      pathname: '/onboarding/analysis-report',
+      params: { childId },
+    });
   };
 
   if (loading) {
@@ -114,21 +122,7 @@ export default function QuestionsScreen() {
   }
 
   if (analyzing) {
-    return (
-      <View style={styles.analyzingContainer}>
-        <Stack.Screen options={{ title: '분석 중', headerShown: false }} />
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.analyzingTitle}>
-          {child?.name}의 성향을 분석하고 있어요
-        </Text>
-        <Text style={styles.analyzingDesc}>잠시만 기다려주세요...</Text>
-        <View style={styles.dotsRow}>
-          {[0, 1, 2].map((i) => (
-            <View key={i} style={[styles.dot, i === 1 && styles.dotActive]} />
-          ))}
-        </View>
-      </View>
-    );
+    return <AnalyzingScreen childName={child?.name ?? ''} />;
   }
 
   if (!current) return null;
