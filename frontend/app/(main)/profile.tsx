@@ -10,6 +10,7 @@ import { EnergyChart } from '../../components/profile/EnergyChart';
 import { SettingsSection } from '../../components/profile/SettingsSection';
 
 const MENU_ITEMS = [
+  { label: '맘스타그램', emoji: '📸', route: '/(main)/momstagram' },
   { label: '영양 가이드', emoji: '🥗', route: '/(main)/nutrition' },
   { label: '학원 추천', emoji: '🏫', route: '/(main)/academy' },
   { label: '교구 구독', emoji: '📦', route: '/(main)/subscription' },

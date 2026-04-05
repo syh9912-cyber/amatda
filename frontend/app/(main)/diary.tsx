@@ -10,7 +10,7 @@ import {
   Platform,
   Image,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { observationApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
@@ -147,6 +147,12 @@ export default function DiaryScreen() {
               interests={obs.extractedTraits.interests}
               socialStyle={obs.extractedTraits.socialStyle}
               summary={obs.extractedTraits.summary}
+              onShare={() => {
+                router.push({
+                  pathname: '/(main)/momstagram-post',
+                  params: { prefillContent: obs.rawContent },
+                });
+              }}
             />
           ))
         )}

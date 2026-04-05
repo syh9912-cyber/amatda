@@ -17,6 +17,7 @@ interface ObservationCardProps {
   interests: string[];
   socialStyle: string;
   summary: string;
+  onShare?: () => void;
 }
 
 function formatDate(iso: string): string {
@@ -29,7 +30,7 @@ function formatDate(iso: string): string {
 }
 
 export function ObservationCard({
-  rawContent, createdAt, emotions, interests, socialStyle, summary,
+  rawContent, createdAt, emotions, interests, socialStyle, summary, onShare,
 }: ObservationCardProps) {
   const isLong = rawContent.length > COLLAPSE_THRESHOLD;
   const [expanded, setExpanded] = useState(false);
@@ -44,6 +45,11 @@ export function ObservationCard({
         <View style={styles.dateBadge}>
           <Text style={styles.dateText}>{formatDate(createdAt)}</Text>
         </View>
+        {onShare && (
+          <TouchableOpacity onPress={onShare} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={styles.shareBtn}>{'\uD83D\uDCF8'} 맘스타그램 공유</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <Text style={styles.content}>{displayContent}</Text>
@@ -91,7 +97,17 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
     ...SHADOWS.soft,
   },
-  dateRow: { marginBottom: SPACING.sm },
+  dateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  shareBtn: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
   dateBadge: {
     alignSelf: 'flex-start',
     backgroundColor: COLORS.primaryLight,

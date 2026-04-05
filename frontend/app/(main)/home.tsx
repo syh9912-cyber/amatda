@@ -35,6 +35,7 @@ function getGreeting(): string {
 }
 
 const QUICK_ACTIONS = [
+  { label: '\uD83D\uDCF8 \uB9D8\uC2A4\uD0C0\uADF8\uB7A8', route: '/(main)/momstagram' },
   { label: 'Quality Time', route: '/(main)/timer' },
   { label: '\uC131\uC7A5\uC568\uBC94', route: '/(main)/album' },
   { label: '\uD615\uC81C\uAD81\uD569', route: '/(main)/compatibility' },

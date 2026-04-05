@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Text, Image, StyleSheet } from 'react-native';
+import { Text, Image, View, StyleSheet } from 'react-native';
 
 const ACTIVE_COLOR = '#6366F1';
 const INACTIVE_COLOR = '#B0B0B0';
@@ -17,6 +17,21 @@ function TabIcon({ name, focused }: { name: keyof typeof TAB_ICONS; focused: boo
       source={TAB_ICONS[name]}
       style={{ width: 24, height: 24, opacity: focused ? 1 : 0.4 }}
     />
+  );
+}
+
+function MomstagramIcon({ focused }: { focused: boolean }) {
+  return (
+    <View style={{
+      width: 24,
+      height: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}>
+      <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>
+        {'\uD83D\uDCF8'}
+      </Text>
+    </View>
   );
 }
 
@@ -66,6 +81,13 @@ export default function MainLayout() {
         }}
       />
       <Tabs.Screen
+        name="momstagram"
+        options={{
+          tabBarIcon: ({ focused }) => <MomstagramIcon focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label="맘스타" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="chatbot"
         options={{
           tabBarIcon: ({ focused }) => <TabIcon name="chatbot" focused={focused} />,
@@ -79,7 +101,8 @@ export default function MainLayout() {
           tabBarLabel: ({ focused }) => <TabLabel label="더보기" focused={focused} />,
         }}
       />
-      {/* Hidden screens accessible from home */}
+      {/* Hidden screens accessible from navigation */}
+      <Tabs.Screen name="momstagram-post" options={{ href: null }} />
       <Tabs.Screen name="report" options={{ href: null }} />
       <Tabs.Screen name="nutrition" options={{ href: null }} />
       <Tabs.Screen name="academy" options={{ href: null }} />

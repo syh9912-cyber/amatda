@@ -20,6 +20,9 @@ export const collections = {
   chatLogs: db.collection('chatLogs'),
   onboardingQuestions: db.collection('onboardingQuestions'),
   dailyTracking: db.collection('dailyTracking'),
+  posts: db.collection('posts'),
+  postLikes: db.collection('postLikes'),
+  postComments: db.collection('postComments'),
 };
 
 /** 문서 ID 생성 */

@@ -1,0 +1,287 @@
+import { Router, Request, Response } from 'express';
+import { authMiddleware } from '../middleware/auth';
+import { success, error } from '../utils/response';
+import { collections, genId } from '../services/firestore';
+
+const router = Router();
+
+/** 이메일에서 마스킹된 닉네임 생성 (예: "abc***@gmail.com" -> "abc***") */
+function maskEmail(email: string): string {
+  const local = email.split('@')[0] || 'user';
+  if (local.length <= 3) return local + '***';
+  return local.slice(0, 3) + '***';
+}
+
+// POST /posts - 게시글 작성
+router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { content, imageUrl, thumbnailUrl, sourceType, childAge, childGender, dominantType } = req.body;
+
+    if (!content) {
+      error(res, '내용을 입력해주세요');
+      return;
+    }
+    if (!sourceType || !['album', 'diary', 'manual'].includes(sourceType)) {
+      error(res, '올바른 sourceType을 입력해주세요 (album, diary, manual)');
+      return;
+    }
+
+    const userDoc = await collections.users.doc(userId).get();
+    const email = userDoc.exists ? (userDoc.data()!.email as string) : 'user';
+    const userName = maskEmail(email);
+
+    const id = genId();
+    const now = new Date().toISOString();
+
+    const post = {
+      userId,
+      userName,
+      childAge: childAge || '',
+      childGender: childGender || '',
+      dominantType: dominantType || '',
+      content,
+      // TODO: 향후 최적화 - imageUrl은 1080px로 리사이즈, thumbnailUrl은 300px 썸네일 생성
+      imageUrl: imageUrl || null,
+      thumbnailUrl: thumbnailUrl || null,
+      sourceType,
+      likes: 0,
+      commentCount: 0,
+      createdAt: now,
+      isPublic: true,
+    };
+
+    await collections.posts.doc(id).set(post);
+    success(res, { id, ...post }, 201);
+  } catch {
+    error(res, '게시글 작성 중 오류가 발생했습니다', 500);
+  }
+});
+
+// GET /feed - 피드 조회 (공개 게시글, 페이지네이션)
+router.get('/feed', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const page = Math.max(0, parseInt(req.query.page as string, 10) || 0);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
+
+    const snap = await collections.posts
+      .where('isPublic', '==', true)
+      .orderBy('createdAt', 'desc')
+      .offset(page * limit)
+      .limit(limit)
+      .get();
+
+    const posts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    // 현재 사용자의 좋아요 여부 확인
+    const postIds = posts.map((p) => p.id);
+    const likedSet = new Set<string>();
+
+    if (postIds.length > 0) {
+      // Firestore 'in' 쿼리는 최대 30개까지 지원
+      const chunks: string[][] = [];
+      for (let i = 0; i < postIds.length; i += 30) {
+        chunks.push(postIds.slice(i, i + 30));
+      }
+      for (const chunk of chunks) {
+        const likeSnap = await collections.postLikes
+          .where('userId', '==', userId)
+          .where('postId', 'in', chunk)
+          .get();
+        likeSnap.docs.forEach((d) => {
+          likedSet.add(d.data().postId as string);
+        });
+      }
+    }
+
+    const feedPosts = posts.map((p) => ({
+      ...p,
+      isLiked: likedSet.has(p.id),
+    }));
+
+    success(res, { posts: feedPosts, page, limit });
+  } catch {
+    error(res, '피드 조회 중 오류가 발생했습니다', 500);
+  }
+});
+
+// POST /posts/:id/like - 좋아요 토글
+router.post('/posts/:id/like', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const postId = req.params.id as string;
+
+    const postRef = collections.posts.doc(postId);
+    const postDoc = await postRef.get();
+    if (!postDoc.exists) {
+      error(res, '게시글을 찾을 수 없습니다', 404);
+      return;
+    }
+
+    // 이미 좋아요 했는지 확인
+    const existingLike = await collections.postLikes
+      .where('postId', '==', postId)
+      .where('userId', '==', userId)
+      .limit(1)
+      .get();
+
+    if (!existingLike.empty) {
+      // 좋아요 취소
+      const likeDocId = existingLike.docs[0].id;
+      await collections.postLikes.doc(likeDocId).delete();
+      const currentLikes = (postDoc.data()!.likes as number) || 0;
+      await postRef.update({ likes: Math.max(0, currentLikes - 1) });
+      success(res, { liked: false, likes: Math.max(0, currentLikes - 1) });
+    } else {
+      // 좋아요
+      const likeId = genId();
+      await collections.postLikes.doc(likeId).set({
+        postId,
+        userId,
+        createdAt: new Date().toISOString(),
+      });
+      const currentLikes = (postDoc.data()!.likes as number) || 0;
+      await postRef.update({ likes: currentLikes + 1 });
+      success(res, { liked: true, likes: currentLikes + 1 });
+    }
+  } catch {
+    error(res, '좋아요 처리 중 오류가 발생했습니다', 500);
+  }
+});
+
+// GET /posts/:id/comments - 댓글 조회
+router.get('/posts/:id/comments', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const postId = req.params.id as string;
+    const page = Math.max(0, parseInt(req.query.page as string, 10) || 0);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
+
+    const postDoc = await collections.posts.doc(postId).get();
+    if (!postDoc.exists) {
+      error(res, '게시글을 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const snap = await collections.postComments
+      .where('postId', '==', postId)
+      .orderBy('createdAt', 'asc')
+      .offset(page * limit)
+      .limit(limit)
+      .get();
+
+    const comments = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    success(res, { comments, page, limit });
+  } catch {
+    error(res, '댓글 조회 중 오류가 발생했습니다', 500);
+  }
+});
+
+// POST /posts/:id/comments - 댓글 작성
+router.post('/posts/:id/comments', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const postId = req.params.id as string;
+    const { content } = req.body;
+
+    if (!content) {
+      error(res, '댓글 내용을 입력해주세요');
+      return;
+    }
+
+    const postRef = collections.posts.doc(postId);
+    const postDoc = await postRef.get();
+    if (!postDoc.exists) {
+      error(res, '게시글을 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const userDoc = await collections.users.doc(userId).get();
+    const email = userDoc.exists ? (userDoc.data()!.email as string) : 'user';
+    const userName = maskEmail(email);
+
+    const commentId = genId();
+    const now = new Date().toISOString();
+
+    const comment = {
+      postId,
+      userId,
+      userName,
+      content,
+      createdAt: now,
+    };
+
+    await collections.postComments.doc(commentId).set(comment);
+
+    const currentCount = (postDoc.data()!.commentCount as number) || 0;
+    await postRef.update({ commentCount: currentCount + 1 });
+
+    success(res, { id: commentId, ...comment }, 201);
+  } catch {
+    error(res, '댓글 작성 중 오류가 발생했습니다', 500);
+  }
+});
+
+// DELETE /posts/:id - 본인 게시글 삭제
+router.delete('/posts/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const postId = req.params.id as string;
+
+    const postDoc = await collections.posts.doc(postId).get();
+    if (!postDoc.exists) {
+      error(res, '게시글을 찾을 수 없습니다', 404);
+      return;
+    }
+    if (postDoc.data()!.userId !== userId) {
+      error(res, '본인의 게시글만 삭제할 수 있습니다', 403);
+      return;
+    }
+
+    // 게시글 관련 좋아요 삭제
+    const likesSnap = await collections.postLikes
+      .where('postId', '==', postId)
+      .get();
+    const likeBatch = likesSnap.docs.map((d) =>
+      collections.postLikes.doc(d.id).delete()
+    );
+
+    // 게시글 관련 댓글 삭제
+    const commentsSnap = await collections.postComments
+      .where('postId', '==', postId)
+      .get();
+    const commentBatch = commentsSnap.docs.map((d) =>
+      collections.postComments.doc(d.id).delete()
+    );
+
+    await Promise.all([...likeBatch, ...commentBatch]);
+    await collections.posts.doc(postId).delete();
+
+    success(res, { id: postId, message: '게시글이 삭제되었습니다' });
+  } catch {
+    error(res, '게시글 삭제 중 오류가 발생했습니다', 500);
+  }
+});
+
+// GET /my-posts - 내 게시글 조회
+router.get('/my-posts', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const page = Math.max(0, parseInt(req.query.page as string, 10) || 0);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
+
+    const snap = await collections.posts
+      .where('userId', '==', userId)
+      .orderBy('createdAt', 'desc')
+      .offset(page * limit)
+      .limit(limit)
+      .get();
+
+    const posts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    success(res, { posts, page, limit });
+  } catch {
+    error(res, '내 게시글 조회 중 오류가 발생했습니다', 500);
+  }
+});
+
+export default router;

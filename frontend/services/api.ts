@@ -167,4 +167,29 @@ export const adApi = {
   },
 };
 
+// Momstagram (맘스타그램)
+export const momstagramApi = {
+  getFeed: (page = 0, limit = 20) =>
+    api.get('/momstagram/feed', { params: { page: String(page), limit: String(limit) } }),
+  createPost: (data: {
+    content: string;
+    imageUrl?: string;
+    thumbnailUrl?: string;
+    sourceType: 'album' | 'diary' | 'manual';
+    childAge?: string;
+    childGender?: string;
+    dominantType?: string;
+  }) => api.post('/momstagram/posts', data),
+  toggleLike: (postId: string) =>
+    api.post(`/momstagram/posts/${postId}/like`),
+  getComments: (postId: string, page = 0, limit = 20) =>
+    api.get(`/momstagram/posts/${postId}/comments`, { params: { page: String(page), limit: String(limit) } }),
+  addComment: (postId: string, content: string) =>
+    api.post(`/momstagram/posts/${postId}/comments`, { content }),
+  deletePost: (postId: string) =>
+    api.delete(`/momstagram/posts/${postId}`),
+  getMyPosts: (page = 0, limit = 20) =>
+    api.get('/momstagram/my-posts', { params: { page: String(page), limit: String(limit) } }),
+};
+
 export default api;

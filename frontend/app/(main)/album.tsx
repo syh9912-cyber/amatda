@@ -8,7 +8,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
@@ -71,7 +71,19 @@ export default function AlbumScreen() {
         ) : (
           <>
             <Text style={styles.countText}>{photos.length}장의 사진</Text>
-            <PhotoGrid photos={photos} onPhotoPress={setViewerIndex} />
+            <PhotoGrid
+              photos={photos}
+              onPhotoPress={setViewerIndex}
+              onSharePress={(index) => {
+                const photo = photos[index];
+                if (photo) {
+                  router.push({
+                    pathname: '/(main)/momstagram-post',
+                    params: { prefillImage: photo.uri },
+                  });
+                }
+              }}
+            />
           </>
         )}
       </ScrollView>

@@ -14,9 +14,10 @@ export interface AlbumPhoto {
 interface PhotoGridProps {
   photos: AlbumPhoto[];
   onPhotoPress: (index: number) => void;
+  onSharePress?: (index: number) => void;
 }
 
-export function PhotoGrid({ photos, onPhotoPress }: PhotoGridProps) {
+export function PhotoGrid({ photos, onPhotoPress, onSharePress }: PhotoGridProps) {
   if (photos.length === 0) {
     return (
       <View style={styles.emptyWrap}>
@@ -39,9 +40,19 @@ export function PhotoGrid({ photos, onPhotoPress }: PhotoGridProps) {
           activeOpacity={0.8}
         >
           <Image source={{ uri: photo.uri }} style={styles.image} />
-          <Text style={styles.dateLabel} numberOfLines={1}>
-            {photo.date}
-          </Text>
+          <View style={styles.photoFooter}>
+            <Text style={styles.dateLabel} numberOfLines={1}>
+              {photo.date}
+            </Text>
+            {onSharePress && (
+              <TouchableOpacity
+                onPress={() => onSharePress(index)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.shareIcon}>{'\uD83D\uDCF8'}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </TouchableOpacity>
       ))}
     </View>
@@ -64,11 +75,20 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm,
     backgroundColor: COLORS.border,
   },
+  photoFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 2,
+    paddingHorizontal: 2,
+  },
   dateLabel: {
     fontSize: 10,
     color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginTop: 2,
+    flex: 1,
+  },
+  shareIcon: {
+    fontSize: 12,
   },
   emptyWrap: {
     alignItems: 'center',
