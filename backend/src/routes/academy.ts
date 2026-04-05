@@ -23,14 +23,17 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     if (isNaN(lat) || isNaN(lng) || isNaN(ageMonths)) { error(res, 'lat, lng, ageMonths 파라미터가 필요합니다'); return; }
 
     const snap = await collections.academies.get();
-    type AcademyDoc = { minAge: number; maxAge: number; lat: number; lng: number; suitableTraits: string | string[]; name: string; category: string; [k: string]: unknown };
+    type RecommendReasons = Record<string, string>;
+    type AcademyDoc = { minAge: number; maxAge: number; lat: number; lng: number; suitableTraits: string | string[]; recommendReasons?: string | RecommendReasons; name: string; category: string; [k: string]: unknown };
     const filtered = snap.docs
       .map((d) => ({ id: d.id, ...(d.data() as AcademyDoc) }))
       .filter((a) => a.minAge <= ageMonths && a.maxAge >= ageMonths)
       .map((a) => {
         const dist = haversineKm(lat, lng, a.lat as number, a.lng as number);
         const traits: string[] = typeof a.suitableTraits === 'string' ? JSON.parse(a.suitableTraits as string) : a.suitableTraits as string[];
-        return { ...a, distance: Math.round(dist * 100) / 100, suitableTraits: traits, traitMatch: type ? traits.includes(type) : true };
+        const reasons: RecommendReasons = typeof a.recommendReasons === 'string' ? JSON.parse(a.recommendReasons) : (a.recommendReasons || {});
+        const recommendReason = type ? (reasons[type] || null) : null;
+        return { ...a, distance: Math.round(dist * 100) / 100, suitableTraits: traits, traitMatch: type ? traits.includes(type) : true, recommendReason };
       })
       .filter((a) => a.distance <= radius)
       .sort((a, b) => (a.traitMatch === b.traitMatch ? a.distance - b.distance : a.traitMatch ? -1 : 1));

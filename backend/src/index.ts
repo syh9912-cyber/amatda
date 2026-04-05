@@ -14,6 +14,7 @@ import siblingRoutes from './routes/sibling';
 import chatbotRoutes from './routes/chatbot';
 import mateRoutes from './routes/mate';
 import adRoutes from './routes/ad';
+import seedRoutes from './routes/seed';
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/siblings', siblingRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/mates', mateRoutes);
 app.use('/api/ads', adRoutes);
+app.use('/api/seed', seedRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() } });

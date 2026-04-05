@@ -75,7 +75,7 @@ async function main() {
   await seedCollection('questions', QUESTIONS.map((q) => ({ ...q, options: JSON.stringify(q.options) })));
   await seedCollection('foodGuides', FOOD_GUIDES.map((f) => ({ ...f, foods: JSON.stringify(f.foods) })));
   await seedCollection('faq', FAQ_DATA);
-  await seedCollection('academies', ACADEMIES.map((a) => ({ ...a, suitableTraits: JSON.stringify(a.suitableTraits) })));
+  await seedCollection('academies', ACADEMIES.map((a) => ({ ...a, suitableTraits: JSON.stringify(a.suitableTraits), recommendReasons: JSON.stringify(a.recommendReasons) })));
   await seedCollection('ads', ADS.map((a) => ({ ...a, isActive: true, clickCount: 0, viewCount: 0, createdAt: new Date().toISOString() })));
 
   console.log('\nSeed 완료!');
