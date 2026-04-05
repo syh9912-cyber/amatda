@@ -1,6 +1,7 @@
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
@@ -8,7 +9,6 @@ import {
   StyleSheet,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ChildDiaryIllustration } from '../../components/ui/ChildDiaryIllustration';
 import { AppNameDisplay } from '../../components/ui/AppNameDisplay';
 import { AuthInput } from '../../components/ui/AuthInput';
 import { AuthDivider } from '../../components/ui/AuthDivider';
@@ -29,7 +29,11 @@ export default function LoginScreen() {
         bounces={false}
       >
         <View style={styles.header}>
-          <ChildDiaryIllustration width={140} height={140} />
+          <Image
+            source={require('../../assets/child-diary.png')}
+            style={{ width: 150, height: 150 }}
+            resizeMode="contain"
+          />
           <View style={styles.nameWrap}>
             <AppNameDisplay size="small" />
           </View>

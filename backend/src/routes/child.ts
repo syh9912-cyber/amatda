@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { calculateSaju } from '../services/saju.calculator';
 import { calculateAge } from '../services/age.calculator';
+import { generateChildReport } from '../services/child.report';
 import { success, error } from '../utils/response';
 import { collections, genId, toISO } from '../services/firestore';
 
@@ -18,6 +19,7 @@ function formatChild(id: string, data: Record<string, unknown>) {
     innateData: publicInnate,
     baseline: data.baseline ? (typeof data.baseline === 'string' ? JSON.parse(data.baseline as string) : data.baseline) : null,
     observedTraits: data.observedTraits ? (typeof data.observedTraits === 'string' ? JSON.parse(data.observedTraits as string) : data.observedTraits) : null,
+    analysisReport: data.analysisReport ? (typeof data.analysisReport === 'string' ? JSON.parse(data.analysisReport as string) : data.analysisReport) : null,
     ageInfo: calculateAge(bd),
   };
 }
@@ -92,6 +94,35 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     success(res, { id: req.params.id, message: '삭제되었습니다' });
   } catch { error(res, '자녀 삭제 중 오류가 발생했습니다', 500); }
+});
+
+router.post('/:id/analyze', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { answers } = req.body;
+    if (!answers || !Array.isArray(answers)) { error(res, '응답 데이터가 필요합니다'); return; }
+
+    const doc = await collections.children.doc(req.params.id as string).get();
+    if (!doc.exists || doc.data()!.userId !== req.userId) { error(res, '자녀를 찾을 수 없습니다', 404); return; }
+
+    const data = doc.data()!;
+    const innate = typeof data.innateData === 'string' ? JSON.parse(data.innateData as string) : data.innateData;
+
+    // Save baseline answers
+    const baseline = JSON.stringify({ answers, completedAt: new Date().toISOString() });
+    await collections.children.doc(req.params.id as string).update({ baseline });
+
+    // Generate static report
+    const report = generateChildReport(innate.dominantType, answers);
+
+    // Save report to child document
+    await collections.children.doc(req.params.id as string).update({
+      analysisReport: JSON.stringify(report),
+    });
+
+    const updated = await collections.children.doc(req.params.id as string).get();
+    const formatted = formatChild(updated.id, updated.data()!);
+    success(res, { ...formatted, analysisReport: report });
+  } catch { error(res, '분석 리포트 생성 중 오류가 발생했습니다', 500); }
 });
 
 router.post('/:id/baseline', authMiddleware, async (req: Request, res: Response) => {

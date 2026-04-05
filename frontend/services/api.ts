@@ -65,6 +65,8 @@ export const childApi = {
   delete: (id: string) => api.delete(`/children/${id}`),
   saveBaseline: (id: string, answers: unknown[]) =>
     api.post(`/children/${id}/baseline`, { answers }),
+  analyze: (id: string, answers: { questionId: string; answer: number }[]) =>
+    api.post(`/children/${id}/analyze`, { answers }),
 };
 
 // Questions

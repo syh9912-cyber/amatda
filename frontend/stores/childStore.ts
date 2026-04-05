@@ -12,6 +12,22 @@ interface InnateDataPublic {
   label: string;
 }
 
+export interface AnalysisReport {
+  summary: string;
+  personality: string[];
+  studyStyle: string;
+  bestSubjects: string[];
+  weakAreas: string[];
+  futureFields: string[];
+  sportsMatch: string[];
+  academyStyle: string;
+  goodFoods: string[];
+  badFoods: string[];
+  educationDirection: string;
+  specialTalent: string;
+  parentingTip: string;
+}
+
 export interface Child {
   id: string;
   name: string;
@@ -21,6 +37,7 @@ export interface Child {
   innateData: InnateDataPublic;
   baseline: Record<string, unknown> | null;
   observedTraits: Record<string, unknown> | null;
+  analysisReport: AnalysisReport | null;
   ageInfo: AgeInfo;
 }
 
@@ -32,6 +49,7 @@ interface ChildState {
   selectChild: (id: string) => void;
   addChild: (child: Child) => void;
   removeChild: (id: string) => void;
+  updateChild: (child: Child) => void;
 }
 
 export const useChildStore = create<ChildState>((set, get) => ({
@@ -57,5 +75,10 @@ export const useChildStore = create<ChildState>((set, get) => ({
     const updated = get().children.filter((c) => c.id !== id);
     const selected = updated[0] ?? null;
     set({ children: updated, selectedChild: selected, selectedChildId: selected?.id ?? null });
+  },
+  updateChild: (child) => {
+    const updated = get().children.map((c) => (c.id === child.id ? child : c));
+    const sel = get().selectedChildId === child.id ? child : get().selectedChild;
+    set({ children: updated, selectedChild: sel });
   },
 }));

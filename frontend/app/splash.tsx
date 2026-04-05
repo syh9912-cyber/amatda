@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { View, Animated, Easing, StyleSheet } from 'react-native';
+import { View, Image, Animated, Easing, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useAuthStore } from '../stores/authStore';
-import { ChildDiaryIllustration } from '../components/ui/ChildDiaryIllustration';
 import { AppNameDisplay } from '../components/ui/AppNameDisplay';
 
 const BG = '#FFF8F0';
@@ -80,7 +79,11 @@ export default function SplashScreen() {
             transform: [{ translateY: illustY }],
           }}
         >
-          <ChildDiaryIllustration width={200} height={200} />
+          <Image
+            source={require('../assets/child-diary.png')}
+            style={{ width: 220, height: 220 }}
+            resizeMode="contain"
+          />
         </Animated.View>
 
         <Animated.View
