@@ -2,6 +2,9 @@ import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'rea
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useChildStore, AnalysisReport, ReportReasons } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import { DetailSection } from '../../components/report/DetailSection';
+import { TextTipSection } from '../../components/report/TextTipSection';
+import { SimpleListSection } from '../../components/report/SimpleListSection';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const reportHeaderImg = require('../../assets/report-header.png');
@@ -113,6 +116,73 @@ export default function AnalysisReportScreen() {
           </View>
         );
       })}
+
+      {/* Strengths Detail */}
+      {report.strengthsDetail && report.strengthsDetail.length > 0 && (
+        <DetailSection
+          emoji={'\u2728'}
+          title="이런 점이 뛰어나요"
+          items={report.strengthsDetail}
+          accentColor={COLORS.primary}
+        />
+      )}
+
+      {/* Weaknesses Detail */}
+      {report.weaknessesDetail && report.weaknessesDetail.length > 0 && (
+        <DetailSection
+          emoji={'\u26A0\uFE0F'}
+          title="이런 점은 주의하세요"
+          items={report.weaknessesDetail}
+          accentColor="#F5A623"
+        />
+      )}
+
+      {/* Do List */}
+      {report.doList && report.doList.length > 0 && (
+        <SimpleListSection
+          emoji={'\u2705'}
+          title="이렇게 해주세요"
+          items={report.doList}
+          bulletColor="#4CAF50"
+        />
+      )}
+
+      {/* Don't List */}
+      {report.dontList && report.dontList.length > 0 && (
+        <SimpleListSection
+          emoji={'\u274C'}
+          title="이건 피해주세요"
+          items={report.dontList}
+          bulletColor="#F44336"
+        />
+      )}
+
+      {/* Daily Routine Tip */}
+      {report.dailyRoutineTip ? (
+        <TextTipSection
+          emoji={'\uD83D\uDD50'}
+          title="하루 루틴 제안"
+          text={report.dailyRoutineTip}
+        />
+      ) : null}
+
+      {/* Social Tip */}
+      {report.socialTip ? (
+        <TextTipSection
+          emoji={'\uD83D\uDC6B'}
+          title="친구 관계 팁"
+          text={report.socialTip}
+        />
+      ) : null}
+
+      {/* Emotional Tip */}
+      {report.emotionalTip ? (
+        <TextTipSection
+          emoji={'\uD83D\uDC95'}
+          title="감정 관리 팁"
+          text={report.emotionalTip}
+        />
+      ) : null}
 
       {/* Disclaimer */}
       <View style={styles.disclaimerCard}>
