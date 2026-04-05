@@ -169,6 +169,13 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.quickItem}
+              onPress={() => router.push('/(main)/album')}
+            >
+              <Text style={styles.quickEmoji}>📸</Text>
+              <Text style={styles.quickLabel}>성장앨범</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.quickItem}
               onPress={() => router.push('/(main)/timer')}
             >
               <Text style={styles.quickEmoji}>⏱️</Text>

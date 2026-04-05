@@ -34,6 +34,7 @@ export interface Child {
   gender: 'M' | 'F';
   birthDate: string;
   birthTime: string;
+  photoUri: string | null;
   innateData: InnateDataPublic;
   baseline: Record<string, unknown> | null;
   observedTraits: Record<string, unknown> | null;

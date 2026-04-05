@@ -1,16 +1,55 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Alert, Platform } from 'react-native';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
 const CHAR_LIMIT = 500;
+
+interface DailyQuestionInfo {
+  question: string;
+  hint: string;
+}
 
 interface WriteAreaProps {
   content: string;
   onChangeContent: (text: string) => void;
   onSubmit: () => void;
   loading: boolean;
+  dailyQuestion?: DailyQuestionInfo;
+  photoUri?: string | null;
+  onChangePhoto?: (uri: string | null) => void;
 }
 
-export function WriteArea({ content, onChangeContent, onSubmit, loading }: WriteAreaProps) {
+async function pickDiaryImage(): Promise<string | null> {
+  const ImagePicker = await import('expo-image-picker');
+
+  if (Platform.OS !== 'web') {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('\uAD8C\uD55C \uD544\uC694', '\uC0AC\uC9C4 \uB77C\uC774\uBE0C\uB7EC\uB9AC \uC811\uADFC \uAD8C\uD55C\uC774 \uD544\uC694\uD569\uB2C8\uB2E4');
+      return null;
+    }
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: true,
+    quality: 0.7,
+  });
+
+  if (!result.canceled && result.assets[0]) {
+    return result.assets[0].uri;
+  }
+  return null;
+}
+
+export function WriteArea({
+  content,
+  onChangeContent,
+  onSubmit,
+  loading,
+  dailyQuestion,
+  photoUri,
+  onChangePhoto,
+}: WriteAreaProps) {
   const charCount = content.length;
   const isOverLimit = charCount > CHAR_LIMIT;
 
@@ -22,6 +61,13 @@ export function WriteArea({ content, onChangeContent, onSubmit, loading }: Write
 
   return (
     <View style={styles.card}>
+      {dailyQuestion && (
+        <View style={styles.questionCard}>
+          <Text style={styles.questionLabel}>오늘의 질문</Text>
+          <Text style={styles.questionText}>{dailyQuestion.question}</Text>
+          <Text style={styles.questionHint}>{dailyQuestion.hint}</Text>
+        </View>
+      )}
       <TextInput
         style={styles.textArea}
         placeholder="오늘 아이의 모습을 자유롭게 기록해주세요..."
@@ -32,19 +78,42 @@ export function WriteArea({ content, onChangeContent, onSubmit, loading }: Write
         numberOfLines={5}
         textAlignVertical="top"
       />
+      {photoUri ? (
+        <View style={styles.previewWrap}>
+          <Image source={{ uri: photoUri }} style={styles.preview} />
+          {onChangePhoto && (
+            <TouchableOpacity style={styles.removeBtn} onPress={() => onChangePhoto(null)}>
+              <Text style={styles.removeText}>{'\u2715'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : null}
       <View style={styles.footer}>
         <Text style={[styles.counter, isOverLimit && styles.counterOver]}>
-          {charCount} / {CHAR_LIMIT}자
+          {charCount} / {CHAR_LIMIT}{'\uC790'}
         </Text>
-        <TouchableOpacity
-          style={[styles.submitBtn, loading && styles.btnDisabled]}
-          onPress={onSubmit}
-          disabled={loading || isOverLimit}
-        >
-          <Text style={styles.submitText}>
-            {loading ? '분석 중...' : '기록하기'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.actions}>
+          {onChangePhoto && (
+            <TouchableOpacity
+              style={styles.photoBtn}
+              onPress={async () => {
+                const uri = await pickDiaryImage();
+                if (uri) onChangePhoto(uri);
+              }}
+            >
+              <Text style={styles.photoBtnText}>{'\uD83D\uDCF7'}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.submitBtn, loading && styles.btnDisabled]}
+            onPress={onSubmit}
+            disabled={loading || isOverLimit}
+          >
+            <Text style={styles.submitText}>
+              {loading ? '\uBD84\uC11D \uC911...' : '\uAE30\uB85D\uD558\uAE30'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -58,6 +127,34 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
     ...SHADOWS.soft,
   },
+  questionCard: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primary,
+  },
+  questionLabel: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginBottom: SPACING.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  questionText: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: '600',
+    color: COLORS.text,
+    lineHeight: 22,
+    marginBottom: SPACING.xs,
+  },
+  questionHint: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    fontStyle: 'italic',
+  },
   textArea: {
     fontSize: FONT_SIZE.md,
     color: COLORS.text,
@@ -68,6 +165,32 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     marginBottom: SPACING.sm,
     lineHeight: 22,
+  },
+  previewWrap: {
+    position: 'relative',
+    alignSelf: 'flex-start',
+    marginBottom: SPACING.sm,
+  },
+  preview: {
+    width: 120,
+    height: 120,
+    borderRadius: RADIUS.md,
+  },
+  removeBtn: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   footer: {
     flexDirection: 'row',
@@ -81,6 +204,23 @@ const styles = StyleSheet.create({
   counterOver: {
     color: COLORS.error,
     fontWeight: '600',
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  photoBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoBtnText: {
+    fontSize: 18,
   },
   submitBtn: {
     backgroundColor: COLORS.primary,

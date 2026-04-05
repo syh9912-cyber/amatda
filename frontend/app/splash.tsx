@@ -121,15 +121,18 @@ export default function SplashScreen() {
         <Animated.Text style={[styles.sp, { top: '8%', right: '10%', opacity: sp2 }]}>⭐</Animated.Text>
         <Animated.Text style={[styles.sp, { top: '38%', right: '5%', opacity: sp3 }]}>💜</Animated.Text>
 
-        {/* 아이맞춤다이어리 — "맞" 중앙 고정 */}
+        {/* 아이맞춤다이어리 — "맞" 절대 중앙 고정 */}
         <Animated.View style={[styles.nameRow, { opacity: titleOp }]}>
+          {/* 맞 — 정확히 수평 중앙 */}
+          <Text style={styles.centerChar}>맞</Text>
+          {/* 왼쪽: 아(이) — 맞 왼쪽에 절대 배치 */}
           <View style={styles.nameLeft}>
             <Text style={styles.mainChar}>아</Text>
             <Animated.View style={{ width: gW1, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
               <Animated.Text style={[styles.subChar, { opacity: subOp1, transform: [{ scale: subSc1 }] }]}>이</Animated.Text>
             </Animated.View>
           </View>
-          <Text style={styles.centerChar}>맞</Text>
+          {/* 오른쪽: (춤)다이어리 — 맞 오른쪽에 절대 배치 */}
           <View style={styles.nameRight}>
             <Animated.View style={{ width: gW2, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
               <Animated.Text style={[styles.subChar, { opacity: subOp2, transform: [{ scale: subSc2 }] }]}>춤</Animated.Text>
@@ -158,11 +161,11 @@ const styles = StyleSheet.create({
   imgWrap: { alignItems: 'center', marginBottom: 4 },
   img: { width: 320, height: 320 },
   sp: { position: 'absolute', fontSize: 20 },
-  nameRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', marginTop: 8, marginBottom: 10, width: '100%' },
-  nameLeft: { flex: 1, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'flex-end' },
-  nameRight: { flex: 1, flexDirection: 'row', alignItems: 'baseline', justifyContent: 'flex-start' },
+  nameRow: { alignItems: 'center', justifyContent: 'center', marginTop: 8, marginBottom: 10, width: '100%', height: 44 },
+  nameLeft: { position: 'absolute', right: '50%', marginRight: 19, flexDirection: 'row', alignItems: 'baseline' },
+  nameRight: { position: 'absolute', left: '50%', marginLeft: 19, flexDirection: 'row', alignItems: 'baseline' },
   mainChar: { fontSize: 32, fontWeight: '800', color: INDIGO },
-  centerChar: { fontSize: 36, fontWeight: '800', color: INDIGO, marginHorizontal: 1 },
+  centerChar: { fontSize: 36, fontWeight: '800', color: INDIGO },
   subChar: { fontSize: 14, fontWeight: '500', color: GRAY },
   line: { height: 1.5, backgroundColor: '#D4C8BE', marginBottom: 10, borderRadius: 1 },
   eng: { fontSize: 11, color: GRAY, letterSpacing: 1.5 },

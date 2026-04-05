@@ -96,7 +96,8 @@ export default function ChatbotScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
     >
       <Stack.Screen options={{ title: '육아 상담', headerShown: true }} />
 
