@@ -1,0 +1,19 @@
+- generic [ref=e14]:
+  - generic [ref=e16]:
+    - generic [ref=e18] [cursor=pointer]: "A: 소형 (180px)"
+    - generic [ref=e20] [cursor=pointer]: "B: 중형 (240px)"
+    - generic [ref=e22] [cursor=pointer]: "C: 대형 (300px)"
+    - generic [ref=e24] [cursor=pointer]: "D: 특대 (340px)"
+    - generic [ref=e26] [cursor=pointer]: "E: 최대 (380px)"
+  - generic [ref=e27]:
+    - generic [ref=e31]:
+      - generic [ref=e32]: 아
+      - generic [ref=e33]: 이
+      - generic [ref=e34]: 맞
+      - generic [ref=e35]: 춤
+      - generic [ref=e36]: 다
+      - generic [ref=e37]: 이어리
+    - generic [ref=e39]: Child-Customized Diary
+    - generic [ref=e40]:
+      - generic [ref=e41]: Bloomin Corp.
+      - generic [ref=e42]: Growing with every child

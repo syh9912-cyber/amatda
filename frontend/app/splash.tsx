@@ -2,151 +2,138 @@ import { useEffect, useRef } from 'react';
 import { View, Text, Image, Animated, Easing, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { useAuthStore } from '../stores/authStore';
-import { AppNameDisplay } from '../components/ui/AppNameDisplay';
 
 const BG = '#FDF6F0';
+const INDIGO = '#4338CA';
+const GRAY = '#9CA3AF';
 
 export default function SplashScreen() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  const illustOpacity = useRef(new Animated.Value(0)).current;
+  // 캐릭터
+  const illustOp = useRef(new Animated.Value(0)).current;
   const illustScale = useRef(new Animated.Value(0.7)).current;
   const illustY = useRef(new Animated.Value(50)).current;
-
-  // 연필만 움직이는 애니메이션
-  const penRotate = useRef(new Animated.Value(0)).current;
-  const penX = useRef(new Animated.Value(0)).current;
-
-  // 글씨 흔적 (점이 하나씩 나타남)
-  const dot1 = useRef(new Animated.Value(0)).current;
-  const dot2 = useRef(new Animated.Value(0)).current;
-  const dot3 = useRef(new Animated.Value(0)).current;
-
   // 반짝이
-  const sparkle1 = useRef(new Animated.Value(0)).current;
-  const sparkle2 = useRef(new Animated.Value(0)).current;
-  const sparkle3 = useRef(new Animated.Value(0)).current;
-
-  const nameOpacity = useRef(new Animated.Value(0)).current;
-  const nameY = useRef(new Animated.Value(20)).current;
-  const lineWidth = useRef(new Animated.Value(0)).current;
-  const engOpacity = useRef(new Animated.Value(0)).current;
-  const companyOpacity = useRef(new Animated.Value(0)).current;
+  const sp1 = useRef(new Animated.Value(0)).current;
+  const sp2 = useRef(new Animated.Value(0)).current;
+  const sp3 = useRef(new Animated.Value(0)).current;
+  // 아맞다 (처음에 붙어서 나옴)
+  const titleOp = useRef(new Animated.Value(0)).current;
+  const titleScale = useRef(new Animated.Value(0.9)).current;
+  // 글자 벌어지기 (아_맞_다 사이 간격)
+  const gap1 = useRef(new Animated.Value(0)).current; // 아 와 맞 사이
+  const gap2 = useRef(new Animated.Value(0)).current; // 맞 과 다 사이
+  // 사이 글자 (이, 춤, 이어리)
+  const subOp1 = useRef(new Animated.Value(0)).current; // 이
+  const subOp2 = useRef(new Animated.Value(0)).current; // 춤
+  const subOp3 = useRef(new Animated.Value(0)).current; // 이어리
+  const subScale1 = useRef(new Animated.Value(0.3)).current;
+  const subScale2 = useRef(new Animated.Value(0.3)).current;
+  const subScale3 = useRef(new Animated.Value(0.3)).current;
+  // 하단
+  const lineW = useRef(new Animated.Value(0)).current;
+  const engOp = useRef(new Animated.Value(0)).current;
+  const coOp = useRef(new Animated.Value(0)).current;
   const fadeOut = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    const ease = Easing.out(Easing.cubic);
-
-    // 연필 글쓰기 모션 (손목만 움직이는 느낌)
-    const penWriteAnim = Animated.loop(
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(penRotate, { toValue: 8, duration: 300, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-          Animated.timing(penX, { toValue: 4, duration: 300, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-        ]),
-        Animated.parallel([
-          Animated.timing(penRotate, { toValue: -5, duration: 350, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-          Animated.timing(penX, { toValue: -3, duration: 350, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-        ]),
-        Animated.parallel([
-          Animated.timing(penRotate, { toValue: 6, duration: 280, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-          Animated.timing(penX, { toValue: 5, duration: 280, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-        ]),
-        Animated.parallel([
-          Animated.timing(penRotate, { toValue: -3, duration: 320, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-          Animated.timing(penX, { toValue: -2, duration: 320, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-        ]),
-        Animated.parallel([
-          Animated.timing(penRotate, { toValue: 0, duration: 200, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-          Animated.timing(penX, { toValue: 0, duration: 200, easing: Easing.inOut(Easing.sine), useNativeDriver: true }),
-        ]),
-      ])
-    );
-
+    const e = Easing.out(Easing.cubic);
     Animated.sequence([
       Animated.delay(400),
       // 1. 캐릭터 등장
       Animated.parallel([
-        Animated.timing(illustOpacity, { toValue: 1, duration: 1200, easing: ease, useNativeDriver: true }),
+        Animated.timing(illustOp, { toValue: 1, duration: 1200, easing: e, useNativeDriver: true }),
         Animated.timing(illustScale, { toValue: 1, duration: 1400, easing: Easing.out(Easing.back(1.1)), useNativeDriver: true }),
         Animated.timing(illustY, { toValue: 0, duration: 1200, easing: Easing.out(Easing.back(1.15)), useNativeDriver: true }),
       ]),
-      // 2. 글 쓰는 점 하나씩
-      Animated.timing(dot1, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.timing(dot2, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.timing(dot3, { toValue: 1, duration: 300, useNativeDriver: true }),
-      // 3. 반짝이 등장
-      Animated.stagger(250, [
-        Animated.timing(sparkle1, { toValue: 1, duration: 400, useNativeDriver: true }),
-        Animated.timing(sparkle2, { toValue: 1, duration: 350, useNativeDriver: true }),
-        Animated.timing(sparkle3, { toValue: 1, duration: 300, useNativeDriver: true }),
+      // 2. 반짝이
+      Animated.stagger(200, [
+        Animated.timing(sp1, { toValue: 1, duration: 350, useNativeDriver: true }),
+        Animated.timing(sp2, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(sp3, { toValue: 1, duration: 300, useNativeDriver: true }),
       ]),
       Animated.delay(300),
-      // 4. 앱 이름
+      // 3. "아맞다" 등장 (붙어서)
       Animated.parallel([
-        Animated.timing(nameOpacity, { toValue: 1, duration: 1000, easing: ease, useNativeDriver: true }),
-        Animated.timing(nameY, { toValue: 0, duration: 1000, easing: ease, useNativeDriver: true }),
+        Animated.timing(titleOp, { toValue: 1, duration: 800, easing: e, useNativeDriver: true }),
+        Animated.timing(titleScale, { toValue: 1, duration: 800, easing: e, useNativeDriver: true }),
       ]),
-      Animated.timing(lineWidth, { toValue: 56, duration: 500, easing: ease, useNativeDriver: false }),
-      Animated.timing(engOpacity, { toValue: 1, duration: 500, easing: ease, useNativeDriver: true }),
+      Animated.delay(500),
+      // 4. 글자 사이가 벌어지면서 + "이" 등장
+      Animated.parallel([
+        Animated.timing(gap1, { toValue: 1, duration: 600, easing: e, useNativeDriver: false }),
+        Animated.timing(subOp1, { toValue: 1, duration: 500, easing: e, useNativeDriver: true }),
+        Animated.timing(subScale1, { toValue: 1, duration: 500, easing: Easing.out(Easing.back(1.3)), useNativeDriver: true }),
+      ]),
+      // 5. "춤" 등장
+      Animated.parallel([
+        Animated.timing(gap2, { toValue: 1, duration: 600, easing: e, useNativeDriver: false }),
+        Animated.timing(subOp2, { toValue: 1, duration: 500, easing: e, useNativeDriver: true }),
+        Animated.timing(subScale2, { toValue: 1, duration: 500, easing: Easing.out(Easing.back(1.3)), useNativeDriver: true }),
+      ]),
+      // 6. "이어리" 등장
+      Animated.parallel([
+        Animated.timing(subOp3, { toValue: 1, duration: 500, easing: e, useNativeDriver: true }),
+        Animated.timing(subScale3, { toValue: 1, duration: 500, easing: Easing.out(Easing.back(1.3)), useNativeDriver: true }),
+      ]),
+      Animated.delay(300),
+      // 7. 구분선 + 영문 + 회사
+      Animated.timing(lineW, { toValue: 56, duration: 500, easing: e, useNativeDriver: false }),
+      Animated.timing(engOp, { toValue: 1, duration: 500, easing: e, useNativeDriver: true }),
       Animated.delay(200),
-      Animated.timing(companyOpacity, { toValue: 1, duration: 400, easing: ease, useNativeDriver: true }),
-      // 5. 2초 멈춤
+      Animated.timing(coOp, { toValue: 1, duration: 400, easing: e, useNativeDriver: true }),
+      // 8. 2초 멈춤
       Animated.delay(2000),
-      // 6. 페이드아웃
-      Animated.timing(fadeOut, { toValue: 0, duration: 500, easing: ease, useNativeDriver: true }),
+      // 9. 페이드아웃
+      Animated.timing(fadeOut, { toValue: 0, duration: 500, easing: e, useNativeDriver: true }),
     ]).start(() => {
-      penWriteAnim.stop();
       router.replace(isAuthenticated ? '/(main)/home' as never : '/(auth)/login' as never);
     });
-
-    // 캐릭터 등장 후 연필 움직임 시작
-    setTimeout(() => penWriteAnim.start(), 1600);
   }, []);
 
-  const penRotateStr = penRotate.interpolate({ inputRange: [-8, 8], outputRange: ['-12deg', '12deg'] });
+  // gap 보간: 0→1 을 0px→24px로
+  const gapWidth1 = gap1.interpolate({ inputRange: [0, 1], outputRange: [0, 24] });
+  const gapWidth2 = gap2.interpolate({ inputRange: [0, 1], outputRange: [0, 24] });
 
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.content, { opacity: fadeOut }]}>
+        {/* 캐릭터 */}
         <View style={styles.illustWrap}>
-          {/* 캐릭터 (고정) */}
           <Animated.View style={{
-            opacity: illustOpacity,
+            opacity: illustOp,
             transform: [{ translateY: illustY }, { scale: illustScale }],
           }}>
             <Image source={require('../assets/child-diary.png')} style={styles.image} resizeMode="contain" />
           </Animated.View>
-
-          {/* 연필 (손만 움직임) */}
-          <Animated.Text style={[styles.pen, {
-            opacity: illustOpacity,
-            transform: [{ rotate: penRotateStr }, { translateX: penX }],
-          }]}>
-            ✏️
-          </Animated.Text>
-
-          {/* 글씨 흔적 (다이어리 위 점) */}
-          <Animated.Text style={[styles.writeDot, styles.wd1, { opacity: dot1 }]}>.</Animated.Text>
-          <Animated.Text style={[styles.writeDot, styles.wd2, { opacity: dot2 }]}>..</Animated.Text>
-          <Animated.Text style={[styles.writeDot, styles.wd3, { opacity: dot3 }]}>...</Animated.Text>
-
-          {/* 반짝이 */}
-          <Animated.Text style={[styles.sparkle, styles.sp1, { opacity: sparkle1 }]}>✨</Animated.Text>
-          <Animated.Text style={[styles.sparkle, styles.sp2, { opacity: sparkle2 }]}>⭐</Animated.Text>
-          <Animated.Text style={[styles.sparkle, styles.sp3, { opacity: sparkle3 }]}>💜</Animated.Text>
+          <Animated.Text style={[styles.sparkle, styles.sp1, { opacity: sp1 }]}>✨</Animated.Text>
+          <Animated.Text style={[styles.sparkle, styles.sp2, { opacity: sp2 }]}>⭐</Animated.Text>
+          <Animated.Text style={[styles.sparkle, styles.sp3, { opacity: sp3 }]}>💜</Animated.Text>
         </View>
 
-        <Animated.View style={[styles.nameWrap, { opacity: nameOpacity, transform: [{ translateY: nameY }] }]}>
-          <AppNameDisplay size="large" />
+        {/* 아이맞춤다이어리 — 아맞다가 먼저, 사이 글자가 벌어지며 등장 */}
+        <Animated.View style={[styles.nameRow, { opacity: titleOp, transform: [{ scale: titleScale }] }]}>
+          <Text style={styles.mainChar}>아</Text>
+          <Animated.View style={{ width: gapWidth1, overflow: 'hidden', alignItems: 'center' }}>
+            <Animated.Text style={[styles.subChar, { opacity: subOp1, transform: [{ scale: subScale1 }] }]}>이</Animated.Text>
+          </Animated.View>
+          <Text style={styles.mainChar}>맞</Text>
+          <Animated.View style={{ width: gapWidth2, overflow: 'hidden', alignItems: 'center' }}>
+            <Animated.Text style={[styles.subChar, { opacity: subOp2, transform: [{ scale: subScale2 }] }]}>춤</Animated.Text>
+          </Animated.View>
+          <Text style={styles.mainChar}>다</Text>
+          <Animated.View style={{ overflow: 'hidden' }}>
+            <Animated.Text style={[styles.subChar, { opacity: subOp3, transform: [{ scale: subScale3 }] }]}>이어리</Animated.Text>
+          </Animated.View>
         </Animated.View>
 
-        <Animated.View style={[styles.line, { width: lineWidth }]} />
-        <Animated.Text style={[styles.eng, { opacity: engOpacity }]}>Child-Customized Diary</Animated.Text>
+        <Animated.View style={[styles.line, { width: lineW }]} />
+        <Animated.Text style={[styles.eng, { opacity: engOp }]}>Child-Customized Diary</Animated.Text>
 
-        <Animated.View style={[styles.companyWrap, { opacity: companyOpacity }]}>
-          <Text style={styles.companyName}>Bloomin Corp.</Text>
-          <Text style={styles.companyInfo}>Growing with every child</Text>
+        <Animated.View style={[styles.coWrap, { opacity: coOp }]}>
+          <Text style={styles.coName}>Bloomin Corp.</Text>
+          <Text style={styles.coInfo}>Growing with every child</Text>
         </Animated.View>
       </Animated.View>
     </View>
@@ -156,21 +143,32 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: BG, justifyContent: 'center', alignItems: 'center' },
   content: { alignItems: 'center' },
-  illustWrap: { position: 'relative', width: 300, height: 300, alignItems: 'center', justifyContent: 'center' },
-  image: { width: 260, height: 260 },
-  pen: { position: 'absolute', fontSize: 28, bottom: 55, right: 45 },
-  writeDot: { position: 'absolute', fontSize: 18, color: '#7B68EE', fontWeight: '700' },
-  wd1: { bottom: 65, right: 90 },
-  wd2: { bottom: 72, right: 80 },
-  wd3: { bottom: 58, right: 70 },
+  illustWrap: { position: 'relative', width: 360, height: 360, alignItems: 'center', justifyContent: 'center' },
+  image: { width: 340, height: 340 },
   sparkle: { position: 'absolute', fontSize: 22 },
   sp1: { top: 15, right: 20 },
-  sp2: { top: 45, left: 15 },
+  sp2: { top: 50, left: 15 },
   sp3: { bottom: 80, right: 10 },
-  nameWrap: { marginTop: 20, marginBottom: 18 },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginTop: 20,
+    marginBottom: 18,
+  },
+  mainChar: {
+    fontSize: 44,
+    fontWeight: '800',
+    color: INDIGO,
+    letterSpacing: -0.5,
+  },
+  subChar: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: GRAY,
+  },
   line: { height: 2, backgroundColor: '#D4C8BE', marginBottom: 16, borderRadius: 1 },
-  eng: { fontSize: 14, color: '#9CA3AF', letterSpacing: 1.5, fontWeight: '400' },
-  companyWrap: { marginTop: 44, alignItems: 'center' },
-  companyName: { fontSize: 13, color: '#B0A89E', fontWeight: '600', letterSpacing: 1.2 },
-  companyInfo: { fontSize: 10, color: '#C8C0B8', marginTop: 3, letterSpacing: 0.5 },
+  eng: { fontSize: 14, color: GRAY, letterSpacing: 1.5, fontWeight: '400' },
+  coWrap: { marginTop: 44, alignItems: 'center' },
+  coName: { fontSize: 13, color: '#B0A89E', fontWeight: '600', letterSpacing: 1.2 },
+  coInfo: { fontSize: 10, color: '#C8C0B8', marginTop: 3, letterSpacing: 0.5 },
 });
