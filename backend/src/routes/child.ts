@@ -16,6 +16,7 @@ function formatChild(id: string, data: Record<string, unknown>) {
     id, name: data.name, gender: data.gender,
     birthDate: bd.toISOString().split('T')[0],
     birthTime: data.birthTime,
+    photoUri: data.photoUri || null,
     innateData: publicInnate,
     baseline: data.baseline ? (typeof data.baseline === 'string' ? JSON.parse(data.baseline as string) : data.baseline) : null,
     observedTraits: data.observedTraits ? (typeof data.observedTraits === 'string' ? JSON.parse(data.observedTraits as string) : data.observedTraits) : null,
@@ -61,9 +62,10 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
     if (!doc.exists || doc.data()!.userId !== req.userId) { error(res, '자녀를 찾을 수 없습니다', 404); return; }
 
     const updates: Record<string, unknown> = {};
-    const { name, gender, birthDate, birthTime } = req.body;
+    const { name, gender, birthDate, birthTime, photoUri } = req.body;
     if (name) updates.name = name;
     if (gender) updates.gender = gender;
+    if (photoUri !== undefined) updates.photoUri = photoUri;
     if (birthDate || birthTime) {
       const bd = birthDate || doc.data()!.birthDate;
       const bt = birthTime || doc.data()!.birthTime;
@@ -128,6 +130,51 @@ router.post('/:id/analyze', authMiddleware, async (req: Request, res: Response) 
     const formatted = formatChild(updated.id, updated.data()!);
     success(res, { ...formatted, analysisReport: report });
   } catch { error(res, '분석 리포트 생성 중 오류가 발생했습니다', 500); }
+});
+
+router.post('/:id/daily-tracking', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const childDoc = await collections.children.doc(req.params.id as string).get();
+    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) {
+      error(res, '자녀를 찾을 수 없습니다', 404); return;
+    }
+    const { date, feeding, diaper, sleep } = req.body;
+    if (!date) { error(res, '날짜가 필요합니다'); return; }
+
+    const docId = `${req.params.id}_${date}`;
+    const trackingData = {
+      childId: req.params.id,
+      userId: req.userId!,
+      date,
+      feeding: feeding || { type: 'breast', count: 0 },
+      diaper: diaper || { poop: 0, pee: 0, total: 0 },
+      sleep: sleep || { naps: 0, totalHours: 0 },
+      updatedAt: new Date().toISOString(),
+    };
+    await collections.dailyTracking.doc(docId).set(trackingData, { merge: true });
+    success(res, { id: docId, ...trackingData });
+  } catch { error(res, '기록 저장 중 오류가 발생했습니다', 500); }
+});
+
+router.get('/:id/daily-tracking', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const childDoc = await collections.children.doc(req.params.id as string).get();
+    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) {
+      error(res, '자녀를 찾을 수 없습니다', 404); return;
+    }
+    const days = parseInt(req.query.days as string) || 7;
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    const sinceStr = since.toISOString().split('T')[0];
+
+    const snap = await collections.dailyTracking
+      .where('childId', '==', req.params.id)
+      .where('date', '>=', sinceStr)
+      .orderBy('date', 'desc')
+      .get();
+
+    success(res, snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  } catch { error(res, '기록 조회 중 오류가 발생했습니다', 500); }
 });
 
 router.post('/:id/baseline', authMiddleware, async (req: Request, res: Response) => {

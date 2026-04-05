@@ -19,6 +19,7 @@ function getCardsForAge(child: Child): CardData[] {
   if (group === 'infant') {
     return [
       { title: '이유식', emoji: '🍼', route: '/(main)/nutrition' },
+      { title: '아기 기록', emoji: '🍼', route: '/(main)/baby-tracker' },
       { title: '하루일기', emoji: '📔', route: '/(main)/diary' },
       { title: '교구 구독', emoji: '📦', route: '/(main)/subscription' },
       { title: '성장 기록', emoji: '📋', route: '/(main)/report' },

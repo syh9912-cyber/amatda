@@ -60,13 +60,17 @@ export const childApi = {
   get: (id: string) => api.get(`/children/${id}`),
   create: (data: { name: string; gender: string; birthDate: string; birthTime: string }) =>
     api.post('/children', data),
-  update: (id: string, data: { name?: string; gender?: string; birthDate?: string; birthTime?: string }) =>
+  update: (id: string, data: Record<string, unknown>) =>
     api.put(`/children/${id}`, data),
   delete: (id: string) => api.delete(`/children/${id}`),
   saveBaseline: (id: string, answers: unknown[]) =>
     api.post(`/children/${id}/baseline`, { answers }),
   analyze: (id: string, answers: { questionId: string; answer: number }[]) =>
     api.post(`/children/${id}/analyze`, { answers }),
+  saveDailyTracking: (childId: string, data: Record<string, unknown>) =>
+    api.post(`/children/${childId}/daily-tracking`, data),
+  getDailyTracking: (childId: string, days = 7) =>
+    api.get(`/children/${childId}/daily-tracking`, { params: { days: String(days) } }),
 };
 
 // Questions

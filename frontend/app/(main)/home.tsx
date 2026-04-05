@@ -8,8 +8,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { childApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -31,7 +33,32 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const { children, selectedChild, setChildren, selectChild } = useChildStore();
+  const { updateChild } = useChildStore();
   const logout = useAuthStore((s) => s.logout);
+
+  const pickPhoto = async () => {
+    if (!selectedChild) return;
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('권한 필요', '사진 라이브러리 접근 권한이 필요합니다.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    const uri = result.assets[0].uri;
+    const updated = { ...selectedChild, photoUri: uri };
+    updateChild(updated);
+    try {
+      await childApi.update(selectedChild.id, { photoUri: uri } as Record<string, unknown>);
+    } catch {
+      // photo saved locally even if backend fails
+    }
+  };
 
   useEffect(() => {
     loadChildren();
@@ -98,18 +125,20 @@ export default function HomeScreen() {
           <Text style={styles.greeting}>{getGreeting()}</Text>
         </View>
         <View style={styles.headerRight}>
-          {selectedChild?.photoUri ? (
-            <Image
-              source={{ uri: selectedChild.photoUri }}
-              style={styles.childPhoto}
-            />
-          ) : (
-            <View style={styles.childPhotoPlaceholder}>
-              <Text style={styles.childPhotoEmoji}>
-                {selectedChild?.gender === 'F' ? '\uD83D\uDC67' : '\uD83D\uDC66'}
-              </Text>
-            </View>
-          )}
+          <TouchableOpacity onPress={pickPhoto} activeOpacity={0.7}>
+            {selectedChild?.photoUri ? (
+              <Image
+                source={{ uri: selectedChild.photoUri }}
+                style={styles.childPhoto}
+              />
+            ) : (
+              <View style={styles.childPhotoPlaceholder}>
+                <Text style={styles.childPhotoEmoji}>
+                  {selectedChild?.gender === 'F' ? '\uD83D\uDC67' : '\uD83D\uDC66'}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => {
               logout();

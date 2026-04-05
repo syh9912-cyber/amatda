@@ -10,6 +10,7 @@ import { Stack } from 'expo-router';
 import { childApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import { ELEMENT_BOOST_ACTIVITIES } from '../../constants/elementActivities';
 
 const ELEMENT_COLORS: Record<string, string> = {
   wood: COLORS.wood,
@@ -136,6 +137,9 @@ export default function TraitDetailScreen() {
           </Text>
         </View>
       )}
+
+      {/* 에너지 보강 활동 */}
+      <EnergyBoostSection fiveElements={child.innateData.fiveElements} />
     </ScrollView>
   );
 }
@@ -174,6 +178,49 @@ function TagSection({ title, emoji, tags, color }: { title: string; emoji: strin
           </View>
         ))}
       </View>
+    </View>
+  );
+}
+
+function EnergyBoostSection({ fiveElements }: { fiveElements: Record<string, number> }) {
+  const sorted = Object.entries(fiveElements).sort((a, b) => a[1] - b[1]);
+  const weakest = sorted.slice(0, 2);
+
+  return (
+    <View style={styles.boostContainer}>
+      <Text style={styles.sectionTitle}>{'⚡'} 에너지 보강 활동</Text>
+      <Text style={styles.boostSubtext}>부족한 에너지를 채워주는 활동을 추천해요</Text>
+      {weakest.map(([key]) => {
+        const boost = ELEMENT_BOOST_ACTIVITIES[key];
+        if (!boost) return null;
+        const color = ELEMENT_COLORS[key] ?? COLORS.primary;
+        return (
+          <View key={key} style={styles.boostCard}>
+            <View style={[styles.boostBadge, { backgroundColor: color + '20' }]}>
+              <Text style={[styles.boostBadgeText, { color }]}>{boost.label}</Text>
+            </View>
+            <Text style={styles.boostSubTitle}>추천 활동</Text>
+            {boost.activities.map((act, i) => (
+              <View key={i} style={styles.bulletRow}>
+                <Text style={styles.bullet}>{'•'}</Text>
+                <Text style={styles.bulletText}>{act}</Text>
+              </View>
+            ))}
+            <Text style={styles.boostSubTitle}>추천 식품</Text>
+            <View style={styles.tagRow}>
+              {boost.foods.map((f, i) => (
+                <View key={i} style={[styles.tag, { backgroundColor: color + '15', borderColor: color + '30' }]}>
+                  <Text style={[styles.tagText, { color }]}>{f}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={styles.tipBox}>
+              <Text style={styles.tipLabel}>{'💡'} 양육 팁</Text>
+              <Text style={styles.tipText}>{boost.tip}</Text>
+            </View>
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -240,4 +287,20 @@ const styles = StyleSheet.create({
   fallbackTitle: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.sm },
   fallbackText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, textAlign: 'center', lineHeight: 20 },
   fallbackHint: { fontSize: FONT_SIZE.xs, color: COLORS.textLight, marginTop: SPACING.md },
+  boostContainer: { marginTop: SPACING.lg },
+  boostSubtext: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginBottom: SPACING.md, marginTop: -SPACING.sm },
+  boostCard: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+    padding: SPACING.lg, marginBottom: SPACING.md,
+    borderWidth: 1, borderColor: '#F0EDE8',
+  },
+  boostBadge: { alignSelf: 'flex-start', borderRadius: RADIUS.sm, paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, marginBottom: SPACING.md },
+  boostBadgeText: { fontSize: FONT_SIZE.sm, fontWeight: '700' },
+  boostSubTitle: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.sm, marginTop: SPACING.sm },
+  tipBox: {
+    backgroundColor: COLORS.background, borderRadius: RADIUS.md,
+    padding: SPACING.md, marginTop: SPACING.md,
+  },
+  tipLabel: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.xs },
+  tipText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, lineHeight: 20 },
 });
