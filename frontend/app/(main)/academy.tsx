@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Alert,
+  Linking,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { academyApi } from '../../services/api';
@@ -20,6 +21,8 @@ interface Academy {
   distance: number;
   traitMatch: boolean;
   suitableTraits: string[];
+  phone?: string;
+  address?: string;
 }
 
 interface AcademyResponse {
@@ -120,6 +123,29 @@ export default function AcademyScreen() {
                   <Text key={i} style={styles.traitChip}>{t}</Text>
                 ))}
               </View>
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={styles.naverBtn}
+                  onPress={() => {
+                    const query = academy.address
+                      ? `${academy.name} ${academy.address}`
+                      : academy.name;
+                    Linking.openURL(
+                      `https://m.map.naver.com/search2/search.naver?query=${encodeURIComponent(query)}`
+                    );
+                  }}
+                >
+                  <Text style={styles.naverBtnText}>{'🗺️ 네이버 지도'}</Text>
+                </TouchableOpacity>
+                {academy.phone ? (
+                  <TouchableOpacity
+                    style={styles.phoneBtn}
+                    onPress={() => Linking.openURL(`tel:${academy.phone}`)}
+                  >
+                    <Text style={styles.phoneBtnText}>{'📞 전화'}</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
           ))}
 
@@ -197,6 +223,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xs, paddingVertical: 1,
     overflow: 'hidden',
   },
+  actionRow: {
+    flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm,
+    borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: SPACING.sm,
+  },
+  naverBtn: {
+    backgroundColor: '#1EC800', borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs,
+  },
+  naverBtnText: { fontSize: FONT_SIZE.xs, color: '#FFFFFF', fontWeight: '600' },
+  phoneBtn: {
+    backgroundColor: COLORS.primaryLight, borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs,
+  },
+  phoneBtnText: { fontSize: FONT_SIZE.xs, color: COLORS.primary, fontWeight: '600' },
   emptyCard: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
     padding: SPACING.xl, alignItems: 'center',

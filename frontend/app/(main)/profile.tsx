@@ -1,8 +1,9 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, TextInput } from 'react-native';
+import { useState } from 'react';
 import { Stack, router } from 'expo-router';
 import { useChildStore, Child } from '../../stores/childStore';
 import { useAuthStore } from '../../stores/authStore';
-import { childApi } from '../../services/api';
+import { childApi, authApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { UserAvatar } from '../../components/profile/UserAvatar';
 import { EnergyChart } from '../../components/profile/EnergyChart';
@@ -23,16 +24,88 @@ export default function ProfileScreen() {
   const children = useChildStore((s) => s.children);
   const email = useAuthStore((s) => s.email);
   const logout = useAuthStore((s) => s.logout);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
 
   const handleLogout = () => {
-    logout();
-    router.replace('/');
+    Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '로그아웃',
+        style: 'destructive',
+        onPress: () => {
+          logout();
+          router.replace('/');
+        },
+      },
+    ]);
+  };
+
+  const handleChangePassword = () => {
+    if (Platform.OS === 'ios') {
+      Alert.prompt(
+        '비밀번호 변경',
+        '현재 비밀번호를 입력하세요',
+        (currentPw) => {
+          if (!currentPw) return;
+          Alert.prompt(
+            '비밀번호 변경',
+            '새 비밀번호를 입력하세요 (8자 이상)',
+            async (newPw) => {
+              if (!newPw || newPw.length < 8) {
+                Alert.alert('오류', '새 비밀번호는 8자 이상이어야 합니다');
+                return;
+              }
+              try {
+                await authApi.changePassword(currentPw, newPw);
+                Alert.alert('완료', '비밀번호가 변경되었습니다');
+              } catch {
+                Alert.alert('오류', '비밀번호 변경에 실패했습니다. 현재 비밀번호를 확인해주세요.');
+              }
+            },
+            'secure-text',
+          );
+        },
+        'secure-text',
+      );
+    } else {
+      setShowPasswordModal(true);
+    }
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (!currentPassword) {
+      Alert.alert('오류', '현재 비밀번호를 입력하세요');
+      return;
+    }
+    if (!newPassword || newPassword.length < 8) {
+      Alert.alert('오류', '새 비밀번호는 8자 이상이어야 합니다');
+      return;
+    }
+    try {
+      await authApi.changePassword(currentPassword, newPassword);
+      Alert.alert('완료', '비밀번호가 변경되었습니다');
+      setShowPasswordModal(false);
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch {
+      Alert.alert('오류', '비밀번호 변경에 실패했습니다. 현재 비밀번호를 확인해주세요.');
+    }
+  };
+
+  const handleNotificationSettings = () => {
+    Alert.alert('알림 설정', '알림 설정은 준비 중입니다');
+  };
+
+  const handleAppInfo = () => {
+    Alert.alert('앱 정보', '아맞다 v1.0.0\nBlooming Corp.\n아이맞춤다이어리');
   };
 
   const settingsItems = [
-    { emoji: '🔑', label: '비밀번호 변경', onPress: () => {} },
-    { emoji: '🔔', label: '알림 설정', onPress: () => {} },
-    { emoji: 'ℹ️', label: '앱 정보', onPress: () => {} },
+    { emoji: '🔑', label: '비밀번호 변경', onPress: handleChangePassword },
+    { emoji: '🔔', label: '알림 설정', onPress: handleNotificationSettings },
+    { emoji: 'ℹ️', label: '앱 정보', onPress: handleAppInfo },
     { emoji: '🚪', label: '로그아웃', onPress: handleLogout, isDestructive: true },
   ];
 
@@ -70,6 +143,48 @@ export default function ProfileScreen() {
       </View>
 
       <SettingsSection items={settingsItems} />
+
+      {showPasswordModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>비밀번호 변경</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="현재 비밀번호"
+              placeholderTextColor={COLORS.textLight}
+              secureTextEntry
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+            />
+            <TextInput
+              style={styles.modalInput}
+              placeholder="새 비밀번호 (8자 이상)"
+              placeholderTextColor={COLORS.textLight}
+              secureTextEntry
+              value={newPassword}
+              onChangeText={setNewPassword}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => {
+                  setShowPasswordModal(false);
+                  setCurrentPassword('');
+                  setNewPassword('');
+                }}
+              >
+                <Text style={styles.modalCancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
+                onPress={handlePasswordSubmit}
+              >
+                <Text style={styles.modalConfirmText}>변경</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -156,7 +271,7 @@ function ChildrenListCard({ children }: { children: Child[] }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: SPACING.lg, paddingBottom: SPACING.xl * 2 },
+  content: { padding: SPACING.lg, paddingBottom: 100 },
   card: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
     padding: SPACING.lg, marginBottom: SPACING.md,
@@ -201,4 +316,64 @@ const styles = StyleSheet.create({
   menuEmoji: { fontSize: 20, marginRight: SPACING.md },
   menuLabel: { flex: 1, fontSize: FONT_SIZE.md, color: COLORS.text },
   menuArrow: { fontSize: 20, color: COLORS.textLight },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.xl,
+  },
+  modalCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.xl,
+    width: '100%',
+    maxWidth: 340,
+  },
+  modalTitle: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.lg,
+    textAlign: 'center',
+  },
+  modalInput: {
+    backgroundColor: COLORS.background,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
+  },
+  modalCancelBtn: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm + 2,
+    borderRadius: RADIUS.md,
+  },
+  modalCancelText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.md,
+    fontWeight: '500',
+  },
+  modalConfirmBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm + 2,
+    borderRadius: RADIUS.md,
+  },
+  modalConfirmText: {
+    color: '#FFF',
+    fontSize: FONT_SIZE.md,
+    fontWeight: '600',
+  },
 });

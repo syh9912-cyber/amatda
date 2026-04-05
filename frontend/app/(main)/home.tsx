@@ -251,7 +251,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: SPACING.lg, paddingTop: SPACING.xl + 20 },
+  content: { padding: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: 100 },
   center: {
     flex: 1,
     justifyContent: 'center',

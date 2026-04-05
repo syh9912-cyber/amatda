@@ -1,14 +1,22 @@
 import { Tabs } from 'expo-router';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, Image, StyleSheet } from 'react-native';
 
 const ACTIVE_COLOR = '#6366F1';
 const INACTIVE_COLOR = '#B0B0B0';
 
-function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
+const TAB_ICONS = {
+  home: require('../../assets/tab-home.png'),
+  diary: require('../../assets/tab-diary.png'),
+  chatbot: require('../../assets/tab-chat.png'),
+  profile: require('../../assets/tab-more.png'),
+} as const;
+
+function TabIcon({ name, focused }: { name: keyof typeof TAB_ICONS; focused: boolean }) {
   return (
-    <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.6 }}>
-      {emoji}
-    </Text>
+    <Image
+      source={TAB_ICONS[name]}
+      style={{ width: 24, height: 24, opacity: focused ? 1 : 0.4 }}
+    />
   );
 }
 
@@ -38,34 +46,36 @@ export default function MainLayout() {
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: '#E5E5E5',
           paddingTop: 4,
+          paddingBottom: 34,
+          height: 80,
         },
       }}
     >
       <Tabs.Screen
         name="home"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="home" focused={focused} />,
           tabBarLabel: ({ focused }) => <TabLabel label="홈" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="diary"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📝" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="diary" focused={focused} />,
           tabBarLabel: ({ focused }) => <TabLabel label="일기" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="chatbot"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="💬" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="chatbot" focused={focused} />,
           tabBarLabel: ({ focused }) => <TabLabel label="상담" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="⋯" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="profile" focused={focused} />,
           tabBarLabel: ({ focused }) => <TabLabel label="더보기" focused={focused} />,
         }}
       />

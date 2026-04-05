@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Image,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { childApi } from '../../services/api';
@@ -83,6 +84,12 @@ export default function BabyTrackerScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: '아기 기록', headerShown: true }} />
 
+      <Image
+        source={require('../../assets/baby-tracker-bg.png')}
+        style={styles.headerImage}
+        resizeMode="contain"
+      />
+
       <Text style={styles.dateLabel}>{todayStr()}</Text>
 
       <FeedingCard data={data} onChange={setData} />
@@ -106,6 +113,12 @@ export default function BabyTrackerScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { padding: SPACING.lg, paddingBottom: SPACING.xl * 2 },
+  headerImage: {
+    width: 120,
+    height: 120,
+    alignSelf: 'center',
+    marginBottom: SPACING.sm,
+  },
   dateLabel: {
     fontSize: FONT_SIZE.md,
     fontWeight: '600',

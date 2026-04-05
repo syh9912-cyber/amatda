@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Image,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -57,10 +58,22 @@ export default function AlbumScreen() {
             {selectedChild.name}의 성장앨범
           </Text>
         )}
-        <Text style={styles.countText}>
-          {photos.length > 0 ? `${photos.length}장의 사진` : ''}
-        </Text>
-        <PhotoGrid photos={photos} onPhotoPress={setViewerIndex} />
+        {photos.length === 0 ? (
+          <View style={styles.emptyWrap}>
+            <Image
+              source={require('../../assets/empty-album.png')}
+              style={styles.emptyImage}
+              resizeMode="contain"
+            />
+            <Text style={styles.emptyText}>아직 사진이 없습니다</Text>
+            <Text style={styles.emptyHint}>+ 버튼을 눌러 사진을 추가해보세요</Text>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.countText}>{photos.length}장의 사진</Text>
+            <PhotoGrid photos={photos} onPhotoPress={setViewerIndex} />
+          </>
+        )}
       </ScrollView>
 
       {/* FAB */}
@@ -112,5 +125,25 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '600',
     lineHeight: 30,
+  },
+  emptyWrap: {
+    alignItems: 'center',
+    padding: SPACING.xl,
+    marginTop: SPACING.xl,
+  },
+  emptyImage: {
+    width: 160,
+    height: 160,
+    marginBottom: SPACING.sm,
+  },
+  emptyText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.md,
+    fontWeight: '500',
+  },
+  emptyHint: {
+    color: COLORS.textLight,
+    fontSize: FONT_SIZE.sm,
+    marginTop: SPACING.xs,
   },
 });

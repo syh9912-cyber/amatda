@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
 import { weatherApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
@@ -70,10 +70,21 @@ export function WeatherWidget({ childId, lat, lng }: Props) {
   );
 }
 
+function getWeatherImage(description: string) {
+  if (description.includes('맑') || description.includes('sunny') || description.includes('clear')) {
+    return require('../../assets/weather-sunny.png');
+  }
+  if (description.includes('비') || description.includes('rain') || description.includes('shower')) {
+    return require('../../assets/weather-rainy.png');
+  }
+  return require('../../assets/weather-cloudy.png');
+}
+
 function RealWeatherSection({ real }: { real: RealWeatherData }) {
+  const weatherImage = getWeatherImage(real.description);
   return (
     <View style={styles.realRow}>
-      <Text style={styles.weatherIcon}>{real.icon}</Text>
+      <Image source={weatherImage} style={styles.weatherImage} />
       <View style={styles.tempBlock}>
         <Text style={styles.tempText}>{real.temperature}°C</Text>
         <Text style={styles.descText}>{real.description}</Text>
@@ -130,8 +141,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: SPACING.md,
   },
-  weatherIcon: {
-    fontSize: 44,
+  weatherImage: {
+    width: 48,
+    height: 48,
     marginRight: SPACING.sm,
   },
   tempBlock: {

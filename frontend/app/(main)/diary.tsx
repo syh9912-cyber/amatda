@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { observationApi } from '../../services/api';
@@ -124,7 +125,11 @@ export default function DiaryScreen() {
           <ActivityIndicator color={COLORS.primary} style={styles.loader} />
         ) : observations.length === 0 ? (
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyEmoji}>{'📝'}</Text>
+            <Image
+              source={require('../../assets/empty-diary.png')}
+              style={styles.emptyImage}
+              resizeMode="contain"
+            />
             <Text style={styles.emptyText}>
               아직 작성된 관찰 일기가 없습니다
             </Text>
@@ -152,7 +157,7 @@ export default function DiaryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: SPACING.lg, paddingTop: SPACING.md },
+  content: { padding: SPACING.lg, paddingTop: SPACING.md, paddingBottom: 100 },
   childLabel: {
     fontSize: FONT_SIZE.lg,
     fontWeight: '700',
@@ -184,7 +189,7 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
     marginTop: SPACING.md,
   },
-  emptyEmoji: { fontSize: 36, marginBottom: SPACING.sm },
+  emptyImage: { width: 160, height: 160, marginBottom: SPACING.sm },
   emptyText: {
     color: COLORS.textSecondary,
     fontSize: FONT_SIZE.md,

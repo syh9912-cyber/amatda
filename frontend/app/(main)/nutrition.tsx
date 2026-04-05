@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { foodApi } from '../../services/api';
@@ -15,6 +17,8 @@ interface FoodItem {
   name: string;
   benefit: string;
   caution?: string;
+  recipe?: string[];
+  youtubeQuery?: string;
 }
 
 interface FoodGuide {
@@ -26,6 +30,7 @@ interface FoodGuide {
 export default function NutritionScreen() {
   const [guides, setGuides] = useState<FoodGuide[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const selectedChild = useChildStore((s) => s.selectedChild);
 
   useEffect(() => {
@@ -47,6 +52,23 @@ export default function NutritionScreen() {
     }
   };
 
+  const toggleExpand = useCallback((key: string) => {
+    setExpandedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
+  const openYoutube = useCallback((query: string) => {
+    const url = `https://m.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+    Linking.openURL(url);
+  }, []);
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: '영양 가이드', headerShown: true }} />
@@ -67,18 +89,60 @@ export default function NutritionScreen() {
         </View>
       ) : (
         guides.map((guide) =>
-          guide.foods.map((food, idx) => (
-            <View key={`${guide.id}-${idx}`} style={styles.foodCard}>
-              <Text style={styles.foodName}>{food.name}</Text>
-              <Text style={styles.foodBenefit}>{food.benefit}</Text>
-              {food.caution && (
-                <View style={styles.cautionRow}>
-                  <Text style={styles.cautionLabel}>주의</Text>
-                  <Text style={styles.cautionText}>{food.caution}</Text>
-                </View>
-              )}
-            </View>
-          ))
+          guide.foods.map((food, idx) => {
+            const itemKey = `${guide.id}-${idx}`;
+            const isExpanded = expandedItems.has(itemKey);
+            const hasRecipe = food.recipe && food.recipe.length > 0;
+
+            return (
+              <View key={itemKey} style={styles.foodCard}>
+                <Text style={styles.foodName}>{food.name}</Text>
+                <Text style={styles.foodBenefit}>{food.benefit}</Text>
+
+                {food.caution && (
+                  <View style={styles.cautionRow}>
+                    <Text style={styles.cautionLabel}>주의</Text>
+                    <Text style={styles.cautionText}>{food.caution}</Text>
+                  </View>
+                )}
+
+                {hasRecipe && (
+                  <View style={styles.recipeSection}>
+                    <TouchableOpacity
+                      style={styles.recipeToggle}
+                      onPress={() => toggleExpand(itemKey)}
+                    >
+                      <Text style={styles.recipeToggleText}>
+                        {isExpanded ? '레시피 접기 📋' : '레시피 📋'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {isExpanded && (
+                      <View style={styles.recipeCard}>
+                        {food.recipe!.map((step, sIdx) => (
+                          <View key={sIdx} style={styles.recipeStep}>
+                            <Text style={styles.stepNumber}>{sIdx + 1}</Text>
+                            <Text style={styles.stepText}>{step}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {food.youtubeQuery && (
+                  <TouchableOpacity
+                    style={styles.youtubeBtn}
+                    onPress={() => openYoutube(food.youtubeQuery!)}
+                  >
+                    <Text style={styles.youtubeBtnText}>
+                      {'유튜브에서 보기 ▶️'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })
         )
       )}
     </ScrollView>
@@ -133,4 +197,60 @@ const styles = StyleSheet.create({
     marginRight: SPACING.sm,
   },
   cautionText: { flex: 1, fontSize: FONT_SIZE.xs, color: COLORS.text },
+  recipeSection: { marginTop: SPACING.sm },
+  recipeToggle: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+  },
+  recipeToggleText: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  recipeCard: {
+    marginTop: SPACING.sm,
+    backgroundColor: '#F0F7FF',
+    borderRadius: RADIUS.sm,
+    padding: SPACING.md,
+  },
+  recipeStep: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: SPACING.xs,
+  },
+  stepNumber: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.primary,
+    color: '#FFFFFF',
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginRight: SPACING.sm,
+    overflow: 'hidden',
+  },
+  stepText: {
+    flex: 1,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text,
+    lineHeight: 20,
+  },
+  youtubeBtn: {
+    marginTop: SPACING.sm,
+    alignSelf: 'flex-start',
+    backgroundColor: '#FF0000',
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+  },
+  youtubeBtnText: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
 });
