@@ -92,6 +92,13 @@ export default function AnalysisReportScreen() {
         );
       })}
 
+      {/* Disclaimer */}
+      <View style={styles.disclaimerCard}>
+        <Text style={styles.disclaimerText}>
+          이 분석은 아이의 생년월일시 기질 분석과 부모님의 응답을 종합한 결과입니다
+        </Text>
+      </View>
+
       {/* CTA */}
       <TouchableOpacity
         style={styles.ctaButton}
@@ -126,6 +133,11 @@ const styles = StyleSheet.create({
   // Header
   header: {
     alignItems: 'center', marginBottom: SPACING.lg,
+    paddingVertical: SPACING.lg,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05, shadowRadius: 10, elevation: 3,
   },
   headerSubtitle: {
     fontSize: FONT_SIZE.md, color: COLORS.textSecondary,
@@ -180,10 +192,26 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
+  // Disclaimer
+  disclaimerCard: {
+    backgroundColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.lg,
+  },
+  disclaimerText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+
   // CTA
   ctaButton: {
     backgroundColor: COLORS.primary, borderRadius: RADIUS.md,
-    padding: SPACING.md, alignItems: 'center', marginTop: SPACING.md,
+    padding: SPACING.md, alignItems: 'center', marginTop: SPACING.lg,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
   ctaText: {
     color: '#FFFFFF', fontSize: FONT_SIZE.lg, fontWeight: '600',

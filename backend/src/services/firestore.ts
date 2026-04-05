@@ -18,6 +18,7 @@ export const collections = {
   ads: db.collection('ads'),
   subscriptions: db.collection('subscriptions'),
   chatLogs: db.collection('chatLogs'),
+  onboardingQuestions: db.collection('onboardingQuestions'),
 };
 
 /** 문서 ID 생성 */

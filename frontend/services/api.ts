@@ -76,6 +76,8 @@ export const questionApi = {
     if (type) params.type = type;
     return api.get('/questions', { params });
   },
+  onboarding: (ageGroup: string) =>
+    api.get('/questions/onboarding', { params: { ageGroup } }),
 };
 
 // Food Guide

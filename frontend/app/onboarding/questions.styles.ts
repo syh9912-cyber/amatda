@@ -1,0 +1,184 @@
+import { StyleSheet } from 'react-native';
+import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    paddingHorizontal: SPACING.xl,
+    paddingTop: 60,
+  },
+  progressWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+    gap: SPACING.sm,
+  },
+  progressTrack: {
+    flex: 1,
+    height: 8,
+    backgroundColor: COLORS.border,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: COLORS.primary,
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+    minWidth: 40,
+    textAlign: 'right',
+  },
+  questionArea: { flex: 1 },
+  categoryLabel: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.primary,
+    fontWeight: '600',
+    backgroundColor: COLORS.primaryLight,
+    alignSelf: 'flex-start',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    borderRadius: RADIUS.sm,
+    marginBottom: SPACING.sm,
+    overflow: 'hidden',
+  },
+  qNumber: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.primary,
+    fontWeight: '700',
+    marginBottom: SPACING.xs,
+  },
+  qText: {
+    fontSize: FONT_SIZE.xxl,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.xl,
+    lineHeight: 38,
+  },
+  optionsWrap: { gap: SPACING.md },
+  optionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    backgroundColor: COLORS.surface,
+    gap: SPACING.md,
+  },
+  optionSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
+  },
+  optionCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  circleSelected: {
+    backgroundColor: COLORS.primary,
+  },
+  optionCircleText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
+  circleTextSelected: {
+    color: '#FFFFFF',
+  },
+  optionText: {
+    flex: 1,
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+  optionTextSelected: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: SPACING.lg,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  backBtnText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+  },
+  backBtnHidden: {
+    opacity: 0,
+  },
+  skipLink: {
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+  },
+  skipText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZE.sm,
+  },
+  // Analyzing state
+  analyzingContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.xl,
+  },
+  analyzingTitle: {
+    fontSize: FONT_SIZE.xl,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginTop: SPACING.xl,
+    textAlign: 'center',
+  },
+  analyzingDesc: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.sm,
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginTop: SPACING.xl,
+  },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: COLORS.border,
+  },
+  dotActive: {
+    backgroundColor: COLORS.primary,
+  },
+  // Loading state
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.md,
+  },
+});

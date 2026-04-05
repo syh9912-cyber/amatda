@@ -46,44 +46,49 @@ function mockExtractTraits(content: string): ExtractedTraits {
   };
 }
 
-/** OpenAI GPT-4o로 성향 추출 (Phase 4) */
-async function extractTraitsWithAI(
+/** Gemini AI로 성향 추출 */
+async function extractTraitsWithGemini(
   content: string,
   childName: string
 ): Promise<ExtractedTraits> {
   const maskedContent = maskChildName(content, childName);
+  const apiKey = env.GEMINI_API_KEY;
 
-  // API 키 없으면 Mock fallback
-  if (!process.env.OPENAI_API_KEY) {
+  if (!apiKey) {
     return mockExtractTraits(maskedContent);
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: `당신은 아동 발달 전문가입니다. 부모가 작성한 관찰 일기에서 아이의 성향을 추출해주세요.
-반드시 아래 JSON 형식으로만 응답하세요:
-{"emotions":["감정1","감정2"],"socialStyle":"사교적/독립적/관찰형","interests":["관심사1"],"stressResponse":"감정표출형/내면처리형/전환활동형","summary":"한줄 요약"}`,
-          },
-          { role: 'user', content: maskedContent },
-        ],
-        temperature: 0.3,
-        max_tokens: 300,
-      }),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `당신은 아동 발달 전문가입니다. 부모가 작성한 관찰 일기에서 아이의 성향을 추출해주세요.
+반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이 JSON만):
+{"emotions":["감정1","감정2"],"socialStyle":"사교적/독립적/관찰형","interests":["관심사1"],"stressResponse":"감정표출형/내면처리형/전환활동형","summary":"한줄 요약"}
 
-    const data = await response.json() as { choices?: { message?: { content?: string } }[] };
-    const text = data.choices?.[0]?.message?.content ?? '';
-    return JSON.parse(text) as ExtractedTraits;
+관찰 일기:
+${maskedContent}`,
+            }],
+          }],
+          generationConfig: { temperature: 0.3, maxOutputTokens: 300 },
+        }),
+      }
+    );
+
+    const data = await response.json() as {
+      candidates?: { content?: { parts?: { text?: string }[] } }[];
+    };
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]) as ExtractedTraits;
+    }
+    return mockExtractTraits(maskedContent);
   } catch {
     return mockExtractTraits(maskedContent);
   }
@@ -96,7 +101,7 @@ export async function analyzeObservation(
   if (env.MOCK_AI) {
     return mockExtractTraits(maskChildName(content, childName));
   }
-  return extractTraitsWithAI(content, childName);
+  return extractTraitsWithGemini(content, childName);
 }
 
 /** 교차검증 리포트 생성 */
