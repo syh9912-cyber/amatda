@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,38 +9,78 @@ import {
   RefreshControl,
   Image,
   Alert,
+  Animated,
 } from 'react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { childApi } from '../../services/api';
-import { useChildStore } from '../../stores/childStore';
+import { useChildStore, Child } from '../../stores/childStore';
 import { useAuthStore } from '../../stores/authStore';
-import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import { FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { ChildSelector } from '../../components/home/ChildSelector';
 import { TraitSummary } from '../../components/home/TraitSummary';
-import { AgeCards } from '../../components/home/AgeCards';
 import { WeatherWidget } from '../../components/home/WeatherWidget';
+import { HomeTabBar } from '../../components/home/HomeTabBar';
+import { DiaryContent } from '../../components/home/DiaryContent';
+import { AcademyContent } from '../../components/home/AcademyContent';
+import { NutritionContent } from '../../components/home/NutritionContent';
+import { ReportContent } from '../../components/home/ReportContent';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 6) return '편안한 밤이에요';
-  if (hour < 12) return '좋은 아침이에요';
-  if (hour < 18) return '좋은 오후에요';
-  return '좋은 저녁이에요';
+  if (hour < 6) return '\uD3B8\uC548\uD55C \uBC24\uC774\uC5D0\uC694';
+  if (hour < 12) return '\uC88B\uC740 \uC544\uCE68\uC774\uC5D0\uC694';
+  if (hour < 18) return '\uC88B\uC740 \uC624\uD6C4\uC5D0\uC694';
+  return '\uC88B\uC740 \uC800\uB141\uC774\uC5D0\uC694';
 }
+
+const QUICK_ACTIONS = [
+  { label: 'Quality Time', route: '/(main)/timer' },
+  { label: '\uC131\uC7A5\uC568\uBC94', route: '/(main)/album' },
+  { label: '\uD615\uC81C\uAD81\uD569', route: '/(main)/compatibility' },
+  { label: '\uAE30\uC9C8\uBA54\uC774\uD2B8', route: '/(main)/mates' },
+  { label: '\uAD50\uAD6C\uAD6C\uB3C5', route: '/(main)/subscription' },
+] as const;
 
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { children, selectedChild, setChildren, selectChild } = useChildStore();
+  const [selectedTab, setSelectedTab] = useState(0);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  const { children, selectedChild, setChildren, selectChild } =
+    useChildStore();
   const { updateChild } = useChildStore();
   const logout = useAuthStore((s) => s.logout);
 
+  const handleTabChange = useCallback(
+    (index: number) => {
+      if (index === selectedTab) return;
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 120,
+        useNativeDriver: true,
+      }).start(() => {
+        setSelectedTab(index);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      });
+    },
+    [selectedTab, fadeAnim],
+  );
+
   const pickPhoto = async () => {
     if (!selectedChild) return;
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const { status } =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('권한 필요', '사진 라이브러리 접근 권한이 필요합니다.');
+      Alert.alert(
+        '\uAD8C\uD55C \uD544\uC694',
+        '\uC0AC\uC9C4 \uB77C\uC774\uBE0C\uB7EC\uB9AC \uC811\uADFC \uAD8C\uD55C\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.',
+      );
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -54,7 +94,9 @@ export default function HomeScreen() {
     const updated = { ...selectedChild, photoUri: uri };
     updateChild(updated);
     try {
-      await childApi.update(selectedChild.id, { photoUri: uri } as Record<string, unknown>);
+      await childApi.update(selectedChild.id, {
+        photoUri: uri,
+      } as Record<string, unknown>);
     } catch {
       // photo saved locally even if backend fails
     }
@@ -69,7 +111,7 @@ export default function HomeScreen() {
       const res = await childApi.list();
       setChildren(res.data.data);
     } catch {
-      // 토큰 만료 등
+      // token expired etc
     } finally {
       setLoading(false);
     }
@@ -84,7 +126,7 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color="#6366F1" />
       </View>
     );
   }
@@ -92,16 +134,20 @@ export default function HomeScreen() {
   if (children.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={styles.emptyEmoji}>👶</Text>
-        <Text style={styles.emptyText}>등록된 자녀가 없습니다</Text>
+        <Text style={styles.emptyEmoji}>{'\uD83D\uDC76'}</Text>
+        <Text style={styles.emptyText}>
+          \uB4F1\uB85D\uB41C \uC790\uB140\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4
+        </Text>
         <Text style={styles.emptySubtext}>
-          자녀를 등록하고 기질을 분석해보세요
+          \uC790\uB140\uB97C \uB4F1\uB85D\uD558\uACE0 \uAE30\uC9C8\uC744 \uBD84\uC11D\uD574\uBCF4\uC138\uC694
         </Text>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => router.push('/onboarding/child-info')}
         >
-          <Text style={styles.addButtonText}>자녀 등록하기</Text>
+          <Text style={styles.addButtonText}>
+            \uC790\uB140 \uB4F1\uB85D\uD558\uAE30
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -115,42 +161,44 @@ export default function HomeScreen() {
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor={COLORS.primary}
+          tintColor="#6366F1"
         />
       }
     >
-      {/* 헤더 */}
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.greeting}>{getGreeting()}</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity onPress={pickPhoto} activeOpacity={0.7}>
-            {selectedChild?.photoUri ? (
-              <Image
-                source={{ uri: selectedChild.photoUri }}
-                style={styles.childPhoto}
-              />
-            ) : (
-              <View style={styles.childPhotoPlaceholder}>
-                <Text style={styles.childPhotoEmoji}>
-                  {selectedChild?.gender === 'F' ? '\uD83D\uDC67' : '\uD83D\uDC66'}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => {
               logout();
               router.replace('/');
             }}
           >
-            <Text style={styles.logoutText}>로그아웃</Text>
+            <Text style={styles.logoutText}>
+              \uB85C\uADF8\uC544\uC6C3
+            </Text>
           </TouchableOpacity>
         </View>
+        <TouchableOpacity onPress={pickPhoto} activeOpacity={0.7}>
+          {selectedChild?.photoUri ? (
+            <Image
+              source={{ uri: selectedChild.photoUri }}
+              style={styles.childPhoto}
+            />
+          ) : (
+            <View style={styles.childPhotoPlaceholder}>
+              <Text style={styles.childPhotoEmoji}>
+                {selectedChild?.gender === 'F'
+                  ? '\uD83D\uDC67'
+                  : '\uD83D\uDC66'}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
-      {/* 자녀 선택 (다자녀 분기) */}
+      {/* Child Selector */}
       {children.length > 1 && (
         <ChildSelector
           children={children}
@@ -161,164 +209,205 @@ export default function HomeScreen() {
 
       {selectedChild && (
         <>
-          {/* 기질 날씨 위젯 */}
-          <WeatherWidget childId={selectedChild.id} />
+          {/* Circle Tab Bar */}
+          <HomeTabBar
+            selectedIndex={selectedTab}
+            onSelect={handleTabChange}
+          />
 
-          {/* 기질 요약 */}
-          <TraitSummary child={selectedChild} />
+          {/* Tab Content */}
+          <Animated.View
+            style={[styles.tabContent, { opacity: fadeAnim }]}
+          >
+            <TabContentRenderer
+              tabIndex={selectedTab}
+              child={selectedChild}
+            />
+          </Animated.View>
 
-          {/* 섹션: 오늘의 추천 */}
-          <Text style={styles.sectionTitle}>오늘의 추천</Text>
-
-          {/* 연령별 카드 */}
-          <AgeCards child={selectedChild} />
-
-          {/* 섹션: 바로가기 */}
-          <Text style={[styles.sectionTitle, { marginTop: SPACING.xl }]}>
-            바로가기
+          {/* Quick Actions */}
+          <Text style={styles.sectionTitle}>
+            \uBC14\uB85C\uAC00\uAE30
           </Text>
-
-          {/* 퀵 액션 그리드 (3열) */}
-          <View style={styles.quickGrid}>
-            <TouchableOpacity
-              style={styles.quickItem}
-              onPress={() => router.push('/(main)/report')}
-            >
-              <Text style={styles.quickEmoji}>📊</Text>
-              <Text style={styles.quickLabel}>리포트</Text>
-            </TouchableOpacity>
-            {children.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.quickRow}
+          >
+            {QUICK_ACTIONS.map((action) => (
               <TouchableOpacity
-                style={styles.quickItem}
-                onPress={() => router.push('/(main)/compatibility')}
+                key={action.label}
+                style={styles.quickPill}
+                onPress={() => router.push(action.route as never)}
+                activeOpacity={0.7}
               >
-                <Text style={styles.quickEmoji}>💕</Text>
-                <Text style={styles.quickLabel}>형제 궁합</Text>
+                <Text style={styles.quickPillText}>
+                  {action.label}
+                </Text>
               </TouchableOpacity>
-            )}
-            <TouchableOpacity
-              style={styles.quickItem}
-              onPress={() => router.push('/(main)/academy')}
-            >
-              <Text style={styles.quickEmoji}>🏫</Text>
-              <Text style={styles.quickLabel}>학원</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickItem}
-              onPress={() => router.push('/(main)/subscription')}
-            >
-              <Text style={styles.quickEmoji}>📦</Text>
-              <Text style={styles.quickLabel}>교구</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickItem}
-              onPress={() => router.push('/(main)/album')}
-            >
-              <Text style={styles.quickEmoji}>📸</Text>
-              <Text style={styles.quickLabel}>성장앨범</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickItem}
-              onPress={() => router.push('/(main)/timer')}
-            >
-              <Text style={styles.quickEmoji}>⏱️</Text>
-              <Text style={styles.quickLabel}>Quality Time</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickItem}
-              onPress={() => router.push('/(main)/mates')}
-            >
-              <Text style={styles.quickEmoji}>👫</Text>
-              <Text style={styles.quickLabel}>기질 메이트</Text>
-            </TouchableOpacity>
-          </View>
+            ))}
+          </ScrollView>
         </>
       )}
 
-      {/* 자녀 추가 */}
+      {/* Add Child */}
       <TouchableOpacity
         style={styles.addMore}
         onPress={() => router.push('/onboarding/child-info')}
       >
-        <Text style={styles.addMoreText}>+ 자녀 추가</Text>
+        <Text style={styles.addMoreText}>+ \uC790\uB140 \uCD94\uAC00</Text>
       </TouchableOpacity>
 
-      {/* 버전 */}
-      <Text style={styles.version}>아맞다 v1.0.0</Text>
+      {/* Version */}
+      <Text style={styles.version}>
+        \uC544\uB9DE\uB2E4 v1.0.0
+      </Text>
     </ScrollView>
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Tab content dispatcher                                              */
+/* ------------------------------------------------------------------ */
+
+interface TabRendererProps {
+  tabIndex: number;
+  child: Child;
+}
+
+function TabContentRenderer({ tabIndex, child }: TabRendererProps) {
+  switch (tabIndex) {
+    case 0:
+      return <WeatherWidget childId={child.id} />;
+    case 1:
+      return <TraitSummary child={child} />;
+    case 2:
+      return (
+        <DiaryContent
+          childId={child.id}
+          ageMonths={child.ageInfo.months}
+        />
+      );
+    case 3:
+      return (
+        <AcademyContent
+          dominantType={child.innateData.dominantType}
+          ageMonths={child.ageInfo.months}
+        />
+      );
+    case 4:
+      return <NutritionContent ageMonths={child.ageInfo.months} />;
+    case 5:
+      return <ReportContent child={child} />;
+    default:
+      return null;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Styles                                                              */
+/* ------------------------------------------------------------------ */
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: SPACING.lg, paddingTop: SPACING.xl + 20, paddingBottom: 100 },
+  container: {
+    flex: 1,
+    backgroundColor: '#FFF8F0',
+  },
+  content: {
+    padding: SPACING.lg,
+    paddingTop: SPACING.xl + 20,
+    paddingBottom: 100,
+  },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: '#FFF8F0',
     padding: SPACING.xl,
   },
+  /* Header */
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.lg + 4,
+    marginBottom: SPACING.lg,
   },
   headerLeft: {
     flex: 1,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
+    gap: 2,
   },
   greeting: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: '600',
-    color: COLORS.text,
+    fontSize: FONT_SIZE.lg,
+    fontWeight: '700',
+    color: '#1E1E2E',
+  },
+  logoutText: {
+    fontSize: FONT_SIZE.xs,
+    color: '#A0A0B0',
+    marginTop: 2,
   },
   childPhoto: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   childPhotoPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.primaryLight,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E0E0FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   childPhotoEmoji: {
-    fontSize: 20,
+    fontSize: 22,
   },
-  logoutText: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
+  /* Tab content area */
+  tabContent: {
+    marginTop: SPACING.md,
+    minHeight: 200,
   },
+  /* Section title */
   sectionTitle: {
     fontSize: FONT_SIZE.md,
     fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: SPACING.md,
-    marginTop: SPACING.sm,
+    color: '#1E1E2E',
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.sm,
   },
+  /* Quick action pills */
+  quickRow: {
+    gap: SPACING.sm,
+    paddingVertical: SPACING.xs,
+  },
+  quickPill: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  quickPillText: {
+    fontSize: FONT_SIZE.xs,
+    color: '#1E1E2E',
+    fontWeight: '500',
+  },
+  /* Empty state */
   emptyEmoji: { fontSize: 48, marginBottom: SPACING.md },
   emptyText: {
     fontSize: FONT_SIZE.lg,
-    color: COLORS.text,
+    color: '#1E1E2E',
     fontWeight: '600',
     marginBottom: SPACING.xs,
   },
   emptySubtext: {
     fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
+    color: '#6B6B80',
     marginBottom: SPACING.lg,
   },
   addButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#4338CA',
     borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.md,
@@ -328,51 +417,27 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.md,
     fontWeight: '600',
   },
-  quickGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm + 2,
-  },
-  quickItem: {
-    width: '31%',
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-    paddingVertical: SPACING.md + 2,
-    paddingHorizontal: SPACING.sm,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  quickEmoji: { fontSize: 26, marginBottom: SPACING.xs },
-  quickLabel: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.text,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
+  /* Add more */
   addMore: {
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: '#F0F0F0',
     borderStyle: 'dashed',
     borderRadius: RADIUS.md,
     padding: SPACING.md,
     alignItems: 'center',
     marginTop: SPACING.xl,
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
   },
   addMoreText: {
-    color: COLORS.textSecondary,
+    color: '#A0A0B0',
     fontSize: FONT_SIZE.md,
     fontWeight: '500',
   },
+  /* Version */
   version: {
     textAlign: 'center' as const,
     fontSize: 11,
-    color: COLORS.textLight,
+    color: '#A0A0B0',
     marginBottom: SPACING.xl * 2,
-    marginTop: SPACING.sm,
   },
 });
