@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections } from '../services/firestore';
+import { getRecommendedAcademyTypes } from '../services/academy.recommend';
 
 const router = Router();
 
@@ -13,6 +14,41 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+/** GET /api/academies/recommend - trait-based academy type recommendations */
+router.get('/recommend', authMiddleware, (req: Request, res: Response) => {
+  try {
+    const dominantType = req.query.dominantType as string;
+    const ageMonths = parseInt(req.query.ageMonths as string, 10);
+    const lat = parseFloat(req.query.lat as string) || 34.815;
+    const lng = parseFloat(req.query.lng as string) || 126.463;
+    const regionName = (req.query.region as string) || '남악';
+
+    if (!dominantType || isNaN(ageMonths)) {
+      error(res, 'dominantType, ageMonths 파라미터가 필요합니다');
+      return;
+    }
+
+    const recommendations = getRecommendedAcademyTypes(dominantType, ageMonths);
+
+    const withNaverUrls = recommendations.map((rec) => {
+      const query = `${rec.searchQuery} ${regionName}`;
+      const naverMapUrl = `https://m.map.naver.com/search2/search.naver?query=${encodeURIComponent(query)}`;
+      return { ...rec, naverMapUrl, lat, lng };
+    });
+
+    success(res, {
+      dominantType,
+      ageMonths,
+      region: regionName,
+      recommendations: withNaverUrls,
+      total: withNaverUrls.length,
+    });
+  } catch {
+    error(res, '학원 추천 조회 중 오류가 발생했습니다', 500);
+  }
+});
+
+/** GET /api/academies - existing static academy search (fallback) */
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
     const lat = parseFloat(req.query.lat as string);

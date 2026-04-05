@@ -115,6 +115,16 @@ export const academyApi = {
     if (type) params.type = type;
     return api.get('/academies', { params });
   },
+  recommend: (dominantType: string, ageMonths: number, lat?: number, lng?: number, region?: string) => {
+    const params: Record<string, string> = {
+      dominantType,
+      ageMonths: String(ageMonths),
+    };
+    if (lat !== undefined) params.lat = String(lat);
+    if (lng !== undefined) params.lng = String(lng);
+    if (region) params.region = region;
+    return api.get('/academies/recommend', { params });
+  },
 };
 
 // Weather
