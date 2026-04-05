@@ -16,53 +16,77 @@ const ELEMENT_COLORS: Record<string, string> = {
 };
 
 const ELEMENT_LABELS: Record<string, string> = {
-  wood: '목',
-  fire: '화',
-  earth: '토',
-  metal: '금',
-  water: '수',
+  wood: '탐구',
+  fire: '활동',
+  earth: '안정',
+  metal: '분석',
+  water: '감성',
 };
 
 export function TraitSummary({ child }: Props) {
   const { dominantType, fiveElements } = child.innateData;
   const maxVal = Math.max(...Object.values(fiveElements), 1);
+  const report = child.analysisReport;
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => router.push('/(main)/trait-detail')}
-      activeOpacity={0.7}
-    >
-      <View style={styles.headRow}>
-        <Text style={styles.headline}>
-          {child.name} · {dominantType} · {child.ageInfo.label}
-        </Text>
-        <Text style={styles.detailLink}>상세 ›</Text>
-      </View>
-      <View style={styles.barsRow}>
-        {Object.entries(fiveElements).map(([key, value]) => {
-          const ratio = value / maxVal;
-          return (
-            <View key={key} style={styles.barItem}>
-              <Text style={styles.barLabel}>
-                {ELEMENT_LABELS[key] ?? key}
-              </Text>
-              <View style={styles.barTrack}>
-                <View
-                  style={[
-                    styles.barFill,
-                    {
-                      width: `${Math.round(ratio * 100)}%`,
-                      backgroundColor: ELEMENT_COLORS[key] ?? COLORS.primary,
-                    },
-                  ]}
-                />
+    <View style={styles.card}>
+      <TouchableOpacity
+        onPress={() => router.push('/(main)/trait-detail')}
+        activeOpacity={0.7}
+      >
+        <View style={styles.headRow}>
+          <Text style={styles.headline}>
+            {child.name} · {dominantType} · {child.ageInfo.label}
+          </Text>
+          <Text style={styles.detailLink}>상세 ›</Text>
+        </View>
+        <View style={styles.barsRow}>
+          {Object.entries(fiveElements).map(([key, value]) => {
+            const ratio = value / maxVal;
+            return (
+              <View key={key} style={styles.barItem}>
+                <Text style={styles.barLabel}>
+                  {ELEMENT_LABELS[key] ?? key}
+                </Text>
+                <View style={styles.barTrack}>
+                  <View
+                    style={[
+                      styles.barFill,
+                      {
+                        width: `${Math.round(ratio * 100)}%`,
+                        backgroundColor: ELEMENT_COLORS[key] ?? COLORS.primary,
+                      },
+                    ]}
+                  />
+                </View>
               </View>
-            </View>
-          );
-        })}
-      </View>
-    </TouchableOpacity>
+            );
+          })}
+        </View>
+      </TouchableOpacity>
+
+      {/* Report summary if available */}
+      {report ? (
+        <View style={styles.reportSection}>
+          <View style={styles.divider} />
+          <Text style={styles.reportSummary} numberOfLines={3}>
+            {report.summary}
+          </Text>
+          <TouchableOpacity
+            style={styles.reportLink}
+            onPress={() =>
+              router.push({
+                pathname: '/onboarding/analysis-report',
+                params: { childId: child.id },
+              })
+            }
+            activeOpacity={0.7}
+          >
+            <Text style={styles.reportLinkText}>상세 분석 보기 ›</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -103,7 +127,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: COLORS.textLight,
     fontWeight: '500',
-    width: 16,
+    width: 24,
     textAlign: 'center',
   },
   barTrack: {
@@ -116,5 +140,28 @@ const styles = StyleSheet.create({
   barFill: {
     height: 6,
     borderRadius: 3,
+  },
+  // Report summary section
+  reportSection: {
+    marginTop: SPACING.sm,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginBottom: SPACING.sm,
+  },
+  reportSummary: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+  },
+  reportLink: {
+    marginTop: SPACING.xs,
+    alignSelf: 'flex-end',
+  },
+  reportLinkText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
 });

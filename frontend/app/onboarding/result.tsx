@@ -70,7 +70,7 @@ export default function ResultScreen() {
         style={styles.button}
         onPress={() =>
           router.replace({
-            pathname: '/onboarding/intake-form',
+            pathname: '/onboarding/questions',
             params: { childId: childId },
           })
         }
