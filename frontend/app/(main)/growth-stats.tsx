@@ -1,7 +1,8 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert } from 'react-native';
-import { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { useState, useEffect } from 'react';
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
+import { childApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
 type TabKey = 'physical' | 'trait' | 'learning';
@@ -157,9 +158,35 @@ function StatBox({
   );
 }
 
+interface TraitInsight {
+  weekLabel: string;
+  insight: string;
+  reason: string;
+  createdAt: string;
+}
+
 function TraitTab() {
   const selectedChild = useChildStore((s) => s.selectedChild);
   const dominantType = selectedChild?.innateData.dominantType ?? '--';
+  const [insights, setInsights] = useState<TraitInsight[]>([]);
+  const [loadingTraits, setLoadingTraits] = useState(false);
+  const [responseCount, setResponseCount] = useState(0);
+
+  useEffect(() => {
+    if (!selectedChild) return;
+    setLoadingTraits(true);
+    childApi
+      .getDailyTraits(selectedChild.id)
+      .then((res) => {
+        const data = res.data.data;
+        setInsights(data.insights ?? []);
+        setResponseCount(data.responses?.length ?? 0);
+      })
+      .catch(() => {
+        // silently fail
+      })
+      .finally(() => setLoadingTraits(false));
+  }, [selectedChild?.id]);
 
   return (
     <View>
@@ -172,19 +199,39 @@ function TraitTab() {
         </View>
         <View style={styles.traitNotice}>
           <Text style={styles.traitNoticeText}>
-            기질 변화를 확인하려면 정기적으로 분석해주세요
+            매일 질문에 답하면 기질 변화를 추적할 수 있어요 ({responseCount}개 응답 누적)
           </Text>
         </View>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>분석 이력</Text>
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>{'📋'}</Text>
-          <Text style={styles.emptyText}>
-            추가 분석 기록이 쌓이면 변화를 비교할 수 있습니다
-          </Text>
-        </View>
+        <Text style={styles.cardTitle}>기질 변화 타임라인</Text>
+        {loadingTraits ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          </View>
+        ) : insights.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>{'📋'}</Text>
+            <Text style={styles.emptyText}>
+              7개 응답이 쌓이면 첫 기질 변화 인사이트가 생성됩니다
+            </Text>
+          </View>
+        ) : (
+          <View>
+            {insights.map((item, idx) => (
+              <View key={idx} style={styles.timelineItem}>
+                <View style={styles.timelineDot} />
+                {idx < insights.length - 1 && <View style={styles.timelineLine} />}
+                <View style={styles.timelineContent}>
+                  <Text style={styles.timelineWeek}>{item.weekLabel}</Text>
+                  <Text style={styles.timelineInsight}>{item.insight}</Text>
+                  <Text style={styles.timelineReason}>{item.reason}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -385,5 +432,50 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.sm,
     color: COLORS.textSecondary,
     textAlign: 'center',
+  },
+  timelineItem: {
+    flexDirection: 'row',
+    marginBottom: SPACING.md,
+    position: 'relative',
+  },
+  timelineDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: COLORS.primary,
+    marginTop: 4,
+    marginRight: SPACING.md,
+    zIndex: 1,
+  },
+  timelineLine: {
+    position: 'absolute',
+    left: 5,
+    top: 16,
+    bottom: -SPACING.md,
+    width: 2,
+    backgroundColor: COLORS.primaryLight,
+  },
+  timelineContent: {
+    flex: 1,
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: RADIUS.sm,
+    padding: SPACING.md,
+  },
+  timelineWeek: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginBottom: 4,
+  },
+  timelineInsight: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  timelineReason: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    lineHeight: 16,
   },
 });

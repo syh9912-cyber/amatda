@@ -70,6 +70,20 @@ export default function TraitDetailScreen() {
         {activeTab === 'detail' && (
           <DetailContent analysisReport={analysisReport} />
         )}
+
+        {/* Re-analysis button */}
+        <TouchableOpacity
+          style={styles.reAnalyzeBtn}
+          onPress={() =>
+            router.push({
+              pathname: '/onboarding/questions',
+              params: { childId: child.id },
+            })
+          }
+          activeOpacity={0.7}
+        >
+          <Text style={styles.reAnalyzeBtnText}>다시 분석하기</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -205,5 +219,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: TRAIT_COLORS.textBrownLight,
     lineHeight: 22,
+  },
+  reAnalyzeBtn: {
+    backgroundColor: TRAIT_COLORS.coral,
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center' as const,
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  reAnalyzeBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700' as const,
   },
 });

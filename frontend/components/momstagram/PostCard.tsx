@@ -94,7 +94,21 @@ export function PostCard({
           <Text style={styles.avatarText}>{avatarInitial}</Text>
         </View>
         <View style={styles.headerInfo}>
-          <Text style={styles.userName}>{post.userName}</Text>
+          <View style={styles.userNameRow}>
+            <Text style={styles.userName}>{post.userName}</Text>
+            {post.isPrivate && (
+              <View style={styles.privateBadge}>
+                <Text style={styles.privateBadgeText}>
+                  🔒 나만보기
+                </Text>
+              </View>
+            )}
+            {post.category && (
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryBadgeText}>{post.category}</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.timeText}>{timeAgo(post.createdAt)}</Text>
         </View>
       </View>
@@ -220,10 +234,37 @@ const styles = StyleSheet.create({
   headerInfo: {
     flex: 1,
   },
+  userNameRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+  },
   userName: {
     fontSize: FONT_SIZE.sm + 1,
     fontWeight: '600',
     color: '#1E1E2E',
+  },
+  privateBadge: {
+    backgroundColor: '#FFF0E6',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  privateBadgeText: {
+    fontSize: 10,
+    color: '#FF8C5A',
+    fontWeight: '600',
+  },
+  categoryBadge: {
+    backgroundColor: '#E8F8F0',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  categoryBadgeText: {
+    fontSize: 10,
+    color: '#4ECDC4',
+    fontWeight: '600',
   },
   timeText: {
     fontSize: FONT_SIZE.xs,

@@ -168,7 +168,7 @@ function getMonthPillarByTerm(
   sajuMonth: number,
   yearStemIdx: number
 ): { stem: string; branch: string } {
-  // 절기 기반 월지: 사주 월 1=인 ~ 12=축
+  // 절기 기반 월지: 기질 월 1=인 ~ 12=축
   const term = SOLAR_TERMS.find((t) => t.month === sajuMonth);
   const branch = term?.branch ?? '인';
   const branchIdx = EARTHLY_BRANCHES.indexOf(branch as typeof EARTHLY_BRANCHES[number]);
@@ -285,7 +285,7 @@ export function calculateSaju(
   const hour = parseInt(hourStr, 10) || 0;
   const hourPillar = getHourPillar(hour, dayPillar.stemIdx);
 
-  // 사주 배열
+  // 기질 분석 배열
   const allPillars = [yearPillar, monthPillar, dayPillar, hourPillar];
 
   // 오행 집계 및 정규화

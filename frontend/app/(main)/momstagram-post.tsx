@@ -10,14 +10,17 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useChildStore } from '../../stores/childStore';
-import { useMomstagramStore } from '../../stores/momstagramStore';
+import { useMomstagramStore, PostCategory } from '../../stores/momstagramStore';
 import { FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
 const MAX_CONTENT = 500;
+const CATEGORIES: PostCategory[] = ['일상', '학습', '여행', '기념일', '기타'];
+const CORAL = '#FF6B6B';
 
 export default function MomstagramPostScreen() {
   const params = useLocalSearchParams<{
@@ -29,8 +32,11 @@ export default function MomstagramPostScreen() {
   const [imageUri, setImageUri] = useState<string | null>(
     params.prefillImage ?? null,
   );
+  const [category, setCategory] = useState<PostCategory>('일상');
+  const [isPrivate, setIsPrivate] = useState(false);
   const selectedChild = useChildStore((s) => s.selectedChild);
   const addPost = useMomstagramStore((s) => s.addPost);
+  const addPrivatePost = useMomstagramStore((s) => s.addPrivatePost);
 
   const childAge = selectedChild
     ? `${selectedChild.ageInfo.months}개월`
@@ -70,11 +76,20 @@ export default function MomstagramPostScreen() {
       liked: false,
       comments: [],
       createdAt: new Date().toISOString(),
+      category,
+      isPrivate,
     };
-    addPost(newPost);
-    Alert.alert('완료', '게시물이 공유되었습니다.', [
-      { text: '확인', onPress: () => router.back() },
-    ]);
+    if (isPrivate) {
+      addPrivatePost(newPost);
+      Alert.alert('완료', '나만보기 게시물이 저장되었습니다.', [
+        { text: '확인', onPress: () => router.back() },
+      ]);
+    } else {
+      addPost(newPost);
+      Alert.alert('완료', '게시물이 공유되었습니다.', [
+        { text: '확인', onPress: () => router.back() },
+      ]);
+    }
   };
 
   return (
@@ -143,6 +158,59 @@ export default function MomstagramPostScreen() {
           </TouchableOpacity>
         )}
 
+        {/* Category selector */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionLabel}>카테고리</Text>
+          <View style={styles.categoryRow}>
+            {CATEGORIES.map((cat) => {
+              const isActive = category === cat;
+              return (
+                <TouchableOpacity
+                  key={cat}
+                  style={[
+                    styles.categoryPill,
+                    isActive && styles.categoryPillActive,
+                  ]}
+                  onPress={() => setCategory(cat)}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.categoryPillText,
+                      isActive && styles.categoryPillTextActive,
+                    ]}
+                  >
+                    {cat}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Private toggle */}
+        <View style={styles.privateRow}>
+          <View style={styles.privateInfo}>
+            <Text style={styles.privateLock}>
+              {isPrivate ? '\uD83D\uDD12' : '\uD83D\uDD13'}
+            </Text>
+            <View>
+              <Text style={styles.privateLabel}>나만보기</Text>
+              <Text style={styles.privateHint}>
+                {isPrivate
+                  ? '이 게시물은 나에게만 보입니다'
+                  : '모든 사용자에게 공유됩니다'}
+              </Text>
+            </View>
+          </View>
+          <Switch
+            value={isPrivate}
+            onValueChange={setIsPrivate}
+            trackColor={{ false: '#E0E0E0', true: CORAL }}
+            thumbColor="#FFFFFF"
+          />
+        </View>
+
         {/* Submit */}
         <TouchableOpacity
           style={[
@@ -153,7 +221,9 @@ export default function MomstagramPostScreen() {
           disabled={!content.trim()}
           activeOpacity={0.85}
         >
-          <Text style={styles.submitBtnText}>공유하기</Text>
+          <Text style={styles.submitBtnText}>
+            {isPrivate ? '저장하기' : '공유하기'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -248,6 +318,74 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.sm,
     color: '#A0A0B0',
     fontWeight: '500',
+  },
+  /* Category selector */
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    ...SHADOWS.soft,
+  },
+  sectionLabel: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '600',
+    color: '#6B6B80',
+    marginBottom: SPACING.sm,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+  },
+  categoryPill: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs + 2,
+    borderRadius: RADIUS.full,
+    backgroundColor: '#F5F5F5',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  categoryPillActive: {
+    backgroundColor: CORAL,
+    borderColor: CORAL,
+  },
+  categoryPillText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '600',
+    color: '#6B6B80',
+  },
+  categoryPillTextActive: {
+    color: '#FFFFFF',
+  },
+  /* Private toggle */
+  privateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    ...SHADOWS.soft,
+  },
+  privateInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  privateLock: {
+    fontSize: 20,
+  },
+  privateLabel: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: '600',
+    color: '#1E1E2E',
+  },
+  privateHint: {
+    fontSize: FONT_SIZE.xs,
+    color: '#A0A0B0',
+    marginTop: 1,
   },
   /* Submit */
   submitBtn: {

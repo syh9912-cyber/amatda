@@ -20,6 +20,7 @@ export const collections = {
   chatLogs: db.collection('chatLogs'),
   onboardingQuestions: db.collection('onboardingQuestions'),
   dailyTracking: db.collection('dailyTracking'),
+  dailyTraits: db.collection('dailyTraits'),
   posts: db.collection('posts'),
   postLikes: db.collection('postLikes'),
   postComments: db.collection('postComments'),

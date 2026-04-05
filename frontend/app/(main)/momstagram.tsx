@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ import { useChildStore } from '../../stores/childStore';
 import { PostCard } from '../../components/momstagram/PostCard';
 import { CommentsModal } from '../../components/momstagram/CommentsModal';
 
-const TAG_FILTERS = ['전체', '일상', '학습', '여행', '기념일'] as const;
+const TAG_FILTERS = ['전체', '일상', '학습', '여행', '기념일', '기타'] as const;
 type TagFilter = (typeof TAG_FILTERS)[number];
 
 const CORAL = '#FF6B6B';
@@ -28,7 +28,7 @@ const BG = '#FFF5EC';
 const WARM_GRAY = '#9E8E82';
 
 export default function MomstagramScreen() {
-  const { posts, hasMore, toggleLike, addComment, loadMore, refresh } =
+  const { posts, privatePosts, hasMore, toggleLike, addComment, loadMore, refresh, loadPrivatePosts } =
     useMomstagramStore();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,12 +36,26 @@ export default function MomstagramScreen() {
   const [activeTag, setActiveTag] = useState<TagFilter>('전체');
   const insets = useSafeAreaInsets();
 
+  useEffect(() => {
+    loadPrivatePosts();
+  }, [loadPrivatePosts]);
+
+  const allPosts = useMemo(() => {
+    const combined = [...posts, ...privatePosts];
+    combined.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+    return combined;
+  }, [posts, privatePosts]);
+
   const commentPost = commentPostId
-    ? posts.find((p) => p.id === commentPostId) ?? null
+    ? allPosts.find((p) => p.id === commentPostId) ?? null
     : null;
 
   const filteredPosts =
-    activeTag === '전체' ? posts : posts;
+    activeTag === '전체'
+      ? allPosts
+      : allPosts.filter((p) => p.category === activeTag);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

@@ -73,6 +73,10 @@ export const childApi = {
     api.post(`/children/${childId}/daily-tracking`, data),
   getDailyTracking: (childId: string, days = 7) =>
     api.get(`/children/${childId}/daily-tracking`, { params: { days: String(days) } }),
+  saveDailyTrait: (childId: string, data: { question: string; answer: string; date: string }) =>
+    api.post(`/children/${childId}/daily-trait`, data),
+  getDailyTraits: (childId: string) =>
+    api.get(`/children/${childId}/daily-traits`),
 };
 
 // Questions

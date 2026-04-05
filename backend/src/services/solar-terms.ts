@@ -1,7 +1,7 @@
 /**
  * 절기(節氣) 데이터 — 월주 정확한 계산을 위한 절입 시간
  *
- * 사주에서 월주는 음력 월이 아닌 절기를 기준으로 변합니다.
+ * 기질 분석에서 월주는 음력 월이 아닌 절기를 기준으로 변합니다.
  * 예: 입춘(2월 4일경) ~ 경칩(3월 6일경) = 인월(1월)
  *
  * 아래는 양력 날짜 기준 각 월의 절기 시작일 (평균값)
@@ -9,7 +9,7 @@
  */
 
 export interface SolarTerm {
-  month: number;   // 사주 월 (1=인월 ~ 12=축월)
+  month: number;   // 기질 월 (1=인월 ~ 12=축월)
   name: string;    // 절기명
   solarMonth: number;  // 양력 월
   solarDay: number;    // 양력 시작일 (평균)
@@ -32,8 +32,8 @@ export const SOLAR_TERMS: SolarTerm[] = [
 ];
 
 /**
- * 양력 날���로 절기 기반 사주 월 번호를 구합니다.
- * @returns 사주 월 (1~12, 1=인월/입춘~경칩)
+ * 양력 날짜로 절기 기반 기질 월 번호를 구합니다.
+ * @returns 기질 월 (1~12, 1=인월/입춘~경칩)
  */
 export function getSajuMonthByTerm(solarMonth: number, solarDay: number): number {
   // 역순 탐색 — 현재 날짜가 어느 절기 이후인지 체크
@@ -83,7 +83,7 @@ export const YEARLY_SOLAR_TERMS: Record<number, { month: number; day: number }[]
 };
 
 /**
- * 정밀 절기 기반 사주 월 구하기 (연도별 데이터 활용)
+ * 정밀 절기 기반 기질 월 구하기 (연도별 데이터 활용)
  */
 export function getPreciseSajuMonth(year: number, solarMonth: number, solarDay: number): number {
   const yearData = YEARLY_SOLAR_TERMS[year];

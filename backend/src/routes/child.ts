@@ -192,4 +192,141 @@ router.post('/:id/baseline', authMiddleware, async (req: Request, res: Response)
   } catch { error(res, '베이스라인 저장 중 오류가 발생했습니다', 500); }
 });
 
+// ===== Daily Trait Accumulation =====
+
+interface DailyTraitInsight {
+  weekLabel: string;
+  insight: string;
+  reason: string;
+  createdAt: string;
+}
+
+function generateTraitInsight(
+  responses: Array<{ question: string; answer: string; date: string }>,
+  dominantType: string
+): DailyTraitInsight {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const weekNum = Math.ceil(now.getDate() / 7);
+  const weekLabel = `${month}월 ${weekNum}주차`;
+
+  // Keyword-based simple insight generation
+  const allAnswers = responses.map((r) => r.answer).join(' ');
+  let insight = '꾸준히 성장하고 있어요.';
+  let reason = '일상의 작은 변화들이 모여 큰 성장이 됩니다.';
+
+  if (allAnswers.includes('친구') || allAnswers.includes('또래') || allAnswers.includes('함께')) {
+    insight = '사교성이 높아지고 있어요.';
+    reason = '또래와 어울리는 시간이 늘었기 때문입니다.';
+  } else if (allAnswers.includes('집중') || allAnswers.includes('오래') || allAnswers.includes('몰두')) {
+    insight = '집중력이 발달하고 있어요.';
+    reason = '한 가지 활동에 오래 몰두하는 모습이 보입니다.';
+  } else if (allAnswers.includes('활발') || allAnswers.includes('에너지') || allAnswers.includes('운동')) {
+    insight = '활동성이 더욱 커지고 있어요.';
+    reason = '신체 활동에 대한 욕구와 에너지가 넘칩니다.';
+  } else if (allAnswers.includes('감정') || allAnswers.includes('울') || allAnswers.includes('기분')) {
+    insight = '감수성이 풍부해지고 있어요.';
+    reason = '감정 표현이 다양해지고 섬세해졌습니다.';
+  } else if (allAnswers.includes('새') || allAnswers.includes('도전') || allAnswers.includes('시도')) {
+    insight = '도전 정신이 자라고 있어요.';
+    reason = '새로운 것에 대한 호기심과 시도가 늘었습니다.';
+  }
+
+  return {
+    weekLabel,
+    insight,
+    reason,
+    createdAt: now.toISOString(),
+  };
+}
+
+router.post('/:id/daily-trait', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const childDoc = await collections.children.doc(req.params.id as string).get();
+    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) {
+      error(res, '자녀를 찾을 수 없습니다', 404); return;
+    }
+
+    const { question, answer, date } = req.body;
+    if (!question || !answer || !date) {
+      error(res, '질문, 답변, 날짜가 필요합니다'); return;
+    }
+
+    const docId = genId();
+    const traitData = {
+      childId: req.params.id,
+      userId: req.userId!,
+      question,
+      answer,
+      date,
+      createdAt: new Date().toISOString(),
+    };
+    await collections.dailyTraits.doc(docId).set(traitData);
+
+    // Check if 7+ responses accumulated — auto-generate insight
+    const allSnap = await collections.dailyTraits
+      .where('childId', '==', req.params.id)
+      .orderBy('date', 'desc')
+      .get();
+
+    const totalResponses = allSnap.docs.length;
+    let newInsight: DailyTraitInsight | null = null;
+
+    if (totalResponses > 0 && totalResponses % 7 === 0) {
+      const recent7 = allSnap.docs.slice(0, 7).map((d) => d.data() as { question: string; answer: string; date: string });
+      const childData = childDoc.data()!;
+      const innate = typeof childData.innateData === 'string'
+        ? JSON.parse(childData.innateData as string)
+        : childData.innateData;
+
+      newInsight = generateTraitInsight(recent7, innate.dominantType);
+
+      // Store insight in child document's traitInsights array
+      const existingInsights: DailyTraitInsight[] = childData.traitInsights
+        ? (typeof childData.traitInsights === 'string'
+            ? JSON.parse(childData.traitInsights as string)
+            : childData.traitInsights)
+        : [];
+      existingInsights.push(newInsight);
+      await collections.children.doc(req.params.id as string).update({
+        traitInsights: JSON.stringify(existingInsights),
+      });
+    }
+
+    success(res, {
+      id: docId,
+      ...traitData,
+      totalResponses,
+      newInsight,
+    });
+  } catch { error(res, '기질 기록 저장 중 오류가 발생했습니다', 500); }
+});
+
+router.get('/:id/daily-traits', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const childDoc = await collections.children.doc(req.params.id as string).get();
+    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) {
+      error(res, '자녀를 찾을 수 없습니다', 404); return;
+    }
+
+    // Return daily trait responses
+    const snap = await collections.dailyTraits
+      .where('childId', '==', req.params.id)
+      .orderBy('date', 'desc')
+      .get();
+
+    const responses = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    // Return trait insights from child document
+    const childData = childDoc.data()!;
+    const insights: DailyTraitInsight[] = childData.traitInsights
+      ? (typeof childData.traitInsights === 'string'
+          ? JSON.parse(childData.traitInsights as string)
+          : childData.traitInsights)
+      : [];
+
+    success(res, { responses, insights });
+  } catch { error(res, '기질 기록 조회 중 오류가 발생했습니다', 500); }
+});
+
 export default router;

@@ -5,7 +5,7 @@ export interface ApiResponse<T = unknown> {
   error?: string;
 }
 
-// ===== 사주/기질 관련 =====
+// ===== 기질 분석 관련 =====
 export interface FiveElements {
   wood: number;
   fire: number;
