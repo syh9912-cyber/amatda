@@ -50,12 +50,6 @@
       "expo-secure-store",
       "@react-native-community/datetimepicker",
       [
-        "expo-camera",
-        {
-          "cameraPermission": "아이 사진을 촬영하여 프로필과 성장앨범에 사용합니다"
-        }
-      ],
-      [
         "expo-image-picker",
         {
           "photosPermission": "갤러리에서 아이 사진을 선택하여 프로필과 성장앨범에 사용합니다",
