@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
   ActivityIndicator, TouchableOpacity, Alert, Linking,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { academyApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { useLocation } from '../../hooks/useLocation';
-import RecommendCard from '../../components/academy/RecommendCard';
-import TraitExplanation from '../../components/academy/TraitExplanation';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
 
 interface Recommendation {
   category: string;
@@ -46,10 +48,28 @@ interface StaticResponse {
   fallbackMessage: string | null;
 }
 
+type FilterTab = 'all' | 'academy' | 'food' | 'lifestyle';
+
+const FILTER_TABS: { key: FilterTab; label: string }[] = [
+  { key: 'all', label: '전체' },
+  { key: 'academy', label: '학습/학원' },
+  { key: 'food', label: '음식' },
+  { key: 'lifestyle', label: '생활습관' },
+];
+
+const CORAL = '#FF6B6B';
+const CORAL_LIGHT = '#FFF0F0';
+
+/* ------------------------------------------------------------------ */
+/*  Main Screen                                                        */
+/* ------------------------------------------------------------------ */
+
 export default function AcademyScreen() {
+  const router = useRouter();
   const [recData, setRecData] = useState<RecommendResponse | null>(null);
   const [staticData, setStaticData] = useState<StaticResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const selectedChild = useChildStore((s) => s.selectedChild);
   const location = useLocation();
 
@@ -79,138 +99,265 @@ export default function AcademyScreen() {
       setRecData(recRes.data.data);
       setStaticData(staticRes.data.data);
     } catch {
-      Alert.alert('오류', '학원 정보를 불러올 수 없습니다');
+      Alert.alert('오류', '추천 정보를 불러올 수 없습니다');
     } finally {
       setLoading(false);
     }
   };
 
+  const report = selectedChild?.analysisReport;
+  const childName = selectedChild?.name ?? '';
   const isReady = !loading && !location.loading;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: '학원 추천', headerShown: true }} />
+    <View style={styles.screen}>
+      <Stack.Screen options={{ headerShown: false }} />
 
-      {selectedChild && (
-        <View style={styles.headerSection}>
-          <Text style={styles.heading}>
-            {selectedChild.name}에게 맞는 학원 종류
-          </Text>
-          <View style={styles.traitBadge}>
-            <Text style={styles.traitBadgeText}>
-              {selectedChild.innateData.dominantType}
-            </Text>
-          </View>
-          {location.regionName && (
-            <Text style={styles.locationText}>
-              {'📍 '}{location.regionName}
-              {location.error ? ' (기본 위치)' : ''}
-            </Text>
-          )}
-        </View>
-      )}
+      {/* Header */}
+      <Header
+        title={`${childName}를 위한 맞춤 추천`}
+        onBack={() => router.back()}
+      />
 
-      {!isReady ? (
-        <ActivityIndicator
-          size="large"
-          color={COLORS.primary}
-          style={{ marginTop: SPACING.xl }}
-        />
-      ) : (
-        <>
-          {/* Trait-based recommendations */}
-          {recData && recData.recommendations.length > 0 && (
-            <>
-              <Text style={styles.sectionTitle}>
-                추천 학원 종류 ({recData.total}가지)
-              </Text>
-              <TraitExplanation
-                dominantType={selectedChild?.innateData.dominantType || ''}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Filter Tabs */}
+        <FilterTabBar active={activeTab} onChange={setActiveTab} />
+
+        {!isReady ? (
+          <ActivityIndicator
+            size="large"
+            color={COLORS.primary}
+            style={{ marginTop: SPACING.xl * 2 }}
+          />
+        ) : (
+          <>
+            {/* Academy Section */}
+            {(activeTab === 'all' || activeTab === 'academy') && (
+              <AcademySection
+                recData={recData}
+                staticData={staticData}
               />
-              {recData.recommendations.map((rec) => (
-                <RecommendCard key={rec.category} item={rec} />
-              ))}
-            </>
-          )}
+            )}
 
-          {/* Static academies */}
-          {staticData && staticData.academies.length > 0 && (
-            <>
-              <Text style={[styles.sectionTitle, { marginTop: SPACING.lg }]}>
-                주변 등록된 학원 ({staticData.total}곳)
-              </Text>
-              {staticData.academies.map((a) => (
-                <StaticAcademyCard key={a.id} academy={a} />
-              ))}
-            </>
-          )}
+            {/* Study Tips Section */}
+            {(activeTab === 'all' || activeTab === 'academy') && report && (
+              <StudyTipsSection report={report} />
+            )}
 
-          {/* Fallback CTA */}
-          {staticData?.fallback && (
-            <FallbackCard />
-          )}
+            {/* Fallback CTA */}
+            {staticData?.fallback && activeTab !== 'food' && activeTab !== 'lifestyle' && (
+              <FallbackCard />
+            )}
 
-          {/* Empty state */}
-          {recData?.recommendations.length === 0 && (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyText}>
-                해당 연령대의 추천 학원 종류가 없습니다
-              </Text>
-            </View>
-          )}
-        </>
-      )}
+            {/* Empty state */}
+            {recData?.recommendations.length === 0 &&
+             staticData?.academies.length === 0 &&
+             (activeTab === 'all' || activeTab === 'academy') && (
+              <EmptyState text="해당 연령대의 추천 정보가 없습니다" />
+            )}
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Header                                                             */
+/* ------------------------------------------------------------------ */
+
+function Header({ title, onBack }: { title: string; onBack: () => void }) {
+  return (
+    <View style={styles.header}>
+      <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+        <Text style={styles.backArrow}>{'<'}</Text>
+      </TouchableOpacity>
+      <Text style={styles.headerTitle} numberOfLines={1}>
+        {title}
+      </Text>
+      <View style={styles.backBtn} />
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Filter Tab Bar                                                     */
+/* ------------------------------------------------------------------ */
+
+function FilterTabBar({
+  active,
+  onChange,
+}: {
+  active: FilterTab;
+  onChange: (t: FilterTab) => void;
+}) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.tabBarScroll}
+      contentContainerStyle={styles.tabBarContent}
+    >
+      {FILTER_TABS.map((tab) => {
+        const isActive = tab.key === active;
+        return (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.tabPill, isActive && styles.tabPillActive]}
+            onPress={() => onChange(tab.key)}
+          >
+            <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </ScrollView>
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  Academy Section                                                    */
+/* ------------------------------------------------------------------ */
+
+function AcademySection({
+  recData,
+  staticData,
+}: {
+  recData: RecommendResponse | null;
+  staticData: StaticResponse | null;
+}) {
+  const recs = recData?.recommendations ?? [];
+  const statics = staticData?.academies ?? [];
+  if (recs.length === 0 && statics.length === 0) return null;
+
+  return (
+    <View style={styles.section}>
+      <SectionHeader title="학습/학원 추천" />
+
+      {recs.map((rec) => (
+        <AcademyCard key={rec.category} item={rec} />
+      ))}
+
+      {statics.map((a) => (
+        <StaticAcademyCard key={a.id} academy={a} />
+      ))}
+    </View>
+  );
+}
+
+function priorityToPercent(p: number): string {
+  if (p === 1) return '95%';
+  if (p === 2) return '85%';
+  return '70%';
+}
+
+function AcademyCard({ item }: { item: Recommendation }) {
+  const openNaverMap = useCallback(() => {
+    Linking.openURL(item.naverMapUrl);
+  }, [item.naverMapUrl]);
+
+  return (
+    <TouchableOpacity style={styles.card} onPress={openNaverMap} activeOpacity={0.7}>
+      <View style={styles.cardLeft}>
+        <Text style={styles.cardEmoji}>{item.emoji}</Text>
+      </View>
+      <View style={styles.cardCenter}>
+        <Text style={styles.cardTitle}>{item.category}</Text>
+        <Text style={styles.cardSubtitle} numberOfLines={2}>
+          {item.reason}
+        </Text>
+      </View>
+      <View style={styles.cardRight}>
+        <View style={styles.coralBadge}>
+          <Text style={styles.coralBadgeText}>
+            {'추천도 '}{priorityToPercent(item.priority)}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 function StaticAcademyCard({ academy }: { academy: StaticAcademy }) {
-  const openNaverMap = () => {
+  const openNaverMap = useCallback(() => {
     const query = academy.address
       ? `${academy.name} ${academy.address}`
       : academy.name;
     Linking.openURL(
       `https://m.map.naver.com/search2/search.naver?query=${encodeURIComponent(query)}`
     );
-  };
+  }, [academy.name, academy.address]);
 
   return (
-    <View style={styles.staticCard}>
-      <View style={styles.staticHeader}>
-        <Text style={styles.staticName}>{academy.name}</Text>
+    <TouchableOpacity style={styles.card} onPress={openNaverMap} activeOpacity={0.7}>
+      <View style={styles.cardLeft}>
+        <Text style={styles.cardEmoji}>{'🏫'}</Text>
+      </View>
+      <View style={styles.cardCenter}>
+        <Text style={styles.cardTitle}>{academy.name}</Text>
+        <Text style={styles.cardSubtitle} numberOfLines={1}>
+          {academy.category} {'  '}{academy.distance}km
+        </Text>
+      </View>
+      <View style={styles.cardRight}>
         {academy.traitMatch && (
-          <View style={styles.matchBadge}>
-            <Text style={styles.matchText}>기질 적합</Text>
+          <View style={styles.coralBadge}>
+            <Text style={styles.coralBadgeText}>기질 적합</Text>
           </View>
         )}
       </View>
-      <View style={styles.metaRow}>
-        <View style={styles.metaChip}>
-          <Text style={styles.metaText}>{academy.category}</Text>
+    </TouchableOpacity>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Study Tips (checklist)                                             */
+/* ------------------------------------------------------------------ */
+
+function StudyTipsSection({ report }: { report: { studyStyle?: string; parentingTip?: string } }) {
+  const tips: string[] = [];
+  if (report.studyStyle) tips.push(report.studyStyle);
+  if (report.parentingTip) tips.push(report.parentingTip);
+  if (tips.length === 0) return null;
+
+  return (
+    <View style={styles.section}>
+      <SectionHeader title="공부 방법" />
+      {tips.map((tip, i) => (
+        <View key={i} style={styles.checkItem}>
+          <Text style={styles.checkIcon}>{'✅'}</Text>
+          <Text style={styles.checkText}>{tip}</Text>
         </View>
-        <Text style={styles.distance}>{academy.distance}km</Text>
-      </View>
-      <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.naverSmallBtn} onPress={openNaverMap}>
-          <Text style={styles.naverSmallText}>{'🗺️ 지도'}</Text>
-        </TouchableOpacity>
-        {academy.phone ? (
-          <TouchableOpacity
-            style={styles.phoneBtn}
-            onPress={() => Linking.openURL(`tel:${academy.phone}`)}
-          >
-            <Text style={styles.phoneBtnText}>{'📞 전화'}</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
+      ))}
     </View>
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  Section Header                                                     */
+/* ------------------------------------------------------------------ */
+
+function SectionHeader({ title }: { title: string }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Fallback & Empty                                                   */
+/* ------------------------------------------------------------------ */
+
 function FallbackCard() {
   return (
     <View style={styles.fallbackCard}>
-      <Text style={styles.fallbackEmoji}>📦</Text>
+      <Text style={styles.fallbackEmoji}>{'📦'}</Text>
       <Text style={styles.fallbackTitle}>
         우리 동네엔 아직 추천 장소가 부족해요
       </Text>
@@ -224,98 +371,199 @@ function FallbackCard() {
   );
 }
 
+function EmptyState({ text }: { text: string }) {
+  return (
+    <View style={styles.emptyCard}>
+      <Text style={styles.emptyText}>{text}</Text>
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Styles                                                             */
+/* ------------------------------------------------------------------ */
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: SPACING.lg, paddingBottom: SPACING.xl * 2 },
-  headerSection: { marginBottom: SPACING.lg },
-  heading: {
-    fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.text,
-    marginBottom: SPACING.sm,
+  screen: {
+    flex: 1,
+    backgroundColor: '#FFF8F2',
   },
-  traitBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.sm,
+  scrollView: { flex: 1 },
+  content: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xl * 3,
+  },
+
+  /* Header */
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 56,
+    paddingBottom: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    backgroundColor: '#FFF8F2',
+  },
+  backBtn: { width: 36, height: 36, justifyContent: 'center' },
+  backArrow: { fontSize: 22, color: COLORS.text, fontWeight: '600' },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: FONT_SIZE.lg,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+
+  /* Filter Tabs */
+  tabBarScroll: { marginBottom: SPACING.lg },
+  tabBarContent: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
     paddingVertical: SPACING.xs,
-    marginBottom: SPACING.xs,
   },
-  traitBadgeText: {
-    fontSize: FONT_SIZE.sm, fontWeight: '600', color: COLORS.primary,
+  tabPill: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.full,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  locationText: {
-    fontSize: FONT_SIZE.sm, color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
+  tabPillActive: {
+    backgroundColor: CORAL,
+    borderColor: CORAL,
   },
-  sectionTitle: {
-    fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.text,
+  tabText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  tabTextActive: {
+    color: '#FFFFFF',
+  },
+
+  /* Section */
+  section: { marginBottom: SPACING.lg },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: SPACING.md,
   },
-  // Static academy cards
-  staticCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
-    padding: SPACING.md, marginBottom: SPACING.md,
+  sectionTitle: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: '700',
+    color: COLORS.text,
   },
-  staticHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: SPACING.sm,
-  },
-  staticName: {
-    fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.text, flex: 1,
-  },
-  matchBadge: {
-    backgroundColor: COLORS.successLight, borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.sm, paddingVertical: 2,
-  },
-  matchText: { fontSize: FONT_SIZE.xs, color: COLORS.successDark, fontWeight: '600' },
-  metaRow: {
-    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
+
+  /* Card (shared academy card) */
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
     marginBottom: SPACING.sm,
   },
-  metaChip: {
-    backgroundColor: COLORS.primaryLight, borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.sm, paddingVertical: 2,
+  cardLeft: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: CORAL_LIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md,
   },
-  metaText: { fontSize: FONT_SIZE.xs, color: COLORS.primary },
-  distance: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary },
-  actionRow: {
-    flexDirection: 'row', gap: SPACING.sm,
-    borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: SPACING.sm,
+  cardEmoji: { fontSize: 22 },
+  cardCenter: { flex: 1, marginRight: SPACING.sm },
+  cardTitle: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 2,
   },
-  naverSmallBtn: {
-    backgroundColor: '#1EC800', borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs,
+  cardSubtitle: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
   },
-  naverSmallText: { fontSize: FONT_SIZE.xs, color: '#FFFFFF', fontWeight: '600' },
-  phoneBtn: {
-    backgroundColor: COLORS.primaryLight, borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs,
+  cardRight: { alignItems: 'flex-end' },
+  coralBadge: {
+    backgroundColor: CORAL_LIGHT,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
   },
-  phoneBtnText: { fontSize: FONT_SIZE.xs, color: COLORS.primary, fontWeight: '600' },
-  // Fallback
+  coralBadgeText: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '700',
+    color: CORAL,
+  },
+
+  /* Study tips checklist */
+  checkItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  checkIcon: { fontSize: 16, marginRight: SPACING.sm, marginTop: 1 },
+  checkText: {
+    flex: 1,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text,
+    lineHeight: 22,
+  },
+
+  /* Fallback */
   fallbackCard: {
-    backgroundColor: '#FFF8E1', borderRadius: RADIUS.lg,
-    padding: SPACING.xl, alignItems: 'center', marginTop: SPACING.lg,
-    borderWidth: 1, borderColor: '#FFE082',
+    backgroundColor: '#FFF8E1',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.xl,
+    alignItems: 'center',
+    marginTop: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#FFE082',
   },
   fallbackEmoji: { fontSize: 40, marginBottom: SPACING.md },
   fallbackTitle: {
-    fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.text,
-    textAlign: 'center', marginBottom: SPACING.sm,
+    fontSize: FONT_SIZE.md,
+    fontWeight: '600',
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: SPACING.sm,
   },
   fallbackDesc: {
-    fontSize: FONT_SIZE.sm, color: COLORS.textSecondary,
-    textAlign: 'center', lineHeight: 20, marginBottom: SPACING.md,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: SPACING.md,
   },
   fallbackBtn: {
-    backgroundColor: COLORS.secondary, borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.xl, paddingVertical: SPACING.sm,
+    backgroundColor: CORAL,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.sm,
   },
-  fallbackBtnText: { color: '#FFF', fontWeight: '600', fontSize: FONT_SIZE.sm },
-  // Empty
+  fallbackBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: FONT_SIZE.sm,
+  },
+
+  /* Empty */
   emptyCard: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
-    padding: SPACING.xl, alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.md,
+    padding: SPACING.xl,
+    alignItems: 'center',
+    marginTop: SPACING.lg,
   },
-  emptyText: { color: COLORS.textSecondary, textAlign: 'center' },
+  emptyText: {
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    fontSize: FONT_SIZE.sm,
+  },
 });

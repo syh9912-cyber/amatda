@@ -7,21 +7,35 @@ import {
   StyleSheet,
   Animated,
 } from 'react-native';
-import { FONT_SIZE, SPACING } from '../../constants/theme';
+import { FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { MomstagramPost } from '../../stores/momstagramStore';
 
 const CONTENT_COLLAPSE = 100;
+const CORAL = '#FF6B6B';
+const WARM_GRAY = '#9E8E82';
 
-const GENDER_COLORS: Record<string, string> = {
-  F: '#FFB6C1',
-  M: '#87CEEB',
-};
+const AVATAR_COLORS: string[] = [
+  '#FFB088',
+  '#FF9B9B',
+  '#A8D8EA',
+  '#FFD3B6',
+  '#DCEDC1',
+  '#C9B1FF',
+];
 
 interface PostCardProps {
   post: MomstagramPost;
   onLike: (postId: string) => void;
   onComment: (postId: string) => void;
   onShare: (postId: string) => void;
+}
+
+function getAvatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
 function timeAgo(iso: string): string {
@@ -36,7 +50,12 @@ function timeAgo(iso: string): string {
   return `${Math.floor(days / 7)}주 전`;
 }
 
-export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
+export function PostCard({
+  post,
+  onLike,
+  onComment,
+  onShare,
+}: PostCardProps) {
   const [expanded, setExpanded] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const isLong = post.content.length > CONTENT_COLLAPSE;
@@ -64,86 +83,25 @@ export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
     onLike(post.id);
   }, [post.id, onLike, scaleAnim]);
 
-  const genderEmoji = post.childGender === 'F' ? '👧' : '👦';
-  const avatarBg = GENDER_COLORS[post.childGender] ?? '#E0E0FF';
+  const avatarBg = getAvatarColor(post.userName);
+  const avatarInitial = post.userName.charAt(0);
 
   return (
     <View style={styles.card}>
-      {/* Header */}
+      {/* Header row */}
       <View style={styles.header}>
         <View style={[styles.avatar, { backgroundColor: avatarBg }]}>
-          <Text style={styles.avatarEmoji}>{genderEmoji}</Text>
+          <Text style={styles.avatarText}>{avatarInitial}</Text>
         </View>
-        <View style={styles.headerText}>
-          <View style={styles.nameRow}>
-            <Text style={styles.userName}>{post.userName}</Text>
-            <View style={styles.typeBadge}>
-              <Text style={styles.typeBadgeText}>{post.dominantType}</Text>
-            </View>
-          </View>
-          <Text style={styles.meta}>
-            {post.childAge} · {timeAgo(post.createdAt)}
-          </Text>
+        <View style={styles.headerInfo}>
+          <Text style={styles.userName}>{post.userName}</Text>
+          <Text style={styles.timeText}>{timeAgo(post.createdAt)}</Text>
         </View>
       </View>
 
-      {/* Image */}
-      {post.imageUri && (
-        <Image
-          source={{ uri: post.imageUri }}
-          style={styles.postImage}
-          resizeMode="cover"
-        />
-      )}
-
-      {/* Action Bar - Instagram style */}
-      <View style={styles.actionBar}>
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={handleLike}
-          activeOpacity={0.7}
-        >
-          <Animated.Text
-            style={[
-              styles.actionIcon,
-              { transform: [{ scale: scaleAnim }] },
-            ]}
-          >
-            {post.liked ? '❤️' : '🤍'}
-          </Animated.Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => onComment(post.id)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.actionIcon}>{'💬'}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => onShare(post.id)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.actionIcon}>{'📤'}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Like count */}
-      {post.likes > 0 && (
-        <Text style={styles.likeCount}>
-          좋아요 {post.likes}개
-        </Text>
-      )}
-
-      {/* Content */}
+      {/* Text content */}
       <View style={styles.contentWrap}>
-        <Text style={styles.content}>
-          <Text style={styles.contentUserName}>{post.userName}</Text>
-          {'  '}
-          {displayContent}
-        </Text>
+        <Text style={styles.content}>{displayContent}</Text>
       </View>
       {isLong && (
         <TouchableOpacity onPress={() => setExpanded((p) => !p)}>
@@ -153,9 +111,67 @@ export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
         </TouchableOpacity>
       )}
 
+      {/* Photo */}
+      {post.imageUri && (
+        <Image
+          source={{ uri: post.imageUri }}
+          style={styles.postImage}
+          resizeMode="cover"
+        />
+      )}
+
+      {/* Action bar */}
+      <View style={styles.actionBar}>
+        <View style={styles.actionLeft}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={handleLike}
+            activeOpacity={0.7}
+          >
+            <Animated.Text
+              style={[
+                styles.actionIcon,
+                { transform: [{ scale: scaleAnim }] },
+              ]}
+            >
+              {post.liked ? '❤️' : '🤍'}
+            </Animated.Text>
+            <Text style={styles.actionCount}>{post.likes}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => onComment(post.id)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionIcon}>{'💬'}</Text>
+            <Text style={styles.actionCount}>
+              {post.comments.length}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          onPress={() => onShare(post.id)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.moreIcon}>{'···'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Like count label */}
+      {post.likes > 0 && (
+        <Text style={styles.likeLabel}>
+          좋아요 {post.likes}개
+        </Text>
+      )}
+
       {/* Comment preview */}
       {post.comments.length > 0 && (
-        <TouchableOpacity onPress={() => onComment(post.id)}>
+        <TouchableOpacity
+          onPress={() => onComment(post.id)}
+          style={styles.commentPreviewWrap}
+        >
           {post.comments.length > 1 && (
             <Text style={styles.viewAllComments}>
               댓글 {post.comments.length}개 모두 보기
@@ -171,7 +187,7 @@ export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
         </TouchableOpacity>
       )}
 
-      {/* Separator */}
+      {/* Bottom separator */}
       <View style={styles.separator} />
     </View>
   );
@@ -186,101 +202,110 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
+    paddingVertical: SPACING.sm + 4,
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: SPACING.sm,
+    marginRight: SPACING.sm + 2,
   },
-  avatarEmoji: { fontSize: 18 },
-  headerText: { flex: 1 },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
+  avatarText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  headerInfo: {
+    flex: 1,
   },
   userName: {
-    fontSize: FONT_SIZE.sm,
+    fontSize: FONT_SIZE.sm + 1,
     fontWeight: '600',
     color: '#1E1E2E',
   },
-  typeBadge: {
-    backgroundColor: '#F0EDFF',
-    borderRadius: 10,
-    paddingHorizontal: SPACING.xs + 2,
-    paddingVertical: 1,
-  },
-  typeBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#6366F1',
-  },
-  meta: {
-    fontSize: 11,
-    color: '#A0A0B0',
+  timeText: {
+    fontSize: FONT_SIZE.xs,
+    color: WARM_GRAY,
     marginTop: 1,
+  },
+  /* Content */
+  contentWrap: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  content: {
+    fontSize: FONT_SIZE.sm + 1,
+    color: '#1E1E2E',
+    lineHeight: 21,
+  },
+  expandToggle: {
+    fontSize: FONT_SIZE.xs,
+    color: WARM_GRAY,
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
   },
   /* Image */
   postImage: {
     width: '100%',
-    aspectRatio: 1,
-    backgroundColor: '#F0EDE8',
+    aspectRatio: 4 / 3,
+    borderRadius: RADIUS.sm + 2,
+    marginHorizontal: 0,
+    backgroundColor: '#F5EDE5',
   },
-  /* Action Bar */
+  /* Action bar */
   actionBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
+    paddingTop: SPACING.sm + 2,
     paddingBottom: SPACING.xs,
-    gap: SPACING.md,
+  },
+  actionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md + 4,
   },
   actionBtn: {
-    padding: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
   },
-  actionIcon: { fontSize: 22 },
-  /* Like count */
-  likeCount: {
+  actionIcon: { fontSize: 20 },
+  actionCount: {
+    fontSize: FONT_SIZE.sm,
+    color: '#6B6B80',
+    fontWeight: '500',
+  },
+  moreIcon: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: WARM_GRAY,
+    letterSpacing: 1,
+  },
+  /* Like label */
+  likeLabel: {
     fontSize: FONT_SIZE.sm,
     fontWeight: '600',
     color: '#1E1E2E',
     paddingHorizontal: SPACING.md,
     marginBottom: SPACING.xs,
   },
-  /* Content */
-  contentWrap: {
-    paddingHorizontal: SPACING.md,
-  },
-  content: {
-    fontSize: FONT_SIZE.sm,
-    color: '#1E1E2E',
-    lineHeight: 20,
-  },
-  contentUserName: {
-    fontWeight: '600',
-  },
-  expandToggle: {
-    fontSize: FONT_SIZE.xs,
-    color: '#A0A0B0',
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xs,
-  },
   /* Comments */
+  commentPreviewWrap: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.xs,
+  },
   viewAllComments: {
     fontSize: FONT_SIZE.xs,
-    color: '#A0A0B0',
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xs,
+    color: WARM_GRAY,
+    marginBottom: 2,
   },
   commentPreview: {
     fontSize: FONT_SIZE.sm,
     color: '#1E1E2E',
-    paddingHorizontal: SPACING.md,
-    paddingTop: 2,
     lineHeight: 20,
   },
   commentUser: {
@@ -288,8 +313,8 @@ const styles = StyleSheet.create({
   },
   /* Separator */
   separator: {
-    height: 1,
-    backgroundColor: '#F0F0F0',
-    marginTop: SPACING.sm + 2,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#F0E8E0',
+    marginTop: SPACING.sm,
   },
 });

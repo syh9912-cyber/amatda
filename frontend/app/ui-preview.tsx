@@ -36,18 +36,18 @@ const TRAITS = [
 ];
 
 const FEATURES = [
-  { emoji: '\u{1F4D6}', label: 'Learning', sub: 'Creative writing' },
-  { emoji: '\u{1F3EB}', label: 'Academy', sub: '2 nearby' },
-  { emoji: '\u{1F957}', label: 'Nutrition', sub: 'Brain foods' },
-  { emoji: '\u{1F4E6}', label: 'Kits', sub: 'New arrivals' },
+  { emoji: '\📖', label: 'Learning', sub: 'Creative writing' },
+  { emoji: '\🏫', label: 'Academy', sub: '2 nearby' },
+  { emoji: '\🥗', label: 'Nutrition', sub: 'Brain foods' },
+  { emoji: '\📦', label: 'Kits', sub: 'New arrivals' },
 ];
 
 const QUICK_ACTIONS = [
-  { emoji: '\u{1F4CA}', label: 'Report' },
-  { emoji: '\u{1F495}', label: 'Compat' },
-  { emoji: '\u{23F1}', label: 'Timer' },
-  { emoji: '\u{1F4F8}', label: 'Album' },
-  { emoji: '\u{1F46B}', label: 'Mate' },
+  { emoji: '\📊', label: 'Report' },
+  { emoji: '\💕', label: 'Compat' },
+  { emoji: '\⏱', label: 'Timer' },
+  { emoji: '\📸', label: 'Album' },
+  { emoji: '\👫', label: 'Mate' },
 ];
 
 /* ═══════════════════════════════════════════
@@ -122,12 +122,12 @@ function StyleAStories() {
   const flatRef = useRef<FlatList>(null);
 
   const storyCircles = [
-    { emoji: '\u{2600}\u{FE0F}', label: 'Weather', ring: '#FF9F43' },
-    { emoji: '\u{1F331}', label: 'Trait', ring: '#38D9A9' },
-    { emoji: '\u{1F4D4}', label: 'Diary', ring: '#6C5CE7' },
-    { emoji: '\u{1F4F8}', label: 'Album', ring: '#FF6B6B' },
-    { emoji: '\u{23F1}', label: 'Timer', ring: '#38BDF8' },
-    { emoji: '\u{1F4CA}', label: 'Report', ring: '#FFC078' },
+    { emoji: '\☀\️', label: 'Weather', ring: '#FF9F43' },
+    { emoji: '\🌱', label: 'Trait', ring: '#38D9A9' },
+    { emoji: '\📔', label: 'Diary', ring: '#6C5CE7' },
+    { emoji: '\📸', label: 'Album', ring: '#FF6B6B' },
+    { emoji: '\⏱', label: 'Timer', ring: '#38BDF8' },
+    { emoji: '\📊', label: 'Report', ring: '#FFC078' },
   ];
 
   const cards = [
@@ -137,7 +137,7 @@ function StyleAStories() {
       accent: '#FF9F43',
       content: (
         <View style={sa.cardInner}>
-          <Text style={sa.cardBigTemp}>26\u00B0</Text>
+          <Text style={sa.cardBigTemp}>26\°</Text>
           <Text style={sa.cardWeatherLabel}>Partly Cloudy</Text>
           <View style={sa.cardDivider} />
           <Text style={sa.cardMsg}>Perfect for outdoor exploration!</Text>
@@ -192,7 +192,7 @@ function StyleAStories() {
             </Text>
           </View>
           <View style={sa.diaryTags}>
-            {['\u{1F60A} Happy', '\u{1F914} Curious', '\u{1F60C} Calm'].map((m) => (
+            {['\😊 Happy', '\🤔 Curious', '\😌 Calm'].map((m) => (
               <View key={m} style={sa.moodChip}>
                 <Text style={sa.moodChipText}>{m}</Text>
               </View>
@@ -475,7 +475,7 @@ function StyleBWidgets() {
       <View style={sb.heroWidget}>
         <View style={sb.heroTop}>
           <View>
-            <Text style={sb.heroTemp}>26\u00B0C</Text>
+            <Text style={sb.heroTemp}>26\°C</Text>
             <Text style={sb.heroWeather}>Partly Cloudy</Text>
           </View>
           <View style={sb.heroTraitBadge}>
@@ -506,7 +506,7 @@ function StyleBWidgets() {
       {/* 2 Medium Widgets side by side */}
       <View style={sb.medRow}>
         <View style={[sb.medWidget, { backgroundColor: '#FFF5EC' }]}>
-          <Text style={sb.medIcon}>{'\u{1F4D4}'}</Text>
+          <Text style={sb.medIcon}>{'\📔'}</Text>
           <Text style={sb.medTitle}>Diary</Text>
           <Text style={sb.medSub}>What happened today?</Text>
           <View style={sb.medBtn}>
@@ -514,7 +514,7 @@ function StyleBWidgets() {
           </View>
         </View>
         <View style={[sb.medWidget, { backgroundColor: '#ECFDF5' }]}>
-          <Text style={sb.medIcon}>{'\u{1F3EB}'}</Text>
+          <Text style={sb.medIcon}>{'\🏫'}</Text>
           <Text style={sb.medTitle}>Academy</Text>
           <Text style={sb.medSub}>2 nearby matches</Text>
           <View style={[sb.medBtn, { backgroundColor: '#10B981' }]}>
@@ -526,9 +526,9 @@ function StyleBWidgets() {
       {/* 3 Small Widgets in a row */}
       <View style={sb.smRow}>
         {[
-          { emoji: '\u{1F957}', label: 'Nutrition', val: '3 tips', bg: '#FEF3C7' },
-          { emoji: '\u{23F1}', label: 'Timer', val: '45 min', bg: '#EDE9FE' },
-          { emoji: '\u{1F4F8}', label: 'Album', val: '12 pics', bg: '#FCE7F3' },
+          { emoji: '\🥗', label: 'Nutrition', val: '3 tips', bg: '#FEF3C7' },
+          { emoji: '\⏱', label: 'Timer', val: '45 min', bg: '#EDE9FE' },
+          { emoji: '\📸', label: 'Album', val: '12 pics', bg: '#FCE7F3' },
         ].map((w) => (
           <View key={w.label} style={[sb.smWidget, { backgroundColor: w.bg }]}>
             <Text style={sb.smEmoji}>{w.emoji}</Text>
@@ -727,12 +727,12 @@ function StyleCTimeline() {
       time: '08:00',
       dateLabel: 'Today',
       title: 'Weather Update',
-      summary: '26\u00B0C, Partly Cloudy',
+      summary: '26\°C, Partly Cloudy',
       dot: '#FF9F43',
       expandContent: (
         <View style={sc.expandBox}>
-          <Text style={sc.expandTemp}>26\u00B0C</Text>
-          <Text style={sc.expandWeather}>Partly Cloudy | Feels 28\u00B0C | 62%</Text>
+          <Text style={sc.expandTemp}>26\°C</Text>
+          <Text style={sc.expandWeather}>Partly Cloudy | Feels 28\°C | 62%</Text>
           <Text style={sc.expandMsg}>Great day for outdoor exploration!</Text>
           <View style={sc.expandTags}>
             {['Nature Walk', 'Water Play', 'Sketching'].map((t) => (
@@ -827,7 +827,7 @@ function StyleCTimeline() {
           <Text style={sc.greetName}>Seungha</Text>
           <Text style={sc.greetSub}>Explorer | Elementary</Text>
         </View>
-        <Text style={sc.greetTemp}>26\u00B0C</Text>
+        <Text style={sc.greetTemp}>26\°C</Text>
       </View>
 
       {/* Timeline */}
@@ -1046,10 +1046,10 @@ function StyleDTinder() {
       bg: ['#FF9F43', '#FF6B6B'],
       content: (
         <View style={sd.cardBody}>
-          <Text style={sd.cardEmoji}>{'\u{2600}\u{FE0F}'}</Text>
+          <Text style={sd.cardEmoji}>{'\☀\️'}</Text>
           <Text style={sd.bigLabel}>Weather</Text>
-          <Text style={sd.bigTemp}>26\u00B0C</Text>
-          <Text style={sd.bigSub}>Partly Cloudy | Feels 28\u00B0C</Text>
+          <Text style={sd.bigTemp}>26\°C</Text>
+          <Text style={sd.bigSub}>Partly Cloudy | Feels 28\°C</Text>
           <View style={sd.divider} />
           <Text style={sd.cardMsg}>Perfect day for outdoor exploration!</Text>
           <View style={sd.tagRow}>
@@ -1067,7 +1067,7 @@ function StyleDTinder() {
       bg: ['#6C5CE7', '#A29BFE'],
       content: (
         <View style={sd.cardBody}>
-          <Text style={sd.cardEmoji}>{'\u{1F331}'}</Text>
+          <Text style={sd.cardEmoji}>{'\🌱'}</Text>
           <Text style={sd.bigLabel}>Trait Profile</Text>
           <Text style={sd.bigName}>Seungha</Text>
           <Text style={sd.bigSub}>Explorer | Elementary</Text>
@@ -1094,7 +1094,7 @@ function StyleDTinder() {
       bg: ['#38D9A9', '#20C997'],
       content: (
         <View style={sd.cardBody}>
-          <Text style={sd.cardEmoji}>{'\u{1F3AF}'}</Text>
+          <Text style={sd.cardEmoji}>{'\🎯'}</Text>
           <Text style={sd.bigLabel}>Today's Activity</Text>
           <View style={sd.divider} />
           {FEATURES.map((f) => (
@@ -1105,7 +1105,7 @@ function StyleDTinder() {
                 <Text style={sd.actSub}>{f.sub}</Text>
               </View>
               <View style={sd.actArrow}>
-                <Text style={sd.actArrowText}>{'\u{2192}'}</Text>
+                <Text style={sd.actArrowText}>{'\→'}</Text>
               </View>
             </View>
           ))}
@@ -1117,7 +1117,7 @@ function StyleDTinder() {
       bg: ['#38BDF8', '#0EA5E9'],
       content: (
         <View style={sd.cardBody}>
-          <Text style={sd.cardEmoji}>{'\u{1F4D4}'}</Text>
+          <Text style={sd.cardEmoji}>{'\📔'}</Text>
           <Text style={sd.bigLabel}>Diary</Text>
           <Text style={sd.bigSub}>What did Seungha discover today?</Text>
           <View style={sd.divider} />
@@ -1125,7 +1125,7 @@ function StyleDTinder() {
             <Text style={sd.diaryPlaceholder}>Tap to start writing...</Text>
           </View>
           <View style={sd.moodRow}>
-            {['\u{1F60A}', '\u{1F914}', '\u{1F60C}', '\u{1F929}', '\u{1F622}'].map((m) => (
+            {['\😊', '\🤔', '\😌', '\🤩', '\😢'].map((m) => (
               <View key={m} style={sd.moodCircle}>
                 <Text style={sd.moodText}>{m}</Text>
               </View>
@@ -1139,7 +1139,7 @@ function StyleDTinder() {
       bg: ['#FFC078', '#FF9F43'],
       content: (
         <View style={sd.cardBody}>
-          <Text style={sd.cardEmoji}>{'\u{1F3EB}'}</Text>
+          <Text style={sd.cardEmoji}>{'\🏫'}</Text>
           <Text style={sd.bigLabel}>Academy</Text>
           <Text style={sd.bigSub}>Recommendations for Seungha</Text>
           <View style={sd.divider} />
@@ -1341,8 +1341,8 @@ function StyleEMagazine() {
           </View>
         </View>
         <View style={se.heroGraphic}>
-          <Text style={se.heroEmoji}>{'\u{1F30F}'}</Text>
-          <Text style={se.heroTemp}>26\u00B0C</Text>
+          <Text style={se.heroEmoji}>{'\🌏'}</Text>
+          <Text style={se.heroTemp}>26\°C</Text>
         </View>
       </View>
 
@@ -1350,9 +1350,9 @@ function StyleEMagazine() {
       <View style={se.wideCard}>
         <View style={se.wideCardInner}>
           <View style={se.wideLeft}>
-            <Text style={se.wideIcon}>{'\u{26C5}'}</Text>
+            <Text style={se.wideIcon}>{'\⛅'}</Text>
             <View>
-              <Text style={se.wideTemp}>26\u00B0C</Text>
+              <Text style={se.wideTemp}>26\°C</Text>
               <Text style={se.wideSub}>Partly Cloudy</Text>
             </View>
           </View>
@@ -1392,14 +1392,14 @@ function StyleEMagazine() {
 
           {/* Short: Timer */}
           <View style={[se.mCard, se.mCardShort, { backgroundColor: '#E0F7FA' }]}>
-            <Text style={se.mShortEmoji}>{'\u{23F1}'}</Text>
+            <Text style={se.mShortEmoji}>{'\⏱'}</Text>
             <Text style={se.mShortLabel}>Timer</Text>
             <Text style={se.mShortVal}>45 min</Text>
           </View>
 
           {/* Medium: Nutrition */}
           <View style={[se.mCard, se.mCardMed, { backgroundColor: '#FFF8E1' }]}>
-            <Text style={se.mMedEmoji}>{'\u{1F957}'}</Text>
+            <Text style={se.mMedEmoji}>{'\🥗'}</Text>
             <Text style={se.mMedTitle}>Nutrition</Text>
             <Text style={se.mMedSub}>Brain foods for Explorer types</Text>
             <View style={se.mMedBtn}>
@@ -1412,7 +1412,7 @@ function StyleEMagazine() {
         <View style={se.masonryCol}>
           {/* Medium: Diary */}
           <View style={[se.mCard, se.mCardMed, { backgroundColor: '#FFEBEE' }]}>
-            <Text style={se.mMedEmoji}>{'\u{1F4D4}'}</Text>
+            <Text style={se.mMedEmoji}>{'\📔'}</Text>
             <Text style={se.mMedTitle}>Diary</Text>
             <Text style={se.mMedSub}>What happened today?</Text>
             <View style={[se.mMedBtn, { backgroundColor: '#EF5350' }]}>
@@ -1422,7 +1422,7 @@ function StyleEMagazine() {
 
           {/* Medium: Academy */}
           <View style={[se.mCard, se.mCardMed, { backgroundColor: '#E8F5E9' }]}>
-            <Text style={se.mMedEmoji}>{'\u{1F3EB}'}</Text>
+            <Text style={se.mMedEmoji}>{'\🏫'}</Text>
             <Text style={se.mMedTitle}>Academy</Text>
             <Text style={se.mMedSub}>2 nearby matches</Text>
             <View style={[se.mMedBtn, { backgroundColor: '#43A047' }]}>
@@ -1432,7 +1432,7 @@ function StyleEMagazine() {
 
           {/* Short: Album */}
           <View style={[se.mCard, se.mCardShort, { backgroundColor: '#FCE4EC' }]}>
-            <Text style={se.mShortEmoji}>{'\u{1F4F8}'}</Text>
+            <Text style={se.mShortEmoji}>{'\📸'}</Text>
             <Text style={se.mShortLabel}>Album</Text>
             <Text style={se.mShortVal}>12 photos</Text>
           </View>

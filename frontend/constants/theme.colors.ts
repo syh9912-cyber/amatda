@@ -1,54 +1,51 @@
 export const COLORS = {
-  // Premium palette
-  primary: '#6366F1',
-  primaryDark: '#4F46E5',
-  primaryLight: '#E0E0FF',
-  secondary: '#FF6B6B',
-  secondaryDark: '#E5524A',
-  secondaryLight: '#FFE0E0',
-  background: '#F8F7F4',
+  // Main
+  primary: '#FF8C5A',
+  primaryLight: '#FFE4D6',
+  primaryDark: '#E67040',
+  secondary: '#4ECDC4',
+  secondaryLight: '#D4F5F2',
+
+  // Background
+  background: '#FFF5EC',
   surface: '#FFFFFF',
-  text: '#1E1E2E',
-  textSecondary: '#6B6B80',
-  textLight: '#A0A0B0',
-  border: '#F0EDE8',
-  error: '#EF4444',
-  success: '#22C55E',
+  surfaceLight: '#FFF9F5',
+
+  // Text
+  text: '#2D2016',
+  textSecondary: '#8B7355',
+  textLight: '#B8A690',
+
+  // Border
+  border: '#F0E6DA',
+  borderLight: '#F7F0E8',
 
   // Status
-  info: '#6366F1',
-  infoLight: '#EEF0FF',
-  infoDark: '#4F46E5',
-  warning: '#F59E0B',
-  warningLight: '#FEF3C7',
-  warningDark: '#D97706',
-  successLight: '#DCFCE7',
-  successDark: '#16A34A',
-  errorLight: '#FEE2E2',
-  errorDark: '#DC2626',
+  success: '#4ECDC4',
+  successLight: '#D4F5F2',
+  successDark: '#2BA89E',
+  error: '#FF6B6B',
+  warning: '#FFD93D',
+  info: '#6C9CE2',
+  infoLight: '#E0ECFA',
 
-  // Accent
-  coral: '#FF6B6B',
-  mint: '#38D9A9',
-  amber: '#FFC078',
+  // Trait colors
+  wood: '#7BC67E',
+  fire: '#FF8C5A',
+  earth: '#FFD93D',
+  metal: '#6C9CE2',
+  water: '#B48EE0',
 
-  // Temperament
-  wood: '#38D9A9',
-  fire: '#FF6B6B',
-  earth: '#FFC078',
-  metal: '#6366F1',
-  water: '#38BDF8',
-
-  // Age themes
-  infant: '#FFF1E6',
-  toddler: '#E6F9F0',
-  elementary: '#EEF0FF',
+  // Age theme
+  infant: '#FFE0B2',
+  toddler: '#C8E6C9',
+  elementary: '#BBDEFB',
 };
 
 export const GRADIENTS = {
-  primary: ['#6366F1', '#818CF8'] as const,
-  warm: ['#FF6B6B', '#FFC078'] as const,
-  cool: ['#38D9A9', '#6366F1'] as const,
-  sunset: ['#FF6B6B', '#F472B6'] as const,
-  nature: ['#38D9A9', '#34D399'] as const,
+  primary: ['#FF8C5A', '#FFB088'] as const,
+  warm: ['#FF8C5A', '#FFD93D'] as const,
+  cool: ['#4ECDC4', '#6C9CE2'] as const,
+  sunset: ['#FF8C5A', '#FF6B6B'] as const,
+  nature: ['#4ECDC4', '#7BC67E'] as const,
 };
