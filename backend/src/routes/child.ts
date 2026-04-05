@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { calculateSaju } from '../services/saju.calculator';
 import { calculateAge } from '../services/age.calculator';
-import { generateChildReport } from '../services/child.report';
+import { generateChildReport, monthsToAgeGroup } from '../services/child.report';
 import { success, error } from '../utils/response';
 import { collections, genId, toISO } from '../services/firestore';
 
@@ -111,8 +111,13 @@ router.post('/:id/analyze', authMiddleware, async (req: Request, res: Response) 
     const baseline = JSON.stringify({ answers, completedAt: new Date().toISOString() });
     await collections.children.doc(req.params.id as string).update({ baseline });
 
+    // Compute age group from birth date
+    const birthDate = data.birthDate ? new Date(data.birthDate as string) : new Date();
+    const ageMonths = calculateAge(birthDate).months;
+    const ageGroup = monthsToAgeGroup(ageMonths);
+
     // Generate static report
-    const report = generateChildReport(innate.dominantType, answers);
+    const report = generateChildReport(innate.dominantType, answers, ageGroup);
 
     // Save report to child document
     await collections.children.doc(req.params.id as string).update({

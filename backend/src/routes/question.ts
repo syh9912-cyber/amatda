@@ -17,7 +17,6 @@ router.get('/onboarding', authMiddleware, async (req: Request, res: Response) =>
 
     const snap = await collections.onboardingQuestions
       .where('ageGroup', '==', ageGroup)
-      .orderBy('order', 'asc')
       .get();
 
     const questions = snap.docs.map((d) => {
@@ -36,6 +35,7 @@ router.get('/onboarding', authMiddleware, async (req: Request, res: Response) =>
       };
     });
 
+    questions.sort((a, b) => a.order - b.order);
     success(res, questions);
   } catch (err) {
     error(res, '온보딩 질문 조회 중 오류가 발생했습니다', 500);
