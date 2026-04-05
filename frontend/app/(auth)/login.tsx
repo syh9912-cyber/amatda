@@ -96,7 +96,10 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.version}>v1.0.0</Text>
+        <View style={styles.footer}>
+          <Text style={styles.version}>v1.0.0</Text>
+          <Text style={styles.companyName}>Bloomin Corp.</Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -105,7 +108,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAF8',
+    backgroundColor: '#FDF6F0',
   },
   scroll: {
     flexGrow: 1,
@@ -165,10 +168,20 @@ const styles = StyleSheet.create({
     color: '#4338CA',
     fontWeight: '600',
   },
+  footer: {
+    alignItems: 'center' as const,
+    paddingBottom: 28,
+    paddingTop: 16,
+  },
   version: {
-    textAlign: 'center',
     fontSize: 11,
     color: '#C0C0C0',
-    paddingBottom: 24,
+  },
+  companyName: {
+    fontSize: 10,
+    color: '#D0C8C0',
+    marginTop: 4,
+    letterSpacing: 1,
+    fontWeight: '500' as const,
   },
 });

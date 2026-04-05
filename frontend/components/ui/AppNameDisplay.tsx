@@ -6,8 +6,8 @@ interface AppNameDisplayProps {
 }
 
 const CONFIG = {
-  large: { main: 40, sub: 16 },
-  small: { main: 28, sub: 12 },
+  large: { main: 52, sub: 20 },
+  small: { main: 32, sub: 14 },
 } as const;
 
 const INDIGO = '#4338CA';
