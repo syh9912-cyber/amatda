@@ -60,7 +60,7 @@ export default function RegisterScreen() {
         bounces={false}
       >
         <View style={styles.header}>
-          <Text style={styles.emoji}>{'\u{1F33F}'}</Text>
+          <Text style={styles.emoji}>{'🌿'}</Text>
           <Text style={styles.title}>회원가입</Text>
           <Text style={styles.subtitle}>
             아맞다에 오신 것을 환영합니다
@@ -70,7 +70,7 @@ export default function RegisterScreen() {
         <View style={styles.body}>
           <View style={styles.form}>
             <AuthInput
-              icon={'\u{1F4E7}'}
+              icon="📧"
               placeholder="이메일"
               value={email}
               onChangeText={setEmail}
@@ -78,14 +78,14 @@ export default function RegisterScreen() {
               autoCapitalize="none"
             />
             <AuthInput
-              icon={'\u{1F512}'}
+              icon="🔒"
               placeholder="비밀번호 (6자 이상)"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
             />
             <AuthInput
-              icon={'\u{1F512}'}
+              icon="🔒"
               placeholder="비밀번호 확인"
               value={confirm}
               onChangeText={setConfirm}

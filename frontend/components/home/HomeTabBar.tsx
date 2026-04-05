@@ -1,16 +1,18 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 
 export interface HomeTab {
   emoji: string;
   label: string;
+  navigateTo?: string;
 }
 
 export const HOME_TABS: HomeTab[] = [
-  { emoji: '\u2600\uFE0F', label: '\uB0A0\uC528' },
-  { emoji: '\uD83D\uDCD4', label: '\uC77C\uAE30' },
-  { emoji: '\uD83C\uDFEB', label: '\uD559\uC6D0' },
-  { emoji: '\uD83E\uDD57', label: '\uC601\uC591' },
-  { emoji: '\uD83D\uDCCA', label: '\uB9AC\uD3EC\uD2B8' },
+  { emoji: '📔', label: '일기' },
+  { emoji: '🏫', label: '학원' },
+  { emoji: '🥗', label: '영양' },
+  { emoji: '📊', label: '리포트' },
+  { emoji: '📸', label: '맘스타', navigateTo: '/(main)/momstagram' },
 ];
 
 interface Props {
@@ -22,12 +24,18 @@ export function HomeTabBar({ selectedIndex, onSelect }: Props) {
   return (
     <View style={styles.container}>
       {HOME_TABS.map((tab, idx) => {
-        const active = idx === selectedIndex;
+        const active = !tab.navigateTo && idx === selectedIndex;
         return (
           <TouchableOpacity
             key={tab.label}
             style={styles.tabWrapper}
-            onPress={() => onSelect(idx)}
+            onPress={() => {
+              if (tab.navigateTo) {
+                router.push(tab.navigateTo as never);
+              } else {
+                onSelect(idx);
+              }
+            }}
             activeOpacity={0.7}
           >
             <View

@@ -8,26 +8,11 @@ interface Props {
   compact?: boolean;
 }
 
-const ELEMENT_COLORS: Record<string, string> = {
-  wood: COLORS.wood,
-  fire: COLORS.fire,
-  earth: COLORS.earth,
-  metal: COLORS.metal,
-  water: COLORS.water,
-};
-
-const ELEMENT_LABELS: Record<string, string> = {
-  wood: '탐구',
-  fire: '활동',
-  earth: '안정',
-  metal: '분석',
-  water: '감성',
-};
-
 export function TraitSummary({ child, compact }: Props) {
-  const { dominantType, fiveElements } = child.innateData;
-  const maxVal = Math.max(...Object.values(fiveElements), 1);
+  const { dominantType } = child.innateData;
   const report = child.analysisReport;
+
+  const summaryText = report?.summary ?? child.innateData.label;
 
   return (
     <View style={[styles.card, compact && styles.cardCompact]}>
@@ -41,45 +26,14 @@ export function TraitSummary({ child, compact }: Props) {
           </Text>
           <Text style={styles.detailLink}>상세 ›</Text>
         </View>
-        <View style={[styles.barsRow, compact && styles.barsRowCompact]}>
-          {Object.entries(fiveElements).map(([key, value]) => {
-            const ratio = value / maxVal;
-            return (
-              <View key={key} style={styles.barItem}>
-                <Text style={styles.barLabel}>
-                  {ELEMENT_LABELS[key] ?? key}
-                </Text>
-                <View
-                  style={[
-                    styles.barTrack,
-                    compact && styles.barTrackCompact,
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.barFill,
-                      compact && styles.barFillCompact,
-                      {
-                        width: `${Math.round(ratio * 100)}%`,
-                        backgroundColor: ELEMENT_COLORS[key] ?? COLORS.primary,
-                      },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.barScore}>{value}</Text>
-              </View>
-            );
-          })}
-        </View>
+        <Text style={styles.summaryText} numberOfLines={3}>
+          {summaryText}
+        </Text>
       </TouchableOpacity>
 
-      {/* Report summary if available — hidden in compact mode */}
+      {/* Full report link — only in non-compact mode */}
       {!compact && report ? (
         <View style={styles.reportSection}>
-          <View style={styles.divider} />
-          <Text style={styles.reportSummary} numberOfLines={3}>
-            {report.summary}
-          </Text>
           <TouchableOpacity
             style={styles.reportLink}
             onPress={() =>
@@ -111,82 +65,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row' as const,
     justifyContent: 'space-between' as const,
     alignItems: 'center' as const,
-    marginBottom: SPACING.sm + 2,
+    marginBottom: SPACING.sm,
   },
   headline: {
     fontSize: FONT_SIZE.sm,
     fontWeight: '600',
     color: COLORS.text,
+    flex: 1,
   },
   detailLink: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.primary,
     fontWeight: '600',
+    marginLeft: SPACING.sm,
   },
   cardCompact: {
     padding: SPACING.sm + 2,
     marginBottom: SPACING.sm,
   },
-  barsRow: {
-    gap: 6,
-  },
-  barsRowCompact: {
-    gap: 4,
-  },
-  barItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  barLabel: {
-    fontSize: 10,
-    color: COLORS.textLight,
-    fontWeight: '500',
-    width: 24,
-    textAlign: 'center',
-  },
-  barTrack: {
-    flex: 1,
-    height: 6,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  barTrackCompact: {
-    height: 4,
-    borderRadius: 2,
-  },
-  barFill: {
-    height: 6,
-    borderRadius: 3,
-  },
-  barFillCompact: {
-    height: 4,
-    borderRadius: 2,
-  },
-  barScore: {
-    fontSize: 10,
-    color: COLORS.text,
-    fontWeight: '600',
-    width: 22,
-    textAlign: 'right' as const,
-  },
-  // Report summary section
-  reportSection: {
-    marginTop: SPACING.sm,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F0F0F0',
-    marginBottom: SPACING.sm,
-  },
-  reportSummary: {
+  summaryText: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
-    lineHeight: 18,
+    lineHeight: 19,
+  },
+  // Report section
+  reportSection: {
+    marginTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    paddingTop: SPACING.sm,
   },
   reportLink: {
-    marginTop: SPACING.xs,
     alignSelf: 'flex-end',
   },
   reportLinkText: {

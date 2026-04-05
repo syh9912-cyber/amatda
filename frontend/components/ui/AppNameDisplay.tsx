@@ -14,12 +14,12 @@ const INDIGO = '#4338CA';
 const GRAY = '#9CA3AF';
 
 const PARTS: Array<{ text: string; isMain: boolean }> = [
-  { text: '\uC544', isMain: true },
-  { text: '\uC774', isMain: false },
-  { text: '\uB9DE', isMain: true },
-  { text: '\uCDA4', isMain: false },
-  { text: '\uB2E4', isMain: true },
-  { text: '\uC774\uC5B4\uB9AC', isMain: false },
+  { text: '아', isMain: true },
+  { text: '이', isMain: false },
+  { text: '맞', isMain: true },
+  { text: '춤', isMain: false },
+  { text: '다', isMain: true },
+  { text: '이어리', isMain: false },
 ];
 
 export function AppNameDisplay({ size = 'large' }: AppNameDisplayProps) {

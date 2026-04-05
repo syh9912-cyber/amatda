@@ -7,10 +7,15 @@ import {
   StyleSheet,
   Animated,
 } from 'react-native';
-import { FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { FONT_SIZE, SPACING } from '../../constants/theme';
 import { MomstagramPost } from '../../stores/momstagramStore';
 
 const CONTENT_COLLAPSE = 100;
+
+const GENDER_COLORS: Record<string, string> = {
+  F: '#FFB6C1',
+  M: '#87CEEB',
+};
 
 interface PostCardProps {
   post: MomstagramPost;
@@ -59,13 +64,14 @@ export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
     onLike(post.id);
   }, [post.id, onLike, scaleAnim]);
 
-  const genderEmoji = post.childGender === 'F' ? '\uD83D\uDC67' : '\uD83D\uDC66';
+  const genderEmoji = post.childGender === 'F' ? '👧' : '👦';
+  const avatarBg = GENDER_COLORS[post.childGender] ?? '#E0E0FF';
 
   return (
     <View style={styles.card}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.avatar}>
+        <View style={[styles.avatar, { backgroundColor: avatarBg }]}>
           <Text style={styles.avatarEmoji}>{genderEmoji}</Text>
         </View>
         <View style={styles.headerText}>
@@ -90,17 +96,7 @@ export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
         />
       )}
 
-      {/* Content */}
-      <Text style={styles.content}>{displayContent}</Text>
-      {isLong && (
-        <TouchableOpacity onPress={() => setExpanded((p) => !p)}>
-          <Text style={styles.expandToggle}>
-            {expanded ? '접기' : '더 보기'}
-          </Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Action Bar */}
+      {/* Action Bar - Instagram style */}
       <View style={styles.actionBar}>
         <TouchableOpacity
           style={styles.actionBtn}
@@ -111,14 +107,10 @@ export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
             style={[
               styles.actionIcon,
               { transform: [{ scale: scaleAnim }] },
-              post.liked && styles.likedIcon,
             ]}
           >
-            {post.liked ? '\u2764\uFE0F' : '\uD83E\uDD0D'}
+            {post.liked ? '❤️' : '🤍'}
           </Animated.Text>
-          <Text style={[styles.actionCount, post.liked && styles.likedCount]}>
-            {post.likes}
-          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -126,8 +118,7 @@ export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
           onPress={() => onComment(post.id)}
           activeOpacity={0.7}
         >
-          <Text style={styles.actionIcon}>{'\uD83D\uDCAC'}</Text>
-          <Text style={styles.actionCount}>{post.comments.length}</Text>
+          <Text style={styles.actionIcon}>{'💬'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -135,9 +126,53 @@ export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
           onPress={() => onShare(post.id)}
           activeOpacity={0.7}
         >
-          <Text style={styles.actionIcon}>{'\uD83D\uDD17'}</Text>
+          <Text style={styles.actionIcon}>{'📤'}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Like count */}
+      {post.likes > 0 && (
+        <Text style={styles.likeCount}>
+          좋아요 {post.likes}개
+        </Text>
+      )}
+
+      {/* Content */}
+      <View style={styles.contentWrap}>
+        <Text style={styles.content}>
+          <Text style={styles.contentUserName}>{post.userName}</Text>
+          {'  '}
+          {displayContent}
+        </Text>
+      </View>
+      {isLong && (
+        <TouchableOpacity onPress={() => setExpanded((p) => !p)}>
+          <Text style={styles.expandToggle}>
+            {expanded ? '접기' : '더 보기'}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Comment preview */}
+      {post.comments.length > 0 && (
+        <TouchableOpacity onPress={() => onComment(post.id)}>
+          {post.comments.length > 1 && (
+            <Text style={styles.viewAllComments}>
+              댓글 {post.comments.length}개 모두 보기
+            </Text>
+          )}
+          <Text style={styles.commentPreview} numberOfLines={1}>
+            <Text style={styles.commentUser}>
+              {post.comments[0].userName}
+            </Text>
+            {'  '}
+            {post.comments[0].text}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Separator */}
+      <View style={styles.separator} />
     </View>
   );
 }
@@ -145,28 +180,23 @@ export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: RADIUS.lg,
-    marginBottom: SPACING.md,
-    overflow: 'hidden',
-    ...SHADOWS.soft,
   },
   /* Header */
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.md,
-    paddingBottom: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F0EDFF',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.sm,
   },
-  avatarEmoji: { fontSize: 20 },
+  avatarEmoji: { fontSize: 18 },
   headerText: { flex: 1 },
   nameRow: {
     flexDirection: 'row',
@@ -174,15 +204,15 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   userName: {
-    fontSize: FONT_SIZE.md,
+    fontSize: FONT_SIZE.sm,
     fontWeight: '600',
     color: '#1E1E2E',
   },
   typeBadge: {
-    backgroundColor: '#E0E0FF',
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 2,
+    backgroundColor: '#F0EDFF',
+    borderRadius: 10,
+    paddingHorizontal: SPACING.xs + 2,
+    paddingVertical: 1,
   },
   typeBadgeText: {
     fontSize: 10,
@@ -190,53 +220,76 @@ const styles = StyleSheet.create({
     color: '#6366F1',
   },
   meta: {
-    fontSize: FONT_SIZE.xs,
+    fontSize: 11,
     color: '#A0A0B0',
-    marginTop: 2,
+    marginTop: 1,
   },
   /* Image */
   postImage: {
     width: '100%',
-    aspectRatio: 4 / 3,
+    aspectRatio: 1,
     backgroundColor: '#F0EDE8',
-  },
-  /* Content */
-  content: {
-    fontSize: FONT_SIZE.sm,
-    color: '#1E1E2E',
-    lineHeight: 21,
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
-  },
-  expandToggle: {
-    fontSize: FONT_SIZE.xs,
-    color: '#6366F1',
-    fontWeight: '600',
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xs,
   },
   /* Action Bar */
   actionBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: '#F5F5F5',
-    marginTop: SPACING.sm,
-    gap: SPACING.lg,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xs,
+    gap: SPACING.md,
   },
   actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
+    padding: 2,
   },
-  actionIcon: { fontSize: 18 },
-  actionCount: {
+  actionIcon: { fontSize: 22 },
+  /* Like count */
+  likeCount: {
     fontSize: FONT_SIZE.sm,
-    color: '#6B6B80',
-    fontWeight: '500',
+    fontWeight: '600',
+    color: '#1E1E2E',
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.xs,
   },
-  likedIcon: { fontSize: 18 },
-  likedCount: { color: '#EF4444', fontWeight: '600' },
+  /* Content */
+  contentWrap: {
+    paddingHorizontal: SPACING.md,
+  },
+  content: {
+    fontSize: FONT_SIZE.sm,
+    color: '#1E1E2E',
+    lineHeight: 20,
+  },
+  contentUserName: {
+    fontWeight: '600',
+  },
+  expandToggle: {
+    fontSize: FONT_SIZE.xs,
+    color: '#A0A0B0',
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.xs,
+  },
+  /* Comments */
+  viewAllComments: {
+    fontSize: FONT_SIZE.xs,
+    color: '#A0A0B0',
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.xs,
+  },
+  commentPreview: {
+    fontSize: FONT_SIZE.sm,
+    color: '#1E1E2E',
+    paddingHorizontal: SPACING.md,
+    paddingTop: 2,
+    lineHeight: 20,
+  },
+  commentUser: {
+    fontWeight: '600',
+  },
+  /* Separator */
+  separator: {
+    height: 1,
+    backgroundColor: '#F0F0F0',
+    marginTop: SPACING.sm + 2,
+  },
 });

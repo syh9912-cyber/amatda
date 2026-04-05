@@ -19,7 +19,6 @@ import { useAuthStore } from '../../stores/authStore';
 import { FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { ChildSelector } from '../../components/home/ChildSelector';
 import { TraitSummary } from '../../components/home/TraitSummary';
-import { WeatherWidget } from '../../components/home/WeatherWidget';
 import { HomeTabBar } from '../../components/home/HomeTabBar';
 import { DiaryContent } from '../../components/home/DiaryContent';
 import { AcademyContent } from '../../components/home/AcademyContent';
@@ -28,19 +27,19 @@ import { ReportContent } from '../../components/home/ReportContent';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
-  if (hour < 6) return '\uD3B8\uC548\uD55C \uBC24\uC774\uC5D0\uC694';
-  if (hour < 12) return '\uC88B\uC740 \uC544\uCE68\uC774\uC5D0\uC694';
-  if (hour < 18) return '\uC88B\uC740 \uC624\uD6C4\uC5D0\uC694';
-  return '\uC88B\uC740 \uC800\uB141\uC774\uC5D0\uC694';
+  if (hour < 6) return '편안한 밤이에요';
+  if (hour < 12) return '좋은 아침이에요';
+  if (hour < 18) return '좋은 오후에요';
+  return '좋은 저녁이에요';
 }
 
 const QUICK_ACTIONS = [
-  { label: '\uD83D\uDCF8 \uB9D8\uC2A4\uD0C0\uADF8\uB7A8', route: '/(main)/momstagram' },
+  { label: '📸 맘스타그램', route: '/(main)/momstagram' },
   { label: 'Quality Time', route: '/(main)/timer' },
-  { label: '\uC131\uC7A5\uC568\uBC94', route: '/(main)/album' },
-  { label: '\uD615\uC81C\uAD81\uD569', route: '/(main)/compatibility' },
-  { label: '\uAE30\uC9C8\uBA54\uC774\uD2B8', route: '/(main)/mates' },
-  { label: '\uAD50\uAD6C\uAD6C\uB3C5', route: '/(main)/subscription' },
+  { label: '성장앨범', route: '/(main)/album' },
+  { label: '형제궁합', route: '/(main)/compatibility' },
+  { label: '기질메이트', route: '/(main)/mates' },
+  { label: '교구구독', route: '/(main)/subscription' },
 ] as const;
 
 export default function HomeScreen() {
@@ -79,8 +78,8 @@ export default function HomeScreen() {
       await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(
-        '\uAD8C\uD55C \uD544\uC694',
-        '\uC0AC\uC9C4 \uB77C\uC774\uBE0C\uB7EC\uB9AC \uC811\uADFC \uAD8C\uD55C\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.',
+        '권한 필요',
+        '사진 라이브러리 접근 권한이 필요합니다.',
       );
       return;
     }
@@ -135,19 +134,19 @@ export default function HomeScreen() {
   if (children.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={styles.emptyEmoji}>{'\uD83D\uDC76'}</Text>
+        <Text style={styles.emptyEmoji}>{'👶'}</Text>
         <Text style={styles.emptyText}>
-          \uB4F1\uB85D\uB41C \uC790\uB140\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4
+          등록된 자녀가 없습니다
         </Text>
         <Text style={styles.emptySubtext}>
-          \uC790\uB140\uB97C \uB4F1\uB85D\uD558\uACE0 \uAE30\uC9C8\uC744 \uBD84\uC11D\uD574\uBCF4\uC138\uC694
+          자녀를 등록하고 기질을 분석해보세요
         </Text>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => router.push('/onboarding/child-info')}
         >
           <Text style={styles.addButtonText}>
-            \uC790\uB140 \uB4F1\uB85D\uD558\uAE30
+            자녀 등록하기
           </Text>
         </TouchableOpacity>
       </View>
@@ -177,7 +176,7 @@ export default function HomeScreen() {
             }}
           >
             <Text style={styles.logoutText}>
-              \uB85C\uADF8\uC544\uC6C3
+              로그아웃
             </Text>
           </TouchableOpacity>
         </View>
@@ -191,8 +190,8 @@ export default function HomeScreen() {
             <View style={styles.childPhotoPlaceholder}>
               <Text style={styles.childPhotoEmoji}>
                 {selectedChild?.gender === 'F'
-                  ? '\uD83D\uDC67'
-                  : '\uD83D\uDC66'}
+                  ? '👧'
+                  : '👦'}
               </Text>
             </View>
           )}
@@ -231,7 +230,7 @@ export default function HomeScreen() {
 
           {/* Quick Actions */}
           <Text style={styles.sectionTitle}>
-            \uBC14\uB85C\uAC00\uAE30
+            바로가기
           </Text>
           <ScrollView
             horizontal
@@ -259,12 +258,12 @@ export default function HomeScreen() {
         style={styles.addMore}
         onPress={() => router.push('/onboarding/child-info')}
       >
-        <Text style={styles.addMoreText}>+ \uC790\uB140 \uCD94\uAC00</Text>
+        <Text style={styles.addMoreText}>+ 자녀 추가</Text>
       </TouchableOpacity>
 
       {/* Version */}
       <Text style={styles.version}>
-        \uC544\uB9DE\uB2E4 v1.0.0
+        아맞다 v1.0.0
       </Text>
     </ScrollView>
   );
@@ -282,24 +281,22 @@ interface TabRendererProps {
 function TabContentRenderer({ tabIndex, child }: TabRendererProps) {
   switch (tabIndex) {
     case 0:
-      return <WeatherWidget childId={child.id} />;
-    case 1:
       return (
         <DiaryContent
           childId={child.id}
           ageMonths={child.ageInfo.months}
         />
       );
-    case 2:
+    case 1:
       return (
         <AcademyContent
           dominantType={child.innateData.dominantType}
           ageMonths={child.ageInfo.months}
         />
       );
-    case 3:
+    case 2:
       return <NutritionContent ageMonths={child.ageInfo.months} />;
-    case 4:
+    case 3:
       return <ReportContent child={child} />;
     default:
       return null;

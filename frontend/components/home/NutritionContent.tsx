@@ -55,13 +55,13 @@ export function NutritionContent({ ageMonths }: Props) {
     <View>
       <View style={styles.card}>
         <Text style={styles.cardLabel}>
-          {'\uD83E\uDD57'} \uC624\uB298\uC758 \uCD94\uCC9C \uC601\uC591
+          {'🥗'} 오늘의 추천 영양
         </Text>
         {foods.length > 0 ? (
           foods.map((food, i) => (
             <View key={food.id ?? i} style={styles.foodRow}>
               <Text style={styles.foodEmoji}>
-                {food.emoji || '\uD83C\uDF4E'}
+                {food.emoji || '🍎'}
               </Text>
               <View style={styles.foodInfo}>
                 <Text style={styles.foodName}>{food.name}</Text>
@@ -73,7 +73,7 @@ export function NutritionContent({ ageMonths }: Props) {
           ))
         ) : (
           <Text style={styles.emptyText}>
-            \uCD94\uCC9C \uC601\uC591 \uC815\uBCF4\uAC00 \uC5C6\uC5B4\uC694
+            추천 영양 정보가 없어요
           </Text>
         )}
         <TouchableOpacity
@@ -81,7 +81,7 @@ export function NutritionContent({ ageMonths }: Props) {
           onPress={() => router.push('/(main)/nutrition')}
         >
           <Text style={styles.recipeBtnText}>
-            \uB808\uC2DC\uD53C \uBCF4\uAE30
+            레시피 보기
           </Text>
         </TouchableOpacity>
       </View>

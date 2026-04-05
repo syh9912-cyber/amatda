@@ -28,18 +28,18 @@ interface SectionConfig {
 }
 
 const SECTIONS: SectionConfig[] = [
-  { emoji: '\uD83C\uDFAD', title: '성격 특성', key: 'personality', type: 'list' },
-  { emoji: '\uD83D\uDCDA', title: '학습 스타일', key: 'studyStyle', type: 'text' },
-  { emoji: '\u2B50', title: '잘하는 분야', key: 'bestSubjects', type: 'list' },
-  { emoji: '\uD83D\uDCA1', title: '보완할 분야', key: 'weakAreas', type: 'list' },
-  { emoji: '\uD83D\uDE80', title: '미래 진로', key: 'futureFields', type: 'list' },
-  { emoji: '\u26BD', title: '잘 맞는 운동', key: 'sportsMatch', type: 'list' },
-  { emoji: '\uD83C\uDFEB', title: '학원 스타일', key: 'academyStyle', type: 'text' },
-  { emoji: '\uD83C\uDF4E', title: '좋은 음식', key: 'goodFoods', type: 'list' },
-  { emoji: '\u26A0\uFE0F', title: '피할 음식', key: 'badFoods', type: 'list' },
-  { emoji: '\uD83C\uDFAF', title: '교육 방향', key: 'educationDirection', type: 'text' },
-  { emoji: '\uD83C\uDFC6', title: '특출난 재능', key: 'specialTalent', type: 'text' },
-  { emoji: '\uD83D\uDC9C', title: '양육 팁', key: 'parentingTip', type: 'text' },
+  { emoji: '🎭', title: '성격 특성', key: 'personality', type: 'list' },
+  { emoji: '📚', title: '학습 스타일', key: 'studyStyle', type: 'text' },
+  { emoji: '⭐', title: '잘하는 분야', key: 'bestSubjects', type: 'list' },
+  { emoji: '💡', title: '보완할 분야', key: 'weakAreas', type: 'list' },
+  { emoji: '🚀', title: '미래 진로', key: 'futureFields', type: 'list' },
+  { emoji: '⚽', title: '잘 맞는 운동', key: 'sportsMatch', type: 'list' },
+  { emoji: '🏫', title: '학원 스타일', key: 'academyStyle', type: 'text' },
+  { emoji: '🍎', title: '좋은 음식', key: 'goodFoods', type: 'list' },
+  { emoji: '⚠️', title: '피할 음식', key: 'badFoods', type: 'list' },
+  { emoji: '🎯', title: '교육 방향', key: 'educationDirection', type: 'text' },
+  { emoji: '🏆', title: '특출난 재능', key: 'specialTalent', type: 'text' },
+  { emoji: '💜', title: '양육 팁', key: 'parentingTip', type: 'text' },
 ];
 
 export default function AnalysisReportScreen() {
@@ -120,7 +120,7 @@ export default function AnalysisReportScreen() {
       {/* Strengths Detail */}
       {report.strengthsDetail && report.strengthsDetail.length > 0 && (
         <DetailSection
-          emoji={'\u2728'}
+          emoji="✨"
           title="이런 점이 뛰어나요"
           items={report.strengthsDetail}
           accentColor={COLORS.primary}
@@ -130,7 +130,7 @@ export default function AnalysisReportScreen() {
       {/* Weaknesses Detail */}
       {report.weaknessesDetail && report.weaknessesDetail.length > 0 && (
         <DetailSection
-          emoji={'\u26A0\uFE0F'}
+          emoji="⚠️"
           title="이런 점은 주의하세요"
           items={report.weaknessesDetail}
           accentColor="#F5A623"
@@ -140,7 +140,7 @@ export default function AnalysisReportScreen() {
       {/* Do List */}
       {report.doList && report.doList.length > 0 && (
         <SimpleListSection
-          emoji={'\u2705'}
+          emoji="✅"
           title="이렇게 해주세요"
           items={report.doList}
           bulletColor="#4CAF50"
@@ -150,7 +150,7 @@ export default function AnalysisReportScreen() {
       {/* Don't List */}
       {report.dontList && report.dontList.length > 0 && (
         <SimpleListSection
-          emoji={'\u274C'}
+          emoji="❌"
           title="이건 피해주세요"
           items={report.dontList}
           bulletColor="#F44336"
@@ -160,7 +160,7 @@ export default function AnalysisReportScreen() {
       {/* Daily Routine Tip */}
       {report.dailyRoutineTip ? (
         <TextTipSection
-          emoji={'\uD83D\uDD50'}
+          emoji="🕐"
           title="하루 루틴 제안"
           text={report.dailyRoutineTip}
         />
@@ -169,7 +169,7 @@ export default function AnalysisReportScreen() {
       {/* Social Tip */}
       {report.socialTip ? (
         <TextTipSection
-          emoji={'\uD83D\uDC6B'}
+          emoji="👫"
           title="친구 관계 팁"
           text={report.socialTip}
         />
@@ -178,7 +178,7 @@ export default function AnalysisReportScreen() {
       {/* Emotional Tip */}
       {report.emotionalTip ? (
         <TextTipSection
-          emoji={'\uD83D\uDC95'}
+          emoji="💕"
           title="감정 관리 팁"
           text={report.emotionalTip}
         />

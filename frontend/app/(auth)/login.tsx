@@ -39,23 +39,23 @@ export default function LoginScreen() {
             <AppNameDisplay size="small" />
           </View>
           <Text style={styles.tagline}>
-            {'\uC544\uC774\uC758 \uAE30\uC9C8\uC744 \uAE30\uB85D\uD558\uB294 \uD2B9\uBCC4\uD55C \uB2E4\uC774\uC5B4\uB9AC'}
+            아이의 기질을 기록하는 특별한 다이어리
           </Text>
         </View>
 
         <View style={styles.body}>
           <View style={styles.form}>
             <AuthInput
-              icon={'\u{1F4E7}'}
-              placeholder={'\uC774\uBA54\uC77C'}
+              icon="📧"
+              placeholder="이메일"
               value={h.email}
               onChangeText={h.setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
             />
             <AuthInput
-              icon={'\u{1F512}'}
-              placeholder={'\uBE44\uBC00\uBC88\uD638'}
+              icon="🔒"
+              placeholder="비밀번호"
               value={h.password}
               onChangeText={h.setPassword}
               secureTextEntry
@@ -70,8 +70,8 @@ export default function LoginScreen() {
           >
             <Text style={styles.buttonText}>
               {h.loading
-                ? '\uB85C\uADF8\uC778 \uC911...'
-                : '\uB85C\uADF8\uC778'}
+                ? '로그인 중...'
+                : '로그인'}
             </Text>
           </TouchableOpacity>
 
@@ -89,9 +89,9 @@ export default function LoginScreen() {
             onPress={() => router.push('/(auth)/register')}
           >
             <Text style={styles.registerText}>
-              {'\uACC4\uC815\uC774 \uC5C6\uC73C\uC2E0\uAC00\uC694? '}
+              {'계정이 없으신가요? '}
               <Text style={styles.registerBold}>
-                {'\uD68C\uC6D0\uAC00\uC785'}
+                회원가입
               </Text>
             </Text>
           </TouchableOpacity>

@@ -11,7 +11,7 @@ function formatDateLabel(date: Date): string {
   const y = date.getFullYear();
   const m = date.getMonth() + 1;
   const d = date.getDate();
-  return `${y}\uB144 ${m}\uC6D4 ${d}\uC77C`;
+  return `${y}년 ${m}월 ${d}일`;
 }
 
 function toISODate(date: Date): string {
@@ -52,7 +52,7 @@ export function BirthDatePicker({ birthDate, onChangeBirthDate }: BirthDatePicke
     <View>
       <TouchableOpacity style={styles.input} onPress={() => setShow(true)}>
         <Text style={birthDate ? styles.valueText : styles.placeholderText}>
-          {birthDate ? formatDateLabel(currentValue) : '\uC0DD\uB144\uC6D4\uC77C\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694'}
+          {birthDate ? formatDateLabel(currentValue) : '생년월일을 선택해주세요'}
         </Text>
       </TouchableOpacity>
       {show && (

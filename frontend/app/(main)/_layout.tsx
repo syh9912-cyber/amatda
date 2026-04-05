@@ -29,7 +29,7 @@ function MomstagramIcon({ focused }: { focused: boolean }) {
       justifyContent: 'center',
     }}>
       <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>
-        {'\uD83D\uDCF8'}
+        {'📸'}
       </Text>
     </View>
   );

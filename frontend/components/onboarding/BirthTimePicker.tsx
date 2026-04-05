@@ -53,7 +53,7 @@ export function BirthTimePicker({ birthTime, onChangeBirthTime }: BirthTimePicke
     <View>
       <TouchableOpacity style={styles.input} onPress={() => setShow(true)}>
         <Text style={birthTime ? styles.valueText : styles.placeholderText}>
-          {birthTime || '\uCD9C\uC0DD \uC2DC\uAC01\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694'}
+          {birthTime || '출생 시각을 선택해주세요'}
         </Text>
       </TouchableOpacity>
       {show && (

@@ -29,15 +29,15 @@ export default function ChildInfoScreen() {
 
   const handleSubmit = async () => {
     if (!name || !gender || !birthDate || !birthTime) {
-      Alert.alert('\uC54C\uB9BC', '\uBAA8\uB4E0 \uD56D\uBAA9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694');
+      Alert.alert('알림', '모든 항목을 입력해주세요');
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
-      Alert.alert('\uC54C\uB9BC', '\uC0DD\uB144\uC6D4\uC77C\uC744 YYYY-MM-DD \uD615\uC2DD\uC73C\uB85C \uC785\uB825\uD574\uC8FC\uC138\uC694');
+      Alert.alert('알림', '생년월일을 YYYY-MM-DD 형식으로 입력해주세요');
       return;
     }
     if (!/^\d{2}:\d{2}$/.test(birthTime)) {
-      Alert.alert('\uC54C\uB9BC', '\uCD9C\uC0DD\uC2DC\uAC01\uC744 HH:MM \uD615\uC2DD\uC73C\uB85C \uC785\uB825\uD574\uC8FC\uC138\uC694');
+      Alert.alert('알림', '출생시각을 HH:MM 형식으로 입력해주세요');
       return;
     }
 
@@ -51,7 +51,7 @@ export default function ChildInfoScreen() {
         params: { childId: res.data.data.id },
       });
     } catch {
-      Alert.alert('\uC624\uB958', '\uC790\uB140 \uB4F1\uB85D\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4');
+      Alert.alert('오류', '자녀 등록에 실패했습니다');
     } finally {
       setLoading(false);
     }
@@ -64,24 +64,24 @@ export default function ChildInfoScreen() {
       keyboardVerticalOffset={0}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bounces={false}>
-        <Stack.Screen options={{ title: '\uC790\uB140 \uC815\uBCF4 \uC785\uB825' }} />
+        <Stack.Screen options={{ title: '자녀 정보 입력' }} />
 
         <PhotoPicker photoUri={photoUri} onChangePhoto={setPhotoUri} />
 
-        <Text style={styles.heading}>{'\uC544\uC774\uC758 \uC815\uBCF4\uB97C \uC54C\uB824\uC8FC\uC138\uC694'}</Text>
-        <Text style={styles.desc}>{'\uC0DD\uB144\uC6D4\uC77C\uC2DC\uB97C \uAE30\uBC18\uC73C\uB85C \uACE0\uC720\uD55C \uAE30\uC9C8\uC744 \uBD84\uC11D\uD569\uB2C8\uB2E4'}</Text>
+        <Text style={styles.heading}>아이의 정보를 알려주세요</Text>
+        <Text style={styles.desc}>생년월일시를 기반으로 고유한 기질을 분석합니다</Text>
 
         <View style={styles.form}>
-          <Text style={styles.label}>{'\uC774\uB984'}</Text>
+          <Text style={styles.label}>이름</Text>
           <TextInput
             style={styles.input}
-            placeholder={'\uC544\uC774 \uC774\uB984'}
+            placeholder="아이 이름"
             placeholderTextColor={COLORS.textLight}
             value={name}
             onChangeText={setName}
           />
 
-          <Text style={styles.label}>{'\uC131\uBCC4'}</Text>
+          <Text style={styles.label}>성별</Text>
           <View style={styles.genderRow}>
             {(['F', 'M'] as const).map((g) => (
               <TouchableOpacity
@@ -90,16 +90,16 @@ export default function ChildInfoScreen() {
                 onPress={() => setGender(g)}
               >
                 <Text style={[styles.genderText, gender === g && styles.genderTextActive]}>
-                  {g === 'F' ? '\uC5EC\uC544' : '\uB0A8\uC544'}
+                  {g === 'F' ? '여아' : '남아'}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          <Text style={styles.label}>{'\uC0DD\uB144\uC6D4\uC77C'}</Text>
+          <Text style={styles.label}>생년월일</Text>
           <BirthDatePicker birthDate={birthDate} onChangeBirthDate={setBirthDate} />
 
-          <Text style={styles.label}>{'\uCD9C\uC0DD \uC2DC\uAC01'}</Text>
+          <Text style={styles.label}>출생 시각</Text>
           <BirthTimePicker birthTime={birthTime} onChangeBirthTime={setBirthTime} />
 
           <TouchableOpacity
@@ -108,7 +108,7 @@ export default function ChildInfoScreen() {
             disabled={loading}
           >
             <Text style={styles.buttonText}>
-              {loading ? '\uBD84\uC11D \uC911...' : '\uAE30\uC9C8 \uBD84\uC11D\uD558\uAE30'}
+              {loading ? '분석 중...' : '기질 분석하기'}
             </Text>
           </TouchableOpacity>
         </View>

@@ -24,7 +24,7 @@ async function pickDiaryImage(): Promise<string | null> {
   if (Platform.OS !== 'web') {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('\uAD8C\uD55C \uD544\uC694', '\uC0AC\uC9C4 \uB77C\uC774\uBE0C\uB7EC\uB9AC \uC811\uADFC \uAD8C\uD55C\uC774 \uD544\uC694\uD569\uB2C8\uB2E4');
+      Alert.alert('권한 필요', '사진 라이브러리 접근 권한이 필요합니다');
       return null;
     }
   }
@@ -83,14 +83,14 @@ export function WriteArea({
           <Image source={{ uri: photoUri }} style={styles.preview} />
           {onChangePhoto && (
             <TouchableOpacity style={styles.removeBtn} onPress={() => onChangePhoto(null)}>
-              <Text style={styles.removeText}>{'\u2715'}</Text>
+              <Text style={styles.removeText}>{'✕'}</Text>
             </TouchableOpacity>
           )}
         </View>
       ) : null}
       <View style={styles.footer}>
         <Text style={[styles.counter, isOverLimit && styles.counterOver]}>
-          {charCount} / {CHAR_LIMIT}{'\uC790'}
+          {charCount} / {CHAR_LIMIT}자
         </Text>
         <View style={styles.actions}>
           {onChangePhoto && (
@@ -101,7 +101,7 @@ export function WriteArea({
                 if (uri) onChangePhoto(uri);
               }}
             >
-              <Text style={styles.photoBtnText}>{'\uD83D\uDCF7'}</Text>
+              <Text style={styles.photoBtnText}>{'📷'}</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -110,7 +110,7 @@ export function WriteArea({
             disabled={loading || isOverLimit}
           >
             <Text style={styles.submitText}>
-              {loading ? '\uBD84\uC11D \uC911...' : '\uAE30\uB85D\uD558\uAE30'}
+              {loading ? '분석 중...' : '기록하기'}
             </Text>
           </TouchableOpacity>
         </View>

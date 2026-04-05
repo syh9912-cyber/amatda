@@ -92,7 +92,7 @@ export default function MomstagramPostScreen() {
           <View style={styles.childBadgeRow}>
             <View style={styles.childBadge}>
               <Text style={styles.childBadgeText}>
-                {selectedChild.gender === 'F' ? '\uD83D\uDC67' : '\uD83D\uDC66'}{' '}
+                {selectedChild.gender === 'F' ? '👧' : '👦'}{' '}
                 {childAge} · {dominantType}
               </Text>
             </View>
@@ -138,7 +138,7 @@ export default function MomstagramPostScreen() {
             onPress={pickImage}
             activeOpacity={0.7}
           >
-            <Text style={styles.addPhotoIcon}>{'\uD83D\uDCF7'}</Text>
+            <Text style={styles.addPhotoIcon}>{'📷'}</Text>
             <Text style={styles.addPhotoText}>사진 추가 (선택)</Text>
           </TouchableOpacity>
         )}

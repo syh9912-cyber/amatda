@@ -73,7 +73,7 @@ export function DiaryContent({ childId, ageMonths }: Props) {
       {question && (
         <View style={styles.card}>
           <Text style={styles.cardLabel}>
-            {'\uD83D\uDCAC'} \uC624\uB298\uC758 \uC9C8\uBB38
+            {'💬'} 오늘의 질문
           </Text>
           <Text style={styles.questionText}>{question.content}</Text>
           <TouchableOpacity
@@ -81,7 +81,7 @@ export function DiaryContent({ childId, ageMonths }: Props) {
             onPress={() => router.push('/(main)/diary')}
           >
             <Text style={styles.actionBtnText}>
-              \uC77C\uAE30 \uC4F0\uAE30
+              일기 쓰기
             </Text>
           </TouchableOpacity>
         </View>
@@ -90,7 +90,7 @@ export function DiaryContent({ childId, ageMonths }: Props) {
       {entries.length > 0 ? (
         <View style={styles.card}>
           <Text style={styles.cardLabel}>
-            {'\uD83D\uDCDD'} \uCD5C\uADFC \uC77C\uAE30
+            {'📝'} 최근 일기
           </Text>
           {entries.map((entry) => (
             <View key={entry.id} style={styles.entryRow}>
@@ -106,21 +106,21 @@ export function DiaryContent({ childId, ageMonths }: Props) {
             onPress={() => router.push('/(main)/diary')}
           >
             <Text style={styles.moreLink}>
-              \uB354\uBCF4\uAE30 {'\u203A'}
+              더보기 {'›'}
             </Text>
           </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.card}>
           <Text style={styles.emptyText}>
-            \uC544\uC9C1 \uC791\uC131\uD55C \uC77C\uAE30\uAC00 \uC5C6\uC5B4\uC694
+            아직 작성한 일기가 없어요
           </Text>
           <TouchableOpacity
             style={styles.actionBtn}
             onPress={() => router.push('/(main)/diary')}
           >
             <Text style={styles.actionBtnText}>
-              \uCCAB \uC77C\uAE30 \uC4F0\uAE30
+              첫 일기 쓰기
             </Text>
           </TouchableOpacity>
         </View>

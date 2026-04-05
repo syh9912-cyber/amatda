@@ -12,7 +12,7 @@ async function pickImage(): Promise<string | null> {
   if (Platform.OS !== 'web') {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('\uAD8C\uD55C \uD544\uC694', '\uC0AC\uC9C4 \uB77C\uC774\uBE0C\uB7EC\uB9AC \uC811\uADFC \uAD8C\uD55C\uC774 \uD544\uC694\uD569\uB2C8\uB2E4');
+      Alert.alert('권한 필요', '사진 라이브러리 접근 권한이 필요합니다');
       return null;
     }
   }
@@ -44,11 +44,11 @@ export function PhotoPicker({ photoUri, onChangePhoto }: PhotoPickerProps) {
         {photoUri ? (
           <Image source={{ uri: photoUri }} style={styles.photo} />
         ) : (
-          <Text style={styles.emoji}>{'\uD83D\uDC76'}</Text>
+          <Text style={styles.emoji}>{'👶'}</Text>
         )}
       </TouchableOpacity>
       <Text style={styles.hint}>
-        {'\uD0ED\uD558\uC5EC \uC0AC\uC9C4 \uCD94\uAC00'}
+        탭하여 사진 추가
       </Text>
     </View>
   );

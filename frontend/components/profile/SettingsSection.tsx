@@ -33,7 +33,7 @@ export function SettingsSection({ items }: SettingsSectionProps) {
             >
               {item.label}
             </Text>
-            <Text style={styles.chevron}>{'\u203A'}</Text>
+            <Text style={styles.chevron}>{'›'}</Text>
           </TouchableOpacity>
         );
       })}

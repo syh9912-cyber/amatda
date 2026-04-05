@@ -47,7 +47,7 @@ export function ObservationCard({
         </View>
         {onShare && (
           <TouchableOpacity onPress={onShare} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.shareBtn}>{'\uD83D\uDCF8'} 맘스타그램 공유</Text>
+            <Text style={styles.shareBtn}>{'📸'} 맘스타그램 공유</Text>
           </TouchableOpacity>
         )}
       </View>

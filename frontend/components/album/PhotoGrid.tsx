@@ -49,7 +49,7 @@ export function PhotoGrid({ photos, onPhotoPress, onSharePress }: PhotoGridProps
                 onPress={() => onSharePress(index)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={styles.shareIcon}>{'\uD83D\uDCF8'}</Text>
+                <Text style={styles.shareIcon}>{'📸'}</Text>
               </TouchableOpacity>
             )}
           </View>

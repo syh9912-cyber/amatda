@@ -54,12 +54,12 @@ export function AcademyContent({ dominantType, ageMonths }: Props) {
     <View>
       <View style={styles.card}>
         <Text style={styles.cardLabel}>
-          {'\uD83C\uDFEB'} \uCD94\uCC9C \uD559\uC6D0 \uC720\uD615
+          {'🏫'} 추천 학원 유형
         </Text>
         {recs.length > 0 ? (
           recs.map((rec, i) => (
             <View key={i} style={styles.recRow}>
-              <Text style={styles.recEmoji}>{rec.emoji || '\uD83C\uDFAF'}</Text>
+              <Text style={styles.recEmoji}>{rec.emoji || '🎯'}</Text>
               <View style={styles.recInfo}>
                 <Text style={styles.recType}>{rec.type}</Text>
                 {rec.reason ? (
@@ -72,7 +72,7 @@ export function AcademyContent({ dominantType, ageMonths }: Props) {
           ))
         ) : (
           <Text style={styles.emptyText}>
-            \uC8FC\uBCC0 \uCD94\uCC9C \uD559\uC6D0\uC774 \uC5C6\uC5B4\uC694
+            주변 추천 학원이 없어요
           </Text>
         )}
         <TouchableOpacity
@@ -80,7 +80,7 @@ export function AcademyContent({ dominantType, ageMonths }: Props) {
           onPress={() => router.push('/(main)/academy')}
         >
           <Text style={styles.moreBtnText}>
-            \uB354\uBCF4\uAE30
+            더보기
           </Text>
         </TouchableOpacity>
       </View>
@@ -90,21 +90,21 @@ export function AcademyContent({ dominantType, ageMonths }: Props) {
 
 function getFallback(dominantType: string): AcademyRec[] {
   const map: Record<string, AcademyRec[]> = {
-    '\uD0D0\uAD6C\uD615': [
-      { type: '\uACFC\uD559 \uD0D0\uAD6C', reason: '\uD0D0\uAD6C \uC131\uD5A5\uC5D0 \uC801\uD569', emoji: '\uD83D\uDD2C' },
-      { type: '\uCF54\uB529', reason: '\uB17C\uB9AC\uC801 \uC0AC\uACE0 \uBC1C\uB2EC', emoji: '\uD83D\uDCBB' },
+    '탐구형': [
+      { type: '과학 탐구', reason: '탐구 성향에 적합', emoji: '🔬' },
+      { type: '코딩', reason: '논리적 사고 발달', emoji: '💻' },
     ],
-    '\uD65C\uB3D9\uD615': [
-      { type: '\uCCB4\uC721', reason: '\uC5D0\uB108\uC9C0 \uBC1C\uC0B0\uC5D0 \uC88B\uC544\uC694', emoji: '\u26BD' },
-      { type: '\uBB34\uC6A9', reason: '\uC0AC\uD68C\uC131 + \uD65C\uB3D9 \uACB0\uD569', emoji: '\uD83D\uDC83' },
+    '활동형': [
+      { type: '체육', reason: '에너지 발산에 좋아요', emoji: '⚽' },
+      { type: '무용', reason: '사회성 + 활동 결합', emoji: '💃' },
     ],
-    '\uC548\uC815\uD615': [
-      { type: '\uBBF8\uC220', reason: '\uC548\uC815\uC801 \uC131\uD5A5\uACFC \uC798 \uB9DE\uC544\uC694', emoji: '\uD83C\uDFA8' },
-      { type: '\uC74C\uC545', reason: '\uC9D1\uC911\uB825 \uAC15\uD654', emoji: '\uD83C\uDFB5' },
+    '안정형': [
+      { type: '미술', reason: '안정적 성향과 잘 맞아요', emoji: '🎨' },
+      { type: '음악', reason: '집중력 강화', emoji: '🎵' },
     ],
   };
   return map[dominantType] ?? [
-    { type: '\uC608\uCCB4\uB2A5', reason: '\uAE30\uC9C8\uC5D0 \uB9DE\uB294 \uD65C\uB3D9', emoji: '\uD83C\uDFAF' },
+    { type: '예체능', reason: '기질에 맞는 활동', emoji: '🎯' },
   ];
 }
 

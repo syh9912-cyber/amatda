@@ -177,7 +177,7 @@ export default function ProfileScreen() {
           >
             <Text style={styles.menuEmoji}>{item.emoji}</Text>
             <Text style={styles.menuLabel}>{item.label}</Text>
-            <Text style={styles.menuArrow}>{'\u203A'}</Text>
+            <Text style={styles.menuArrow}>{'›'}</Text>
           </TouchableOpacity>
         ))}
       </View>

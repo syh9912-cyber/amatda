@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import {
   useMomstagramStore,
   MomstagramPost,
@@ -64,7 +64,7 @@ export default function MomstagramScreen() {
 
   const renderEmpty = () => (
     <View style={styles.emptyWrap}>
-      <Text style={styles.emptyEmoji}>{'\uD83D\uDCF8'}</Text>
+      <Text style={styles.emptyEmoji}>{'📸'}</Text>
       <Text style={styles.emptyText}>아직 게시물이 없습니다</Text>
       <Text style={styles.emptyHint}>
         첫 번째 게시물을 작성해보세요
@@ -84,7 +84,26 @@ export default function MomstagramScreen() {
   return (
     <View style={styles.container}>
       <Stack.Screen
-        options={{ title: '\uB9D8\uC2A4\uD0C0\uADF8\uB7A8', headerShown: true }}
+        options={{
+          title: '맘스타그램',
+          headerShown: true,
+          headerStyle: { backgroundColor: '#FFFFFF' },
+          headerShadowVisible: false,
+          headerTitleAlign: 'center',
+          headerTitleStyle: {
+            fontSize: 18,
+            fontWeight: '700',
+            color: '#1E1E2E',
+          },
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => router.push('/(main)/momstagram-post')}
+              style={styles.headerAddBtn}
+            >
+              <Text style={styles.headerAddText}>+</Text>
+            </TouchableOpacity>
+          ),
+        }}
       />
 
       <FlatList
@@ -106,15 +125,6 @@ export default function MomstagramScreen() {
         ListFooterComponent={renderFooter}
       />
 
-      {/* FAB - create post */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/(main)/momstagram-post')}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
-
       {/* Comments modal */}
       <CommentsModal
         visible={commentPostId !== null}
@@ -127,10 +137,26 @@ export default function MomstagramScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F0' },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
   listContent: {
-    padding: SPACING.md,
     paddingBottom: 100,
+  },
+  /* Header */
+  headerAddBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#1E1E2E',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.sm,
+  },
+  headerAddText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1E1E2E',
+    lineHeight: 22,
   },
   /* Empty */
   emptyWrap: {
@@ -153,24 +179,5 @@ const styles = StyleSheet.create({
     color: '#A0A0B0',
     fontSize: FONT_SIZE.sm,
     paddingVertical: SPACING.md,
-  },
-  /* FAB */
-  fab: {
-    position: 'absolute',
-    bottom: SPACING.xl,
-    right: SPACING.lg,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#6366F1',
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...SHADOWS.elevated,
-  },
-  fabText: {
-    color: '#FFF',
-    fontSize: 28,
-    fontWeight: '600',
-    lineHeight: 30,
   },
 });

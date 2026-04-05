@@ -14,14 +14,14 @@ export function ReportContent({ child }: Props) {
     return (
       <View style={styles.card}>
         <Text style={styles.emptyText}>
-          \uC544\uC9C1 \uBD84\uC11D \uB9AC\uD3EC\uD2B8\uAC00 \uC5C6\uC5B4\uC694
+          아직 분석 리포트가 없어요
         </Text>
         <TouchableOpacity
           style={styles.actionBtn}
           onPress={() => router.push('/(main)/report')}
         >
           <Text style={styles.actionBtnText}>
-            \uBD84\uC11D \uC2DC\uC791\uD558\uAE30
+            분석 시작하기
           </Text>
         </TouchableOpacity>
       </View>
@@ -41,7 +41,7 @@ export function ReportContent({ child }: Props) {
       {/* Summary */}
       <View style={styles.card}>
         <Text style={styles.cardLabel}>
-          {'\uD83D\uDCCA'} \uBD84\uC11D \uC694\uC57D
+          {'📊'} 분석 요약
         </Text>
         <Text style={styles.summaryText} numberOfLines={4}>
           {report.summary}
@@ -55,7 +55,7 @@ export function ReportContent({ child }: Props) {
           }
         >
           <Text style={styles.moreLink}>
-            \uC0C1\uC138 \uBCF4\uAE30 {'\u203A'}
+            상세 보기 {'›'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -64,11 +64,11 @@ export function ReportContent({ child }: Props) {
       {strengths.length > 0 && (
         <View style={styles.card}>
           <Text style={styles.cardLabel}>
-            {'\uD83D\uDCAA'} \uAC15\uC810
+            {'💪'} 강점
           </Text>
           {strengths.map((s, i) => (
             <View key={i} style={styles.listItem}>
-              <Text style={styles.bullet}>{'\u2022'}</Text>
+              <Text style={styles.bullet}>{'•'}</Text>
               <Text style={styles.listText}>{s.item}</Text>
             </View>
           ))}
@@ -79,11 +79,11 @@ export function ReportContent({ child }: Props) {
       {weaknesses.length > 0 && (
         <View style={styles.card}>
           <Text style={styles.cardLabel}>
-            {'\uD83D\uDCA1'} \uBCF4\uC644 \uC601\uC5ED
+            {'💡'} 보완 영역
           </Text>
           {weaknesses.map((w, i) => (
             <View key={i} style={styles.listItem}>
-              <Text style={styles.bullet}>{'\u2022'}</Text>
+              <Text style={styles.bullet}>{'•'}</Text>
               <Text style={styles.listText}>{w.item}</Text>
             </View>
           ))}
