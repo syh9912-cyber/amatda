@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type PostCategory = '일상' | '학습' | '여행' | '기념일' | '기타';
 
@@ -40,6 +39,15 @@ interface MomstagramState {
   loadMore: () => void;
   refresh: () => void;
   loadPrivatePosts: () => Promise<void>;
+}
+
+function getAsyncStorage(): typeof import('@react-native-async-storage/async-storage').default | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('@react-native-async-storage/async-storage').default;
+  } catch {
+    return null;
+  }
 }
 
 function generateId(): string {
@@ -117,7 +125,9 @@ function createSamplePosts(): MomstagramPost[] {
 
 async function loadStoredPrivatePosts(): Promise<MomstagramPost[]> {
   try {
-    const stored = await AsyncStorage.getItem(PRIVATE_POSTS_KEY);
+    const storage = getAsyncStorage();
+    if (!storage) return [];
+    const stored = await storage.getItem(PRIVATE_POSTS_KEY);
     if (stored) return JSON.parse(stored) as MomstagramPost[];
   } catch { /* ignore */ }
   return [];
@@ -125,7 +135,9 @@ async function loadStoredPrivatePosts(): Promise<MomstagramPost[]> {
 
 async function savePrivatePostsToStorage(posts: MomstagramPost[]): Promise<void> {
   try {
-    await AsyncStorage.setItem(PRIVATE_POSTS_KEY, JSON.stringify(posts));
+    const storage = getAsyncStorage();
+    if (!storage) return;
+    await storage.setItem(PRIVATE_POSTS_KEY, JSON.stringify(posts));
   } catch { /* ignore */ }
 }
 

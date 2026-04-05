@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { useState } from 'react';
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
@@ -108,11 +108,13 @@ export default function ProfileScreen() {
 function ProfileHeader({ onSettingsPress }: { onSettingsPress: () => void }) {
   return (
     <View style={styles.header}>
+      <TouchableOpacity onPress={() => router.back()}>
+        <Text style={styles.backArrow}>{'<'}</Text>
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>마이페이지</Text>
       <TouchableOpacity onPress={onSettingsPress}>
         <Text style={styles.headerGear}>{'⚙️'}</Text>
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>마이페이지</Text>
-      <View style={styles.headerSpacer} />
     </View>
   );
 }
@@ -133,6 +135,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: SPACING.lg,
   },
+  backArrow: {
+    fontSize: 24,
+    color: COLORS.text,
+    fontWeight: '300',
+    paddingRight: SPACING.sm,
+  },
   headerGear: {
     fontSize: 24,
   },
@@ -140,8 +148,5 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xl,
     fontWeight: '700',
     color: COLORS.text,
-  },
-  headerSpacer: {
-    width: 24,
   },
 });

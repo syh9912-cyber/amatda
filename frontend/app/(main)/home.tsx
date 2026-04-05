@@ -51,16 +51,22 @@ const QUICK_ACTIONS: {
     bg: COLOR.coralBg,
   },
   {
+    emoji: '📊',
+    label: '성장 기록',
+    route: '/(main)/growth-stats',
+    bg: COLOR.mintBg,
+  },
+  {
+    emoji: '📝',
+    label: '관찰 일기',
+    route: '/(main)/diary',
+    bg: COLOR.yellowBg,
+  },
+  {
     emoji: '📚',
     label: '추천 학습',
     route: '/(main)/academy',
     bg: COLOR.mintBg,
-  },
-  {
-    emoji: '📸',
-    label: '성장앨범',
-    route: '/(main)/momstagram',
-    bg: COLOR.yellowBg,
   },
 ];
 
@@ -537,9 +543,11 @@ const styles = StyleSheet.create({
   /* === 3. Quick Action Circles === */
   quickSection: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-around',
     marginBottom: 28,
     paddingHorizontal: 8,
+    rowGap: 16,
   },
   quickItem: {
     alignItems: 'center',

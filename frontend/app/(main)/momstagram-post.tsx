@@ -192,7 +192,7 @@ export default function MomstagramPostScreen() {
         <View style={styles.privateRow}>
           <View style={styles.privateInfo}>
             <Text style={styles.privateLock}>
-              {isPrivate ? '\uD83D\uDD12' : '\uD83D\uDD13'}
+              {isPrivate ? '🔒' : '🔓'}
             </Text>
             <View>
               <Text style={styles.privateLabel}>나만보기</Text>

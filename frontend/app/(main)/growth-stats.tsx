@@ -1,8 +1,9 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert, ActivityIndicator } from 'react-native';
-import { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { useState, useEffect, useMemo } from 'react';
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
 import { childApi } from '../../services/api';
+import { getTodayQuestion } from '../../constants/dailyQuestions';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
 type TabKey = 'physical' | 'trait' | 'learning';
@@ -18,18 +19,26 @@ export default function GrowthStatsScreen() {
   const selectedChild = useChildStore((s) => s.selectedChild);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ headerShown: false }} />
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Stack.Screen options={{ headerShown: false }} />
 
-      <GrowthHeader />
-      <FilterTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        <GrowthHeader />
+        <FilterTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {activeTab === 'physical' && (
-        <PhysicalTab childName={selectedChild?.name ?? '아이'} />
-      )}
-      {activeTab === 'trait' && <TraitTab />}
-      {activeTab === 'learning' && <LearningTab />}
-    </ScrollView>
+        {activeTab === 'physical' && (
+          <PhysicalTab childName={selectedChild?.name ?? '아이'} />
+        )}
+        {activeTab === 'trait' && <TraitTab />}
+        {activeTab === 'learning' && <LearningTab />}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -171,6 +180,13 @@ function TraitTab() {
   const [insights, setInsights] = useState<TraitInsight[]>([]);
   const [loadingTraits, setLoadingTraits] = useState(false);
   const [responseCount, setResponseCount] = useState(0);
+  const [traitAnswer, setTraitAnswer] = useState('');
+  const [savingTrait, setSavingTrait] = useState(false);
+
+  const dailyQuestion = useMemo(() => {
+    if (!selectedChild) return null;
+    return getTodayQuestion(selectedChild.ageInfo.group);
+  }, [selectedChild?.ageInfo.group]);
 
   useEffect(() => {
     if (!selectedChild) return;
@@ -188,6 +204,25 @@ function TraitTab() {
       .finally(() => setLoadingTraits(false));
   }, [selectedChild?.id]);
 
+  const handleSaveTrait = async () => {
+    if (!traitAnswer.trim() || !selectedChild || !dailyQuestion) return;
+    setSavingTrait(true);
+    try {
+      await childApi.saveDailyTrait(selectedChild.id, {
+        question: dailyQuestion.question,
+        answer: traitAnswer.trim(),
+        date: new Date().toISOString().split('T')[0],
+      });
+      setResponseCount((c) => c + 1);
+      setTraitAnswer('');
+      Alert.alert('저장 완료', '오늘의 기질 관찰이 기록되었습니다');
+    } catch {
+      Alert.alert('오류', '저장에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setSavingTrait(false);
+    }
+  };
+
   return (
     <View>
       <View style={styles.card}>
@@ -203,6 +238,35 @@ function TraitTab() {
           </Text>
         </View>
       </View>
+
+      {/* Daily question input */}
+      {dailyQuestion && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>오늘의 질문</Text>
+          <View style={styles.traitNotice}>
+            <Text style={styles.traitNoticeText}>{dailyQuestion.question}</Text>
+          </View>
+          <Text style={styles.traitHintText}>{dailyQuestion.hint}</Text>
+          <TextInput
+            style={styles.traitInput}
+            placeholder="관찰 내용을 입력하세요..."
+            placeholderTextColor={COLORS.textLight}
+            value={traitAnswer}
+            onChangeText={setTraitAnswer}
+            multiline
+            textAlignVertical="top"
+          />
+          <TouchableOpacity
+            style={[styles.saveBtn, (!traitAnswer.trim() || savingTrait) && styles.saveBtnDisabled]}
+            onPress={handleSaveTrait}
+            disabled={!traitAnswer.trim() || savingTrait}
+          >
+            <Text style={styles.saveBtnText}>
+              {savingTrait ? '저장 중...' : '기질 관찰 저장'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>기질 변화 타임라인</Text>
@@ -237,11 +301,105 @@ function TraitTab() {
   );
 }
 
+const SUBJECTS = ['국어', '수학', '영어', '과학', '사회', '미술', '음악', '체육'] as const;
+
 function LearningTab() {
+  const selectedChild = useChildStore((s) => s.selectedChild);
+  const [selectedSubject, setSelectedSubject] = useState<string>(SUBJECTS[0]);
+  const [score, setScore] = useState('');
+  const [memo, setMemo] = useState('');
+  const [savingLearning, setSavingLearning] = useState(false);
+
+  const handleSaveLearning = async () => {
+    if (!score.trim() || !selectedChild) {
+      Alert.alert('알림', '점수를 입력해주세요');
+      return;
+    }
+    const numScore = Number(score);
+    if (isNaN(numScore) || numScore < 0 || numScore > 100) {
+      Alert.alert('알림', '0~100 사이의 점수를 입력해주세요');
+      return;
+    }
+    setSavingLearning(true);
+    try {
+      await childApi.saveDailyTracking(selectedChild.id, {
+        type: 'learning',
+        subject: selectedSubject,
+        score: numScore,
+        memo: memo.trim(),
+        date: new Date().toISOString().split('T')[0],
+      });
+      Alert.alert('저장 완료', `${selectedSubject} 학습 기록이 저장되었습니다`);
+      setScore('');
+      setMemo('');
+    } catch {
+      Alert.alert('오류', '저장에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setSavingLearning(false);
+    }
+  };
+
   return (
     <View>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>학습 활동 기록</Text>
+
+        {/* Subject selector */}
+        <Text style={styles.inputLabel}>과목 선택</Text>
+        <View style={styles.subjectRow}>
+          {SUBJECTS.map((subj) => {
+            const isActive = selectedSubject === subj;
+            return (
+              <TouchableOpacity
+                key={subj}
+                style={[styles.subjectPill, isActive && styles.subjectPillActive]}
+                onPress={() => setSelectedSubject(subj)}
+              >
+                <Text style={[styles.subjectPillText, isActive && styles.subjectPillTextActive]}>
+                  {subj}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Score input */}
+        <Text style={styles.inputLabel}>점수 (0~100)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="점수 입력"
+          placeholderTextColor={COLORS.textLight}
+          keyboardType="number-pad"
+          value={score}
+          onChangeText={setScore}
+          maxLength={3}
+        />
+
+        {/* Memo input */}
+        <Text style={styles.inputLabel}>메모 (선택)</Text>
+        <TextInput
+          style={[styles.input, styles.memoInput]}
+          placeholder="학습 활동에 대한 메모..."
+          placeholderTextColor={COLORS.textLight}
+          value={memo}
+          onChangeText={setMemo}
+          multiline
+          textAlignVertical="top"
+        />
+
+        <TouchableOpacity
+          style={[styles.saveBtn, (!score.trim() || savingLearning) && styles.saveBtnDisabled]}
+          onPress={handleSaveLearning}
+          disabled={!score.trim() || savingLearning}
+        >
+          <Text style={styles.saveBtnText}>
+            {savingLearning ? '저장 중...' : '학습 기록 저장'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>최근 학습 기록</Text>
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>{'📚'}</Text>
           <Text style={styles.emptyText}>
@@ -419,6 +577,58 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.sm,
     color: COLORS.primaryDark,
     textAlign: 'center',
+  },
+  traitHintText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    fontStyle: 'italic',
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.md,
+  },
+  traitInput: {
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    minHeight: 80,
+    marginBottom: SPACING.md,
+  },
+  saveBtnDisabled: {
+    opacity: 0.5,
+  },
+  subjectRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  subjectPill: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs + 2,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceLight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  subjectPillActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  subjectPillText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  subjectPillTextActive: {
+    color: '#FFFFFF',
+  },
+  memoInput: {
+    minHeight: 60,
+    marginBottom: SPACING.md,
   },
   emptyState: {
     alignItems: 'center',
