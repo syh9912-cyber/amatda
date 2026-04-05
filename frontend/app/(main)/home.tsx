@@ -209,6 +209,9 @@ export default function HomeScreen() {
 
       {selectedChild && (
         <>
+          {/* Trait Summary — always visible */}
+          <TraitSummary child={selectedChild} compact />
+
           {/* Circle Tab Bar */}
           <HomeTabBar
             selectedIndex={selectedTab}
@@ -280,24 +283,22 @@ function TabContentRenderer({ tabIndex, child }: TabRendererProps) {
     case 0:
       return <WeatherWidget childId={child.id} />;
     case 1:
-      return <TraitSummary child={child} />;
-    case 2:
       return (
         <DiaryContent
           childId={child.id}
           ageMonths={child.ageInfo.months}
         />
       );
-    case 3:
+    case 2:
       return (
         <AcademyContent
           dominantType={child.innateData.dominantType}
           ageMonths={child.ageInfo.months}
         />
       );
-    case 4:
+    case 3:
       return <NutritionContent ageMonths={child.ageInfo.months} />;
-    case 5:
+    case 4:
       return <ReportContent child={child} />;
     default:
       return null;

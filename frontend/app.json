@@ -14,16 +14,32 @@
       "backgroundColor": "#FFFFFF"
     },
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.bloomincorp.amatda",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "아이 사진을 촬영하여 프로필과 성장앨범에 사용합니다",
+        "NSPhotoLibraryUsageDescription": "갤러리에서 아이 사진을 선택하여 프로필과 성장앨범에 사용합니다",
+        "NSLocationWhenInUseUsageDescription": "주변 학원을 추천하기 위해 위치 정보를 사용합니다",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "buildNumber": "1"
     },
     "android": {
-      "package": "com.amatda.app",
+      "package": "com.bloomincorp.amatda",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -32,7 +48,26 @@
       "expo-web-browser",
       "expo-router",
       "expo-secure-store",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "아이 사진을 촬영하여 프로필과 성장앨범에 사용합니다"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "갤러리에서 아이 사진을 선택하여 프로필과 성장앨범에 사용합니다",
+          "cameraPermission": "아이 사진을 촬영하여 프로필과 성장앨범에 사용합니다"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "주변 학원을 추천하기 위해 위치 정보를 사용합니다"
+        }
+      ]
     ],
     "updates": {
       "url": "https://u.expo.dev/fe4c99cb-994f-4905-93f3-99aa93aea6ab"

@@ -149,7 +149,7 @@ export default function SubscriptionScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: SPACING.lg },
+  content: { padding: SPACING.lg, paddingBottom: 120 },
   heading: {
     fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.text,
     marginBottom: SPACING.lg,

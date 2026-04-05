@@ -83,7 +83,7 @@ export default function CompatibilityScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: SPACING.lg },
+  content: { padding: SPACING.lg, paddingBottom: 120 },
   emptyCard: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
     padding: SPACING.xl, alignItems: 'center',

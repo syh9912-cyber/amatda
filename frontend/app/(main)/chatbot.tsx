@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     padding: SPACING.sm,
-    paddingBottom: SPACING.sm + 34,
+    paddingBottom: SPACING.sm + 44,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
     backgroundColor: COLORS.surface,

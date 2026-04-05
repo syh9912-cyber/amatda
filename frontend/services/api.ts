@@ -52,6 +52,8 @@ export const authApi = {
     api.post('/auth/social', { provider, accessToken }),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post('/auth/change-password', { currentPassword, newPassword }),
+  deleteAccount: () =>
+    api.delete('/auth/account'),
 };
 
 // Children

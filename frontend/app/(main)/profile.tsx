@@ -102,11 +102,50 @@ export default function ProfileScreen() {
     Alert.alert('앱 정보', '아맞다 v1.0.0\nBlooming Corp.\n아이맞춤다이어리');
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      '계정 삭제',
+      '정말 계정을 삭제하시겠습니까?\n\n모든 데이터(자녀 정보, 관찰 일기, 사진, 구독 등)가 영구적으로 삭제되며 복구할 수 없습니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '계정 삭제',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              '최종 확인',
+              '이 작업은 되돌릴 수 없습니다. 정말 삭제하시겠습니까?',
+              [
+                { text: '취소', style: 'cancel' },
+                {
+                  text: '삭제 확인',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await authApi.deleteAccount();
+                      logout();
+                      router.replace('/');
+                    } catch {
+                      Alert.alert('오류', '계정 삭제에 실패했습니다. 잠시 후 다시 시도해주세요.');
+                    }
+                  },
+                },
+              ],
+            );
+          },
+        },
+      ],
+    );
+  };
+
   const settingsItems = [
     { emoji: '🔑', label: '비밀번호 변경', onPress: handleChangePassword },
     { emoji: '🔔', label: '알림 설정', onPress: handleNotificationSettings },
+    { emoji: '📋', label: '개인정보 처리방침', onPress: () => router.push('/(main)/privacy' as never) },
+    { emoji: '📄', label: '이용약관', onPress: () => router.push('/(main)/terms' as never) },
     { emoji: 'ℹ️', label: '앱 정보', onPress: handleAppInfo },
     { emoji: '🚪', label: '로그아웃', onPress: handleLogout, isDestructive: true },
+    { emoji: '⛔', label: '계정 삭제', onPress: handleDeleteAccount, isDestructive: true },
   ];
 
   return (

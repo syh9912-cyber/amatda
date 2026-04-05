@@ -108,7 +108,7 @@ export default function ReportScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: SPACING.lg },
+  content: { padding: SPACING.lg, paddingBottom: 120 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
   emptyText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.md },
   headerCard: {

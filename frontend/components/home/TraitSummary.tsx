@@ -5,6 +5,7 @@ import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
 interface Props {
   child: Child;
+  compact?: boolean;
 }
 
 const ELEMENT_COLORS: Record<string, string> = {
@@ -23,13 +24,13 @@ const ELEMENT_LABELS: Record<string, string> = {
   water: '감성',
 };
 
-export function TraitSummary({ child }: Props) {
+export function TraitSummary({ child, compact }: Props) {
   const { dominantType, fiveElements } = child.innateData;
   const maxVal = Math.max(...Object.values(fiveElements), 1);
   const report = child.analysisReport;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, compact && styles.cardCompact]}>
       <TouchableOpacity
         onPress={() => router.push('/(main)/trait-detail')}
         activeOpacity={0.7}
@@ -40,7 +41,7 @@ export function TraitSummary({ child }: Props) {
           </Text>
           <Text style={styles.detailLink}>상세 ›</Text>
         </View>
-        <View style={styles.barsRow}>
+        <View style={[styles.barsRow, compact && styles.barsRowCompact]}>
           {Object.entries(fiveElements).map(([key, value]) => {
             const ratio = value / maxVal;
             return (
@@ -48,10 +49,16 @@ export function TraitSummary({ child }: Props) {
                 <Text style={styles.barLabel}>
                   {ELEMENT_LABELS[key] ?? key}
                 </Text>
-                <View style={styles.barTrack}>
+                <View
+                  style={[
+                    styles.barTrack,
+                    compact && styles.barTrackCompact,
+                  ]}
+                >
                   <View
                     style={[
                       styles.barFill,
+                      compact && styles.barFillCompact,
                       {
                         width: `${Math.round(ratio * 100)}%`,
                         backgroundColor: ELEMENT_COLORS[key] ?? COLORS.primary,
@@ -66,8 +73,8 @@ export function TraitSummary({ child }: Props) {
         </View>
       </TouchableOpacity>
 
-      {/* Report summary if available */}
-      {report ? (
+      {/* Report summary if available — hidden in compact mode */}
+      {!compact && report ? (
         <View style={styles.reportSection}>
           <View style={styles.divider} />
           <Text style={styles.reportSummary} numberOfLines={3}>
@@ -116,8 +123,15 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '600',
   },
+  cardCompact: {
+    padding: SPACING.sm + 2,
+    marginBottom: SPACING.sm,
+  },
   barsRow: {
     gap: 6,
+  },
+  barsRowCompact: {
+    gap: 4,
   },
   barItem: {
     flexDirection: 'row',
@@ -138,9 +152,17 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     overflow: 'hidden',
   },
+  barTrackCompact: {
+    height: 4,
+    borderRadius: 2,
+  },
   barFill: {
     height: 6,
     borderRadius: 3,
+  },
+  barFillCompact: {
+    height: 4,
+    borderRadius: 2,
   },
   barScore: {
     fontSize: 10,

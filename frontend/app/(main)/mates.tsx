@@ -122,7 +122,7 @@ export default function MatesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: SPACING.lg },
+  content: { padding: SPACING.lg, paddingBottom: 120 },
   myCard: {
     backgroundColor: COLORS.primaryLight, borderRadius: RADIUS.lg,
     padding: SPACING.lg, marginBottom: SPACING.lg, alignItems: 'center',

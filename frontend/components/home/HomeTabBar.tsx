@@ -7,7 +7,6 @@ export interface HomeTab {
 
 export const HOME_TABS: HomeTab[] = [
   { emoji: '\u2600\uFE0F', label: '\uB0A0\uC528' },
-  { emoji: '\uD83E\uDDD2', label: '\uAE30\uC9C8' },
   { emoji: '\uD83D\uDCD4', label: '\uC77C\uAE30' },
   { emoji: '\uD83C\uDFEB', label: '\uD559\uC6D0' },
   { emoji: '\uD83E\uDD57', label: '\uC601\uC591' },

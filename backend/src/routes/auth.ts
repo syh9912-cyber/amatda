@@ -4,7 +4,8 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { success, error } from '../utils/response';
 import { verifySocialToken, SocialProvider } from '../services/social.auth';
-import { collections, genId } from '../services/firestore';
+import { collections, genId, db } from '../services/firestore';
+import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
 
@@ -141,6 +142,46 @@ router.post('/change-password', async (req: Request, res: Response) => {
     await collections.users.doc(req.userId!).update({ passwordHash: newHash });
     success(res, { message: '비밀번호가 변경되었습니다' });
   } catch { error(res, '비밀번호 변경 중 오류가 발생했습니다', 500); }
+});
+
+// DELETE /api/auth/account — required by Google Play & Apple App Store
+router.delete('/account', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const batch = db.batch();
+
+    // 1. Find and delete all children for this user
+    const childrenSnap = await collections.children.where('userId', '==', userId).get();
+    const childIds = childrenSnap.docs.map((d) => d.id);
+    childrenSnap.docs.forEach((d) => batch.delete(d.ref));
+
+    // 2. Delete observations for each child
+    for (const childId of childIds) {
+      const obsSnap = await collections.observations.where('childId', '==', childId).get();
+      obsSnap.docs.forEach((d) => batch.delete(d.ref));
+
+      // 3. Delete daily tracking for each child
+      const trackSnap = await collections.dailyTracking.where('childId', '==', childId).get();
+      trackSnap.docs.forEach((d) => batch.delete(d.ref));
+
+      // 4. Delete subscriptions for each child
+      const subSnap = await collections.subscriptions.where('childId', '==', childId).get();
+      subSnap.docs.forEach((d) => batch.delete(d.ref));
+    }
+
+    // 5. Delete chat logs for this user
+    const chatSnap = await collections.chatLogs.where('userId', '==', userId).get();
+    chatSnap.docs.forEach((d) => batch.delete(d.ref));
+
+    // 6. Delete the user document itself
+    batch.delete(collections.users.doc(userId));
+
+    await batch.commit();
+
+    success(res, { message: '계정과 모든 관련 데이터가 삭제되었습니다' });
+  } catch {
+    error(res, '계정 삭제 중 오류가 발생했습니다', 500);
+  }
 });
 
 export default router;

@@ -45,9 +45,9 @@ export default function MainLayout() {
           backgroundColor: '#FFFFFF',
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: '#E5E5E5',
-          paddingTop: 4,
-          paddingBottom: 34,
-          height: 80,
+          paddingTop: 6,
+          paddingBottom: 40,
+          height: 90,
         },
       }}
     >
@@ -90,6 +90,8 @@ export default function MainLayout() {
       <Tabs.Screen name="trait-detail" options={{ href: null }} />
       <Tabs.Screen name="album" options={{ href: null }} />
       <Tabs.Screen name="baby-tracker" options={{ href: null }} />
+      <Tabs.Screen name="privacy" options={{ href: null }} />
+      <Tabs.Screen name="terms" options={{ href: null }} />
     </Tabs>
   );
 }
