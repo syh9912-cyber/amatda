@@ -20,7 +20,7 @@
       "package": "com.amatda.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/child-diary.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#E8E0F0"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
