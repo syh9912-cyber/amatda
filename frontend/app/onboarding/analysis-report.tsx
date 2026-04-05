@@ -1,7 +1,18 @@
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useChildStore, AnalysisReport } from '../../stores/childStore';
+import { useChildStore, AnalysisReport, ReportReasons } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+
+/** Maps section keys to reason keys */
+const REASON_KEY_MAP: Partial<Record<keyof AnalysisReport, keyof ReportReasons>> = {
+  personality: 'personality',
+  studyStyle: 'studyStyle',
+  bestSubjects: 'bestSubjects',
+  futureFields: 'futureFields',
+  sportsMatch: 'sportsMatch',
+  academyStyle: 'academyStyle',
+  goodFoods: 'foods',
+};
 
 interface SectionConfig {
   emoji: string;
@@ -70,6 +81,11 @@ export default function AnalysisReportScreen() {
         const value = report[section.key];
         if (!value) return null;
 
+        const reasonKey = REASON_KEY_MAP[section.key];
+        const reason = reasonKey && report.reasons
+          ? report.reasons[reasonKey]
+          : undefined;
+
         return (
           <View key={section.key} style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
@@ -88,6 +104,9 @@ export default function AnalysisReportScreen() {
             ) : (
               <Text style={styles.sectionText}>{value as string}</Text>
             )}
+            {reason ? (
+              <Text style={styles.reasonText}>{reason}</Text>
+            ) : null}
           </View>
         );
       })}
@@ -190,6 +209,13 @@ const styles = StyleSheet.create({
   listText: {
     flex: 1, fontSize: FONT_SIZE.sm, color: COLORS.textSecondary,
     lineHeight: 22,
+  },
+  reasonText: {
+    fontSize: FONT_SIZE.xs, color: COLORS.textLight,
+    fontStyle: 'italic', lineHeight: 18,
+    marginTop: SPACING.sm, paddingTop: SPACING.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#F0F0F0',
   },
 
   // Disclaimer

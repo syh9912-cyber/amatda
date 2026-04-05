@@ -5,9 +5,19 @@ import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
 interface Props {
   childId: string;
+  lat?: number;
+  lng?: number;
 }
 
-interface WeatherData {
+interface RealWeatherData {
+  temperature: number;
+  description: string;
+  humidity: number;
+  feelsLike: number;
+  icon: string;
+}
+
+interface TraitWeatherData {
   weather: string;
   emoji: string;
   message: string;
@@ -15,16 +25,24 @@ interface WeatherData {
   color: string;
 }
 
-export function WeatherWidget({ childId }: Props) {
-  const [data, setData] = useState<WeatherData | null>(null);
+interface WeatherResponse {
+  childName: string;
+  dominantType: string;
+  realWeather: RealWeatherData | null;
+  traitWeather: TraitWeatherData;
+  recommendedActivities: string[];
+}
+
+export function WeatherWidget({ childId, lat, lng }: Props) {
+  const [data, setData] = useState<WeatherResponse | null>(null);
 
   useEffect(() => {
     loadWeather();
-  }, [childId]);
+  }, [childId, lat, lng]);
 
   const loadWeather = async () => {
     try {
-      const res = await weatherApi.get(childId);
+      const res = await weatherApi.get(childId, lat, lng);
       setData(res.data.data);
     } catch {
       // ignore
@@ -33,13 +51,54 @@ export function WeatherWidget({ childId }: Props) {
 
   if (!data) return null;
 
-  const bgColor = (data.color || COLORS.primary) + '12';
+  const bgColor = (data.traitWeather.color || COLORS.primary) + '12';
+  const hasReal = data.realWeather !== null;
 
   return (
     <View style={[styles.card, { backgroundColor: bgColor }]}>
-      <Text style={styles.emoji}>{data.emoji}</Text>
-      <Text style={styles.message}>{data.message}</Text>
-      <Text style={styles.tip}>{data.tip}</Text>
+      {hasReal && data.realWeather ? (
+        <RealWeatherSection real={data.realWeather} />
+      ) : (
+        <Text style={styles.emoji}>{data.traitWeather.emoji}</Text>
+      )}
+      <Text style={styles.message}>{data.traitWeather.message}</Text>
+      <Text style={styles.tip}>{data.traitWeather.tip}</Text>
+      {data.recommendedActivities.length > 0 && (
+        <ActivityPills activities={data.recommendedActivities} />
+      )}
+    </View>
+  );
+}
+
+function RealWeatherSection({ real }: { real: RealWeatherData }) {
+  return (
+    <View style={styles.realRow}>
+      <Text style={styles.weatherIcon}>{real.icon}</Text>
+      <View style={styles.tempBlock}>
+        <Text style={styles.tempText}>{real.temperature}°C</Text>
+        <Text style={styles.descText}>{real.description}</Text>
+      </View>
+      <View style={styles.metaBlock}>
+        <Text style={styles.metaText}>
+          체감 {real.feelsLike}°C
+        </Text>
+        <Text style={styles.metaText}>
+          습도 {real.humidity}%
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function ActivityPills({ activities }: { activities: string[] }) {
+  const shown = activities.slice(0, 3);
+  return (
+    <View style={styles.pillRow}>
+      {shown.map((act) => (
+        <View key={act} style={styles.pill}>
+          <Text style={styles.pillText}>{act}</Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -65,5 +124,52 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.sm,
     color: COLORS.textSecondary,
     lineHeight: 20,
+  },
+  realRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  weatherIcon: {
+    fontSize: 44,
+    marginRight: SPACING.sm,
+  },
+  tempBlock: {
+    flex: 1,
+  },
+  tempText: {
+    fontSize: FONT_SIZE.xxl,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  descText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  metaBlock: {
+    alignItems: 'flex-end',
+  },
+  metaText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textLight,
+    lineHeight: 18,
+  },
+  pillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: SPACING.sm,
+    gap: SPACING.xs,
+  },
+  pill: {
+    backgroundColor: COLORS.primary + '18',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.sm + 2,
+    paddingVertical: SPACING.xs,
+  },
+  pillText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
 });

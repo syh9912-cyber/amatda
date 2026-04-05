@@ -115,7 +115,12 @@ export const academyApi = {
 
 // Weather
 export const weatherApi = {
-  get: (childId: string) => api.get(`/weather/${childId}`),
+  get: (childId: string, lat?: number, lng?: number) => {
+    const params: Record<string, string> = {};
+    if (lat !== undefined) params.lat = String(lat);
+    if (lng !== undefined) params.lng = String(lng);
+    return api.get(`/weather/${childId}`, { params });
+  },
 };
 
 // Subscriptions

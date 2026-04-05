@@ -11,6 +11,22 @@ import { childApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
+const ELEMENT_COLORS: Record<string, string> = {
+  wood: COLORS.wood,
+  fire: COLORS.fire,
+  earth: COLORS.earth,
+  metal: COLORS.metal,
+  water: COLORS.water,
+};
+
+const ELEMENT_LABELS: Record<string, string> = {
+  wood: '탐구',
+  fire: '활동',
+  earth: '안정',
+  metal: '분석',
+  water: '감성',
+};
+
 interface TraitDetail {
   personality: string[];
   strengths: string[];
@@ -65,6 +81,36 @@ export default function TraitDetailScreen() {
       <View style={styles.heroCard}>
         <Text style={styles.heroType}>{child.innateData.dominantType}</Text>
         <Text style={styles.heroLabel}>{child.innateData.label}</Text>
+      </View>
+
+      {/* 에너지 분포 */}
+      <View style={styles.chartCard}>
+        <Text style={styles.chartTitle}>에너지 분포</Text>
+        {Object.entries(child.innateData.fiveElements).map(([key, val]) => {
+          const maxVal = Math.max(
+            ...Object.values(child.innateData.fiveElements),
+            1,
+          );
+          return (
+            <View key={key} style={styles.chartBarRow}>
+              <Text style={styles.chartBarLabel}>
+                {ELEMENT_LABELS[key] ?? key}
+              </Text>
+              <View style={styles.chartBarBg}>
+                <View
+                  style={[
+                    styles.chartBarFill,
+                    {
+                      width: `${(val / maxVal) * 100}%`,
+                      backgroundColor: ELEMENT_COLORS[key] ?? COLORS.primary,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={styles.chartBarVal}>{val}</Text>
+            </View>
+          );
+        })}
       </View>
 
       {detail ? (
@@ -163,6 +209,30 @@ const styles = StyleSheet.create({
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   tag: { borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: SPACING.xs, borderWidth: 1 },
   tagText: { fontSize: FONT_SIZE.sm, fontWeight: '600' },
+  chartCard: {
+    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg,
+    padding: SPACING.lg, marginBottom: SPACING.lg,
+    borderWidth: 1, borderColor: '#F0EDE8',
+  },
+  chartTitle: {
+    fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text,
+    marginBottom: SPACING.md,
+  },
+  chartBarRow: {
+    flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm,
+  },
+  chartBarLabel: {
+    width: 36, fontSize: FONT_SIZE.sm, color: COLORS.textSecondary,
+  },
+  chartBarBg: {
+    flex: 1, height: 12, backgroundColor: COLORS.border,
+    borderRadius: 6, overflow: 'hidden', marginHorizontal: SPACING.sm,
+  },
+  chartBarFill: { height: '100%' as unknown as number, borderRadius: 6 },
+  chartBarVal: {
+    width: 28, fontSize: FONT_SIZE.sm, color: COLORS.text, textAlign: 'right' as const,
+    fontWeight: '600',
+  },
   fallbackCard: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, padding: SPACING.xl,
     alignItems: 'center', borderWidth: 1, borderColor: '#F0EDE8',

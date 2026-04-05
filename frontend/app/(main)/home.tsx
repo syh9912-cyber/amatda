@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { childApi } from '../../services/api';
@@ -93,18 +94,31 @@ export default function HomeScreen() {
     >
       {/* 헤더 */}
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerLeft}>
           <Text style={styles.greeting}>{getGreeting()}</Text>
-          <Text style={styles.appTitle}>아맞다</Text>
         </View>
-        <TouchableOpacity
-          onPress={() => {
-            logout();
-            router.replace('/');
-          }}
-        >
-          <Text style={styles.logoutText}>로그아웃</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          {selectedChild?.photoUri ? (
+            <Image
+              source={{ uri: selectedChild.photoUri }}
+              style={styles.childPhoto}
+            />
+          ) : (
+            <View style={styles.childPhotoPlaceholder}>
+              <Text style={styles.childPhotoEmoji}>
+                {selectedChild?.gender === 'F' ? '\uD83D\uDC67' : '\uD83D\uDC66'}
+              </Text>
+            </View>
+          )}
+          <TouchableOpacity
+            onPress={() => {
+              logout();
+              router.replace('/');
+            }}
+          >
+            <Text style={styles.logoutText}>로그아웃</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* 자녀 선택 (다자녀 분기) */}
@@ -219,24 +233,41 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: SPACING.lg + 4,
   },
-  greeting: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    marginBottom: 2,
+  headerLeft: {
+    flex: 1,
   },
-  appTitle: {
-    fontSize: FONT_SIZE.xxl,
-    fontWeight: '800',
-    color: COLORS.primary,
-    letterSpacing: -0.5,
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  greeting: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  childPhoto: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  childPhotoPlaceholder: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  childPhotoEmoji: {
+    fontSize: 20,
   },
   logoutText: {
     fontSize: FONT_SIZE.sm,
     color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
   },
   sectionTitle: {
     fontSize: FONT_SIZE.md,

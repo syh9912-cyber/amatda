@@ -12,6 +12,16 @@ interface InnateDataPublic {
   label: string;
 }
 
+export interface ReportReasons {
+  personality: string;
+  studyStyle: string;
+  bestSubjects: string;
+  futureFields: string;
+  sportsMatch: string;
+  academyStyle: string;
+  foods: string;
+}
+
 export interface AnalysisReport {
   summary: string;
   personality: string[];
@@ -26,6 +36,7 @@ export interface AnalysisReport {
   educationDirection: string;
   specialTalent: string;
   parentingTip: string;
+  reasons?: ReportReasons;
 }
 
 export interface Child {

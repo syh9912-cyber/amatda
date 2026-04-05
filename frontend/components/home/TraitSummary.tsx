@@ -59,6 +59,7 @@ export function TraitSummary({ child }: Props) {
                     ]}
                   />
                 </View>
+                <Text style={styles.barScore}>{value}</Text>
               </View>
             );
           })}
@@ -140,6 +141,13 @@ const styles = StyleSheet.create({
   barFill: {
     height: 6,
     borderRadius: 3,
+  },
+  barScore: {
+    fontSize: 10,
+    color: COLORS.text,
+    fontWeight: '600',
+    width: 22,
+    textAlign: 'right' as const,
   },
   // Report summary section
   reportSection: {

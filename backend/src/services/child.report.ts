@@ -4,6 +4,16 @@
  * dominantType + ageGroup + 온보딩 질문 답변으로 상세 리포트를 생성한다.
  */
 
+export interface ReportReasons {
+  personality: string;
+  studyStyle: string;
+  bestSubjects: string;
+  futureFields: string;
+  sportsMatch: string;
+  academyStyle: string;
+  foods: string;
+}
+
 export interface ChildReport {
   summary: string;
   personality: string[];
@@ -18,6 +28,7 @@ export interface ChildReport {
   educationDirection: string;
   specialTalent: string;
   parentingTip: string;
+  reasons: ReportReasons;
 }
 
 export type AgeGroup = 'infant' | 'kinder' | 'elem_low' | 'elem_high';
@@ -61,6 +72,15 @@ const BASE_PROFILES: Record<string, ChildReport> = {
       '복잡한 문제를 스스로 분석하고 해결 방법을 찾아가는 문제해결력이 특출납니다.',
     parentingTip:
       '탐구형 아이는 통제보다 방향 제시가 효과적입니다. "하지 마"보다 "이렇게 해볼까?"로 대화하면 훨씬 잘 따릅니다. 자율성을 최대한 존중하면서 안전한 경계를 잡아주세요.',
+    reasons: {
+      personality: '호기심과 탐구 에너지가 강하게 나타나 새로운 것을 스스로 발견하고 이해하려는 성향이 두드러집니다.',
+      studyStyle: '직접 체험하고 질문하며 답을 찾아가는 탐구형 에너지가 강하기 때문에 프로젝트 기반 학습이 가장 효과적입니다.',
+      bestSubjects: '논리적 사고와 호기심이 뛰어나 과학, 수학 등 탐구가 필요한 과목에서 강점을 보입니다.',
+      futureFields: '독립적 사고력과 문제해결력이 강해 연구, 개발, 창업 등 탐구 중심 분야에서 잠재력이 높습니다.',
+      sportsMatch: '자기 페이스로 도전하고 성취를 느끼는 개인 스포츠에서 집중력과 끈기를 발휘할 수 있습니다.',
+      academyStyle: '일방적 강의보다 질문과 토론이 가능한 환경에서 학습 효율이 크게 올라가는 탐구형 기질입니다.',
+      foods: '두뇌 활동이 활발한 탐구형 기질이므로 뇌 발달을 돕는 오메가3와 녹색 채소가 특히 도움이 됩니다.',
+    },
   },
   fire: {
     summary:
@@ -92,6 +112,15 @@ const BASE_PROFILES: Record<string, ChildReport> = {
       '사람들의 마음을 사로잡는 카리스마와 표현력이 특출납니다. 무대 위에서 더욱 빛나는 아이입니다.',
     parentingTip:
       '활동형 아이는 억누르면 역효과가 납니다. 충분한 신체 활동 시간을 보장하고, 칭찬과 격려를 아끼지 마세요. 실패해도 "다시 해보자"는 메시지가 아이에게 큰 힘이 됩니다.',
+    reasons: {
+      personality: '활동적인 에너지가 강하고 표현력이 뛰어나 사람들 사이에서 자연스럽게 주목받는 리더형 기질입니다.',
+      studyStyle: '경쟁과 상호작용에서 동기부여를 받는 에너지가 강하기 때문에 그룹 학습과 발표 중심 수업이 효과적입니다.',
+      bestSubjects: '표현력과 에너지가 풍부해 체육, 예술, 발표가 필요한 과목에서 두각을 나타냅니다.',
+      futureFields: '카리스마와 추진력이 뛰어나기 때문에 리더십과 표현이 요구되는 분야에서 잠재력이 높습니다.',
+      sportsMatch: '활동적인 에너지가 강하고 표현력이 뛰어나기 때문에 팀 스포츠에서 리더십을 발휘할 수 있습니다.',
+      academyStyle: '앉아서 듣기만 하면 에너지가 분산되므로 참여형, 활동형 수업이 집중력을 높여줍니다.',
+      foods: '에너지 소모가 크고 성장이 활발한 기질이므로 양질의 단백질과 빠른 에너지 보충 식품이 중요합니다.',
+    },
   },
   earth: {
     summary:
@@ -123,6 +152,15 @@ const BASE_PROFILES: Record<string, ChildReport> = {
       '다른 사람의 감정을 섬세하게 읽고 다독이는 공감 능력이 특출납니다. 팀에서 갈등을 해결하는 핵심 역할을 합니다.',
     parentingTip:
       '조화형 아이는 변화에 민감합니다. 환경이 바뀔 때 미리 충분히 설명해주고, 안전하다는 느낌을 주세요. 매일 같은 시간에 안아주는 루틴이 큰 안정감을 줍니다.',
+    reasons: {
+      personality: '안정과 조화의 에너지가 강해 주변 사람들을 배려하고 갈등을 해결하는 중재자 역할을 자연스럽게 합니다.',
+      studyStyle: '꾸준함과 안정감 속에서 성장하는 기질이므로 규칙적인 루틴과 반복 학습이 가장 큰 효과를 냅니다.',
+      bestSubjects: '공감 능력과 성실함이 뛰어나 언어, 윤리, 생물 등 이해와 배려가 필요한 과목에서 강점을 보입니다.',
+      futureFields: '깊은 공감 능력과 책임감이 있어 사람을 돕고 돌보는 분야에서 큰 보람과 성과를 얻을 수 있습니다.',
+      sportsMatch: '경쟁보다 조화를 중시하는 기질이므로 차분하고 꾸준히 즐길 수 있는 운동이 잘 맞습니다.',
+      academyStyle: '안정적인 환경과 친밀한 관계 속에서 학습 효율이 올라가는 기질이므로 소규모 수업이 적합합니다.',
+      foods: '소화 기능과 정서 안정이 중요한 기질이므로 따뜻하고 소화가 잘 되는 음식이 건강에 도움이 됩니다.',
+    },
   },
   metal: {
     summary:
@@ -154,6 +192,15 @@ const BASE_PROFILES: Record<string, ChildReport> = {
       '복잡한 정보를 체계적으로 분류하고 패턴을 찾아내는 분석력이 특출납니다. 논리적 사고가 필요한 분야에서 두각을 나타냅니다.',
     parentingTip:
       '분석형 아이는 "왜"에 대한 논리적 설명이 필요합니다. "그냥 해"라는 말보다 이유를 설명해주면 훨씬 잘 따릅니다. 감정 표현이 서툴 수 있으니 감정 이야기 시간을 의식적으로 만들어 주세요.',
+    reasons: {
+      personality: '분석과 논리의 에너지가 강해 꼼꼼하게 관찰하고 체계적으로 정리하는 것에 뛰어난 능력을 보입니다.',
+      studyStyle: '체계와 논리를 중시하는 기질이므로 단계별 학습과 노트 정리를 통해 깊은 이해에 도달합니다.',
+      bestSubjects: '논리적 사고력과 집중력이 뛰어나 수학, 과학, 코딩 등 정확성이 요구되는 과목에서 강점을 보입니다.',
+      futureFields: '뛰어난 분석력과 체계적 사고가 강점이므로 전문성과 정확성이 요구되는 분야에서 두각을 나타냅니다.',
+      sportsMatch: '전략적 사고와 집중력이 뛰어난 기질이므로 두뇌를 활용하는 스포츠에서 실력을 발휘합니다.',
+      academyStyle: '자기 속도에 맞춰 체계적으로 학습하는 것을 선호하므로 커리큘럼이 명확한 수업이 효과적입니다.',
+      foods: '집중력을 많이 사용하는 기질이므로 뇌 기능을 돕고 면역력을 유지하는 식품이 중요합니다.',
+    },
   },
   water: {
     summary:
@@ -185,6 +232,15 @@ const BASE_PROFILES: Record<string, ChildReport> = {
       '다른 사람이 보지 못하는 아름다움과 의미를 찾아내는 예술적 감각이 특출납니다. 감정을 작품으로 표현하는 능력이 뛰어납니다.',
     parentingTip:
       '감성형 아이는 부모의 감정에 매우 민감합니다. 아이 앞에서 부정적 감정을 강하게 표현하면 위축될 수 있어요. 아이의 감정을 먼저 인정해주고, 일기나 그림으로 표현하게 도와주세요.',
+    reasons: {
+      personality: '감성과 직관의 에너지가 풍부해 섬세한 감수성과 깊은 내면 세계를 가진 예술가형 기질입니다.',
+      studyStyle: '이미지와 이야기에 반응하는 감성 에너지가 강하기 때문에 시청각 자료와 창의적 표현을 통한 학습이 효과적입니다.',
+      bestSubjects: '풍부한 감수성과 창의력이 강점이므로 문학, 미술, 음악 등 자기표현이 중요한 과목에서 빛을 발합니다.',
+      futureFields: '남다른 감성과 창의력을 가지고 있어 예술, 문학, 상담 등 감정과 표현이 핵심인 분야에서 잠재력이 높습니다.',
+      sportsMatch: '우아함과 감성 표현이 뛰어난 기질이므로 미적 감각을 살릴 수 있는 예술적 운동이 잘 맞습니다.',
+      academyStyle: '경쟁보다 자기표현을 중시하는 기질이므로 감성을 자극하고 편안한 분위기의 수업이 적합합니다.',
+      foods: '감성이 예민한 기질이므로 정서 안정과 두뇌 발달을 돕는 해조류, 견과류 등이 특히 좋습니다.',
+    },
   },
 };
 
@@ -1001,6 +1057,7 @@ export function generateChildReport(
   base.sportsMatch = [...base.sportsMatch];
   base.goodFoods = [...base.goodFoods];
   base.badFoods = [...base.badFoods];
+  base.reasons = { ...base.reasons };
 
   // 연령대별 오버레이 적용
   if (ageGroup) {
