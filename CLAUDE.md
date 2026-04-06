@@ -182,6 +182,14 @@ LBS Fallback (반경 5km 학원 < 3개):
 - 이 프로젝트는 Expo/React Native + Firebase이며, Vercel/Next.js가 아님
 - Vercel 관련 스킬(shadcn, Next.js Cache, Vercel Functions 등)은 사용하지 않음
 
+### 빌드 전 필수 체크
+- 빌드 전에 반드시 `npx tsc --noEmit`으로 TypeScript 에러 확인
+- 빌드 전에 반드시 모든 화면 파일이 _layout.tsx에 등록되어 있는지 확인
+- 빌드 전에 반드시 import된 패키지가 설치되어 있는지 확인
+- 빌드 전에 반드시 유니코드 이스케이프(\uXXXX)가 없는지 확인
+- 빌드 전에 반드시 웹에서 기본 동작 테스트 (expo start --web)
+- 빌드 전에 반드시 Firebase 배포 후 API 테스트 (health, login, children)
+
 ### 반드시 할 것
 - 기능 1개 완료마다 git commit
 - 에러 발생 시 5회까지 자가 수정 시도

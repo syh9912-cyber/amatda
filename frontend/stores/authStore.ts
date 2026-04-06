@@ -60,14 +60,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   hydrate: async () => {
-    const saved = await loadAuthAsync();
-    if (saved.accessToken && saved.refreshToken) {
-      set({
-        ...saved,
-        isAuthenticated: true,
-        isHydrated: true,
-      });
-    } else {
+    try {
+      const saved = await loadAuthAsync();
+      if (saved.accessToken && saved.refreshToken) {
+        set({
+          ...saved,
+          isAuthenticated: true,
+          isHydrated: true,
+        });
+      } else {
+        set({ isHydrated: true });
+      }
+    } catch {
+      // SecureStore or AsyncStorage failure — proceed unauthenticated
       set({ isHydrated: true });
     }
   },

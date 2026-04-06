@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { useEffect, useState, Component, ErrorInfo, ReactNode } from 'react';
+import { View, ActivityIndicator, Text } from 'react-native';
 import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
@@ -14,7 +14,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const hydrate = useAuthStore((s) => s.hydrate);
 
   useEffect(() => {
-    hydrate().then(() => setReady(true));
+    hydrate()
+      .catch(() => {})
+      .finally(() => setReady(true));
   }, []);
 
   if (!ready) {
@@ -28,15 +30,51 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('App ErrorBoundary:', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: COLORS.background }}>
+          <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 8 }}>
+            {'\uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4'}
+          </Text>
+          <Text style={{ fontSize: 13, color: '#888', textAlign: 'center' }}>
+            {this.state.error?.message ?? 'Unknown error'}
+          </Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <QueryClientProvider client={queryClient}>
-        <StatusBar style="dark" />
-        <AuthGate>
-          <Stack screenOptions={{ headerShown: false }} />
-        </AuthGate>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <StatusBar style="dark" />
+          <AuthGate>
+            <Stack screenOptions={{ headerShown: false }} />
+          </AuthGate>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

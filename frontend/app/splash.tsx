@@ -91,7 +91,17 @@ export default function SplashScreen() {
       Animated.timing(fadeOut, { toValue: 0, duration: 500, easing: e, useNativeDriver: true }),
     ]).start(() => {
       writeLoop.stop();
-      router.replace(isAuthenticated ? '/(main)/home' as never : '/(auth)/login' as never);
+      try {
+        const target = isAuthenticated ? '/(main)/home' : '/(auth)/login';
+        setTimeout(() => {
+          router.replace(target as never);
+        }, 100);
+      } catch {
+        // fallback: try again after a longer delay
+        setTimeout(() => {
+          router.replace('/(auth)/login' as never);
+        }, 500);
+      }
     });
     setTimeout(() => writeLoop.start(), 2000);
   }, []);
