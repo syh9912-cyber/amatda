@@ -212,8 +212,8 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
           };
         }
       }
-      // 최소 점수 이상일 때만 사용
-      if (bestScore < 4) learnedMatch = null;
+      // 최소 점수 이상일 때만 사용 (너무 낮으면 잘못된 매칭)
+      if (bestScore < 8) learnedMatch = null;
       // 사용 횟수 증가
       if (learnedMatch) {
         const matchDoc = learnedSnap.docs.find((d) => d.data().answer === learnedMatch!.answer);
@@ -232,6 +232,22 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
     let followupQuestion: string | null = null;
     let detectedCategory = category ?? '기타';
 
+    // 카테고리별 상세 질문 (더 정확한 상담을 위해)
+    const DETAIL_PROMPTS: Record<string, string> = {
+      '울음': '더 정확한 분석을 위해 아이의 울음소리를 녹음해서 들려주시거나, 울 때의 상황을 자세히 알려주세요. (언제, 얼마나 오래, 어떤 상황에서)',
+      '대변': '대변 사진을 찍어서 보여주시면 더 정확한 조언을 드릴 수 있어요. 색깔, 묽기, 빈도를 알려주세요.',
+      '피부': '아이의 피부 상태를 사진으로 찍어서 보여주세요. 발생 부위와 시작 시기를 알려주시면 도움됩니다.',
+      '식사': '아이가 어제 먹은 음식과 양을 알려주세요. 거부하는 음식 종류도 구체적으로 알려주시면 좋아요.',
+      '수면': '아이의 취침 시간, 기상 시간, 낮잠 횟수를 알려주세요. 잠들 때 습관도 알려주시면 도움됩니다.',
+      '건강': '체온을 재서 알려주세요. 다른 증상(기침, 콧물, 구토 등)이 있는지도 함께 알려주세요.',
+      '사회성': '구체적인 상황을 알려주세요. (어린이집에서? 놀이터에서? 어떤 친구와?) 아이의 반응도 자세히 알려주세요.',
+      '행동': '이 행동이 언제부터 시작됐는지, 하루에 몇 번 정도 하는지, 어떤 상황에서 하는지 알려주세요.',
+      '성장': '현재 키와 몸무게를 알려주세요. 또래와 비교했을 때 어떤 차이가 느껴지는지도 알려주시면 좋아요.',
+      '정서': '아이가 이런 감정을 보일 때 구체적인 상황을 알려주세요. 얼마나 자주, 어떤 때에 그러는지 알려주시면 도움됩니다.',
+    };
+
+    let detailPrompt: string | null = null;
+
     if (entry) {
       // 기질별 맞춤 조언 선택
       const traitTip = entry.traitAdvice[child.dominantType] ?? entry.generalAdvice;
@@ -242,6 +258,7 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
       followupDays = entry.followupDays;
       followupQuestion = entry.followupQuestion;
       detectedCategory = entry.category;
+      detailPrompt = DETAIL_PROMPTS[entry.category] ?? null;
     } else if (learnedMatch) {
       // 1-2. 학습된 데이터 사용
       answer = learnedMatch.answer;
@@ -336,6 +353,7 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
       source,
       category: detectedCategory,
       followup,
+      detailPrompt,
     });
   } catch {
     error(res, '코칭 응답 중 오류가 발생했습니다', 500);

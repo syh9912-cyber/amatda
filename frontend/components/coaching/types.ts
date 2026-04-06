@@ -4,7 +4,8 @@ export interface CoachingMessage {
   text: string;
   reason?: string;
   solutions?: string[];
-  source?: 'knowledge' | 'ai';
+  source?: 'knowledge' | 'ai' | 'learned';
+  detailPrompt?: string;
   imageUri?: string;
   createdAt: string;
 }

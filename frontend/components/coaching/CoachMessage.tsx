@@ -16,12 +16,12 @@ export function CoachMessage({ message }: Props) {
 
   const timeStr = formatTime(message.createdAt);
   const sourceBadge = message.source === 'ai' ? 'AI' : 'DB';
-  const sourceEmoji = message.source === 'ai' ? '\uD83E\uDD16' : '\uD83D\uDCDA';
+  const sourceEmoji = message.source === 'ai' ? '🤖' : '📚';
 
   return (
     <View style={styles.row}>
       <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{'\uD83E\uDD16'}</Text>
+        <Text style={styles.avatarText}>{'🤖'}</Text>
       </View>
       <View style={styles.content}>
         <View style={styles.bubble}>
@@ -34,7 +34,7 @@ export function CoachMessage({ message }: Props) {
               activeOpacity={0.7}
             >
               <Text style={styles.reasonToggleText}>
-                {'\uD83D\uDCA1'} {reasonOpen ? '\uC774\uC720 \u25B2' : '\uC774\uC720 \u25BC'}
+                💡 {reasonOpen ? '이유 ▲' : '이유 ▼'}
               </Text>
             </TouchableOpacity>
           ) : null}
@@ -48,13 +48,20 @@ export function CoachMessage({ message }: Props) {
           {message.solutions && message.solutions.length > 0 ? (
             <View style={styles.solutionBox}>
               <Text style={styles.solutionTitle}>
-                {'\u2705'} {'\uD574\uACB0\uBC29\uBC95'}
+                ✅ 해결방법
               </Text>
               {message.solutions.map((sol, idx) => (
                 <Text key={idx} style={styles.solutionItem}>
                   {idx + 1}. {sol}
                 </Text>
               ))}
+            </View>
+          ) : null}
+
+          {message.detailPrompt ? (
+            <View style={styles.detailBox}>
+              <Text style={styles.detailTitle}>📋 더 정확한 상담을 위해</Text>
+              <Text style={styles.detailText}>{message.detailPrompt}</Text>
             </View>
           ) : null}
         </View>
@@ -76,7 +83,7 @@ function formatTime(iso: string): string {
   const d = new Date(iso);
   const h = d.getHours();
   const m = d.getMinutes().toString().padStart(2, '0');
-  const ampm = h < 12 ? '\uC624\uC804' : '\uC624\uD6C4';
+  const ampm = h < 12 ? '오전' : '오후';
   const hour = h % 12 || 12;
   return `${ampm} ${hour}:${m}`;
 }
@@ -173,5 +180,24 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 11,
     color: COACHING_COLORS.textLight,
+  },
+  detailBox: {
+    backgroundColor: '#FFF0E6',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#FFD4B8',
+  },
+  detailTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#E67040',
+    marginBottom: 4,
+  },
+  detailText: {
+    fontSize: 13,
+    color: '#8B5E3C',
+    lineHeight: 20,
   },
 });

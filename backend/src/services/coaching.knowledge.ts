@@ -3595,21 +3595,26 @@ export const COACHING_KNOWLEDGE: CoachingEntry[] = [
 export function findCoachingEntry(message: string): CoachingEntry | null {
   let bestMatch: CoachingEntry | null = null;
   let bestScore = 0;
+  let bestMatchCount = 0;
 
   for (const entry of COACHING_KNOWLEDGE) {
     let score = 0;
+    let matchCount = 0;
     for (const keyword of entry.keywords) {
-      if (message.includes(keyword)) {
+      if (keyword.length >= 2 && message.includes(keyword)) {
         score += keyword.length;
+        matchCount++;
       }
     }
-    if (score > bestScore) {
+    // 최소 2글자 이상 키워드가 1개 이상 매칭되어야 하고, 점수가 4 이상이어야 함
+    if (score >= 4 && matchCount >= 1 && (score > bestScore || (score === bestScore && matchCount > bestMatchCount))) {
       bestScore = score;
       bestMatch = entry;
+      bestMatchCount = matchCount;
     }
   }
 
-  return bestScore > 0 ? bestMatch : null;
+  return bestMatch;
 }
 
 /** 카테고리별 엔트리 조회 */
