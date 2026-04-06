@@ -176,6 +176,12 @@ LBS Fallback (반경 5km 학원 < 3개):
 - `any` 타입 사용
 - AI API 전송 시 아이 실명 포함
 
+### MCP 사용 규칙
+- CLI로 대체 가능한 작업은 반드시 CLI 사용
+- MCP는 CLI가 없는 서비스(Figma, Notion 등)에만 사용
+- 이 프로젝트는 Expo/React Native + Firebase이며, Vercel/Next.js가 아님
+- Vercel 관련 스킬(shadcn, Next.js Cache, Vercel Functions 등)은 사용하지 않음
+
 ### 반드시 할 것
 - 기능 1개 완료마다 git commit
 - 에러 발생 시 5회까지 자가 수정 시도
