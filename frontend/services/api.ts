@@ -162,6 +162,22 @@ export const chatbotApi = {
   history: () => api.get('/chatbot/history'),
 };
 
+// Coaching
+export const coachingApi = {
+  send: (childId: string, message: string, category?: string) =>
+    api.post('/coaching', { childId, message, category }),
+  history: (childId: string) =>
+    api.get(`/coaching/history/${childId}`),
+  checkin: (childId: string, mood: string) =>
+    api.post('/coaching/checkin', { childId, mood }),
+  followups: (childId: string) =>
+    api.get(`/coaching/followups/${childId}`),
+  dismissFollowup: (followupId: string) =>
+    api.post(`/coaching/followups/${followupId}/dismiss`),
+  respondFollowup: (followupId: string, response: string) =>
+    api.post(`/coaching/followups/${followupId}/respond`, { response }),
+};
+
 // Ads
 export const adApi = {
   list: (type?: string, limit = 3) => {
@@ -194,6 +210,18 @@ export const momstagramApi = {
     api.delete(`/momstagram/posts/${postId}`),
   getMyPosts: (page = 0, limit = 20) =>
     api.get('/momstagram/my-posts', { params: { page: String(page), limit: String(limit) } }),
+};
+
+// Coaching (AI 육아 코칭)
+export const coachingApi = {
+  ask: (childId: string, message: string, category?: string, photoUrl?: string) =>
+    api.post('/coaching/ask', { childId, message, category, photoUrl }),
+  history: (childId: string) =>
+    api.get(`/coaching/history/${childId}`),
+  followups: (childId: string) =>
+    api.get(`/coaching/followups/${childId}`),
+  respondFollowup: (followupId: string, answer: string) =>
+    api.post(`/coaching/followup/${followupId}/respond`, { answer }),
 };
 
 export default api;

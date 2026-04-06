@@ -13,10 +13,15 @@ import {
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { childApi } from '../../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { childApi, coachingApi } from '../../services/api';
 import { useChildStore, Child } from '../../stores/childStore';
 import { useAuthStore } from '../../stores/authStore';
 import { ChildSelector } from '../../components/home/ChildSelector';
+import {
+  ProactivePopup,
+  PopupReason,
+} from '../../components/coaching/ProactivePopup';
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
@@ -132,9 +137,17 @@ function getRecommendations(child: Child): {
 /* Main Screen                                                         */
 /* ------------------------------------------------------------------ */
 
+const LAST_OPEN_KEY = 'amatda_last_open_ts';
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [popupReason, setPopupReason] = useState<PopupReason>('inactive');
+  const [popupFollowupText, setPopupFollowupText] = useState<
+    string | undefined
+  >(undefined);
 
   const { children, selectedChild, setChildren, selectChild } =
     useChildStore();
@@ -143,6 +156,7 @@ export default function HomeScreen() {
 
   useEffect(() => {
     loadChildren();
+    checkProactivePopup();
   }, []);
 
   const loadChildren = async () => {
@@ -155,6 +169,65 @@ export default function HomeScreen() {
       setLoading(false);
     }
   };
+
+  const checkProactivePopup = async () => {
+    try {
+      const now = Date.now();
+      const lastOpenStr = await AsyncStorage.getItem(LAST_OPEN_KEY);
+      await AsyncStorage.setItem(LAST_OPEN_KEY, String(now));
+
+      // Check follow-ups first
+      const childState = useChildStore.getState();
+      const child = childState.selectedChild;
+      if (child) {
+        try {
+          const res = await coachingApi.followups(child.id);
+          const data = res.data?.data;
+          if (Array.isArray(data) && data.length > 0) {
+            setPopupReason('followup');
+            setPopupFollowupText(data[0].followupText);
+            setPopupVisible(true);
+            return;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      // Check if inactive > 3 days
+      if (lastOpenStr) {
+        const lastOpen = parseInt(lastOpenStr, 10);
+        if (now - lastOpen > THREE_DAYS_MS) {
+          setPopupReason('inactive');
+          setPopupVisible(true);
+          return;
+        }
+      }
+
+      // Check weekend
+      const day = new Date().getDay();
+      if (day === 0 || day === 6) {
+        const weekendKey = `amatda_weekend_popup_${new Date().toDateString()}`;
+        const shown = await AsyncStorage.getItem(weekendKey);
+        if (!shown) {
+          await AsyncStorage.setItem(weekendKey, '1');
+          setPopupReason('weekend');
+          setPopupVisible(true);
+        }
+      }
+    } catch {
+      // ignore popup errors
+    }
+  };
+
+  const handlePopupRespond = useCallback((response: string) => {
+    setPopupVisible(false);
+    router.push('/(main)/chatbot' as never);
+  }, []);
+
+  const handlePopupDismiss = useCallback(() => {
+    setPopupVisible(false);
+  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -251,7 +324,16 @@ export default function HomeScreen() {
       </TouchableOpacity>
 
       {/* Version */}
-      <Text style={styles.version}>아맞다 v1.0.0</Text>
+      <Text style={styles.version}>{'\uC544\uB9DE\uB2E4 v1.0.0'}</Text>
+
+      {/* Proactive Popup */}
+      <ProactivePopup
+        visible={popupVisible}
+        reason={popupReason}
+        followupText={popupFollowupText}
+        onRespond={handlePopupRespond}
+        onDismiss={handlePopupDismiss}
+      />
     </ScrollView>
   );
 }

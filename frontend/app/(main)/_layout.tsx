@@ -5,11 +5,11 @@ const ACTIVE_COLOR = '#FF8C5A';
 const INACTIVE_COLOR = '#B8A690';
 
 const TAB_CONFIG = [
-  { emoji: '🏠', label: '홈' },
-  { emoji: '🧠', label: '기질분석' },
-  { emoji: '📸', label: '맘스타' },
-  { emoji: '👥', label: '커뮤니티' },
-  { emoji: '📚', label: '성장앨범' },
+  { emoji: '\uD83C\uDFE0', label: '\uD648' },
+  { emoji: '\uD83E\uDDE0', label: '\uAE30\uC9C8\uBD84\uC11D' },
+  { emoji: '\uD83D\uDCAC', label: '\uCF54\uCE6D' },
+  { emoji: '\uD83D\uDCF8', label: '\uB9D8\uC2A4\uD0C0' },
+  { emoji: '\uD83D\uDCDA', label: '\uC131\uC7A5\uC568\uBC94' },
 ] as const;
 
 function EmojiIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
@@ -84,7 +84,7 @@ export default function MainLayout() {
         }}
       />
       <Tabs.Screen
-        name="momstagram"
+        name="chatbot"
         options={{
           tabBarIcon: ({ focused }) => (
             <EmojiIcon emoji={TAB_CONFIG[2].emoji} focused={focused} />
@@ -95,7 +95,7 @@ export default function MainLayout() {
         }}
       />
       <Tabs.Screen
-        name="community"
+        name="momstagram"
         options={{
           tabBarIcon: ({ focused }) => (
             <EmojiIcon emoji={TAB_CONFIG[3].emoji} focused={focused} />
@@ -119,7 +119,7 @@ export default function MainLayout() {
 
       {/* === Hidden screens === */}
       <Tabs.Screen name="diary" options={{ href: null }} />
-      <Tabs.Screen name="chatbot" options={{ href: null }} />
+      <Tabs.Screen name="community" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />
       <Tabs.Screen name="momstagram-post" options={{ href: null }} />
       <Tabs.Screen name="report" options={{ href: null }} />

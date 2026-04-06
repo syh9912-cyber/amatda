@@ -24,6 +24,8 @@ export const collections = {
   posts: db.collection('posts'),
   postLikes: db.collection('postLikes'),
   postComments: db.collection('postComments'),
+  coachingSessions: db.collection('coachingSessions'),
+  followups: db.collection('followups'),
 };
 
 /** 문서 ID 생성 */
