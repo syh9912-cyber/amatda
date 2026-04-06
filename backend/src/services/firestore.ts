@@ -26,6 +26,7 @@ export const collections = {
   postComments: db.collection('postComments'),
   coachingSessions: db.collection('coachingSessions'),
   followups: db.collection('followups'),
+  learnedKnowledge: db.collection('learnedKnowledge'),
 };
 
 /** 문서 ID 생성 */

@@ -19,7 +19,7 @@ interface CoachingSession {
   answer: string;
   reason: string;
   solutions: string[];
-  source: 'knowledge' | 'ai';
+  source: 'knowledge' | 'ai' | 'learned';
   followupDays: number | null;
   followupQuestion: string | null;
   photoUrl: string | null;
@@ -188,13 +188,46 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
       return;
     }
 
-    // 1. 지식 DB에서 매칭 검색
+    // 1. 정적 지식DB에서 매칭
     const entry = findCoachingEntry(message);
+
+    // 1-1. 학습된 데이터에서도 검색
+    let learnedMatch: { answer: string; reason: string; solutions: string[] } | null = null;
+    if (!entry) {
+      const learnedSnap = await collections.learnedKnowledge.get();
+      let bestScore = 0;
+      for (const doc of learnedSnap.docs) {
+        const learned = doc.data();
+        const kws = learned.keywords as string[];
+        let score = 0;
+        for (const kw of kws) {
+          if (message.includes(kw)) score += kw.length;
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          learnedMatch = {
+            answer: learned.answer as string,
+            reason: learned.reason as string,
+            solutions: learned.solutions as string[],
+          };
+        }
+      }
+      // 최소 점수 이상일 때만 사용
+      if (bestScore < 4) learnedMatch = null;
+      // 사용 횟수 증가
+      if (learnedMatch) {
+        const matchDoc = learnedSnap.docs.find((d) => d.data().answer === learnedMatch!.answer);
+        if (matchDoc) {
+          const current = (matchDoc.data().useCount as number) || 0;
+          await collections.learnedKnowledge.doc(matchDoc.id).update({ useCount: current + 1 });
+        }
+      }
+    }
 
     let answer: string;
     let reason: string;
     let solutions: string[];
-    let source: 'knowledge' | 'ai';
+    let source: 'knowledge' | 'ai' | 'learned';
     let followupDays: number | null = null;
     let followupQuestion: string | null = null;
     let detectedCategory = category ?? '기타';
@@ -209,6 +242,12 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
       followupDays = entry.followupDays;
       followupQuestion = entry.followupQuestion;
       detectedCategory = entry.category;
+    } else if (learnedMatch) {
+      // 1-2. 학습된 데이터 사용
+      answer = learnedMatch.answer;
+      reason = learnedMatch.reason;
+      solutions = learnedMatch.solutions;
+      source = 'learned';
     } else {
       // 2. Gemini AI 폴백
       const aiResult = await getGeminiCoachingResponse(
@@ -221,6 +260,29 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
       reason = aiResult.reason;
       solutions = aiResult.solutions;
       source = 'ai';
+
+      // AI 응답을 학습 데이터로 자동 저장 (다음에 비슷한 질문 시 AI 없이 응답)
+      const keywords = message
+        .replace(/[?？!！.。,，]/g, ' ')
+        .split(/\s+/)
+        .filter((w: string) => w.length >= 2)
+        .slice(0, 8);
+
+      if (keywords.length >= 2) {
+        const learnedId = genId();
+        await collections.learnedKnowledge.doc(learnedId).set({
+          keywords,
+          category: detectedCategory,
+          dominantType: child.dominantType,
+          ageMonths: child.ageMonths,
+          originalMessage: message,
+          answer,
+          reason,
+          solutions,
+          useCount: 0,
+          createdAt: new Date().toISOString(),
+        });
+      }
     }
 
     // 3. 세션 저장
