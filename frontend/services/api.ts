@@ -162,21 +162,6 @@ export const chatbotApi = {
   history: () => api.get('/chatbot/history'),
 };
 
-// Coaching
-export const coachingApi = {
-  send: (childId: string, message: string, category?: string) =>
-    api.post('/coaching', { childId, message, category }),
-  history: (childId: string) =>
-    api.get(`/coaching/history/${childId}`),
-  checkin: (childId: string, mood: string) =>
-    api.post('/coaching/checkin', { childId, mood }),
-  followups: (childId: string) =>
-    api.get(`/coaching/followups/${childId}`),
-  dismissFollowup: (followupId: string) =>
-    api.post(`/coaching/followups/${followupId}/dismiss`),
-  respondFollowup: (followupId: string, response: string) =>
-    api.post(`/coaching/followups/${followupId}/respond`, { response }),
-};
 
 // Ads
 export const adApi = {
@@ -216,12 +201,18 @@ export const momstagramApi = {
 export const coachingApi = {
   ask: (childId: string, message: string, category?: string, photoUrl?: string) =>
     api.post('/coaching/ask', { childId, message, category, photoUrl }),
+  send: (childId: string, message: string, category?: string) =>
+    api.post('/coaching/ask', { childId, message, category }),
   history: (childId: string) =>
     api.get(`/coaching/history/${childId}`),
+  checkin: (childId: string, mood: string) =>
+    api.post('/coaching/ask', { childId, message: `오늘 아이 컨디션: ${mood}`, category: '체크인' }),
   followups: (childId: string) =>
     api.get(`/coaching/followups/${childId}`),
-  respondFollowup: (followupId: string, answer: string) =>
-    api.post(`/coaching/followup/${followupId}/respond`, { answer }),
+  dismissFollowup: (followupId: string) =>
+    api.post(`/coaching/followup/${followupId}/respond`, { answer: '나중에' }),
+  respondFollowup: (followupId: string, response: string) =>
+    api.post(`/coaching/followup/${followupId}/respond`, { answer: response }),
 };
 
 export default api;

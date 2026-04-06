@@ -318,7 +318,7 @@ router.get('/followups/:childId', authMiddleware, async (req: Request, res: Resp
       .get();
 
     // 기한이 지났거나 오늘까지인 것만 반환
-    const allFollowups = snap.docs.map((d) => {
+    const allFollowups: Array<Record<string, unknown>> = snap.docs.map((d) => {
       const data = d.data() as Record<string, unknown>;
       return { id: d.id, ...data };
     });
@@ -337,7 +337,7 @@ router.get('/followups/:childId', authMiddleware, async (req: Request, res: Resp
 
 router.post('/followup/:id/respond', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { answer } = req.body as { answer: string };
 
     if (!answer) {
