@@ -1,15 +1,15 @@
 import { Tabs } from 'expo-router';
-import { Text, View } from 'react-native';
+import { Text, View, Platform } from 'react-native';
 
 const ACTIVE_COLOR = '#FF8C5A';
 const INACTIVE_COLOR = '#B8A690';
 
 const TAB_CONFIG = [
-  { emoji: '\uD83C\uDFE0', label: '\uD648' },
-  { emoji: '\uD83E\uDDE0', label: '\uAE30\uC9C8\uBD84\uC11D' },
-  { emoji: '\uD83D\uDCAC', label: '\uCF54\uCE6D' },
-  { emoji: '\uD83D\uDCF8', label: '\uB9D8\uC2A4\uD0C0' },
-  { emoji: '\uD83D\uDCDA', label: '\uC131\uC7A5\uC568\uBC94' },
+  { emoji: '\uD83C\uDFE0', label: '홈' },
+  { emoji: '\uD83E\uDDE0', label: '기질분석' },
+  { emoji: '\uD83D\uDCAC', label: 'AI상담' },
+  { emoji: '\uD83D\uDCF8', label: '맘스타그램' },
+  { emoji: '\uD83D\uDE4B', label: '마이' },
 ] as const;
 
 function EmojiIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
@@ -50,8 +50,8 @@ export default function MainLayout() {
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
           paddingTop: 8,
-          paddingBottom: 30,
-          height: 85,
+          paddingBottom: Platform.OS === 'android' ? 44 : 34,
+          height: Platform.OS === 'android' ? 100 : 90,
           shadowColor: '#B8A690',
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.06,
@@ -106,7 +106,7 @@ export default function MainLayout() {
         }}
       />
       <Tabs.Screen
-        name="album"
+        name="profile"
         options={{
           tabBarIcon: ({ focused }) => (
             <EmojiIcon emoji={TAB_CONFIG[4].emoji} focused={focused} />
@@ -120,7 +120,7 @@ export default function MainLayout() {
       {/* === Hidden screens === */}
       <Tabs.Screen name="diary" options={{ href: null }} />
       <Tabs.Screen name="community" options={{ href: null }} />
-      <Tabs.Screen name="profile" options={{ href: null }} />
+      <Tabs.Screen name="album" options={{ href: null }} />
       <Tabs.Screen name="momstagram-post" options={{ href: null }} />
       <Tabs.Screen name="report" options={{ href: null }} />
       <Tabs.Screen name="nutrition" options={{ href: null }} />
@@ -133,6 +133,11 @@ export default function MainLayout() {
       <Tabs.Screen name="growth-stats" options={{ href: null }} />
       <Tabs.Screen name="privacy" options={{ href: null }} />
       <Tabs.Screen name="terms" options={{ href: null }} />
+      <Tabs.Screen name="poop-analyzer" options={{ href: null }} />
+      <Tabs.Screen name="cry-analyzer" options={{ href: null }} />
+      <Tabs.Screen name="play-learning" options={{ href: null }} />
+      <Tabs.Screen name="clinic" options={{ href: null }} />
+      <Tabs.Screen name="child-card" options={{ href: null }} />
     </Tabs>
   );
 }

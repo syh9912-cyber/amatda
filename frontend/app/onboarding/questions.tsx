@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity,
-  ActivityIndicator, Animated,
+  ActivityIndicator, Animated, ScrollView,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { childApi, questionApi } from '../../services/api';
@@ -141,34 +141,39 @@ export default function QuestionsScreen() {
 
       {/* Question */}
       <Animated.View style={[styles.questionArea, { opacity: fadeAnim }]}>
-        {current.category ? (
-          <Text style={styles.categoryLabel}>{current.category}</Text>
-        ) : null}
-        <Text style={styles.qNumber}>Q{currentIdx + 1}</Text>
-        <Text style={styles.qText}>{current.text}</Text>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.questionScroll}
+        >
+          {current.category ? (
+            <Text style={styles.categoryLabel}>{current.category}</Text>
+          ) : null}
+          <Text style={styles.qNumber}>Q{currentIdx + 1}</Text>
+          <Text style={styles.qText}>{current.text}</Text>
 
-        <View style={styles.optionsWrap}>
-          {current.options.map((opt, idx) => {
-            const selected = answers[current.id] === idx;
-            return (
-              <TouchableOpacity
-                key={idx}
-                style={[styles.optionBtn, selected && styles.optionSelected]}
-                onPress={() => handleSelect(idx)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.optionCircle, selected && styles.circleSelected]}>
-                  <Text style={[styles.optionCircleText, selected && styles.circleTextSelected]}>
-                    {String.fromCharCode(65 + idx)}
+          <View style={styles.optionsWrap}>
+            {current.options.map((opt, idx) => {
+              const selected = answers[current.id] === idx;
+              return (
+                <TouchableOpacity
+                  key={idx}
+                  style={[styles.optionBtn, selected && styles.optionSelected]}
+                  onPress={() => handleSelect(idx)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.optionCircle, selected && styles.circleSelected]}>
+                    <Text style={[styles.optionCircleText, selected && styles.circleTextSelected]}>
+                      {String.fromCharCode(65 + idx)}
+                    </Text>
+                  </View>
+                  <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
+                    {opt}
                   </Text>
-                </View>
-                <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
-                  {opt}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
       </Animated.View>
 
       {/* Bottom row: back + skip */}

@@ -1,6 +1,6 @@
 /**
  * onboarding-questions.ts
- * 온보딩 질문 80개 (연령 그룹별 20개)
+ * 온보딩 질문 120개 (연령 그룹별 30개, 각 6개 답변 옵션)
  * 부모가 자녀 최초 등록 시 답변하는 질문 목록
  */
 
@@ -15,10 +15,10 @@ export interface OnboardingQuestion {
 
 export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
   // ========================================
-  // 영아기 (0~36개월) 20개
+  // 영아기 (0~36개월) 30개
   // ========================================
 
-  // 1-4: 기질/성격
+  // 1-5: 기질/성격
   {
     id: 'infant_1',
     ageGroup: 'infant',
@@ -29,6 +29,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '부모에게 꼭 달라붙어 불안해해요',
       '처음엔 경계하다가 서서히 적응해요',
       '별 반응 없이 평소와 비슷해요',
+      '울지는 않지만 표정이 굳어요',
+      '주변 사람들에게 관심을 보이며 웃어요',
     ],
     category: 'personality',
   },
@@ -42,6 +44,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '잠깐 떼쓰다가 금방 잊어요',
       '다른 것으로 쉽게 관심이 옮겨져요',
       '표현 자체를 잘 안 하는 편이에요',
+      '울음 대신 몸짓으로 끈질기게 요구해요',
+      '상황에 따라 강도가 달라요',
     ],
     category: 'personality',
   },
@@ -55,6 +59,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '손가락으로 가리키며 옹알이해요',
       '부모 손을 잡고 끌고 가요',
       '표정이나 눈빛으로 알려줘요',
+      '특정 단어나 소리를 반복해요',
+      '몸을 비틀거나 발버둥 쳐요',
     ],
     category: 'personality',
   },
@@ -68,11 +74,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '한참 쳐다보며 관찰한 뒤 만져요',
       '부모가 먼저 놀아주길 기다려요',
       '기존 장난감에 더 관심을 보여요',
+      '장난감의 구조나 작동 방식을 탐색해요',
+      '장난감보다 포장이나 상자에 더 관심을 가져요',
     ],
     category: 'personality',
   },
-
-  // 5-8: 감각/활동
   {
     id: 'infant_5',
     ageGroup: 'infant',
@@ -83,9 +89,13 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '음악이나 소리 듣기',
       '다양한 촉감 만지기(물, 모래 등)',
       '몸을 흔들거나 움직이는 것 자체',
+      '냄새나 맛에 반응하는 편이에요',
+      '여러 감각을 동시에 즐기는 편이에요',
     ],
     category: 'activity',
   },
+
+  // 6-10: 활동/감각
   {
     id: 'infant_6',
     ageGroup: 'infant',
@@ -96,6 +106,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '적당히 활동적이에요',
       '한 자리에 오래 앉아 놀아요',
       '안기거나 누워있는 걸 더 좋아해요',
+      '특정 시간대에만 활발해요',
+      '놀이에 따라 활동량이 크게 달라요',
     ],
     category: 'activity',
   },
@@ -109,6 +121,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '좋아하지만 금방 지쳐요',
       '좋아하는 편이에요',
       '밖보다 집 안을 더 좋아해요',
+      '자연(풀, 흙, 물)을 특히 좋아해요',
+      '다른 아이들이 노는 모습을 구경하는 걸 즐겨요',
     ],
     category: 'activity',
   },
@@ -122,11 +136,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '손으로 쥐고 탐색하는 놀이(블록, 컵쌓기)',
       '소리나 음악에 반응하는 놀이',
       '그림책 보기나 가만히 관찰하는 놀이',
+      '물놀이나 감각 자극 놀이',
+      '부모와 함께하는 상호작용 놀이(까꿍 등)',
     ],
     category: 'activity',
   },
-
-  // 9-12: 감정/애착
   {
     id: 'infant_9',
     ageGroup: 'infant',
@@ -137,6 +151,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '처음엔 울지만 비교적 빨리 적응해요',
       '별로 개의치 않고 잘 놀아요',
       '상황에 따라 매번 달라요',
+      '울지 않지만 부모를 계속 찾아 두리번거려요',
+      '분리 후에 다시 만나면 오히려 삐져요',
     ],
     category: 'emotion',
   },
@@ -150,9 +166,13 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '수줍어하거나 부끄러워해요',
       '별 반응 없이 하던 걸 계속해요',
       '더 신나서 과격하게 행동해요',
+      '부모 눈치를 보며 확인하듯 쳐다봐요',
+      '박수를 따라 치며 좋아해요',
     ],
     category: 'emotion',
   },
+
+  // 11-15: 감정/애착
   {
     id: 'infant_11',
     ageGroup: 'infant',
@@ -163,6 +183,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '울면서 도와달라고 해요',
       '포기하고 다른 놀이로 넘어가요',
       '끈기 있게 계속 시도해요',
+      '부모에게 해달라고 내밀어요',
+      '잠시 멈췄다가 다시 시도해요',
     ],
     category: 'emotion',
   },
@@ -176,11 +198,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '좋아하는 물건(인형, 담요)을 쥐어주면 돼요',
       '다른 것에 관심을 돌리면 잊어요',
       '시간을 좀 두면 스스로 진정해요',
+      '노래를 불러주거나 음악을 틀어주면 안정돼요',
+      '바깥 공기를 쐬면 빠르게 진정돼요',
     ],
     category: 'emotion',
   },
-
-  // 13-16: 사회성
   {
     id: 'infant_13',
     ageGroup: 'infant',
@@ -191,6 +213,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '멀리서 쳐다보기만 해요',
       '무서워하거나 부모 뒤에 숨어요',
       '같은 공간에서 각자 놀아요',
+      '장난감을 뺏거나 밀치는 행동을 해요',
+      '옹알이나 소리로 먼저 의사소통을 시도해요',
     ],
     category: 'social',
   },
@@ -204,6 +228,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '처음엔 경계하다가 풀려요',
       '부모 뒤에 숨거나 울어요',
       '무반응이거나 자기 할 것만 해요',
+      '관심을 보이며 쳐다보지만 다가가진 않아요',
+      '친숙한 어른과 낯선 어른을 확실히 구분해요',
     ],
     category: 'social',
   },
@@ -217,9 +243,13 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '줬다 뺐었다 해요',
       '절대 안 줘요',
       '부모 것만 나눠줘요',
+      '스스로는 안 주지만 칭찬하면 줘요',
+      '나눠주는 행동 자체를 아직 이해하지 못해요',
     ],
     category: 'social',
   },
+
+  // 16-20: 사회성/소통
   {
     id: 'infant_16',
     ageGroup: 'infant',
@@ -230,11 +260,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '관심이 있을 때만 눈을 마주쳐요',
       '물건에 더 관심이 많아 눈맞춤이 적어요',
       '부를 때 잘 쳐다보지만 먼저 찾진 않아요',
+      '눈맞춤과 함께 옹알이로 대화하듯 해요',
+      '거울 속 자기 모습에도 반응해요',
     ],
     category: 'social',
   },
-
-  // 17-20: 습관/루틴
   {
     id: 'infant_17',
     ageGroup: 'infant',
@@ -245,6 +275,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '재우기가 힘들지만 한번 자면 잘 자요',
       '자주 깨거나 수면 시간이 불규칙해요',
       '낮잠 시간이 제각각이에요',
+      '잠들기까지 특정 의식(수유, 자장가)이 필요해요',
+      '밤에 자주 깨서 울다가 다시 자요',
     ],
     category: 'habit',
   },
@@ -258,6 +290,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '먹는 양은 적지만 골고루 먹어요',
       '좋아하는 것만 먹으려 해요',
       '먹는 것에 관심이 적어요',
+      '새로운 음식에 호기심은 있지만 뱉기도 해요',
+      '먹을 때 손으로 직접 잡고 탐색하려 해요',
     ],
     category: 'habit',
   },
@@ -271,6 +305,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '5분 내외로 놀다가 다른 걸로 옮겨요',
       '1~2분이면 다른 것에 관심을 가져요',
       '관심 있는 것만 오래 해요',
+      '부모와 함께하면 더 오래 집중해요',
+      '여러 장난감을 번갈아 가며 놀아요',
     ],
     category: 'habit',
   },
@@ -284,15 +320,171 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '약간 불안해하지만 곧 괜찮아져요',
       '많이 보채고 힘들어해요',
       '크게 개의치 않아요',
+      '하루 정도 적응 시간이 필요해요',
+      '루틴이 바뀌면 수면이나 식사에 영향이 가요',
     ],
     category: 'habit',
   },
 
+  // 21-25: 발달/인지 (신규)
+  {
+    id: 'infant_21',
+    ageGroup: 'infant',
+    ageLabel: '영아기',
+    questionText: '아이의 언어 발달 수준은 어떤가요?',
+    options: [
+      '또래보다 말이 빠른 편이에요',
+      '또래 수준에 맞게 발달하고 있어요',
+      '말보다 몸짓이나 표정으로 소통해요',
+      '아직 옹알이 단계예요',
+      '단어는 말하지만 문장은 아직이에요',
+      '특정 단어만 반복해서 사용해요',
+    ],
+    category: 'development',
+  },
+  {
+    id: 'infant_22',
+    ageGroup: 'infant',
+    ageLabel: '영아기',
+    questionText: '아이가 그림책을 볼 때 어떤 모습인가요?',
+    options: [
+      '그림을 손가락으로 가리키며 관심을 보여요',
+      '페이지를 빨리 넘기며 탐색해요',
+      '한 페이지를 오래 들여다봐요',
+      '책을 입에 넣거나 던져요',
+      '부모가 읽어주면 집중해서 들어요',
+      '직접 페이지를 넘기며 주도적으로 봐요',
+    ],
+    category: 'development',
+  },
+  {
+    id: 'infant_23',
+    ageGroup: 'infant',
+    ageLabel: '영아기',
+    questionText: '음악이 들리면 아이는 어떻게 반응하나요?',
+    options: [
+      '몸을 흔들며 리듬을 타요',
+      '가만히 집중해서 들어요',
+      '소리 나는 방향을 찾아 쳐다봐요',
+      '별 반응이 없어요',
+      '직접 악기를 두드리거나 소리를 내요',
+      '특정 노래에만 반응해요',
+    ],
+    category: 'development',
+  },
+  {
+    id: 'infant_24',
+    ageGroup: 'infant',
+    ageLabel: '영아기',
+    questionText: '아이가 거울을 보면 어떤 반응을 보이나요?',
+    options: [
+      '자기 모습을 보며 웃고 좋아해요',
+      '손을 대거나 뽀뽀하려 해요',
+      '거울 뒤를 확인하려 해요',
+      '별 관심이 없어요',
+      '거울 속 부모를 보며 반응해요',
+      '표정을 바꿔가며 놀아요',
+    ],
+    category: 'development',
+  },
+  {
+    id: 'infant_25',
+    ageGroup: 'infant',
+    ageLabel: '영아기',
+    questionText: '아이가 모방 행동(전화하는 척, 요리하는 척)을 하나요?',
+    options: [
+      '자주 어른 행동을 따라 해요',
+      '가끔 흉내를 내요',
+      '아직 모방 행동은 거의 없어요',
+      '특정 행동만 반복적으로 따라 해요',
+      '형제자매나 또래의 행동을 따라 해요',
+      'TV나 영상 속 동작을 따라 하려 해요',
+    ],
+    category: 'development',
+  },
+
+  // 26-30: 건강/생체리듬 (신규)
+  {
+    id: 'infant_26',
+    ageGroup: 'infant',
+    ageLabel: '영아기',
+    questionText: '아이의 전반적인 건강 상태는 어떤가요?',
+    options: [
+      '감기나 열에 잘 안 걸려요',
+      '환절기마다 잔병치레가 있어요',
+      '소화나 장이 약한 편이에요',
+      '피부가 예민한 편이에요',
+      '또래보다 체력이 좋은 편이에요',
+      '전반적으로 건강하지만 가끔 컨디션 기복이 있어요',
+    ],
+    category: 'health',
+  },
+  {
+    id: 'infant_27',
+    ageGroup: 'infant',
+    ageLabel: '영아기',
+    questionText: '아이가 아프거나 불편할 때 부모에게 어떻게 알리나요?',
+    options: [
+      '심하게 울어요',
+      '아픈 곳을 가리키거나 잡아요',
+      '평소보다 많이 보채요',
+      '조용해지고 축 처져요',
+      '특정 자세로 몸을 웅크려요',
+      '잘 먹지 않거나 잠을 안 자요',
+    ],
+    category: 'health',
+  },
+  {
+    id: 'infant_28',
+    ageGroup: 'infant',
+    ageLabel: '영아기',
+    questionText: '아이의 배변 습관은 어떤 편인가요?',
+    options: [
+      '규칙적이고 편안하게 해요',
+      '불규칙하지만 큰 문제는 없어요',
+      '변비 경향이 있어요',
+      '대소변 가리기를 시작했어요',
+      '기저귀를 갈 때 협조적이에요',
+      '배변 관련해서 예민한 편이에요',
+    ],
+    category: 'health',
+  },
+  {
+    id: 'infant_29',
+    ageGroup: 'infant',
+    ageLabel: '영아기',
+    questionText: '아이에게 안정감을 주는 물건(애착 인형, 담요 등)이 있나요?',
+    options: [
+      '네, 특정 물건이 없으면 불안해해요',
+      '좋아하는 건 있지만 없어도 괜찮아요',
+      '특별히 집착하는 물건은 없어요',
+      '부모 자체가 안정감의 대상이에요',
+      '공갈 젖꼭지나 손가락을 빨아요',
+      '상황에 따라 안정감을 주는 대상이 달라요',
+    ],
+    category: 'health',
+  },
+  {
+    id: 'infant_30',
+    ageGroup: 'infant',
+    ageLabel: '영아기',
+    questionText: '아이의 활동 에너지는 하루 중 언제 가장 높나요?',
+    options: [
+      '오전에 가장 활발해요',
+      '오후에 더 활발해요',
+      '하루 종일 에너지가 넘쳐요',
+      '전반적으로 차분한 편이에요',
+      '낮잠 후에 특히 활발해요',
+      '시간보다 컨디션에 따라 달라요',
+    ],
+    category: 'health',
+  },
+
   // ========================================
-  // 유치원기 (37~72개월) 20개
+  // 유치원기 (37~72개월) 30개
   // ========================================
 
-  // 1-4: 성격/기질
+  // 1-5: 성격/기질
   {
     id: 'kinder_1',
     ageGroup: 'kinder',
@@ -303,6 +495,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '며칠은 긴장하지만 곧 익숙해져요',
       '오랫동안 불안해하고 가기 싫어해요',
       '겉으로는 괜찮아 보이지만 집에서 힘들어해요',
+      '선생님과의 관계가 형성되면 빠르게 적응해요',
+      '흥미로운 활동이 있으면 환경은 신경 안 써요',
     ],
     category: 'personality',
   },
@@ -316,6 +510,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '대체로 따르지만 가끔 잊어요',
       '싫어하고 자기 방식대로 하려 해요',
       '"왜 그래야 해?"라며 이유를 물어요',
+      '기분이 좋을 때는 잘 따르고 아닐 때는 거부해요',
+      '어른이 지켜보면 따르고 안 보면 어겨요',
     ],
     category: 'personality',
   },
@@ -329,6 +525,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '고민하다가 결국 잘 고르는 편이에요',
       '결정을 못 하고 부모에게 정해달라고 해요',
       '한번 정한 걸 자주 바꿔요',
+      '주변 친구나 형제의 선택을 따라가요',
+      '선택지가 많으면 오히려 힘들어해요',
     ],
     category: 'personality',
   },
@@ -342,11 +540,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '중간에 힘들어도 도와주면 계속해요',
       '금방 "못하겠어"라며 포기해요',
       '쉬운 부분만 하고 어려우면 넘겨요',
+      '완성하면 뿌듯해하며 자랑해요',
+      '혼자는 어렵지만 함께 하면 끝까지 해요',
     ],
     category: 'personality',
   },
-
-  // 5-8: 학습/호기심
   {
     id: 'kinder_5',
     ageGroup: 'kinder',
@@ -357,9 +555,13 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '스스로 만져보거나 해보며 알아내요',
       '그림책이나 영상에서 답을 찾으려 해요',
       '궁금해도 금방 잊어버리는 편이에요',
+      '부모나 선생님에게 자세히 설명해달라고 해요',
+      '친구와 함께 탐구하며 알아가요',
     ],
     category: 'learning',
   },
+
+  // 6-10: 학습/호기심
   {
     id: 'kinder_6',
     ageGroup: 'kinder',
@@ -370,6 +572,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '글자, 숫자, 퍼즐 등 사고력 놀이',
       '그림 그리기, 노래, 춤 등 예술',
       '친구와 함께하는 역할놀이/사회놀이',
+      '요리, 만들기 등 생활 체험',
+      '자동차, 기차 등 특정 주제에 깊이 빠져요',
     ],
     category: 'learning',
   },
@@ -383,6 +587,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '15~20분 정도 집중해요',
       '10분 이내로 다른 것에 관심이 옮겨져요',
       '좋아하는 것만 오래, 나머지는 짧아요',
+      '혼자일 때보다 함께할 때 더 잘 집중해요',
+      '집중하다가 갑자기 다른 생각을 하는 경우가 있어요',
     ],
     category: 'learning',
   },
@@ -396,11 +602,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '그림이나 영상으로 보여주면 잘 따라와요',
       '말로 차근차근 설명하면 이해해요',
       '또래와 함께 하면 더 빨리 배워요',
+      '노래나 율동으로 배우면 잘 기억해요',
+      '반복해서 여러 번 접하면 자연스럽게 습득해요',
     ],
     category: 'learning',
   },
-
-  // 9-12: 사회성
   {
     id: 'kinder_9',
     ageGroup: 'kinder',
@@ -411,6 +617,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '한두 명의 단짝 친구가 있어요',
       '혼자 노는 것을 더 좋아해요',
       '친구를 사귀고 싶어하지만 어려워해요',
+      '나이가 많거나 적은 아이와 더 잘 어울려요',
+      '상황에 따라 리더가 되기도 하고 따르기도 해요',
     ],
     category: 'social',
   },
@@ -424,9 +632,13 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '양보하거나 참는 편이에요',
       '울거나 부모에게 도움을 요청해요',
       '화를 내거나 몸으로 표현해요',
+      '그 자리를 피하거나 혼자 놀아요',
+      '제3의 대안을 제시하며 협상하려 해요',
     ],
     category: 'social',
   },
+
+  // 11-15: 사회성
   {
     id: 'kinder_11',
     ageGroup: 'kinder',
@@ -437,6 +649,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '규칙을 잘 따르며 협조적이에요',
       '자기 방식대로 하려고 고집부려요',
       '뒤에서 관찰하다가 천천히 참여해요',
+      '분위기를 밝게 만드는 무드메이커에요',
+      '특정 친구와만 함께하려 해요',
     ],
     category: 'social',
   },
@@ -450,11 +664,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '부모가 말하면 하는 편이에요',
       '나누기를 매우 싫어해요',
       '친한 친구에게만 나눠줘요',
+      '나눠준 후에 후회하기도 해요',
+      '자기 것을 챙기면서도 상대의 기분을 살펴요',
     ],
     category: 'social',
   },
-
-  // 13-16: 감정
   {
     id: 'kinder_13',
     ageGroup: 'kinder',
@@ -465,6 +679,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '표정과 몸짓으로 나타내요',
       '감정을 안으로 삼키고 잘 표현하지 않아요',
       '감정 기복이 크고 격하게 표현해요',
+      '그림이나 놀이를 통해 간접적으로 표현해요',
+      '기분이 좋을 땐 잘 표현하고 나쁠 땐 숨겨요',
     ],
     category: 'emotion',
   },
@@ -478,6 +694,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '속상해하지만 격려하면 다시 해요',
       '"나는 못해"라며 쉽게 포기해요',
       '화를 내거나 울면서 안 하겠다고 해요',
+      '실패 자체를 인정하지 않으려 해요',
+      '조용히 혼자 연습한 뒤 다시 시도해요',
     ],
     category: 'emotion',
   },
@@ -491,9 +709,13 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '기쁘지만 내색을 잘 안 해요',
       '칭찬에 별로 반응이 없어요',
       '"당연하지!"라며 자신감을 보여요',
+      '칭찬을 듣고 부끄러워하며 숨어요',
+      '칭찬받은 행동을 반복하며 또 칭찬받으려 해요',
     ],
     category: 'emotion',
   },
+
+  // 16-20: 감정/놀이
   {
     id: 'kinder_16',
     ageGroup: 'kinder',
@@ -504,11 +726,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '무슨 일인지 궁금해하며 쳐다봐요',
       '별로 관심을 보이지 않아요',
       '같이 울거나 불안해해요',
+      '선생님이나 부모에게 알려줘요',
+      '자기 물건(간식, 장난감)을 나눠주려 해요',
     ],
     category: 'emotion',
   },
-
-  // 17-20: 놀이/활동
   {
     id: 'kinder_17',
     ageGroup: 'kinder',
@@ -519,6 +741,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '블록, 퍼즐, 만들기 등 손 활동',
       '그림 그리기, 노래 부르기 등 예술 활동',
       '역할놀이나 상상놀이',
+      '영상이나 태블릿 보기',
+      '조용히 혼자 책을 보거나 생각에 빠져요',
     ],
     category: 'activity',
   },
@@ -532,6 +756,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '현실적인 것을 관찰하고 그대로 표현해요',
       '규칙에 맞게 정확히 하려 해요',
       '보통 수준이에요',
+      '엉뚱한 질문이나 독창적인 아이디어를 내요',
+      '친구의 아이디어를 발전시키는 걸 잘해요',
     ],
     category: 'activity',
   },
@@ -545,6 +771,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '하면 즐기지만 스스로 찾지는 않아요',
       '별로 관심이 없어요',
       '특정 분야(그리기 또는 노래)만 좋아해요',
+      '감상하는 것을 더 즐기는 편이에요',
+      '친구와 함께 하면 적극적으로 참여해요',
     ],
     category: 'activity',
   },
@@ -558,15 +786,171 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '또래 수준으로 잘 뛰고 놀아요',
       '체력이 약한 편이라 금방 지쳐요',
       '소근육(가위질, 그리기)이 대근육보다 발달했어요',
+      '특정 운동(자전거, 공놀이 등)을 잘해요',
+      '움직이는 것보다 앉아서 하는 활동을 선호해요',
     ],
     category: 'activity',
   },
 
+  // 21-25: 생활습관/자립 (신규)
+  {
+    id: 'kinder_21',
+    ageGroup: 'kinder',
+    ageLabel: '유치원기',
+    questionText: '아이의 식사 습관은 어떤가요?',
+    options: [
+      '골고루 잘 먹고 식사 시간이 규칙적이에요',
+      '편식이 있지만 노력하면 먹어요',
+      '좋아하는 것만 먹으려 하고 거부가 심해요',
+      '먹는 양이 적어 걱정이에요',
+      '먹으면서 자꾸 돌아다니거나 놀아요',
+      '식사 시간에 이야기를 많이 하며 천천히 먹어요',
+    ],
+    category: 'habit',
+  },
+  {
+    id: 'kinder_22',
+    ageGroup: 'kinder',
+    ageLabel: '유치원기',
+    questionText: '아이가 혼자서 할 수 있는 자립 활동은 어떤 수준인가요?',
+    options: [
+      '옷 입기, 양치, 세수 등 대부분 혼자 해요',
+      '도움을 주면 스스로 하려고 노력해요',
+      '많은 부분에서 아직 도움이 필요해요',
+      '할 수 있는데도 해달라고 하는 편이에요',
+      '스스로 하겠다고 고집부릴 때가 많아요',
+      '항목에 따라 차이가 커요',
+    ],
+    category: 'habit',
+  },
+  {
+    id: 'kinder_23',
+    ageGroup: 'kinder',
+    ageLabel: '유치원기',
+    questionText: '잠자리에서 아이의 모습은 어떤가요?',
+    options: [
+      '정해진 시간에 스스로 잠들어요',
+      '자장가나 책 읽기 같은 루틴이 있어야 자요',
+      '잠드는 데 오래 걸리고 보채요',
+      '부모와 함께여야만 잠들 수 있어요',
+      '밤에 자주 깨거나 악몽을 꿔요',
+      '피곤해도 놀고 싶어서 안 자려고 해요',
+    ],
+    category: 'habit',
+  },
+  {
+    id: 'kinder_24',
+    ageGroup: 'kinder',
+    ageLabel: '유치원기',
+    questionText: '아이가 어린이집이나 유치원 다녀온 후 하루 이야기를 하나요?',
+    options: [
+      '자세하게 잘 이야기해줘요',
+      '물어보면 간단히 대답해요',
+      '잘 이야기하지 않아요',
+      '특별한 일만 이야기해요',
+      '친구 이야기를 특히 많이 해요',
+      '선생님에게 들은 이야기를 재현하듯 해요',
+    ],
+    category: 'habit',
+  },
+  {
+    id: 'kinder_25',
+    ageGroup: 'kinder',
+    ageLabel: '유치원기',
+    questionText: '아이의 화면(TV, 태블릿) 사용 습관은?',
+    options: [
+      '시간을 정하면 잘 지켜요',
+      '끄라고 하면 보채지만 곧 수긍해요',
+      '끄기 싫어서 매번 실랑이해요',
+      '화면 대신 다른 놀이를 더 좋아해요',
+      '교육 콘텐츠에 관심이 많아요',
+      '또래 친구에 비해 화면 사용이 적은 편이에요',
+    ],
+    category: 'habit',
+  },
+
+  // 26-30: 정서/안정 (신규)
+  {
+    id: 'kinder_26',
+    ageGroup: 'kinder',
+    ageLabel: '유치원기',
+    questionText: '아이가 두려워하거나 무서워하는 것이 있나요?',
+    options: [
+      '어둠이나 혼자 있는 것을 무서워해요',
+      '큰 소리나 갑작스러운 변화를 싫어해요',
+      '특정 동물이나 곤충을 무서워해요',
+      '특별히 무서워하는 것이 없어요',
+      '상상 속 괴물이나 귀신을 무서워해요',
+      '새로운 시도나 실패를 두려워해요',
+    ],
+    category: 'emotion',
+  },
+  {
+    id: 'kinder_27',
+    ageGroup: 'kinder',
+    ageLabel: '유치원기',
+    questionText: '아이가 잘못했을 때 보이는 반응은?',
+    options: [
+      '솔직하게 인정하고 사과해요',
+      '변명하거나 거짓말을 해요',
+      '울면서 속상해해요',
+      '모르는 척하거나 숨어요',
+      '남 탓을 하는 경향이 있어요',
+      '잘못을 인정하면서도 이유를 설명하려 해요',
+    ],
+    category: 'emotion',
+  },
+  {
+    id: 'kinder_28',
+    ageGroup: 'kinder',
+    ageLabel: '유치원기',
+    questionText: '형제자매나 동생에 대한 아이의 태도는?',
+    options: [
+      '잘 돌봐주고 챙겨요',
+      '질투하거나 경쟁하는 모습이 있어요',
+      '무관심한 편이에요',
+      '장난치며 잘 놀아요',
+      '외동이에요',
+      '상황에 따라 돌봐주다가도 싸워요',
+    ],
+    category: 'social',
+  },
+  {
+    id: 'kinder_29',
+    ageGroup: 'kinder',
+    ageLabel: '유치원기',
+    questionText: '아이가 칭찬과 보상 중 어떤 것에 더 동기부여가 되나요?',
+    options: [
+      '말로 하는 칭찬에 크게 반응해요',
+      '스티커나 작은 보상을 좋아해요',
+      '칭찬보다 결과에 스스로 만족해요',
+      '부모의 관심과 함께하는 시간이 보상이에요',
+      '칭찬과 보상 모두 좋아해요',
+      '특별히 동기부여 되는 것이 뚜렷하지 않아요',
+    ],
+    category: 'emotion',
+  },
+  {
+    id: 'kinder_30',
+    ageGroup: 'kinder',
+    ageLabel: '유치원기',
+    questionText: '아이가 부모에게 애정 표현을 어떻게 하나요?',
+    options: [
+      '자주 안아달라고 하고 뽀뽀해요',
+      '말로 "사랑해"라고 표현해요',
+      '옆에 붙어 있거나 따라다니며 표현해요',
+      '선물이나 그림을 그려서 줘요',
+      '도와주거나 착한 행동으로 표현해요',
+      '애정 표현이 적은 편이에요',
+    ],
+    category: 'emotion',
+  },
+
   // ========================================
-  // 초등 저학년 (73~108개월, 1~3학년) 20개
+  // 초등 저학년 (73~108개월, 1~3학년) 30개
   // ========================================
 
-  // 1-4: 학습 스타일
+  // 1-5: 학습 스타일
   {
     id: 'elem_low_1',
     ageGroup: 'elem_low',
@@ -577,6 +961,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '부모나 선생님이 설명해주면 잘 따라가요',
       '친구와 함께 문제를 풀면 더 잘해요',
       '직접 실험하거나 만들면서 배우면 좋아해요',
+      '영상이나 시각 자료로 배우면 잘 이해해요',
+      '게임이나 퀴즈 형식으로 배우는 걸 좋아해요',
     ],
     category: 'learning',
   },
@@ -590,6 +976,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '시키면 하는데 꼼꼼하게 해요',
       '미루다가 마지막에 해요',
       '싫어하고 하기 싫어해서 매번 실랑이해요',
+      '좋아하는 과목 숙제만 먼저 해요',
+      '친구와 함께 하면 더 잘해요',
     ],
     category: 'learning',
   },
@@ -603,6 +991,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '15~20분 정도 집중하는 편이에요',
       '자주 딴짓하거나 움직여요',
       '좋아하는 과목만 잘 집중해요',
+      '조용한 환경이면 집중을 잘해요',
+      '타이머나 목표를 정해주면 집중력이 올라가요',
     ],
     category: 'learning',
   },
@@ -616,11 +1006,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '긴장하지만 준비를 열심히 해요',
       '불안해하며 스트레스를 받아요',
       '별로 신경 쓰지 않는 편이에요',
+      '연습을 많이 해서 완벽하게 하려 해요',
+      '친구들 앞에서는 긴장하지만 소수 앞에서는 괜찮아요',
     ],
     category: 'learning',
   },
-
-  // 5-8: 성격
   {
     id: 'elem_low_5',
     ageGroup: 'elem_low',
@@ -631,9 +1021,13 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '물어보면 이야기하는 편이에요',
       '남들 눈치를 보며 잘 말 못 해요',
       '상황에 따라 다르게 행동해요',
+      '글이나 그림으로 표현하는 걸 선호해요',
+      '친한 사람 앞에서만 자유롭게 이야기해요',
     ],
     category: 'personality',
   },
+
+  // 6-10: 성격
   {
     id: 'elem_low_6',
     ageGroup: 'elem_low',
@@ -644,6 +1038,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '대략적인 계획은 세우는 편이에요',
       '계획 없이 즉흥적으로 해요',
       '계획은 세우지만 잘 안 지켜요',
+      '부모가 계획을 세워주면 잘 따라요',
+      '루틴이 있으면 편안해하고 잘 따라가요',
     ],
     category: 'personality',
   },
@@ -657,6 +1053,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '어느 정도 잘 하면 만족해요',
       '대충 빨리 끝내려 해요',
       '잘하는 것만 완벽하게, 나머진 대충 해요',
+      '실수를 발견하면 처음부터 다시 하려 해요',
+      '완벽하진 않아도 나름의 기준이 있어요',
     ],
     category: 'personality',
   },
@@ -670,11 +1068,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '관심 분야면 적극적으로 도전해요',
       '처음에는 무서워하지만 해보면 좋아해요',
       '익숙한 것만 하려 하고 새 시도를 꺼려요',
+      '친구가 함께 하면 도전하는 편이에요',
+      '정보를 충분히 모은 후에 시작하려 해요',
     ],
     category: 'personality',
   },
-
-  // 9-12: 사회성
   {
     id: 'elem_low_9',
     ageGroup: 'elem_low',
@@ -685,6 +1083,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '소수의 친한 친구가 있어요',
       '친구보다 혼자 놀기를 좋아해요',
       '친구를 사귀고 싶지만 다가가기 어려워해요',
+      '학교 밖에서도 친구를 자주 만나요',
+      '같은 관심사를 가진 친구와 잘 맞아요',
     ],
     category: 'social',
   },
@@ -698,9 +1098,13 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '참거나 양보하는 편이에요',
       '화를 내거나 싸우는 편이에요',
       '선생님이나 부모에게 말해요',
+      '속상해하지만 시간이 지나면 풀어요',
+      '갈등 자체를 피하려고 해요',
     ],
     category: 'social',
   },
+
+  // 11-15: 사회성
   {
     id: 'elem_low_11',
     ageGroup: 'elem_low',
@@ -711,6 +1115,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '무난하게 지내요',
       '선생님을 어려워하거나 긴장해요',
       '관심받고 싶어서 자주 이야기해요',
+      '선생님의 칭찬에 큰 영향을 받아요',
+      '선생님에 따라 학교 생활 만족도가 크게 달라요',
     ],
     category: 'social',
   },
@@ -724,11 +1130,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '맡은 역할을 책임감 있게 해요',
       '친구가 시키는 대로 따라가요',
       '혼자 하는 게 더 편해 보여요',
+      '아이디어를 많이 내지만 실행은 다른 사람에게 맡겨요',
+      '조율하고 중재하는 역할을 자연스럽게 해요',
     ],
     category: 'social',
   },
-
-  // 13-16: 감정/스트레스
   {
     id: 'elem_low_13',
     ageGroup: 'elem_low',
@@ -739,6 +1145,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '좋아하는 취미(그림, 게임 등)를 해요',
       '부모나 친구에게 이야기해요',
       '혼자 조용히 있고 싶어해요',
+      '음식으로 풀려는 경향이 있어요',
+      '울거나 짜증으로 표현하다가 스스로 진정해요',
     ],
     category: 'emotion',
   },
@@ -752,6 +1160,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '속상해하지만 격려하면 괜찮아져요',
       '오래 속상해하고 자책해요',
       '남 탓을 하거나 화를 내요',
+      '실수를 숨기려 해요',
+      '다음에 같은 실수를 하지 않으려고 분석해요',
     ],
     category: 'emotion',
   },
@@ -765,9 +1175,13 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '잘하는 분야에서는 자신 있어해요',
       '전반적으로 자신감이 부족해요',
       '칭찬을 받으면 올라갔다가 곧 내려가요',
+      '친구와 비교하며 자신감이 흔들릴 때가 있어요',
+      '도전할 때는 불안하지만 해내면 크게 뿌듯해해요',
     ],
     category: 'emotion',
   },
+
+  // 16-20: 감정/생활
   {
     id: 'elem_low_16',
     ageGroup: 'elem_low',
@@ -778,11 +1192,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '학교나 시험에 대한 걱정이 있어요',
       '친구 관계에 대해 걱정해요',
       '여러 가지를 걱정하는 편이에요',
+      '부모님이 아프거나 떨어지는 것을 걱정해요',
+      '미래나 새로운 변화에 대해 불안해해요',
     ],
     category: 'emotion',
   },
-
-  // 17-20: 생활습관
   {
     id: 'elem_low_17',
     ageGroup: 'elem_low',
@@ -793,6 +1207,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '깨워주면 곧 일어나서 준비해요',
       '여러 번 깨워야 겨우 일어나요',
       '준비물 챙기는 걸 자주 빠뜨려요',
+      '아침 컨디션에 따라 차이가 커요',
+      '전날 밤에 미리 준비해두는 편이에요',
     ],
     category: 'habit',
   },
@@ -806,6 +1222,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '시키면 정리하는 편이에요',
       '정리를 잘 못하고 어질러요',
       '자기 방식대로 정리하는데 좀 독특해요',
+      '정리를 시작하면 완벽하게 해야 직성이 풀려요',
+      '특정 물건만 꼼꼼하게 정리해요',
     ],
     category: 'habit',
   },
@@ -819,6 +1237,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '가끔 늦지만 노력하는 편이에요',
       '시간 개념이 약해서 자주 늦어요',
       '좋아하는 것에 빠지면 시간을 잊어요',
+      '알람이나 타이머를 활용하면 잘해요',
+      '하고 싶은 일의 시간은 칼같이 지켜요',
     ],
     category: 'habit',
   },
@@ -832,15 +1252,171 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '독서나 공부',
       '게임이나 영상 시청',
       '미술, 음악 등 창작 활동',
+      '코딩이나 과학 실험 같은 탐구 활동',
+      '보드게임이나 카드게임 같은 전략 놀이',
     ],
     category: 'habit',
   },
 
+  // 21-25: 디지털/미디어/자립 (신규)
+  {
+    id: 'elem_low_21',
+    ageGroup: 'elem_low',
+    ageLabel: '초등 저학년',
+    questionText: '아이의 디지털 기기(스마트폰, 태블릿) 사용 습관은?',
+    options: [
+      '정해진 시간을 잘 지켜요',
+      '끝내라고 하면 약간 불만이지만 수긍해요',
+      '매번 실랑이를 해야 끌 수 있어요',
+      '디지털 기기보다 다른 활동을 더 좋아해요',
+      '교육용 콘텐츠 위주로 사용해요',
+      '게임에 특히 빠지는 경향이 있어요',
+    ],
+    category: 'habit',
+  },
+  {
+    id: 'elem_low_22',
+    ageGroup: 'elem_low',
+    ageLabel: '초등 저학년',
+    questionText: '아이가 용돈을 받으면 어떻게 하나요?',
+    options: [
+      '저축하는 편이에요',
+      '계획적으로 사용해요',
+      '받으면 바로 써버려요',
+      '필요한 것만 사요',
+      '아직 용돈을 주고 있지 않아요',
+      '원하는 것을 위해 모으는 중이에요',
+    ],
+    category: 'habit',
+  },
+  {
+    id: 'elem_low_23',
+    ageGroup: 'elem_low',
+    ageLabel: '초등 저학년',
+    questionText: '아이의 책임감 수준은 어떤가요?',
+    options: [
+      '맡은 일을 끝까지 해내요',
+      '시작은 하지만 중간에 도움이 필요해요',
+      '책임감이 약하고 쉽게 포기해요',
+      '관심 있는 일에만 책임감을 보여요',
+      '다른 사람이 기대하면 더 열심히 해요',
+      '스스로 한 약속은 잘 지키려 노력해요',
+    ],
+    category: 'personality',
+  },
+  {
+    id: 'elem_low_24',
+    ageGroup: 'elem_low',
+    ageLabel: '초등 저학년',
+    questionText: '아이가 감사나 미안함을 표현하는 모습은?',
+    options: [
+      '상황에 맞게 "감사합니다/미안해요"를 잘 써요',
+      '부모가 상기시키면 표현해요',
+      '마음은 있지만 말로 표현하기 어려워해요',
+      '자기 잘못을 인정하기 어려워해요',
+      '편지나 그림으로 마음을 전하는 걸 좋아해요',
+      '행동으로 보여주는 편이에요',
+    ],
+    category: 'emotion',
+  },
+  {
+    id: 'elem_low_25',
+    ageGroup: 'elem_low',
+    ageLabel: '초등 저학년',
+    questionText: '아이의 수면 습관은 어떤가요?',
+    options: [
+      '일찍 자고 일찍 일어나는 편이에요',
+      '밤에 늦게까지 안 자려 해요',
+      '잠들기 어려워하지만 한번 자면 잘 자요',
+      '충분히 자도 아침에 일어나기 힘들어해요',
+      '주말과 평일 수면 패턴이 크게 달라요',
+      '꿈이나 악몽 이야기를 자주 해요',
+    ],
+    category: 'habit',
+  },
+
+  // 26-30: 진로/가치관 (신규)
+  {
+    id: 'elem_low_26',
+    ageGroup: 'elem_low',
+    ageLabel: '초등 저학년',
+    questionText: '아이가 가장 보람을 느끼는 순간은 언제인가요?',
+    options: [
+      '어려운 문제를 혼자 풀었을 때',
+      '친구와 함께 뭔가를 해냈을 때',
+      '부모나 선생님에게 칭찬받았을 때',
+      '새로운 것을 배웠을 때',
+      '다른 사람을 도와줬을 때',
+      '자기가 만든 것을 완성했을 때',
+    ],
+    category: 'personality',
+  },
+  {
+    id: 'elem_low_27',
+    ageGroup: 'elem_low',
+    ageLabel: '초등 저학년',
+    questionText: '아이가 혼자 있는 시간을 어떻게 보내나요?',
+    options: [
+      '책을 읽거나 그림을 그려요',
+      '게임이나 영상을 봐요',
+      '상상놀이를 혼자서 해요',
+      '금방 심심해하며 같이 놀자고 해요',
+      '공작이나 만들기를 해요',
+      '음악을 듣거나 노래를 불러요',
+    ],
+    category: 'activity',
+  },
+  {
+    id: 'elem_low_28',
+    ageGroup: 'elem_low',
+    ageLabel: '초등 저학년',
+    questionText: '아이의 경쟁심은 어느 정도인가요?',
+    options: [
+      '이기는 것을 매우 중요하게 생각해요',
+      '적당한 경쟁심이 있어요',
+      '경쟁보다 협력을 좋아해요',
+      '지면 크게 속상해하고 오래 끌어요',
+      '자기 자신과의 경쟁(이전 기록 깨기)을 좋아해요',
+      '경쟁 상황 자체를 피하려 해요',
+    ],
+    category: 'personality',
+  },
+  {
+    id: 'elem_low_29',
+    ageGroup: 'elem_low',
+    ageLabel: '초등 저학년',
+    questionText: '가족 활동에 대한 아이의 태도는?',
+    options: [
+      '가족과 함께하는 시간을 매우 좋아해요',
+      '좋아하지만 친구와 노는 것도 중요해요',
+      '가족 활동보다 혼자만의 시간을 원해요',
+      '가족 여행이나 외출을 특히 좋아해요',
+      '집에서 가족과 함께 요리, 게임 등을 즐겨요',
+      '가족 행사에 적극적으로 참여해요',
+    ],
+    category: 'social',
+  },
+  {
+    id: 'elem_low_30',
+    ageGroup: 'elem_low',
+    ageLabel: '초등 저학년',
+    questionText: '아이의 장래 희망이나 관심 분야는?',
+    options: [
+      '구체적인 꿈이 있고 자주 이야기해요',
+      '관심 분야는 있지만 아직 확실하진 않아요',
+      '자주 바뀌어요',
+      '아직 특별히 생각해본 적 없는 것 같아요',
+      '여러 분야에 골고루 관심이 많아요',
+      '좋아하는 것은 확실하지만 직업으로 연결짓지는 않아요',
+    ],
+    category: 'personality',
+  },
+
   // ========================================
-  // 초등 고학년 (109~144개월, 4~6학년) 20개
+  // 초등 고학년 (109~144개월, 4~6학년) 30개
   // ========================================
 
-  // 1-4: 학습/진로
+  // 1-5: 학습/진로
   {
     id: 'elem_high_1',
     ageGroup: 'elem_high',
@@ -851,6 +1427,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '국어/사회 같은 언어/인문 과목',
       '미술/음악/체육 같은 예체능 과목',
       '특별히 좋아하는 과목이 없어요',
+      '실과/정보 같은 실용 과목',
+      '영어나 외국어에 관심이 많아요',
     ],
     category: 'learning',
   },
@@ -864,6 +1442,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '좋은 성적을 받고 싶어서',
       '부모님이 시켜서 해야 하니까',
       '장래 꿈을 위해 필요하다고 느껴서',
+      '친구들에게 뒤처지기 싫어서',
+      '스스로 성장하는 느낌이 좋아서',
     ],
     category: 'learning',
   },
@@ -877,6 +1457,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '목표는 세우지만 중간에 흐지부지돼요',
       '목표를 세우는 걸 어려워해요',
       '단기 목표는 잘 지키지만 장기는 힘들어해요',
+      '부모가 함께 세우면 잘 따라가요',
+      '결과보다 과정을 즐기는 편이에요',
     ],
     category: 'learning',
   },
@@ -890,11 +1472,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '좋아하는 장르(만화, 소설 등)만 읽어요',
       '학교 필독서 외에는 잘 안 읽어요',
       '책보다 영상이나 유튜브를 선호해요',
+      '오디오북이나 전자책을 이용해요',
+      '한번 시작하면 끝까지 읽는 집중형이에요',
     ],
     category: 'learning',
   },
-
-  // 5-8: 성격/가치관
   {
     id: 'elem_high_5',
     ageGroup: 'elem_high',
@@ -905,9 +1487,13 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '속으로 불만이지만 참아요',
       '신뢰하는 어른에게 이야기해요',
       '크게 신경 쓰지 않는 편이에요',
+      '논리적으로 왜 불공평한지 설명하려 해요',
+      '비슷한 경험을 한 친구와 공감하며 해소해요',
     ],
     category: 'personality',
   },
+
+  // 6-10: 성격/가치관
   {
     id: 'elem_high_6',
     ageGroup: 'elem_high',
@@ -918,6 +1504,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '해야 할 건 하지만 가끔 도움을 요청해요',
       '부모 도움이 많이 필요해요',
       '할 수 있는데도 해달라고 하는 편이에요',
+      '자기 방식대로 하고 싶어서 간섭을 싫어해요',
+      '새로운 일은 도움이 필요하지만 익숙한 일은 잘해요',
     ],
     category: 'personality',
   },
@@ -931,6 +1519,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '의견은 적극적으로 내지만 따르기도 해요',
       '리더보다는 팔로워 역할이 편해요',
       '필요하면 리더를 하지만 선호하진 않아요',
+      '중재자나 조율자 역할을 잘해요',
+      '아이디어를 내고 방향을 제시하는 참모형이에요',
     ],
     category: 'personality',
   },
@@ -944,11 +1534,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '경쟁은 좋아하지만 지는 것도 받아들여요',
       '경쟁 자체를 별로 좋아하지 않아요',
       '지면 크게 속상해하고 오래 끌어요',
+      '자기 기록 갱신에 더 관심이 있어요',
+      '팀으로 하는 경쟁을 더 좋아해요',
     ],
     category: 'personality',
   },
-
-  // 9-12: 사회성
   {
     id: 'elem_high_9',
     ageGroup: 'elem_high',
@@ -959,6 +1549,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '몇 명의 절친과 깊은 관계를 유지해요',
       '친구보다 자기만의 시간을 중시해요',
       '또래 관계에서 어려움을 느끼는 것 같아요',
+      '온라인과 오프라인 친구가 구분돼요',
+      '학교 밖(학원, 동네)에서의 친구 관계가 더 좋아요',
     ],
     category: 'social',
   },
@@ -972,9 +1564,13 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '적절히 사용하고 스스로 조절해요',
       '많이 사용하고 놓기 힘들어해요',
       '친구와 소통 수단으로 주로 사용해요',
+      '콘텐츠를 소비하기보다 만드는 데 관심이 있어요',
+      '부모와의 규칙은 있지만 지키기 어려워해요',
     ],
     category: 'social',
   },
+
+  // 11-15: 사회성
   {
     id: 'elem_high_11',
     ageGroup: 'elem_high',
@@ -985,6 +1581,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '의식하면서 부끄러워해요',
       '별로 관심이 없어요',
       '이성 친구 이야기를 가끔 해요',
+      '이성에 대한 관심이 생기기 시작한 것 같아요',
+      '같은 성별 친구와만 어울리려 해요',
     ],
     category: 'social',
   },
@@ -998,11 +1596,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '시키면 하지만 스스로 나서진 않아요',
       '별로 관심이 없어요',
       '관심은 있지만 실천으로 옮기긴 어려워해요',
+      '작은 일부터 실천하려고 노력해요',
+      '동물이나 환경 관련 봉사에 특히 관심이 있어요',
     ],
     category: 'social',
   },
-
-  // 13-16: 감정/자아
   {
     id: 'elem_high_13',
     ageGroup: 'elem_high',
@@ -1013,6 +1611,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '좋아하는 것은 알지만 깊은 이해는 부족해요',
       '자기 자신에 대해 잘 모르는 것 같아요',
       '자기 자신에 대해 자주 고민하는 편이에요',
+      '외모나 능력에 대한 관심이 생기기 시작했어요',
+      '자기만의 정체성을 만들어가고 있어요',
     ],
     category: 'emotion',
   },
@@ -1026,6 +1626,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '부모 도움이 있으면 잘 극복해요',
       '쉽게 스트레스를 받고 해소가 어려워요',
       '스트레스를 안 받는 척하지만 쌓이는 것 같아요',
+      '운동이나 취미로 효과적으로 해소해요',
+      '친구와 대화하며 풀어요',
     ],
     category: 'emotion',
   },
@@ -1039,9 +1641,13 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '약간의 걱정이 있지만 대체로 괜찮아요',
       '불안해하거나 걱정이 많아요',
       '아직 관심이 없는 것 같아요',
+      '구체적인 계획을 세우려 해요',
+      '부모나 선생님의 조언을 구해요',
     ],
     category: 'emotion',
   },
+
+  // 16-20: 감정/자아
   {
     id: 'elem_high_16',
     ageGroup: 'elem_high',
@@ -1052,11 +1658,11 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '보통이고 상황에 따라 달라져요',
       '낮은 편이고 자주 자신을 부정적으로 봐요',
       '겉으로는 자신감 있어 보이지만 속으로는 불안해요',
+      '자신감이 점차 성장하고 있어요',
+      '특정 분야에서만 자존감이 높아요',
     ],
     category: 'emotion',
   },
-
-  // 17-20: 생활/취미
   {
     id: 'elem_high_17',
     ageGroup: 'elem_high',
@@ -1067,6 +1673,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '계획적으로 쓰려고 노력해요',
       '받으면 바로 써버려요',
       '아직 용돈을 주고 있지 않아요',
+      '원하는 목표 금액을 정하고 모아요',
+      '친구에게 잘 사주거나 나눠요',
     ],
     category: 'habit',
   },
@@ -1080,6 +1688,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '부모가 정해주면 따라요',
       '놀이 시간만 늘리려 해요',
       '바빠서 여유 시간이 거의 없어요',
+      '할 일을 먼저 끝내고 놀려고 노력해요',
+      '계획표를 직접 만들어 관리해요',
     ],
     category: 'habit',
   },
@@ -1093,6 +1703,8 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '개인 운동(수영, 달리기, 자전거 등)',
       '특별히 좋아하는 운동은 없어요',
       '운동보다 예술이나 두뇌 활동을 좋아해요',
+      '댄스, 체조, 무술 같은 활동을 좋아해요',
+      'e스포츠나 보드게임 같은 전략적 활동을 선호해요',
     ],
     category: 'habit',
   },
@@ -1106,7 +1718,163 @@ export const ONBOARDING_QUESTIONS: OnboardingQuestion[] = [
       '관심 분야는 있지만 아직 확실하진 않아요',
       '자주 바뀌어요',
       '아직 특별히 생각해본 적 없는 것 같아요',
+      '유튜버, 인플루언서 같은 신직업에 관심이 있어요',
+      '자기가 잘하는 것과 연결해서 생각하려 해요',
     ],
     category: 'habit',
+  },
+
+  // 21-25: 자립/성장 (신규)
+  {
+    id: 'elem_high_21',
+    ageGroup: 'elem_high',
+    ageLabel: '초등 고학년',
+    questionText: '사춘기 징후가 보이나요?',
+    options: [
+      '아직 전혀 없어요',
+      '약간의 감정 변화가 있어요',
+      '부모와의 대화가 줄고 혼자 있으려 해요',
+      '친구 관계에 더 민감해졌어요',
+      '외모에 관심이 많아졌어요',
+      '반항적이거나 예민해진 부분이 있어요',
+    ],
+    category: 'emotion',
+  },
+  {
+    id: 'elem_high_22',
+    ageGroup: 'elem_high',
+    ageLabel: '초등 고학년',
+    questionText: '아이가 뉴스나 사회 이슈에 관심을 보이나요?',
+    options: [
+      '관심이 많고 자기 의견도 이야기해요',
+      '가끔 관심을 보여요',
+      '거의 관심이 없어요',
+      '특정 분야(환경, 동물 등)에만 관심이 있어요',
+      '부모와 함께 뉴스를 보며 이야기하는 걸 좋아해요',
+      '또래 사이에서 화제가 된 이슈에 관심을 보여요',
+    ],
+    category: 'personality',
+  },
+  {
+    id: 'elem_high_23',
+    ageGroup: 'elem_high',
+    ageLabel: '초등 고학년',
+    questionText: '아이의 시간 관리 능력은 어떤가요?',
+    options: [
+      '계획표를 만들고 지키려 노력해요',
+      '부모가 알려주면 잘 따라가요',
+      '시간 관리에 어려움이 많아요',
+      '좋아하는 일에 시간을 너무 많이 써요',
+      '마감이 있으면 잘 맞추는 편이에요',
+      '자기만의 루틴이 있어요',
+    ],
+    category: 'habit',
+  },
+  {
+    id: 'elem_high_24',
+    ageGroup: 'elem_high',
+    ageLabel: '초등 고학년',
+    questionText: '아이가 친구의 영향을 얼마나 받나요?',
+    options: [
+      '친구 의견을 중요하게 여기지만 자기 주관도 있어요',
+      '친구가 하면 나도 하고 싶어해요',
+      '친구 영향을 거의 받지 않아요',
+      '특정 친구의 영향을 많이 받아요',
+      '긍정적인 영향은 잘 받고 부정적인 것은 거절해요',
+      '또래 압력에 약한 편이에요',
+    ],
+    category: 'social',
+  },
+  {
+    id: 'elem_high_25',
+    ageGroup: 'elem_high',
+    ageLabel: '초등 고학년',
+    questionText: '아이가 자기 감정을 다루는 방식은?',
+    options: [
+      '말로 감정을 잘 표현하고 조절해요',
+      '일기나 글쓰기로 감정을 정리해요',
+      '감정 조절이 어렵고 폭발할 때가 있어요',
+      '감정을 숨기거나 억누르는 편이에요',
+      '음악이나 운동으로 감정을 해소해요',
+      '신뢰하는 사람에게만 마음을 열어요',
+    ],
+    category: 'emotion',
+  },
+
+  // 26-30: 관계/성장 (신규)
+  {
+    id: 'elem_high_26',
+    ageGroup: 'elem_high',
+    ageLabel: '초등 고학년',
+    questionText: '아이가 부모와의 관계에서 보이는 모습은?',
+    options: [
+      '대화를 좋아하고 속마음을 잘 이야기해요',
+      '필요할 때만 대화하는 편이에요',
+      '대화를 피하거나 귀찮아하는 때가 많아요',
+      '부모에게 의지하면서도 독립하고 싶어해요',
+      '특정 주제(학교, 친구)는 이야기하지 않으려 해요',
+      '부모와의 약속이나 규칙에 대해 협상하려 해요',
+    ],
+    category: 'social',
+  },
+  {
+    id: 'elem_high_27',
+    ageGroup: 'elem_high',
+    ageLabel: '초등 고학년',
+    questionText: '아이의 창의성이나 독창성은 어떤가요?',
+    options: [
+      '독특한 아이디어를 자주 내요',
+      '기존 것을 응용하거나 개선하는 걸 잘해요',
+      '정해진 대로 하는 것을 더 편해해요',
+      '예술(미술, 음악, 글쓰기) 분야에서 창의적이에요',
+      '문제 해결 방법이 남다를 때가 있어요',
+      '창의적이지만 현실화하는 데 어려움이 있어요',
+    ],
+    category: 'personality',
+  },
+  {
+    id: 'elem_high_28',
+    ageGroup: 'elem_high',
+    ageLabel: '초등 고학년',
+    questionText: '아이가 학교생활에서 가장 즐기는 부분은?',
+    options: [
+      '수업 시간에 새로운 것을 배우는 것',
+      '쉬는 시간에 친구와 노는 것',
+      '체육이나 특별활동 시간',
+      '급식 시간',
+      '방과 후 활동이나 동아리',
+      '학교 행사나 현장학습',
+    ],
+    category: 'learning',
+  },
+  {
+    id: 'elem_high_29',
+    ageGroup: 'elem_high',
+    ageLabel: '초등 고학년',
+    questionText: '아이의 건강 관리 인식은 어떤가요?',
+    options: [
+      '건강한 습관(운동, 식사)을 스스로 실천해요',
+      '부모가 챙겨주면 잘 따라요',
+      '편한 것(패스트푸드, 늦잠)을 좋아해요',
+      '건강에 대한 관심이 없어요',
+      '체중이나 체형에 관심이 생기기 시작했어요',
+      '아프지 않으면 건강에 신경을 안 써요',
+    ],
+    category: 'health',
+  },
+  {
+    id: 'elem_high_30',
+    ageGroup: 'elem_high',
+    ageLabel: '초등 고학년',
+    questionText: '아이가 가장 행복해하는 순간은 언제인가요?',
+    options: [
+      '친구와 함께 놀 때',
+      '가족과 함께 시간을 보낼 때',
+      '자기가 좋아하는 활동에 몰두할 때',
+      '칭찬받거나 인정받았을 때',
+      '새로운 것을 발견하거나 배웠을 때',
+      '혼자만의 시간에 편안하게 쉴 때',
+    ],
+    category: 'emotion',
   },
 ];

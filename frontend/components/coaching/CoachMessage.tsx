@@ -25,7 +25,28 @@ export function CoachMessage({ message }: Props) {
       </View>
       <View style={styles.content}>
         <View style={styles.bubble}>
+          {message.redFlag ? (
+            <View style={styles.redFlagBox}>
+              <Text style={styles.redFlagText}>
+                {'⚠️ '}{message.redFlag}
+              </Text>
+            </View>
+          ) : null}
+
           <Text style={styles.messageText}>{message.text}</Text>
+
+          {message.reasons && message.reasons.length > 0 ? (
+            <View style={styles.reasonsBox}>
+              <Text style={styles.reasonsTitle}>
+                {'💡 가능한 이유'}
+              </Text>
+              {message.reasons.map((r, idx) => (
+                <Text key={idx} style={styles.reasonItem}>
+                  {'• '}{r}
+                </Text>
+              ))}
+            </View>
+          ) : null}
 
           {message.reason ? (
             <TouchableOpacity
@@ -58,9 +79,23 @@ export function CoachMessage({ message }: Props) {
             </View>
           ) : null}
 
+          {message.medical ? (
+            <View style={styles.medicalBox}>
+              <Text style={styles.medicalTitle}>{'🏥 진료 안내'}</Text>
+              <Text style={styles.medicalText}>{message.medical}</Text>
+            </View>
+          ) : null}
+
+          {message.followup ? (
+            <View style={styles.followupBox}>
+              <Text style={styles.followupTitle}>{'💬 다음에 확인해볼게요'}</Text>
+              <Text style={styles.followupText}>{message.followup}</Text>
+            </View>
+          ) : null}
+
           {message.detailPrompt ? (
             <View style={styles.detailBox}>
-              <Text style={styles.detailTitle}>📋 더 정확한 상담을 위해</Text>
+              <Text style={styles.detailTitle}>{'📋 더 정확한 상담을 위해'}</Text>
               <Text style={styles.detailText}>{message.detailPrompt}</Text>
             </View>
           ) : null}
@@ -180,6 +215,76 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: 11,
     color: COACHING_COLORS.textLight,
+  },
+  redFlagBox: {
+    backgroundColor: '#FFF0F0',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#FFB8B8',
+  },
+  redFlagText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#D32F2F',
+    lineHeight: 20,
+  },
+  reasonsBox: {
+    backgroundColor: '#FFF9E6',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 10,
+  },
+  reasonsTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#D4A017',
+    marginBottom: 4,
+  },
+  reasonItem: {
+    fontSize: 13,
+    color: COACHING_COLORS.text,
+    lineHeight: 20,
+    paddingLeft: 4,
+  },
+  medicalBox: {
+    backgroundColor: '#F0F4FF',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#B8CCFF',
+  },
+  medicalTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1565C0',
+    marginBottom: 4,
+  },
+  medicalText: {
+    fontSize: 13,
+    color: '#2D2016',
+    lineHeight: 20,
+  },
+  followupBox: {
+    backgroundColor: '#F0F0FF',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#C8C8FF',
+  },
+  followupTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#5C5CAE',
+    marginBottom: 4,
+  },
+  followupText: {
+    fontSize: 13,
+    color: '#2D2016',
+    lineHeight: 20,
   },
   detailBox: {
     backgroundColor: '#FFF0E6',

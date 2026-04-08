@@ -11,11 +11,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Switch,
+  ActivityIndicator,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useChildStore } from '../../stores/childStore';
-import { useMomstagramStore, PostCategory } from '../../stores/momstagramStore';
+import { useMomstagramStore, PostCategory, MomstagramPost } from '../../stores/momstagramStore';
+import { momstagramApi } from '../../services/api';
 import { FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
 const MAX_CONTENT = 500;
@@ -34,6 +36,7 @@ export default function MomstagramPostScreen() {
   );
   const [category, setCategory] = useState<PostCategory>('일상');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const selectedChild = useChildStore((s) => s.selectedChild);
   const addPost = useMomstagramStore((s) => s.addPost);
   const addPrivatePost = useMomstagramStore((s) => s.addPrivatePost);
@@ -59,36 +62,74 @@ export default function MomstagramPostScreen() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!content.trim()) {
       Alert.alert('알림', '내용을 입력해주세요.');
       return;
     }
-    const newPost = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-      userName: '나',
-      childGender: (selectedChild?.gender ?? 'M') as 'M' | 'F',
-      childAge,
-      dominantType,
-      imageUri,
-      content: content.trim(),
-      likes: 0,
-      liked: false,
-      comments: [],
-      createdAt: new Date().toISOString(),
-      category,
-      isPrivate,
-    };
+
     if (isPrivate) {
+      // Private posts are local-only
+      const newPost: MomstagramPost = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+        userName: '나',
+        childGender: (selectedChild?.gender ?? 'M') as 'M' | 'F',
+        childAge,
+        dominantType,
+        imageUri,
+        content: content.trim(),
+        likes: 0,
+        liked: false,
+        comments: [],
+        createdAt: new Date().toISOString(),
+        category,
+        isPrivate: true,
+      };
       addPrivatePost(newPost);
       Alert.alert('완료', '나만보기 게시물이 저장되었습니다.', [
         { text: '확인', onPress: () => router.back() },
       ]);
-    } else {
+      return;
+    }
+
+    // Public post: call real API
+    setSubmitting(true);
+    try {
+      const res = await momstagramApi.createPost({
+        content: content.trim(),
+        imageUrl: imageUri ?? undefined,
+        sourceType: 'manual',
+        childAge: childAge || undefined,
+        childGender: selectedChild?.gender ?? undefined,
+        dominantType: dominantType || undefined,
+      });
+
+      const data = res.data;
+      const apiPost = data.data ?? data.post ?? data;
+
+      const newPost: MomstagramPost = {
+        id: apiPost?.id ?? Date.now().toString(36),
+        userName: apiPost?.userName ?? apiPost?.authorName ?? '나',
+        childGender: (selectedChild?.gender ?? 'M') as 'M' | 'F',
+        childAge,
+        dominantType,
+        imageUri: apiPost?.imageUrl ?? apiPost?.thumbnailUrl ?? imageUri,
+        content: content.trim(),
+        likes: 0,
+        liked: false,
+        comments: [],
+        createdAt: apiPost?.createdAt ?? new Date().toISOString(),
+        category,
+        isPrivate: false,
+      };
       addPost(newPost);
       Alert.alert('완료', '게시물이 공유되었습니다.', [
         { text: '확인', onPress: () => router.back() },
       ]);
+    } catch {
+      Alert.alert('오류', '게시물 업로드에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -215,15 +256,19 @@ export default function MomstagramPostScreen() {
         <TouchableOpacity
           style={[
             styles.submitBtn,
-            !content.trim() && styles.submitBtnDisabled,
+            (!content.trim() || submitting) && styles.submitBtnDisabled,
           ]}
           onPress={handleSubmit}
-          disabled={!content.trim()}
+          disabled={!content.trim() || submitting}
           activeOpacity={0.85}
         >
-          <Text style={styles.submitBtnText}>
-            {isPrivate ? '저장하기' : '공유하기'}
-          </Text>
+          {submitting ? (
+            <ActivityIndicator color="#FFFFFF" size="small" />
+          ) : (
+            <Text style={styles.submitBtnText}>
+              {isPrivate ? '저장하기' : '공유하기'}
+            </Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

@@ -85,12 +85,21 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     const doc = await collections.children.doc(req.params.id as string).get();
     if (!doc.exists || doc.data()!.userId !== req.userId) { error(res, '자녀를 찾을 수 없습니다', 404); return; }
 
-    // cascade delete
-    const obs = await collections.observations.where('childId', '==', req.params.id).get();
-    const subs = await collections.subscriptions.where('childId', '==', req.params.id).get();
+    // cascade delete all related data
+    const childId = req.params.id as string;
+    const relatedQueries = await Promise.all([
+      collections.observations.where('childId', '==', childId).get(),
+      collections.subscriptions.where('childId', '==', childId).get(),
+      collections.coachingSessions.where('childId', '==', childId).get(),
+      collections.followups.where('childId', '==', childId).get(),
+      collections.conversationSummaries.where('childId', '==', childId).get(),
+      collections.dailyTracking.where('childId', '==', childId).get(),
+      collections.dailyTraits.where('childId', '==', childId).get(),
+    ]);
     const batch = collections.children.firestore.batch();
-    obs.docs.forEach((d) => batch.delete(d.ref));
-    subs.docs.forEach((d) => batch.delete(d.ref));
+    for (const snap of relatedQueries) {
+      snap.docs.forEach((d) => batch.delete(d.ref));
+    }
     batch.delete(doc.ref);
     await batch.commit();
 

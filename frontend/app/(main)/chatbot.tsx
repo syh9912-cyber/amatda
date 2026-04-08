@@ -8,9 +8,10 @@ import {
   Image,
   StyleSheet,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
-import { Stack } from 'expo-router';
-import { coachingApi } from '../../services/api';
+import { Stack, useRouter } from 'expo-router';
+import { coachingApi, memoriesApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { CoachMessage } from '../../components/coaching/CoachMessage';
 import { ParentMessage } from '../../components/coaching/ParentMessage';
@@ -18,6 +19,7 @@ import { CheckinCard } from '../../components/coaching/CheckinCard';
 import { CategoryBar } from '../../components/coaching/CategoryBar';
 import { FollowupCard } from '../../components/coaching/FollowupCard';
 import { CoachingInput } from '../../components/coaching/CoachingInput';
+import { YearAgoBanner } from '../../components/coaching/YearAgoBanner';
 import {
   CoachingMessage,
   FollowupItem,
@@ -25,6 +27,7 @@ import {
 } from '../../components/coaching/types';
 
 export default function CoachingScreen() {
+  const router = useRouter();
   const child = useChildStore((s) => s.selectedChild);
   const [messages, setMessages] = useState<CoachingMessage[]>([]);
   const [followups, setFollowups] = useState<FollowupItem[]>([]);
@@ -32,12 +35,14 @@ export default function CoachingScreen() {
   const [sending, setSending] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [checkedIn, setCheckedIn] = useState(false);
+  const [yearAgoMemory, setYearAgoMemory] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     if (child) {
       loadHistory();
       loadFollowups();
+      loadYearAgoMemory();
     }
   }, [child?.id]);
 
@@ -47,8 +52,53 @@ export default function CoachingScreen() {
       const res = await coachingApi.history(child.id);
       const data = res.data?.data;
       if (Array.isArray(data) && data.length > 0) {
-        setMessages(data);
-        setCheckedIn(true);
+        // Backend returns sessions desc; reverse for chronological order
+        const sessions = [...data].reverse();
+        const mapped: CoachingMessage[] = [];
+        for (const s of sessions) {
+          const session = s as Record<string, unknown>;
+          const ts = (session.createdAt as string) ?? new Date().toISOString();
+          // Parent message
+          const parentText = (session.message as string | undefined) ?? '';
+          if (parentText) {
+            mapped.push({
+              id: `h-p-${session.id as string}`,
+              isCoach: false,
+              text: parentText,
+              createdAt: ts,
+            });
+          }
+          // Coach response
+          const coachText =
+            (session.answer as string | undefined) ??
+            (session.text as string | undefined) ??
+            (session.reply as string | undefined) ??
+            '';
+          if (coachText) {
+            mapped.push({
+              id: `h-c-${session.id as string}`,
+              isCoach: true,
+              text: coachText,
+              reason: (session.reason as string | undefined) ?? undefined,
+              solutions: Array.isArray(session.solutions)
+                ? (session.solutions as string[])
+                : undefined,
+              source: (session.source as CoachingMessage['source']) ?? 'ai',
+              redFlag: (session.redFlag as string | undefined) ?? undefined,
+              reasons: Array.isArray(session.reasons)
+                ? (session.reasons as string[])
+                : undefined,
+              medical: (session.medical as string | undefined) ?? undefined,
+              followup: (session.followup as string | undefined) ??
+                (session.followupQuestion as string | undefined) ?? undefined,
+              createdAt: ts,
+            });
+          }
+        }
+        if (mapped.length > 0) {
+          setMessages(mapped);
+          setCheckedIn(true);
+        }
       }
     } catch {
       // offline or first visit
@@ -65,6 +115,19 @@ export default function CoachingScreen() {
       }
     } catch {
       // ignore
+    }
+  };
+
+  const loadYearAgoMemory = async () => {
+    if (!child) return;
+    try {
+      const res = await memoriesApi.yearAgo(child.id);
+      const data = res.data?.data;
+      if (data?.hasMemory && data?.memory) {
+        setYearAgoMemory(data.memory as string);
+      }
+    } catch {
+      // no memory or endpoint not available
     }
   };
 
@@ -98,10 +161,14 @@ export default function CoachingScreen() {
         const coachMsg: CoachingMessage = {
           id: `c-${Date.now()}`,
           isCoach: true,
-          text: reply?.text ?? reply?.reply ?? '\uB2F5\uBCC0\uC744 \uC900\uBE44\uD558\uACE0 \uC788\uC5B4\uC694.',
+          text: reply?.answer ?? reply?.text ?? reply?.reply ?? '답변을 준비하고 있어요.',
           reason: reply?.reason,
           solutions: reply?.solutions,
           source: reply?.source ?? 'ai',
+          redFlag: reply?.redFlag ?? undefined,
+          reasons: reply?.reasons ?? undefined,
+          medical: reply?.medical ?? undefined,
+          followup: reply?.followup ?? undefined,
           createdAt: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, coachMsg]);
@@ -229,6 +296,11 @@ export default function CoachingScreen() {
         onContentSizeChange={scrollToBottom}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Year Ago Memory Banner */}
+        {yearAgoMemory ? (
+          <YearAgoBanner memory={yearAgoMemory} />
+        ) : null}
+
         {/* Follow-up Cards */}
         {followups.map((fu) => (
           <FollowupCard
@@ -281,6 +353,28 @@ export default function CoachingScreen() {
           </Text>
         </View>
       ) : null}
+
+      {/* Analyzer shortcuts */}
+      <View style={styles.analyzerRow}>
+        <TouchableOpacity
+          style={styles.analyzerPill}
+          onPress={() => router.push('/(main)/poop-analyzer')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.analyzerPillText}>
+            {'\uD83D\uDD0D \uB300\uBCC0 \uBD84\uC11D'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.analyzerPill}
+          onPress={() => router.push('/(main)/cry-analyzer')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.analyzerPillText}>
+            {'\uD83D\uDD0D \uC6B8\uC74C \uBD84\uC11D'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Input Area */}
       <CoachingInput
@@ -399,5 +493,28 @@ const styles = StyleSheet.create({
   photoLabel: {
     fontSize: 12,
     color: COACHING_COLORS.textSub,
+  },
+  /* Analyzer shortcuts */
+  analyzerRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: COACHING_COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: COACHING_COLORS.border,
+  },
+  analyzerPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#FFF5EC',
+    borderWidth: 1,
+    borderColor: COACHING_COLORS.accent,
+  },
+  analyzerPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COACHING_COLORS.accent,
   },
 });

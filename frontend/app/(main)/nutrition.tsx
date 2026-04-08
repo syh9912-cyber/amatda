@@ -1,30 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  ActivityIndicator, TouchableOpacity, Linking,
+  TouchableOpacity, Linking,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { foodApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import {
+  FOOD_RECOMMENDATIONS,
+  resolveTemperamentKey,
+} from '../../constants/foodRecommendations';
+import type {
+  FoodRecommendation,
+  AvoidFood,
+} from '../../constants/foodRecommendations';
 
 /* ------------------------------------------------------------------ */
-/*  Types                                                              */
+/*  Types & constants                                                   */
 /* ------------------------------------------------------------------ */
-
-interface FoodItem {
-  name: string;
-  benefit: string;
-  caution?: string;
-  recipe?: string[];
-  youtubeQuery?: string;
-}
-
-interface FoodGuide {
-  id: string;
-  suitableType: string;
-  foods: FoodItem[];
-}
 
 type FoodTab = 'good' | 'bad';
 
@@ -33,20 +26,8 @@ const MINT_LIGHT = '#E8FAF8';
 const CORAL_RED = '#FF6B6B';
 const CORAL_RED_LIGHT = '#FFF0F0';
 
-/* ------------------------------------------------------------------ */
-/*  Emoji helpers                                                      */
-/* ------------------------------------------------------------------ */
-
-const GOOD_EMOJIS = ['🥦', '🐟', '🫐', '🥕', '🍎', '🥚', '🥜', '🍠', '🥑', '🍊'];
-const BAD_EMOJIS = ['🍬', '🥤', '🍟', '🍕', '🍩', '🍫', '🧁', '🌭', '🍿', '🥫'];
-
-function getEmoji(index: number, tab: FoodTab): string {
-  const list = tab === 'good' ? GOOD_EMOJIS : BAD_EMOJIS;
-  return list[index % list.length];
-}
-
 function getRecommendPercent(index: number): string {
-  const values = [95, 90, 88, 85, 82, 80, 78, 75];
+  const values = [95, 92, 90, 88, 85, 83, 80, 78];
   return `${values[index % values.length]}%`;
 }
 
@@ -56,36 +37,22 @@ function getRecommendPercent(index: number): string {
 
 export default function NutritionScreen() {
   const router = useRouter();
-  const [guides, setGuides] = useState<FoodGuide[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<FoodTab>('good');
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(
+    new Set(),
+  );
   const selectedChild = useChildStore((s) => s.selectedChild);
 
-  useEffect(() => {
-    if (selectedChild) loadGuides();
-  }, [selectedChild?.id]);
+  const temperamentKey = resolveTemperamentKey(
+    selectedChild?.innateData.dominantType ?? '',
+  );
+  const foods = FOOD_RECOMMENDATIONS[temperamentKey];
 
-  const loadGuides = async () => {
-    if (!selectedChild) return;
-    try {
-      const res = await foodApi.list(
-        selectedChild.ageInfo.months,
-        selectedChild.innateData.dominantType,
-      );
-      setGuides(res.data.data);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const toggleExpand = useCallback((key: string) => {
+  const toggleExpand = useCallback((idx: number) => {
     setExpandedItems((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
       return next;
     });
   }, []);
@@ -95,29 +62,16 @@ export default function NutritionScreen() {
     Linking.openURL(url);
   }, []);
 
-  /* Split foods into good / bad based on caution field */
-  const allFoods: { food: FoodItem; guideId: string; idx: number }[] = [];
-  guides.forEach((g) =>
-    g.foods.forEach((f, i) => allFoods.push({ food: f, guideId: g.id, idx: i }))
-  );
-  const goodFoods = allFoods.filter((f) => !f.food.caution);
-  const badFoods = allFoods.filter((f) => !!f.food.caution);
-  const displayFoods = activeTab === 'good' ? goodFoods : badFoods;
-
-  /* Also use analysisReport goodFoods/badFoods if API returns nothing */
-  const report = selectedChild?.analysisReport;
-  const reportGoodFoods = report?.goodFoods ?? [];
-  const reportBadFoods = report?.badFoods ?? [];
-
   const childName = selectedChild?.name ?? '';
+  const dominantLabel =
+    selectedChild?.innateData.dominantType.split('(')[0] ?? '';
 
   return (
     <View style={styles.screen}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header */}
       <Header
-        title={`${childName}를 위한 식단 가이드`}
+        title={`${childName}${childName.endsWith('\uB97C') ? '' : '\uB97C'} \uC704\uD55C \uC2DD\uB2E8 \uAC00\uC774\uB4DC`}
         onBack={() => router.back()}
       />
 
@@ -126,37 +80,25 @@ export default function NutritionScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Toggle Tabs */}
         <ToggleTabs active={activeTab} onChange={setActiveTab} />
 
-        {loading ? (
-          <ActivityIndicator
-            size="large"
-            color={activeTab === 'good' ? MINT : CORAL_RED}
-            style={{ marginTop: SPACING.xl * 2 }}
-          />
-        ) : displayFoods.length > 0 ? (
-          displayFoods.map(({ food, guideId, idx }, flatIdx) => {
-            const itemKey = `${guideId}-${idx}`;
-            return (
-              <FoodCard
-                key={itemKey}
-                food={food}
-                tab={activeTab}
-                index={flatIdx}
-                itemKey={itemKey}
-                expanded={expandedItems.has(itemKey)}
-                onToggle={toggleExpand}
-                onYoutube={openYoutube}
-              />
-            );
-          })
+        {activeTab === 'good' ? (
+          foods.good.map((food, idx) => (
+            <GoodFoodCard
+              key={idx}
+              food={food}
+              index={idx}
+              childName={childName}
+              dominantLabel={dominantLabel}
+              expanded={expandedItems.has(idx)}
+              onToggle={toggleExpand}
+              onYoutube={openYoutube}
+            />
+          ))
         ) : (
-          /* Fallback to analysisReport strings */
-          <ReportFoodList
-            items={activeTab === 'good' ? reportGoodFoods : reportBadFoods}
-            tab={activeTab}
-          />
+          foods.bad.map((food, idx) => (
+            <BadFoodCard key={idx} food={food} index={idx} />
+          ))
         )}
       </ScrollView>
     </View>
@@ -167,7 +109,13 @@ export default function NutritionScreen() {
 /*  Header                                                             */
 /* ------------------------------------------------------------------ */
 
-function Header({ title, onBack }: { title: string; onBack: () => void }) {
+function Header({
+  title,
+  onBack,
+}: {
+  title: string;
+  onBack: () => void;
+}) {
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={onBack} style={styles.backBtn}>
@@ -204,10 +152,10 @@ function ToggleTabs({
         <Text
           style={[
             styles.toggleText,
-            active === 'good' && styles.toggleTextGoodActive,
+            active === 'good' && styles.toggleTextActive,
           ]}
         >
-          {'먹으면 좋은 음식'}
+          {'\uBA39\uC73C\uBA74 \uC88B\uC740 \uC74C\uC2DD'}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -220,10 +168,10 @@ function ToggleTabs({
         <Text
           style={[
             styles.toggleText,
-            active === 'bad' && styles.toggleTextBadActive,
+            active === 'bad' && styles.toggleTextActive,
           ]}
         >
-          {'피해야 할 음식'}
+          {'\uD53C\uD574\uC57C \uD560 \uC74C\uC2DD'}
         </Text>
       </TouchableOpacity>
     </View>
@@ -231,149 +179,133 @@ function ToggleTabs({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Food Card                                                          */
+/*  Good Food Card                                                     */
 /* ------------------------------------------------------------------ */
 
-function FoodCard({
+function GoodFoodCard({
   food,
-  tab,
   index,
-  itemKey,
+  childName,
+  dominantLabel,
   expanded,
   onToggle,
   onYoutube,
 }: {
-  food: FoodItem;
-  tab: FoodTab;
+  food: FoodRecommendation;
   index: number;
-  itemKey: string;
+  childName: string;
+  dominantLabel: string;
   expanded: boolean;
-  onToggle: (key: string) => void;
+  onToggle: (idx: number) => void;
   onYoutube: (query: string) => void;
 }) {
-  const isGood = tab === 'good';
-  const accentColor = isGood ? MINT : CORAL_RED;
-  const bgTint = isGood ? '#FFFFFF' : CORAL_RED_LIGHT;
-  const hasRecipe = food.recipe && food.recipe.length > 0;
-
   return (
-    <View style={[styles.foodCard, { backgroundColor: bgTint, borderLeftColor: accentColor }]}>
+    <View style={[styles.foodCard, { borderLeftColor: MINT }]}>
+      {/* Top row */}
       <View style={styles.foodRow}>
-        {/* Emoji */}
-        <View style={[styles.foodEmojiWrap, { backgroundColor: isGood ? MINT_LIGHT : CORAL_RED_LIGHT }]}>
-          <Text style={styles.foodEmoji}>{getEmoji(index, tab)}</Text>
+        <View style={[styles.foodEmojiWrap, { backgroundColor: MINT_LIGHT }]}>
+          <Text style={styles.foodEmoji}>{food.emoji}</Text>
         </View>
-
-        {/* Text */}
         <View style={styles.foodTextWrap}>
           <Text style={styles.foodName}>{food.name}</Text>
-          <Text style={styles.foodBenefit} numberOfLines={2}>
-            {isGood ? food.benefit : (food.caution ?? food.benefit)}
+        </View>
+        <View style={styles.mintBadge}>
+          <Text style={styles.mintBadgeText}>
+            {'\uCD94\uCC9C\uB3C4 '}{getRecommendPercent(index)}
           </Text>
         </View>
+      </View>
 
-        {/* Badge (good only) */}
-        {isGood && (
-          <View style={styles.mintBadge}>
-            <Text style={styles.mintBadgeText}>
-              {'추천도 '}{getRecommendPercent(index)}
-            </Text>
+      {/* Reason */}
+      <View style={styles.reasonBox}>
+        <Text style={styles.reasonLabel}>
+          {'\uD83D\uDCA1 \uCD94\uCC9C \uC774\uC720'}
+        </Text>
+        <Text style={styles.reasonText}>
+          {`${dominantLabel} \uAE30\uC9C8\uC758 ${childName}\uC5D0\uAC8C - ${food.reason}`}
+        </Text>
+      </View>
+
+      {/* Caution */}
+      {food.caution && (
+        <View style={styles.cautionBox}>
+          <Text style={styles.cautionLabel}>
+            {'\u26A0\uFE0F \uC8FC\uC758\uC0AC\uD56D'}
+          </Text>
+          <Text style={styles.cautionText}>{food.caution}</Text>
+        </View>
+      )}
+
+      {/* Recipe toggle */}
+      <View style={styles.recipeSection}>
+        <TouchableOpacity
+          style={[styles.recipeToggle, { backgroundColor: MINT_LIGHT }]}
+          onPress={() => onToggle(index)}
+        >
+          <Text style={[styles.recipeToggleText, { color: MINT }]}>
+            {expanded
+              ? '\uD83D\uDCD6 \uAC04\uB2E8 \uB808\uC2DC\uD53C \uC811\uAE30'
+              : '\uD83D\uDCD6 \uAC04\uB2E8 \uB808\uC2DC\uD53C \uBCF4\uAE30'}
+          </Text>
+        </TouchableOpacity>
+
+        {expanded && (
+          <View style={styles.recipeCard}>
+            {food.recipe.map((step, sIdx) => (
+              <View key={sIdx} style={styles.recipeStep}>
+                <View style={[styles.stepDot, { backgroundColor: MINT }]}>
+                  <Text style={styles.stepNumber}>{sIdx + 1}</Text>
+                </View>
+                <Text style={styles.stepText}>{step}</Text>
+              </View>
+            ))}
           </View>
         )}
       </View>
 
-      {/* Recipe expandable */}
-      {hasRecipe && (
-        <View style={styles.recipeSection}>
-          <TouchableOpacity
-            style={[styles.recipeToggle, { backgroundColor: isGood ? MINT_LIGHT : CORAL_RED_LIGHT }]}
-            onPress={() => onToggle(itemKey)}
-          >
-            <Text style={[styles.recipeToggleText, { color: accentColor }]}>
-              {expanded ? '레시피 접기' : '레시피 보기'}
-            </Text>
-          </TouchableOpacity>
-
-          {expanded && (
-            <View style={styles.recipeCard}>
-              {food.recipe!.map((step, sIdx) => (
-                <View key={sIdx} style={styles.recipeStep}>
-                  <View style={[styles.stepDot, { backgroundColor: accentColor }]}>
-                    <Text style={styles.stepNumber}>{sIdx + 1}</Text>
-                  </View>
-                  <Text style={styles.stepText}>{step}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* YouTube link */}
-      {food.youtubeQuery && (
-        <TouchableOpacity
-          style={styles.youtubeBtn}
-          onPress={() => onYoutube(food.youtubeQuery!)}
-        >
-          <Text style={styles.youtubeBtnText}>
-            {'유튜브에서 보기 ▶️'}
-          </Text>
-        </TouchableOpacity>
-      )}
+      {/* YouTube button */}
+      <TouchableOpacity
+        style={styles.youtubeBtn}
+        onPress={() => onYoutube(food.youtubeQuery)}
+      >
+        <Text style={styles.youtubeBtnText}>
+          {'\u25B6\uFE0F \uC720\uD29C\uBE0C \uAC80\uC0C9'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Report Food List (fallback when API has no items)                   */
+/*  Bad Food Card                                                      */
 /* ------------------------------------------------------------------ */
 
-function ReportFoodList({
-  items,
-  tab,
+function BadFoodCard({
+  food,
+  index,
 }: {
-  items: string[];
-  tab: FoodTab;
+  food: AvoidFood;
+  index: number;
 }) {
-  if (items.length === 0) {
-    return (
-      <View style={styles.emptyCard}>
-        <Text style={styles.emptyText}>
-          해당 연령/기질에 맞는 영양 가이드가 아직 준비 중입니다
-        </Text>
-      </View>
-    );
-  }
-
-  const isGood = tab === 'good';
-  const bgTint = isGood ? '#FFFFFF' : CORAL_RED_LIGHT;
-  const accentColor = isGood ? MINT : CORAL_RED;
-
   return (
-    <>
-      {items.map((item, i) => (
+    <View
+      style={[
+        styles.foodCard,
+        { backgroundColor: CORAL_RED_LIGHT, borderLeftColor: CORAL_RED },
+      ]}
+    >
+      <View style={styles.foodRow}>
         <View
-          key={i}
-          style={[styles.foodCard, { backgroundColor: bgTint, borderLeftColor: accentColor }]}
+          style={[styles.foodEmojiWrap, { backgroundColor: '#FFE0E0' }]}
         >
-          <View style={styles.foodRow}>
-            <View style={[styles.foodEmojiWrap, { backgroundColor: isGood ? MINT_LIGHT : CORAL_RED_LIGHT }]}>
-              <Text style={styles.foodEmoji}>{getEmoji(i, tab)}</Text>
-            </View>
-            <View style={styles.foodTextWrap}>
-              <Text style={styles.foodName}>{item}</Text>
-            </View>
-            {isGood && (
-              <View style={styles.mintBadge}>
-                <Text style={styles.mintBadgeText}>
-                  {'추천도 '}{getRecommendPercent(i)}
-                </Text>
-              </View>
-            )}
-          </View>
+          <Text style={styles.foodEmoji}>{food.emoji}</Text>
         </View>
-      ))}
-    </>
+        <View style={styles.foodTextWrap}>
+          <Text style={styles.foodName}>{food.name}</Text>
+          <Text style={styles.foodBenefit}>{food.reason}</Text>
+        </View>
+      </View>
+    </View>
   );
 }
 
@@ -382,10 +314,7 @@ function ReportFoodList({
 /* ------------------------------------------------------------------ */
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#FFF8F2',
-  },
+  screen: { flex: 1, backgroundColor: '#FFF8F2' },
   scrollView: { flex: 1 },
   content: {
     paddingHorizontal: SPACING.lg,
@@ -411,7 +340,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
 
-  /* Toggle Tabs */
+  /* Toggle */
   toggleRow: {
     flexDirection: 'row',
     gap: SPACING.sm,
@@ -426,21 +355,14 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     alignItems: 'center',
   },
-  toggleBtnGoodActive: {
-    backgroundColor: MINT,
-    borderColor: MINT,
-  },
-  toggleBtnBadActive: {
-    backgroundColor: CORAL_RED,
-    borderColor: CORAL_RED,
-  },
+  toggleBtnGoodActive: { backgroundColor: MINT, borderColor: MINT },
+  toggleBtnBadActive: { backgroundColor: CORAL_RED, borderColor: CORAL_RED },
   toggleText: {
     fontSize: FONT_SIZE.md,
     fontWeight: '700',
     color: COLORS.textSecondary,
   },
-  toggleTextGoodActive: { color: '#FFFFFF' },
-  toggleTextBadActive: { color: '#FFFFFF' },
+  toggleTextActive: { color: '#FFFFFF' },
 
   /* Food Card */
   foodCard: {
@@ -488,6 +410,44 @@ const styles = StyleSheet.create({
     color: MINT,
   },
 
+  /* Reason */
+  reasonBox: {
+    marginTop: SPACING.sm,
+    backgroundColor: '#F0FFFE',
+    borderRadius: RADIUS.sm,
+    padding: SPACING.md,
+  },
+  reasonLabel: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '700',
+    color: MINT,
+    marginBottom: 4,
+  },
+  reasonText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text,
+    lineHeight: 20,
+  },
+
+  /* Caution */
+  cautionBox: {
+    marginTop: SPACING.xs,
+    backgroundColor: '#FFF8E1',
+    borderRadius: RADIUS.sm,
+    padding: SPACING.sm,
+  },
+  cautionLabel: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '700',
+    color: '#E6A817',
+    marginBottom: 2,
+  },
+  cautionText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    lineHeight: 16,
+  },
+
   /* Recipe */
   recipeSection: { marginTop: SPACING.sm },
   recipeToggle: {
@@ -496,10 +456,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.xs,
   },
-  recipeToggleText: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '600',
-  },
+  recipeToggleText: { fontSize: FONT_SIZE.xs, fontWeight: '600' },
   recipeCard: {
     marginTop: SPACING.sm,
     backgroundColor: '#F8FFFE',
@@ -544,19 +501,5 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     fontWeight: '600',
     color: '#FFFFFF',
-  },
-
-  /* Empty */
-  emptyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: RADIUS.md,
-    padding: SPACING.xl,
-    alignItems: 'center',
-    marginTop: SPACING.lg,
-  },
-  emptyText: {
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    fontSize: FONT_SIZE.sm,
   },
 });

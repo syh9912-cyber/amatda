@@ -4,168 +4,30 @@ import { env } from '../config/env';
 import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
 import { maskChildName } from '../utils/masking';
-import { findCoachingEntry } from '../services/coaching.knowledge';
+
+// ─── 새 코칭 서비스 ───
+import { CoachingAIResponse, UserTier, TIER_CONFIGS } from '../services/coaching/types';
+import { filterUselessQuestion } from '../services/coaching/useless.filter';
+import { detectRedFlags } from '../services/coaching/red.flag.detector';
+import { findTopCoachingEntries, formatCandidatesForPrompt } from '../services/coaching/db.searcher';
+import { buildChildContext, buildTrackingSummary } from '../services/coaching/context.builder';
+import {
+  getConversationContext,
+  updateConversationSummary,
+  formatRecentTurns,
+} from '../services/coaching/conversation.summarizer';
+import { buildPrompt } from '../services/coaching/prompt.builder';
 
 const router = Router();
 
-// ─── 타입 정의 ───
+// ─── 카테고리 매핑 ───
 
-interface CoachingSession {
-  id: string;
-  userId: string;
-  childId: string;
-  message: string;
-  category: string;
-  answer: string;
-  reason: string;
-  solutions: string[];
-  source: 'knowledge' | 'ai' | 'learned';
-  followupDays: number | null;
-  followupQuestion: string | null;
-  photoUrl: string | null;
-  audioUrl: string | null;
-  createdAt: string;
-}
+const CATEGORY_KO: Record<string, string> = {
+  crying: '울음', sleep: '수면', eating: '식사', poop: '대변',
+  social: '사회성', growth: '성장', behavior: '행동', etc: '기타',
+};
 
-interface Followup {
-  id: string;
-  userId: string;
-  childId: string;
-  sessionId: string;
-  question: string;
-  dueDate: string;
-  respondedAt: string | null;
-  response: string | null;
-  coachingReply: string | null;
-  status: 'pending' | 'completed';
-  createdAt: string;
-}
-
-// ─── Gemini AI 폴백 ───
-
-async function getGeminiCoachingResponse(
-  message: string,
-  childName: string,
-  dominantType: string,
-  ageMonths: number
-): Promise<{
-  answer: string;
-  reason: string;
-  solutions: string[];
-}> {
-  const maskedMessage = maskChildName(message, childName);
-  const apiKey = env.GEMINI_API_KEY;
-
-  if (!apiKey || env.MOCK_AI) {
-    return getMockCoachingResponse(maskedMessage, dominantType);
-  }
-
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `당신은 아동 발달 전문 육아 코치입니다.
-부모의 고민에 대해 아이의 기질 유형(${dominantType})과 월령(${ageMonths}개월)을 고려하여 답변하세요.
-
-반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이 JSON만):
-{"answer":"기질 맞춤 조언","reason":"이런 현상이 발생하는 이유","solutions":["구체적 해결 방법1","구체적 해결 방법2","구체적 해결 방법3"]}
-
-부모 고민:
-${maskedMessage}`,
-            }],
-          }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 500 },
-        }),
-      }
-    );
-
-    const data = await response.json() as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]) as {
-        answer: string;
-        reason: string;
-        solutions: string[];
-      };
-      return parsed;
-    }
-    return getMockCoachingResponse(maskedMessage, dominantType);
-  } catch {
-    return getMockCoachingResponse(maskedMessage, dominantType);
-  }
-}
-
-function getMockCoachingResponse(
-  message: string,
-  dominantType: string
-): {
-  answer: string;
-  reason: string;
-  solutions: string[];
-} {
-  const traitTips: Record<string, string> = {
-    '탐구형': '탐구형 아이는 호기심이 강하므로 새로운 경험을 통해 문제를 해결할 수 있습니다.',
-    '활동형': '활동형 아이는 에너지가 넘치므로 충분한 신체 활동이 도움됩니다.',
-    '조화형': '조화형 아이는 관계를 중시하므로 부모의 관심과 스킨십이 효과적입니다.',
-    '분석형': '분석형 아이는 논리적 설명을 이해하므로 이유를 설명해주는 것이 좋습니다.',
-    '감성형': '감성형 아이는 감정에 민감하므로 공감과 위로가 우선입니다.',
-  };
-
-  const tip = traitTips[dominantType] ?? '아이의 기질을 파악하여 맞춤 육아를 실천해보세요.';
-
-  return {
-    answer: `${tip} "${message.slice(0, 20)}..."에 대해 전문 상담이 준비되었습니다.`,
-    reason: '아이의 발달 과정에서 자연스럽게 나타나는 현상이며, 기질에 따라 표현 방식이 다릅니다.',
-    solutions: [
-      '1. 아이의 감정을 먼저 인정하고 공감해주세요.',
-      '2. 일관된 루틴과 규칙을 만들어주세요.',
-      '3. 하루 15분 이상 1:1 놀이 시간을 가져보세요.',
-    ],
-  };
-}
-
-// ─── 자녀 데이터 조회 헬퍼 ───
-
-interface ChildData {
-  name: string;
-  dominantType: string;
-  ageMonths: number;
-}
-
-async function getChildData(
-  childId: string,
-  userId: string
-): Promise<ChildData | null> {
-  const doc = await collections.children.doc(childId).get();
-  if (!doc.exists) return null;
-  const data = doc.data() as Record<string, unknown>;
-  if (data.userId !== userId) return null;
-
-  const birthDate = data.birthDate as string | undefined;
-  let ageMonths = 12;
-  if (birthDate) {
-    const birth = new Date(birthDate);
-    const now = new Date();
-    ageMonths = (now.getFullYear() - birth.getFullYear()) * 12
-      + (now.getMonth() - birth.getMonth());
-  }
-
-  return {
-    name: (data.name as string) || '아이',
-    dominantType: (data.dominantType as string) || '조화형',
-    ageMonths,
-  };
-}
-
-// ─── POST /api/coaching/ask ───
+// ─── POST /api/coaching/ask — 10단계 파이프라인 ───
 
 router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -182,183 +44,380 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
       return;
     }
 
-    const child = await getChildData(childId, req.userId!);
+    // ─── Step 1: 카테고리 확인 ───
+    const categoryKo = category ? (CATEGORY_KO[category] ?? category) : '기타';
+
+    // ─── Step 2: 쓸모없는 질문 차단 ───
+    const filter = filterUselessQuestion(message);
+    if (filter.isUseless) {
+      const sessionId = genId();
+      await collections.coachingSessions.doc(sessionId).set({
+        userId: req.userId,
+        childId,
+        message,
+        category: categoryKo,
+        answer: filter.rejectionMessage,
+        reason: '',
+        solutions: [],
+        source: 'filter',
+        createdAt: new Date().toISOString(),
+      });
+      success(res, {
+        sessionId,
+        answer: filter.rejectionMessage,
+        reason: '',
+        solutions: [],
+        source: 'filter',
+        category: categoryKo,
+        redFlag: null,
+        reasons: [],
+        medical: null,
+        followup: null,
+      });
+      return;
+    }
+
+    // ─── Step 3: 아이 프로필 로드 ───
+    const child = await buildChildContext(childId, req.userId!);
     if (!child) {
       error(res, '자녀 정보를 찾을 수 없습니다', 404);
       return;
     }
 
-    // 1. 정적 지식DB에서 매칭
-    const entry = findCoachingEntry(message);
+    // ─── Step 4: 레드 플래그 검사 ───
+    const redFlag = detectRedFlags(message);
 
-    // 1-1. 학습된 데이터에서도 검색
-    let learnedMatch: { answer: string; reason: string; solutions: string[] } | null = null;
-    if (!entry) {
-      const learnedSnap = await collections.learnedKnowledge.get();
-      let bestScore = 0;
-      for (const doc of learnedSnap.docs) {
-        const learned = doc.data();
-        const kws = learned.keywords as string[];
-        let score = 0;
-        for (const kw of kws) {
-          if (message.includes(kw)) score += kw.length;
-        }
-        if (score > bestScore) {
-          bestScore = score;
-          learnedMatch = {
-            answer: learned.answer as string,
-            reason: learned.reason as string,
-            solutions: learned.solutions as string[],
-          };
-        }
-      }
-      // 최소 점수 이상일 때만 사용 (너무 낮으면 잘못된 매칭)
-      if (bestScore < 8) learnedMatch = null;
-      // 사용 횟수 증가
-      if (learnedMatch) {
-        const matchDoc = learnedSnap.docs.find((d) => d.data().answer === learnedMatch!.answer);
-        if (matchDoc) {
-          const current = (matchDoc.data().useCount as number) || 0;
-          await collections.learnedKnowledge.doc(matchDoc.id).update({ useCount: current + 1 });
-        }
-      }
-    }
+    // ─── Step 5: 사용자 티어 확인 ───
+    const tier = await getUserTier(req.userId!);
+    const config = TIER_CONFIGS[tier];
 
-    let answer: string;
-    let reason: string;
-    let solutions: string[];
-    let source: 'knowledge' | 'ai' | 'learned';
-    let followupDays: number | null = null;
-    let followupQuestion: string | null = null;
-    let detectedCategory = category ?? '기타';
-
-    // 카테고리별 상세 질문 (더 정확한 상담을 위해)
-    const DETAIL_PROMPTS: Record<string, string> = {
-      '울음': '더 정확한 분석을 위해 아이의 울음소리를 녹음해서 들려주시거나, 울 때의 상황을 자세히 알려주세요. (언제, 얼마나 오래, 어떤 상황에서)',
-      '대변': '대변 사진을 찍어서 보여주시면 더 정확한 조언을 드릴 수 있어요. 색깔, 묽기, 빈도를 알려주세요.',
-      '피부': '아이의 피부 상태를 사진으로 찍어서 보여주세요. 발생 부위와 시작 시기를 알려주시면 도움됩니다.',
-      '식사': '아이가 어제 먹은 음식과 양을 알려주세요. 거부하는 음식 종류도 구체적으로 알려주시면 좋아요.',
-      '수면': '아이의 취침 시간, 기상 시간, 낮잠 횟수를 알려주세요. 잠들 때 습관도 알려주시면 도움됩니다.',
-      '건강': '체온을 재서 알려주세요. 다른 증상(기침, 콧물, 구토 등)이 있는지도 함께 알려주세요.',
-      '사회성': '구체적인 상황을 알려주세요. (어린이집에서? 놀이터에서? 어떤 친구와?) 아이의 반응도 자세히 알려주세요.',
-      '행동': '이 행동이 언제부터 시작됐는지, 하루에 몇 번 정도 하는지, 어떤 상황에서 하는지 알려주세요.',
-      '성장': '현재 키와 몸무게를 알려주세요. 또래와 비교했을 때 어떤 차이가 느껴지는지도 알려주시면 좋아요.',
-      '정서': '아이가 이런 감정을 보일 때 구체적인 상황을 알려주세요. 얼마나 자주, 어떤 때에 그러는지 알려주시면 도움됩니다.',
-    };
-
-    let detailPrompt: string | null = null;
-
-    if (entry) {
-      // 기질별 맞춤 조언 선택
-      const traitTip = entry.traitAdvice[child.dominantType] ?? entry.generalAdvice;
-      answer = traitTip;
-      reason = entry.reason;
-      solutions = entry.solution;
-      source = 'knowledge';
-      followupDays = entry.followupDays;
-      followupQuestion = entry.followupQuestion;
-      detectedCategory = entry.category;
-      detailPrompt = DETAIL_PROMPTS[entry.category] ?? null;
-    } else if (learnedMatch) {
-      // 1-2. 학습된 데이터 사용
-      answer = learnedMatch.answer;
-      reason = learnedMatch.reason;
-      solutions = learnedMatch.solutions;
-      source = 'learned';
-    } else {
-      // 2. Gemini AI 폴백
-      const aiResult = await getGeminiCoachingResponse(
-        message,
-        child.name,
-        child.dominantType,
-        child.ageMonths
-      );
-      answer = aiResult.answer;
-      reason = aiResult.reason;
-      solutions = aiResult.solutions;
-      source = 'ai';
-
-      // AI 응답을 학습 데이터로 자동 저장 (다음에 비슷한 질문 시 AI 없이 응답)
-      const keywords = message
-        .replace(/[?？!！.。,，]/g, ' ')
-        .split(/\s+/)
-        .filter((w: string) => w.length >= 2)
-        .slice(0, 8);
-
-      if (keywords.length >= 2) {
-        const learnedId = genId();
-        await collections.learnedKnowledge.doc(learnedId).set({
-          keywords,
-          category: detectedCategory,
-          dominantType: child.dominantType,
-          ageMonths: child.ageMonths,
-          originalMessage: message,
-          answer,
-          reason,
-          solutions,
-          useCount: 0,
-          createdAt: new Date().toISOString(),
+    // ─── Step 6: 하루 상담 횟수 체크 (무료, 레드플래그는 제외) ───
+    if (tier === 'free' && !redFlag.detected) {
+      const todayCount = await getTodaySessionCount(req.userId!);
+      if (todayCount >= config.dailyLimit) {
+        success(res, {
+          sessionId: null,
+          answer: `오늘 무료 상담 횟수(${config.dailyLimit}회)를 모두 사용했어요. 내일 다시 이용하시거나, 프리미엄으로 업그레이드하시면 무제한 상담이 가능해요.`,
+          reason: '',
+          solutions: [],
+          source: 'limit',
+          category: categoryKo,
+          redFlag: null,
+          reasons: [],
+          medical: null,
+          followup: null,
         });
+        return;
       }
     }
 
-    // 3. 세션 저장
-    const sessionId = genId();
-    const session: Omit<CoachingSession, 'id'> = {
-      userId: req.userId!,
-      childId,
-      message,
-      category: detectedCategory,
-      answer,
-      reason,
-      solutions,
-      source,
-      followupDays,
-      followupQuestion,
-      photoUrl: photoUrl ?? null,
-      audioUrl: audioUrl ?? null,
-      createdAt: new Date().toISOString(),
-    };
-    await collections.coachingSessions.doc(sessionId).set(session);
+    // ─── Step 7: 병렬 데이터 수집 ───
+    const maskedMessage = maskChildName(message, child.name);
 
-    // 4. 팔로업 스케줄링
+    const [dbCandidates, tracking, conversation] = await Promise.all([
+      Promise.resolve(findTopCoachingEntries(
+        message, category, child.temperament, config.dbCandidateCount, child.ageMonths
+      )),
+      buildTrackingSummary(childId, config.contextDays),
+      getConversationContext(req.userId!, childId, tier),
+    ]);
+
+    // ─── Step 8: 프롬프트 조합 ───
+    const dbTexts = formatCandidatesForPrompt(dbCandidates);
+    const recentTurnsText = formatRecentTurns(conversation.recentTurns);
+
+    const { systemPrompt, runtimePrompt } = buildPrompt({
+      category: categoryKo,
+      userMessage: maskedMessage,
+      childName: child.name,
+      ageInfo: child.ageInfo,
+      gender: child.gender,
+      temperament: `${child.temperament} (${child.temperamentDetail})`,
+      specialNotes: child.specialNotes,
+      sleepSummary: tracking.sleepSummary,
+      mealSummary: tracking.mealSummary,
+      poopSummary: tracking.poopSummary,
+      conditionSummary: tracking.conditionSummary,
+      recentChangeSummary: tracking.recentChangeSummary,
+      conversationSummary: conversation.summary,
+      recentChatTurns: recentTurnsText,
+      dbCandidates: dbTexts,
+      cryAnalysisInput: audioUrl ? `울음소리 녹음 제공됨 (${audioUrl})` : '',
+      poopAnalysisInput: photoUrl ? `대변 사진 제공됨 (${photoUrl})` : '',
+    });
+
+    // ─── Step 9: AI 호출 ───
+    let aiResponse: CoachingAIResponse;
+    try {
+      aiResponse = await callGemini(systemPrompt, runtimePrompt, config.maxOutputTokens);
+    } catch (err) {
+      console.error('Gemini call failed:', err instanceof Error ? err.message : err);
+      aiResponse = getMockResponse(child.temperament, categoryKo);
+    }
+
+    // 레드플래그가 있으면 AI 응답에 추가
+    if (redFlag.detected && redFlag.message) {
+      aiResponse.medical = redFlag.message;
+    }
+
+    // ─── Step 10: 응답 포맷 + 저장 ───
+    const sessionId = genId();
+
+    // 프론트 하위호환 매핑
+    const answerText = aiResponse.judgement;
+    const reasonText = aiResponse.personalNote;
+    const solutionsList = aiResponse.actions;
+
+    // 팔로업 스케줄링
     let followup: { days: number; question: string } | null = null;
-    if (followupDays && followupQuestion) {
+    if (aiResponse.followupQuestion) {
       const followupId = genId();
       const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + followupDays);
-
-      const followupDoc: Omit<Followup, 'id'> = {
-        userId: req.userId!,
+      dueDate.setDate(dueDate.getDate() + 1);
+      await collections.followups.doc(followupId).set({
+        userId: req.userId,
         childId,
         sessionId,
-        question: followupQuestion,
+        question: aiResponse.followupQuestion,
         dueDate: dueDate.toISOString(),
         respondedAt: null,
         response: null,
         coachingReply: null,
         status: 'pending',
         createdAt: new Date().toISOString(),
-      };
-      await collections.followups.doc(followupId).set(followupDoc);
-
-      followup = { days: followupDays, question: followupQuestion };
+      });
+      followup = { days: 1, question: aiResponse.followupQuestion };
     }
+
+    // 세션 저장
+    await collections.coachingSessions.doc(sessionId).set({
+      userId: req.userId,
+      childId,
+      message,
+      category: categoryKo,
+      answer: answerText,
+      reason: reasonText,
+      solutions: solutionsList,
+      source: 'ai',
+      redFlag: redFlag.detected ? redFlag.message : null,
+      reasons: aiResponse.reasons,
+      medical: aiResponse.medical ?? null,
+      personalNote: aiResponse.personalNote,
+      followupDays: followup ? 1 : null,
+      followupQuestion: aiResponse.followupQuestion ?? null,
+      photoUrl: photoUrl ?? null,
+      audioUrl: audioUrl ?? null,
+      dbCandidatesUsed: dbCandidates.map((c) => c.id),
+      createdAt: new Date().toISOString(),
+    });
+
+    // 대화 요약 업데이트 (비동기, 응답 차단 안 함)
+    updateConversationSummary(
+      req.userId!,
+      childId,
+      message,
+      answerText
+    ).catch(() => {});
 
     success(res, {
       sessionId,
-      answer,
-      reason,
-      solutions,
-      source,
-      category: detectedCategory,
+      answer: answerText,
+      reason: reasonText,
+      solutions: solutionsList,
+      source: 'ai',
+      category: categoryKo,
+      redFlag: redFlag.detected ? redFlag.message : null,
+      reasons: aiResponse.reasons,
+      medical: aiResponse.medical ?? null,
       followup,
-      detailPrompt,
     });
   } catch {
     error(res, '코칭 응답 중 오류가 발생했습니다', 500);
   }
 });
+
+// ─── Gemini AI 호출 ───
+
+async function callGemini(
+  systemPrompt: string,
+  runtimePrompt: string,
+  maxTokens: number
+): Promise<CoachingAIResponse> {
+  const apiKey = env.GEMINI_API_KEY;
+  if (!apiKey || env.MOCK_AI) {
+    throw new Error('MOCK_MODE');
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ parts: [{ text: runtimePrompt }] }],
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: maxTokens,
+        },
+      }),
+    }
+  );
+
+  const rawBody = await response.text();
+  let data: { candidates?: { content?: { parts?: { text?: string }[] } }[]; error?: { message?: string } };
+  try {
+    data = JSON.parse(rawBody) as typeof data;
+  } catch {
+    console.error('Gemini raw response not JSON:', rawBody.substring(0, 200));
+    throw new Error('Gemini response not JSON');
+  }
+
+  if (data.error) {
+    console.error('Gemini API error:', data.error.message);
+    throw new Error('Gemini API error: ' + data.error.message);
+  }
+
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  if (!text) {
+    console.error('Gemini empty response, full:', JSON.stringify(data).substring(0, 300));
+    throw new Error('Gemini empty response');
+  }
+
+  // markdown 코드펜스 제거
+  const cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+
+  let jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    // 잘린 JSON 복구 시도: 마지막 { 이후를 닫아줌
+    const openIdx = cleaned.indexOf('{');
+    if (openIdx >= 0) {
+      let truncated = cleaned.substring(openIdx);
+      // 열린 괄호 수만큼 닫기
+      const opens = (truncated.match(/\{/g) || []).length;
+      const closes = (truncated.match(/\}/g) || []).length;
+      for (let i = 0; i < opens - closes; i++) truncated += '}';
+      // 잘린 문자열/배열 닫기
+      truncated = truncated.replace(/,\s*$/, '');
+      truncated = truncated.replace(/"[^"]*$/, '"');
+      truncated = truncated.replace(/\[\s*("[^"]*",?\s*)*$/, (m) => m.endsWith(']') ? m : m.replace(/,\s*$/, '') + ']');
+      jsonMatch = truncated.match(/\{[\s\S]*\}/);
+    }
+    if (!jsonMatch) {
+      console.error('Gemini no JSON in response:', text.substring(0, 300));
+      throw new Error('JSON parse failed');
+    }
+  }
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+  } catch {
+    console.error('Gemini JSON parse error, raw:', jsonMatch[0].substring(0, 300));
+    throw new Error('JSON parse failed');
+  }
+
+  return {
+    judgement: (parsed.judgement as string) || '아이 상황을 확인해보겠습니다.',
+    reasons: Array.isArray(parsed.reasons) ? parsed.reasons as string[] : [],
+    actions: Array.isArray(parsed.actions) ? parsed.actions as string[] : [],
+    medical: (parsed.medical as string) || undefined,
+    personalNote: (parsed.personalNote as string) || '',
+    followupQuestion: (parsed.followupQuestion as string) || undefined,
+  };
+}
+
+// ─── Mock 응답 (Gemini 없을 때) ───
+
+function getMockResponse(temperament: string, category: string): CoachingAIResponse {
+  const traitIntro: Record<string, string> = {
+    '탐구형': '탐구형 기질의 아이는 호기심이 강해서',
+    '활동형': '활동형 기질의 아이는 에너지가 넘쳐서',
+    '조화형': '조화형 기질의 아이는 안정감을 중요하게 여겨서',
+    '분석형': '분석형 기질의 아이는 규칙적인 환경을 좋아해서',
+    '감성형': '감성형 기질의 아이는 감정에 민감해서',
+  };
+
+  const intro = traitIntro[temperament] ?? '아이의 기질 특성상';
+
+  const categoryTips: Record<string, { reason: string; actions: string[] }> = {
+    '울음': {
+      reason: '울음은 아이의 가장 중요한 소통 수단이에요.',
+      actions: ['체온을 확인해주세요.', '수유/기저귀/수면 상태를 점검해보세요.', '안아주며 달래보세요.'],
+    },
+    '수면': {
+      reason: '수면 패턴은 월령에 따라 계속 변해요.',
+      actions: ['일정한 취침 루틴을 만들어보세요.', '잠들기 30분 전 조용한 환경을 만들어주세요.', '낮잠 시간을 조절해보세요.'],
+    },
+    '식사': {
+      reason: '식사 거부는 발달 과정에서 흔히 나타나요.',
+      actions: ['억지로 먹이지 않고 노출 횟수를 늘려보세요.', '함께 먹는 분위기를 만들어보세요.', '한 번에 소량씩 제공해보세요.'],
+    },
+    '대변': {
+      reason: '대변 양상은 식이와 소화 상태를 반영해요.',
+      actions: ['수분 섭취를 충분히 해주세요.', '식이 변화가 있었는지 확인해보세요.', '횟수와 색을 기록해두세요.'],
+    },
+  };
+
+  const tips = categoryTips[category] ?? {
+    reason: '아이의 발달 과정에서 자연스럽게 나타나는 현상이에요.',
+    actions: ['아이의 감정을 먼저 인정해주세요.', '일관된 루틴을 유지해보세요.', '1:1 놀이 시간을 가져보세요.'],
+  };
+
+  return {
+    judgement: `${intro} 이런 모습을 보일 수 있어요. 걱정되시겠지만, 충분히 대처 가능한 상황이에요.`,
+    reasons: [tips.reason, '아이마다 시기와 표현 방식이 달라요.'],
+    actions: tips.actions,
+    personalNote: `${intro} 부모님의 따뜻한 관심이 가장 큰 도움이 됩니다.`,
+    followupQuestion: '내일 상태가 어떤지 알려주세요.',
+  };
+}
+
+// ─── 헬퍼 함수 ───
+
+async function getUserTier(userId: string): Promise<UserTier> {
+  try {
+    const doc = await collections.users.doc(userId).get();
+    if (!doc.exists) return 'free';
+    const data = doc.data() as Record<string, unknown>;
+
+    // 유료 구독 확인
+    if ((data.subscriptionTier as string) === 'PAID') {
+      const premiumExpires = data.premiumExpiresAt as string | undefined;
+      if (premiumExpires && new Date(premiumExpires) > new Date()) return 'paid';
+    }
+
+    // 체험판 확인 (30일)
+    const trialStarted = data.trialStartedAt as string | undefined;
+    if (trialStarted) {
+      const trialEnd = new Date(trialStarted);
+      trialEnd.setDate(trialEnd.getDate() + 30);
+      if (new Date() < trialEnd) return 'paid';
+    }
+
+    return 'free';
+  } catch {
+    return 'free';
+  }
+}
+
+async function getTodaySessionCount(userId: string): Promise<number> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  try {
+    const snap = await collections.coachingSessions
+      .where('userId', '==', userId)
+      .where('createdAt', '>=', today.toISOString())
+      .get();
+    // filter/limit 소스는 AI 비용 없으므로 제외
+    return snap.docs.filter((d) => {
+      const src = (d.data() as Record<string, unknown>).source as string;
+      return src !== 'filter' && src !== 'limit';
+    }).length;
+  } catch {
+    return 0;
+  }
+}
 
 // ─── GET /api/coaching/history/:childId ───
 
@@ -378,7 +437,8 @@ router.get('/history/:childId', authMiddleware, async (req: Request, res: Respon
     }));
 
     success(res, sessions);
-  } catch {
+  } catch (err) {
+    console.error('History error:', err);
     error(res, '코칭 기록 조회 중 오류가 발생했습니다', 500);
   }
 });
@@ -397,18 +457,18 @@ router.get('/followups/:childId', authMiddleware, async (req: Request, res: Resp
       .orderBy('dueDate', 'asc')
       .get();
 
-    // 기한이 지났거나 오늘까지인 것만 반환
     const allFollowups: Array<Record<string, unknown>> = snap.docs.map((d) => {
       const data = d.data() as Record<string, unknown>;
       return { id: d.id, ...data };
     });
     const dueFollowups = allFollowups.filter((f) => {
-      const dueDate = f.dueDate as string | undefined;
-      return dueDate ? dueDate <= now : false;
+      const due = f.dueDate as string | undefined;
+      return due ? due <= now : false;
     });
 
     success(res, dueFollowups);
-  } catch {
+  } catch (err) {
+    console.error('Followups error:', err);
     error(res, '팔로업 조회 중 오류가 발생했습니다', 500);
   }
 });
@@ -431,29 +491,24 @@ router.post('/followup/:id/respond', authMiddleware, async (req: Request, res: R
       return;
     }
 
-    const followupData = doc.data() as Omit<Followup, 'id'>;
+    const followupData = doc.data() as Record<string, unknown>;
     if (followupData.userId !== req.userId) {
       error(res, '권한이 없습니다', 403);
       return;
     }
 
-    // 팔로업 응답에 대한 코칭 답변 생성
-    const child = await getChildData(followupData.childId, req.userId!);
-    const dominantType = child?.dominantType ?? '조화형';
+    // 팔로업 응답 → 새 코칭 세션으로 처리
+    const child = await buildChildContext(
+      followupData.childId as string,
+      req.userId!
+    );
+    const temperament = child?.temperament ?? '조화형';
 
-    let coachingReply: string;
-    if (env.MOCK_AI || !env.GEMINI_API_KEY) {
-      coachingReply = generateMockFollowupReply(answer, dominantType);
-    } else {
-      coachingReply = await generateGeminiFollowupReply(
-        followupData.question,
-        answer,
-        dominantType,
-        child?.name ?? '아이'
-      );
-    }
+    const positive = answer.includes('좋아') || answer.includes('나아') || answer.includes('줄었');
+    const coachingReply = positive
+      ? `다행이에요! ${temperament} 기질의 아이에게 잘 맞는 방법을 찾으신 것 같아요. 꾸준히 유지해주세요.`
+      : `아직 어려우시군요. ${temperament} 기질의 아이에게는 시간이 좀 더 필요할 수 있어요. 다른 방법을 시도해보시거나, 궁금한 점이 있으면 더 질문해주세요.`;
 
-    // 팔로업 업데이트
     await collections.followups.doc(id).update({
       response: answer,
       respondedAt: new Date().toISOString(),
@@ -467,54 +522,1036 @@ router.post('/followup/:id/respond', authMiddleware, async (req: Request, res: R
   }
 });
 
-// ─── 팔로업 응답 생성 헬퍼 ───
+// ─── POST /api/coaching/first-talk — 온보딩 후 AI가 먼저 말 걸기 ───
 
-function generateMockFollowupReply(answer: string, dominantType: string): string {
-  const positive = answer.includes('좋아') || answer.includes('나아') || answer.includes('줄었');
-  if (positive) {
-    return `잘 하고 계시네요! ${dominantType} 기질의 아이에게 잘 맞는 방법을 찾으신 것 같습니다. 이 방법을 꾸준히 유지하시면 더 좋은 결과를 볼 수 있습니다.`;
+const TOP_CONCERNS: Record<string, Record<string, string>> = {
+  infant: {
+    '활동형': '밤에 자주 깨서 울어요',
+    '탐구형': '낯선 환경에서 예민하게 반응해요',
+    '조화형': '분리불안이 심해요',
+    '분석형': '새로운 음식을 거부해요',
+    '감성형': '쉽게 칭얼거리고 보채요',
+  },
+  toddler: {
+    '활동형': '가만히 앉아 있질 못해요',
+    '탐구형': '왜? 질문이 끝이 없어요',
+    '조화형': '어린이집 갈 때 너무 울어요',
+    '분석형': '편식이 심해졌어요',
+    '감성형': '사소한 것에도 많이 울어요',
+  },
+  preschool: {
+    '활동형': '친구를 때리거나 밀어요',
+    '탐구형': '집중력이 너무 짧아요',
+    '조화형': '혼자 놀지 못하고 항상 엄마를 찾아요',
+    '분석형': '실수하면 크게 좌절해요',
+    '감성형': '감정 기복이 심해요',
+  },
+};
+
+router.post('/first-talk', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { childId } = req.body as { childId: string };
+    if (!childId) {
+      error(res, 'childId는 필수입니다');
+      return;
+    }
+
+    const child = await buildChildContext(childId, req.userId!);
+    if (!child) {
+      error(res, '자녀 정보를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    // 연령 구간 결정
+    let ageGroup = 'infant';
+    if (child.ageMonths >= 25 && child.ageMonths <= 72) ageGroup = 'toddler';
+    else if (child.ageMonths > 72) ageGroup = 'preschool';
+
+    // 기질별 대표 고민
+    const concerns = TOP_CONCERNS[ageGroup] ?? TOP_CONCERNS.toddler;
+    const topConcern = concerns[child.temperament] ?? concerns['조화형'];
+
+    // AI에게 첫 인사 생성 요청
+    const apiKey = env.GEMINI_API_KEY;
+    let greeting: {
+      intro: string;
+      traitSummary: string;
+      suggestedQuestion: string;
+      quickOptions: string[];
+    };
+
+    if (apiKey && !env.MOCK_AI) {
+      try {
+        const prompt = `너는 영유아 육아 코치야. 아이가 방금 등록되었어. 부모에게 처음 인사하면서 아이 기질을 설명하고 첫 질문을 유도해.
+
+아이 정보:
+- 이름: ${child.name}
+- 나이: ${child.ageInfo}
+- 성별: ${child.gender}
+- 기질: ${child.temperament}
+- 기질 특성: ${child.temperamentDetail}
+
+반드시 아래 JSON만 출력해:
+{
+  "intro": "반갑다는 인사 + 아이 이름 호명 (1문장)",
+  "traitSummary": "이 아이의 기질을 부모가 이해하기 쉽게 2~3문장으로 설명. '사주/오행' 용어 절대 금지. 기질/성향/에너지로만 표현",
+  "suggestedQuestion": "이 기질과 월령에서 가장 흔한 고민을 자연스럽게 물어보는 1문장",
+  "quickOptions": ["네, 그래요!", "아니요, 다른 고민이 있어요", "아직 잘 모르겠어요"]
+}`;
+
+        const resp = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.6, maxOutputTokens: 400 },
+            }),
+          }
+        );
+
+        const raw = await resp.text();
+        const parsed = JSON.parse(raw) as {
+          candidates?: { content?: { parts?: { text?: string }[] } }[];
+        };
+        const aiText = parsed.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+        const cleaned = aiText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          greeting = JSON.parse(jsonMatch[0]) as typeof greeting;
+        } else {
+          throw new Error('parse failed');
+        }
+      } catch {
+        greeting = getDefaultGreeting(child.name, child.ageInfo, child.temperament, topConcern);
+      }
+    } else {
+      greeting = getDefaultGreeting(child.name, child.ageInfo, child.temperament, topConcern);
+    }
+
+    success(res, {
+      childId,
+      childName: child.name,
+      ageInfo: child.ageInfo,
+      temperament: child.temperament,
+      ...greeting,
+    });
+  } catch {
+    error(res, '첫 대화 생성 중 오류가 발생했습니다', 500);
   }
-  return `아직 어려우시군요. ${dominantType} 기질의 아이에게는 시간이 더 필요할 수 있습니다. 다른 방법을 시도해보시거나, 전문가 상담을 고려해보세요.`;
+});
+
+function getDefaultGreeting(
+  name: string, ageInfo: string, temperament: string, topConcern: string
+): { intro: string; traitSummary: string; suggestedQuestion: string; quickOptions: string[] } {
+  const traitDesc: Record<string, string> = {
+    '활동형': `${name}이는 에너지가 넘치고 활발한 활동형 기질이에요. 새로운 것에 도전하는 걸 좋아하지만, 에너지 발산이 안 되면 짜증이 늘 수 있어요. 충분한 신체 활동과 함께 차분한 시간을 균형 있게 가져주는 게 중요해요.`,
+    '탐구형': `${name}이는 호기심이 강하고 관찰력이 뛰어난 탐구형 기질이에요. "왜?"라는 질문으로 세상을 이해하려 하고, 새로운 것을 발견하면 집중력이 높아져요. 충분한 탐색 시간을 주시면 좋아요.`,
+    '조화형': `${name}이는 따뜻하고 안정적인 조화형 기질이에요. 규칙적인 생활을 좋아하고, 친숙한 환경에서 편안함을 느껴요. 갑작스러운 변화보다는 미리 알려주고 준비 시간을 주시면 좋아요.`,
+    '분석형': `${name}이는 꼼꼼하고 논리적인 분석형 기질이에요. 규칙과 패턴을 좋아하고, 이유를 알면 더 잘 따라와요. 명확한 설명과 예측 가능한 루틴이 아이에게 안정감을 줄 거예요.`,
+    '감성형': `${name}이는 감정이 풍부하고 공감 능력이 뛰어난 감성형 기질이에요. 주변 분위기에 민감하게 반응하고, 감정 표현이 다양해요. 아이의 감정을 먼저 읽어주고 공감해주시면 큰 힘이 돼요.`,
+  };
+
+  return {
+    intro: `${name}이를 만나게 되어 반가워요!`,
+    traitSummary: traitDesc[temperament] ?? `${name}이는 고유한 기질을 가진 아이에요. 아이의 성향을 이해하면 육아가 한결 수월해질 거예요.`,
+    suggestedQuestion: `${ageInfo} ${temperament} 아이에게 가장 많은 고민이 "${topConcern}"인데, 혹시 ${name}이도 비슷한가요?`,
+    quickOptions: ['네, 맞아요!', '아니요, 다른 고민이 있어요', '아직 잘 모르겠어요'],
+  };
 }
 
-async function generateGeminiFollowupReply(
-  question: string,
-  answer: string,
-  dominantType: string,
-  childName: string
-): Promise<string> {
-  const maskedAnswer = maskChildName(answer, childName);
-  const apiKey = env.GEMINI_API_KEY;
+// ─── POST /api/coaching/weekly-report — 주간 AI 리포트 ───
 
+router.post('/weekly-report', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `당신은 아동 발달 전문 육아 코치입니다.
-이전에 부모에게 "${question}"라고 팔로업 질문을 드렸고, 부모의 답변은 "${maskedAnswer}"입니다.
-아이의 기질 유형은 ${dominantType}입니다.
+    const { childId } = req.body as { childId: string };
+    if (!childId) { error(res, 'childId 필수'); return; }
 
-부모의 답변에 대해 격려하며, 기질 맞춤 추가 조언을 한국어 2~3문장으로 해주세요. JSON 없이 텍스트만 답변하세요.`,
-            }],
-          }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 200 },
-        }),
-      }
-    );
+    const child = await buildChildContext(childId, req.userId!);
+    if (!child) { error(res, '자녀 정보 없음', 404); return; }
 
-    const data = await response.json() as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-    return data.candidates?.[0]?.content?.parts?.[0]?.text
-      ?? generateMockFollowupReply(answer, dominantType);
-  } catch {
-    return generateMockFollowupReply(answer, dominantType);
+    // 이번 주 상담 내역 조회
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const sessionsSnap = await collections.coachingSessions
+      .where('userId', '==', req.userId)
+      .where('childId', '==', childId)
+      .where('createdAt', '>=', weekAgo.toISOString())
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    const sessions = sessionsSnap.docs.map((d) => d.data() as Record<string, unknown>);
+    const totalCount = sessions.filter((s) => s.source !== 'filter' && s.source !== 'limit').length;
+    const categories = sessions.map((s) => s.category as string).filter(Boolean);
+    const topCategory = getMostFrequent(categories) || '없음';
+
+    // 요약 텍스트
+    const sessionSummary = sessions
+      .filter((s) => s.source !== 'filter')
+      .slice(0, 5)
+      .map((s) => `- ${s.category}: ${(s.message as string)?.slice(0, 30)}`)
+      .join('\n') || '이번 주 상담 내역이 없습니다.';
+
+    const apiKey = env.GEMINI_API_KEY;
+    if (!apiKey || env.MOCK_AI || totalCount === 0) {
+      success(res, {
+        childName: child.name,
+        ageInfo: child.ageInfo,
+        period: `${weekAgo.toISOString().slice(0, 10)} ~ ${new Date().toISOString().slice(0, 10)}`,
+        totalSessions: totalCount,
+        topCategory,
+        report: totalCount === 0
+          ? `이번 주에는 ${child.name}이에 대한 상담이 없었어요. 궁금한 점이 있으면 언제든 물어봐주세요!`
+          : `이번 주 ${child.name}이에 대해 ${totalCount}건의 상담을 하셨어요. 주로 ${topCategory} 관련 고민이 많으셨네요. 꾸준히 아이를 관찰하고 계신 모습이 훌륭합니다!`,
+        tip: `${child.temperament} 기질의 ${child.ageInfo} 아이에게는 일관된 루틴과 따뜻한 반응이 가장 중요해요.`,
+      });
+      return;
+    }
+
+    // AI 주간 리포트
+    try {
+      const prompt = `아래 육아 상담 내역을 보고 부모님께 주간 리포트를 작성해줘.
+
+아이: ${child.name} (${child.ageInfo}, ${child.gender}, ${child.temperament})
+이번 주 상담 ${totalCount}건, 주요 카테고리: ${topCategory}
+
+상담 내역:
+${sessionSummary}
+
+JSON만 출력해:
+{
+  "report": "이번 주 상담을 종합한 2~3문장 요약",
+  "improvement": "좋아진 점이나 칭찬할 점 1문장",
+  "nextWeekTip": "다음 주에 시도해볼 한 가지 1문장"
+}`;
+
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.4, maxOutputTokens: 300 },
+          }),
+        }
+      );
+
+      const raw = await resp.text();
+      const data = JSON.parse(raw) as {
+        candidates?: { content?: { parts?: { text?: string }[] } }[];
+      };
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      const cleaned = aiText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      const report = match ? JSON.parse(match[0]) as Record<string, string> : null;
+
+      success(res, {
+        childName: child.name,
+        ageInfo: child.ageInfo,
+        period: `${weekAgo.toISOString().slice(0, 10)} ~ ${new Date().toISOString().slice(0, 10)}`,
+        totalSessions: totalCount,
+        topCategory,
+        report: report?.report ?? `이번 주 ${totalCount}건 상담하셨어요.`,
+        improvement: report?.improvement ?? '',
+        nextWeekTip: report?.nextWeekTip ?? '',
+      });
+    } catch {
+      success(res, {
+        childName: child.name,
+        period: `${weekAgo.toISOString().slice(0, 10)} ~ ${new Date().toISOString().slice(0, 10)}`,
+        totalSessions: totalCount,
+        topCategory,
+        report: `이번 주 ${child.name}이에 대해 ${totalCount}건 상담하셨어요.`,
+      });
+    }
+  } catch (err) {
+    console.error('Weekly report error:', err);
+    error(res, '주간 리포트 생성 중 오류', 500);
   }
+});
+
+function getMostFrequent(arr: string[]): string | null {
+  if (arr.length === 0) return null;
+  const counts: Record<string, number> = {};
+  for (const item of arr) counts[item] = (counts[item] || 0) + 1;
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+}
+
+// ─── GET /api/coaching/milestones/:childId — 성장 마일스톤 체크 ───
+
+const MILESTONES: Array<{ months: number; label: string; items: string[] }> = [
+  { months: 12, label: '12개월', items: ['혼자 서기', '엄마/아빠 말하기', '손가락으로 가리키기'] },
+  { months: 18, label: '18개월', items: ['혼자 걷기', '단어 5~10개', '컵으로 마시기', '숟가락 사용 시도'] },
+  { months: 24, label: '24개월', items: ['두 단어 조합', '계단 오르기', '간단한 지시 따르기', '또래에 관심'] },
+  { months: 30, label: '30개월', items: ['세 단어 이상 문장', '점프하기', '이름 말하기', '옷 벗기 시도'] },
+  { months: 36, label: '36개월', items: ['질문하기', '세발자전거', '친구와 놀기', '간단한 대화'] },
+  { months: 48, label: '48개월', items: ['긴 문장 사용', '가위질', '혼자 옷 입기', '규칙 이해'] },
+  { months: 60, label: '60개월', items: ['숫자 세기', '그림 그리기', '차례 지키기', '감정 표현'] },
+];
+
+router.get('/milestones/:childId', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const childId = req.params.childId as string;
+    const child = await buildChildContext(childId, req.userId!);
+    if (!child) { error(res, '자녀 정보 없음', 404); return; }
+
+    // 현재 월령에 해당하는 마일스톤 + 다음 마일스톤
+    const current = MILESTONES.filter((m) => m.months <= child.ageMonths).pop();
+    const next = MILESTONES.find((m) => m.months > child.ageMonths);
+
+    success(res, {
+      childName: child.name,
+      ageMonths: child.ageMonths,
+      ageInfo: child.ageInfo,
+      temperament: child.temperament,
+      current: current ? {
+        label: `${current.label} 발달 체크`,
+        items: current.items,
+      } : null,
+      next: next ? {
+        label: `다음 목표: ${next.label}`,
+        monthsUntil: next.months - child.ageMonths,
+        items: next.items,
+      } : null,
+    });
+  } catch {
+    error(res, '마일스톤 조회 중 오류', 500);
+  }
+});
+
+// ─── POST /api/coaching/daily-diary — AI 육아일기 자동 생성 ───
+
+router.post('/daily-diary', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { childId } = req.body as { childId: string };
+    if (!childId) { error(res, 'childId 필수'); return; }
+
+    const child = await buildChildContext(childId, req.userId!);
+    if (!child) { error(res, '자녀 정보 없음', 404); return; }
+
+    // 오늘 상담 내역 조회 (인덱스 없이 단순 쿼리)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayISO = today.toISOString();
+    const sessionsSnap = await collections.coachingSessions
+      .where('childId', '==', childId)
+      .get();
+
+    const sessions = sessionsSnap.docs
+      .map((d) => d.data() as Record<string, unknown>)
+      .filter((s) =>
+        s.userId === req.userId &&
+        s.source !== 'filter' && s.source !== 'limit' &&
+        String(s.createdAt ?? '') >= todayISO
+      )
+      .sort((a, b) => String(a.createdAt ?? '').localeCompare(String(b.createdAt ?? '')));
+
+    // 오늘 추적 데이터 조회
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const trackingSnap = await collections.dailyTracking
+      .where('childId', '==', childId)
+      .where('date', '==', todayStr)
+      .limit(1)
+      .get();
+    const trackingData = trackingSnap.docs[0]?.data() as Record<string, unknown> | undefined;
+
+    if (sessions.length === 0 && !trackingData) {
+      success(res, {
+        childName: child.name,
+        date: todayStr,
+        diary: '오늘은 아직 기록이 없어요. 아이와의 하루를 기록하면 AI가 따뜻한 일기를 만들어드려요!',
+      });
+      return;
+    }
+
+    // 세션 요약 텍스트
+    const sessionTexts = sessions.slice(0, 8).map((s) =>
+      `[${s.category}] Q: ${(s.message as string)?.slice(0, 40)} / A: ${(s.answer as string)?.slice(0, 60)}`
+    ).join('\n');
+
+    // 추적 데이터 요약
+    const trackingSummaryText = trackingData
+      ? buildTrackingText(trackingData)
+      : '추적 데이터 없음';
+
+    const apiKey = env.GEMINI_API_KEY;
+    if (!apiKey || env.MOCK_AI) {
+      success(res, {
+        childName: child.name,
+        date: todayStr,
+        diary: buildMockDiary(child.name, child.temperament, sessions.length),
+      });
+      return;
+    }
+
+    try {
+      const prompt = `너는 따뜻한 육아일기 작가야. 오늘 하루 부모가 아이와 보낸 기록을 바탕으로 감성적이고 개인적인 육아일기를 한국어로 2~3문단 작성해.
+
+아이: ${child.name} (${child.ageInfo}, ${child.gender}, ${child.temperament})
+날짜: ${todayStr}
+
+오늘 상담 내역:
+${sessionTexts || '없음'}
+
+오늘 추적 기록:
+${trackingSummaryText}
+
+규칙:
+- 부모 시점(1인칭)으로 작성
+- 사주/오행 용어 절대 금지
+- 따뜻하고 일상적인 톤으로
+- 아이 이름을 자연스럽게 포함
+- JSON 없이 일기 텍스트만 출력`;
+
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.7, maxOutputTokens: 500 },
+          }),
+        }
+      );
+
+      const raw = await resp.text();
+      const data = JSON.parse(raw) as {
+        candidates?: { content?: { parts?: { text?: string }[] } }[];
+      };
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+
+      success(res, {
+        childName: child.name,
+        date: todayStr,
+        diary: aiText.trim() || buildMockDiary(child.name, child.temperament, sessions.length),
+      });
+    } catch {
+      success(res, {
+        childName: child.name,
+        date: todayStr,
+        diary: buildMockDiary(child.name, child.temperament, sessions.length),
+      });
+    }
+  } catch (err: unknown) {
+    console.error('daily-diary error:', err);
+    error(res, '육아일기 생성 중 오류', 500);
+  }
+});
+
+function buildTrackingText(data: Record<string, unknown>): string {
+  const parts: string[] = [];
+  if (data.sleepHours) parts.push(`수면 ${data.sleepHours}시간`);
+  if (data.meals) parts.push(`식사 ${data.meals}회`);
+  if (data.poopCount) parts.push(`대변 ${data.poopCount}회`);
+  if (data.mood) parts.push(`기분: ${data.mood}`);
+  if (data.note) parts.push(`메모: ${(data.note as string).slice(0, 50)}`);
+  return parts.length > 0 ? parts.join(', ') : '기록 없음';
+}
+
+function buildMockDiary(name: string, temperament: string, sessionCount: number): string {
+  if (sessionCount === 0) {
+    return `오늘 ${name}이와 조용한 하루를 보냈다. ${temperament} 기질답게 자기만의 방식으로 세상을 탐색하는 모습이 대견했다. 내일은 어떤 모습을 보여줄지 기대된다.`;
+  }
+  return `오늘 ${name}이에 대해 ${sessionCount}가지를 고민했다. ${temperament} 기질의 아이를 키우면서 매일 새로운 것을 배운다. 걱정도 되지만, ${name}이가 건강하게 자라는 모습을 보면 모든 고민이 사라진다. 내일도 함께 성장하자.`;
+}
+
+// ─── POST /api/coaching/parent-mental — 부모 멘탈 감지 ───
+
+router.post('/parent-mental', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { childId } = req.body as { childId: string };
+    if (!childId) { error(res, 'childId 필수'); return; }
+
+    const child = await buildChildContext(childId, req.userId!);
+    if (!child) { error(res, '자녀 정보 없음', 404); return; }
+
+    // 최근 7일 상담 내역
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const sessionsSnap = await collections.coachingSessions
+      .where('userId', '==', req.userId)
+      .where('childId', '==', childId)
+      .where('createdAt', '>=', weekAgo.toISOString())
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    const sessions = sessionsSnap.docs
+      .map((d) => d.data() as Record<string, unknown>)
+      .filter((s) => s.source !== 'filter' && s.source !== 'limit');
+
+    // 스트레스 패턴 분석
+    const stressSignals = analyzeStressPatterns(sessions);
+
+    const apiKey = env.GEMINI_API_KEY;
+    if (!apiKey || env.MOCK_AI) {
+      success(res, buildMockMentalResult(child.name, child.temperament, stressSignals));
+      return;
+    }
+
+    try {
+      const sessionTexts = sessions.slice(0, 10).map((s) =>
+        `[${s.category}] ${(s.message as string)?.slice(0, 50)} (${(s.createdAt as string)?.slice(11, 16)})`
+      ).join('\n');
+
+      const prompt = `너는 부모 멘탈 케어 전문가야. 최근 7일 상담 내역을 분석해서 부모의 스트레스 수준을 판단하고 응원 메시지를 작성해.
+
+부모 상담 패턴:
+- 총 상담 횟수: ${sessions.length}건
+- 야간 상담(22시~6시): ${stressSignals.lateNightCount}건
+- 부정 키워드 감지: ${stressSignals.negativeWords}개
+- 같은 카테고리 반복: ${stressSignals.repeatedCategory || '없음'}
+
+상담 내역:
+${sessionTexts || '없음'}
+
+아이: ${child.name} (${child.ageInfo}, ${child.temperament})
+
+반드시 아래 JSON만 출력해:
+{
+  "stressLevel": "low" 또는 "medium" 또는 "high",
+  "message": "현재 부모 상태에 대한 공감 + 분석 2~3문장",
+  "encouragement": "진심 어린 응원 메시지 1~2문장"
+}`;
+
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.5, maxOutputTokens: 400 },
+          }),
+        }
+      );
+
+      const raw = await resp.text();
+      const data = JSON.parse(raw) as {
+        candidates?: { content?: { parts?: { text?: string }[] } }[];
+      };
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      const cleaned = aiText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      const match = cleaned.match(/\{[\s\S]*\}/);
+
+      if (match) {
+        const parsed = JSON.parse(match[0]) as Record<string, string>;
+        success(res, {
+          stressLevel: parsed.stressLevel || stressSignals.level,
+          message: parsed.message || '',
+          encouragement: parsed.encouragement || '',
+          analysisData: {
+            totalSessions: sessions.length,
+            lateNightCount: stressSignals.lateNightCount,
+            negativeWords: stressSignals.negativeWords,
+          },
+        });
+      } else {
+        success(res, buildMockMentalResult(child.name, child.temperament, stressSignals));
+      }
+    } catch {
+      success(res, buildMockMentalResult(child.name, child.temperament, stressSignals));
+    }
+  } catch {
+    error(res, '부모 멘탈 분석 중 오류', 500);
+  }
+});
+
+interface StressSignals {
+  level: 'low' | 'medium' | 'high';
+  lateNightCount: number;
+  negativeWords: number;
+  repeatedCategory: string | null;
+}
+
+function analyzeStressPatterns(sessions: Array<Record<string, unknown>>): StressSignals {
+  let lateNightCount = 0;
+  let negativeWords = 0;
+  const negativeKeywords = ['힘들', '지치', '못', '안', '울', '짜증', '화', '포기', '한계', '미치', '죽겠'];
+  const categoryCounts: Record<string, number> = {};
+
+  for (const s of sessions) {
+    // 야간 사용 체크
+    const createdAt = s.createdAt as string | undefined;
+    if (createdAt) {
+      const hour = parseInt(createdAt.slice(11, 13), 10);
+      if (hour >= 22 || hour < 6) lateNightCount++;
+    }
+
+    // 부정 키워드
+    const msg = (s.message as string) || '';
+    for (const kw of negativeKeywords) {
+      if (msg.includes(kw)) negativeWords++;
+    }
+
+    // 카테고리 반복
+    const cat = s.category as string;
+    if (cat) categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+  }
+
+  const repeatedEntry = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0];
+  const repeatedCategory = repeatedEntry && repeatedEntry[1] >= 3 ? repeatedEntry[0] : null;
+
+  let level: 'low' | 'medium' | 'high' = 'low';
+  const score = lateNightCount * 2 + negativeWords + (repeatedCategory ? 3 : 0);
+  if (score >= 8) level = 'high';
+  else if (score >= 4) level = 'medium';
+
+  return { level, lateNightCount, negativeWords, repeatedCategory };
+}
+
+function buildMockMentalResult(
+  childName: string, temperament: string, signals: StressSignals
+): { stressLevel: string; message: string; encouragement: string; analysisData: Record<string, unknown> } {
+  const messages: Record<string, string> = {
+    low: `${childName}이 육아를 잘 해내고 계시네요! 상담 패턴이 안정적이에요.`,
+    medium: `${childName}이 때문에 고민이 좀 있으셨군요. ${temperament} 기질의 아이를 키우다 보면 당연한 거예요.`,
+    high: `최근 많이 힘드셨을 것 같아요. ${childName}이를 위해 이렇게 노력하는 모습 자체가 훌륭한 부모의 증거에요.`,
+  };
+  const encouragements: Record<string, string> = {
+    low: '이 페이스 그대로 유지하시면 돼요. 부모님도 충분히 쉬어가세요!',
+    medium: '잠깐 쉬어가도 괜찮아요. 완벽한 부모보다 행복한 부모가 아이에게 더 좋답니다.',
+    high: '오늘 하루, 딱 한 가지만 잘하면 돼요. 그리고 그건 이미 하고 계세요 - 아이를 사랑하는 것.',
+  };
+
+  return {
+    stressLevel: signals.level,
+    message: messages[signals.level],
+    encouragement: encouragements[signals.level],
+    analysisData: {
+      totalSessions: 0,
+      lateNightCount: signals.lateNightCount,
+      negativeWords: signals.negativeWords,
+    },
+  };
+}
+
+// ─── POST /api/coaching/future-predict — 기질 기반 미래 예측 ───
+
+router.post('/future-predict', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { childId } = req.body as { childId: string };
+    if (!childId) { error(res, 'childId 필수'); return; }
+
+    const child = await buildChildContext(childId, req.userId!);
+    if (!child) { error(res, '자녀 정보 없음', 404); return; }
+
+    const predictedAgeMonths = child.ageMonths + 3;
+    const predictedAgeInfo = formatAgeMonths(predictedAgeMonths);
+
+    const apiKey = env.GEMINI_API_KEY;
+    if (!apiKey || env.MOCK_AI) {
+      success(res, buildMockPrediction(child.name, child.temperament, child.ageMonths, predictedAgeMonths, predictedAgeInfo));
+      return;
+    }
+
+    try {
+      const prompt = `너는 영유아 발달 전문가야. 아이의 현재 정보를 바탕으로 3개월 후 어떤 변화가 예상되는지 예측하고 준비 팁을 알려줘.
+
+아이: ${child.name} (${child.ageInfo}, ${child.gender}, ${child.temperament})
+기질 특성: ${child.temperamentDetail}
+3개월 후 예상 월령: ${predictedAgeInfo}
+
+규칙:
+- 사주/오행 용어 절대 금지, 기질/성향/에너지로만 표현
+- 발달 단계와 기질을 결합한 현실적 예측
+
+반드시 아래 JSON만 출력해:
+{
+  "predictions": ["3개월 후 예상 변화 1", "예상 변화 2", "예상 변화 3"],
+  "prepTips": ["미리 준비할 것 1", "준비할 것 2", "준비할 것 3"]
+}`;
+
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.5, maxOutputTokens: 400 },
+          }),
+        }
+      );
+
+      const raw = await resp.text();
+      const data = JSON.parse(raw) as {
+        candidates?: { content?: { parts?: { text?: string }[] } }[];
+      };
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      const cleaned = aiText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      const match = cleaned.match(/\{[\s\S]*\}/);
+
+      if (match) {
+        const parsed = JSON.parse(match[0]) as {
+          predictions?: string[];
+          prepTips?: string[];
+        };
+        success(res, {
+          childName: child.name,
+          currentAge: child.ageInfo,
+          currentAgeMonths: child.ageMonths,
+          predictedAge: predictedAgeInfo,
+          predictedAgeMonths,
+          temperament: child.temperament,
+          predictions: Array.isArray(parsed.predictions) ? parsed.predictions : [],
+          prepTips: Array.isArray(parsed.prepTips) ? parsed.prepTips : [],
+        });
+      } else {
+        success(res, buildMockPrediction(child.name, child.temperament, child.ageMonths, predictedAgeMonths, predictedAgeInfo));
+      }
+    } catch {
+      success(res, buildMockPrediction(child.name, child.temperament, child.ageMonths, predictedAgeMonths, predictedAgeInfo));
+    }
+  } catch {
+    error(res, '미래 예측 중 오류', 500);
+  }
+});
+
+function formatAgeMonths(months: number): string {
+  if (months < 24) return `${months}개월`;
+  const years = Math.floor(months / 12);
+  const rem = months % 12;
+  return rem > 0 ? `${years}세 ${rem}개월` : `${years}세`;
+}
+
+function buildMockPrediction(
+  name: string, temperament: string, currentMonths: number, predictedMonths: number, predictedAge: string
+): Record<string, unknown> {
+  const predictionMap: Record<string, string[]> = {
+    '활동형': ['에너지 발산 욕구가 더 커질 수 있어요', '새로운 신체 활동에 도전하려 할 거예요', '규칙 이해가 시작될 시기예요'],
+    '탐구형': ['질문이 더 구체적으로 변할 거예요', '스스로 해보겠다는 의지가 강해져요', '집중 시간이 조금씩 늘어날 거예요'],
+    '조화형': ['사회성이 발달하면서 친구를 찾기 시작해요', '분리불안이 줄어들 수 있어요', '자기 의견 표현이 늘어나요'],
+    '분석형': ['규칙과 패턴에 대한 관심이 높아져요', '실수에 대한 두려움이 나타날 수 있어요', '논리적 사고의 기초가 잡혀요'],
+    '감성형': ['감정 표현이 더 다양해져요', '공감 능력이 눈에 띄게 발달해요', '예술적 관심이 생길 수 있어요'],
+  };
+  const tipMap: Record<string, string[]> = {
+    '활동형': ['안전한 활동 공간을 미리 확보해주세요', '새로운 스포츠나 놀이를 찾아보세요', '에너지 발산 후 차분한 시간을 계획해주세요'],
+    '탐구형': ['다양한 탐구 재료를 준비해주세요', '아이 질문에 함께 답을 찾아보세요', '실험하고 실패해도 괜찮다는 분위기를 만들어주세요'],
+    '조화형': ['소규모 또래 모임을 시작해보세요', '변화를 미리 예고해주세요', '아이의 선택을 존중해주세요'],
+    '분석형': ['시각적 스케줄표를 만들어보세요', '실수해도 괜찮다는 경험을 많이 주세요', '단계별 설명을 해주세요'],
+    '감성형': ['감정 카드나 감정 그림책을 준비해주세요', '아이 감정을 이름 붙여주는 연습을 해보세요', '차분한 환경을 유지해주세요'],
+  };
+
+  return {
+    childName: name,
+    currentAge: formatAgeMonths(currentMonths),
+    currentAgeMonths: currentMonths,
+    predictedAge,
+    predictedAgeMonths: predictedMonths,
+    temperament,
+    predictions: predictionMap[temperament] ?? predictionMap['조화형'],
+    prepTips: tipMap[temperament] ?? tipMap['조화형'],
+  };
+}
+
+// ─── POST /api/coaching/now-activity — 실시간 활동 추천 ───
+
+router.post('/now-activity', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { childId } = req.body as { childId: string };
+    if (!childId) { error(res, 'childId 필수'); return; }
+
+    const child = await buildChildContext(childId, req.userId!);
+    if (!child) { error(res, '자녀 정보 없음', 404); return; }
+
+    // 현재 시간대 판단
+    const hour = new Date().getHours();
+    let timeOfDay = '오전';
+    if (hour >= 12 && hour < 17) timeOfDay = '오후';
+    else if (hour >= 17) timeOfDay = '저녁';
+
+    // 최근 고민 조회 (최근 3개 세션)
+    const recentSnap = await collections.coachingSessions
+      .where('userId', '==', req.userId)
+      .where('childId', '==', childId)
+      .orderBy('createdAt', 'desc')
+      .limit(3)
+      .get();
+    const recentConcerns = recentSnap.docs
+      .map((d) => (d.data() as Record<string, unknown>).category as string)
+      .filter(Boolean)
+      .join(', ') || '없음';
+
+    const apiKey = env.GEMINI_API_KEY;
+    if (!apiKey || env.MOCK_AI) {
+      success(res, buildMockActivity(child.name, child.temperament, child.ageInfo, timeOfDay));
+      return;
+    }
+
+    try {
+      const prompt = `너는 영유아 활동 전문가야. 지금 이 순간 아이와 할 수 있는 구체적인 활동 1가지를 추천해.
+
+아이: ${child.name} (${child.ageInfo}, ${child.gender}, ${child.temperament})
+현재 시간대: ${timeOfDay}
+최근 고민 카테고리: ${recentConcerns}
+
+규칙:
+- 기질과 시간대에 맞는 현실적 활동
+- 사주/오행 용어 금지
+
+반드시 아래 JSON만 출력해:
+{
+  "activity": "구체적 활동명과 방법 1~2문장",
+  "duration": "예상 소요 시간 (예: 15~20분)",
+  "reason": "이 활동이 이 기질의 아이에게 좋은 이유 1문장"
+}`;
+
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.6, maxOutputTokens: 300 },
+          }),
+        }
+      );
+
+      const raw = await resp.text();
+      const data = JSON.parse(raw) as {
+        candidates?: { content?: { parts?: { text?: string }[] } }[];
+      };
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      const cleaned = aiText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      const match = cleaned.match(/\{[\s\S]*\}/);
+
+      if (match) {
+        const parsed = JSON.parse(match[0]) as Record<string, string>;
+        success(res, {
+          childName: child.name,
+          timeOfDay,
+          activity: parsed.activity || '',
+          duration: parsed.duration || '',
+          reason: parsed.reason || '',
+        });
+      } else {
+        success(res, buildMockActivity(child.name, child.temperament, child.ageInfo, timeOfDay));
+      }
+    } catch {
+      success(res, buildMockActivity(child.name, child.temperament, child.ageInfo, timeOfDay));
+    }
+  } catch {
+    error(res, '활동 추천 중 오류', 500);
+  }
+});
+
+function buildMockActivity(
+  name: string, temperament: string, ageInfo: string, timeOfDay: string
+): Record<string, string> {
+  const activities: Record<string, Record<string, { activity: string; duration: string; reason: string }>> = {
+    '활동형': {
+      '오전': { activity: `${name}이와 함께 음악에 맞춰 신체 놀이를 해보세요. 점프, 스트레칭, 동물 흉내 내기 등을 섞으면 좋아요.`, duration: '15~20분', reason: '활동형 기질의 아이는 오전에 에너지 발산이 중요해요.' },
+      '오후': { activity: `${name}이와 블록이나 퍼즐로 조용한 집중 놀이를 해보세요.`, duration: '10~15분', reason: '오후에는 차분한 활동으로 균형을 잡아주면 좋아요.' },
+      '저녁': { activity: `${name}이와 오늘 하루 있었던 일을 그림으로 그려보세요.`, duration: '10분', reason: '저녁에는 하루를 정리하는 차분한 활동이 수면에 도움돼요.' },
+    },
+    '탐구형': {
+      '오전': { activity: `${name}이와 물 놀이 실험을 해보세요. 어떤 물건이 뜨고 가라앉는지 관찰해보세요.`, duration: '15~20분', reason: '탐구형 아이는 실험과 관찰을 통해 가장 잘 배워요.' },
+      '오후': { activity: `${name}이와 집에 있는 재료로 간단한 요리를 함께 해보세요.`, duration: '20분', reason: '요리는 탐구형 아이의 오감을 자극하는 훌륭한 활동이에요.' },
+      '저녁': { activity: `${name}이에게 오늘 가장 궁금했던 것을 물어보고 함께 이야기해보세요.`, duration: '10분', reason: '하루의 호기심을 나누면 탐구형 아이의 사고력이 자라요.' },
+    },
+  };
+
+  const temperamentActivities = activities[temperament] ?? activities['활동형'];
+  const timeActivity = temperamentActivities[timeOfDay] ?? temperamentActivities['오전'];
+
+  return {
+    childName: name,
+    timeOfDay,
+    activity: timeActivity.activity,
+    duration: timeActivity.duration,
+    reason: timeActivity.reason,
+  };
+}
+
+// ─── POST /api/coaching/analyze-media — 울음/대변 AI 분석 ───
+
+router.post('/analyze-media', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { childId, type, description } = req.body as {
+      childId: string;
+      type: 'cry' | 'poop';
+      description: string;
+    };
+
+    if (!childId || !type || !description) {
+      error(res, 'childId, type, description은 필수입니다');
+      return;
+    }
+    if (type !== 'cry' && type !== 'poop') {
+      error(res, "type은 'cry' 또는 'poop'만 가능합니다");
+      return;
+    }
+
+    const child = await buildChildContext(childId, req.userId!);
+    if (!child) { error(res, '자녀 정보 없음', 404); return; }
+
+    const apiKey = env.GEMINI_API_KEY;
+    if (!apiKey || env.MOCK_AI) {
+      success(res, type === 'cry'
+        ? buildMockCryAnalysis(child.name, description)
+        : buildMockPoopAnalysis(child.name, description));
+      return;
+    }
+
+    try {
+      const prompt = type === 'cry'
+        ? buildCryPrompt(child, description)
+        : buildPoopPrompt(child, description);
+
+      const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.3, maxOutputTokens: 500 },
+          }),
+        }
+      );
+
+      const raw = await resp.text();
+      const data = JSON.parse(raw) as {
+        candidates?: { content?: { parts?: { text?: string }[] } }[];
+      };
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      const cleaned = aiText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      const match = cleaned.match(/\{[\s\S]*\}/);
+
+      if (match) {
+        const parsed = JSON.parse(match[0]) as {
+          analysis?: string;
+          possibilities?: Array<{ label: string; likelihood: string }>;
+          recommendations?: string[];
+          needsDoctor?: boolean;
+        };
+        success(res, {
+          childName: child.name,
+          type,
+          analysis: parsed.analysis || '',
+          possibilities: Array.isArray(parsed.possibilities) ? parsed.possibilities : [],
+          recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
+          needsDoctor: parsed.needsDoctor ?? false,
+        });
+      } else {
+        success(res, type === 'cry'
+          ? buildMockCryAnalysis(child.name, description)
+          : buildMockPoopAnalysis(child.name, description));
+      }
+    } catch {
+      success(res, type === 'cry'
+        ? buildMockCryAnalysis(child.name, description)
+        : buildMockPoopAnalysis(child.name, description));
+    }
+  } catch {
+    error(res, '미디어 분석 중 오류', 500);
+  }
+});
+
+function buildCryPrompt(child: { name: string; ageInfo: string; gender: string; temperament: string }, description: string): string {
+  return `너는 영유아 울음 분석 전문가야. 부모가 설명한 울음 특성을 분석해.
+
+아이: ${child.name} (${child.ageInfo}, ${child.gender}, ${child.temperament})
+부모 설명: ${description}
+
+울음 유형별 판단 기준:
+- 배고픔: 규칙적, 점점 강해짐, 입을 벌리거나 손을 빨음
+- 졸림: 짜증 섞인 울음, 눈 비비기, 하품
+- 통증: 갑작스럽고 높은 톤, 얼굴 붉어짐, 다리 구부림
+- 과자극: 보챔, 고개 돌리기, 불규칙한 울음
+
+반드시 아래 JSON만 출력해:
+{
+  "analysis": "울음 분석 종합 소견 2~3문장",
+  "possibilities": [
+    {"label": "배고픔", "likelihood": "높음/보통/낮음"},
+    {"label": "졸림", "likelihood": "높음/보통/낮음"},
+    {"label": "통증/불편", "likelihood": "높음/보통/낮음"},
+    {"label": "과자극", "likelihood": "높음/보통/낮음"}
+  ],
+  "recommendations": ["대처법 1", "대처법 2", "대처법 3"],
+  "needsDoctor": false
+}`;
+}
+
+function buildPoopPrompt(child: { name: string; ageInfo: string; gender: string; temperament: string }, description: string): string {
+  return `너는 영유아 대변 분석 전문가야. 부모가 설명한 대변 특성을 분석해.
+
+아이: ${child.name} (${child.ageInfo}, ${child.gender}, ${child.temperament})
+부모 설명: ${description}
+
+대변 판단 기준:
+- 정상: 노란색/갈색, 부드러운 형태
+- 주의: 녹색(담즙 과다, 보통 무해), 무른 변(식이 변화 가능)
+- 위험: 붉은색(혈변), 흰색/회색(담도 문제), 검은색(상부 출혈 가능), 물 같은 설사 지속
+
+반드시 아래 JSON만 출력해:
+{
+  "analysis": "대변 분석 종합 소견 2~3문장",
+  "possibilities": [
+    {"label": "정상", "likelihood": "높음/보통/낮음"},
+    {"label": "식이 관련", "likelihood": "높음/보통/낮음"},
+    {"label": "소화 문제", "likelihood": "높음/보통/낮음"},
+    {"label": "감염/질환", "likelihood": "높음/보통/낮음"}
+  ],
+  "recommendations": ["조치법 1", "조치법 2", "조치법 3"],
+  "needsDoctor": false
+}`;
+}
+
+function buildMockCryAnalysis(
+  name: string, description: string
+): Record<string, unknown> {
+  const hasHunger = description.includes('배고') || description.includes('먹') || description.includes('젖');
+  const hasPain = description.includes('아프') || description.includes('높') || description.includes('급') || description.includes('갑자기');
+  const hasSleepy = description.includes('졸') || description.includes('잠') || description.includes('눈');
+
+  return {
+    childName: name,
+    type: 'cry',
+    analysis: `${name}이의 울음 설명을 바탕으로 분석했어요. 아이의 상태를 좀 더 관찰하면서 아래 가능성을 확인해보세요.`,
+    possibilities: [
+      { label: '배고픔', likelihood: hasHunger ? '높음' : '보통' },
+      { label: '졸림', likelihood: hasSleepy ? '높음' : '보통' },
+      { label: '통증/불편', likelihood: hasPain ? '높음' : '낮음' },
+      { label: '과자극', likelihood: '보통' },
+    ],
+    recommendations: [
+      '마지막 수유/식사 시간을 확인해보세요.',
+      '기저귀 상태와 체온을 체크해주세요.',
+      '안아서 달래보고 반응을 살펴보세요.',
+    ],
+    needsDoctor: hasPain,
+  };
+}
+
+function buildMockPoopAnalysis(
+  name: string, description: string
+): Record<string, unknown> {
+  const hasRed = description.includes('빨간') || description.includes('피') || description.includes('혈');
+  const hasWhite = description.includes('하얀') || description.includes('흰') || description.includes('회색');
+  const hasWatery = description.includes('물') || description.includes('설사');
+  const needsDoctor = hasRed || hasWhite;
+
+  return {
+    childName: name,
+    type: 'poop',
+    analysis: `${name}이의 대변 설명을 바탕으로 분석했어요. ${needsDoctor ? '일부 주의가 필요한 징후가 있어요.' : '크게 걱정할 상황은 아닌 것 같아요.'}`,
+    possibilities: [
+      { label: '정상', likelihood: needsDoctor ? '낮음' : '높음' },
+      { label: '식이 관련', likelihood: hasWatery ? '높음' : '보통' },
+      { label: '소화 문제', likelihood: hasWatery ? '높음' : '낮음' },
+      { label: '감염/질환', likelihood: needsDoctor ? '보통' : '낮음' },
+    ],
+    recommendations: needsDoctor
+      ? ['소아과 방문을 권장합니다.', '대변 사진을 찍어 의사에게 보여주세요.', '최근 먹은 음식을 기록해주세요.']
+      : ['수분 섭취를 충분히 해주세요.', '최근 식단 변화가 있었는지 확인해보세요.', '2~3일 관찰 후에도 지속되면 소아과에 문의하세요.'],
+    needsDoctor,
+  };
 }
 
 export default router;

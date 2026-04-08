@@ -3591,26 +3591,68 @@ export const COACHING_KNOWLEDGE: CoachingEntry[] = [
   },
 ];
 
-/** 키워드 매칭으로 코칭 엔트리 검색 */
-export function findCoachingEntry(message: string): CoachingEntry | null {
+/** 카테고리 키 → 한글 카테고리 매핑 */
+const CATEGORY_MAP: Record<string, string> = {
+  crying: '울음', sleep: '수면', eating: '식사', poop: '대변',
+  social: '사회성', growth: '성장', behavior: '행동', etc: '기타',
+  이유식: '이유식', 생활습관: '생활습관', 안전: '안전', 건강: '건강',
+  정서: '정서', 교육: '교육',
+};
+
+/** 2글자 키워드의 잘못된 부분 매칭 방지 (조사 결합 체크) */
+function isValidKeywordMatch(message: string, keyword: string): boolean {
+  if (keyword.length > 2) return message.includes(keyword);
+  const idx = message.indexOf(keyword);
+  if (idx < 0) return false;
+  // 2글자 키워드: 앞뒤에 한글이 바로 붙어있으면 거짓 매칭 가능
+  const before = idx > 0 ? message.charCodeAt(idx - 1) : 0;
+  const after = idx + keyword.length < message.length ? message.charCodeAt(idx + keyword.length) : 0;
+  const isKorean = (c: number) => c >= 0xAC00 && c <= 0xD7AF;
+  // "이가" in "아이가" → 앞에 한글 붙어있음 → false
+  if (isKorean(before)) return false;
+  return true;
+}
+
+/** 키워드 매칭으로 코칭 엔트리 검색 (word-level + 카테고리 우선) */
+export function findCoachingEntry(message: string, categoryHint?: string): CoachingEntry | null {
+  const hintKo = categoryHint ? (CATEGORY_MAP[categoryHint] ?? categoryHint) : null;
+
   let bestMatch: CoachingEntry | null = null;
   let bestScore = 0;
   let bestMatchCount = 0;
+  let bestHasHint = false;
 
   for (const entry of COACHING_KNOWLEDGE) {
     let score = 0;
     let matchCount = 0;
     for (const keyword of entry.keywords) {
-      if (keyword.length >= 2 && message.includes(keyword)) {
-        score += keyword.length;
+      if (keyword.length < 2) continue;
+      if (isValidKeywordMatch(message, keyword)) {
+        score += keyword.length * 2;
         matchCount++;
+      } else if (keyword.includes(' ')) {
+        const parts = keyword.split(/\s+/).filter((w) => w.length >= 1);
+        const matched = parts.filter((p) => isValidKeywordMatch(message, p));
+        if (matched.length === parts.length) {
+          score += keyword.length;
+          matchCount++;
+        }
       }
     }
-    // 최소 2글자 이상 키워드가 1개 이상 매칭되어야 하고, 점수가 4 이상이어야 함
-    if (score >= 4 && matchCount >= 1 && (score > bestScore || (score === bestScore && matchCount > bestMatchCount))) {
+    if (score < 4 || matchCount < 1) continue;
+
+    const hasHint = !!(hintKo && entry.category === hintKo);
+    // 카테고리 힌트 매칭이면 우선, 그 외 점수 비교
+    const isBetter =
+      (hasHint && !bestHasHint) ||
+      (hasHint === bestHasHint && score > bestScore) ||
+      (hasHint === bestHasHint && score === bestScore && matchCount > bestMatchCount);
+
+    if (isBetter) {
       bestScore = score;
       bestMatch = entry;
       bestMatchCount = matchCount;
+      bestHasHint = hasHint;
     }
   }
 

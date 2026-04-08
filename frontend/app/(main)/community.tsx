@@ -246,7 +246,7 @@ export default function CommunityScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    refresh();
+    await refresh();
     setRefreshing(false);
   }, [refresh]);
 

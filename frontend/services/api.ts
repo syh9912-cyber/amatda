@@ -197,6 +197,16 @@ export const momstagramApi = {
     api.get('/momstagram/my-posts', { params: { page: String(page), limit: String(limit) } }),
 };
 
+// Memories
+export const memoriesApi = {
+  yearAgo: (childId: string) =>
+    api.get(`/memories/year-ago/${childId}`),
+  childCard: (childId: string) =>
+    api.get(`/memories/child-card/${childId}`),
+  timeline: (childId: string) =>
+    api.get(`/memories/timeline/${childId}`),
+};
+
 // Coaching (AI 육아 코칭)
 export const coachingApi = {
   ask: (childId: string, message: string, category?: string, photoUrl?: string) =>
@@ -213,6 +223,60 @@ export const coachingApi = {
     api.post(`/coaching/followup/${followupId}/respond`, { answer: '나중에' }),
   respondFollowup: (followupId: string, response: string) =>
     api.post(`/coaching/followup/${followupId}/respond`, { answer: response }),
+  weeklyReport: (childId: string) =>
+    api.post('/coaching/weekly-report', { childId }),
+  dailyDiary: (childId: string) =>
+    api.post('/coaching/daily-diary', { childId }),
+  analyzeMedia: (childId: string, type: 'cry' | 'poop', description: string) =>
+    api.post('/coaching/analyze-media', { childId, type, description }),
+  firstTalk: (childId: string) =>
+    api.post('/coaching/first-talk', { childId }),
+  parentMental: (childId: string) =>
+    api.post('/coaching/parent-mental', { childId }),
+  futurePredict: (childId: string) =>
+    api.post('/coaching/future-predict', { childId }),
+  nowActivity: (childId: string) =>
+    api.post('/coaching/now-activity', { childId }),
+  milestones: (childId: string) =>
+    api.get(`/coaching/milestones/${childId}`),
+};
+
+// Retention (growth countdown, daily tip, streak)
+export const retentionApi = {
+  countdown: (childId: string) =>
+    api.get(`/retention/countdown/${childId}`),
+  dailyCard: (childId: string) =>
+    api.get(`/retention/daily-card/${childId}`),
+  streak: (childId: string) =>
+    api.get(`/retention/streak/${childId}`),
+  pushSchedule: (data: Record<string, unknown>) =>
+    api.post('/retention/push-schedule', data),
+  pushContent: (childId: string) =>
+    api.get(`/retention/push-content/${childId}`),
+};
+
+// Clinic (소아과 리뷰)
+export const clinicApi = {
+  nearby: (lat: number, lng: number, radius?: number) =>
+    api.get(`/clinics/nearby?lat=${lat}&lng=${lng}&radius=${radius || 5}`),
+  postReview: (data: Record<string, unknown>) =>
+    api.post('/clinics/review', data),
+  reviews: (clinicId: string) =>
+    api.get(`/clinics/${clinicId}/reviews`),
+  myReviews: () =>
+    api.get('/clinics/my-reviews'),
+};
+
+// Premium (프리미엄 구독)
+export const premiumApi = {
+  plans: () =>
+    api.get('/subscriptions/premium/plans'),
+  status: () =>
+    api.get('/subscriptions/premium/status'),
+  startTrial: () =>
+    api.post('/subscriptions/premium/start-trial', {}),
+  subscribe: (planId: string, paymentMethod: string) =>
+    api.post('/subscriptions/premium/subscribe', { planId, paymentMethod }),
 };
 
 export default api;

@@ -9,15 +9,18 @@ import {
   RefreshControl,
   Image,
   Alert,
+  Share,
 } from 'react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { childApi, coachingApi } from '../../services/api';
+import { childApi, coachingApi, retentionApi } from '../../services/api';
 import { useChildStore, Child } from '../../stores/childStore';
 import { useAuthStore } from '../../stores/authStore';
 import { ChildSelector } from '../../components/home/ChildSelector';
+import { WeeklyReportCard } from '../../components/home/WeeklyReportCard';
+import { DailyDiaryCard } from '../../components/home/DailyDiaryCard';
 import {
   ProactivePopup,
   PopupReason,
@@ -75,6 +78,64 @@ const QUICK_ACTIONS: {
   },
 ];
 
+/* ------------------------------------------------------------------ */
+/* Retention Types                                                     */
+/* ------------------------------------------------------------------ */
+
+interface CountdownData {
+  daysSinceBirth: number;
+  childName: string;
+  nextMilestone: string;
+  daysUntilMilestone: number;
+}
+
+interface DailyCardData {
+  emoji: string;
+  tip: string;
+  category: string;
+}
+
+interface StreakData {
+  currentStreak: number;
+  level: number;
+  levelName: string;
+  progressToNext: number;
+  maxForNext: number;
+}
+
+interface ParentMentalData {
+  stressLevel: 'low' | 'medium' | 'high';
+  encouragement: string;
+  feeling: string;
+}
+
+interface FuturePredictData {
+  currentAge: string;
+  predictedAge: string;
+  predictions: string[];
+  prepTips: string[];
+}
+
+interface NowActivityData {
+  activityName: string;
+  duration: string;
+  reason: string;
+  timeOfDay: 'morning' | 'afternoon' | 'evening';
+}
+
+interface WeeklyReportData {
+  period: string;
+  totalSessions: number;
+  report: string;
+}
+
+interface DailyDiaryData {
+  diary: string;
+  hasSessions: boolean;
+}
+
+const WEEKLY_REPORT_DISMISSED_KEY = 'amatda_weekly_report_dismissed';
+
 function getAgeText(months: number): string {
   if (months < 12) return `${months}개월`;
   const years = Math.floor(months / 12);
@@ -87,46 +148,53 @@ function getRecommendations(child: Child): {
   emoji: string;
   title: string;
   desc: string;
+  route: string;
 }[] {
   const dominant = child.innateData.dominantType;
   const group = child.ageInfo.group;
 
   const base = [
     {
-      emoji: '🎨',
-      title: '창의력이 쑥쑥! 미술 체험 추천',
-      desc: `${child.name}의 기질에 맞는 창의 활동을 확인하세요`,
+      emoji: '\uD83C\uDFA8',
+      title: '\uCC3D\uC758\uB825\uC774 \uC411\uC411! \uBBF8\uC220 \uCCB4\uD5D8 \uCD94\uCC9C',
+      desc: `${child.name}\uC758 \uAE30\uC9C8\uC5D0 \uB9DE\uB294 \uCC3D\uC758 \uD65C\uB3D9\uC744 \uD655\uC778\uD558\uC138\uC694`,
+      route: '/(main)/play-learning',
     },
     {
-      emoji: '📚',
-      title: '집에서 할 수 있는 놀이학습 방법',
-      desc: '연령에 맞춘 홈스쿨링 가이드',
+      emoji: '\uD83D\uDCDA',
+      title: '\uC9D1\uC5D0\uC11C \uD560 \uC218 \uC788\uB294 \uB180\uC774\uD559\uC2B5 \uBC29\uBC95',
+      desc: '\uC5F0\uB839\uC5D0 \uB9DE\uCDB4 \uD648\uC2A4\uCFE8\uB9C1 \uAC00\uC774\uB4DC',
+      route: '/(main)/play-learning',
     },
     {
-      emoji: '🥗',
-      title: '면역력에 좋은 제철 음식 추천',
-      desc: '성장기 영양 밸런스를 맞춰보세요',
+      emoji: '\uD83E\uDD57',
+      title: '\uBA74\uC5ED\uB825\uC5D0 \uC88B\uC740 \uC81C\uCCA0 \uC74C\uC2DD \uCD94\uCC9C',
+      desc: '\uC131\uC7A5\uAE30 \uC601\uC591 \uBC38\uB7F0\uC2A4\uB97C \uB9DE\uCDB0\uBCF4\uC138\uC694',
+      route: '/(main)/nutrition',
     },
   ];
 
   if (group === 'infant') {
     base[0] = {
-      emoji: '👶',
-      title: '감각 발달 놀이 추천',
-      desc: '오감을 자극하는 놀이 활동이에요',
+      emoji: '\uD83D\uDC76',
+      title: '\uAC10\uAC01 \uBC1C\uB2EC \uB180\uC774 \uCD94\uCC9C',
+      desc: '\uC624\uAC10\uC744 \uC790\uADF9\uD558\uB294 \uB180\uC774 \uD65C\uB3D9\uC774\uC5D0\uC694',
+      route: '/(main)/play-learning',
     };
     base[2] = {
-      emoji: '🍜',
-      title: '월령별 이유식 가이드',
-      desc: '단계별 이유식 레시피를 확인하세요',
+      emoji: '\uD83C\uDF5C',
+      title: '\uC6D4\uB839\uBCC4 \uC774\uC720\uC2DD \uAC00\uC774\uB4DC',
+      desc: '\uB2E8\uACC4\uBCC4 \uC774\uC720\uC2DD \uB808\uC2DC\uD53C\uB97C \uD655\uC778\uD558\uC138\uC694',
+      route: '/(main)/nutrition',
     };
   }
 
-  if (dominant.includes('활동') || dominant.includes('火')) {
+  if (dominant.includes('\uD65C\uB3D9') || dominant.includes('\u706B')) {
     base[0] = {
-      emoji: '⚽',
-      title: '에너지 넘치는 체육 활동 추천',
-      desc: '활동적인 기질에 맞는 스포츠를 찾아보세요',
+      emoji: '\u26BD',
+      title: '\uC5D0\uB108\uC9C0 \uB118\uCE58\uB294 \uCCB4\uC721 \uD65C\uB3D9 \uCD94\uCC9C',
+      desc: '\uD65C\uB3D9\uC801\uC778 \uAE30\uC9C8\uC5D0 \uB9DE\uB294 \uC2A4\uD3EC\uCE20\uB97C \uCC3E\uC544\uBCF4\uC138\uC694',
+      route: '/(main)/play-learning',
     };
   }
 
@@ -149,14 +217,146 @@ export default function HomeScreen() {
     string | undefined
   >(undefined);
 
+  const [countdown, setCountdown] = useState<CountdownData | null>(null);
+  const [dailyCard, setDailyCard] = useState<DailyCardData | null>(null);
+  const [streak, setStreak] = useState<StreakData | null>(null);
+  const [weeklyReport, setWeeklyReport] = useState<WeeklyReportData | null>(null);
+  const [dailyDiary, setDailyDiary] = useState<string | null>(null);
+
+  const [parentMental, setParentMental] = useState<ParentMentalData | null>(null);
+  const [futurePrediction, setFuturePrediction] = useState<FuturePredictData | null>(null);
+  const [nowActivity, setNowActivity] = useState<NowActivityData | null>(null);
+
   const { children, selectedChild, setChildren, selectChild } =
     useChildStore();
   const { updateChild } = useChildStore();
   const logout = useAuthStore((s) => s.logout);
 
+  const loadRetentionData = useCallback(async (childId: string) => {
+    const results = await Promise.allSettled([
+      retentionApi.countdown(childId),
+      retentionApi.dailyCard(childId),
+      retentionApi.streak(childId),
+    ]);
+    if (results[0].status === 'fulfilled') {
+      setCountdown(results[0].value.data?.data ?? null);
+    }
+    if (results[1].status === 'fulfilled') {
+      setDailyCard(results[1].value.data?.data ?? null);
+    }
+    if (results[2].status === 'fulfilled') {
+      setStreak(results[2].value.data?.data ?? null);
+    }
+  }, []);
+
   useEffect(() => {
     loadChildren();
     checkProactivePopup();
+  }, []);
+
+  const loadWeeklyReport = useCallback(async (childId: string) => {
+    try {
+      const dismissedWeek = await AsyncStorage.getItem(WEEKLY_REPORT_DISMISSED_KEY);
+      const now = new Date();
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - now.getDay() + 1);
+      const weekKey = weekStart.toISOString().slice(0, 10);
+      if (dismissedWeek === weekKey) return;
+
+      const isMonday = now.getDay() === 1;
+      if (!isMonday && dismissedWeek) return;
+
+      const res = await coachingApi.weeklyReport(childId);
+      const data = res.data?.data;
+      if (data?.report) {
+        setWeeklyReport({
+          period: data.period as string,
+          totalSessions: data.totalSessions as number,
+          report: data.report as string,
+        });
+      }
+    } catch {
+      // endpoint not available yet
+    }
+  }, []);
+
+  const loadDailyDiary = useCallback(async (childId: string) => {
+    try {
+      const res = await coachingApi.dailyDiary(childId);
+      const data = res.data?.data as DailyDiaryData | undefined;
+      if (data?.hasSessions && data?.diary) {
+        setDailyDiary(data.diary);
+      }
+    } catch {
+      // endpoint not available yet
+    }
+  }, []);
+
+  const loadParentMental = useCallback(async (childId: string, streakDays: number) => {
+    if (streakDays < 3) return;
+    try {
+      const res = await coachingApi.parentMental(childId);
+      const data = res.data?.data as ParentMentalData | undefined;
+      if (data?.encouragement) {
+        setParentMental(data);
+      }
+    } catch {
+      // silently hide section
+    }
+  }, []);
+
+  const loadFuturePrediction = useCallback(async (childId: string) => {
+    try {
+      const res = await coachingApi.futurePredict(childId);
+      const data = res.data?.data as FuturePredictData | undefined;
+      if (data?.predictions && data.predictions.length > 0) {
+        setFuturePrediction(data);
+      }
+    } catch {
+      // silently hide section
+    }
+  }, []);
+
+  const loadNowActivity = useCallback(async (childId: string) => {
+    try {
+      const res = await coachingApi.nowActivity(childId);
+      const data = res.data?.data as NowActivityData | undefined;
+      if (data?.activityName) {
+        setNowActivity(data);
+      }
+    } catch {
+      // silently hide section
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedChild) {
+      loadRetentionData(selectedChild.id);
+      loadWeeklyReport(selectedChild.id);
+      loadDailyDiary(selectedChild.id);
+      loadFuturePrediction(selectedChild.id);
+      loadNowActivity(selectedChild.id);
+    }
+  }, [selectedChild?.id, loadRetentionData, loadWeeklyReport, loadDailyDiary, loadFuturePrediction, loadNowActivity]);
+
+  // Load parent mental care after streak data is available (requires 3+ day streak)
+  useEffect(() => {
+    if (selectedChild && streak) {
+      loadParentMental(selectedChild.id, streak.currentStreak);
+    }
+  }, [selectedChild?.id, streak, loadParentMental]);
+
+  const handleDismissWeeklyReport = useCallback(async () => {
+    setWeeklyReport(null);
+    try {
+      const now = new Date();
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - now.getDay() + 1);
+      const weekKey = weekStart.toISOString().slice(0, 10);
+      await AsyncStorage.setItem(WEEKLY_REPORT_DISMISSED_KEY, weekKey);
+    } catch {
+      // ignore
+    }
   }, []);
 
   const loadChildren = async () => {
@@ -232,8 +432,18 @@ export default function HomeScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadChildren();
+    if (selectedChild) {
+      await Promise.allSettled([
+        loadRetentionData(selectedChild.id),
+        loadWeeklyReport(selectedChild.id),
+        loadDailyDiary(selectedChild.id),
+        loadFuturePrediction(selectedChild.id),
+        loadNowActivity(selectedChild.id),
+      ]);
+      // parent mental depends on streak, will reload via useEffect
+    }
     setRefreshing(false);
-  }, []);
+  }, [selectedChild?.id, loadRetentionData, loadWeeklyReport, loadDailyDiary, loadFuturePrediction, loadNowActivity]);
 
   const pickPhoto = async () => {
     if (!selectedChild) return;
@@ -304,8 +514,39 @@ export default function HomeScreen() {
 
       {child && (
         <>
+          {/* === Growth Countdown === */}
+          {countdown && <GrowthCountdown data={countdown} />}
+
+          {/* === Now Activity (prominent position) === */}
+          {nowActivity && <NowActivityCard data={nowActivity} />}
+
+          {/* === Streak Badge === */}
+          {streak && <StreakBadge data={streak} />}
+
+          {/* === Parent Mental Care (3+ day streak) === */}
+          {parentMental && <ParentMentalCard data={parentMental} />}
+
           {/* === 2. Today's Card === */}
           <TodayCard child={child} />
+
+          {/* === Weekly Report === */}
+          {weeklyReport ? (
+            <WeeklyReportCard
+              report={weeklyReport}
+              onDismiss={handleDismissWeeklyReport}
+            />
+          ) : null}
+
+          {/* === Daily Diary === */}
+          {dailyDiary ? (
+            <DailyDiaryCard diary={dailyDiary} />
+          ) : null}
+
+          {/* === Daily Tip Card === */}
+          {dailyCard && <DailyTipCard data={dailyCard} />}
+
+          {/* === Future Prediction === */}
+          {futurePrediction && <FuturePredictCard data={futurePrediction} />}
 
           {/* === 3. Quick Action Circles === */}
           <QuickActions />
@@ -458,7 +699,7 @@ function RecommendationSection({ child }: { child: Child }) {
           key={idx}
           style={styles.recoCard}
           activeOpacity={0.7}
-          onPress={() => router.push('/(main)/academy' as never)}
+          onPress={() => router.push(item.route as never)}
         >
           <View style={styles.recoEmojiWrap}>
             <Text style={styles.recoEmoji}>{item.emoji}</Text>
@@ -470,6 +711,182 @@ function RecommendationSection({ child }: { child: Child }) {
           <Text style={styles.recoChevron}>{'›'}</Text>
         </TouchableOpacity>
       ))}
+    </View>
+  );
+}
+
+function GrowthCountdown({ data }: { data: CountdownData }) {
+  return (
+    <LinearGradient
+      colors={['#FF8C5A', '#FF6B6B']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.countdownCard}
+    >
+      <Text style={styles.countdownMain}>
+        {data.childName}{'가 이 세상에 온 지 '}
+        <Text style={styles.countdownDays}>{data.daysSinceBirth}</Text>
+        {'일째'}
+      </Text>
+      <Text style={styles.countdownSub}>
+        {'D-'}{data.daysUntilMilestone}{' '}{data.nextMilestone}
+      </Text>
+    </LinearGradient>
+  );
+}
+
+function DailyTipCard({ data }: { data: DailyCardData }) {
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `${data.emoji} ${data.tip}`,
+      });
+    } catch {
+      // share cancelled or failed
+    }
+  };
+
+  return (
+    <View style={styles.dailyTipCard}>
+      <View style={styles.dailyTipHeader}>
+        <Text style={styles.dailyTipEmoji}>{data.emoji}</Text>
+        <Text style={styles.dailyTipLabel}>{data.category}</Text>
+      </View>
+      <Text style={styles.dailyTipText}>{data.tip}</Text>
+      <TouchableOpacity
+        style={styles.dailyTipShareBtn}
+        onPress={handleShare}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.dailyTipShareText}>{'공유하기'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function StreakBadge({ data }: { data: StreakData }) {
+  const progress = data.maxForNext > 0
+    ? Math.min(data.progressToNext / data.maxForNext, 1)
+    : 0;
+
+  return (
+    <View style={styles.streakCard}>
+      <View style={styles.streakTop}>
+        <Text style={styles.streakText}>
+          {'\uD83D\uDD25 연속 '}{data.currentStreak}{'일째! '}
+          {data.levelName}{' Lv.'}{data.level}
+        </Text>
+      </View>
+      <View style={styles.streakBarBg}>
+        <View
+          style={[styles.streakBarFill, { width: `${progress * 100}%` }]}
+        />
+      </View>
+      <Text style={styles.streakNextText}>
+        {'다음 레벨까지 '}{data.maxForNext - data.progressToNext}{'일'}
+      </Text>
+    </View>
+  );
+}
+
+function ParentMentalCard({ data }: { data: ParentMentalData }) {
+  const stressColors: Record<string, string> = {
+    low: '#7DD3B8',
+    medium: '#FFD76E',
+    high: '#FF8C5A',
+  };
+  const stressLabels: Record<string, string> = {
+    low: '안정',
+    medium: '보통',
+    high: '주의',
+  };
+  const stressColor = stressColors[data.stressLevel] ?? '#7DD3B8';
+  const stressLabel = stressLabels[data.stressLevel] ?? '안정';
+
+  return (
+    <View style={aiStyles.mentalCard}>
+      <View style={aiStyles.mentalHeader}>
+        <Text style={aiStyles.sectionEmoji}>{'💆'}</Text>
+        <Text style={aiStyles.sectionTitle}>{'부모 멘탈 케어'}</Text>
+      </View>
+      <View style={aiStyles.mentalStressRow}>
+        <Text style={aiStyles.mentalStressLabel}>{'스트레스 수준'}</Text>
+        <View style={[aiStyles.mentalStressBadge, { backgroundColor: stressColor }]}>
+          <Text style={aiStyles.mentalStressBadgeText}>{stressLabel}</Text>
+        </View>
+      </View>
+      <Text style={aiStyles.mentalEncouragement}>{data.encouragement}</Text>
+      <View style={aiStyles.mentalFeelingRow}>
+        <Text style={aiStyles.mentalFeelingLabel}>{'오늘의 위로'}</Text>
+        <Text style={aiStyles.mentalFeelingText}>{data.feeling}</Text>
+      </View>
+    </View>
+  );
+}
+
+function FuturePredictCard({ data }: { data: FuturePredictData }) {
+  return (
+    <View style={aiStyles.futureCard}>
+      <View style={aiStyles.futureHeader}>
+        <Text style={aiStyles.sectionEmoji}>{'🔮'}</Text>
+        <Text style={aiStyles.sectionTitle}>{'3개월 후 예측'}</Text>
+      </View>
+      <View style={aiStyles.futureAgeRow}>
+        <Text style={aiStyles.futureAgeText}>{data.currentAge}</Text>
+        <Text style={aiStyles.futureArrow}>{'→'}</Text>
+        <Text style={aiStyles.futureAgePredicted}>{data.predictedAge}</Text>
+      </View>
+      {data.predictions.slice(0, 3).map((pred, idx) => (
+        <View key={idx} style={aiStyles.futureBulletRow}>
+          <Text style={aiStyles.futureBullet}>{'•'}</Text>
+          <Text style={aiStyles.futureBulletText}>{pred}</Text>
+        </View>
+      ))}
+      {data.prepTips.length > 0 && (
+        <View style={aiStyles.futureTipSection}>
+          <Text style={aiStyles.futureTipLabel}>{'미리 준비하세요'}</Text>
+          {data.prepTips.slice(0, 2).map((tip, idx) => (
+            <View key={idx} style={aiStyles.futureBulletRow}>
+              <Text style={aiStyles.futureTipBullet}>{'✓'}</Text>
+              <Text style={aiStyles.futureTipText}>{tip}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+function NowActivityCard({ data }: { data: NowActivityData }) {
+  const timeEmojis: Record<string, string> = {
+    morning: '🌅',
+    afternoon: '☀️',
+    evening: '🌙',
+  };
+  const timeLabels: Record<string, string> = {
+    morning: '오전',
+    afternoon: '오후',
+    evening: '저녁',
+  };
+  const timeEmoji = timeEmojis[data.timeOfDay] ?? '☀️';
+  const timeLabel = timeLabels[data.timeOfDay] ?? '오후';
+
+  return (
+    <View style={aiStyles.activityCard}>
+      <View style={aiStyles.activityHeader}>
+        <Text style={aiStyles.sectionEmoji}>{timeEmoji}</Text>
+        <Text style={aiStyles.activityTimeLabel}>{timeLabel}{' 추천 활동'}</Text>
+      </View>
+      <Text style={aiStyles.activityName}>{data.activityName}</Text>
+      <Text style={aiStyles.activityDuration}>{data.duration}</Text>
+      <Text style={aiStyles.activityReason}>{data.reason}</Text>
+      <TouchableOpacity
+        style={aiStyles.activityButton}
+        onPress={() => router.push('/(main)/play-learning' as never)}
+        activeOpacity={0.7}
+      >
+        <Text style={aiStyles.activityButtonText}>{'해보기'}</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -714,6 +1131,110 @@ const styles = StyleSheet.create({
     fontWeight: '300',
   },
 
+  /* === Growth Countdown === */
+  countdownCard: {
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    alignItems: 'center' as const,
+  },
+  countdownMain: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
+    textAlign: 'center' as const,
+    lineHeight: 24,
+  },
+  countdownDays: {
+    fontSize: 28,
+    fontWeight: '800' as const,
+  },
+  countdownSub: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 6,
+    fontWeight: '500' as const,
+  },
+
+  /* === Daily Tip Card === */
+  dailyTipCard: {
+    backgroundColor: '#E8F8F0',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+  },
+  dailyTipHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    marginBottom: 10,
+  },
+  dailyTipEmoji: {
+    fontSize: 24,
+  },
+  dailyTipLabel: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: '#4ECDC4',
+  },
+  dailyTipText: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: COLOR.text,
+    lineHeight: 23,
+    marginBottom: 14,
+  },
+  dailyTipShareBtn: {
+    alignSelf: 'flex-start' as const,
+    backgroundColor: '#4ECDC4',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  dailyTipShareText: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: '#FFFFFF',
+  },
+
+  /* === Streak Badge === */
+  streakCard: {
+    backgroundColor: COLOR.card,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FFE0CC',
+    ...CARD_SHADOW,
+  },
+  streakTop: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    marginBottom: 8,
+  },
+  streakText: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: COLOR.text,
+  },
+  streakBarBg: {
+    height: 6,
+    backgroundColor: '#F0E6DC',
+    borderRadius: 3,
+    overflow: 'hidden' as const,
+    marginBottom: 4,
+  },
+  streakBarFill: {
+    height: 6,
+    backgroundColor: COLOR.accent,
+    borderRadius: 3,
+  },
+  streakNextText: {
+    fontSize: 11,
+    color: COLOR.textSub,
+    textAlign: 'right' as const,
+  },
+
   /* === Empty state === */
   emptyEmoji: {
     fontSize: 48,
@@ -765,5 +1286,218 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLOR.textLight,
     marginBottom: 24,
+  },
+});
+
+/* ------------------------------------------------------------------ */
+/* AI Feature Card Styles                                              */
+/* ------------------------------------------------------------------ */
+
+const aiStyles = StyleSheet.create({
+  /* Shared */
+  sectionEmoji: {
+    fontSize: 22,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: COLOR.text,
+  },
+
+  /* === Parent Mental Care === */
+  mentalCard: {
+    backgroundColor: '#F8F0FF',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E4D4F4',
+    ...CARD_SHADOW,
+  },
+  mentalHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    marginBottom: 14,
+  },
+  mentalStressRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    marginBottom: 12,
+  },
+  mentalStressLabel: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: COLOR.textSub,
+  },
+  mentalStressBadge: {
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  mentalStressBadgeText: {
+    fontSize: 12,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
+  },
+  mentalEncouragement: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: COLOR.text,
+    lineHeight: 23,
+    marginBottom: 12,
+  },
+  mentalFeelingRow: {
+    backgroundColor: '#F0EAFF',
+    borderRadius: 12,
+    padding: 12,
+  },
+  mentalFeelingLabel: {
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: '#9B7FD4',
+    marginBottom: 4,
+  },
+  mentalFeelingText: {
+    fontSize: 14,
+    fontWeight: '500' as const,
+    color: COLOR.text,
+    lineHeight: 21,
+  },
+
+  /* === Future Prediction === */
+  futureCard: {
+    backgroundColor: '#F3EEFF',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+  },
+  futureHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    marginBottom: 14,
+  },
+  futureAgeRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 12,
+    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+  },
+  futureAgeText: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: COLOR.textSub,
+  },
+  futureArrow: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: '#A78BFA',
+  },
+  futureAgePredicted: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: '#7C3AED',
+  },
+  futureBulletRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    gap: 8,
+    marginBottom: 6,
+  },
+  futureBullet: {
+    fontSize: 14,
+    color: '#7C3AED',
+    fontWeight: '700' as const,
+    marginTop: 1,
+  },
+  futureBulletText: {
+    fontSize: 14,
+    fontWeight: '500' as const,
+    color: COLOR.text,
+    lineHeight: 21,
+    flex: 1,
+  },
+  futureTipSection: {
+    marginTop: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+  },
+  futureTipLabel: {
+    fontSize: 12,
+    fontWeight: '700' as const,
+    color: '#7C3AED',
+    marginBottom: 8,
+  },
+  futureTipBullet: {
+    fontSize: 13,
+    color: '#A78BFA',
+    fontWeight: '700' as const,
+    marginTop: 1,
+  },
+  futureTipText: {
+    fontSize: 13,
+    fontWeight: '500' as const,
+    color: COLOR.text,
+    lineHeight: 20,
+    flex: 1,
+  },
+
+  /* === Now Activity === */
+  activityCard: {
+    backgroundColor: COLOR.coralBg,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FFD6C0',
+  },
+  activityHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    marginBottom: 10,
+  },
+  activityTimeLabel: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: COLOR.accent,
+  },
+  activityName: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: COLOR.text,
+    marginBottom: 4,
+  },
+  activityDuration: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: COLOR.textSub,
+    marginBottom: 8,
+  },
+  activityReason: {
+    fontSize: 14,
+    fontWeight: '500' as const,
+    color: COLOR.text,
+    lineHeight: 21,
+    marginBottom: 14,
+  },
+  activityButton: {
+    alignSelf: 'flex-start' as const,
+    backgroundColor: COLOR.accent,
+    borderRadius: 14,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+  },
+  activityButtonText: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
   },
 });

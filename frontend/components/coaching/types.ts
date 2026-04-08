@@ -4,10 +4,14 @@ export interface CoachingMessage {
   text: string;
   reason?: string;
   solutions?: string[];
-  source?: 'knowledge' | 'ai' | 'learned';
+  source?: 'knowledge' | 'ai' | 'learned' | 'filter' | 'limit';
   detailPrompt?: string;
   imageUri?: string;
   createdAt: string;
+  redFlag?: string;
+  reasons?: string[];
+  medical?: string;
+  followup?: string;
 }
 
 export interface FollowupItem {

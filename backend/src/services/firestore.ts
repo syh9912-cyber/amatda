@@ -27,6 +27,10 @@ export const collections = {
   coachingSessions: db.collection('coachingSessions'),
   followups: db.collection('followups'),
   learnedKnowledge: db.collection('learnedKnowledge'),
+  conversationSummaries: db.collection('conversationSummaries'),
+  clinics: db.collection('clinics'),
+  clinicReviews: db.collection('clinicReviews'),
+  pushSchedules: db.collection('pushSchedules'),
 };
 
 /** 문서 ID 생성 */

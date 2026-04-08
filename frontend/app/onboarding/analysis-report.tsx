@@ -1,10 +1,12 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useChildStore, AnalysisReport, ReportReasons } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { DetailSection } from '../../components/report/DetailSection';
 import { TextTipSection } from '../../components/report/TextTipSection';
 import { SimpleListSection } from '../../components/report/SimpleListSection';
+import { coachingApi } from '../../services/api';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const reportHeaderImg = require('../../assets/report-header.png');
@@ -45,8 +47,29 @@ const SECTIONS: SectionConfig[] = [
 export default function AnalysisReportScreen() {
   const { childId } = useLocalSearchParams<{ childId: string }>();
   const children = useChildStore((s) => s.children);
+  const selectChild = useChildStore((s) => s.selectChild);
   const child = children.find((c) => c.id === childId);
   const report = child?.analysisReport;
+  const [firstTalkLoading, setFirstTalkLoading] = useState(false);
+
+  const handleFirstTalk = async () => {
+    if (!childId || firstTalkLoading) return;
+    setFirstTalkLoading(true);
+    try {
+      // Select child for the chatbot screen
+      if (child) selectChild(child.id);
+      // Call first-talk API to get initial AI greeting
+      await coachingApi.firstTalk(childId);
+      // Navigate to chatbot screen
+      router.push('/(main)/chatbot');
+    } catch {
+      // Navigate anyway even if API fails
+      if (child) selectChild(child.id);
+      router.push('/(main)/chatbot');
+    } finally {
+      setFirstTalkLoading(false);
+    }
+  };
 
   if (!child || !report) {
     return (
@@ -191,6 +214,20 @@ export default function AnalysisReportScreen() {
         </Text>
       </View>
 
+      {/* First Talk CTA */}
+      <TouchableOpacity
+        style={styles.firstTalkButton}
+        onPress={handleFirstTalk}
+        activeOpacity={0.8}
+        disabled={firstTalkLoading}
+      >
+        {firstTalkLoading ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
+          <Text style={styles.firstTalkText}>AI 코치와 첫 대화 시작하기</Text>
+        )}
+      </TouchableOpacity>
+
       {/* CTA */}
       <TouchableOpacity
         style={styles.ctaButton}
@@ -316,4 +353,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF', fontSize: FONT_SIZE.lg, fontWeight: '600',
   },
   bottomSpacer: { height: 40 },
+  firstTalkButton: {
+    backgroundColor: '#FF8C5A',
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 20,
+    marginTop: 20,
+    alignItems: 'center' as const,
+  },
+  firstTalkText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700' as const,
+  },
 });

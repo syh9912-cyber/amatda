@@ -17,6 +17,9 @@ import adRoutes from './routes/ad';
 import seedRoutes from './routes/seed';
 import momstagramRoutes from './routes/momstagram';
 import coachingRoutes from './routes/coaching';
+import clinicRoutes from './routes/clinic';
+import memoriesRoutes from './routes/memories';
+import retentionRoutes from './routes/retention';
 
 const app = express();
 
@@ -38,6 +41,9 @@ app.use('/api/ads', adRoutes);
 app.use('/api/seed', seedRoutes);
 app.use('/api/momstagram', momstagramRoutes);
 app.use('/api/coaching', coachingRoutes);
+app.use('/api/clinics', clinicRoutes);
+app.use('/api/memories', memoriesRoutes);
+app.use('/api/retention', retentionRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() } });

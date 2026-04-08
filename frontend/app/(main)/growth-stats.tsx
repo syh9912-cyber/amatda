@@ -1,18 +1,44 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useState, useEffect, useMemo } from 'react';
 import { Stack, router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useChildStore } from '../../stores/childStore';
-import { childApi } from '../../services/api';
+import { childApi, coachingApi, memoriesApi } from '../../services/api';
 import { getTodayQuestion } from '../../constants/dailyQuestions';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
-type TabKey = 'physical' | 'trait' | 'learning';
+type TabKey = 'physical' | 'trait' | 'learning' | 'milestones' | 'timeline';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'physical', label: '키/몸무게' },
   { key: 'trait', label: '기질 변화' },
+  { key: 'milestones', label: '발달 체크' },
+  { key: 'timeline', label: '타임라인' },
   { key: 'learning', label: '학습 활동' },
 ];
+
+/* ---- Milestone Types ---- */
+
+interface MilestoneItem {
+  label: string;
+  completed: boolean;
+}
+
+interface MilestoneData {
+  ageLabel: string;
+  items: MilestoneItem[];
+  nextMilestone: string;
+  daysUntilNext: number;
+}
+
+/* ---- Timeline Types ---- */
+
+interface TimelineMonth {
+  month: string;
+  sessionCount: number;
+  topCategory: string;
+  milestoneText: string;
+}
 
 export default function GrowthStatsScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>('physical');
@@ -36,6 +62,8 @@ export default function GrowthStatsScreen() {
           <PhysicalTab childName={selectedChild?.name ?? '아이'} />
         )}
         {activeTab === 'trait' && <TraitTab />}
+        {activeTab === 'milestones' && <MilestonesTab />}
+        {activeTab === 'timeline' && <TimelineTab />}
         {activeTab === 'learning' && <LearningTab />}
       </ScrollView>
     </KeyboardAvoidingView>
@@ -300,6 +328,401 @@ function TraitTab() {
     </View>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Milestones Tab                                                      */
+/* ------------------------------------------------------------------ */
+
+function MilestonesTab() {
+  const selectedChild = useChildStore((s) => s.selectedChild);
+  const [loading, setLoading] = useState(false);
+  const [milestones, setMilestones] = useState<MilestoneData | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!selectedChild) return;
+    setLoading(true);
+    setError(false);
+    coachingApi
+      .milestones(selectedChild.id)
+      .then((res) => {
+        const data = res.data?.data as MilestoneData | undefined;
+        if (data) setMilestones(data);
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [selectedChild?.id]);
+
+  if (loading) {
+    return (
+      <View style={styles.emptyState}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  if (error || !milestones) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>{'📋'}</Text>
+          <Text style={styles.emptyText}>
+            발달 체크리스트를 불러올 수 없습니다
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const completedCount = milestones.items.filter((i) => i.completed).length;
+  const totalCount = milestones.items.length;
+  const progress = totalCount > 0 ? completedCount / totalCount : 0;
+
+  return (
+    <View>
+      {/* Current Milestone Card */}
+      <LinearGradient
+        colors={['#FF8C5A', '#FFB88C']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={msStyles.gradientCard}
+      >
+        <Text style={msStyles.gradientTitle}>
+          {milestones.ageLabel} 발달 체크
+        </Text>
+        <View style={msStyles.progressRow}>
+          <View style={msStyles.progressBarBg}>
+            <View
+              style={[msStyles.progressBarFill, { width: `${progress * 100}%` }]}
+            />
+          </View>
+          <Text style={msStyles.progressText}>
+            {completedCount}/{totalCount}
+          </Text>
+        </View>
+      </LinearGradient>
+
+      {/* Checklist */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>발달 체크리스트</Text>
+        {milestones.items.map((item, idx) => (
+          <View key={idx} style={msStyles.checkRow}>
+            <Text style={msStyles.checkIcon}>
+              {item.completed ? '\u2705' : '\u2B1C'}
+            </Text>
+            <Text
+              style={[
+                msStyles.checkLabel,
+                item.completed && msStyles.checkLabelDone,
+              ]}
+            >
+              {item.label}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Next Milestone */}
+      <LinearGradient
+        colors={['#7DD3B8', '#A8E6CF']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={msStyles.nextCard}
+      >
+        <Text style={msStyles.nextLabel}>다음 목표</Text>
+        <Text style={msStyles.nextTitle}>{milestones.nextMilestone}</Text>
+        <View style={msStyles.ddayBadge}>
+          <Text style={msStyles.ddayText}>
+            D-{milestones.daysUntilNext}
+          </Text>
+        </View>
+      </LinearGradient>
+    </View>
+  );
+}
+
+const msStyles = StyleSheet.create({
+  gradientCard: {
+    borderRadius: 20,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+  },
+  gradientTitle: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: SPACING.sm,
+  },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  progressBarBg: {
+    flex: 1,
+    height: 8,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
+  },
+  checkIcon: {
+    fontSize: 18,
+    marginRight: SPACING.sm,
+  },
+  checkLabel: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text,
+    flex: 1,
+  },
+  checkLabelDone: {
+    color: COLORS.textLight,
+    textDecorationLine: 'line-through',
+  },
+  nextCard: {
+    borderRadius: 20,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+    alignItems: 'center',
+  },
+  nextLabel: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 4,
+  },
+  nextTitle: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: SPACING.sm,
+    textAlign: 'center',
+  },
+  ddayBadge: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+  },
+  ddayText: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+});
+
+/* ------------------------------------------------------------------ */
+/* Timeline Tab                                                        */
+/* ------------------------------------------------------------------ */
+
+function TimelineTab() {
+  const selectedChild = useChildStore((s) => s.selectedChild);
+  const [loading, setLoading] = useState(false);
+  const [months, setMonths] = useState<TimelineMonth[]>([]);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!selectedChild) return;
+    setLoading(true);
+    setError(false);
+    memoriesApi
+      .timeline(selectedChild.id)
+      .then((res) => {
+        const data = res.data?.data;
+        if (Array.isArray(data)) {
+          setMonths(data as TimelineMonth[]);
+        }
+      })
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [selectedChild?.id]);
+
+  if (loading) {
+    return (
+      <View style={styles.emptyState}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>{'📅'}</Text>
+          <Text style={styles.emptyText}>
+            타임라인을 불러올 수 없습니다
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const nonEmptyMonths = months.filter(
+    (m) => m.sessionCount > 0 || m.milestoneText
+  );
+
+  if (nonEmptyMonths.length === 0) {
+    return (
+      <View style={styles.card}>
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>{'📅'}</Text>
+          <Text style={styles.emptyText}>
+            코칭 기록이 쌓이면 월별 타임라인이 표시됩니다
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View>
+      <View style={tlStyles.header}>
+        <Text style={styles.cardTitle}>성장 타임라인</Text>
+        <Text style={tlStyles.monthCount}>
+          {nonEmptyMonths.length}개월 기록
+        </Text>
+      </View>
+
+      {nonEmptyMonths.map((item, idx) => {
+        const isLast = idx === nonEmptyMonths.length - 1;
+        return (
+          <View key={item.month} style={tlStyles.row}>
+            {/* Left: dot + line */}
+            <View style={tlStyles.dotColumn}>
+              <View style={tlStyles.dot} />
+              {!isLast && <View style={tlStyles.line} />}
+            </View>
+
+            {/* Right: content card */}
+            <View style={tlStyles.contentCard}>
+              <Text style={tlStyles.monthLabel}>{item.month}</Text>
+
+              <View style={tlStyles.statsRow}>
+                {item.sessionCount > 0 && (
+                  <View style={tlStyles.statPill}>
+                    <Text style={tlStyles.statPillText}>
+                      {item.sessionCount}회 상담
+                    </Text>
+                  </View>
+                )}
+                {item.topCategory ? (
+                  <View style={[tlStyles.statPill, tlStyles.statPillMint]}>
+                    <Text style={[tlStyles.statPillText, tlStyles.statPillMintText]}>
+                      {item.topCategory}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {item.milestoneText ? (
+                <Text style={tlStyles.milestoneText}>
+                  {item.milestoneText}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+const tlStyles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  monthCount: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+  },
+  row: {
+    flexDirection: 'row',
+    marginBottom: 0,
+  },
+  dotColumn: {
+    width: 24,
+    alignItems: 'center',
+  },
+  dot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: COLORS.primary,
+    marginTop: 14,
+    zIndex: 1,
+  },
+  line: {
+    width: 2,
+    flex: 1,
+    backgroundColor: COLORS.primaryLight,
+    marginTop: 2,
+  },
+  contentCard: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: SPACING.md,
+    marginLeft: SPACING.sm,
+    marginBottom: SPACING.sm,
+    ...SHADOWS.soft,
+  },
+  monthLabel: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    color: COLORS.primary,
+    marginBottom: 6,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 6,
+  },
+  statPill: {
+    backgroundColor: '#FFF0E6',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  statPillText: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  statPillMint: {
+    backgroundColor: '#E8F8F0',
+  },
+  statPillMintText: {
+    color: '#2BA89E',
+  },
+  milestoneText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text,
+    lineHeight: 20,
+  },
+});
+
+/* ------------------------------------------------------------------ */
 
 const SUBJECTS = ['국어', '수학', '영어', '과학', '사회', '미술', '음악', '체육'] as const;
 
