@@ -19,20 +19,20 @@ export default function ProfileScreen() {
   const handleDeleteChild = () => {
     if (!selectedChild) return;
     Alert.alert(
-      '\uC544\uC774 \uC0AD\uC81C',
-      `${selectedChild.name}\uC758 \uBAA8\uB4E0 \uB370\uC774\uD130\uAC00 \uC601\uAD6C\uC801\uC73C\uB85C \uC0AD\uC81C\uB429\uB2C8\uB2E4.\n\uC815\uB9D0 \uC0AD\uC81C\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?`,
+      '아이 삭제',
+      `${selectedChild.name}의 모든 데이터가 영구적으로 삭제됩니다.\n정말 삭제하시겠습니까?`,
       [
-        { text: '\uCDE8\uC18C', style: 'cancel' },
+        { text: '취소', style: 'cancel' },
         {
-          text: '\uC0AD\uC81C',
+          text: '삭제',
           style: 'destructive',
           onPress: async () => {
             try {
               await childApi.delete(selectedChild.id);
               removeChild(selectedChild.id);
-              Alert.alert('\uC644\uB8CC', '\uC544\uC774 \uC815\uBCF4\uAC00 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.');
+              Alert.alert('완료', '아이 정보가 삭제되었습니다.');
             } catch {
-              Alert.alert('\uC624\uB958', '\uC544\uC774 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.');
+              Alert.alert('오류', '아이 삭제에 실패했습니다.');
             }
           },
         },
@@ -41,10 +41,10 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert('\uB85C\uADF8\uC544\uC6C3', '\uC815\uB9D0 \uB85C\uADF8\uC544\uC6C3 \uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?', [
-      { text: '\uCDE8\uC18C', style: 'cancel' },
+    Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
       {
-        text: '\uB85C\uADF8\uC544\uC6C3',
+        text: '로그아웃',
         style: 'destructive',
         onPress: () => {
           logout();
@@ -56,18 +56,18 @@ export default function ProfileScreen() {
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      '\uACC4\uC815 \uC0AD\uC81C',
-      '\uC815\uB9D0 \uACC4\uC815\uC744 \uC0AD\uC81C\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?\n\n\uBAA8\uB4E0 \uB370\uC774\uD130\uAC00 \uC601\uAD6C\uC801\uC73C\uB85C \uC0AD\uC81C\uB418\uBA70 \uBCF5\uAD6C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.',
+      '계정 삭제',
+      '정말 계정을 삭제하시겠습니까?\n\n모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.',
       [
-        { text: '\uCDE8\uC18C', style: 'cancel' },
+        { text: '취소', style: 'cancel' },
         {
-          text: '\uACC4\uC815 \uC0AD\uC81C',
+          text: '계정 삭제',
           style: 'destructive',
           onPress: () => {
-            Alert.alert('\uCD5C\uC885 \uD655\uC778', '\uC774 \uC791\uC5C5\uC740 \uB418\uB3CC\uB9B4 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.', [
-              { text: '\uCDE8\uC18C', style: 'cancel' },
+            Alert.alert('최종 확인', '이 작업은 되돌릴 수 없습니다.', [
+              { text: '취소', style: 'cancel' },
               {
-                text: '\uC0AD\uC81C \uD655\uC778',
+                text: '삭제 확인',
                 style: 'destructive',
                 onPress: async () => {
                   try {
@@ -75,7 +75,7 @@ export default function ProfileScreen() {
                     logout();
                     router.replace('/');
                   } catch {
-                    Alert.alert('\uC624\uB958', '\uACC4\uC815 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.');
+                    Alert.alert('오류', '계정 삭제에 실패했습니다.');
                   }
                 },
               },
@@ -88,18 +88,18 @@ export default function ProfileScreen() {
 
   const handleChangePassword = () => {
     if (Platform.OS === 'ios') {
-      Alert.prompt('\uBE44\uBC00\uBC88\uD638 \uBCC0\uACBD', '\uD604\uC7AC \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD558\uC138\uC694', (currentPw) => {
+      Alert.prompt('비밀번호 변경', '현재 비밀번호를 입력하세요', (currentPw) => {
         if (!currentPw) return;
-        Alert.prompt('\uBE44\uBC00\uBC88\uD638 \uBCC0\uACBD', '\uC0C8 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD558\uC138\uC694 (8\uC790 \uC774\uC0C1)', async (newPw) => {
+        Alert.prompt('비밀번호 변경', '새 비밀번호를 입력하세요 (8자 이상)', async (newPw) => {
           if (!newPw || newPw.length < 8) {
-            Alert.alert('\uC624\uB958', '\uC0C8 \uBE44\uBC00\uBC88\uD638\uB294 8\uC790 \uC774\uC0C1\uC774\uC5B4\uC57C \uD569\uB2C8\uB2E4');
+            Alert.alert('오류', '새 비밀번호는 8자 이상이어야 합니다');
             return;
           }
           try {
             await authApi.changePassword(currentPw, newPw);
-            Alert.alert('\uC644\uB8CC', '\uBE44\uBC00\uBC88\uD638\uAC00 \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4');
+            Alert.alert('완료', '비밀번호가 변경되었습니다');
           } catch {
-            Alert.alert('\uC624\uB958', '\uBE44\uBC00\uBC88\uD638 \uBCC0\uACBD\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.');
+            Alert.alert('오류', '비밀번호 변경에 실패했습니다.');
           }
         }, 'secure-text');
       }, 'secure-text');

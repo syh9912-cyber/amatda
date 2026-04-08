@@ -3,6 +3,7 @@ import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { calculateAge } from '../services/age.calculator';
 import { collections } from '../services/firestore';
+import { parseInnateDataFull } from '../utils/parse';
 
 const router = Router();
 
@@ -18,14 +19,14 @@ router.get('/:childId', authMiddleware, async (req: Request, res: Response) => {
     if (!childDoc.exists || childDoc.data()!.userId !== req.userId) { error(res, '자녀를 찾을 수 없습니다', 404); return; }
 
     const data = childDoc.data()!;
-    const innate = typeof data.innateData === 'string' ? JSON.parse(data.innateData) : data.innateData;
+    const innate = parseInnateDataFull(data.innateData) as { dominantType: string };
     const myAge = calculateAge(new Date(data.birthDate as string));
     const complementTypes = COMPLEMENT_MAP[innate.dominantType] ?? [];
 
     const allSnap = await collections.children.where('userId', '!=', req.userId).get();
     const matches = allSnap.docs.map((d) => {
       const c = d.data();
-      const cInnate = typeof c.innateData === 'string' ? JSON.parse(c.innateData) : c.innateData;
+      const cInnate = parseInnateDataFull(c.innateData) as { dominantType: string };
       const cAge = calculateAge(new Date(c.birthDate as string));
       const ageDiff = Math.abs(myAge.months - cAge.months);
       const isComplement = complementTypes.includes(cInnate.dominantType);

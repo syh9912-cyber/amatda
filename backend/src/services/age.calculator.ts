@@ -27,3 +27,12 @@ export function calculateAge(birthDate: Date): AgeInfo {
 
   return { months, group, label };
 }
+
+/** 개월 수를 한국어 문자열로 변환 (예: 20 → "20개월", 30 → "2세 6개월") */
+export function formatAgeKo(months: number): string {
+  if (months < 24) return `${months}개월`;
+  const years = Math.floor(months / 12);
+  const remaining = months % 12;
+  if (remaining === 0) return `${years}세`;
+  return `${years}세 ${remaining}개월`;
+}

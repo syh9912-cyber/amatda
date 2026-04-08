@@ -59,6 +59,15 @@
       ]
     },
     {
+      "collectionGroup": "coachingSessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "childId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "followups",
       "queryScope": "COLLECTION",
       "fields": [

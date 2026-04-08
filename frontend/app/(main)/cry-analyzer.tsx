@@ -14,28 +14,28 @@ import { AnalyzerResult } from '../../components/coaching/AnalyzerResult';
 import { COACHING_COLORS } from '../../components/coaching/types';
 
 const CRY_TYPES = [
-  { id: 'sharp', label: '\uB192\uACE0 \uB0A0\uCE74\uB85C\uC6B4 \uC6B8\uC74C' },
-  { id: 'escalating', label: '\uC810\uC810 \uCEE4\uC9C0\uB294 \uBC18\uBCF5 \uC6B8\uC74C' },
-  { id: 'whiny', label: '\uCE6D\uC5BC\uAC70\uB9BC/\uB0AE\uC740 \uC6B8\uC74C' },
-  { id: 'sudden', label: '\uAC11\uC791\uC2A4\uB7EC\uC6B4 \uBE44\uBA85' },
-  { id: 'soothable', label: '\uB2EC\uB798\uBA74 \uADF8\uCE58\uB294 \uC6B8\uC74C' },
-  { id: 'unsoothable', label: '\uB2EC\uB798\uB3C4 \uC548 \uADF8\uCE58\uB294 \uC6B8\uC74C' },
+  { id: 'sharp', label: '높고 날카로운 울음' },
+  { id: 'escalating', label: '점점 커지는 반복 울음' },
+  { id: 'whiny', label: '칭얼거림/낮은 울음' },
+  { id: 'sudden', label: '갑작스러운 비명' },
+  { id: 'soothable', label: '달래면 그치는 울음' },
+  { id: 'unsoothable', label: '달래도 안 그치는 울음' },
 ] as const;
 
 const DURATIONS = [
-  '5\uBD84 \uBBF8\uB9CC',
-  '5~15\uBD84',
-  '15~30\uBD84',
-  '30\uBD84 \uC774\uC0C1',
-  '1\uC2DC\uAC04 \uC774\uC0C1',
+  '5분 미만',
+  '5~15분',
+  '15~30분',
+  '30분 이상',
+  '1시간 이상',
 ] as const;
 
 const SYMPTOMS = [
-  { id: 'fever', label: '\uC5F4' },
-  { id: 'full', label: '\uBC30\uBD80\uB984' },
-  { id: 'diaper', label: '\uAE30\uC800\uADC0' },
-  { id: 'sleepy', label: '\uC878\uB9BC' },
-  { id: 'unusual', label: '\uD3C9\uC18C\uC640 \uB2E4\uB984' },
+  { id: 'fever', label: '열' },
+  { id: 'full', label: '배부름' },
+  { id: 'diaper', label: '기저귀' },
+  { id: 'sleepy', label: '졸림' },
+  { id: 'unusual', label: '평소와 다름' },
 ] as const;
 
 interface AnalysisResult {
@@ -82,13 +82,13 @@ export default function CryAnalyzerScreen() {
       (c) => c.label
     );
     if (cryLabels.length > 0)
-      parts.push(`\uC6B8\uC74C \uD2B9\uC131: ${cryLabels.join(', ')}`);
-    if (duration) parts.push(`\uC9C0\uC18D\uC2DC\uAC04: ${duration}`);
+      parts.push(`울음 특성: ${cryLabels.join(', ')}`);
+    if (duration) parts.push(`지속시간: ${duration}`);
     const symLabels = SYMPTOMS.filter((s) => selectedSymptoms.has(s.id)).map(
       (s) => s.label
     );
     if (symLabels.length > 0)
-      parts.push(`\uB3D9\uBC18\uC99D\uC0C1: ${symLabels.join(', ')}`);
+      parts.push(`동반증상: ${symLabels.join(', ')}`);
     return parts.join('. ');
   }, [selectedCries, duration, selectedSymptoms]);
 
@@ -122,10 +122,10 @@ export default function CryAnalyzerScreen() {
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Text style={styles.backBtn}>{'\u2190'}</Text>
+          <Text style={styles.backBtn}>{'←'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {'\uC6B8\uC74C\uC18C\uB9AC \uBD84\uC11D\uAE30'}
+          {'울음소리 분석기'}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -139,7 +139,7 @@ export default function CryAnalyzerScreen() {
         ) : (
           <>
             <Text style={styles.sectionLabel}>
-              {'\uD83D\uDE2D \uC6B8\uC74C \uD2B9\uC131 (\uBCF5\uC218 \uC120\uD0DD)'}
+              {'😭 울음 특성 (복수 선택)'}
             </Text>
             <View style={styles.optionGrid}>
               {CRY_TYPES.map((c) => (
@@ -165,7 +165,7 @@ export default function CryAnalyzerScreen() {
             </View>
 
             <Text style={styles.sectionLabel}>
-              {'\u23F1\uFE0F \uC9C0\uC18D \uC2DC\uAC04'}
+              {'⏱️ 지속 시간'}
             </Text>
             <View style={styles.pillRow}>
               {DURATIONS.map((d) => (
@@ -190,7 +190,7 @@ export default function CryAnalyzerScreen() {
             </View>
 
             <Text style={styles.sectionLabel}>
-              {'\uD83E\uDE7A \uB3D9\uBC18 \uC99D\uC0C1 (\uBCF5\uC218 \uC120\uD0DD)'}
+              {'🩺 동반 증상 (복수 선택)'}
             </Text>
             <View style={styles.pillRow}>
               {SYMPTOMS.map((s) => (
@@ -225,7 +225,7 @@ export default function CryAnalyzerScreen() {
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <Text style={styles.analyzeBtnText}>
-                  {'AI \uBD84\uC11D\uD558\uAE30'}
+                  {'AI 분석하기'}
                 </Text>
               )}
             </TouchableOpacity>

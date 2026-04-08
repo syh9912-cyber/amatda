@@ -3,6 +3,7 @@ import { authMiddleware } from '../middleware/auth';
 import { analyzeObservation, generateCrossReport } from '../services/ai.service';
 import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
+import { parseInnateDataFull } from '../utils/parse';
 
 const router = Router();
 
@@ -71,11 +72,12 @@ router.get('/report/:childId', authMiddleware, async (req: Request, res: Respons
     if (!childDoc.exists || childDoc.data()!.userId !== req.userId) { error(res, '자녀를 찾을 수 없습니다', 404); return; }
 
     const data = childDoc.data()!;
-    const innate = typeof data.innateData === 'string' ? JSON.parse(data.innateData) : data.innateData;
-    const observed = data.observedTraits ? (typeof data.observedTraits === 'string' ? JSON.parse(data.observedTraits) : data.observedTraits) : null;
-    const latestTraits = observed?.entries?.length ? observed.entries[observed.entries.length - 1].traits : null;
+    const innate = parseInnateDataFull(data.innateData) as { dominantType: string; fiveElements: Record<string, number> };
+    const observed = data.observedTraits ? (typeof data.observedTraits === 'string' ? JSON.parse(data.observedTraits as string) : data.observedTraits) as Record<string, unknown> : null;
+    const entries = observed?.entries as Array<{ traits: Record<string, unknown> }> | undefined;
+    const latestTraits = entries?.length ? entries[entries.length - 1].traits : null;
 
-    const report = generateCrossReport(innate, latestTraits);
+    const report = generateCrossReport(innate, latestTraits as Parameters<typeof generateCrossReport>[1]);
     success(res, { childName: data.name, innateType: innate.dominantType, fiveElements: innate.fiveElements, observedSummary: latestTraits?.summary ?? '관찰 데이터 없음', ...report });
   } catch { error(res, '리포트 생성 중 오류가 발생했습니다', 500); }
 });

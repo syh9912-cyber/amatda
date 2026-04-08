@@ -5,11 +5,11 @@ const ACTIVE_COLOR = '#FF8C5A';
 const INACTIVE_COLOR = '#B8A690';
 
 const TAB_CONFIG = [
-  { emoji: '\uD83C\uDFE0', label: '홈' },
-  { emoji: '\uD83E\uDDE0', label: '기질분석' },
-  { emoji: '\uD83D\uDCAC', label: 'AI상담' },
-  { emoji: '\uD83D\uDCF8', label: '맘스타그램' },
-  { emoji: '\uD83D\uDE4B', label: '마이' },
+  { emoji: '🏠', label: '홈' },
+  { emoji: '🧠', label: '기질분석' },
+  { emoji: '💬', label: 'AI상담' },
+  { emoji: '📸', label: '맘스타그램' },
+  { emoji: '🙋', label: '마이' },
 ] as const;
 
 function EmojiIcon({ emoji, focused }: { emoji: string; focused: boolean }) {

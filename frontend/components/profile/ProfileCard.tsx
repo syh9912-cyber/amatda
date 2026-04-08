@@ -17,25 +17,25 @@ function calcAge(birthDate: string): string {
   const years = now.getFullYear() - birth.getFullYear();
   const months = now.getMonth() - birth.getMonth();
   const totalMonths = years * 12 + months;
-  if (totalMonths < 12) return `${totalMonths}\uAC1C\uC6D4`;
+  if (totalMonths < 12) return `${totalMonths}개월`;
   const y = Math.floor(totalMonths / 12);
   const m = totalMonths % 12;
-  return m > 0 ? `${y}\uC138 ${m}\uAC1C\uC6D4` : `${y}\uC138`;
+  return m > 0 ? `${y}세 ${m}개월` : `${y}세`;
 }
 
 function getTemperamentLabel(dominantType: string): string {
   const map: Record<string, string> = {
-    wood: '\uD0D0\uAD6C\uD615',
-    fire: '\uD65C\uB3D9\uD615',
-    earth: '\uC548\uC815\uD615',
-    metal: '\uBD84\uC11D\uD615',
-    water: '\uCC3D\uC758\uD615',
+    wood: '탐구형',
+    fire: '활동형',
+    earth: '안정형',
+    metal: '분석형',
+    water: '창의형',
   };
   return map[dominantType] || dominantType;
 }
 
 function getGenderLabel(gender: string): string {
-  return gender === 'F' ? '\uC5EC\uC544' : '\uB0A8\uC544';
+  return gender === 'F' ? '여아' : '남아';
 }
 
 export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
@@ -46,17 +46,17 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
     return (
       <View style={styles.card}>
         <View style={styles.photoCircle}>
-          <Text style={styles.photoEmoji}>{'\uD83D\uDC76'}</Text>
+          <Text style={styles.photoEmoji}>{'👶'}</Text>
         </View>
         <Text style={styles.nameText}>
-          {'\uC544\uC774\uB97C \uB4F1\uB85D\uD574\uC8FC\uC138\uC694'}
+          {'아이를 등록해주세요'}
         </Text>
       </View>
     );
   }
 
   const age = calcAge(child.birthDate);
-  const emoji = child.gender === 'F' ? '\uD83D\uDC67' : '\uD83D\uDC66';
+  const emoji = child.gender === 'F' ? '👧' : '👦';
   const temperament = getTemperamentLabel(
     child.innateData?.dominantType ?? ''
   );
@@ -65,8 +65,8 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(
-        '\uAD8C\uD55C \uD544\uC694',
-        '\uC0AC\uC9C4 \uC811\uADFC \uAD8C\uD55C\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.'
+        '권한 필요',
+        '사진 접근 권한이 필요합니다.'
       );
       return;
     }
@@ -84,8 +84,8 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
       updateChild({ ...child, photoUri });
     } catch {
       Alert.alert(
-        '\uC624\uB958',
-        '\uC0AC\uC9C4 \uC5C5\uB370\uC774\uD2B8\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'
+        '오류',
+        '사진 업데이트에 실패했습니다.'
       );
     } finally {
       setUploading(false);
@@ -108,8 +108,8 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
         <View style={styles.editBadge}>
           <Text style={styles.editBadgeText}>
             {uploading
-              ? '\u2026'
-              : '\uD83D\uDCF7'}
+              ? '…'
+              : '📷'}
           </Text>
         </View>
       </TouchableOpacity>
@@ -140,7 +140,7 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
       {temperament ? (
         <View style={styles.temperamentBadge}>
           <Text style={styles.temperamentText}>
-            {'\uAE30\uC9C8: '}
+            {'기질: '}
             {temperament}
           </Text>
         </View>
@@ -153,7 +153,7 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
           onPress={onDeleteChild}
         >
           <Text style={styles.deleteBtnText}>
-            {'\uC544\uC774 \uC0AD\uC81C'}
+            {'아이 삭제'}
           </Text>
         </TouchableOpacity>
       ) : null}

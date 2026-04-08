@@ -38,18 +38,18 @@ export const COACHING_COLORS = {
 };
 
 export const CONCERN_CATEGORIES = [
-  { emoji: '\uD83D\uDE2D', label: '\uC6B8\uC74C', key: 'crying' },
-  { emoji: '\uD83D\uDE34', label: '\uC218\uBA74', key: 'sleep' },
-  { emoji: '\uD83C\uDF7D', label: '\uC2DD\uC0AC', key: 'eating' },
-  { emoji: '\uD83D\uDCA9', label: '\uB300\uBCC0', key: 'poop' },
-  { emoji: '\uD83C\uDFEB', label: '\uC0AC\uD68C\uC131', key: 'social' },
-  { emoji: '\uD83D\uDCCF', label: '\uC131\uC7A5', key: 'growth' },
-  { emoji: '\uD83D\uDE24', label: '\uD589\uB3D9', key: 'behavior' },
-  { emoji: '\uD83D\uDCAC', label: '\uAE30\uD0C0', key: 'etc' },
+  { emoji: '😭', label: '울음', key: 'crying' },
+  { emoji: '😴', label: '수면', key: 'sleep' },
+  { emoji: '🍽', label: '식사', key: 'eating' },
+  { emoji: '💩', label: '대변', key: 'poop' },
+  { emoji: '🏫', label: '사회성', key: 'social' },
+  { emoji: '📏', label: '성장', key: 'growth' },
+  { emoji: '😤', label: '행동', key: 'behavior' },
+  { emoji: '💬', label: '기타', key: 'etc' },
 ] as const;
 
 export const CHECKIN_OPTIONS = [
-  { emoji: '\uD83D\uDE0A', label: '\uC88B\uC544\uC694', mood: 'good' },
-  { emoji: '\uD83D\uDE10', label: '\uBCF4\uD1B5\uC774\uC5D0\uC694', mood: 'normal' },
-  { emoji: '\uD83D\uDE22', label: '\uC548 \uC88B\uC544\uC694', mood: 'bad' },
+  { emoji: '😊', label: '좋아요', mood: 'good' },
+  { emoji: '😐', label: '보통이에요', mood: 'normal' },
+  { emoji: '😢', label: '안 좋아요', mood: 'bad' },
 ] as const;

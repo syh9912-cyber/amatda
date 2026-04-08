@@ -71,7 +71,7 @@ export default function NutritionScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <Header
-        title={`${childName}${childName.endsWith('\uB97C') ? '' : '\uB97C'} \uC704\uD55C \uC2DD\uB2E8 \uAC00\uC774\uB4DC`}
+        title={`${childName}${childName.endsWith('를') ? '' : '를'} 위한 식단 가이드`}
         onBack={() => router.back()}
       />
 
@@ -155,7 +155,7 @@ function ToggleTabs({
             active === 'good' && styles.toggleTextActive,
           ]}
         >
-          {'\uBA39\uC73C\uBA74 \uC88B\uC740 \uC74C\uC2DD'}
+          {'먹으면 좋은 음식'}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -171,7 +171,7 @@ function ToggleTabs({
             active === 'bad' && styles.toggleTextActive,
           ]}
         >
-          {'\uD53C\uD574\uC57C \uD560 \uC74C\uC2DD'}
+          {'피해야 할 음식'}
         </Text>
       </TouchableOpacity>
     </View>
@@ -211,7 +211,7 @@ function GoodFoodCard({
         </View>
         <View style={styles.mintBadge}>
           <Text style={styles.mintBadgeText}>
-            {'\uCD94\uCC9C\uB3C4 '}{getRecommendPercent(index)}
+            {'추천도 '}{getRecommendPercent(index)}
           </Text>
         </View>
       </View>
@@ -219,10 +219,10 @@ function GoodFoodCard({
       {/* Reason */}
       <View style={styles.reasonBox}>
         <Text style={styles.reasonLabel}>
-          {'\uD83D\uDCA1 \uCD94\uCC9C \uC774\uC720'}
+          {'💡 추천 이유'}
         </Text>
         <Text style={styles.reasonText}>
-          {`${dominantLabel} \uAE30\uC9C8\uC758 ${childName}\uC5D0\uAC8C - ${food.reason}`}
+          {`${dominantLabel} 기질의 ${childName}에게 - ${food.reason}`}
         </Text>
       </View>
 
@@ -230,7 +230,7 @@ function GoodFoodCard({
       {food.caution && (
         <View style={styles.cautionBox}>
           <Text style={styles.cautionLabel}>
-            {'\u26A0\uFE0F \uC8FC\uC758\uC0AC\uD56D'}
+            {'⚠️ 주의사항'}
           </Text>
           <Text style={styles.cautionText}>{food.caution}</Text>
         </View>
@@ -244,8 +244,8 @@ function GoodFoodCard({
         >
           <Text style={[styles.recipeToggleText, { color: MINT }]}>
             {expanded
-              ? '\uD83D\uDCD6 \uAC04\uB2E8 \uB808\uC2DC\uD53C \uC811\uAE30'
-              : '\uD83D\uDCD6 \uAC04\uB2E8 \uB808\uC2DC\uD53C \uBCF4\uAE30'}
+              ? '📖 간단 레시피 접기'
+              : '📖 간단 레시피 보기'}
           </Text>
         </TouchableOpacity>
 
@@ -269,7 +269,7 @@ function GoodFoodCard({
         onPress={() => onYoutube(food.youtubeQuery)}
       >
         <Text style={styles.youtubeBtnText}>
-          {'\u25B6\uFE0F \uC720\uD29C\uBE0C \uAC80\uC0C9'}
+          {'▶️ 유튜브 검색'}
         </Text>
       </TouchableOpacity>
     </View>

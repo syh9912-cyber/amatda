@@ -155,45 +155,45 @@ function getRecommendations(child: Child): {
 
   const base = [
     {
-      emoji: '\uD83C\uDFA8',
-      title: '\uCC3D\uC758\uB825\uC774 \uC411\uC411! \uBBF8\uC220 \uCCB4\uD5D8 \uCD94\uCC9C',
-      desc: `${child.name}\uC758 \uAE30\uC9C8\uC5D0 \uB9DE\uB294 \uCC3D\uC758 \uD65C\uB3D9\uC744 \uD655\uC778\uD558\uC138\uC694`,
+      emoji: '🎨',
+      title: '창의력이 쐑쐑! 미술 체험 추천',
+      desc: `${child.name}의 기질에 맞는 창의 활동을 확인하세요`,
       route: '/(main)/play-learning',
     },
     {
-      emoji: '\uD83D\uDCDA',
-      title: '\uC9D1\uC5D0\uC11C \uD560 \uC218 \uC788\uB294 \uB180\uC774\uD559\uC2B5 \uBC29\uBC95',
-      desc: '\uC5F0\uB839\uC5D0 \uB9DE\uCDB4 \uD648\uC2A4\uCFE8\uB9C1 \uAC00\uC774\uB4DC',
+      emoji: '📚',
+      title: '집에서 할 수 있는 놀이학습 방법',
+      desc: '연령에 맞춴 홈스쿨링 가이드',
       route: '/(main)/play-learning',
     },
     {
-      emoji: '\uD83E\uDD57',
-      title: '\uBA74\uC5ED\uB825\uC5D0 \uC88B\uC740 \uC81C\uCCA0 \uC74C\uC2DD \uCD94\uCC9C',
-      desc: '\uC131\uC7A5\uAE30 \uC601\uC591 \uBC38\uB7F0\uC2A4\uB97C \uB9DE\uCDB0\uBCF4\uC138\uC694',
+      emoji: '🥗',
+      title: '면역력에 좋은 제철 음식 추천',
+      desc: '성장기 영양 밸런스를 맞춰보세요',
       route: '/(main)/nutrition',
     },
   ];
 
   if (group === 'infant') {
     base[0] = {
-      emoji: '\uD83D\uDC76',
-      title: '\uAC10\uAC01 \uBC1C\uB2EC \uB180\uC774 \uCD94\uCC9C',
-      desc: '\uC624\uAC10\uC744 \uC790\uADF9\uD558\uB294 \uB180\uC774 \uD65C\uB3D9\uC774\uC5D0\uC694',
+      emoji: '👶',
+      title: '감각 발달 놀이 추천',
+      desc: '오감을 자극하는 놀이 활동이에요',
       route: '/(main)/play-learning',
     };
     base[2] = {
-      emoji: '\uD83C\uDF5C',
-      title: '\uC6D4\uB839\uBCC4 \uC774\uC720\uC2DD \uAC00\uC774\uB4DC',
-      desc: '\uB2E8\uACC4\uBCC4 \uC774\uC720\uC2DD \uB808\uC2DC\uD53C\uB97C \uD655\uC778\uD558\uC138\uC694',
+      emoji: '🍜',
+      title: '월령별 이유식 가이드',
+      desc: '단계별 이유식 레시피를 확인하세요',
       route: '/(main)/nutrition',
     };
   }
 
-  if (dominant.includes('\uD65C\uB3D9') || dominant.includes('\u706B')) {
+  if (dominant.includes('활동') || dominant.includes('火')) {
     base[0] = {
-      emoji: '\u26BD',
-      title: '\uC5D0\uB108\uC9C0 \uB118\uCE58\uB294 \uCCB4\uC721 \uD65C\uB3D9 \uCD94\uCC9C',
-      desc: '\uD65C\uB3D9\uC801\uC778 \uAE30\uC9C8\uC5D0 \uB9DE\uB294 \uC2A4\uD3EC\uCE20\uB97C \uCC3E\uC544\uBCF4\uC138\uC694',
+      emoji: '⚽',
+      title: '에너지 넘치는 체육 활동 추천',
+      desc: '활동적인 기질에 맞는 스포츠를 찾아보세요',
       route: '/(main)/play-learning',
     };
   }
@@ -565,7 +565,7 @@ export default function HomeScreen() {
       </TouchableOpacity>
 
       {/* Version */}
-      <Text style={styles.version}>{'\uC544\uB9DE\uB2E4 v1.0.0'}</Text>
+      <Text style={styles.version}>{'아맞다 v1.0.0'}</Text>
 
       {/* Proactive Popup */}
       <ProactivePopup
@@ -773,7 +773,7 @@ function StreakBadge({ data }: { data: StreakData }) {
     <View style={styles.streakCard}>
       <View style={styles.streakTop}>
         <Text style={styles.streakText}>
-          {'\uD83D\uDD25 연속 '}{data.currentStreak}{'일째! '}
+          {'🔥 연속 '}{data.currentStreak}{'일째! '}
           {data.levelName}{' Lv.'}{data.level}
         </Text>
       </View>

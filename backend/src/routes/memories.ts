@@ -2,19 +2,11 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections } from '../services/firestore';
-import { calculateAge } from '../services/age.calculator';
+import { calculateAge, formatAgeKo } from '../services/age.calculator';
+import { safeParse } from '../utils/parse';
+import { getChildIfOwned } from '../utils/child';
 
 const router = Router();
-
-// ─── Helper: 개월 수를 한국어 문자열로 변환 ───
-
-function formatAgeKo(months: number): string {
-  if (months < 12) return `${months}개월`;
-  const years = Math.floor(months / 12);
-  const remaining = months % 12;
-  if (remaining === 0) return `${years}세`;
-  return `${years}세 ${remaining}개월`;
-}
 
 // ─── Helper: 기질 타입에 맞는 이모지 ───
 
@@ -39,37 +31,6 @@ function generateShareCode(): string {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return code;
-}
-
-// ─── Helper: Firestore JSON 필드 안전 파싱 ───
-
-function safeParse(value: unknown): Record<string, unknown> | null {
-  if (!value) return null;
-  if (typeof value === 'string') {
-    try { return JSON.parse(value) as Record<string, unknown>; } catch { return null; }
-  }
-  if (typeof value === 'object') return value as Record<string, unknown>;
-  return null;
-}
-
-// ─── Helper: 자녀 소유권 확인 ───
-
-async function getChildIfOwned(
-  childId: string,
-  userId: string | undefined,
-  res: Response,
-): Promise<Record<string, unknown> | null> {
-  const doc = await collections.children.doc(childId).get();
-  if (!doc.exists) {
-    error(res, '자녀를 찾을 수 없습니다', 404);
-    return null;
-  }
-  const data = doc.data() as Record<string, unknown>;
-  if (data.userId !== userId) {
-    error(res, '자녀를 찾을 수 없습니다', 404);
-    return null;
-  }
-  return data;
 }
 
 // ─── GET /api/memories/year-ago/:childId ───

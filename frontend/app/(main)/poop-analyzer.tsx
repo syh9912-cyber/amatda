@@ -15,19 +15,19 @@ import { AnalyzerResult } from '../../components/coaching/AnalyzerResult';
 import { COACHING_COLORS } from '../../components/coaching/types';
 
 const COLORS = [
-  { id: 'yellow', label: '\uB178\uB780\uC0C9/\uACA8\uC790\uC0C9', hex: '#DAA520', level: 'normal' },
-  { id: 'brown', label: '\uAC08\uC0C9', hex: '#8B4513', level: 'normal' },
-  { id: 'green', label: '\uCD08\uB85D\uC0C9', hex: '#2E8B57', level: 'normal' },
-  { id: 'darkred', label: '\uAC80\uBD89\uC740\uC0C9', hex: '#8B0000', level: 'warning' },
-  { id: 'white', label: '\uD770\uC0C9/\uD68C\uC0C9', hex: '#D3D3D3', level: 'danger' },
-  { id: 'black', label: '\uAC80\uC740\uC0C9', hex: '#1A1A1A', level: 'danger' },
+  { id: 'yellow', label: '노란색/겨자색', hex: '#DAA520', level: 'normal' },
+  { id: 'brown', label: '갈색', hex: '#8B4513', level: 'normal' },
+  { id: 'green', label: '초록색', hex: '#2E8B57', level: 'normal' },
+  { id: 'darkred', label: '검붉은색', hex: '#8B0000', level: 'warning' },
+  { id: 'white', label: '흰색/회색', hex: '#D3D3D3', level: 'danger' },
+  { id: 'black', label: '검은색', hex: '#1A1A1A', level: 'danger' },
 ] as const;
 
 const CONSISTENCIES = [
-  '\uBB3C\uC124\uC0AC',
-  '\uBB34\uB978\uBCC0',
-  '\uBCF4\uD1B5',
-  '\uB531\uB531',
+  '물설사',
+  '무른변',
+  '보통',
+  '딱딱',
 ] as const;
 
 interface AnalysisResult {
@@ -53,11 +53,11 @@ export default function PoopAnalyzerScreen() {
   const buildDescription = useCallback((): string => {
     const parts: string[] = [];
     const sel = COLORS.find((c) => c.id === color);
-    if (sel) parts.push(`\uC0C9\uAE54: ${sel.label}`);
-    if (consistency) parts.push(`\uBB3D\uAE30: ${consistency}`);
-    if (hasMucus) parts.push('\uC810\uC561 \uC788\uC74C');
-    if (hasBlood) parts.push('\uD608\uD754 \uC788\uC74C');
-    if (note.trim()) parts.push(`\uCD94\uAC00 \uC124\uBA85: ${note.trim()}`);
+    if (sel) parts.push(`색깔: ${sel.label}`);
+    if (consistency) parts.push(`묽기: ${consistency}`);
+    if (hasMucus) parts.push('점액 있음');
+    if (hasBlood) parts.push('혈흔 있음');
+    if (note.trim()) parts.push(`추가 설명: ${note.trim()}`);
     return parts.join(', ');
   }, [color, consistency, hasMucus, hasBlood, note]);
 
@@ -93,10 +93,10 @@ export default function PoopAnalyzerScreen() {
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Text style={styles.backBtn}>{'\u2190'}</Text>
+          <Text style={styles.backBtn}>{'←'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {'\uB300\uBCC0 \uC0C9\uAE54 \uBD84\uC11D\uAE30'}
+          {'대변 색깔 분석기'}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -110,7 +110,7 @@ export default function PoopAnalyzerScreen() {
         ) : (
           <>
             <Text style={styles.sectionLabel}>
-              {'\uD83C\uDFA8 \uC0C9\uAE54 \uC120\uD0DD'}
+              {'🎨 색깔 선택'}
             </Text>
             <View style={styles.colorGrid}>
               {COLORS.map((c) => (
@@ -134,11 +134,11 @@ export default function PoopAnalyzerScreen() {
                   <Text style={styles.colorLabel}>{c.label}</Text>
                   {c.level === 'danger' ? (
                     <Text style={styles.levelBadgeDanger}>
-                      {'\uC704\uD5D8'}
+                      {'위험'}
                     </Text>
                   ) : c.level === 'warning' ? (
                     <Text style={styles.levelBadgeWarning}>
-                      {'\uC8FC\uC758'}
+                      {'주의'}
                     </Text>
                   ) : null}
                 </TouchableOpacity>
@@ -146,7 +146,7 @@ export default function PoopAnalyzerScreen() {
             </View>
 
             <Text style={styles.sectionLabel}>
-              {'\uD83D\uDCA7 \uBB3D\uAE30'}
+              {'💧 묽기'}
             </Text>
             <View style={styles.pillRow}>
               {CONSISTENCIES.map((c) => (
@@ -174,7 +174,7 @@ export default function PoopAnalyzerScreen() {
             </View>
 
             <Text style={styles.sectionLabel}>
-              {'\uD83D\uDC40 \uCD94\uAC00 \uC99D\uC0C1'}
+              {'👀 추가 증상'}
             </Text>
             <View style={styles.pillRow}>
               <TouchableOpacity
@@ -188,7 +188,7 @@ export default function PoopAnalyzerScreen() {
                     hasMucus && styles.pillTextSelected,
                   ]}
                 >
-                  {'\uC810\uC561 \uC788\uC74C'}
+                  {'점액 있음'}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -202,17 +202,17 @@ export default function PoopAnalyzerScreen() {
                     hasBlood && styles.pillTextSelected,
                   ]}
                 >
-                  {'\uD608\uD754 \uC788\uC74C'}
+                  {'혈흔 있음'}
                 </Text>
               </TouchableOpacity>
             </View>
 
             <Text style={styles.sectionLabel}>
-              {'\uD83D\uDCDD \uCD94\uAC00 \uC124\uBA85 (\uC120\uD0DD)'}
+              {'📝 추가 설명 (선택)'}
             </Text>
             <TextInput
               style={styles.textInput}
-              placeholder={'\uC608: \uC5B4\uC81C\uBD80\uD130 \uBCC0\uD654\uAC00 \uC788\uC5C8\uC5B4\uC694...'}
+              placeholder={'예: 어제부터 변화가 있었어요...'}
               placeholderTextColor={COACHING_COLORS.textLight}
               value={note}
               onChangeText={setNote}
@@ -230,7 +230,7 @@ export default function PoopAnalyzerScreen() {
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <Text style={styles.analyzeBtnText}>
-                  {'AI \uBD84\uC11D\uD558\uAE30'}
+                  {'AI 분석하기'}
                 </Text>
               )}
             </TouchableOpacity>

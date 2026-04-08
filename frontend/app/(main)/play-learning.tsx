@@ -50,7 +50,7 @@ export default function PlayLearningScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <Header
-        title={`${childName}\uC758 \uB180\uC774\uD559\uC2B5`}
+        title={`${childName}의 놀이학습`}
         onBack={() => router.back()}
       />
 
@@ -61,16 +61,16 @@ export default function PlayLearningScreen() {
       >
         {/* Intro banner */}
         <View style={styles.introBanner}>
-          <Text style={styles.introEmoji}>{'\uD83C\uDFA8'}</Text>
+          <Text style={styles.introEmoji}>{'🎨'}</Text>
           <Text style={styles.introText}>
-            {`${dominantLabel} \uAE30\uC9C8\uC758 ${childName}\uC5D0\uAC8C \uB531 \uB9DE\uB294\n\uC9D1\uC5D0\uC11C \uD560 \uC218 \uC788\uB294 \uB180\uC774\uD559\uC2B5 \uBC29\uBC95\uC774\uC5D0\uC694`}
+            {`${dominantLabel} 기질의 ${childName}에게 딱 맞는\n집에서 할 수 있는 놀이학습 방법이에요`}
           </Text>
         </View>
 
         {filtered.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>
-              {'\uD574\uB2F9 \uC5F0\uB839\uB300\uC5D0 \uB9DE\uB294 \uD65C\uB3D9\uC774 \uC900\uBE44 \uC911\uC785\uB2C8\uB2E4'}
+              {'해당 연령대에 맞는 활동이 준비 중입니다'}
             </Text>
           </View>
         ) : (
@@ -149,27 +149,27 @@ function ActivityCard({
           <Text style={styles.actName}>{activity.name}</Text>
           <View style={styles.actMeta}>
             <Text style={styles.actMetaText}>
-              {'\u23F1 '}{activity.duration}
+              {'⏱ '}{activity.duration}
             </Text>
             {activity.materials.length > 0 && (
               <Text style={styles.actMetaText}>
-                {'\uD83D\uDCE6 '}{activity.materials.join(', ')}
+                {'📦 '}{activity.materials.join(', ')}
               </Text>
             )}
           </View>
         </View>
         <Text style={styles.chevron}>
-          {expanded ? '\u25B2' : '\u25BC'}
+          {expanded ? '▲' : '▼'}
         </Text>
       </TouchableOpacity>
 
       {/* Reason */}
       <View style={styles.reasonBox}>
         <Text style={styles.reasonLabel}>
-          {'\uD83D\uDCA1 \uC65C \uC88B\uC744\uAE4C\uC694?'}
+          {'💡 왜 좋을까요?'}
         </Text>
         <Text style={styles.reasonText}>
-          {`${dominantLabel} \uAE30\uC9C8\uC758 ${childName}\uC5D0\uAC8C - ${activity.reason}`}
+          {`${dominantLabel} 기질의 ${childName}에게 - ${activity.reason}`}
         </Text>
       </View>
 
@@ -177,7 +177,7 @@ function ActivityCard({
       {expanded && (
         <View style={styles.stepsSection}>
           <Text style={styles.stepsTitle}>
-            {'\uD83D\uDCCB \uC774\uB807\uAC8C \uD574\uBCF4\uC138\uC694'}
+            {'📋 이렇게 해보세요'}
           </Text>
           {activity.steps.map((step, sIdx) => (
             <View key={sIdx} style={styles.stepRow}>
@@ -191,11 +191,11 @@ function ActivityCard({
           {activity.materials.length > 0 && (
             <View style={styles.materialsBox}>
               <Text style={styles.materialsLabel}>
-                {'\uD83D\uDCE6 \uC900\uBE44\uBB3C'}
+                {'📦 준비물'}
               </Text>
               {activity.materials.map((m, mIdx) => (
                 <Text key={mIdx} style={styles.materialItem}>
-                  {'\u2022 '}{m}
+                  {'• '}{m}
                 </Text>
               ))}
             </View>

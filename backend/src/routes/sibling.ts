@@ -3,6 +3,7 @@ import { authMiddleware } from '../middleware/auth';
 import { analyzeAllSiblings } from '../services/sibling.compatibility';
 import { success, error } from '../utils/response';
 import { collections } from '../services/firestore';
+import { parseInnateDataFull } from '../utils/parse';
 
 const router = Router();
 
@@ -13,7 +14,7 @@ router.get('/compatibility', authMiddleware, async (req: Request, res: Response)
 
     const traits = snap.docs.map((d) => {
       const data = d.data();
-      const innate = typeof data.innateData === 'string' ? JSON.parse(data.innateData) : data.innateData;
+      const innate = parseInnateDataFull(data.innateData) as { dominantType: string; fiveElements: Record<string, number> };
       return { name: data.name as string, dominantType: innate.dominantType, fiveElements: innate.fiveElements };
     });
     success(res, { results: analyzeAllSiblings(traits) });

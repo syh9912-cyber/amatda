@@ -124,7 +124,7 @@ router.post('/social', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/change-password
-router.post('/change-password', async (req: Request, res: Response) => {
+router.post('/change-password', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) { error(res, '현재 비밀번호와 새 비밀번호를 입력해주세요'); return; }
@@ -148,35 +148,42 @@ router.post('/change-password', async (req: Request, res: Response) => {
 router.delete('/account', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const batch = db.batch();
 
-    // 1. Find and delete all children for this user
+    // Firestore batch는 500건 한도 — 모든 삭제 대상을 모아서 분할 커밋
+    const refs: FirebaseFirestore.DocumentReference[] = [];
+
+    // 1. Find all children for this user
     const childrenSnap = await collections.children.where('userId', '==', userId).get();
     const childIds = childrenSnap.docs.map((d) => d.id);
-    childrenSnap.docs.forEach((d) => batch.delete(d.ref));
+    childrenSnap.docs.forEach((d) => refs.push(d.ref));
 
-    // 2. Delete observations for each child
+    // 2. Delete related data for each child
     for (const childId of childIds) {
-      const obsSnap = await collections.observations.where('childId', '==', childId).get();
-      obsSnap.docs.forEach((d) => batch.delete(d.ref));
-
-      // 3. Delete daily tracking for each child
-      const trackSnap = await collections.dailyTracking.where('childId', '==', childId).get();
-      trackSnap.docs.forEach((d) => batch.delete(d.ref));
-
-      // 4. Delete subscriptions for each child
-      const subSnap = await collections.subscriptions.where('childId', '==', childId).get();
-      subSnap.docs.forEach((d) => batch.delete(d.ref));
+      const [obsSnap, trackSnap, subSnap] = await Promise.all([
+        collections.observations.where('childId', '==', childId).get(),
+        collections.dailyTracking.where('childId', '==', childId).get(),
+        collections.subscriptions.where('childId', '==', childId).get(),
+      ]);
+      obsSnap.docs.forEach((d) => refs.push(d.ref));
+      trackSnap.docs.forEach((d) => refs.push(d.ref));
+      subSnap.docs.forEach((d) => refs.push(d.ref));
     }
 
-    // 5. Delete chat logs for this user
+    // 3. Delete chat logs for this user
     const chatSnap = await collections.chatLogs.where('userId', '==', userId).get();
-    chatSnap.docs.forEach((d) => batch.delete(d.ref));
+    chatSnap.docs.forEach((d) => refs.push(d.ref));
 
-    // 6. Delete the user document itself
-    batch.delete(collections.users.doc(userId));
+    // 4. Delete the user document itself
+    refs.push(collections.users.doc(userId));
 
-    await batch.commit();
+    // 5. 500건씩 나눠서 batch commit
+    const BATCH_LIMIT = 500;
+    for (let i = 0; i < refs.length; i += BATCH_LIMIT) {
+      const chunk = refs.slice(i, i + BATCH_LIMIT);
+      const batch = db.batch();
+      chunk.forEach((ref) => batch.delete(ref));
+      await batch.commit();
+    }
 
     success(res, { message: '계정과 모든 관련 데이터가 삭제되었습니다' });
   } catch {

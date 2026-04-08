@@ -3,39 +3,10 @@ import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections } from '../services/firestore';
 import { calculateAge } from '../services/age.calculator';
+import { safeParse } from '../utils/parse';
+import { getChildIfOwned } from '../utils/child';
 
 const router = Router();
-
-// ─── Helper: Firestore JSON 필드 안전 파싱 ───
-
-function safeParse(value: unknown): Record<string, unknown> | null {
-  if (!value) return null;
-  if (typeof value === 'string') {
-    try { return JSON.parse(value) as Record<string, unknown>; } catch { return null; }
-  }
-  if (typeof value === 'object') return value as Record<string, unknown>;
-  return null;
-}
-
-// ─── Helper: 자녀 소유권 확인 ───
-
-async function getChildIfOwned(
-  childId: string,
-  userId: string | undefined,
-  res: Response,
-): Promise<Record<string, unknown> | null> {
-  const doc = await collections.children.doc(childId).get();
-  if (!doc.exists) {
-    error(res, '자녀를 찾을 수 없습니다', 404);
-    return null;
-  }
-  const data = doc.data() as Record<string, unknown>;
-  if (data.userId !== userId) {
-    error(res, '자녀를 찾을 수 없습니다', 404);
-    return null;
-  }
-  return data;
-}
 
 // ─── 기질 타입 한글 매핑 ───
 

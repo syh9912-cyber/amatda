@@ -136,7 +136,7 @@ export default function ChildCardScreen() {
               ) : (
                 <View style={ccStyles.avatarPlaceholder}>
                   <Text style={ccStyles.avatarEmoji}>
-                    {selectedChild?.gender === 'F' ? '\uD83D\uDC67' : '\uD83D\uDC66'}
+                    {selectedChild?.gender === 'F' ? '👧' : '👦'}
                   </Text>
                 </View>
               )}

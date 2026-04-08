@@ -16,12 +16,12 @@ export function CheckinCard({ onSelect }: Props) {
     >
       <View style={styles.avatarRow}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{'\uD83E\uDD16'}</Text>
+          <Text style={styles.avatarText}>{'🤖'}</Text>
         </View>
-        <Text style={styles.coachLabel}>AI {'\uCF54\uCE58'}</Text>
+        <Text style={styles.coachLabel}>AI {'코치'}</Text>
       </View>
       <Text style={styles.question}>
-        {'\uC624\uB298 \uC544\uC774\uC758 \uCEE8\uB514\uC158\uC740 \uC5B4\uB5A4\uAC00\uC694?'}
+        {'오늘 아이의 컨디션은 어떤가요?'}
       </Text>
       <View style={styles.btnRow}>
         {CHECKIN_OPTIONS.map((opt) => (

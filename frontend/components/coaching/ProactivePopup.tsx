@@ -22,24 +22,24 @@ function getContent(reason: PopupReason, followupText?: string) {
   switch (reason) {
     case 'inactive':
       return {
-        emoji: '\uD83D\uDC4B',
-        title: '\uC624\uB7AB\uB9CC\uC774\uC5D0\uC694!',
-        question: '\uC694\uC998 \uC544\uC774 \uCEE8\uB514\uC158\uC740 \uC5B4\uB5A4\uAC00\uC694?',
-        options: ['\uC88B\uC544\uC694', '\uBCF4\uD1B5\uC774\uC5D0\uC694', '\uACE0\uBBFC\uC774 \uC788\uC5B4\uC694'],
+        emoji: '👋',
+        title: '오랫만이에요!',
+        question: '요즘 아이 컨디션은 어떤가요?',
+        options: ['좋아요', '보통이에요', '고민이 있어요'],
       };
     case 'weekend':
       return {
-        emoji: '\u2600\uFE0F',
-        title: '\uC990\uAC70\uC6B4 \uC8FC\uB9D0!',
-        question: '\uC8FC\uB9D0\uC5D0 \uC544\uC774\uC640 \uC5B4\uB5A4 \uC2DC\uAC04\uC744 \uBCF4\uB0C8\uB098\uC694?',
-        options: ['\uBC14\uAE65 \uB098\uB4E4\uC774', '\uC9D1\uC5D0\uC11C \uB180\uC774', '\uC544\uC9C1 \uACC4\uD68D \uC911'],
+        emoji: '☀️',
+        title: '즐거운 주말!',
+        question: '주말에 아이와 어떤 시간을 보냈나요?',
+        options: ['바깥 나들이', '집에서 놀이', '아직 계획 중'],
       };
     case 'followup':
       return {
-        emoji: '\uD83D\uDD14',
-        title: '\uADF8 \uD6C4\uB85C \uC5B4\uB5A4\uAC00\uC694?',
-        question: followupText ?? '\uC774\uC804\uC5D0 \uBB3C\uC5B4\uBD10 \uC8FC\uC2E0 \uACE0\uBBFC, \uADF8 \uD6C4\uB85C \uC5B4\uB5A4\uAC00\uC694?',
-        options: ['\uB9CE\uC774 \uC88B\uC544\uC84C\uC5B4\uC694', '\uBE44\uC2B7\uD574\uC694', '\uC0C1\uB2F4\uD558\uACE0 \uC2F6\uC5B4\uC694'],
+        emoji: '🔔',
+        title: '그 후로 어떤가요?',
+        question: followupText ?? '이전에 물어봐 주신 고민, 그 후로 어떤가요?',
+        options: ['많이 좋아졌어요', '비슷해요', '상담하고 싶어요'],
       };
   }
 }
@@ -88,7 +88,7 @@ export function ProactivePopup({
             activeOpacity={0.7}
           >
             <Text style={styles.dismissText}>
-              {'\uB2E4\uC74C\uC5D0 \uC751\uB2F5\uD560\uAC8C\uC694'}
+              {'다음에 응답할게요'}
             </Text>
           </TouchableOpacity>
         </LinearGradient>

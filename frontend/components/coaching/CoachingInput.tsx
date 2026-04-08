@@ -29,8 +29,8 @@ export function CoachingInput({
       await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(
-        '\uAD8C\uD55C \uD544\uC694',
-        '\uC0AC\uC9C4 \uB77C\uC774\uBE0C\uB7EC\uB9AC \uC811\uADFC \uAD8C\uD55C\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.'
+        '권한 필요',
+        '사진 라이브러리 접근 권한이 필요합니다.'
       );
       return;
     }
@@ -46,8 +46,8 @@ export function CoachingInput({
 
   const handleVoice = () => {
     Alert.alert(
-      '\uC900\uBE44 \uC911',
-      '\uC74C\uC131 \uC785\uB825 \uAE30\uB2A5\uC740 \uC900\uBE44 \uC911\uC785\uB2C8\uB2E4.'
+      '준비 중',
+      '음성 입력 기능은 준비 중입니다.'
     );
   };
 
@@ -59,18 +59,18 @@ export function CoachingInput({
           onPress={handlePhoto}
           activeOpacity={0.7}
         >
-          <Text style={styles.actionEmoji}>{'\uD83D\uDCF7'}</Text>
+          <Text style={styles.actionEmoji}>{'📷'}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.actionBtn}
           onPress={handleVoice}
           activeOpacity={0.7}
         >
-          <Text style={styles.actionEmoji}>{'\uD83C\uDFA4'}</Text>
+          <Text style={styles.actionEmoji}>{'🎤'}</Text>
         </TouchableOpacity>
         <TextInput
           style={styles.input}
-          placeholder={'\uACE0\uBBFC\uC744 \uB9D0\uC500\uD574\uC8FC\uC138\uC694...'}
+          placeholder={'고민을 말씀해주세요...'}
           placeholderTextColor={COACHING_COLORS.textLight}
           value={value}
           onChangeText={onChangeText}
@@ -85,7 +85,7 @@ export function CoachingInput({
           disabled={disabled}
           activeOpacity={0.7}
         >
-          <Text style={styles.sendEmoji}>{'\uD83D\uDCE4'}</Text>
+          <Text style={styles.sendEmoji}>{'📤'}</Text>
         </TouchableOpacity>
       </View>
     </View>

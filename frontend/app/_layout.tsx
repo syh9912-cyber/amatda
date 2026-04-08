@@ -52,7 +52,7 @@ class ErrorBoundary extends Component<
       return (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: COLORS.background }}>
           <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 8 }}>
-            {'\uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4'}
+            {'오류가 발생했습니다'}
           </Text>
           <Text style={{ fontSize: 13, color: '#888', textAlign: 'center' }}>
             {this.state.error?.message ?? 'Unknown error'}

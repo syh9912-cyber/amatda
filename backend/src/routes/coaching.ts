@@ -831,22 +831,20 @@ router.post('/daily-diary', authMiddleware, async (req: Request, res: Response) 
     const child = await buildChildContext(childId, req.userId!);
     if (!child) { error(res, '자녀 정보 없음', 404); return; }
 
-    // 오늘 상담 내역 조회 (인덱스 없이 단순 쿼리)
+    // 오늘 상담 내역 조회
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayISO = today.toISOString();
     const sessionsSnap = await collections.coachingSessions
+      .where('userId', '==', req.userId)
       .where('childId', '==', childId)
+      .where('createdAt', '>=', todayISO)
+      .orderBy('createdAt', 'asc')
       .get();
 
     const sessions = sessionsSnap.docs
       .map((d) => d.data() as Record<string, unknown>)
-      .filter((s) =>
-        s.userId === req.userId &&
-        s.source !== 'filter' && s.source !== 'limit' &&
-        String(s.createdAt ?? '') >= todayISO
-      )
-      .sort((a, b) => String(a.createdAt ?? '').localeCompare(String(b.createdAt ?? '')));
+      .filter((s) => s.source !== 'filter' && s.source !== 'limit');
 
     // 오늘 추적 데이터 조회
     const todayStr = new Date().toISOString().slice(0, 10);

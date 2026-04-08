@@ -16,7 +16,7 @@ import mateRoutes from './routes/mate';
 import adRoutes from './routes/ad';
 import seedRoutes from './routes/seed';
 import momstagramRoutes from './routes/momstagram';
-import coachingRoutes from './routes/coaching';
+import coachingRoutes from './routes/coaching/index';
 import clinicRoutes from './routes/clinic';
 import memoriesRoutes from './routes/memories';
 import retentionRoutes from './routes/retention';

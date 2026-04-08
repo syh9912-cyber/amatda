@@ -11,7 +11,7 @@ interface MenuItem {
 
 const MENU_ITEMS: MenuItem[] = [
   {
-    emoji: '\uD83C\uDFB4',
+    emoji: '🎴',
     label: '아이 디지털 카드',
     description: '아이 정보 카드 공유하기',
     route: '/(main)/child-card',
@@ -65,13 +65,13 @@ const MENU_ITEMS: MenuItem[] = [
     route: '/(main)/growth-stats',
   },
   {
-    emoji: '\uD83C\uDFE5',
+    emoji: '🏥',
     label: '소아과 후기',
     description: '근처 소아과 리뷰 보기',
     route: '/(main)/clinic',
   },
   {
-    emoji: '\uD83D\uDC8E',
+    emoji: '💎',
     label: '프리미엄 플랜',
     description: 'AI 코칭 무제한 이용',
     route: '/(main)/subscription',

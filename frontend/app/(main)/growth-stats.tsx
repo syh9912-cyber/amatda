@@ -408,7 +408,7 @@ function MilestonesTab() {
         {milestones.items.map((item, idx) => (
           <View key={idx} style={msStyles.checkRow}>
             <Text style={msStyles.checkIcon}>
-              {item.completed ? '\u2705' : '\u2B1C'}
+              {item.completed ? '✅' : '⬜'}
             </Text>
             <Text
               style={[

@@ -31,7 +31,7 @@ function formatTime(iso: string): string {
   const d = new Date(iso);
   const h = d.getHours();
   const m = d.getMinutes().toString().padStart(2, '0');
-  const ampm = h < 12 ? '\uC624\uC804' : '\uC624\uD6C4';
+  const ampm = h < 12 ? '오전' : '오후';
   const hour = h % 12 || 12;
   return `${ampm} ${hour}:${m}`;
 }

@@ -1,6 +1,6 @@
 import { collections } from '../firestore';
 import { ConversationContext, ConversationTurn, UserTier, TIER_CONFIGS } from './types';
-import { env } from '../../config/env';
+import { isGeminiAvailable, callGeminiText } from './gemini.client';
 
 const SUMMARIZE_THRESHOLD = 5;
 
@@ -110,21 +110,12 @@ async function compressTurns(
     .map((t) => `${t.role === 'parent' ? '부모' : '코치'}: ${t.text.slice(0, 80)}`)
     .join('\n');
 
-  const apiKey = env.GEMINI_API_KEY;
-  if (!apiKey || env.MOCK_AI) {
+  if (!isGeminiAvailable()) {
     return compressFallback(existingSummary, turns);
   }
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `아래 육아 상담 대화를 5~8줄 핵심 요약으로 압축하세요. 한국어로, 불릿 포인트 형식으로.
+    const prompt = `아래 육아 상담 대화를 5~8줄 핵심 요약으로 압축하세요. 한국어로, 불릿 포인트 형식으로.
 
 기존 요약:
 ${existingSummary || '(없음)'}
@@ -132,19 +123,9 @@ ${existingSummary || '(없음)'}
 새 대화:
 ${turnsText}
 
-요약 (5~8줄, - 로 시작):`,
-            }],
-          }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 200 },
-        }),
-      }
-    );
+요약 (5~8줄, - 로 시작):`;
 
-    const data = await response.json() as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-    return data.candidates?.[0]?.content?.parts?.[0]?.text
-      ?? compressFallback(existingSummary, turns);
+    return await callGeminiText(prompt, { temperature: 0.2, maxTokens: 200 });
   } catch {
     return compressFallback(existingSummary, turns);
   }

@@ -5,6 +5,7 @@ import { fetchRealWeather } from '../services/real.weather';
 import { getRecommendedActivities } from '../services/weather.activities';
 import { success, error } from '../utils/response';
 import { collections } from '../services/firestore';
+import { parseInnateDataFull } from '../utils/parse';
 
 const DEFAULT_LAT = 34.815;
 const DEFAULT_LNG = 126.463;
@@ -20,9 +21,7 @@ router.get('/:childId', authMiddleware, async (req: Request, res: Response) => {
     }
 
     const childData = doc.data()!;
-    const innate = typeof childData.innateData === 'string'
-      ? JSON.parse(childData.innateData as string)
-      : childData.innateData;
+    const innate = parseInnateDataFull(childData.innateData) as { dominantType: string };
 
     const dominantType: string = innate.dominantType;
     const traitWeather = getTraitWeather(dominantType);

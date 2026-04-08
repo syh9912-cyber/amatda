@@ -56,7 +56,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
     good: [
       {
         name: '소고기 죽',
-        emoji: '\uD83E\uDD69',
+        emoji: '🥩',
         reason:
           '활동형 기질은 에너지 소모가 많아 철분과 단백질이 풍부한 소고기가 좋아요',
         recipe: [
@@ -69,7 +69,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '바나나 오트밀',
-        emoji: '\uD83C\uDF4C',
+        emoji: '🍌',
         reason:
           '에너지를 빠르게 보충하면서도 소화가 편한 탄수화물 조합이에요',
         recipe: [
@@ -81,7 +81,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '닭가슴살 채소볶음밥',
-        emoji: '\uD83C\uDF57',
+        emoji: '🍗',
         reason:
           '고단백 저지방 닭가슴살이 활발한 근육 발달을 도와줘요',
         recipe: [
@@ -93,7 +93,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '고구마 스틱',
-        emoji: '\uD83C\uDF60',
+        emoji: '🍠',
         reason:
           '에너지 보충에 좋은 복합 탄수화물로 활동 후 간식으로 딱이에요',
         recipe: [
@@ -105,7 +105,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '연어 덮밥',
-        emoji: '\uD83E\uDD69',
+        emoji: '🥩',
         reason:
           '오메가3 지방산이 활동 후 근육 회복과 두뇌 발달에 도움을 줘요',
         recipe: [
@@ -118,7 +118,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '두부 달걀찜',
-        emoji: '\uD83E\uDD5A',
+        emoji: '🥚',
         reason:
           '단백질이 풍부하면서도 부드러워 에너지 보충에 좋아요',
         recipe: [
@@ -130,7 +130,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '시금치 감자 수프',
-        emoji: '\uD83E\uDD66',
+        emoji: '🥦',
         reason:
           '철분이 풍부한 시금치가 활동적인 아이의 빈혈을 예방해요',
         recipe: [
@@ -142,7 +142,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '잡곡밥 주먹밥',
-        emoji: '\uD83C\uDF59',
+        emoji: '🍙',
         reason:
           '다양한 영양소를 고르게 섭취하며 지속적인 에너지를 공급해요',
         recipe: [
@@ -154,11 +154,11 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
     ],
     bad: [
-      { name: '탄산음료', emoji: '\uD83E\uDD64', reason: '칼슘 흡수를 방해해 성장기 뼈 발달에 해로워요' },
-      { name: '과자/쿠키', emoji: '\uD83C\uDF6A', reason: '빈 칼로리로 포만감만 주고 필요한 영양소가 부족해요' },
-      { name: '튀김류', emoji: '\uD83C\uDF5F', reason: '과도한 지방이 소화를 느리게 하고 활동력을 떨어뜨려요' },
-      { name: '초콜릿', emoji: '\uD83C\uDF6B', reason: '카페인 성분이 수면을 방해하고 과잉 흥분을 유발해요' },
-      { name: '라면', emoji: '\uD83C\uDF5C', reason: '나트륨 과다 섭취가 신장에 부담을 줘요' },
+      { name: '탄산음료', emoji: '🥤', reason: '칼슘 흡수를 방해해 성장기 뼈 발달에 해로워요' },
+      { name: '과자/쿠키', emoji: '🍪', reason: '빈 칼로리로 포만감만 주고 필요한 영양소가 부족해요' },
+      { name: '튀김류', emoji: '🍟', reason: '과도한 지방이 소화를 느리게 하고 활동력을 떨어뜨려요' },
+      { name: '초콜릿', emoji: '🍫', reason: '카페인 성분이 수면을 방해하고 과잉 흥분을 유발해요' },
+      { name: '라면', emoji: '🍜', reason: '나트륨 과다 섭취가 신장에 부담을 줘요' },
     ],
   },
 
@@ -167,7 +167,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
     good: [
       {
         name: '블루베리 요거트',
-        emoji: '\uD83E\uDED0',
+        emoji: '🫐',
         reason:
           '탐구형 기질의 두뇌 활동을 돕는 안토시아닌이 풍부해요',
         recipe: [
@@ -179,7 +179,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '호두 바나나 스무디',
-        emoji: '\uD83E\uDD5B',
+        emoji: '🥛',
         reason:
           '호두의 오메가3가 집중력과 기억력 발달에 도움을 줘요',
         recipe: [
@@ -192,7 +192,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '달걀 시금치 토스트',
-        emoji: '\uD83C\uDF5E',
+        emoji: '🍞',
         reason:
           '달걀의 콜린 성분이 두뇌 신경 전달을 활발하게 해줘요',
         recipe: [
@@ -204,7 +204,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '미역 소고기 국',
-        emoji: '\uD83E\uDD62',
+        emoji: '🥢',
         reason:
           '미역의 요오드가 갑상선 건강과 두뇌 성장을 지원해요',
         recipe: [
@@ -216,7 +216,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '당근 사과 주스',
-        emoji: '\uD83E\uDD55',
+        emoji: '🥕',
         reason:
           '베타카로틴이 시력 발달과 면역력 강화에 좋아요',
         recipe: [
@@ -228,7 +228,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '두부 채소 죽',
-        emoji: '\uD83C\uDF72',
+        emoji: '🍲',
         reason:
           '양질의 식물성 단백질이 성장기 두뇌에 영양을 공급해요',
         recipe: [
@@ -240,7 +240,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '고등어 구이',
-        emoji: '\uD83D\uDC1F',
+        emoji: '🐟',
         reason:
           'DHA가 풍부하여 학습 능력과 집중력 향상에 도움을 줘요',
         recipe: [
@@ -253,7 +253,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '검은콩 밥',
-        emoji: '\uD83C\uDF5A',
+        emoji: '🍚',
         reason:
           '레시틴 성분이 기억력과 학습 능력을 높여줘요',
         recipe: [
@@ -265,11 +265,11 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
     ],
     bad: [
-      { name: '사탕/젤리', emoji: '\uD83C\uDF6C', reason: '과도한 당분이 집중력을 흐리게 하고 충치를 유발해요' },
-      { name: '인스턴트 식품', emoji: '\uD83E\uDD6B', reason: '인공첨가물이 두뇌 발달에 부정적인 영향을 줄 수 있어요' },
-      { name: '핫도그/소시지', emoji: '\uD83C\uDF2D', reason: '아질산나트륨 등 보존제가 건강에 좋지 않아요' },
-      { name: '아이스크림', emoji: '\uD83C\uDF68', reason: '과도한 당분과 지방이 영양 균형을 깨뜨려요' },
-      { name: '캔 음료', emoji: '\uD83E\uDD64', reason: '인공감미료와 색소가 성장기 아이에게 해로워요' },
+      { name: '사탕/젤리', emoji: '🍬', reason: '과도한 당분이 집중력을 흐리게 하고 충치를 유발해요' },
+      { name: '인스턴트 식품', emoji: '🥫', reason: '인공첨가물이 두뇌 발달에 부정적인 영향을 줄 수 있어요' },
+      { name: '핫도그/소시지', emoji: '🌭', reason: '아질산나트륨 등 보존제가 건강에 좋지 않아요' },
+      { name: '아이스크림', emoji: '🍨', reason: '과도한 당분과 지방이 영양 균형을 깨뜨려요' },
+      { name: '캔 음료', emoji: '🥤', reason: '인공감미료와 색소가 성장기 아이에게 해로워요' },
     ],
   },
 
@@ -278,7 +278,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
     good: [
       {
         name: '오곡밥',
-        emoji: '\uD83C\uDF5A',
+        emoji: '🍚',
         reason:
           '조화형 기질에 맞게 다양한 영양소를 균형 있게 섭취할 수 있어요',
         recipe: [
@@ -290,7 +290,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '된장찌개',
-        emoji: '\uD83C\uDF72',
+        emoji: '🍲',
         reason:
           '발효 식품의 유익균이 장 건강과 면역력을 키워줘요',
         recipe: [
@@ -302,7 +302,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '계란말이',
-        emoji: '\uD83E\uDD5A',
+        emoji: '🥚',
         reason:
           '완전식품 달걀로 단백질과 지방을 균형 있게 섭취해요',
         recipe: [
@@ -314,7 +314,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '제철 과일 샐러드',
-        emoji: '\uD83E\uDD57',
+        emoji: '🥗',
         reason:
           '다양한 비타민과 미네랄로 전반적인 건강을 지켜줘요',
         recipe: [
@@ -326,7 +326,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '멸치볶음',
-        emoji: '\uD83D\uDC1F',
+        emoji: '🐟',
         reason:
           '칼슘이 풍부하여 균형 잡힌 뼈 성장을 도와줘요',
         recipe: [
@@ -338,7 +338,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '미니 김밥',
-        emoji: '\uD83C\uDF63',
+        emoji: '🍣',
         reason:
           '다양한 재료가 들어있어 영양 밸런스가 뛰어나요',
         recipe: [
@@ -350,7 +350,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '찐 브로콜리',
-        emoji: '\uD83E\uDD66',
+        emoji: '🥦',
         reason:
           '비타민C와 식이섬유가 면역과 소화를 함께 도와줘요',
         recipe: [
@@ -362,7 +362,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '소고기 미역국밥',
-        emoji: '\uD83E\uDD62',
+        emoji: '🥢',
         reason:
           '한 그릇에 단백질, 미네랄, 탄수화물이 모두 들어있어요',
         recipe: [
@@ -374,11 +374,11 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
     ],
     bad: [
-      { name: '패스트푸드', emoji: '\uD83C\uDF54', reason: '과도한 나트륨과 지방이 성장기 아이에게 부담이 돼요' },
-      { name: '가공 치즈', emoji: '\uD83E\uDDC0', reason: '인공 첨가물이 많아 자연 치즈를 선택하는 것이 좋아요' },
-      { name: '달달한 시리얼', emoji: '\uD83E\uDD63', reason: '당분이 과다해 영양 불균형을 초래할 수 있어요' },
-      { name: '맵고 자극적인 음식', emoji: '\uD83C\uDF36\uFE0F', reason: '아직 약한 위장을 자극할 수 있어요' },
-      { name: '에너지 드링크', emoji: '\uD83E\uDD64', reason: '카페인과 타우린이 어린이에게 위험해요' },
+      { name: '패스트푸드', emoji: '🍔', reason: '과도한 나트륨과 지방이 성장기 아이에게 부담이 돼요' },
+      { name: '가공 치즈', emoji: '🧀', reason: '인공 첨가물이 많아 자연 치즈를 선택하는 것이 좋아요' },
+      { name: '달달한 시리얼', emoji: '🥣', reason: '당분이 과다해 영양 불균형을 초래할 수 있어요' },
+      { name: '맵고 자극적인 음식', emoji: '🌶️', reason: '아직 약한 위장을 자극할 수 있어요' },
+      { name: '에너지 드링크', emoji: '🥤', reason: '카페인과 타우린이 어린이에게 위험해요' },
     ],
   },
 
@@ -387,7 +387,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
     good: [
       {
         name: '현미밥',
-        emoji: '\uD83C\uDF5A',
+        emoji: '🍚',
         reason:
           '분석형 기질의 체계적 사고를 돕는 비타민B 복합체가 풍부해요',
         recipe: [
@@ -399,7 +399,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '닭고기 채소 스프',
-        emoji: '\uD83C\uDF5C',
+        emoji: '🍜',
         reason:
           '소화가 좋고 면역력을 키워주는 따뜻한 한 그릇이에요',
         recipe: [
@@ -411,7 +411,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '견과류 에너지볼',
-        emoji: '\uD83E\uDD5C',
+        emoji: '🥜',
         reason:
           '두뇌 에너지원인 건강한 지방과 단백질이 가득해요',
         recipe: [
@@ -424,7 +424,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '배 조림',
-        emoji: '\uD83C\uDF50',
+        emoji: '🍐',
         reason:
           '소화를 돕고 기관지 건강에 좋아 집중 환경을 만들어줘요',
         recipe: [
@@ -436,7 +436,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '두부 스테이크',
-        emoji: '\uD83E\uDDD1\u200D\uD83C\uDF73',
+        emoji: '🧑‍🍳',
         reason:
           '두뇌 발달에 좋은 레시틴이 풍부한 식물성 단백질이에요',
         recipe: [
@@ -448,7 +448,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '아보카도 토스트',
-        emoji: '\uD83E\uDD51',
+        emoji: '🥑',
         reason:
           '불포화지방산이 두뇌 세포막 형성에 도움을 줘요',
         recipe: [
@@ -460,7 +460,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '표고버섯 불고기',
-        emoji: '\uD83C\uDF44',
+        emoji: '🍄',
         reason:
           '비타민D가 풍부해 뼈 건강과 면역력을 함께 지켜줘요',
         recipe: [
@@ -472,7 +472,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '치즈 감자전',
-        emoji: '\uD83E\uDDC0',
+        emoji: '🧀',
         reason:
           '칼슘과 탄수화물로 에너지와 성장을 동시에 도와줘요',
         recipe: [
@@ -484,11 +484,11 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
     ],
     bad: [
-      { name: '과도한 당분 간식', emoji: '\uD83C\uDF6D', reason: '혈당 급등락이 집중력 저하를 유발해요' },
-      { name: '인공색소 음식', emoji: '\uD83C\uDF6C', reason: '인공색소가 행동 과잉과 주의력 분산을 일으킬 수 있어요' },
-      { name: '냉동 피자', emoji: '\uD83C\uDF55', reason: '가공 치즈와 나트륨이 과다해 건강에 좋지 않아요' },
-      { name: '맛살/게맛살', emoji: '\uD83E\uDD80', reason: '전분과 첨가물이 많아 진짜 해산물을 선택하세요' },
-      { name: '달달한 음료', emoji: '\uD83E\uDD64', reason: '과도한 설탕이 성장 호르몬 분비를 방해해요' },
+      { name: '과도한 당분 간식', emoji: '🍭', reason: '혈당 급등락이 집중력 저하를 유발해요' },
+      { name: '인공색소 음식', emoji: '🍬', reason: '인공색소가 행동 과잉과 주의력 분산을 일으킬 수 있어요' },
+      { name: '냉동 피자', emoji: '🍕', reason: '가공 치즈와 나트륨이 과다해 건강에 좋지 않아요' },
+      { name: '맛살/게맛살', emoji: '🦀', reason: '전분과 첨가물이 많아 진짜 해산물을 선택하세요' },
+      { name: '달달한 음료', emoji: '🥤', reason: '과도한 설탕이 성장 호르몬 분비를 방해해요' },
     ],
   },
 
@@ -497,7 +497,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
     good: [
       {
         name: '단호박 죽',
-        emoji: '\uD83C\uDF83',
+        emoji: '🎃',
         reason:
           '감성형 기질은 정서 안정이 중요해요. 단호박의 트립토판이 마음을 편안하게 해줘요',
         recipe: [
@@ -509,7 +509,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '따뜻한 우유',
-        emoji: '\uD83E\uDD5B',
+        emoji: '🥛',
         reason:
           '칼슘과 트립토판이 감정 안정과 깊은 수면을 도와줘요',
         recipe: [
@@ -522,7 +522,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '감자 치즈볼',
-        emoji: '\uD83E\uDDC0',
+        emoji: '🧀',
         reason:
           '부드러운 식감이 까다로운 감성형 아이도 잘 먹어요',
         recipe: [
@@ -534,7 +534,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '바나나 팬케이크',
-        emoji: '\uD83E\uDD5E',
+        emoji: '🥞',
         reason:
           '바나나의 세로토닌 전구체가 기분 안정에 도움을 줘요',
         recipe: [
@@ -546,7 +546,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '사과 배 조림',
-        emoji: '\uD83C\uDF4E',
+        emoji: '🍎',
         reason:
           '따뜻하고 달콤한 간식이 정서적 안정감을 줘요',
         recipe: [
@@ -558,7 +558,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '콩나물 밥',
-        emoji: '\uD83C\uDF31',
+        emoji: '🌱',
         reason:
           '아스파라긴산이 피로를 풀어주고 예민한 기질을 안정시켜요',
         recipe: [
@@ -570,7 +570,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '미니 호떡',
-        emoji: '\uD83E\uDD5E',
+        emoji: '🥞',
         reason:
           '따뜻한 간식이 위장을 편하게 하고 마음을 안정시켜요',
         recipe: [
@@ -582,7 +582,7 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
       {
         name: '연근 조림',
-        emoji: '\uD83E\uDD54',
+        emoji: '🥔',
         reason:
           '비타민C와 철분이 풍부해 면역력과 정서 안정에 좋아요',
         recipe: [
@@ -594,11 +594,11 @@ export const FOOD_RECOMMENDATIONS: Record<TemperamentKey, TemperamentFoods> = {
       },
     ],
     bad: [
-      { name: '매운 음식', emoji: '\uD83C\uDF36\uFE0F', reason: '예민한 위장을 자극해 소화 불량을 일으킬 수 있어요' },
-      { name: '카페인 음료', emoji: '\u2615', reason: '카페인이 불안감을 높이고 수면의 질을 떨어뜨려요' },
-      { name: '인스턴트 국물', emoji: '\uD83E\uDD62', reason: 'MSG와 나트륨이 예민한 체질에 자극적이에요' },
-      { name: '딱딱한 견과류', emoji: '\uD83E\uDD5C', reason: '질감에 예민한 아이가 거부할 수 있어요 (잘게 갈아 제공)' },
-      { name: '새콤한 과일 젤리', emoji: '\uD83C\uDF4A', reason: '인공산미료와 색소가 감성형 아이에게 자극적이에요' },
+      { name: '매운 음식', emoji: '🌶️', reason: '예민한 위장을 자극해 소화 불량을 일으킬 수 있어요' },
+      { name: '카페인 음료', emoji: '☕', reason: '카페인이 불안감을 높이고 수면의 질을 떨어뜨려요' },
+      { name: '인스턴트 국물', emoji: '🥢', reason: 'MSG와 나트륨이 예민한 체질에 자극적이에요' },
+      { name: '딱딱한 견과류', emoji: '🥜', reason: '질감에 예민한 아이가 거부할 수 있어요 (잘게 갈아 제공)' },
+      { name: '새콤한 과일 젤리', emoji: '🍊', reason: '인공산미료와 색소가 감성형 아이에게 자극적이에요' },
     ],
   },
 };

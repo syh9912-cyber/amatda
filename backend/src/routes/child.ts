@@ -5,12 +5,12 @@ import { calculateAge } from '../services/age.calculator';
 import { generateChildReport, monthsToAgeGroup } from '../services/child.report';
 import { success, error } from '../utils/response';
 import { collections, genId, toISO } from '../services/firestore';
+import { parseInnateData, parseInnateDataFull, safeParse } from '../utils/parse';
 
 const router = Router();
 
 function formatChild(id: string, data: Record<string, unknown>) {
-  const innate = typeof data.innateData === 'string' ? JSON.parse(data.innateData as string) : data.innateData;
-  const { pillars, ...publicInnate } = innate;
+  const publicInnate = parseInnateData(data.innateData);
   const bd = data.birthDate instanceof Date ? data.birthDate : new Date(data.birthDate as string);
   return {
     id, name: data.name, gender: data.gender,
@@ -18,9 +18,9 @@ function formatChild(id: string, data: Record<string, unknown>) {
     birthTime: data.birthTime,
     photoUri: data.photoUri || null,
     innateData: publicInnate,
-    baseline: data.baseline ? (typeof data.baseline === 'string' ? JSON.parse(data.baseline as string) : data.baseline) : null,
-    observedTraits: data.observedTraits ? (typeof data.observedTraits === 'string' ? JSON.parse(data.observedTraits as string) : data.observedTraits) : null,
-    analysisReport: data.analysisReport ? (typeof data.analysisReport === 'string' ? JSON.parse(data.analysisReport as string) : data.analysisReport) : null,
+    baseline: safeParse(data.baseline),
+    observedTraits: safeParse(data.observedTraits),
+    analysisReport: safeParse(data.analysisReport),
     ageInfo: calculateAge(bd),
   };
 }
@@ -116,7 +116,7 @@ router.post('/:id/analyze', authMiddleware, async (req: Request, res: Response) 
     if (!doc.exists || doc.data()!.userId !== req.userId) { error(res, '자녀를 찾을 수 없습니다', 404); return; }
 
     const data = doc.data()!;
-    const innate = typeof data.innateData === 'string' ? JSON.parse(data.innateData as string) : data.innateData;
+    const innate = parseInnateDataFull(data.innateData) as { dominantType: string; fiveElements: Record<string, number> };
 
     // Save baseline answers
     const baseline = JSON.stringify({ answers, completedAt: new Date().toISOString() });
@@ -284,11 +284,9 @@ router.post('/:id/daily-trait', authMiddleware, async (req: Request, res: Respon
     if (totalResponses > 0 && totalResponses % 7 === 0) {
       const recent7 = allSnap.docs.slice(0, 7).map((d) => d.data() as { question: string; answer: string; date: string });
       const childData = childDoc.data()!;
-      const innate = typeof childData.innateData === 'string'
-        ? JSON.parse(childData.innateData as string)
-        : childData.innateData;
+      const innate = parseInnateDataFull(childData.innateData) as { dominantType: string };
 
-      newInsight = generateTraitInsight(recent7, innate.dominantType);
+      newInsight = generateTraitInsight(recent7, innate.dominantType as string);
 
       // Store insight in child document's traitInsights array
       const existingInsights: DailyTraitInsight[] = childData.traitInsights

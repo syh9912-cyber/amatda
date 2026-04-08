@@ -21,14 +21,14 @@ interface Props {
 }
 
 function likelihoodToWidth(l: string): number {
-  if (l.includes('\uB192\uC74C')) return 90;
-  if (l.includes('\uBCF4\uD1B5')) return 55;
+  if (l.includes('높음')) return 90;
+  if (l.includes('보통')) return 55;
   return 25;
 }
 
 function likelihoodToColor(l: string): string {
-  if (l.includes('\uB192\uC74C')) return '#FF6B6B';
-  if (l.includes('\uBCF4\uD1B5')) return '#FFB347';
+  if (l.includes('높음')) return '#FF6B6B';
+  if (l.includes('보통')) return '#FFB347';
   return '#77DD77';
 }
 
@@ -37,23 +37,23 @@ export function AnalyzerResult({ result, onReset }: Props) {
     <View style={styles.container}>
       {result.needsDoctor ? (
         <View style={styles.doctorBanner}>
-          <Text style={styles.doctorIcon}>{'\u26A0\uFE0F'}</Text>
+          <Text style={styles.doctorIcon}>{'⚠️'}</Text>
           <Text style={styles.doctorText}>
-            {'\uC804\uBB38\uC758 \uC0C1\uB2F4\uC774 \uD544\uC694\uD560 \uC218 \uC788\uC5B4\uC694'}
+            {'전문의 상담이 필요할 수 있어요'}
           </Text>
         </View>
       ) : null}
 
       <View style={styles.analysisBox}>
         <Text style={styles.sectionTitle}>
-          {'\uD83D\uDD0D \uBD84\uC11D \uACB0\uACFC'}
+          {'🔍 분석 결과'}
         </Text>
         <Text style={styles.analysisText}>{result.analysis}</Text>
       </View>
 
       <View style={styles.possBox}>
         <Text style={styles.sectionTitle}>
-          {'\uD83D\uDCCA \uAC00\uB2A5\uC131'}
+          {'📊 가능성'}
         </Text>
         {result.possibilities.map((p, i) => (
           <View key={i} style={styles.barRow}>
@@ -76,7 +76,7 @@ export function AnalyzerResult({ result, onReset }: Props) {
 
       <View style={styles.recsBox}>
         <Text style={styles.sectionTitle}>
-          {'\u2705 \uCD94\uCC9C \uC870\uCE58'}
+          {'✅ 추천 조치'}
         </Text>
         {result.recommendations.map((r, i) => (
           <Text key={i} style={styles.recItem}>
@@ -91,7 +91,7 @@ export function AnalyzerResult({ result, onReset }: Props) {
         activeOpacity={0.7}
       >
         <Text style={styles.resetText}>
-          {'\uB2E4\uC2DC \uBD84\uC11D\uD558\uAE30'}
+          {'다시 분석하기'}
         </Text>
       </TouchableOpacity>
     </View>

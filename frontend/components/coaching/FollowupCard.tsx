@@ -20,9 +20,9 @@ export function FollowupCard({ followup, onRespond, onDismiss }: Props) {
   const [text, setText] = useState('');
 
   const quickOptions = [
-    '\uB9CE\uC774 \uC88B\uC544\uC84C\uC5B4\uC694',
-    '\uBE44\uC2B7\uD574\uC694',
-    '\uC544\uC9C1 \uACE0\uBBFC\uC774\uC5D0\uC694',
+    '많이 좋아졌어요',
+    '비슷해요',
+    '아직 고민이에요',
   ];
 
   const handleQuickRespond = (response: string) => {
@@ -43,7 +43,7 @@ export function FollowupCard({ followup, onRespond, onDismiss }: Props) {
       end={{ x: 1, y: 1 }}
       style={styles.card}
     >
-      <Text style={styles.bellIcon}>{'\uD83D\uDD14'}</Text>
+      <Text style={styles.bellIcon}>{'🔔'}</Text>
       <Text style={styles.questionText}>{followup.followupText}</Text>
 
       {inputMode ? (
@@ -52,14 +52,14 @@ export function FollowupCard({ followup, onRespond, onDismiss }: Props) {
             style={styles.textInput}
             value={text}
             onChangeText={setText}
-            placeholder={'\uC0C1\uD669\uC744 \uC54C\uB824\uC8FC\uC138\uC694...'}
+            placeholder={'상황을 알려주세요...'}
             placeholderTextColor={COACHING_COLORS.textLight}
           />
           <TouchableOpacity
             style={styles.sendBtn}
             onPress={handleTextRespond}
           >
-            <Text style={styles.sendBtnText}>{'\uC804\uC1A1'}</Text>
+            <Text style={styles.sendBtnText}>{'전송'}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -84,7 +84,7 @@ export function FollowupCard({ followup, onRespond, onDismiss }: Props) {
             activeOpacity={0.7}
           >
             <Text style={styles.directText}>
-              {'\uC9C1\uC811 \uC785\uB825'}
+              {'직접 입력'}
             </Text>
           </TouchableOpacity>
         ) : null}
@@ -92,7 +92,7 @@ export function FollowupCard({ followup, onRespond, onDismiss }: Props) {
           onPress={() => onDismiss(followup.id)}
           activeOpacity={0.7}
         >
-          <Text style={styles.dismissText}>{'\uB098\uC911\uC5D0'}</Text>
+          <Text style={styles.dismissText}>{'나중에'}</Text>
         </TouchableOpacity>
       </View>
     </LinearGradient>

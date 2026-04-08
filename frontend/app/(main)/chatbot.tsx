@@ -176,7 +176,7 @@ export default function CoachingScreen() {
         const errMsg: CoachingMessage = {
           id: `e-${Date.now()}`,
           isCoach: true,
-          text: '\uC751\uB2F5\uC744 \uAC00\uC838\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694. \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.',
+          text: '응답을 가져오지 못했어요. 다시 시도해주세요.',
           createdAt: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, errMsg]);
@@ -199,12 +199,12 @@ export default function CoachingScreen() {
       }
       const moodLabel =
         mood === 'good'
-          ? '\uC88B\uC544\uC694'
+          ? '좋아요'
           : mood === 'normal'
-            ? '\uBCF4\uD1B5\uC774\uC5D0\uC694'
-            : '\uC548 \uC88B\uC544\uC694';
+            ? '보통이에요'
+            : '안 좋아요';
       sendMessage(
-        `\uC624\uB298 \uC544\uC774 \uCEE8\uB514\uC158: ${moodLabel}`
+        `오늘 아이 컨디션: ${moodLabel}`
       );
     },
     [child, sendMessage]
@@ -212,7 +212,7 @@ export default function CoachingScreen() {
 
   const handleCategorySelect = useCallback(
     (key: string, label: string) => {
-      const text = `\uC544\uC774\uAC00 ${label} \uAD00\uB828\uD574\uC11C \uACE0\uBBFC\uC774 \uC788\uC5B4\uC694`;
+      const text = `아이가 ${label} 관련해서 고민이 있어요`;
       setInput(text);
     },
     []
@@ -251,7 +251,7 @@ export default function CoachingScreen() {
     []
   );
 
-  const childName = child?.name ?? '\uC544\uC774';
+  const childName = child?.name ?? '아이';
   const isEmpty = messages.length === 0;
   const showCheckin = isEmpty && !checkedIn;
 
@@ -266,7 +266,7 @@ export default function CoachingScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>
-          AI {'\uC721\uC544 \uCF54\uCE6D'}
+          AI {'육아 코칭'}
         </Text>
         <View style={styles.headerChild}>
           {child?.photoUri ? (
@@ -277,7 +277,7 @@ export default function CoachingScreen() {
           ) : (
             <View style={styles.headerPhotoPlaceholder}>
               <Text style={styles.headerPhotoEmoji}>
-                {child?.gender === 'F' ? '\uD83D\uDC67' : '\uD83D\uDC66'}
+                {child?.gender === 'F' ? '👧' : '👦'}
               </Text>
             </View>
           )}
@@ -329,7 +329,7 @@ export default function CoachingScreen() {
         {sending ? (
           <View style={styles.typingRow}>
             <View style={styles.typingAvatar}>
-              <Text style={styles.typingAvatarText}>{'\uD83E\uDD16'}</Text>
+              <Text style={styles.typingAvatarText}>{'🤖'}</Text>
             </View>
             <View style={styles.typingBubble}>
               <ActivityIndicator
@@ -337,7 +337,7 @@ export default function CoachingScreen() {
                 color={COACHING_COLORS.accent}
               />
               <Text style={styles.typingText}>
-                {'\uB2F5\uBCC0 \uC900\uBE44 \uC911...'}
+                {'답변 준비 중...'}
               </Text>
             </View>
           </View>
@@ -349,7 +349,7 @@ export default function CoachingScreen() {
         <View style={styles.photoPreview}>
           <Image source={{ uri: photoUri }} style={styles.photoThumb} />
           <Text style={styles.photoLabel}>
-            {'\uC0AC\uC9C4 \uCCA8\uBD80\uB428'}
+            {'사진 첨부됨'}
           </Text>
         </View>
       ) : null}
@@ -362,7 +362,7 @@ export default function CoachingScreen() {
           activeOpacity={0.7}
         >
           <Text style={styles.analyzerPillText}>
-            {'\uD83D\uDD0D \uB300\uBCC0 \uBD84\uC11D'}
+            {'🔍 대변 분석'}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -371,7 +371,7 @@ export default function CoachingScreen() {
           activeOpacity={0.7}
         >
           <Text style={styles.analyzerPillText}>
-            {'\uD83D\uDD0D \uC6B8\uC74C \uBD84\uC11D'}
+            {'🔍 울음 분석'}
           </Text>
         </TouchableOpacity>
       </View>
