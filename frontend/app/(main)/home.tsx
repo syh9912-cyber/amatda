@@ -28,6 +28,7 @@ import {
 } from '../../components/coaching/ProactivePopup';
 import { getCharacteristicForChild } from '../../constants/monthlyCharacteristics';
 import { OnboardingGuide } from '../../components/common/OnboardingGuide';
+import { AgeGroupKey } from '../../constants/ageGroups';
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
@@ -49,21 +50,38 @@ const COLOR = {
   shadow: '#2D2016',
 };
 
-const ALL_ACTIONS: {
+interface QuickAction {
   icon: ReturnType<typeof require>;
   label: string;
   route: string;
   bg: string;
-}[] = [
-  { icon: require('../../assets/quick-trait.png'), label: '기질 요약', route: '/(main)/trait-detail', bg: COLOR.coralBg },
-  { icon: require('../../assets/quick-report.png'), label: '성장 기록', route: '/(main)/growth-stats', bg: COLOR.mintBg },
-  { icon: require('../../assets/quick-sleep.png'), label: '수면 예측', route: '/(main)/sleep-predict', bg: '#EDE7F6' },
-  { icon: require('../../assets/quick-learning.png'), label: '육아 기록', route: '/(main)/baby-tracker', bg: COLOR.mintBg },
-  { icon: require('../../assets/quick-lullaby.png'), label: '자장가', route: '/(main)/lullaby', bg: '#EDE7F6' },
-  { icon: require('../../assets/quick-timeline.png'), label: '타임라인', route: '/(main)/album', bg: '#E0F2F1' },
-  { icon: require('../../assets/quick-coparenting.png'), label: '공동육아', route: '/(main)/coparenting', bg: '#FFF3E0' },
-  { icon: require('../../assets/quick-parent-level.png'), label: '새싹부모', route: '/(main)/parent-level', bg: '#E8F5E9' },
+  ages: AgeGroupKey[]; // 표시할 연령 그룹
+}
+
+const ALL_ACTIONS: QuickAction[] = [
+  // 공통
+  { icon: require('../../assets/quick-learning.png'), label: '육아 기록', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['infant', 'toddler'] },
+  { icon: require('../../assets/quick-learning.png'), label: '생활 기록', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['elementary'] },
+  { icon: require('../../assets/quick-report.png'), label: '성장 통계', route: '/(main)/growth-stats', bg: COLOR.mintBg, ages: ['infant', 'toddler', 'elementary'] },
+  // 영아 전용
+  { icon: require('../../assets/cat-crying.png'), label: '울음 분석', route: '/(main)/cry-analyzer', bg: '#FFF0E6', ages: ['infant'] },
+  { icon: require('../../assets/cat-poop.png'), label: '대변 분석', route: '/(main)/poop-analyzer', bg: '#FFF0E6', ages: ['infant', 'toddler'] },
+  // 영유아
+  { icon: require('../../assets/quick-sleep.png'), label: '수면 예측', route: '/(main)/sleep-predict', bg: '#EDE7F6', ages: ['infant', 'toddler'] },
+  { icon: require('../../assets/quick-lullaby.png'), label: '자장가', route: '/(main)/lullaby', bg: '#EDE7F6', ages: ['infant', 'toddler'] },
+  // 유아 + 초등
+  { icon: require('../../assets/play-activity.png'), label: '놀이 학습', route: '/(main)/play-learning', bg: COLOR.yellowBg, ages: ['toddler', 'elementary'] },
+  // 초등
+  { icon: require('../../assets/icon-hospital.png'), label: '소아과', route: '/(main)/clinic', bg: '#E8F5E9', ages: ['infant', 'toddler', 'elementary'] },
+  // 공통
+  { icon: require('../../assets/quick-timeline.png'), label: '타임라인', route: '/(main)/album', bg: '#E0F2F1', ages: ['infant', 'toddler', 'elementary'] },
+  { icon: require('../../assets/quick-coparenting.png'), label: '공동육아', route: '/(main)/coparenting', bg: '#FFF3E0', ages: ['infant', 'toddler', 'elementary'] },
+  { icon: require('../../assets/quick-parent-level.png'), label: '새싹부모', route: '/(main)/parent-level', bg: '#E8F5E9', ages: ['infant', 'toddler', 'elementary'] },
 ];
+
+function getActionsForAge(ageGroup: AgeGroupKey): QuickAction[] {
+  return ALL_ACTIONS.filter((a) => a.ages.includes(ageGroup)).slice(0, 8);
+}
 
 /* ------------------------------------------------------------------ */
 /* Retention Types                                                     */
@@ -451,7 +469,7 @@ export default function HomeScreen() {
           <TodayCard child={child} />
 
           {/* === Quick Actions (8 icons, 2 rows) === */}
-          <AllActionsGrid />
+          <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} />
 
           {/* === Monthly Characteristic === */}
           <MonthlyCharCard child={child} />
@@ -666,10 +684,11 @@ function MonthlyCharCard({ child }: { child: Child }) {
   );
 }
 
-function AllActionsGrid() {
+function AllActionsGrid({ ageGroup }: { ageGroup: AgeGroupKey }) {
+  const actions = getActionsForAge(ageGroup);
   return (
     <View style={styles.quickSection}>
-      {ALL_ACTIONS.map((action) => (
+      {actions.map((action) => (
         <TouchableOpacity
           key={action.label}
           style={styles.quickItem}

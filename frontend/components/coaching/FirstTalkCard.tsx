@@ -68,7 +68,11 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
     const trimmed = answer.trim();
     if (!trimmed || submitting) return;
     setSubmitting(true);
-    onSelect(trimmed);
+    // 원래 질문 컨텍스트를 포함하여 AI가 맥락을 이해하도록
+    const contextMsg = data?.suggestedQuestion
+      ? `[코치 질문: ${data.suggestedQuestion}] ${trimmed}`
+      : trimmed;
+    onSelect(contextMsg);
   };
 
   if (loading) {
@@ -163,7 +167,11 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
             <TouchableOpacity
               key={opt}
               style={styles.optionBtn}
-              onPress={() => { setSubmitting(true); onSelect(opt); }}
+              onPress={() => {
+                setSubmitting(true);
+                // 원래 질문 컨텍스트를 포함하여 AI가 맥락을 이해하도록
+                onSelect(`[코치 질문: ${data.suggestedQuestion}] ${opt}`);
+              }}
               disabled={submitting}
               activeOpacity={0.7}
             >

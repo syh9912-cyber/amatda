@@ -346,18 +346,26 @@ export function registerHistoryHandlers(router: Router): void {
       const access = await getChildIfAccessible(childId, req.userId, 'viewCoaching', res);
       if (!access) return;
 
+      // orderBy 없이 조회 후 코드에서 정렬 (복합 인덱스 미생성 시에도 안전)
       const snap = await collections.coachingSessions
         .where('childId', '==', childId)
-        .orderBy('createdAt', 'desc')
-        .limit(50)
+        .limit(100)
         .get();
 
-      const sessions = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Record<string, unknown>),
-      }));
+      const toTimeStr = (v: unknown): string => {
+        if (typeof v === 'string') return v;
+        if (v && typeof v === 'object' && 'toDate' in v) {
+          return (v as { toDate: () => Date }).toDate().toISOString();
+        }
+        return '';
+      };
 
-      success(res, sessions);
+      const sessions: Record<string, unknown>[] = snap.docs
+        .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }));
+      sessions.sort((a, b) => toTimeStr(b['createdAt']).localeCompare(toTimeStr(a['createdAt'])));
+      const limited = sessions.slice(0, 50);
+
+      success(res, limited);
     } catch (err) {
       console.error('History error:', err);
       error(res, '코칭 기록 조회 중 오류가 발생했습니다', 500);
