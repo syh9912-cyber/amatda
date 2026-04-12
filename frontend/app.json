@@ -72,8 +72,7 @@
             "./assets/sounds/amatda_chime.wav"
           ]
         }
-      ],
-      "@sentry/react-native"
+      ]
     ],
     "updates": {
       "enabled": true,
