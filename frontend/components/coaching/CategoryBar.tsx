@@ -1,11 +1,15 @@
-import { ScrollView, TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { CONCERN_CATEGORIES, COACHING_COLORS } from './types';
+import { ScrollView, TouchableOpacity, Text, Image, StyleSheet } from 'react-native';
+import { CONCERN_CATEGORIES, COACHING_COLORS, getCategoriesForAge } from './types';
+import type { AgeGroupKey } from '../../constants/ageGroups';
 
 interface Props {
   onSelect: (categoryKey: string, label: string) => void;
+  ageGroup?: AgeGroupKey;
 }
 
-export function CategoryBar({ onSelect }: Props) {
+export function CategoryBar({ onSelect, ageGroup }: Props) {
+  const categories = ageGroup ? getCategoriesForAge(ageGroup) : CONCERN_CATEGORIES;
+
   return (
     <ScrollView
       horizontal
@@ -13,14 +17,14 @@ export function CategoryBar({ onSelect }: Props) {
       contentContainerStyle={styles.row}
       style={styles.container}
     >
-      {CONCERN_CATEGORIES.map((cat) => (
+      {categories.map((cat) => (
         <TouchableOpacity
           key={cat.key}
           style={styles.chip}
           onPress={() => onSelect(cat.key, cat.label)}
           activeOpacity={0.7}
         >
-          <Text style={styles.chipEmoji}>{cat.emoji}</Text>
+          <Image source={cat.icon} style={styles.chipIcon} resizeMode="contain" />
           <Text style={styles.chipLabel}>{cat.label}</Text>
         </TouchableOpacity>
       ))}
@@ -48,7 +52,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COACHING_COLORS.border,
   },
-  chipEmoji: { fontSize: 16 },
+  chipIcon: { width: 20, height: 20, borderRadius: 4 },
   chipLabel: {
     fontSize: 13,
     fontWeight: '600',

@@ -31,6 +31,14 @@ export const collections = {
   clinics: db.collection('clinics'),
   clinicReviews: db.collection('clinicReviews'),
   pushSchedules: db.collection('pushSchedules'),
+  recommendationCache: db.collection('recommendationCache'),
+  analysisUsage: db.collection('analysisUsage'),
+  milestoneChecks: db.collection('milestoneChecks'),
+  sleepPredictions: db.collection('sleepPredictions'),
+  sleepKnowledgeCache: db.collection('sleepKnowledgeCache'),
+  familyMembers: db.collection('familyMembers'),
+  autoDiaries: db.collection('autoDiaries'),
+  timeCapsules: db.collection('timeCapsules'),
 };
 
 /** 문서 ID 생성 */

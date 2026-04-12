@@ -6,46 +6,46 @@ import { isGeminiAvailable, callGeminiJSON } from '../../services/coaching/gemin
 
 // ─── 연령/기질별 대표 고민 ───
 
-const TOP_CONCERNS: Record<string, Record<string, string>> = {
+const TOP_CONCERNS: Record<string, Record<string, { question: string; options: string[] }>> = {
   infant: {
-    '활동형': '밤에 자주 깨서 울어요',
-    '탐구형': '낯선 환경에서 예민하게 반응해요',
-    '조화형': '분리불안이 심해요',
-    '분석형': '새로운 음식을 거부해요',
-    '감성형': '쉽게 칭얼거리고 보채요',
+    '활동형': { question: '밤에 자주 깨는 편인가요?', options: ['네, 자주 깨요', '가끔 깨요', '잘 자는 편이에요'] },
+    '탐구형': { question: '낯선 곳에 가면 예민해지나요?', options: ['네, 많이 예민해요', '조금 그래요', '괜찮은 편이에요'] },
+    '조화형': { question: '엄마와 떨어지면 많이 우나요?', options: ['네, 많이 울어요', '조금 보채요', '괜찮아요'] },
+    '분석형': { question: '새로운 음식을 잘 먹나요?', options: ['거부하는 편이에요', '조금 까다로워요', '잘 먹어요'] },
+    '감성형': { question: '쉽게 보채거나 칭얼거리나요?', options: ['네, 자주 그래요', '가끔 그래요', '잘 안 그래요'] },
   },
   toddler: {
-    '활동형': '가만히 앉아 있질 못해요',
-    '탐구형': '왜? 질문이 끝이 없어요',
-    '조화형': '어린이집 갈 때 너무 울어요',
-    '분석형': '편식이 심해졌어요',
-    '감성형': '사소한 것에도 많이 울어요',
+    '활동형': { question: '가만히 앉아있기 힘들어하나요?', options: ['네, 많이 그래요', '조금 그래요', '괜찮아요'] },
+    '탐구형': { question: '"왜?" 질문이 끝이 없나요?', options: ['네, 끊임없어요', '가끔 그래요', '아직 별로 안 해요'] },
+    '조화형': { question: '어린이집 갈 때 많이 우나요?', options: ['네, 매일 울어요', '가끔 울어요', '잘 다녀요'] },
+    '분석형': { question: '편식이 심한 편인가요?', options: ['네, 심해요', '조금 까다로워요', '잘 먹어요'] },
+    '감성형': { question: '사소한 일에도 잘 우나요?', options: ['네, 자주 울어요', '가끔 그래요', '잘 안 울어요'] },
   },
   preschool: {
-    '활동형': '친구를 때리거나 밀어요',
-    '탐구형': '집중력이 너무 짧아요',
-    '조화형': '혼자 놀지 못하고 항상 엄마를 찾아요',
-    '분석형': '실수하면 크게 좌절해요',
-    '감성형': '감정 기복이 심해요',
+    '활동형': { question: '친구와 놀 때 거칠게 노나요?', options: ['네, 좀 거칠어요', '가끔 그래요', '순한 편이에요'] },
+    '탐구형': { question: '한 가지에 오래 집중하기 어려워하나요?', options: ['네, 많이 그래요', '조금 그래요', '집중 잘해요'] },
+    '조화형': { question: '혼자 놀기보다 항상 같이 놀자고 하나요?', options: ['네, 항상 그래요', '가끔 그래요', '혼자도 잘 놀아요'] },
+    '분석형': { question: '실수하면 크게 속상해하나요?', options: ['네, 많이 그래요', '조금 그래요', '괜찮아해요'] },
+    '감성형': { question: '기분이 자주 바뀌나요?', options: ['네, 자주 바뀌어요', '가끔 그래요', '안정적이에요'] },
   },
 };
 
 function getDefaultGreeting(
-  name: string, ageInfo: string, temperament: string, topConcern: string
+  name: string, _ageInfo: string, temperament: string, concern: { question: string; options: string[] }
 ): { intro: string; traitSummary: string; suggestedQuestion: string; quickOptions: string[] } {
   const traitDesc: Record<string, string> = {
-    '활동형': `${name}이는 에너지가 넘치고 활발한 활동형 기질이에요. 새로운 것에 도전하는 걸 좋아하지만, 에너지 발산이 안 되면 짜증이 늘 수 있어요. 충분한 신체 활동과 함께 차분한 시간을 균형 있게 가져주는 게 중요해요.`,
-    '탐구형': `${name}이는 호기심이 강하고 관찰력이 뛰어난 탐구형 기질이에요. "왜?"라는 질문으로 세상을 이해하려 하고, 새로운 것을 발견하면 집중력이 높아져요. 충분한 탐색 시간을 주시면 좋아요.`,
-    '조화형': `${name}이는 따뜻하고 안정적인 조화형 기질이에요. 규칙적인 생활을 좋아하고, 친숙한 환경에서 편안함을 느껴요. 갑작스러운 변화보다는 미리 알려주고 준비 시간을 주시면 좋아요.`,
-    '분석형': `${name}이는 꼼꼼하고 논리적인 분석형 기질이에요. 규칙과 패턴을 좋아하고, 이유를 알면 더 잘 따라와요. 명확한 설명과 예측 가능한 루틴이 아이에게 안정감을 줄 거예요.`,
-    '감성형': `${name}이는 감정이 풍부하고 공감 능력이 뛰어난 감성형 기질이에요. 주변 분위기에 민감하게 반응하고, 감정 표현이 다양해요. 아이의 감정을 먼저 읽어주고 공감해주시면 큰 힘이 돼요.`,
+    '활동형': `${name}이는 에너지가 넘치는 활동형이에요! 충분히 움직일 수 있는 시간을 주면 더 잘 먹고 잘 자요.`,
+    '탐구형': `${name}이는 호기심 가득한 탐구형이에요! 새로운 걸 발견하면 집중력이 높아지니 탐색 시간을 충분히 주세요.`,
+    '조화형': `${name}이는 따뜻한 조화형이에요! 규칙적인 생활과 미리 알려주기가 아이에게 안정감을 줘요.`,
+    '분석형': `${name}이는 꼼꼼한 분석형이에요! 이유를 설명해주면 더 잘 따라오니 "왜"를 알려주세요.`,
+    '감성형': `${name}이는 감정이 풍부한 감성형이에요! 감정을 먼저 읽어주고 공감해주면 큰 힘이 돼요.`,
   };
 
   return {
-    intro: `${name}이를 만나게 되어 반가워요!`,
-    traitSummary: traitDesc[temperament] ?? `${name}이는 고유한 기질을 가진 아이에요. 아이의 성향을 이해하면 육아가 한결 수월해질 거예요.`,
-    suggestedQuestion: `${ageInfo} ${temperament} 아이에게 가장 많은 고민이 "${topConcern}"인데, 혹시 ${name}이도 비슷한가요?`,
-    quickOptions: ['네, 맞아요!', '아니요, 다른 고민이 있어요', '아직 잘 모르겠어요'],
+    intro: `${name}이를 만나서 반가워요!`,
+    traitSummary: traitDesc[temperament] ?? `${name}이는 고유한 기질을 가진 아이에요. 아이 성향을 이해하면 육아가 수월해져요.`,
+    suggestedQuestion: concern.question,
+    quickOptions: concern.options,
   };
 }
 
@@ -73,7 +73,7 @@ export function registerFirstTalkHandler(router: Router): void {
 
       // 기질별 대표 고민
       const concerns = TOP_CONCERNS[ageGroup] ?? TOP_CONCERNS.toddler;
-      const topConcern = concerns[child.temperament] ?? concerns['조화형'];
+      const concern = concerns[child.temperament] ?? concerns['조화형'];
 
       // AI에게 첫 인사 생성 요청
       let greeting: {
@@ -85,7 +85,7 @@ export function registerFirstTalkHandler(router: Router): void {
 
       if (isGeminiAvailable()) {
         try {
-          const prompt = `너는 영유아 육아 코치야. 아이가 방금 등록되었어. 부모에게 처음 인사하면서 아이 기질을 설명하고 첫 질문을 유도해.
+          const prompt = `너는 영유아 육아 코치야. 아이가 방금 등록되었어. 부모에게 처음 인사하면서 아이 기질을 짧게 설명하고, 쉬운 첫 질문을 해줘.
 
 아이 정보:
 - 이름: ${child.name}
@@ -94,23 +94,29 @@ export function registerFirstTalkHandler(router: Router): void {
 - 기질: ${child.temperament}
 - 기질 특성: ${child.temperamentDetail}
 
+규칙:
+1. suggestedQuestion은 "~나요?" "~인가요?" 형태의 간단한 예/아니오 질문 (15자 내외)
+2. quickOptions는 3개, 부모가 바로 터치할 수 있는 짧은 답변 (8자 이내)
+3. traitSummary는 2문장 이내, 쉬운 말로
+4. '사주/오행/천간/지지' 용어 절대 금지
+
 반드시 아래 JSON만 출력해:
 {
-  "intro": "반갑다는 인사 + 아이 이름 호명 (1문장)",
-  "traitSummary": "이 아이의 기질을 부모가 이해하기 쉽게 2~3문장으로 설명. '사주/오행' 용어 절대 금지. 기질/성향/에너지로만 표현",
-  "suggestedQuestion": "이 기질과 월령에서 가장 흔한 고민을 자연스럽게 물어보는 1문장",
-  "quickOptions": ["네, 그래요!", "아니요, 다른 고민이 있어요", "아직 잘 모르겠어요"]
+  "intro": "반갑다는 인사 1문장",
+  "traitSummary": "기질 설명 2문장 이내",
+  "suggestedQuestion": "쉬운 예/아니오 질문 1문장",
+  "quickOptions": ["짧은답변1", "짧은답변2", "짧은답변3"]
 }`;
 
           greeting = await callGeminiJSON<typeof greeting>(prompt, {
-            temperature: 0.6,
-            maxTokens: 400,
+            temperature: 0.5,
+            maxTokens: 300,
           });
         } catch {
-          greeting = getDefaultGreeting(child.name, child.ageInfo, child.temperament, topConcern);
+          greeting = getDefaultGreeting(child.name, child.ageInfo, child.temperament, concern);
         }
       } else {
-        greeting = getDefaultGreeting(child.name, child.ageInfo, child.temperament, topConcern);
+        greeting = getDefaultGreeting(child.name, child.ageInfo, child.temperament, concern);
       }
 
       success(res, {

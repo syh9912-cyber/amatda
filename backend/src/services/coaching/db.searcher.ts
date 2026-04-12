@@ -44,7 +44,12 @@ function isValidMatch(message: string, keyword: string): boolean {
   return true;
 }
 
-function scoreEntry(entry: CoachingEntry, message: string, categoryHint?: string): number {
+function scoreEntry(
+  entry: CoachingEntry,
+  message: string,
+  categoryHint?: string,
+  dominantType?: string,
+): number {
   let score = 0;
   for (const keyword of entry.keywords) {
     if (keyword.length < 2) continue;
@@ -58,11 +63,18 @@ function scoreEntry(entry: CoachingEntry, message: string, categoryHint?: string
       }
     }
   }
-  // 카테고리 힌트 보너스
+
+  // 카테고리 일치 보너스 (3 → 8로 강화)
   const hintKo = categoryHint ? (CATEGORY_MAP[categoryHint] ?? categoryHint) : null;
   if (hintKo && entry.category === hintKo) {
-    score += 3;
+    score += 8;
   }
+
+  // 기질별 맞춤 조언이 있으면 보너스
+  if (dominantType && entry.traitAdvice[dominantType]) {
+    score += 4;
+  }
+
   return score;
 }
 
@@ -78,7 +90,7 @@ export function findTopCoachingEntries(
   const scored: Array<{ entry: CoachingEntry; score: number }> = [];
 
   for (const entry of db) {
-    const score = scoreEntry(entry, message, category);
+    const score = scoreEntry(entry, message, category, dominantType);
     if (score >= 4) {
       scored.push({ entry, score });
     }

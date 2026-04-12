@@ -20,10 +20,15 @@ import coachingRoutes from './routes/coaching/index';
 import clinicRoutes from './routes/clinic';
 import memoriesRoutes from './routes/memories';
 import retentionRoutes from './routes/retention';
+import recommendationRoutes from './routes/recommendations';
+import growthRoutes from './routes/growth';
+import sleepRoutes from './routes/sleep';
+import coparentingRoutes from './routes/coparenting';
+import sosRoutes from './routes/sos';
 
 const app = express();
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 setupSecurity(app);
 
 app.use('/api/auth', authRoutes);
@@ -44,6 +49,11 @@ app.use('/api/coaching', coachingRoutes);
 app.use('/api/clinics', clinicRoutes);
 app.use('/api/memories', memoriesRoutes);
 app.use('/api/retention', retentionRoutes);
+app.use('/api/recommendations', recommendationRoutes);
+app.use('/api/growth', growthRoutes);
+app.use('/api/sleep', sleepRoutes);
+app.use('/api/coparenting', coparentingRoutes);
+app.use('/api/sos', sosRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() } });

@@ -17,6 +17,8 @@ export interface MomstagramPost {
   childAge: string;
   dominantType: string;
   imageUri: string | null;
+  videoUrl: string | null;
+  mediaType: 'image' | 'video' | 'none';
   content: string;
   likes: number;
   liked: boolean;
@@ -83,6 +85,8 @@ interface ApiFeedPost {
   dominantType?: string;
   imageUrl?: string;
   thumbnailUrl?: string;
+  videoUrl?: string;
+  mediaType?: string;
   content: string;
   likeCount?: number;
   likes?: number;
@@ -105,6 +109,8 @@ interface ApiComment {
 }
 
 function mapApiPostToStore(p: ApiFeedPost): MomstagramPost {
+  const hasVideo = !!p.videoUrl || p.mediaType === 'video';
+  const hasImage = !!p.imageUrl || !!p.thumbnailUrl;
   return {
     id: p.id,
     userName: p.userName ?? p.authorName ?? '익명',
@@ -112,6 +118,8 @@ function mapApiPostToStore(p: ApiFeedPost): MomstagramPost {
     childAge: p.childAge ?? '',
     dominantType: p.dominantType ?? '',
     imageUri: p.imageUrl ?? p.thumbnailUrl ?? null,
+    videoUrl: p.videoUrl ?? null,
+    mediaType: hasVideo ? 'video' : hasImage ? 'image' : 'none',
     content: p.content,
     likes: p.likeCount ?? p.likes ?? 0,
     liked: p.liked ?? p.isLiked ?? false,
@@ -139,11 +147,22 @@ export const useMomstagramStore = create<MomstagramState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const res = await momstagramApi.getFeed(0, 20);
-      const data = res.data;
-      const feedPosts: ApiFeedPost[] = data.data ?? data.posts ?? data ?? [];
-      const mapped = Array.isArray(feedPosts) ? feedPosts.map(mapApiPostToStore) : [];
+      const raw = res.data;
+      // API returns { success, data: { posts: [...] } }
+      const inner = raw?.data ?? raw;
+      const feedPosts: ApiFeedPost[] = inner?.posts ?? (Array.isArray(inner) ? inner : []);
+      const mapped = feedPosts.map(mapApiPostToStore);
+
+      // 최근 로컬에서 추가된 게시물이 서버 응답에 없으면 보존
+      const currentPosts = get().posts;
+      const serverIds = new Set(mapped.map((p) => p.id));
+      const recentLocal = currentPosts.filter(
+        (p) => !serverIds.has(p.id) && Date.now() - new Date(p.createdAt).getTime() < 60000,
+      );
+      const merged = [...recentLocal, ...mapped];
+
       set({
-        posts: mapped,
+        posts: merged,
         page: 0,
         hasMore: mapped.length >= 20,
         loading: false,
@@ -161,9 +180,10 @@ export const useMomstagramStore = create<MomstagramState>((set, get) => ({
     set({ loading: true });
     try {
       const res = await momstagramApi.getFeed(nextPage, 20);
-      const data = res.data;
-      const feedPosts: ApiFeedPost[] = data.data ?? data.posts ?? data ?? [];
-      const mapped = Array.isArray(feedPosts) ? feedPosts.map(mapApiPostToStore) : [];
+      const raw = res.data;
+      const inner = raw?.data ?? raw;
+      const feedPosts: ApiFeedPost[] = inner?.posts ?? (Array.isArray(inner) ? inner : []);
+      const mapped = feedPosts.map(mapApiPostToStore);
       set((s) => ({
         posts: [...s.posts, ...mapped],
         page: nextPage,

@@ -13,7 +13,7 @@ import { AppNameDisplay } from '../../components/ui/AppNameDisplay';
 import { AuthInput } from '../../components/ui/AuthInput';
 import { AuthDivider } from '../../components/ui/AuthDivider';
 import { SocialLoginButtons } from '../../components/ui/SocialLoginButtons';
-import { useLoginHandlers } from './useLoginHandlers';
+import { useLoginHandlers } from '../../hooks/useLoginHandlers';
 
 export default function LoginScreen() {
   const h = useLoginHandlers();
@@ -30,11 +30,15 @@ export default function LoginScreen() {
         bounces={false}
       >
         <View style={styles.header}>
-          <Image
-            source={require('../../assets/child-diary.png')}
-            style={{ width: 150, height: 150 }}
-            resizeMode="contain"
-          />
+          <View style={{ width: 360, height: 360, backgroundColor: '#FDF6F0', borderRadius: 24, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#FDF6F0' }} />
+            <Image
+              source={require('../../assets/child-diary.png')}
+              style={{ width: 350, height: 350, backgroundColor: '#FDF6F0', marginLeft: -12 }}
+              resizeMode="contain"
+              fadeDuration={0}
+            />
+          </View>
           <View style={styles.nameWrap}>
             <AppNameDisplay size="small" />
           </View>
@@ -46,7 +50,7 @@ export default function LoginScreen() {
         <View style={styles.body}>
           <View style={styles.form}>
             <AuthInput
-              icon="📧"
+              icon={require('../../assets/icon-comment.png')}
               placeholder="이메일"
               value={h.email}
               onChangeText={h.setEmail}
@@ -54,7 +58,7 @@ export default function LoginScreen() {
               autoCapitalize="none"
             />
             <AuthInput
-              icon="🔒"
+              icon={require('../../assets/icon-lock.png')}
               placeholder="비밀번호"
               value={h.password}
               onChangeText={h.setPassword}
@@ -98,8 +102,8 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.version}>v1.0.0</Text>
-          <Text style={styles.companyName}>Bloomin Corp.</Text>
+          <Text style={styles.version}>{`v${require('../../app.json').expo.version}`}</Text>
+          <Text style={styles.companyName}>SY Labs</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -115,7 +119,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    paddingTop: 72,
+    paddingTop: 48,
     alignItems: 'center',
   },
   nameWrap: {

@@ -9,13 +9,14 @@ import {
   RefreshControl,
   Image,
   Alert,
-  Share,
+  Modal,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { childApi, coachingApi, retentionApi } from '../../services/api';
+import { childApi, coachingApi, retentionApi, premiumApi } from '../../services/api';
 import { useChildStore, Child } from '../../stores/childStore';
 import { useAuthStore } from '../../stores/authStore';
 import { ChildSelector } from '../../components/home/ChildSelector';
@@ -25,6 +26,8 @@ import {
   ProactivePopup,
   PopupReason,
 } from '../../components/coaching/ProactivePopup';
+import { getCharacteristicForChild } from '../../constants/monthlyCharacteristics';
+import { OnboardingGuide } from '../../components/common/OnboardingGuide';
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
@@ -46,36 +49,20 @@ const COLOR = {
   shadow: '#2D2016',
 };
 
-const QUICK_ACTIONS: {
-  emoji: string;
+const ALL_ACTIONS: {
+  icon: ReturnType<typeof require>;
   label: string;
   route: string;
   bg: string;
 }[] = [
-  {
-    emoji: '🧩',
-    label: '기질 요약',
-    route: '/(main)/trait-detail',
-    bg: COLOR.coralBg,
-  },
-  {
-    emoji: '📊',
-    label: '성장 기록',
-    route: '/(main)/growth-stats',
-    bg: COLOR.mintBg,
-  },
-  {
-    emoji: '📝',
-    label: '관찰 일기',
-    route: '/(main)/diary',
-    bg: COLOR.yellowBg,
-  },
-  {
-    emoji: '📚',
-    label: '추천 학습',
-    route: '/(main)/academy',
-    bg: COLOR.mintBg,
-  },
+  { icon: require('../../assets/quick-trait.png'), label: '기질 요약', route: '/(main)/trait-detail', bg: COLOR.coralBg },
+  { icon: require('../../assets/quick-report.png'), label: '성장 기록', route: '/(main)/growth-stats', bg: COLOR.mintBg },
+  { icon: require('../../assets/quick-sleep.png'), label: '수면 예측', route: '/(main)/sleep-predict', bg: '#EDE7F6' },
+  { icon: require('../../assets/quick-learning.png'), label: '육아 기록', route: '/(main)/baby-tracker', bg: COLOR.mintBg },
+  { icon: require('../../assets/quick-lullaby.png'), label: '자장가', route: '/(main)/lullaby', bg: '#EDE7F6' },
+  { icon: require('../../assets/quick-timeline.png'), label: '타임라인', route: '/(main)/album', bg: '#E0F2F1' },
+  { icon: require('../../assets/quick-coparenting.png'), label: '공동육아', route: '/(main)/coparenting', bg: '#FFF3E0' },
+  { icon: require('../../assets/quick-parent-level.png'), label: '새싹부모', route: '/(main)/parent-level', bg: '#E8F5E9' },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -85,8 +72,8 @@ const QUICK_ACTIONS: {
 interface CountdownData {
   daysSinceBirth: number;
   childName: string;
-  nextMilestone: string;
-  daysUntilMilestone: number;
+  displayText: string;
+  nextMilestone: { label: string; daysUntil: number; monthsUntil?: number } | null;
 }
 
 interface DailyCardData {
@@ -97,30 +84,11 @@ interface DailyCardData {
 
 interface StreakData {
   currentStreak: number;
+  longestStreak: number;
   level: number;
   levelName: string;
-  progressToNext: number;
-  maxForNext: number;
-}
-
-interface ParentMentalData {
-  stressLevel: 'low' | 'medium' | 'high';
-  encouragement: string;
-  feeling: string;
-}
-
-interface FuturePredictData {
-  currentAge: string;
-  predictedAge: string;
-  predictions: string[];
-  prepTips: string[];
-}
-
-interface NowActivityData {
-  activityName: string;
-  duration: string;
-  reason: string;
-  timeOfDay: 'morning' | 'afternoon' | 'evening';
+  nextLevelDays: number;
+  totalSessions: number;
 }
 
 interface WeeklyReportData {
@@ -144,62 +112,14 @@ function getAgeText(months: number): string {
   return `${years}세 ${remaining}개월`;
 }
 
-function getRecommendations(child: Child): {
-  emoji: string;
-  title: string;
-  desc: string;
-  route: string;
-}[] {
-  const dominant = child.innateData.dominantType;
-  const group = child.ageInfo.group;
+/* ── 맞춤 추천 카테고리 (홈 + 마이페이지 동일) ── */
 
-  const base = [
-    {
-      emoji: '🎨',
-      title: '창의력이 쐑쐑! 미술 체험 추천',
-      desc: `${child.name}의 기질에 맞는 창의 활동을 확인하세요`,
-      route: '/(main)/play-learning',
-    },
-    {
-      emoji: '📚',
-      title: '집에서 할 수 있는 놀이학습 방법',
-      desc: '연령에 맞춴 홈스쿨링 가이드',
-      route: '/(main)/play-learning',
-    },
-    {
-      emoji: '🥗',
-      title: '면역력에 좋은 제철 음식 추천',
-      desc: '성장기 영양 밸런스를 맞춰보세요',
-      route: '/(main)/nutrition',
-    },
-  ];
-
-  if (group === 'infant') {
-    base[0] = {
-      emoji: '👶',
-      title: '감각 발달 놀이 추천',
-      desc: '오감을 자극하는 놀이 활동이에요',
-      route: '/(main)/play-learning',
-    };
-    base[2] = {
-      emoji: '🍜',
-      title: '월령별 이유식 가이드',
-      desc: '단계별 이유식 레시피를 확인하세요',
-      route: '/(main)/nutrition',
-    };
-  }
-
-  if (dominant.includes('활동') || dominant.includes('火')) {
-    base[0] = {
-      emoji: '⚽',
-      title: '에너지 넘치는 체육 활동 추천',
-      desc: '활동적인 기질에 맞는 스포츠를 찾아보세요',
-      route: '/(main)/play-learning',
-    };
-  }
-
-  return base;
-}
+const RECO_CATEGORIES = [
+  { icon: require('../../assets/cat-eating.png'), label: '음식 추천', category: '음식', desc: '기질에 맞는 영양 식단과 레시피', color: '#FF8C5A', bg: '#FFF0E6' },
+  { icon: require('../../assets/cat-growth.png'), label: '생활습관', category: '생활습관', desc: '수면, 위생, 루틴 등 생활 가이드', color: '#4ECDC4', bg: '#E8FAF8' },
+  { icon: require('../../assets/cat-social.png'), label: '학원 추천', category: '학원', desc: '기질과 발달에 맞는 교육 활동', color: '#7C83EC', bg: '#EEEDFC' },
+  { icon: require('../../assets/play-activity.png'), label: '놀이학습', category: '놀이학습', desc: '집에서 할 수 있는 놀이와 활동', color: '#FFB344', bg: '#FFF8E1' },
+] as const;
 
 /* ------------------------------------------------------------------ */
 /* Main Screen                                                         */
@@ -207,6 +127,8 @@ function getRecommendations(child: Child): {
 
 const LAST_OPEN_KEY = 'amatda_last_open_ts';
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+const TRIAL_AUTO_KEY = 'amatda_trial_auto_started';
+const TRIAL_POPUP_KEY = 'amatda_trial_popup_dismissed';
 
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
@@ -223,14 +145,16 @@ export default function HomeScreen() {
   const [weeklyReport, setWeeklyReport] = useState<WeeklyReportData | null>(null);
   const [dailyDiary, setDailyDiary] = useState<string | null>(null);
 
-  const [parentMental, setParentMental] = useState<ParentMentalData | null>(null);
-  const [futurePrediction, setFuturePrediction] = useState<FuturePredictData | null>(null);
-  const [nowActivity, setNowActivity] = useState<NowActivityData | null>(null);
+  const [aiInsightsOpen, setAiInsightsOpen] = useState(false);
+  const [proactiveInsights, setProactiveInsights] = useState<Array<{
+    type: string; title: string; message: string; actionLabel?: string; actionRoute?: string;
+  }>>([]);
 
   const { children, selectedChild, setChildren, selectChild } =
     useChildStore();
   const { updateChild } = useChildStore();
   const logout = useAuthStore((s) => s.logout);
+  const [trialPopupVisible, setTrialPopupVisible] = useState(false);
 
   const loadRetentionData = useCallback(async (childId: string) => {
     const results = await Promise.allSettled([
@@ -249,9 +173,39 @@ export default function HomeScreen() {
     }
   }, []);
 
+  const checkTrialStatus = useCallback(async () => {
+    try {
+      const res = await premiumApi.status();
+      const status = res.data?.data as {
+        tier: string;
+        trialDaysLeft?: number;
+      } | undefined;
+      if (!status) return;
+
+      if (status.tier === 'FREE') {
+        const alreadyStarted = await AsyncStorage.getItem(TRIAL_AUTO_KEY);
+        if (!alreadyStarted && (status.trialDaysLeft === undefined || status.trialDaysLeft === null)) {
+          await premiumApi.startTrial();
+          await AsyncStorage.setItem(TRIAL_AUTO_KEY, '1');
+          Alert.alert('7일 무료 체험 시작!', '프리미엄 기능을 무료로 이용해보세요.');
+          return;
+        }
+        if (alreadyStarted && status.trialDaysLeft !== undefined && status.trialDaysLeft <= 0) {
+          const dismissed = await AsyncStorage.getItem(TRIAL_POPUP_KEY);
+          if (!dismissed) {
+            setTrialPopupVisible(true);
+          }
+        }
+      }
+    } catch {
+      // ignore trial check errors
+    }
+  }, []);
+
   useEffect(() => {
     loadChildren();
     checkProactivePopup();
+    checkTrialStatus();
   }, []);
 
   const loadWeeklyReport = useCallback(async (childId: string) => {
@@ -292,40 +246,15 @@ export default function HomeScreen() {
     }
   }, []);
 
-  const loadParentMental = useCallback(async (childId: string, streakDays: number) => {
-    if (streakDays < 3) return;
+  const loadProactiveInsights = useCallback(async (childId: string) => {
     try {
-      const res = await coachingApi.parentMental(childId);
-      const data = res.data?.data as ParentMentalData | undefined;
-      if (data?.encouragement) {
-        setParentMental(data);
+      const res = await coachingApi.dailyInsight(childId);
+      const data = res.data?.data as { insights?: Array<{ type: string; title: string; message: string; actionLabel?: string; actionRoute?: string }> } | undefined;
+      if (data?.insights && data.insights.length > 0) {
+        setProactiveInsights(data.insights);
       }
     } catch {
-      // silently hide section
-    }
-  }, []);
-
-  const loadFuturePrediction = useCallback(async (childId: string) => {
-    try {
-      const res = await coachingApi.futurePredict(childId);
-      const data = res.data?.data as FuturePredictData | undefined;
-      if (data?.predictions && data.predictions.length > 0) {
-        setFuturePrediction(data);
-      }
-    } catch {
-      // silently hide section
-    }
-  }, []);
-
-  const loadNowActivity = useCallback(async (childId: string) => {
-    try {
-      const res = await coachingApi.nowActivity(childId);
-      const data = res.data?.data as NowActivityData | undefined;
-      if (data?.activityName) {
-        setNowActivity(data);
-      }
-    } catch {
-      // silently hide section
+      // 인사이트 로딩 실패해도 앱은 정상
     }
   }, []);
 
@@ -334,17 +263,9 @@ export default function HomeScreen() {
       loadRetentionData(selectedChild.id);
       loadWeeklyReport(selectedChild.id);
       loadDailyDiary(selectedChild.id);
-      loadFuturePrediction(selectedChild.id);
-      loadNowActivity(selectedChild.id);
+      loadProactiveInsights(selectedChild.id);
     }
-  }, [selectedChild?.id, loadRetentionData, loadWeeklyReport, loadDailyDiary, loadFuturePrediction, loadNowActivity]);
-
-  // Load parent mental care after streak data is available (requires 3+ day streak)
-  useEffect(() => {
-    if (selectedChild && streak) {
-      loadParentMental(selectedChild.id, streak.currentStreak);
-    }
-  }, [selectedChild?.id, streak, loadParentMental]);
+  }, [selectedChild?.id, loadRetentionData, loadWeeklyReport, loadDailyDiary, loadProactiveInsights]);
 
   const handleDismissWeeklyReport = useCallback(async () => {
     setWeeklyReport(null);
@@ -362,9 +283,13 @@ export default function HomeScreen() {
   const loadChildren = async () => {
     try {
       const res = await childApi.list();
-      setChildren(res.data.data);
-    } catch {
-      // token expired etc
+      setChildren(res.data?.data ?? []);
+    } catch (e: unknown) {
+      const axErr = e as { response?: { status?: number }; message?: string };
+      console.error('loadChildren failed:', axErr.response?.status, axErr.message);
+      if (axErr.response?.status === 401) {
+        Alert.alert('인증 만료', '다시 로그인해주세요.');
+      }
     } finally {
       setLoading(false);
     }
@@ -437,13 +362,10 @@ export default function HomeScreen() {
         loadRetentionData(selectedChild.id),
         loadWeeklyReport(selectedChild.id),
         loadDailyDiary(selectedChild.id),
-        loadFuturePrediction(selectedChild.id),
-        loadNowActivity(selectedChild.id),
       ]);
-      // parent mental depends on streak, will reload via useEffect
     }
     setRefreshing(false);
-  }, [selectedChild?.id, loadRetentionData, loadWeeklyReport, loadDailyDiary, loadFuturePrediction, loadNowActivity]);
+  }, [selectedChild?.id, loadRetentionData, loadWeeklyReport, loadDailyDiary]);
 
   const pickPhoto = async () => {
     if (!selectedChild) return;
@@ -489,8 +411,9 @@ export default function HomeScreen() {
   const child = selectedChild;
 
   return (
+    <View style={styles.container}>
     <ScrollView
-      style={styles.container}
+      style={styles.scrollFill}
       contentContainerStyle={styles.content}
       refreshControl={
         <RefreshControl
@@ -500,13 +423,15 @@ export default function HomeScreen() {
         />
       }
     >
+      <OnboardingGuide />
+
       {/* === 1. Header === */}
       <Header child={child} onPickPhoto={pickPhoto} />
 
       {/* === Child Selector (multi-child) === */}
       {children.length > 1 && (
         <ChildSelector
-          children={children}
+          items={children}
           selectedId={selectedChild?.id ?? ''}
           onSelect={selectChild}
         />
@@ -514,45 +439,49 @@ export default function HomeScreen() {
 
       {child && (
         <>
-          {/* === Growth Countdown === */}
-          {countdown && <GrowthCountdown data={countdown} />}
+          {/* === Compact Stats (D-day + Streak) === */}
+          <CompactStats countdown={countdown} streak={streak} />
 
-          {/* === Now Activity (prominent position) === */}
-          {nowActivity && <NowActivityCard data={nowActivity} />}
+          {/* === Proactive Insight (AI가 먼저 말 거는 카드) === */}
+          {proactiveInsights.length > 0 && (
+            <InsightCards insights={proactiveInsights} />
+          )}
 
-          {/* === Streak Badge === */}
-          {streak && <StreakBadge data={streak} />}
-
-          {/* === Parent Mental Care (3+ day streak) === */}
-          {parentMental && <ParentMentalCard data={parentMental} />}
-
-          {/* === 2. Today's Card === */}
+          {/* === Today's Card === */}
           <TodayCard child={child} />
 
-          {/* === Weekly Report === */}
-          {weeklyReport ? (
-            <WeeklyReportCard
-              report={weeklyReport}
-              onDismiss={handleDismissWeeklyReport}
-            />
-          ) : null}
+          {/* === Quick Actions (8 icons, 2 rows) === */}
+          <AllActionsGrid />
 
-          {/* === Daily Diary === */}
-          {dailyDiary ? (
-            <DailyDiaryCard diary={dailyDiary} />
-          ) : null}
+          {/* === Monthly Characteristic === */}
+          <MonthlyCharCard child={child} />
 
-          {/* === Daily Tip Card === */}
-          {dailyCard && <DailyTipCard data={dailyCard} />}
+          {/* === AI Insights (collapsible) === */}
+          {(weeklyReport || dailyDiary) && (
+            <View style={styles.insightsSection}>
+              <TouchableOpacity
+                style={styles.insightsHeader}
+                onPress={() => setAiInsightsOpen((v) => !v)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.insightsTitle}>AI 인사이트</Text>
+                <Text style={styles.insightsArrow}>{aiInsightsOpen ? '∧' : '∨'}</Text>
+              </TouchableOpacity>
+              {aiInsightsOpen && (
+                <View style={styles.insightsBody}>
+                  {weeklyReport ? (
+                    <WeeklyReportCard report={weeklyReport} onDismiss={handleDismissWeeklyReport} />
+                  ) : null}
+                  {dailyDiary ? (
+                    <DailyDiaryCard diary={dailyDiary} />
+                  ) : null}
+                </View>
+              )}
+            </View>
+          )}
 
-          {/* === Future Prediction === */}
-          {futurePrediction && <FuturePredictCard data={futurePrediction} />}
-
-          {/* === 3. Quick Action Circles === */}
-          <QuickActions />
-
-          {/* === 4. Weekly Recommendations === */}
-          <RecommendationSection child={child} />
+          {/* === Recommendations === */}
+          <RecommendationSection />
         </>
       )}
 
@@ -564,9 +493,6 @@ export default function HomeScreen() {
         <Text style={styles.addMoreText}>+ 자녀 추가</Text>
       </TouchableOpacity>
 
-      {/* Version */}
-      <Text style={styles.version}>{'아맞다 v1.0.0'}</Text>
-
       {/* Proactive Popup */}
       <ProactivePopup
         visible={popupVisible}
@@ -575,7 +501,55 @@ export default function HomeScreen() {
         onRespond={handlePopupRespond}
         onDismiss={handlePopupDismiss}
       />
+
+      {/* Trial Expiry Popup */}
+      <Modal
+        visible={trialPopupVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTrialPopupVisible(false)}
+      >
+        <View style={styles.trialOverlay}>
+          <View style={styles.trialCard}>
+            <Text style={styles.trialEmoji}>{'👑'}</Text>
+            <Text style={styles.trialTitle}>무료 체험이 종료되었습니다</Text>
+            <Text style={styles.trialDesc}>
+              프리미엄으로 업그레이드하면 AI 코칭 무제한, 상세 리포트 등 모든 기능을 이용할 수 있어요.
+            </Text>
+            <TouchableOpacity
+              style={styles.trialPremiumBtn}
+              onPress={() => {
+                setTrialPopupVisible(false);
+                router.push('/(main)/subscription');
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.trialPremiumText}>프리미엄 구독하기</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.trialFreeBtn}
+              onPress={async () => {
+                setTrialPopupVisible(false);
+                await AsyncStorage.setItem(TRIAL_POPUP_KEY, '1');
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.trialFreeText}>무료로 계속하기</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
+
+    {/* Floating SOS Button */}
+    <TouchableOpacity
+      style={styles.sosFab}
+      onPress={() => router.push('/(main)/sos')}
+      activeOpacity={0.8}
+    >
+      <Text style={styles.sosFabText}>SOS</Text>
+    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -600,11 +574,12 @@ function Header({
               style={styles.childPhoto}
             />
           ) : (
-            <View style={styles.childPhotoPlaceholder}>
-              <Text style={styles.childPhotoEmoji}>
-                {child?.gender === 'F' ? '👧' : '👦'}
-              </Text>
-            </View>
+            <Image
+              source={child?.gender === 'F'
+                ? require('../../assets/avatar-girl.png')
+                : require('../../assets/avatar-boy.png')}
+              style={styles.childPhoto}
+            />
           )}
         </TouchableOpacity>
         <View style={styles.headerInfo}>
@@ -620,17 +595,17 @@ function Header({
       <View style={styles.headerRight}>
         <TouchableOpacity
           style={styles.iconBtn}
-          onPress={() => router.push('/(main)/chatbot' as never)}
+          onPress={() => router.push('/(main)/notification-settings' as never)}
           activeOpacity={0.7}
         >
-          <Text style={styles.iconEmoji}>{'🔔'}</Text>
+          <Image source={require('../../assets/icon-bell.png')} style={styles.headerIcon} resizeMode="contain" />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.iconBtn}
           onPress={() => router.push('/(main)/profile' as never)}
           activeOpacity={0.7}
         >
-          <Text style={styles.iconEmoji}>{'⚙️'}</Text>
+          <Image source={require('../../assets/icon-settings.png')} style={styles.headerIcon} resizeMode="contain" />
         </TouchableOpacity>
       </View>
     </View>
@@ -658,20 +633,51 @@ function TodayCard({ child }: { child: Child }) {
   );
 }
 
-function QuickActions() {
+function MonthlyCharCard({ child }: { child: Child }) {
+  const ageMonths = child.birthDate
+    ? Math.floor(
+        (Date.now() - new Date(child.birthDate).getTime()) /
+          (1000 * 60 * 60 * 24 * 30.44),
+      )
+    : null;
+
+  if (ageMonths === null) return null;
+
+  const temperament = child.innateData?.label ?? undefined;
+  const result = getCharacteristicForChild(ageMonths, temperament ?? '');
+  if (!result) return null;
+
+  return (
+    <TouchableOpacity
+      style={styles.monthlyCard}
+      activeOpacity={0.7}
+      onPress={() => router.push('/(main)/monthly-characteristic')}
+    >
+      <View style={styles.monthlyTop}>
+        <View style={styles.monthlyBadge}>
+          <Text style={styles.monthlyBadgeText}>{ageMonths}{'개월'}</Text>
+        </View>
+        <Text style={styles.monthlyTitle} numberOfLines={1}>
+          {ageMonths}{'개월 특징 — '}{result.characteristic.title}
+        </Text>
+        <Text style={styles.monthlyArrow}>{'>'}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function AllActionsGrid() {
   return (
     <View style={styles.quickSection}>
-      {QUICK_ACTIONS.map((action) => (
+      {ALL_ACTIONS.map((action) => (
         <TouchableOpacity
           key={action.label}
           style={styles.quickItem}
           onPress={() => router.push(action.route as never)}
           activeOpacity={0.7}
         >
-          <View
-            style={[styles.quickCircle, { backgroundColor: action.bg }]}
-          >
-            <Text style={styles.quickEmoji}>{action.emoji}</Text>
+          <View style={[styles.quickCircle, { backgroundColor: action.bg }]}>
+            <Image source={action.icon} style={styles.quickIcon} resizeMode="contain" />
           </View>
           <Text style={styles.quickLabel}>{action.label}</Text>
         </TouchableOpacity>
@@ -680,213 +686,133 @@ function QuickActions() {
   );
 }
 
-function RecommendationSection({ child }: { child: Child }) {
-  const items = getRecommendations(child);
-
+function RecommendationSection() {
   return (
     <View style={styles.recoSection}>
       <View style={styles.recoHeader}>
-        <Text style={styles.recoTitle}>이번 주 추천</Text>
-        <TouchableOpacity
-          onPress={() => router.push('/(main)/academy' as never)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.recoMore}>더보기 &gt;</Text>
-        </TouchableOpacity>
+        <Text style={styles.recoTitle}>{'맞춤 추천'}</Text>
       </View>
-      {items.map((item, idx) => (
+      {RECO_CATEGORIES.map((cat) => (
         <TouchableOpacity
-          key={idx}
+          key={cat.category}
           style={styles.recoCard}
           activeOpacity={0.7}
-          onPress={() => router.push(item.route as never)}
+          onPress={() =>
+            router.push({
+              pathname: '/(main)/recommendation-list',
+              params: { category: cat.category },
+            })
+          }
         >
-          <View style={styles.recoEmojiWrap}>
-            <Text style={styles.recoEmoji}>{item.emoji}</Text>
+          <View style={[styles.recoEmojiWrap, { backgroundColor: cat.bg }]}>
+            <Image source={cat.icon} style={styles.recoIcon} resizeMode="contain" />
           </View>
           <View style={styles.recoTextWrap}>
-            <Text style={styles.recoCardTitle}>{item.title}</Text>
-            <Text style={styles.recoCardDesc}>{item.desc}</Text>
+            <Text style={styles.recoCardTitle}>{cat.label}</Text>
+            <Text style={styles.recoCardDesc}>{cat.desc}</Text>
           </View>
-          <Text style={styles.recoChevron}>{'›'}</Text>
+          <Text style={[styles.recoChevron, { color: cat.color }]}>{'>'}</Text>
         </TouchableOpacity>
       ))}
     </View>
   );
 }
 
-function GrowthCountdown({ data }: { data: CountdownData }) {
+function CompactStats({
+  countdown,
+  streak,
+}: {
+  countdown: CountdownData | null;
+  streak: StreakData | null;
+}) {
+  if (!countdown && !streak) return null;
+
+  const LEVEL_ICONS: Record<number, string> = {
+    1: '🌱', 2: '🪴', 3: '🌸', 4: '🌻', 5: '💎',
+  };
+
   return (
-    <LinearGradient
-      colors={['#FF8C5A', '#FF6B6B']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.countdownCard}
+    <TouchableOpacity
+      style={styles.compactStats}
+      onPress={() => router.push('/(main)/parent-level')}
+      activeOpacity={0.7}
     >
-      <Text style={styles.countdownMain}>
-        {data.childName}{'가 이 세상에 온 지 '}
-        <Text style={styles.countdownDays}>{data.daysSinceBirth}</Text>
-        {'일째'}
-      </Text>
-      <Text style={styles.countdownSub}>
-        {'D-'}{data.daysUntilMilestone}{' '}{data.nextMilestone}
-      </Text>
-    </LinearGradient>
-  );
-}
-
-function DailyTipCard({ data }: { data: DailyCardData }) {
-  const handleShare = async () => {
-    try {
-      await Share.share({
-        message: `${data.emoji} ${data.tip}`,
-      });
-    } catch {
-      // share cancelled or failed
-    }
-  };
-
-  return (
-    <View style={styles.dailyTipCard}>
-      <View style={styles.dailyTipHeader}>
-        <Text style={styles.dailyTipEmoji}>{data.emoji}</Text>
-        <Text style={styles.dailyTipLabel}>{data.category}</Text>
-      </View>
-      <Text style={styles.dailyTipText}>{data.tip}</Text>
-      <TouchableOpacity
-        style={styles.dailyTipShareBtn}
-        onPress={handleShare}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.dailyTipShareText}>{'공유하기'}</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-function StreakBadge({ data }: { data: StreakData }) {
-  const progress = data.maxForNext > 0
-    ? Math.min(data.progressToNext / data.maxForNext, 1)
-    : 0;
-
-  return (
-    <View style={styles.streakCard}>
-      <View style={styles.streakTop}>
-        <Text style={styles.streakText}>
-          {'🔥 연속 '}{data.currentStreak}{'일째! '}
-          {data.levelName}{' Lv.'}{data.level}
-        </Text>
-      </View>
-      <View style={styles.streakBarBg}>
-        <View
-          style={[styles.streakBarFill, { width: `${progress * 100}%` }]}
-        />
-      </View>
-      <Text style={styles.streakNextText}>
-        {'다음 레벨까지 '}{data.maxForNext - data.progressToNext}{'일'}
-      </Text>
-    </View>
-  );
-}
-
-function ParentMentalCard({ data }: { data: ParentMentalData }) {
-  const stressColors: Record<string, string> = {
-    low: '#7DD3B8',
-    medium: '#FFD76E',
-    high: '#FF8C5A',
-  };
-  const stressLabels: Record<string, string> = {
-    low: '안정',
-    medium: '보통',
-    high: '주의',
-  };
-  const stressColor = stressColors[data.stressLevel] ?? '#7DD3B8';
-  const stressLabel = stressLabels[data.stressLevel] ?? '안정';
-
-  return (
-    <View style={aiStyles.mentalCard}>
-      <View style={aiStyles.mentalHeader}>
-        <Text style={aiStyles.sectionEmoji}>{'💆'}</Text>
-        <Text style={aiStyles.sectionTitle}>{'부모 멘탈 케어'}</Text>
-      </View>
-      <View style={aiStyles.mentalStressRow}>
-        <Text style={aiStyles.mentalStressLabel}>{'스트레스 수준'}</Text>
-        <View style={[aiStyles.mentalStressBadge, { backgroundColor: stressColor }]}>
-          <Text style={aiStyles.mentalStressBadgeText}>{stressLabel}</Text>
-        </View>
-      </View>
-      <Text style={aiStyles.mentalEncouragement}>{data.encouragement}</Text>
-      <View style={aiStyles.mentalFeelingRow}>
-        <Text style={aiStyles.mentalFeelingLabel}>{'오늘의 위로'}</Text>
-        <Text style={aiStyles.mentalFeelingText}>{data.feeling}</Text>
-      </View>
-    </View>
-  );
-}
-
-function FuturePredictCard({ data }: { data: FuturePredictData }) {
-  return (
-    <View style={aiStyles.futureCard}>
-      <View style={aiStyles.futureHeader}>
-        <Text style={aiStyles.sectionEmoji}>{'🔮'}</Text>
-        <Text style={aiStyles.sectionTitle}>{'3개월 후 예측'}</Text>
-      </View>
-      <View style={aiStyles.futureAgeRow}>
-        <Text style={aiStyles.futureAgeText}>{data.currentAge}</Text>
-        <Text style={aiStyles.futureArrow}>{'→'}</Text>
-        <Text style={aiStyles.futureAgePredicted}>{data.predictedAge}</Text>
-      </View>
-      {data.predictions.slice(0, 3).map((pred, idx) => (
-        <View key={idx} style={aiStyles.futureBulletRow}>
-          <Text style={aiStyles.futureBullet}>{'•'}</Text>
-          <Text style={aiStyles.futureBulletText}>{pred}</Text>
-        </View>
-      ))}
-      {data.prepTips.length > 0 && (
-        <View style={aiStyles.futureTipSection}>
-          <Text style={aiStyles.futureTipLabel}>{'미리 준비하세요'}</Text>
-          {data.prepTips.slice(0, 2).map((tip, idx) => (
-            <View key={idx} style={aiStyles.futureBulletRow}>
-              <Text style={aiStyles.futureTipBullet}>{'✓'}</Text>
-              <Text style={aiStyles.futureTipText}>{tip}</Text>
-            </View>
-          ))}
+      {countdown && (
+        <View style={styles.compactStatItem}>
+          <Text style={styles.compactStatValue}>D+{countdown.daysSinceBirth}</Text>
+          <Text style={styles.compactStatLabel}>{countdown.childName}</Text>
         </View>
       )}
-    </View>
+      {countdown && streak && <View style={styles.compactDivider} />}
+      {streak && (
+        <View style={styles.compactStatItem}>
+          <Text style={styles.compactStatValue}>
+            {LEVEL_ICONS[streak.level] ?? '🌱'} {streak.currentStreak}{'일째'}
+          </Text>
+          <Text style={styles.compactStatLabel}>{streak.levelName}</Text>
+        </View>
+      )}
+      {countdown?.nextMilestone && (
+        <>
+          <View style={styles.compactDivider} />
+          <View style={styles.compactStatItem}>
+            <Text style={styles.compactStatValue}>D-{countdown.nextMilestone.daysUntil}</Text>
+            <Text style={styles.compactStatLabel}>{countdown.nextMilestone.label}</Text>
+          </View>
+        </>
+      )}
+    </TouchableOpacity>
   );
 }
 
-function NowActivityCard({ data }: { data: NowActivityData }) {
-  const timeEmojis: Record<string, string> = {
-    morning: '🌅',
-    afternoon: '☀️',
-    evening: '🌙',
+function InsightCards({ insights }: { insights: Array<{ type: string; title: string; message: string; actionLabel?: string; actionRoute?: string }> }) {
+  const TYPE_COLORS: Record<string, { bg: string; accent: string; icon: string }> = {
+    pattern_alert: { bg: '#FFF0E6', accent: '#FF8C5A', icon: '!' },
+    milestone_tip: { bg: '#E8F8F0', accent: '#7DD3B8', icon: '\u2605' },
+    encouragement: { bg: '#FFF8E1', accent: '#FFD76E', icon: '\u2665' },
+    smart_question: { bg: '#EEEDFC', accent: '#7C83EC', icon: '?' },
+    weekly_summary: { bg: '#E8F4FD', accent: '#5BA8D9', icon: '\u03A3' },
   };
-  const timeLabels: Record<string, string> = {
-    morning: '오전',
-    afternoon: '오후',
-    evening: '저녁',
-  };
-  const timeEmoji = timeEmojis[data.timeOfDay] ?? '☀️';
-  const timeLabel = timeLabels[data.timeOfDay] ?? '오후';
 
   return (
-    <View style={aiStyles.activityCard}>
-      <View style={aiStyles.activityHeader}>
-        <Text style={aiStyles.sectionEmoji}>{timeEmoji}</Text>
-        <Text style={aiStyles.activityTimeLabel}>{timeLabel}{' 추천 활동'}</Text>
-      </View>
-      <Text style={aiStyles.activityName}>{data.activityName}</Text>
-      <Text style={aiStyles.activityDuration}>{data.duration}</Text>
-      <Text style={aiStyles.activityReason}>{data.reason}</Text>
-      <TouchableOpacity
-        style={aiStyles.activityButton}
-        onPress={() => router.push('/(main)/play-learning' as never)}
-        activeOpacity={0.7}
-      >
-        <Text style={aiStyles.activityButtonText}>{'해보기'}</Text>
-      </TouchableOpacity>
+    <View style={{ marginBottom: 16 }}>
+      {insights.map((ins, idx) => {
+        const colors = TYPE_COLORS[ins.type] || TYPE_COLORS.encouragement;
+        return (
+          <TouchableOpacity
+            key={`${ins.type}-${idx}`}
+            style={{
+              backgroundColor: colors.bg,
+              borderRadius: 16,
+              padding: 16,
+              marginBottom: idx < insights.length - 1 ? 10 : 0,
+              borderLeftWidth: 4,
+              borderLeftColor: colors.accent,
+            }}
+            activeOpacity={ins.actionRoute ? 0.7 : 1}
+            onPress={() => {
+              if (ins.actionRoute) router.push(ins.actionRoute as never);
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <View style={{
+                width: 24, height: 24, borderRadius: 12,
+                backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center',
+                marginRight: 8,
+              }}>
+                <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '700' }}>{colors.icon}</Text>
+              </View>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: COLOR.text }}>{ins.title}</Text>
+            </View>
+            <Text style={{ fontSize: 13, color: COLOR.textSub, lineHeight: 20 }}>{ins.message}</Text>
+            {ins.actionLabel && (
+              <Text style={{ fontSize: 12, color: colors.accent, fontWeight: '600', marginTop: 8 }}>
+                {ins.actionLabel} {'>'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -894,7 +820,7 @@ function NowActivityCard({ data }: { data: NowActivityData }) {
 function EmptyState() {
   return (
     <View style={styles.center}>
-      <Text style={styles.emptyEmoji}>{'👶'}</Text>
+      <Image source={require('../../assets/mascot-waving.png')} style={styles.emptyMascot} resizeMode="contain" />
       <Text style={styles.emptyText}>등록된 자녀가 없습니다</Text>
       <Text style={styles.emptySubtext}>
         자녀를 등록하고 기질을 분석해보세요
@@ -926,6 +852,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLOR.bg,
+  },
+  scrollFill: {
+    flex: 1,
   },
   content: {
     padding: 20,
@@ -969,8 +898,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: COLOR.accent,
   },
-  childPhotoEmoji: {
-    fontSize: 24,
+  headerIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
   },
   headerInfo: {
     gap: 2,
@@ -1039,6 +970,49 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
 
+  /* === Monthly Characteristic Card === */
+  monthlyCard: {
+    backgroundColor: COLOR.card,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: COLOR.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: COLOR.mint,
+  },
+  monthlyTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  monthlyBadge: {
+    backgroundColor: COLOR.mint,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  monthlyBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  monthlyTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLOR.text,
+  },
+  monthlyArrow: {
+    fontSize: 18,
+    color: COLOR.textLight,
+    fontWeight: '300',
+  },
+
   /* === 3. Quick Action Circles === */
   quickSection: {
     flexDirection: 'row',
@@ -1060,14 +1034,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...CARD_SHADOW,
   },
-  quickEmoji: {
-    fontSize: 28,
+  quickIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
   },
   quickLabel: {
     fontSize: 12,
     fontWeight: '600',
     color: COLOR.text,
   },
+
 
   /* === 4. Recommendations === */
   recoSection: {
@@ -1107,8 +1084,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 14,
   },
-  recoEmoji: {
-    fontSize: 22,
+  recoIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
   },
   recoTextWrap: {
     flex: 1,
@@ -1131,113 +1110,73 @@ const styles = StyleSheet.create({
     fontWeight: '300',
   },
 
-  /* === Growth Countdown === */
-  countdownCard: {
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    alignItems: 'center' as const,
-  },
-  countdownMain: {
-    fontSize: 16,
-    fontWeight: '700' as const,
-    color: '#FFFFFF',
-    textAlign: 'center' as const,
-    lineHeight: 24,
-  },
-  countdownDays: {
-    fontSize: 28,
-    fontWeight: '800' as const,
-  },
-  countdownSub: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: 6,
-    fontWeight: '500' as const,
-  },
-
-  /* === Daily Tip Card === */
-  dailyTipCard: {
-    backgroundColor: '#E8F8F0',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 24,
-  },
-  dailyTipHeader: {
+  /* === Compact Stats === */
+  compactStats: {
     flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 8,
-    marginBottom: 10,
-  },
-  dailyTipEmoji: {
-    fontSize: 24,
-  },
-  dailyTipLabel: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: '#4ECDC4',
-  },
-  dailyTipText: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: COLOR.text,
-    lineHeight: 23,
-    marginBottom: 14,
-  },
-  dailyTipShareBtn: {
-    alignSelf: 'flex-start' as const,
-    backgroundColor: '#4ECDC4',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  dailyTipShareText: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: '#FFFFFF',
-  },
-
-  /* === Streak Badge === */
-  streakCard: {
     backgroundColor: COLOR.card,
     borderRadius: 16,
     padding: 14,
     marginBottom: 16,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     borderWidth: 1,
     borderColor: '#FFE0CC',
     ...CARD_SHADOW,
   },
-  streakTop: {
-    flexDirection: 'row' as const,
+  compactStatItem: {
     alignItems: 'center' as const,
-    marginBottom: 8,
+    flex: 1,
   },
-  streakText: {
-    fontSize: 14,
+  compactStatValue: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: COLOR.accent,
+  },
+  compactStatLabel: {
+    fontSize: 11,
+    color: COLOR.textSub,
+    marginTop: 2,
+  },
+  compactDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#F0E6DC',
+    marginHorizontal: 8,
+  },
+
+  /* === AI Insights === */
+  insightsSection: {
+    backgroundColor: COLOR.card,
+    borderRadius: 16,
+    marginBottom: 20,
+    overflow: 'hidden' as const,
+    ...CARD_SHADOW,
+  },
+  insightsHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    padding: 16,
+  },
+  insightsTitle: {
+    fontSize: 15,
     fontWeight: '700' as const,
     color: COLOR.text,
   },
-  streakBarBg: {
-    height: 6,
-    backgroundColor: '#F0E6DC',
-    borderRadius: 3,
-    overflow: 'hidden' as const,
-    marginBottom: 4,
-  },
-  streakBarFill: {
-    height: 6,
-    backgroundColor: COLOR.accent,
-    borderRadius: 3,
-  },
-  streakNextText: {
-    fontSize: 11,
+  insightsArrow: {
+    fontSize: 16,
     color: COLOR.textSub,
-    textAlign: 'right' as const,
+    fontWeight: '600' as const,
+  },
+  insightsBody: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
 
   /* === Empty state === */
-  emptyEmoji: {
-    fontSize: 48,
+  emptyMascot: {
+    width: 120,
+    height: 120,
     marginBottom: 16,
   },
   emptyText: {
@@ -1287,217 +1226,80 @@ const styles = StyleSheet.create({
     color: COLOR.textLight,
     marginBottom: 24,
   },
-});
 
-/* ------------------------------------------------------------------ */
-/* AI Feature Card Styles                                              */
-/* ------------------------------------------------------------------ */
-
-const aiStyles = StyleSheet.create({
-  /* Shared */
-  sectionEmoji: {
-    fontSize: 22,
+  /* === Trial Expiry Popup === */
+  trialOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    padding: 32,
   },
-  sectionTitle: {
-    fontSize: 16,
+  trialCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 28,
+    alignItems: 'center' as const,
+    width: '100%' as const,
+  },
+  trialEmoji: { fontSize: 44, marginBottom: 16 },
+  trialTitle: {
+    fontSize: 20,
     fontWeight: '700' as const,
     color: COLOR.text,
-  },
-
-  /* === Parent Mental Care === */
-  mentalCard: {
-    backgroundColor: '#F8F0FF',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E4D4F4',
-    ...CARD_SHADOW,
-  },
-  mentalHeader: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 8,
-    marginBottom: 14,
-  },
-  mentalStressRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
     marginBottom: 12,
+    textAlign: 'center' as const,
   },
-  mentalStressLabel: {
-    fontSize: 13,
-    fontWeight: '600' as const,
-    color: COLOR.textSub,
-  },
-  mentalStressBadge: {
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  mentalStressBadgeText: {
-    fontSize: 12,
-    fontWeight: '700' as const,
-    color: '#FFFFFF',
-  },
-  mentalEncouragement: {
-    fontSize: 15,
-    fontWeight: '600' as const,
-    color: COLOR.text,
-    lineHeight: 23,
-    marginBottom: 12,
-  },
-  mentalFeelingRow: {
-    backgroundColor: '#F0EAFF',
-    borderRadius: 12,
-    padding: 12,
-  },
-  mentalFeelingLabel: {
-    fontSize: 11,
-    fontWeight: '600' as const,
-    color: '#9B7FD4',
-    marginBottom: 4,
-  },
-  mentalFeelingText: {
+  trialDesc: {
     fontSize: 14,
-    fontWeight: '500' as const,
-    color: COLOR.text,
-    lineHeight: 21,
-  },
-
-  /* === Future Prediction === */
-  futureCard: {
-    backgroundColor: '#F3EEFF',
-    borderRadius: 20,
-    padding: 20,
+    color: COLOR.textSub,
+    lineHeight: 22,
+    textAlign: 'center' as const,
     marginBottom: 24,
   },
-  futureHeader: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 8,
-    marginBottom: 14,
-  },
-  futureAgeRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    gap: 12,
-    marginBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
-  },
-  futureAgeText: {
-    fontSize: 15,
-    fontWeight: '700' as const,
-    color: COLOR.textSub,
-  },
-  futureArrow: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: '#A78BFA',
-  },
-  futureAgePredicted: {
-    fontSize: 15,
-    fontWeight: '700' as const,
-    color: '#7C3AED',
-  },
-  futureBulletRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'flex-start' as const,
-    gap: 8,
-    marginBottom: 6,
-  },
-  futureBullet: {
-    fontSize: 14,
-    color: '#7C3AED',
-    fontWeight: '700' as const,
-    marginTop: 1,
-  },
-  futureBulletText: {
-    fontSize: 14,
-    fontWeight: '500' as const,
-    color: COLOR.text,
-    lineHeight: 21,
-    flex: 1,
-  },
-  futureTipSection: {
-    marginTop: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
-  },
-  futureTipLabel: {
-    fontSize: 12,
-    fontWeight: '700' as const,
-    color: '#7C3AED',
-    marginBottom: 8,
-  },
-  futureTipBullet: {
-    fontSize: 13,
-    color: '#A78BFA',
-    fontWeight: '700' as const,
-    marginTop: 1,
-  },
-  futureTipText: {
-    fontSize: 13,
-    fontWeight: '500' as const,
-    color: COLOR.text,
-    lineHeight: 20,
-    flex: 1,
-  },
-
-  /* === Now Activity === */
-  activityCard: {
-    backgroundColor: COLOR.coralBg,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#FFD6C0',
-  },
-  activityHeader: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 8,
-    marginBottom: 10,
-  },
-  activityTimeLabel: {
-    fontSize: 14,
-    fontWeight: '700' as const,
-    color: COLOR.accent,
-  },
-  activityName: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: COLOR.text,
-    marginBottom: 4,
-  },
-  activityDuration: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: COLOR.textSub,
-    marginBottom: 8,
-  },
-  activityReason: {
-    fontSize: 14,
-    fontWeight: '500' as const,
-    color: COLOR.text,
-    lineHeight: 21,
-    marginBottom: 14,
-  },
-  activityButton: {
-    alignSelf: 'flex-start' as const,
+  trialPremiumBtn: {
     backgroundColor: COLOR.accent,
     borderRadius: 14,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
+    paddingVertical: 16,
+    width: '100%' as const,
+    alignItems: 'center' as const,
+    marginBottom: 12,
   },
-  activityButtonText: {
-    fontSize: 14,
-    fontWeight: '700' as const,
+  trialPremiumText: {
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700' as const,
+  },
+  trialFreeBtn: { paddingVertical: 12 },
+  trialFreeText: {
+    color: COLOR.textLight,
+    fontSize: 14,
+    fontWeight: '600' as const,
+  },
+
+  /* === SOS Floating Button === */
+  sosFab: {
+    position: 'absolute',
+    right: 20,
+    bottom: Platform.OS === 'ios' ? 100 : 90,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#FF3B30',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 100,
+  },
+  sosFabText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800' as const,
+    letterSpacing: 1,
   },
 });
+

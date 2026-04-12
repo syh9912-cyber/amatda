@@ -4,7 +4,7 @@ import { success, error } from '../../utils/response';
 import { collections, genId } from '../../services/firestore';
 import { maskChildName } from '../../utils/masking';
 
-import { CoachingAIResponse, UserTier, TIER_CONFIGS } from '../../services/coaching/types';
+import { CoachingAIResponse, UserTier, TIER_CONFIGS, getLevelByStreak } from '../../services/coaching/types';
 import { filterUselessQuestion } from '../../services/coaching/useless.filter';
 import { detectRedFlags } from '../../services/coaching/red.flag.detector';
 import { findTopCoachingEntries, formatCandidatesForPrompt } from '../../services/coaching/db.searcher';
@@ -16,6 +16,10 @@ import {
 } from '../../services/coaching/conversation.summarizer';
 import { buildPrompt } from '../../services/coaching/prompt.builder';
 import { callGeminiJSON } from '../../services/coaching/gemini.client';
+import { detectParentEmotion } from '../../services/coaching/emotion.detector';
+import { getTimeContext } from '../../services/coaching/time.awareness';
+import { getMilestoneContext } from '../../services/coaching/milestone.detector';
+import { parseTrackingFromMessage, ParsedTracking } from '../../services/coaching/tracker.parser';
 
 // ─── 카테고리 매핑 ───
 
@@ -38,11 +42,11 @@ async function getUserTier(userId: string): Promise<UserTier> {
       if (premiumExpires && new Date(premiumExpires) > new Date()) return 'paid';
     }
 
-    // 체험판 확인 (30일)
+    // 체험판 확인 (7일)
     const trialStarted = data.trialStartedAt as string | undefined;
     if (trialStarted) {
       const trialEnd = new Date(trialStarted);
-      trialEnd.setDate(trialEnd.getDate() + 30);
+      trialEnd.setDate(trialEnd.getDate() + 7);
       if (new Date() < trialEnd) return 'paid';
     }
 
@@ -65,6 +69,45 @@ async function getTodaySessionCount(userId: string): Promise<number> {
       const src = (d.data() as Record<string, unknown>).source as string;
       return src !== 'filter' && src !== 'limit';
     }).length;
+  } catch {
+    return 0;
+  }
+}
+
+async function getUserStreak(userId: string): Promise<number> {
+  try {
+    const snap = await collections.dailyTracking
+      .where('userId', '==', userId)
+      .orderBy('date', 'desc')
+      .limit(90)
+      .get();
+
+    if (snap.empty) return 0;
+
+    const dates = snap.docs
+      .map((d) => (d.data() as Record<string, unknown>).date as string)
+      .filter(Boolean)
+      .sort()
+      .reverse();
+
+    const uniqueDates = [...new Set(dates)];
+    const today = new Date().toISOString().slice(0, 10);
+
+    let streak = 0;
+    let checkDate = today;
+
+    for (const d of uniqueDates) {
+      if (d === checkDate) {
+        streak++;
+        const prev = new Date(checkDate);
+        prev.setDate(prev.getDate() - 1);
+        checkDate = prev.toISOString().slice(0, 10);
+      } else if (d < checkDate) {
+        break;
+      }
+    }
+
+    return streak;
   } catch {
     return 0;
   }
@@ -206,11 +249,17 @@ export function registerAskHandler(router: Router): void {
 
       // ─── Step 6: 하루 상담 횟수 체크 (무료, 레드플래그는 제외) ───
       if (tier === 'free' && !redFlag.detected) {
-        const todayCount = await getTodaySessionCount(req.userId!);
-        if (todayCount >= config.dailyLimit) {
+        const [todayCount, userStreak] = await Promise.all([
+          getTodaySessionCount(req.userId!),
+          getUserStreak(req.userId!),
+        ]);
+        const userLevel = getLevelByStreak(userStreak);
+        const dailyLimit = userLevel.dailyLimit;
+
+        if (todayCount >= dailyLimit) {
           success(res, {
             sessionId: null,
-            answer: `오늘 무료 상담 횟수(${config.dailyLimit}회)를 모두 사용했어요. 내일 다시 이용하시거나, 프리미엄으로 업그레이드하시면 무제한 상담이 가능해요.`,
+            answer: `오늘 상담 횟수(${dailyLimit}회)를 모두 사용했어요. 꾸준히 기록하면 레벨이 올라 더 많이 상담할 수 있어요! 지금은 ${userLevel.name} (Lv.${userLevel.level})이에요.`,
             reason: '',
             solutions: [],
             source: 'limit',
@@ -235,9 +284,16 @@ export function registerAskHandler(router: Router): void {
         getConversationContext(req.userId!, childId, tier),
       ]);
 
-      // ─── Step 8: 프롬프트 조합 ───
+      // ─── Step 8: 컨텍스트 강화 + 프롬프트 조합 ───
+      const parentEmotion = detectParentEmotion(message);
+      const timeCtx = getTimeContext();
+      const milestones = getMilestoneContext(child.ageMonths);
       const dbTexts = formatCandidatesForPrompt(dbCandidates);
       const recentTurnsText = formatRecentTurns(conversation.recentTurns);
+
+      const redFlagContext = redFlag.detected && redFlag.message
+        ? `[${redFlag.urgency.toUpperCase()}] ${redFlag.flags.join(', ')} - ${redFlag.message}`
+        : '';
 
       const { systemPrompt, runtimePrompt } = buildPrompt({
         category: categoryKo,
@@ -246,6 +302,7 @@ export function registerAskHandler(router: Router): void {
         ageInfo: child.ageInfo,
         gender: child.gender,
         temperament: `${child.temperament} (${child.temperamentDetail})`,
+        temperamentDetail: child.temperamentDetail,
         specialNotes: child.specialNotes,
         sleepSummary: tracking.sleepSummary,
         mealSummary: tracking.mealSummary,
@@ -257,6 +314,12 @@ export function registerAskHandler(router: Router): void {
         dbCandidates: dbTexts,
         cryAnalysisInput: audioUrl ? `울음소리 녹음 제공됨 (${audioUrl})` : '',
         poopAnalysisInput: photoUrl ? `대변 사진 제공됨 (${photoUrl})` : '',
+        parentEmotion: parentEmotion.emotion,
+        emotionToneGuide: parentEmotion.toneGuide,
+        redFlagContext,
+        observedTraits: child.observedTraits,
+        timeEmpathyHint: timeCtx.empathyHint,
+        milestoneContext: milestones.combined,
       });
 
       // ─── Step 9: AI 호출 ───
@@ -332,6 +395,29 @@ export function registerAskHandler(router: Router): void {
         answerText
       ).catch(() => {});
 
+      // ─── 트래커 자동 파싱 (fire-and-forget) ───
+      let trackerAutoSaved = false;
+      const parsed: ParsedTracking | null = parseTrackingFromMessage(message);
+      if (parsed) {
+        trackerAutoSaved = true;
+        const today = new Date().toISOString().slice(0, 10);
+        const docId = `${childId}_${today}`;
+        const updates: Record<string, unknown> = {
+          childId,
+          userId: req.userId,
+          date: today,
+          updatedAt: new Date().toISOString(),
+          autoParserSource: 'coaching',
+        };
+        if (parsed.feeding) updates.feeding = parsed.feeding;
+        if (parsed.sleep) updates.sleep = parsed.sleep;
+        if (parsed.diaper) updates.diaper = parsed.diaper;
+        if (parsed.condition) updates.condition = parsed.condition;
+        if (parsed.temperature !== undefined) updates.temperature = parsed.temperature;
+
+        collections.dailyTracking.doc(docId).set(updates, { merge: true }).catch(() => {});
+      }
+
       success(res, {
         sessionId,
         answer: answerText,
@@ -343,6 +429,7 @@ export function registerAskHandler(router: Router): void {
         reasons: aiResponse.reasons,
         medical: aiResponse.medical ?? null,
         followup,
+        trackerAutoSaved,
       });
     } catch {
       error(res, '코칭 응답 중 오류가 발생했습니다', 500);

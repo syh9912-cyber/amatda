@@ -1,18 +1,20 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   View, Text, TouchableOpacity,
   ActivityIndicator, Animated, ScrollView,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { childApi, questionApi } from '../../services/api';
+import { childApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS } from '../../constants/theme';
-import { styles } from './questions.styles';
+import { styles } from '../../constants/onboardingStyles';
 import {
-  FALLBACK_QUESTIONS,
+  type SurveyQuestion,
   getAgeGroup,
-  type OnboardingQuestion,
-} from './questions.helpers';
+  getSurveyQuestions,
+  LIKERT_OPTIONS,
+} from '../../constants/onboardingHelpers';
+import { calculateTemperament } from '../../constants/onboardingQuestions';
 import { AnalyzingScreen } from '../../components/onboarding/AnalyzingScreen';
 
 export default function QuestionsScreen() {
@@ -21,33 +23,13 @@ export default function QuestionsScreen() {
   const updateChild = useChildStore((s) => s.updateChild);
   const child = children.find((c) => c.id === childId);
 
-  const [questions, setQuestions] = useState<OnboardingQuestion[]>([]);
-  const [loading, setLoading] = useState(true);
+  const ageGroup = child ? getAgeGroup(child.ageInfo.months) : 'toddler';
+  const questions: SurveyQuestion[] = getSurveyQuestions(ageGroup);
+
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [analyzing, setAnalyzing] = useState(false);
   const [fadeAnim] = useState(() => new Animated.Value(1));
-
-  useEffect(() => {
-    loadQuestions();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const loadQuestions = async () => {
-    try {
-      const ageGroup = child ? getAgeGroup(child.ageInfo.months) : 'kinder';
-      const res = await questionApi.onboarding(ageGroup);
-      const backendQs = res.data?.data as OnboardingQuestion[] | undefined;
-      if (backendQs && backendQs.length > 0) {
-        setQuestions(backendQs);
-      } else {
-        setQuestions(FALLBACK_QUESTIONS);
-      }
-    } catch {
-      setQuestions(FALLBACK_QUESTIONS);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const total = questions.length;
   const current = questions[currentIdx];
@@ -67,8 +49,8 @@ export default function QuestionsScreen() {
     }
   };
 
-  const handleSelect = async (optionIdx: number) => {
-    const newAnswers = { ...answers, [current.id]: optionIdx };
+  const handleSelect = async (likertValue: number) => {
+    const newAnswers = { ...answers, [current.id]: likertValue };
     setAnswers(newAnswers);
 
     if (currentIdx < total - 1) {
@@ -84,6 +66,9 @@ export default function QuestionsScreen() {
     setAnalyzing(true);
     apiDoneRef.current = false;
 
+    // Calculate temperament locally for UI display
+    const _result = calculateTemperament(finalAnswers);
+
     // Fire API call immediately (runs during loading animation)
     const apiCall = (async () => {
       try {
@@ -92,8 +77,12 @@ export default function QuestionsScreen() {
           answer: finalAnswers[q.id] ?? 0,
         }));
         const res = await childApi.analyze(childId!, answerList);
-        const updatedChild = res.data.data;
-        if (updatedChild) updateChild(updatedChild);
+        const updatedChild = res.data?.data;
+        if (updatedChild) {
+          updateChild(updatedChild);
+          // 스토어 전파 보장
+          await new Promise((r) => setTimeout(r, 200));
+        }
       } catch {
         // navigate anyway after timer
       } finally {
@@ -111,7 +100,7 @@ export default function QuestionsScreen() {
     });
   };
 
-  if (loading) {
+  if (questions.length === 0) {
     return (
       <View style={styles.loadingContainer}>
         <Stack.Screen options={{ title: '질문 준비', headerShown: false }} />
@@ -149,25 +138,25 @@ export default function QuestionsScreen() {
             <Text style={styles.categoryLabel}>{current.category}</Text>
           ) : null}
           <Text style={styles.qNumber}>Q{currentIdx + 1}</Text>
-          <Text style={styles.qText}>{current.text}</Text>
+          <Text style={styles.qText}>{current.question}</Text>
 
           <View style={styles.optionsWrap}>
-            {current.options.map((opt, idx) => {
-              const selected = answers[current.id] === idx;
+            {LIKERT_OPTIONS.map((opt) => {
+              const selected = answers[current.id] === opt.value;
               return (
                 <TouchableOpacity
-                  key={idx}
+                  key={opt.value}
                   style={[styles.optionBtn, selected && styles.optionSelected]}
-                  onPress={() => handleSelect(idx)}
+                  onPress={() => handleSelect(opt.value)}
                   activeOpacity={0.7}
                 >
                   <View style={[styles.optionCircle, selected && styles.circleSelected]}>
                     <Text style={[styles.optionCircleText, selected && styles.circleTextSelected]}>
-                      {String.fromCharCode(65 + idx)}
+                      {opt.value}
                     </Text>
                   </View>
                   <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
-                    {opt}
+                    {opt.label}
                   </Text>
                 </TouchableOpacity>
               );

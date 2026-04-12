@@ -184,7 +184,7 @@ function StyleAStories() {
       accent: '#38BDF8',
       content: (
         <View style={sa.cardInner}>
-          <Text style={sa.cardTitle}>Today's Diary</Text>
+          <Text style={sa.cardTitle}>Today&apos;s Diary</Text>
           <Text style={sa.cardSub}>What did Seungha discover today?</Text>
           <View style={sa.diaryPrompt}>
             <Text style={sa.diaryPromptText}>
@@ -208,7 +208,7 @@ function StyleAStories() {
       content: (
         <View style={sa.cardInner}>
           <Text style={sa.cardTitle}>Academy Picks</Text>
-          <Text style={sa.cardSub}>2 academies nearby match Seungha's traits</Text>
+          <Text style={sa.cardSub}>2 academies nearby match Seungha&apos;s traits</Text>
           {FEATURES.map((f) => (
             <View key={f.label} style={sa.featureRow}>
               <Text style={sa.featureEmoji}>{f.emoji}</Text>
@@ -539,7 +539,7 @@ function StyleBWidgets() {
       </View>
 
       {/* Feature cards row */}
-      <Text style={sb.sectionLabel}>Today's Picks</Text>
+      <Text style={sb.sectionLabel}>Today&apos;s Picks</Text>
       <View style={sb.featureRow}>
         {FEATURES.map((f) => (
           <View key={f.label} style={sb.featureCard}>
@@ -1095,7 +1095,7 @@ function StyleDTinder() {
       content: (
         <View style={sd.cardBody}>
           <Text style={sd.cardEmoji}>{'\🎯'}</Text>
-          <Text style={sd.bigLabel}>Today's Activity</Text>
+          <Text style={sd.bigLabel}>Today&apos;s Activity</Text>
           <View style={sd.divider} />
           {FEATURES.map((f) => (
             <View key={f.label} style={sd.actRow}>
@@ -1439,7 +1439,7 @@ function StyleEMagazine() {
 
           {/* Tall-ish: Feature cards stacked */}
           <View style={[se.mCard, { backgroundColor: '#EDE7F6', padding: 14 }]}>
-            <Text style={se.mCardTag}>TODAY'S PICKS</Text>
+            <Text style={se.mCardTag}>TODAY&apos;S PICKS</Text>
             {FEATURES.map((f) => (
               <View key={f.label} style={se.mPickRow}>
                 <Text style={se.mPickEmoji}>{f.emoji}</Text>

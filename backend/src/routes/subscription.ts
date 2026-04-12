@@ -45,8 +45,8 @@ router.put('/:id/cancel', authMiddleware, async (req: Request, res: Response) =>
 // ─── 프리미엄 구독 시스템 ───
 
 const PLANS = {
-  monthly: { id: 'premium_monthly', name: '프리미엄 월간', price: 4900, period: 'month' },
-  yearly: { id: 'premium_yearly', name: '프리미엄 연간', price: 39900, monthlyPrice: 3325, period: 'year' },
+  monthly: { id: 'premium_monthly', name: 'VIP 월간', price: 3900, period: 'month' },
+  yearly: { id: 'premium_yearly', name: 'VIP 연간', price: 33900, monthlyPrice: 2825, period: 'year' },
 };
 
 const PAYMENT_METHODS = [
@@ -79,11 +79,11 @@ router.get('/premium/status', authMiddleware, async (req: Request, res: Response
     if (trialStarted) {
       const trialStart = new Date(trialStarted);
       const trialEnd = new Date(trialStart);
-      trialEnd.setDate(trialEnd.getDate() + 30); // 30일 체험
+      trialEnd.setDate(trialEnd.getDate() + 7); // 7일 체험
       const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       trialDaysLeft = Math.max(0, daysLeft);
       trialActive = daysLeft > 0;
-      showTrialWarning = daysLeft <= 7 && daysLeft > 0; // 7일 전부터 경고
+      showTrialWarning = daysLeft <= 3 && daysLeft > 0; // 3일 전부터 경고
     }
 
     // 유료 구독 상태
@@ -99,10 +99,9 @@ router.get('/premium/status', authMiddleware, async (req: Request, res: Response
     const effectiveTier = premiumActive || trialActive ? 'PAID' : 'FREE';
 
     const freeRestrictions = effectiveTier === 'FREE' ? [
-      '일 상담 10회 제한',
-      '기본 답변 길이',
-      '대화 맥락 1일만 유지',
-      '주간 리포트 미제공',
+      '레벨에 따라 상담 횟수 제한 (레벨업으로 증가)',
+      'AI 자동 일기, 타임캡슐, 또래 비교 이용 불가',
+      '대화 맥락 3일 유지 (VIP: 7일)',
     ] : [];
 
     success(res, {
@@ -221,28 +220,31 @@ router.get('/premium/plans', async (_req: Request, res: Response) => {
         ...PLANS.monthly,
         features: [
           '무제한 AI 상담',
-          '상세 맞춤 답변',
+          '풍부한 맞춤 답변 (1200토큰)',
           '대화 맥락 7일 유지',
+          'AI 자동 육아일기',
+          '성장 타임캡슐',
+          '또래 비교 인사이트',
           '주간 AI 리포트',
-          '성장 마일스톤 알림',
-          'DB 참고자료 4개 반영',
         ],
       },
       {
         ...PLANS.yearly,
-        badge: '32% 할인',
+        badge: '28% 할인',
         features: [
           '월간 플랜의 모든 기능',
-          '연간 결제 시 32% 할인',
-          '월 3,325원꼴',
+          '연간 결제 시 28% 할인',
+          '월 2,825원꼴',
         ],
       },
     ],
     paymentMethods: PAYMENT_METHODS,
     freeFeatures: [
-      '일 10회 AI 상담',
-      '기본 답변',
-      '대화 맥락 1일 유지',
+      '레벨업으로 상담 횟수 증가 (최대 50회/일)',
+      'DB 전체 참고 맞춤 답변',
+      '대화 맥락 3일 유지',
+      '기질 기반 개인화 상담',
+      '레드플래그 긴급 안내 (무제한)',
     ],
   });
 });

@@ -1,15 +1,53 @@
-import { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useChildStore, AnalysisReport, ReportReasons } from '../../stores/childStore';
+import { childApi, coachingApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { DetailSection } from '../../components/report/DetailSection';
 import { TextTipSection } from '../../components/report/TextTipSection';
 import { SimpleListSection } from '../../components/report/SimpleListSection';
-import { coachingApi } from '../../services/api';
+import { LinearGradient } from 'expo-linear-gradient';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const reportHeaderImg = require('../../assets/report-header.png');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const IC_SEND = require('../../assets/icon-send.png') as number;
+
+/**
+ * Safely converts any value to a displayable string.
+ * Prevents "Objects are not valid as a React child" errors.
+ */
+function safeString(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (typeof value === 'object') {
+    // Handle common object shapes like { label, daysUntil }
+    const obj = value as Record<string, unknown>;
+    if ('label' in obj && typeof obj.label === 'string') return obj.label;
+    if ('text' in obj && typeof obj.text === 'string') return obj.text;
+    if ('item' in obj && typeof obj.item === 'string') return obj.item;
+    try { return JSON.stringify(value); } catch { return '[object]'; }
+  }
+  return String(value);
+}
+
+/**
+ * Safely converts an array value to string[].
+ * Each element is run through safeString.
+ */
+function safeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => safeString(item));
+}
+
+interface FirstTalkData {
+  intro: string;
+  traitSummary: string;
+  suggestedQuestion: string;
+  quickOptions: string[];
+}
 
 /** Maps section keys to reason keys */
 const REASON_KEY_MAP: Partial<Record<keyof AnalysisReport, keyof ReportReasons>> = {
@@ -48,28 +86,90 @@ export default function AnalysisReportScreen() {
   const { childId } = useLocalSearchParams<{ childId: string }>();
   const children = useChildStore((s) => s.children);
   const selectChild = useChildStore((s) => s.selectChild);
+  const updateChild = useChildStore((s) => s.updateChild);
   const child = children.find((c) => c.id === childId);
-  const report = child?.analysisReport;
-  const [firstTalkLoading, setFirstTalkLoading] = useState(false);
+  const storeReport = child?.analysisReport;
 
-  const handleFirstTalk = async () => {
-    if (!childId || firstTalkLoading) return;
-    setFirstTalkLoading(true);
-    try {
-      // Select child for the chatbot screen
-      if (child) selectChild(child.id);
-      // Call first-talk API to get initial AI greeting
-      await coachingApi.firstTalk(childId);
-      // Navigate to chatbot screen
-      router.push('/(main)/chatbot');
-    } catch {
-      // Navigate anyway even if API fails
-      if (child) selectChild(child.id);
-      router.push('/(main)/chatbot');
-    } finally {
-      setFirstTalkLoading(false);
+  const [localReport, setLocalReport] = useState<AnalysisReport | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [firstTalk, setFirstTalk] = useState<FirstTalkData | null>(null);
+  const [firstTalkLoading, setFirstTalkLoading] = useState(false);
+  const [answer, setAnswer] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const report = storeReport ?? localReport;
+
+  // 스토어에 리포트 없으면 API에서 재조회
+  useEffect(() => {
+    if (childId && !storeReport && !localReport && !loading) {
+      setLoading(true);
+      childApi.list()
+        .then((res) => {
+          const list = res.data?.data as Array<Record<string, unknown>> | undefined;
+          const found = list?.find((c) => (c.id as string) === childId);
+          if (found) {
+            const parsed = found.analysisReport as AnalysisReport | null;
+            if (parsed) {
+              setLocalReport(parsed);
+              updateChild(found as unknown as ReturnType<typeof useChildStore.getState>['children'][0]);
+            }
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
     }
+  }, [childId, storeReport, localReport, loading, updateChild]);
+
+  // 리포트가 로드되면 AI 첫 대화 가져오기
+  useEffect(() => {
+    if (!childId || !report || firstTalk || firstTalkLoading) return;
+    setFirstTalkLoading(true);
+    coachingApi
+      .firstTalk(childId)
+      .then((res) => {
+        const raw = res.data?.data;
+        if (raw && typeof raw === 'object') {
+          const rawObj = raw as Record<string, unknown>;
+          setFirstTalk({
+            intro: typeof rawObj.intro === 'string' ? rawObj.intro : '',
+            traitSummary: typeof rawObj.traitSummary === 'string' ? rawObj.traitSummary : '',
+            suggestedQuestion: typeof rawObj.suggestedQuestion === 'string' ? rawObj.suggestedQuestion : '',
+            quickOptions: Array.isArray(rawObj.quickOptions)
+              ? (rawObj.quickOptions as unknown[]).map((o) => safeString(o))
+              : [],
+          });
+        }
+      })
+      .catch(() => {
+        // fallback: show default question
+        setFirstTalk({
+          intro: 'AI 코치가 준비되었어요!',
+          traitSummary: '',
+          suggestedQuestion: '아이에 대해 궁금한 점을 물어보세요',
+          quickOptions: [],
+        });
+      })
+      .finally(() => setFirstTalkLoading(false));
+  }, [childId, report, firstTalk, firstTalkLoading]);
+
+  const handleFirstTalkOption = (option: string) => {
+    if (!childId) return;
+    if (child) selectChild(child.id);
+    router.push({
+      pathname: '/(main)/chatbot',
+      params: { firstMessage: option },
+    });
   };
+
+  if (loading) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Stack.Screen options={{ title: '분석 결과', headerShown: false }} />
+        <ActivityIndicator size="large" color="#FF8C5A" />
+        <Text style={[styles.emptyText, { marginTop: 16 }]}>분석 결과를 불러오는 중...</Text>
+      </View>
+    );
+  }
 
   if (!child || !report) {
     return (
@@ -96,24 +196,25 @@ export default function AnalysisReportScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerSubtitle}>{child.name}의 종합 분석</Text>
-        <Text style={styles.headerTitle}>{child.innateData.dominantType}</Text>
+        <Text style={styles.headerSubtitle}>{safeString(child.name)}의 종합 분석</Text>
+        <Text style={styles.headerTitle}>{safeString(child.innateData.dominantType)}</Text>
       </View>
 
       {/* Summary card */}
       <View style={styles.summaryCard}>
-        <Text style={styles.summaryText}>{report.summary}</Text>
+        <Text style={styles.summaryText}>{safeString(report.summary)}</Text>
       </View>
 
       {/* Sections */}
       {SECTIONS.map((section) => {
-        const value = report[section.key];
-        if (!value) return null;
+        const rawValue = report[section.key];
+        if (!rawValue) return null;
 
         const reasonKey = REASON_KEY_MAP[section.key];
-        const reason = reasonKey && report.reasons
+        const rawReason = reasonKey && report.reasons
           ? report.reasons[reasonKey]
           : undefined;
+        const reason = rawReason ? safeString(rawReason) : undefined;
 
         return (
           <View key={section.key} style={styles.sectionCard}>
@@ -121,9 +222,9 @@ export default function AnalysisReportScreen() {
               <Text style={styles.sectionEmoji}>{section.emoji}</Text>
               <Text style={styles.sectionTitle}>{section.title}</Text>
             </View>
-            {section.type === 'list' && Array.isArray(value) ? (
+            {section.type === 'list' && Array.isArray(rawValue) ? (
               <View style={styles.listWrap}>
-                {(value as string[]).map((item, idx) => (
+                {safeStringArray(rawValue).map((item, idx) => (
                   <View key={idx} style={styles.listItem}>
                     <View style={styles.bulletDot} />
                     <Text style={styles.listText}>{item}</Text>
@@ -131,7 +232,7 @@ export default function AnalysisReportScreen() {
                 ))}
               </View>
             ) : (
-              <Text style={styles.sectionText}>{value as string}</Text>
+              <Text style={styles.sectionText}>{safeString(rawValue)}</Text>
             )}
             {reason ? (
               <Text style={styles.reasonText}>{reason}</Text>
@@ -145,7 +246,10 @@ export default function AnalysisReportScreen() {
         <DetailSection
           emoji="✨"
           title="이런 점이 뛰어나요"
-          items={report.strengthsDetail}
+          items={report.strengthsDetail.map((d) => ({
+            item: safeString(d.item),
+            reason: safeString(d.reason),
+          }))}
           accentColor={COLORS.primary}
         />
       )}
@@ -155,7 +259,10 @@ export default function AnalysisReportScreen() {
         <DetailSection
           emoji="⚠️"
           title="이런 점은 주의하세요"
-          items={report.weaknessesDetail}
+          items={report.weaknessesDetail.map((d) => ({
+            item: safeString(d.item),
+            reason: safeString(d.reason),
+          }))}
           accentColor="#F5A623"
         />
       )}
@@ -165,7 +272,7 @@ export default function AnalysisReportScreen() {
         <SimpleListSection
           emoji="✅"
           title="이렇게 해주세요"
-          items={report.doList}
+          items={safeStringArray(report.doList)}
           bulletColor="#4CAF50"
         />
       )}
@@ -175,7 +282,7 @@ export default function AnalysisReportScreen() {
         <SimpleListSection
           emoji="❌"
           title="이건 피해주세요"
-          items={report.dontList}
+          items={safeStringArray(report.dontList)}
           bulletColor="#F44336"
         />
       )}
@@ -185,7 +292,7 @@ export default function AnalysisReportScreen() {
         <TextTipSection
           emoji="🕐"
           title="하루 루틴 제안"
-          text={report.dailyRoutineTip}
+          text={safeString(report.dailyRoutineTip)}
         />
       ) : null}
 
@@ -194,7 +301,7 @@ export default function AnalysisReportScreen() {
         <TextTipSection
           emoji="👫"
           title="친구 관계 팁"
-          text={report.socialTip}
+          text={safeString(report.socialTip)}
         />
       ) : null}
 
@@ -203,7 +310,7 @@ export default function AnalysisReportScreen() {
         <TextTipSection
           emoji="💕"
           title="감정 관리 팁"
-          text={report.emotionalTip}
+          text={safeString(report.emotionalTip)}
         />
       ) : null}
 
@@ -214,28 +321,76 @@ export default function AnalysisReportScreen() {
         </Text>
       </View>
 
-      {/* First Talk CTA */}
-      <TouchableOpacity
-        style={styles.firstTalkButton}
-        onPress={handleFirstTalk}
-        activeOpacity={0.8}
-        disabled={firstTalkLoading}
-      >
-        {firstTalkLoading ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
-        ) : (
-          <Text style={styles.firstTalkText}>AI 코치와 첫 대화 시작하기</Text>
-        )}
-      </TouchableOpacity>
-
-      {/* CTA */}
-      <TouchableOpacity
-        style={styles.ctaButton}
-        onPress={() => router.replace('/(main)/home')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.ctaText}>홈으로 이동</Text>
-      </TouchableOpacity>
+      {/* AI First Talk Inline */}
+      {firstTalkLoading ? (
+        <LinearGradient
+          colors={['#FFB088', '#FF8C5A']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.firstTalkCard}
+        >
+          <View style={styles.ftLoadingWrap}>
+            <ActivityIndicator size="small" color="#FFFFFF" />
+            <Text style={styles.ftLoadingText}>AI 코치가 준비 중이에요...</Text>
+          </View>
+        </LinearGradient>
+      ) : firstTalk ? (
+        <LinearGradient
+          colors={['#FFB088', '#FF8C5A']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.firstTalkCard}
+        >
+          <View style={styles.ftAvatarRow}>
+            <View style={styles.ftAvatar}>
+              <Text style={styles.ftAvatarEmoji}>{'🤖'}</Text>
+            </View>
+            <Text style={styles.ftCoachLabel}>AI 코치</Text>
+          </View>
+          {firstTalk.intro ? (
+            <Text style={styles.ftIntro}>{firstTalk.intro}</Text>
+          ) : null}
+          {firstTalk.traitSummary ? (
+            <View style={styles.ftTraitBox}>
+              <Text style={styles.ftTraitText}>{firstTalk.traitSummary}</Text>
+            </View>
+          ) : null}
+          {firstTalk.suggestedQuestion ? (
+            <Text style={styles.ftQuestion}>{firstTalk.suggestedQuestion}</Text>
+          ) : null}
+          <View style={styles.ftInputRow}>
+            <TextInput
+              style={styles.ftTextInput}
+              placeholder="고민이나 궁금한 점을 적어주세요..."
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              value={answer}
+              onChangeText={setAnswer}
+              multiline
+              maxLength={500}
+            />
+            <TouchableOpacity
+              style={[styles.ftSendBtn, !answer.trim() && styles.ftSendBtnDisabled]}
+              onPress={() => {
+                const trimmed = answer.trim();
+                if (!trimmed || submitting) return;
+                setSubmitting(true);
+                handleFirstTalkOption(trimmed);
+              }}
+              disabled={!answer.trim() || submitting}
+              activeOpacity={0.7}
+            >
+              {submitting ? (
+                <ActivityIndicator size="small" color="#FF8C5A" />
+              ) : (
+                <Image source={IC_SEND} style={styles.ftSendIcon} resizeMode="contain" />
+              )}
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.ftHint}>
+            첫 질문에 답변하시면 맞춤 코칭이 시작됩니다
+          </Text>
+        </LinearGradient>
+      ) : null}
 
       <View style={styles.bottomSpacer} />
     </ScrollView>
@@ -353,17 +508,110 @@ const styles = StyleSheet.create({
     color: '#FFFFFF', fontSize: FONT_SIZE.lg, fontWeight: '600',
   },
   bottomSpacer: { height: 40 },
-  firstTalkButton: {
-    backgroundColor: '#FF8C5A',
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 20,
-    marginTop: 20,
-    alignItems: 'center' as const,
+
+  // First Talk Card (inline AI question)
+  firstTalkCard: {
+    borderRadius: 20,
+    padding: 20,
+    marginTop: SPACING.lg,
   },
-  firstTalkText: {
+  ftLoadingWrap: {
+    alignItems: 'center' as const,
+    paddingVertical: 20,
+    gap: 10,
+  },
+  ftLoadingText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  ftAvatarRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    marginBottom: 10,
+  },
+  ftAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  ftAvatarEmoji: { fontSize: 16 },
+  ftCoachLabel: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: 'rgba(255,255,255,0.9)',
+  },
+  ftIntro: {
+    fontSize: 15,
+    fontWeight: '600' as const,
     color: '#FFFFFF',
-    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 10,
+  },
+  ftTraitBox: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  ftTraitText: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    lineHeight: 20,
+  },
+  ftQuestion: {
+    fontSize: 17,
     fontWeight: '700' as const,
+    color: '#FFFFFF',
+    lineHeight: 26,
+    marginBottom: 16,
+  },
+  ftInputRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'flex-end' as const,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    paddingLeft: 14,
+    paddingRight: 6,
+    paddingVertical: 4,
+  },
+  ftTextInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '500' as const,
+    minHeight: 40,
+    maxHeight: 100,
+    paddingVertical: 8,
+  },
+  ftSendBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginBottom: 2,
+  },
+  ftSendBtnDisabled: {
+    opacity: 0.4,
+  },
+  ftSendIcon: {
+    width: 18,
+    height: 18,
+    tintColor: '#FF8C5A',
+  },
+  ftHint: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center' as const,
+    marginTop: 10,
+    fontWeight: '500' as const,
   },
 });

@@ -5,18 +5,25 @@ import { collections, genId } from '../services/firestore';
 
 const router = Router();
 
-/** 이메일에서 마스킹된 닉네임 생성 (예: "abc***@gmail.com" -> "abc***") */
-function maskEmail(email: string): string {
-  const local = email.split('@')[0] || 'user';
-  if (local.length <= 3) return local + '***';
-  return local.slice(0, 3) + '***';
+/** 유저 문서에서 표시 이름 추출: nickname > 이메일 앞부분 > '익명' */
+function getDisplayName(userData: Record<string, unknown> | undefined): string {
+  if (!userData) return '익명';
+  const nick = userData.nickname as string | undefined;
+  if (nick && nick.trim().length > 0) return nick.trim();
+  const email = userData.email as string | undefined;
+  if (email) {
+    const local = email.split('@')[0] || '익명';
+    if (local.length <= 3) return local + '***';
+    return local.slice(0, 3) + '***';
+  }
+  return '익명';
 }
 
 // POST /posts - 게시글 작성
 router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { content, imageUrl, thumbnailUrl, sourceType, childAge, childGender, dominantType } = req.body;
+    const { content, imageUrl, thumbnailUrl, videoUrl, mediaType, sourceType, childAge, childGender, dominantType } = req.body;
 
     if (!content) {
       error(res, '내용을 입력해주세요');
@@ -28,8 +35,7 @@ router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
     }
 
     const userDoc = await collections.users.doc(userId).get();
-    const email = userDoc.exists ? (userDoc.data()!.email as string) : 'user';
-    const userName = maskEmail(email);
+    const userName = getDisplayName(userDoc.exists ? (userDoc.data() as Record<string, unknown>) : undefined);
 
     const id = genId();
     const now = new Date().toISOString();
@@ -41,9 +47,10 @@ router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
       childGender: childGender || '',
       dominantType: dominantType || '',
       content,
-      // TODO: 향후 최적화 - imageUrl은 1080px로 리사이즈, thumbnailUrl은 300px 썸네일 생성
       imageUrl: imageUrl || null,
       thumbnailUrl: thumbnailUrl || null,
+      videoUrl: videoUrl || null,
+      mediaType: mediaType || (videoUrl ? 'video' : imageUrl ? 'image' : 'none'),
       sourceType,
       likes: 0,
       commentCount: 0,
@@ -58,21 +65,59 @@ router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-// GET /feed - 피드 조회 (공개 게시글, 페이지네이션)
+// GET /feed - 가족 피드 (나 + 공동육아 멤버의 게시글만)
 router.get('/feed', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const page = Math.max(0, parseInt(req.query.page as string, 10) || 0);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
 
-    const snap = await collections.posts
-      .where('isPublic', '==', true)
-      .orderBy('createdAt', 'desc')
-      .offset(page * limit)
-      .limit(limit)
-      .get();
+    // 가족 멤버 userId 수집 (나 + 공동육아 초대된 멤버)
+    const familyUserIds = [userId];
+    try {
+      const memberSnap = await collections.familyMembers
+        .where('invitedBy', '==', userId)
+        .where('status', '==', 'accepted')
+        .get();
+      memberSnap.docs.forEach((d) => {
+        const memberId = d.data().userId as string;
+        if (memberId && !familyUserIds.includes(memberId)) familyUserIds.push(memberId);
+      });
+      // 내가 초대받은 경우도 포함
+      const invitedSnap = await collections.familyMembers
+        .where('userId', '==', userId)
+        .where('status', '==', 'accepted')
+        .get();
+      invitedSnap.docs.forEach((d) => {
+        const inviter = d.data().invitedBy as string;
+        if (inviter && !familyUserIds.includes(inviter)) familyUserIds.push(inviter);
+      });
+    } catch { /* familyMembers 없어도 본인 게시글은 표시 */ }
 
-    const posts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // 가족 멤버의 게시글만 조회 (Firestore 'in' 최대 30)
+    const userChunks: string[][] = [];
+    for (let i = 0; i < familyUserIds.length; i += 30) {
+      userChunks.push(familyUserIds.slice(i, i + 30));
+    }
+
+    const allDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+    for (const chunk of userChunks) {
+      const snap = await collections.posts
+        .where('userId', 'in', chunk)
+        .orderBy('createdAt', 'desc')
+        .limit(limit * (page + 1))
+        .get();
+      allDocs.push(...snap.docs);
+    }
+
+    // 정렬 + 페이지네이션
+    allDocs.sort((a, b) => {
+      const aTime = a.data().createdAt as string;
+      const bTime = b.data().createdAt as string;
+      return bTime.localeCompare(aTime);
+    });
+    const paginated = allDocs.slice(page * limit, (page + 1) * limit);
+    const posts = paginated.map((d) => ({ id: d.id, ...d.data() }));
 
     // 현재 사용자의 좋아요 여부 확인
     const postIds = posts.map((p) => p.id);
@@ -197,8 +242,7 @@ router.post('/posts/:id/comments', authMiddleware, async (req: Request, res: Res
     }
 
     const userDoc = await collections.users.doc(userId).get();
-    const email = userDoc.exists ? (userDoc.data()!.email as string) : 'user';
-    const userName = maskEmail(email);
+    const userName = getDisplayName(userDoc.exists ? (userDoc.data() as Record<string, unknown>) : undefined);
 
     const commentId = genId();
     const now = new Date().toISOString();

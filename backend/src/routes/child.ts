@@ -6,6 +6,7 @@ import { generateChildReport, monthsToAgeGroup } from '../services/child.report'
 import { success, error } from '../utils/response';
 import { collections, genId, toISO } from '../services/firestore';
 import { parseInnateData, parseInnateDataFull, safeParse } from '../utils/parse';
+import { getChildIfAccessible, getAccessibleChildIds } from '../utils/childAccess';
 
 const router = Router();
 
@@ -22,13 +23,23 @@ function formatChild(id: string, data: Record<string, unknown>) {
     observedTraits: safeParse(data.observedTraits),
     analysisReport: safeParse(data.analysisReport),
     ageInfo: calculateAge(bd),
+    height: typeof data.height === 'number' ? data.height : null,
+    weight: typeof data.weight === 'number' ? data.weight : null,
   };
 }
 
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const snap = await collections.children.where('userId', '==', req.userId).get();
-    success(res, snap.docs.map((d) => formatChild(d.id, d.data())));
+    // 소유 아이 + 가족으로 접근 가능한 아이 모두 조회
+    const childIds = await getAccessibleChildIds(req.userId!);
+    if (childIds.length === 0) { success(res, []); return; }
+
+    const results: ReturnType<typeof formatChild>[] = [];
+    for (const cid of childIds) {
+      const doc = await collections.children.doc(cid).get();
+      if (doc.exists) results.push(formatChild(doc.id, doc.data()!));
+    }
+    success(res, results);
   } catch { error(res, '자녀 목록 조회 중 오류가 발생했습니다', 500); }
 });
 
@@ -39,9 +50,13 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 
     const innateData = calculateSaju(new Date(birthDate), birthTime);
     const id = genId();
-    const data = {
+    const heightVal = typeof req.body.height === 'number' ? req.body.height : null;
+    const weightVal = typeof req.body.weight === 'number' ? req.body.weight : null;
+    const photoUri = typeof req.body.photoUri === 'string' ? req.body.photoUri : null;
+    const data: Record<string, unknown> = {
       userId: req.userId!, name, gender, birthDate, birthTime,
       innateData: JSON.stringify(innateData), baseline: null, observedTraits: null,
+      height: heightVal, weight: weightVal, photoUri,
     };
     await collections.children.doc(id).set(data);
     success(res, formatChild(id, data), 201);
@@ -50,16 +65,16 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 
 router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const doc = await collections.children.doc(req.params.id as string).get();
-    if (!doc.exists || doc.data()!.userId !== req.userId) { error(res, '자녀를 찾을 수 없습니다', 404); return; }
-    success(res, formatChild(doc.id, doc.data()!));
+    const access = await getChildIfAccessible(req.params.id as string, req.userId, 'viewProfile', res);
+    if (!access) return;
+    success(res, formatChild(req.params.id as string, access.data));
   } catch { error(res, '자녀 조회 중 오류가 발생했습니다', 500); }
 });
 
 router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const doc = await collections.children.doc(req.params.id as string).get();
-    if (!doc.exists || doc.data()!.userId !== req.userId) { error(res, '자녀를 찾을 수 없습니다', 404); return; }
+    const access = await getChildIfAccessible(req.params.id as string, req.userId, 'editProfile', res);
+    if (!access) return;
 
     const updates: Record<string, unknown> = {};
     const { name, gender, birthDate, birthTime, photoUri } = req.body;
@@ -67,8 +82,8 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
     if (gender) updates.gender = gender;
     if (photoUri !== undefined) updates.photoUri = photoUri;
     if (birthDate || birthTime) {
-      const bd = birthDate || doc.data()!.birthDate;
-      const bt = birthTime || doc.data()!.birthTime;
+      const bd = birthDate || access.data.birthDate;
+      const bt = birthTime || access.data.birthTime;
       updates.birthDate = bd;
       updates.birthTime = bt;
       updates.innateData = JSON.stringify(calculateSaju(new Date(bd), bt));
@@ -112,10 +127,10 @@ router.post('/:id/analyze', authMiddleware, async (req: Request, res: Response) 
     const { answers } = req.body;
     if (!answers || !Array.isArray(answers)) { error(res, '응답 데이터가 필요합니다'); return; }
 
-    const doc = await collections.children.doc(req.params.id as string).get();
-    if (!doc.exists || doc.data()!.userId !== req.userId) { error(res, '자녀를 찾을 수 없습니다', 404); return; }
+    const access = await getChildIfAccessible(req.params.id as string, req.userId, 'editProfile', res);
+    if (!access) return;
 
-    const data = doc.data()!;
+    const data = access.data;
     const innate = parseInnateDataFull(data.innateData) as { dominantType: string; fiveElements: Record<string, number> };
 
     // Save baseline answers
@@ -143,10 +158,8 @@ router.post('/:id/analyze', authMiddleware, async (req: Request, res: Response) 
 
 router.post('/:id/daily-tracking', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const childDoc = await collections.children.doc(req.params.id as string).get();
-    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) {
-      error(res, '자녀를 찾을 수 없습니다', 404); return;
-    }
+    const access = await getChildIfAccessible(req.params.id as string, req.userId, 'editRecords', res);
+    if (!access) return;
     const { date, feeding, diaper, sleep } = req.body;
     if (!date) { error(res, '날짜가 필요합니다'); return; }
 
@@ -167,10 +180,8 @@ router.post('/:id/daily-tracking', authMiddleware, async (req: Request, res: Res
 
 router.get('/:id/daily-tracking', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const childDoc = await collections.children.doc(req.params.id as string).get();
-    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) {
-      error(res, '자녀를 찾을 수 없습니다', 404); return;
-    }
+    const access = await getChildIfAccessible(req.params.id as string, req.userId, 'viewRecords', res);
+    if (!access) return;
     const days = parseInt(req.query.days as string) || 7;
     const since = new Date();
     since.setDate(since.getDate() - days);
@@ -191,8 +202,8 @@ router.post('/:id/baseline', authMiddleware, async (req: Request, res: Response)
     const { answers } = req.body;
     if (!answers || !Array.isArray(answers)) { error(res, '응답 데이터가 필요합니다'); return; }
 
-    const doc = await collections.children.doc(req.params.id as string).get();
-    if (!doc.exists || doc.data()!.userId !== req.userId) { error(res, '자녀를 찾을 수 없습니다', 404); return; }
+    const access = await getChildIfAccessible(req.params.id as string, req.userId, 'editProfile', res);
+    if (!access) return;
 
     const baseline = JSON.stringify({ answers, completedAt: new Date().toISOString() });
     await collections.children.doc(req.params.id as string).update({ baseline });
@@ -251,10 +262,8 @@ function generateTraitInsight(
 
 router.post('/:id/daily-trait', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const childDoc = await collections.children.doc(req.params.id as string).get();
-    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) {
-      error(res, '자녀를 찾을 수 없습니다', 404); return;
-    }
+    const access = await getChildIfAccessible(req.params.id as string, req.userId, 'editRecords', res);
+    if (!access) return;
 
     const { question, answer, date } = req.body;
     if (!question || !answer || !date) {
@@ -283,16 +292,15 @@ router.post('/:id/daily-trait', authMiddleware, async (req: Request, res: Respon
 
     if (totalResponses > 0 && totalResponses % 7 === 0) {
       const recent7 = allSnap.docs.slice(0, 7).map((d) => d.data() as { question: string; answer: string; date: string });
-      const childData = childDoc.data()!;
-      const innate = parseInnateDataFull(childData.innateData) as { dominantType: string };
+      const innate = parseInnateDataFull(access.data.innateData) as { dominantType: string };
 
       newInsight = generateTraitInsight(recent7, innate.dominantType as string);
 
       // Store insight in child document's traitInsights array
-      const existingInsights: DailyTraitInsight[] = childData.traitInsights
-        ? (typeof childData.traitInsights === 'string'
-            ? JSON.parse(childData.traitInsights as string)
-            : childData.traitInsights)
+      const existingInsights: DailyTraitInsight[] = access.data.traitInsights
+        ? (typeof access.data.traitInsights === 'string'
+            ? JSON.parse(access.data.traitInsights as string)
+            : access.data.traitInsights) as DailyTraitInsight[]
         : [];
       existingInsights.push(newInsight);
       await collections.children.doc(req.params.id as string).update({
@@ -311,10 +319,8 @@ router.post('/:id/daily-trait', authMiddleware, async (req: Request, res: Respon
 
 router.get('/:id/daily-traits', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const childDoc = await collections.children.doc(req.params.id as string).get();
-    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) {
-      error(res, '자녀를 찾을 수 없습니다', 404); return;
-    }
+    const access = await getChildIfAccessible(req.params.id as string, req.userId, 'viewRecords', res);
+    if (!access) return;
 
     // Return daily trait responses
     const snap = await collections.dailyTraits
@@ -325,11 +331,10 @@ router.get('/:id/daily-traits', authMiddleware, async (req: Request, res: Respon
     const responses = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
     // Return trait insights from child document
-    const childData = childDoc.data()!;
-    const insights: DailyTraitInsight[] = childData.traitInsights
-      ? (typeof childData.traitInsights === 'string'
-          ? JSON.parse(childData.traitInsights as string)
-          : childData.traitInsights)
+    const insights: DailyTraitInsight[] = access.data.traitInsights
+      ? (typeof access.data.traitInsights === 'string'
+          ? JSON.parse(access.data.traitInsights as string)
+          : access.data.traitInsights) as DailyTraitInsight[]
       : [];
 
     success(res, { responses, insights });

@@ -1,7 +1,7 @@
 # 아맞다(A-matda) 프로젝트 현황
 
 > AI 기반 영유아~초등 육아 코칭 앱
-> 최종 업데이트: 2026-04-07
+> 최종 업데이트: 2026-04-12
 
 ---
 
@@ -10,7 +10,8 @@
 - Backend: Express + TypeScript, Firebase Cloud Functions (Node.js 22)
 - Database: Firestore
 - AI: Google Gemini 2.5 Flash Lite
-- 배포: EAS Build (APK) + OTA (expo-updates)
+- 이미지 생성: fal.ai FLUX (3D Pixar 스타일)
+- 배포: EAS Build (APK) + OTA (expo-updates) + Firebase Functions
 
 ## 계정/URL
 - Firebase 프로젝트: amatda-parenting
@@ -18,7 +19,8 @@
 - EAS: @song9912/amatda (ID: fe4c99cb-994f-4905-93f3-99aa93aea6ab)
 - 테스트 계정: test@amatda.com / test1234
 - 테스트 아이: 윤도(20개월 남아 활동형), 승하(8세 여아 조화형)
-- Gemini API Key: .env에 설정됨
+- 카카오 JavaScript키: a621098190b12a58275dcb80e39a6c18
+- 카카오 REST API키: 0aa17590759470d930a9720d273b8a8f
 
 ---
 
@@ -28,15 +30,17 @@
 | 기능 | API | 상태 |
 |------|-----|------|
 | 회원가입/로그인 (JWT) | POST /api/auth/login, register | ✅ |
-| 자녀 등록/관리 (CRUD) | /api/children | ✅ |
+| 카카오 소셜 로그인 | POST /api/auth/kakao | ✅ |
+| 비밀번호 설정/변경 | POST /api/auth/set-password | ✅ |
+| 자녀 등록/관리 (CRUD + photoUri) | /api/children | ✅ |
 | 사주 기질 분석 (5종) | 온보딩 시 자동 | ✅ |
-| 온보딩 설문 (20문항) | /api/onboarding | ✅ |
+| 온보딩 설문 (60문항, 구어체) | /api/onboarding | ✅ |
 
 ### AI 코칭 (10단계 파이프라인)
 | 단계 | 설명 |
 |------|------|
 | 1 | 입력 받기 (message, category, childId) |
-| 2 | 쓸모없는 질문 차단 (장난/무관/모호) |
+| 2 | 쓸모없는 질문 차단 + 대화 응답 패턴 통과 |
 | 3 | 레드플래그 검사 (발열/혈변/경련→진료안내) |
 | 4 | DB 410개 중 상위 2~4개 참고자료 검색 |
 | 5 | 이전 대화 요약 불러오기 (5~8줄) |
@@ -69,24 +73,31 @@
 | 초등 저학년 (7~9세) | elementary-low 1/2/3.ts | 135개 (45x3) |
 | 초등 고학년 (10~12세) | elementary-high 1/2/3.ts | 135개 (45x3) |
 
-카테고리: 수면, 식사, 행동, 사회성, 성장, 정서, 교육, 건강, 생활습관
+카테고리: 울음, 수면, 식사, 행동, 사회성, 성장, 정서, 교육, 건강, 생활습관
 
 ### 추억/카드 기능
 | API | 용도 |
 |-----|------|
 | GET /api/memories/year-ago/:childId | 1년 전 오늘 |
-| GET /api/memories/child-card/:childId | 아이 디지털 카드(명함) |
+| GET /api/memories/child-card/:childId | 아이 디지털 카드(여권 스타일) |
 | GET /api/memories/timeline/:childId | 성장 타임라인 |
+
+### 맘스타그램 (소셜 피드)
+| API | 용도 |
+|-----|------|
+| GET /api/momstagram/feed | 피드 목록 |
+| POST /api/momstagram/post | 게시물 작성 |
+| POST /api/momstagram/like | 좋아요 |
+| POST /api/momstagram/comment | 댓글 |
+- 로컬 즉시 반영 + 서버 동기화 (경합 방지 로직)
+- 타임라인에서 맘스타그램 동시 공유 토글
 
 ### 소아과 후기
 | API | 용도 |
 |-----|------|
-| GET /api/clinics/nearby?lat=&lng=&radius= | 주변 소아과 |
-| POST /api/clinics/review | 후기 작성 (별점4종+한마디) |
+| GET /api/clinics/nearby | 주변 소아과 |
+| POST /api/clinics/review | 후기 작성 (별점4종) |
 | GET /api/clinics/:clinicId/reviews | 병원별 후기 |
-| GET /api/clinics/my-reviews | 내 후기 |
-
-별점: 친절도, 대기시간, 편의성, 전문성 (각 1~5)
 
 ### 구독 시스템
 | API | 용도 |
@@ -95,33 +106,50 @@
 | GET /api/subscriptions/premium/status | 구독 상태 |
 | POST /api/subscriptions/premium/start-trial | 체험판 시작 (30일) |
 | POST /api/subscriptions/premium/subscribe | 유료 구독 |
-
-- 1달 무료 체험 → 7일 전 경고 → 무료 전환
 - 월 4,900원 / 연 39,900원 (32% 할인)
-- 결제: 카드, 카카오페이, 네이버페이, 토스, 무통장입금
-- 무료 vs 유료: 일10회제한/무제한, 답변길이, DB후보수, 맥락유지기간
 
 ### 리텐션 기능
 | API | 용도 |
 |-----|------|
-| GET /api/retention/daily-card/:childId | 오늘의 한마디 (기질맞춤 팁) |
+| GET /api/retention/daily-card/:childId | 오늘의 한마디 |
 | GET /api/retention/streak/:childId | 육아력 스트릭 (레벨 시스템) |
-| GET /api/retention/countdown/:childId | 성장 카운트다운 (D-day) |
+| GET /api/retention/countdown/:childId | 성장 카운트다운 |
 | POST /api/retention/push-schedule | 푸시 알림 설정 |
-| GET /api/retention/push-content/:childId | 푸시 콘텐츠 생성 |
 
 레벨: 새싹부모(1-3일) → 성장부모(4-7) → 열정부모(8-14) → 베테랑부모(15-30) → 마스터부모(31+)
 
 ### 기타 기능
 | 기능 | 상태 |
 |------|------|
-| 맘스타그램 (소셜 피드) | ✅ |
 | 관찰 일기 | ✅ |
-| 성장 앨범 | ✅ |
+| 성장 앨범 + 타임라인 | ✅ |
 | 베이비 트래커 (수유/수면/배변) | ✅ |
 | 학원 추천 (LBS) | ✅ |
 | 영양 가이드 | ✅ |
 | 기질 날씨 | ✅ |
+| 추천 시스템 (DB-first + AI 폴백) | ✅ |
+| 학습 활동 (5기질 x 6활동) | ✅ |
+| 대변 분석기 (규칙 기반) | ✅ |
+| 울음 분석기 (규칙 기반) | ✅ |
+| 고객센터 (FAQ + 메일) | ✅ |
+| 개월별 발달 특징 (화면) | ✅ |
+| 발달 체크리스트 (26포인트) | ✅ |
+
+---
+
+## UI/디자인 완성 현황
+
+### 에셋 (135개 생성 완료)
+- fal.ai FLUX 3D Pixar 스타일
+- 스크립트: scripts/generate-assets.mjs
+
+### 전체 emoji → Image 교체 완료
+- 탭바, 홈, AI코칭, 맘스타그램, 프로필, 분석기 등 전체 화면
+
+### 주요 디자인
+- 스플래시: 보케 파티클 + 마스코트 + 텍스트 애니메이션
+- 아이 카드: 여권 스타일, 다크네이비+골드, 기질별 컬러, 캡처 공유
+- 프로필 메뉴: 아이콘 42x42
 
 ---
 
@@ -130,24 +158,23 @@
 ### 탭 바 (5개)
 홈 / 기질분석 / AI상담 / 맘스타그램 / 성장앨범
 
-### 홈 화면 구성 (위→아래)
+### 홈 화면 구성
 1. 아이 선택 + 프로필
-2. 성장 카운트다운 ("이 세상에 온 지 592일째")
-3. 육아력 스트릭 ("연속 7일! 열정부모 Lv.3")
-4. 오늘의 한마디 카드 (공유 가능)
-5. 주간 리포트 (월요일 표시)
-6. AI 육아일기 (당일 상담 있을 때)
+2. 성장 카운트다운
+3. 육아력 스트릭
+4. 오늘의 한마디 카드
+5. 주간 리포트
+6. AI 육아일기
 7. 퀵 액션 (기질요약/리포트/일기/학습)
 8. 이번 주 추천
 
-### AI 상담 화면 구성
-1. 1년 전 오늘 배너 (있을 때만)
+### AI 상담 화면
+1. 1년 전 오늘 배너
 2. 팔로업 카드
-3. 체크인 카드 (첫 방문)
-4. 카테고리 바 (울음/수면/식사/대변/사회성/성장/행동/기타)
-5. 채팅 메시지 (부모/코치)
-6. 코치 메시지 구성: 레드플래그(빨강) → 답변 → 이유(노랑) → 해결방법(민트) → 진료안내(파랑) → 팔로업(보라) → 맞춤한마디
-7. 입력 (텍스트 + 사진 + 음성)
+3. 체크인 카드
+4. 카테고리 바 (8종)
+5. 채팅 (레드플래그→답변→이유→해결→진료→팔로업→맞춤한마디)
+6. 입력 (텍스트 + 사진 + 음성)
 
 ---
 
@@ -155,80 +182,48 @@
 
 ```
 backend/src/
-├── index.ts                    # Express 진입점
-├── config/env.ts               # 환경변수
-├── middleware/auth.ts           # JWT 인증
+├── index.ts
+├── config/env.ts
+├── middleware/auth.ts
 ├── routes/
-│   ├── auth.ts                 # 로그인/회원가입
-│   ├── child.ts                # 자녀 CRUD
-│   ├── coaching.ts             # AI 상담 (10단계) + 킬러기능 5개
-│   ├── memories.ts             # 1년전오늘/아이카드/타임라인
-│   ├── clinic.ts               # 소아과 후기
-│   ├── retention.ts            # 리텐션 (카운트다운/스트릭/팁/푸시)
-│   ├── subscription.ts         # 구독/결제
-│   ├── momstagram.ts           # 소셜 피드
-│   ├── observation.ts          # 관찰 일기
-│   ├── food.ts                 # 영양 가이드
-│   ├── academy.ts              # 학원 추천
-│   └── ...
+│   ├── auth.ts, child.ts, coaching.ts
+│   ├── coaching/ (firstTalk, analyzeMedia, history)
+│   ├── memories.ts, clinic.ts, retention.ts
+│   ├── subscription.ts, momstagram.ts
+│   ├── observation.ts, food.ts, academy.ts
 ├── services/
-│   ├── firestore.ts            # Firestore 컬렉션
-│   ├── saju.calculator.ts      # 기질 분석 엔진
-│   ├── coaching.knowledge.ts   # 영유아 DB (140개)
-│   ├── coaching.knowledge.elementary-low.ts   # 초등저 (45개)
-│   ├── coaching.knowledge.elementary-low2.ts  # 초등저 (45개)
-│   ├── coaching.knowledge.elementary-low3.ts  # 초등저 (45개)
-│   ├── coaching.knowledge.elementary-high.ts  # 초등고 (45개)
-│   ├── coaching.knowledge.elementary-high2.ts # 초등고 (45개)
-│   ├── coaching.knowledge.elementary-high3.ts # 초등고 (45개)
-│   └── coaching/
-│       ├── types.ts              # 공유 타입 + 티어 설정
-│       ├── useless.filter.ts     # 무관질문 차단
-│       ├── red.flag.detector.ts  # 레드플래그 감지
-│       ├── db.searcher.ts        # DB 검색 (연령별 분기)
-│       ├── context.builder.ts    # 아이 컨텍스트 빌드
-│       ├── conversation.summarizer.ts  # 대화 요약
-│       └── prompt.builder.ts     # 프롬프트 빌드
-└── utils/
-    ├── masking.ts              # 이름 마스킹
-    └── response.ts             # 표준 응답
+│   ├── firestore.ts, saju.calculator.ts
+│   ├── coaching.knowledge.ts (140개)
+│   ├── coaching.knowledge.elementary-*.ts (270개)
+│   └── coaching/ (types, filter, redflag, db, context, summarizer, prompt, gemini)
+└── utils/ (masking.ts, response.ts)
 ```
 
 ## Firestore 컬렉션
 users, children, coachingSessions, followups, learnedKnowledge,
 conversationSummaries, dailyTracking, observations, posts, postLikes,
 postComments, clinics, clinicReviews, pushSchedules, subscriptions,
-onboardingQuestions, foodGuides, academies, faq, ads
+onboardingQuestions, foodGuides, academies, faq, recommendationCache
 
 ---
 
-## 제작 대기 목록
-
-### 에셋 이미지 (ASSET-LIST.md)
-- 총 108개 (캐릭터/기질/온보딩/탭바/카테고리/빈상태/날씨/학원/코칭/프로필/구독/감정)
-
-### 보이스 음성 (VOICE-LIST.md)
-- 총 30개 (온보딩5/매일인사6/AI상담8/특별기능7/수면4)
-- CLOVA Voice 제작 예정, frontend/assets/voice/ 디렉토리 준비됨
-
----
-
-## 최근 빌드/배포
+## 배포 현황
 - Firebase API: 배포 완료
-- OTA: production 브랜치 배포 완료
-- APK: https://expo.dev/accounts/song9912/projects/amatda/builds/a5165ec1-2a66-44e7-9300-bf851000ae0f
+- OTA: preview 브랜치 (최신: 2026-04-12)
+- APK: EAS Build preview 프로필
 
 ## 테스트 결과
 - 전체 API: 24/24 PASS
-- AI 상담 시나리오: 20개 테스트 완료 (기질맞춤 개인화 확인)
+- AI 상담 시나리오: 20개 테스트 완료
 
 ---
 
-## 다음 단계 (미완성)
-1. 에셋 이미지 108개 제작 적용 (이모지→커스텀 일러스트)
-2. CLOVA 보이스 30개 제작 적용
-3. 푸시 알림 실제 연결 (expo-notifications)
-4. 결제 실제 연동 (PG사 연동)
-5. 소셜 로그인 (구글/카카오/네이버) 실제 연동
-6. 프론트엔드 전체 UI 고퀄 디자인 적용
-7. 스토어 등록 (플레이스토어/앱스토어)
+## 미완성 (다음 단계)
+1. 개월별 발달 특징 데이터 78개 (monthlyCharacteristics.ts 스텁만)
+2. CLOVA 보이스 30개 제작
+3. 푸시 알림 실제 연결 (expo-notifications + FCM)
+4. 결제 실제 연동 (PG사)
+5. 스토어 등록 (플레이스토어/앱스토어)
+6. 육아기록 UI 일러스트 전면 변경
+7. icon-settings.png 흰배경 투명화
+8. 팔로업/재접속 유도 알림

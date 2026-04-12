@@ -19,6 +19,7 @@ export interface PromptContext {
   ageInfo: string;
   gender: string;
   temperament: string;
+  temperamentDetail: string;
   specialNotes: string;
   sleepSummary: string;
   mealSummary: string;
@@ -30,6 +31,12 @@ export interface PromptContext {
   dbCandidates: string[];
   cryAnalysisInput: string;
   poopAnalysisInput: string;
+  parentEmotion: string;
+  emotionToneGuide: string;
+  redFlagContext: string;
+  observedTraits: string;
+  timeEmpathyHint: string;
+  milestoneContext: string;
 }
 
 // ─── 레드 플래그 ───
@@ -113,17 +120,47 @@ export interface TierConfig {
 
 export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
   free: {
-    maxOutputTokens: 800,
-    dbCandidateCount: 2,
-    summaryLines: 3,
-    contextDays: 1,
-    dailyLimit: 200,
+    maxOutputTokens: 900,
+    dbCandidateCount: 4,      // 무료도 DB 전체 참고 (유료 전환을 위해 무료 경험 강화)
+    summaryLines: 5,
+    contextDays: 3,
+    dailyLimit: 10,            // 레벨업으로 증가 가능
   },
   paid: {
-    maxOutputTokens: 1000,
+    maxOutputTokens: 1200,
     dbCandidateCount: 4,
     summaryLines: 8,
     contextDays: 7,
     dailyLimit: 999,
   },
 };
+
+// ─── 레벨업 시스템 (무료 사용자 연속 기록 보상) ───
+
+export interface UserLevel {
+  level: number;
+  name: string;
+  minDays: number;
+  dailyLimit: number;        // 해당 레벨의 하루 상담 횟수
+  badge: string;
+}
+
+export const USER_LEVELS: UserLevel[] = [
+  { level: 1, name: '새싹 부모', minDays: 0, dailyLimit: 10, badge: 'sprout' },
+  { level: 2, name: '줄기 부모', minDays: 7, dailyLimit: 15, badge: 'stem' },
+  { level: 3, name: '꽃봉오리 부모', minDays: 14, dailyLimit: 20, badge: 'bud' },
+  { level: 4, name: '만개 부모', minDays: 30, dailyLimit: 30, badge: 'bloom' },
+  { level: 5, name: '열매 부모', minDays: 60, dailyLimit: 50, badge: 'fruit' },
+];
+
+export function getLevelByStreak(streakDays: number): UserLevel {
+  for (let i = USER_LEVELS.length - 1; i >= 0; i--) {
+    if (streakDays >= USER_LEVELS[i].minDays) return USER_LEVELS[i];
+  }
+  return USER_LEVELS[0];
+}
+
+export function getNextLevel(current: UserLevel): UserLevel | null {
+  const idx = USER_LEVELS.findIndex((l) => l.level === current.level);
+  return idx < USER_LEVELS.length - 1 ? USER_LEVELS[idx + 1] : null;
+}

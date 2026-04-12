@@ -77,6 +77,8 @@ export default function MomstagramPostScreen() {
         childAge,
         dominantType,
         imageUri,
+        videoUrl: null,
+        mediaType: imageUri ? 'image' : 'none',
         content: content.trim(),
         likes: 0,
         liked: false,
@@ -114,6 +116,8 @@ export default function MomstagramPostScreen() {
         childAge,
         dominantType,
         imageUri: apiPost?.imageUrl ?? apiPost?.thumbnailUrl ?? imageUri,
+        videoUrl: apiPost?.videoUrl ?? null,
+        mediaType: apiPost?.videoUrl ? 'video' : imageUri ? 'image' : 'none',
         content: content.trim(),
         likes: 0,
         liked: false,
@@ -159,7 +163,7 @@ export default function MomstagramPostScreen() {
         <View style={styles.inputCard}>
           <TextInput
             style={styles.textInput}
-            placeholder="아이의 성장 이야기를 공유해보세요..."
+            placeholder="가족과 아이의 성장 이야기를 공유해보세요..."
             placeholderTextColor="#A0A0B0"
             value={content}
             onChangeText={(t) => {
@@ -240,7 +244,7 @@ export default function MomstagramPostScreen() {
               <Text style={styles.privateHint}>
                 {isPrivate
                   ? '이 게시물은 나에게만 보입니다'
-                  : '모든 사용자에게 공유됩니다'}
+                  : '가족에게 공유됩니다'}
               </Text>
             </View>
           </View>

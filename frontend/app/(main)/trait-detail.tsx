@@ -5,6 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Share,
+  Alert,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useChildStore, AnalysisReport } from '../../stores/childStore';
@@ -27,6 +29,39 @@ export default function TraitDetailScreen() {
     ? child.birthDate.replace(/-/g, '.')
     : '';
 
+  const handleShare = async () => {
+    const personalityTraits = analysisReport?.personality?.length
+      ? analysisReport.personality.join(', ')
+      : '';
+
+    const lines: string[] = [
+      `${child.name}의 기질 유형: ${innateData.label}`,
+    ];
+
+    if (personalityTraits) {
+      lines.push(`주요 성향: ${personalityTraits}`);
+    }
+
+    if (analysisReport?.summary) {
+      const summarySnippet = analysisReport.summary.length > 100
+        ? analysisReport.summary.slice(0, 100) + '...'
+        : analysisReport.summary;
+      lines.push(`요약: ${summarySnippet}`);
+    }
+
+    lines.push('');
+    lines.push('아맞다 앱에서 분석했어요');
+
+    try {
+      await Share.share({
+        message: lines.join('\n'),
+      });
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : '공유에 실패했습니다';
+      Alert.alert('오류', errorMessage);
+    }
+  };
+
   return (
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -37,7 +72,7 @@ export default function TraitDetailScreen() {
           <Text style={styles.backArrow}>{'←'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{child.name}의 기질 분석</Text>
-        <TouchableOpacity hitSlop={12}>
+        <TouchableOpacity hitSlop={12} onPress={handleShare}>
           <Text style={styles.shareIcon}>{'🔗'}</Text>
         </TouchableOpacity>
       </View>

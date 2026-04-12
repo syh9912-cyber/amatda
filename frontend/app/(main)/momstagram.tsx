@@ -1,7 +1,8 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
+  Image,
   FlatList,
   TouchableOpacity,
   StyleSheet,
@@ -9,7 +10,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONT_SIZE, SPACING } from '../../constants/theme';
 import {
@@ -32,10 +33,12 @@ export default function MomstagramScreen() {
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    fetchFeed();
-    loadPrivatePosts();
-  }, [fetchFeed, loadPrivatePosts]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchFeed();
+      loadPrivatePosts();
+    }, [fetchFeed, loadPrivatePosts]),
+  );
 
   const allPosts = useMemo(() => {
     const combined = [...posts, ...privatePosts];
@@ -93,10 +96,10 @@ export default function MomstagramScreen() {
     }
     return (
       <View style={styles.emptyWrap}>
-        <Text style={styles.emptyEmoji}>{'📸'}</Text>
+        <Image source={require('../../assets/icon-camera.png')} style={styles.emptyIcon} resizeMode="contain" />
         <Text style={styles.emptyTitle}>아직 게시물이 없습니다</Text>
         <Text style={styles.emptyHint}>
-          첫 게시물을 올려보세요!
+          가족과 소중한 순간을 공유해보세요
         </Text>
       </View>
     );
@@ -118,14 +121,14 @@ export default function MomstagramScreen() {
 
       {/* Instagram-style header */}
       <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
-        <Text style={styles.headerLogo}>맘스타그램</Text>
+        <Text style={styles.headerLogo}>가족 피드</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.headerBtn}
             onPress={() => router.push('/(main)/momstagram-post')}
             activeOpacity={0.7}
           >
-            <Text style={styles.headerIcon}>{'📷'}</Text>
+            <Image source={require('../../assets/icon-camera.png')} style={styles.headerIconImg} resizeMode="contain" />
           </TouchableOpacity>
         </View>
       </View>
@@ -200,6 +203,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerIcon: { fontSize: 24 },
+  headerIconImg: { width: 24, height: 24 },
   /* List */
   listContent: {
     paddingBottom: 100,
@@ -210,6 +214,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xl * 3,
   },
   emptyEmoji: { fontSize: 56, marginBottom: SPACING.md },
+  emptyIcon: { width: 56, height: 56, marginBottom: SPACING.md },
   emptyTitle: {
     fontSize: FONT_SIZE.lg,
     fontWeight: '600',

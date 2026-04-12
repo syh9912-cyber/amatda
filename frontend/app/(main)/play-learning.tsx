@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView,
+  View, Text, Image, StyleSheet, ScrollView,
   TouchableOpacity,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
@@ -61,7 +61,7 @@ export default function PlayLearningScreen() {
       >
         {/* Intro banner */}
         <View style={styles.introBanner}>
-          <Text style={styles.introEmoji}>{'🎨'}</Text>
+          <Image source={require('../../assets/play-activity.png')} style={styles.introIcon} resizeMode="contain" />
           <Text style={styles.introText}>
             {`${dominantLabel} 기질의 ${childName}에게 딱 맞는\n집에서 할 수 있는 놀이학습 방법이에요`}
           </Text>
@@ -246,6 +246,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   introEmoji: { fontSize: 32, marginBottom: SPACING.xs },
+  introIcon: { width: 48, height: 48, marginBottom: SPACING.xs },
   introText: {
     fontSize: FONT_SIZE.sm,
     color: COLORS.text,

@@ -1,5 +1,16 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { COACHING_COLORS } from './types';
+
+/* eslint-disable @typescript-eslint/no-require-imports */
+const IC_WARN = require('../../assets/icon-redflag.png') as number;
+const IC_SEARCH = require('../../assets/trait-analyst-small.png') as number;
+const IC_CHART = require('../../assets/quick-report.png') as number;
+const IC_CHECK = require('../../assets/growth-cognitive.png') as number;
+/* eslint-enable @typescript-eslint/no-require-imports */
+
+function SectionIcon({ src, size = 16 }: { src: number; size?: number }) {
+  return <Image source={src} style={{ width: size, height: size, marginRight: 4 }} resizeMode="contain" />;
+}
 
 interface Possibility {
   label: string;
@@ -37,7 +48,7 @@ export function AnalyzerResult({ result, onReset }: Props) {
     <View style={styles.container}>
       {result.needsDoctor ? (
         <View style={styles.doctorBanner}>
-          <Text style={styles.doctorIcon}>{'⚠️'}</Text>
+          <Image source={IC_WARN} style={styles.doctorIconImg} resizeMode="contain" />
           <Text style={styles.doctorText}>
             {'전문의 상담이 필요할 수 있어요'}
           </Text>
@@ -45,16 +56,18 @@ export function AnalyzerResult({ result, onReset }: Props) {
       ) : null}
 
       <View style={styles.analysisBox}>
-        <Text style={styles.sectionTitle}>
-          {'🔍 분석 결과'}
-        </Text>
+        <View style={styles.sectionRow}>
+          <SectionIcon src={IC_SEARCH} />
+          <Text style={styles.sectionTitle}>{'분석 결과'}</Text>
+        </View>
         <Text style={styles.analysisText}>{result.analysis}</Text>
       </View>
 
       <View style={styles.possBox}>
-        <Text style={styles.sectionTitle}>
-          {'📊 가능성'}
-        </Text>
+        <View style={styles.sectionRow}>
+          <SectionIcon src={IC_CHART} />
+          <Text style={styles.sectionTitle}>{'가능성'}</Text>
+        </View>
         {result.possibilities.map((p, i) => (
           <View key={i} style={styles.barRow}>
             <Text style={styles.barLabel}>{p.label}</Text>
@@ -75,9 +88,10 @@ export function AnalyzerResult({ result, onReset }: Props) {
       </View>
 
       <View style={styles.recsBox}>
-        <Text style={styles.sectionTitle}>
-          {'✅ 추천 조치'}
-        </Text>
+        <View style={styles.sectionRow}>
+          <SectionIcon src={IC_CHECK} />
+          <Text style={styles.sectionTitle}>{'추천 조치'}</Text>
+        </View>
         {result.recommendations.map((r, i) => (
           <Text key={i} style={styles.recItem}>
             {i + 1}. {r}
@@ -110,7 +124,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FFB8B8',
   },
-  doctorIcon: { fontSize: 20 },
+  doctorIconImg: { width: 20, height: 20 },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   doctorText: {
     flex: 1,
     fontSize: 14,

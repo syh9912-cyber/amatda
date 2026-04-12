@@ -1,12 +1,19 @@
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   Modal,
   StyleSheet,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COACHING_COLORS } from './types';
+
+/* eslint-disable @typescript-eslint/no-require-imports */
+const IC_WAVING = require('../../assets/mascot-waving.png') as number;
+const IC_SUNNY = require('../../assets/weather-sunny.png') as number;
+const IC_BELL = require('../../assets/icon-bell.png') as number;
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 export type PopupReason = 'inactive' | 'weekend' | 'followup';
 
@@ -22,21 +29,21 @@ function getContent(reason: PopupReason, followupText?: string) {
   switch (reason) {
     case 'inactive':
       return {
-        emoji: '👋',
+        icon: IC_WAVING,
         title: '오랫만이에요!',
         question: '요즘 아이 컨디션은 어떤가요?',
         options: ['좋아요', '보통이에요', '고민이 있어요'],
       };
     case 'weekend':
       return {
-        emoji: '☀️',
+        icon: IC_SUNNY,
         title: '즐거운 주말!',
         question: '주말에 아이와 어떤 시간을 보냈나요?',
         options: ['바깥 나들이', '집에서 놀이', '아직 계획 중'],
       };
     case 'followup':
       return {
-        emoji: '🔔',
+        icon: IC_BELL,
         title: '그 후로 어떤가요?',
         question: followupText ?? '이전에 물어봐 주신 고민, 그 후로 어떤가요?',
         options: ['많이 좋아졌어요', '비슷해요', '상담하고 싶어요'],
@@ -65,7 +72,7 @@ export function ProactivePopup({
           colors={['#FFF5EC', '#FFE4D6']}
           style={styles.card}
         >
-          <Text style={styles.emoji}>{content.emoji}</Text>
+          <Image source={content.icon} style={styles.popupIcon} resizeMode="contain" />
           <Text style={styles.title}>{content.title}</Text>
           <Text style={styles.question}>{content.question}</Text>
 
@@ -111,8 +118,10 @@ const styles = StyleSheet.create({
     padding: 28,
     alignItems: 'center',
   },
-  emoji: {
-    fontSize: 40,
+  popupIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     marginBottom: 12,
   },
   title: {

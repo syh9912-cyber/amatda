@@ -1,14 +1,14 @@
-import { View, TextInput, Text, StyleSheet, TextInputProps } from 'react-native';
+import { View, TextInput, Image, StyleSheet, TextInputProps, ImageSourcePropType } from 'react-native';
 import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
 
 interface AuthInputProps extends TextInputProps {
-  icon: string;
+  icon: ImageSourcePropType;
 }
 
 export function AuthInput({ icon, style, ...props }: AuthInputProps) {
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.icon}>{icon}</Text>
+      <Image source={icon} style={styles.icon} resizeMode="contain" />
       <TextInput
         style={[styles.input, style]}
         placeholderTextColor={COLORS.textLight}
@@ -30,10 +30,9 @@ const styles = StyleSheet.create({
     height: 56,
   },
   icon: {
-    fontSize: 18,
+    width: 22,
+    height: 22,
     marginRight: 12,
-    width: 24,
-    textAlign: 'center',
   },
   input: {
     flex: 1,

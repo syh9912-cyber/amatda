@@ -3,12 +3,12 @@ import { Child } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
 
 interface Props {
-  children: Child[];
+  items: Child[];
   selectedId: string;
   onSelect: (id: string) => void;
 }
 
-export function ChildSelector({ children, selectedId, onSelect }: Props) {
+export function ChildSelector({ items, selectedId, onSelect }: Props) {
   return (
     <ScrollView
       horizontal
@@ -16,7 +16,7 @@ export function ChildSelector({ children, selectedId, onSelect }: Props) {
       style={styles.container}
       contentContainerStyle={styles.content}
     >
-      {children.map((child) => {
+      {items.map((child) => {
         const active = child.id === selectedId;
         return (
           <TouchableOpacity

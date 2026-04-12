@@ -23,6 +23,8 @@ export default function ChildInfoScreen() {
   const [gender, setGender] = useState<'M' | 'F' | null>(null);
   const [birthDate, setBirthDate] = useState('');
   const [birthTime, setBirthTime] = useState('');
+  const [height, setHeight] = useState('');
+  const [weight, setWeight] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const addChild = useChildStore((s) => s.addChild);
@@ -43,8 +45,12 @@ export default function ChildInfoScreen() {
 
     setLoading(true);
     try {
-      const res = await childApi.create({ name, gender, birthDate, birthTime });
-      const childData = { ...res.data.data, photoUri };
+      const createPayload: Record<string, unknown> = { name, gender, birthDate, birthTime };
+      if (height.trim()) createPayload.height = parseFloat(height);
+      if (weight.trim()) createPayload.weight = parseFloat(weight);
+      if (photoUri) createPayload.photoUri = photoUri;
+      const res = await childApi.create(createPayload);
+      const childData = { ...res.data.data };
       addChild(childData);
       router.replace({
         pathname: '/onboarding/result',
@@ -60,10 +66,15 @@ export default function ChildInfoScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" bounces={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
+        showsVerticalScrollIndicator={false}
+      >
         <Stack.Screen options={{ title: '자녀 정보 입력' }} />
 
         <PhotoPicker photoUri={photoUri} onChangePhoto={setPhotoUri} />
@@ -102,6 +113,26 @@ export default function ChildInfoScreen() {
           <Text style={styles.label}>출생 시각</Text>
           <BirthTimePicker birthTime={birthTime} onChangeBirthTime={setBirthTime} />
 
+          <Text style={styles.label}>키 (cm) - 선택</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="예: 85"
+            placeholderTextColor={COLORS.textLight}
+            value={height}
+            onChangeText={setHeight}
+            keyboardType="decimal-pad"
+          />
+
+          <Text style={styles.label}>몸무게 (kg) - 선택</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="예: 11.5"
+            placeholderTextColor={COLORS.textLight}
+            value={weight}
+            onChangeText={setWeight}
+            keyboardType="decimal-pad"
+          />
+
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleSubmit}
@@ -119,7 +150,7 @@ export default function ChildInfoScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: SPACING.xl },
+  content: { padding: SPACING.xl, paddingBottom: 160 },
   heading: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text, marginTop: SPACING.lg },
   desc: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: SPACING.xs, marginBottom: SPACING.lg },
   form: { gap: SPACING.md },

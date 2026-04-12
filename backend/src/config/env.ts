@@ -10,7 +10,9 @@ export const env = {
   MOCK_SOCIAL: process.env.MOCK_SOCIAL === 'true',
   DATABASE_URL: process.env.DATABASE_URL || 'file:./dev.db',
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+  KAKAO_JAVASCRIPT_KEY: process.env.KAKAO_JAVASCRIPT_KEY || '',
   KAKAO_REST_API_KEY: process.env.KAKAO_REST_API_KEY || '',
+  KAKAO_CLIENT_SECRET: process.env.KAKAO_CLIENT_SECRET || '',
   NAVER_CLIENT_ID: process.env.NAVER_CLIENT_ID || '',
   NAVER_CLIENT_SECRET: process.env.NAVER_CLIENT_SECRET || '',
 };

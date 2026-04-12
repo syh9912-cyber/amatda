@@ -11,6 +11,7 @@ export interface GeminiCallOptions {
   systemPrompt?: string;
   temperature?: number;
   maxTokens?: number;
+  mediaData?: { mimeType: string; base64: string };
 }
 
 /** Gemini API 사용 가능 여부 */
@@ -28,10 +29,15 @@ export async function callGeminiText(
     throw new Error('MOCK_MODE');
   }
 
-  const { systemPrompt, temperature = 0.4, maxTokens = 500 } = options;
+  const { systemPrompt, temperature = 0.4, maxTokens = 500, mediaData } = options;
+
+  const parts: Array<Record<string, unknown>> = [{ text: prompt }];
+  if (mediaData) {
+    parts.push({ inline_data: { mime_type: mediaData.mimeType, data: mediaData.base64 } });
+  }
 
   const body: Record<string, unknown> = {
-    contents: [{ parts: [{ text: prompt }] }],
+    contents: [{ parts }],
     generationConfig: { temperature, maxOutputTokens: maxTokens },
   };
   if (systemPrompt) {

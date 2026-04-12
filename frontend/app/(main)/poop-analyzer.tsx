@@ -1,239 +1,234 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
-  TextInput,
   TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
+  Image,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Dimensions,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { coachingApi } from '../../services/api';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useChildStore } from '../../stores/childStore';
-import { AnalyzerResult } from '../../components/coaching/AnalyzerResult';
-import { COACHING_COLORS } from '../../components/coaching/types';
+import { coachingApi } from '../../services/api';
+import { isScreenAvailable } from '../../constants/ageFeatures';
 
-const COLORS = [
-  { id: 'yellow', label: '노란색/겨자색', hex: '#DAA520', level: 'normal' },
-  { id: 'brown', label: '갈색', hex: '#8B4513', level: 'normal' },
-  { id: 'green', label: '초록색', hex: '#2E8B57', level: 'normal' },
-  { id: 'darkred', label: '검붉은색', hex: '#8B0000', level: 'warning' },
-  { id: 'white', label: '흰색/회색', hex: '#D3D3D3', level: 'danger' },
-  { id: 'black', label: '검은색', hex: '#1A1A1A', level: 'danger' },
-] as const;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const CONSISTENCIES = [
-  '물설사',
-  '무른변',
-  '보통',
-  '딱딱',
-] as const;
+const COLORS = {
+  bg: '#FFF5EC',
+  white: '#FFFFFF',
+  text: '#2D2016',
+  textSub: '#8C7A6B',
+  textLight: '#B5A99A',
+  accent: '#FF8C5A',
+  border: '#F0E6DA',
+  urgentBg: '#FFF0F0',
+  urgentBorder: '#FF4444',
+  normalBg: '#E8FAF8',
+  normal: '#7DD3B8',
+  attentionBg: '#FFF9E6',
+  attention: '#FFD76E',
+  warningBg: '#FFF0E8',
+  warning: '#FF8C5A',
+};
+
+interface UsageInfo {
+  used: number;
+  limit: number;
+  remaining: number;
+}
 
 interface AnalysisResult {
-  childName?: string;
-  type: 'cry' | 'poop';
   analysis: string;
   possibilities: Array<{ label: string; likelihood: string }>;
   recommendations: string[];
   needsDoctor: boolean;
+  usage?: UsageInfo;
 }
+
+const LIKELIHOOD_CONFIG: Record<string, { color: string; bg: string }> = {
+  '\uB192\uC74C': { color: '#D32F2F', bg: '#FFF0F0' },
+  '\uBCF4\uD1B5': { color: '#F57C00', bg: '#FFF8E1' },
+  '\uB0AE\uC74C': { color: COLORS.normal, bg: COLORS.normalBg },
+};
 
 export default function PoopAnalyzerScreen() {
   const router = useRouter();
-  const child = useChildStore((s) => s.selectedChild);
-  const [color, setColor] = useState<string | null>(null);
-  const [consistency, setConsistency] = useState<string | null>(null);
-  const [hasMucus, setHasMucus] = useState(false);
-  const [hasBlood, setHasBlood] = useState(false);
-  const [note, setNote] = useState('');
-  const [loading, setLoading] = useState(false);
+  const selectedChild = useChildStore((s) => s.selectedChild);
+
+  // 연령 제한: 영아+유아(0-72개월)만 접근 가능
+  useEffect(() => {
+    const ageGroup = selectedChild?.ageInfo?.group ?? 'infant';
+    if (!isScreenAvailable('poop-analyzer', ageGroup)) {
+      Alert.alert('안내', '대변 분석은 영유아(0~72개월) 전용 기능이에요.', [
+        { text: '확인', onPress: () => router.back() },
+      ]);
+    }
+  }, [selectedChild, router]);
+
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
-  const buildDescription = useCallback((): string => {
-    const parts: string[] = [];
-    const sel = COLORS.find((c) => c.id === color);
-    if (sel) parts.push(`색깔: ${sel.label}`);
-    if (consistency) parts.push(`묽기: ${consistency}`);
-    if (hasMucus) parts.push('점액 있음');
-    if (hasBlood) parts.push('혈흔 있음');
-    if (note.trim()) parts.push(`추가 설명: ${note.trim()}`);
-    return parts.join(', ');
-  }, [color, consistency, hasMucus, hasBlood, note]);
+  const handlePickImage = useCallback(async () => {
+    try {
+      const ImagePicker = await import('expo-image-picker');
+      const permResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permResult.granted) return;
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+      if (!pickerResult.canceled && pickerResult.assets[0]) {
+        setPhotoUri(pickerResult.assets[0].uri);
+        setResult(null);
+      }
+    } catch { /* not available */ }
+  }, []);
+
+  const handleTakePhoto = useCallback(async () => {
+    try {
+      const ImagePicker = await import('expo-image-picker');
+      const permResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permResult.granted) return;
+      const pickerResult = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+      if (!pickerResult.canceled && pickerResult.assets[0]) {
+        setPhotoUri(pickerResult.assets[0].uri);
+        setResult(null);
+      }
+    } catch { /* not available */ }
+  }, []);
 
   const handleAnalyze = useCallback(async () => {
-    if (!child || !color) return;
-    setLoading(true);
+    if (!photoUri || !selectedChild) return;
+    setAnalyzing(true);
     try {
-      const desc = buildDescription();
-      const res = await coachingApi.analyzeMedia(child.id, 'poop', desc);
+      const base64 = await FileSystem.readAsStringAsync(photoUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const res = await coachingApi.analyzeMedia(
+        selectedChild.id,
+        'poop',
+        undefined,
+        base64,
+        'image/jpeg',
+      );
       const data = res.data?.data as AnalysisResult | undefined;
       if (data) setResult(data);
-    } catch {
-      // fallback handled by backend mock
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { error?: string; usage?: UsageInfo } } };
+      if (axiosErr.response?.status === 429) {
+        const usage = axiosErr.response.data?.usage;
+        setResult({
+          analysis: axiosErr.response.data?.error ?? '이번 달 분석 횟수를 모두 사용했습니다.',
+          possibilities: [],
+          recommendations: [],
+          needsDoctor: false,
+          usage,
+        });
+      } else {
+        setResult({
+          analysis: '분석에 실패했습니다. 다시 시도해주세요.',
+          possibilities: [],
+          recommendations: [],
+          needsDoctor: false,
+        });
+      }
     } finally {
-      setLoading(false);
+      setAnalyzing(false);
     }
-  }, [child, color, buildDescription]);
+  }, [photoUri, selectedChild]);
 
   const handleReset = useCallback(() => {
     setResult(null);
-    setColor(null);
-    setConsistency(null);
-    setHasMucus(false);
-    setHasBlood(false);
-    setNote('');
+    setPhotoUri(null);
   }, []);
-
-  const canSubmit = !!color && !loading;
 
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Text style={styles.backBtn}>{'←'}</Text>
+          <Text style={styles.backBtn}>{'<'}</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {'대변 색깔 분석기'}
-        </Text>
+        <Text style={styles.headerTitle}>{'대변 분석기'}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {result ? (
-          <AnalyzerResult result={result} onReset={handleReset} />
+          <ResultView result={result} onReset={handleReset} />
         ) : (
           <>
-            <Text style={styles.sectionLabel}>
-              {'🎨 색깔 선택'}
-            </Text>
-            <View style={styles.colorGrid}>
-              {COLORS.map((c) => (
+            {/* 안내 카드 */}
+            <View style={styles.guideCard}>
+              <Image source={require('../../assets/mascot-thinking.png')} style={styles.guideImage} resizeMode="contain" />
+              <Text style={styles.guideTitle}>{'사진으로 대변을 분석해요'}</Text>
+              <Text style={styles.guideDesc}>
+                {'아이의 대변 사진을 촬영하거나 갤러리에서 선택하면\nAI가 색상, 형태, 상태를 분석해 드려요.'}
+              </Text>
+            </View>
+
+            {/* 사진 영역 */}
+            {photoUri ? (
+              <View style={styles.photoPreviewWrap}>
+                <Image source={{ uri: photoUri }} style={styles.photoPreview} />
                 <TouchableOpacity
-                  key={c.id}
-                  style={[
-                    styles.colorItem,
-                    color === c.id && styles.colorSelected,
-                  ]}
-                  onPress={() => setColor(c.id)}
+                  style={styles.photoRemoveBtn}
+                  onPress={() => { setPhotoUri(null); }}
                   activeOpacity={0.7}
                 >
-                  <View
-                    style={[
-                      styles.colorCircle,
-                      { backgroundColor: c.hex },
-                      c.level === 'danger' && styles.dangerBorder,
-                      c.level === 'warning' && styles.warningBorder,
-                    ]}
-                  />
-                  <Text style={styles.colorLabel}>{c.label}</Text>
-                  {c.level === 'danger' ? (
-                    <Text style={styles.levelBadgeDanger}>
-                      {'위험'}
-                    </Text>
-                  ) : c.level === 'warning' ? (
-                    <Text style={styles.levelBadgeWarning}>
-                      {'주의'}
-                    </Text>
-                  ) : null}
+                  <Text style={styles.photoRemoveText}>{'X'}</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={styles.sectionLabel}>
-              {'💧 묽기'}
-            </Text>
-            <View style={styles.pillRow}>
-              {CONSISTENCIES.map((c) => (
-                <TouchableOpacity
-                  key={c}
-                  style={[
-                    styles.pill,
-                    consistency === c && styles.pillSelected,
-                  ]}
-                  onPress={() =>
-                    setConsistency((prev) => (prev === c ? null : c))
-                  }
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.pillText,
-                      consistency === c && styles.pillTextSelected,
-                    ]}
-                  >
-                    {c}
-                  </Text>
+              </View>
+            ) : (
+              <View style={styles.photoButtonRow}>
+                <TouchableOpacity style={styles.photoBtn} onPress={handleTakePhoto} activeOpacity={0.7}>
+                  <Text style={styles.photoBtnEmoji}>{'📷'}</Text>
+                  <Text style={styles.photoBtnText}>{'카메라 촬영'}</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
+                <TouchableOpacity style={styles.photoBtn} onPress={handlePickImage} activeOpacity={0.7}>
+                  <Text style={styles.photoBtnEmoji}>{'🖼'}</Text>
+                  <Text style={styles.photoBtnText}>{'갤러리 선택'}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
-            <Text style={styles.sectionLabel}>
-              {'👀 추가 증상'}
-            </Text>
-            <View style={styles.pillRow}>
-              <TouchableOpacity
-                style={[styles.pill, hasMucus && styles.pillSelected]}
-                onPress={() => setHasMucus(!hasMucus)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.pillText,
-                    hasMucus && styles.pillTextSelected,
-                  ]}
-                >
-                  {'점액 있음'}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.pill, hasBlood && styles.pillSelected]}
-                onPress={() => setHasBlood(!hasBlood)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.pillText,
-                    hasBlood && styles.pillTextSelected,
-                  ]}
-                >
-                  {'혈흔 있음'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.sectionLabel}>
-              {'📝 추가 설명 (선택)'}
-            </Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder={'예: 어제부터 변화가 있었어요...'}
-              placeholderTextColor={COACHING_COLORS.textLight}
-              value={note}
-              onChangeText={setNote}
-              multiline
-              maxLength={300}
-            />
-
+            {/* 분석 버튼 */}
             <TouchableOpacity
-              style={[styles.analyzeBtn, !canSubmit && styles.analyzeBtnOff]}
+              style={[styles.analyzeBtn, (!photoUri || analyzing) && styles.analyzeBtnDisabled]}
               onPress={handleAnalyze}
-              disabled={!canSubmit}
+              disabled={!photoUri || analyzing}
               activeOpacity={0.7}
             >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
+              {analyzing ? (
+                <View style={styles.analyzingRow}>
+                  <ActivityIndicator size="small" color={COLORS.white} />
+                  <Text style={styles.analyzeBtnText}>{'AI 분석 중...'}</Text>
+                </View>
               ) : (
                 <Text style={styles.analyzeBtnText}>
-                  {'AI 분석하기'}
+                  {photoUri ? '사진 분석하기' : '사진을 먼저 선택해주세요'}
                 </Text>
               )}
             </TouchableOpacity>
+
+            <View style={styles.disclaimerBox}>
+              <Text style={styles.disclaimerText}>
+                {'이 분석은 의학적 진단을 대체하지 않습니다. 걱정되는 증상이 있으면 반드시 소아과 전문의와 상담하세요.'}
+              </Text>
+            </View>
           </>
         )}
       </ScrollView>
@@ -241,115 +236,183 @@ export default function PoopAnalyzerScreen() {
   );
 }
 
+/* ── 결과 화면 ── */
+function ResultView({ result, onReset }: { result: AnalysisResult; onReset: () => void }) {
+  return (
+    <View style={resultStyles.container}>
+      {result.needsDoctor && (
+        <View style={resultStyles.urgentBanner}>
+          <Text style={resultStyles.urgentIcon}>{'🚨'}</Text>
+          <View style={resultStyles.urgentTextWrap}>
+            <Text style={resultStyles.urgentTitle}>{'병원 방문을 권장합니다'}</Text>
+            <Text style={resultStyles.urgentDesc}>
+              {'분석 결과 주의가 필요한 징후가 발견되었습니다. 소아과를 방문해주세요.'}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* 분석 소견 */}
+      <View style={resultStyles.analysisCard}>
+        <Text style={resultStyles.analysisTitle}>{'분석 결과'}</Text>
+        <Text style={resultStyles.analysisText}>{result.analysis}</Text>
+      </View>
+
+      {/* 가능성 */}
+      {result.possibilities.length > 0 && (
+        <View style={resultStyles.sectionCard}>
+          <Text style={resultStyles.sectionTitle}>{'가능성 분석'}</Text>
+          {result.possibilities.map((p, i) => {
+            const cfg = LIKELIHOOD_CONFIG[p.likelihood] ?? LIKELIHOOD_CONFIG['\uBCF4\uD1B5'];
+            return (
+              <View key={i} style={resultStyles.possibilityRow}>
+                <Text style={resultStyles.possibilityLabel}>{p.label}</Text>
+                <View style={[resultStyles.likelihoodBadge, { backgroundColor: cfg.bg }]}>
+                  <Text style={[resultStyles.likelihoodText, { color: cfg.color }]}>{p.likelihood}</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      {/* 권장 조치 */}
+      {result.recommendations.length > 0 && (
+        <View style={[resultStyles.sectionCard, { backgroundColor: '#F0FAF8' }]}>
+          <Text style={resultStyles.sectionTitle}>{'권장 조치'}</Text>
+          {result.recommendations.map((rec, i) => (
+            <View key={i} style={resultStyles.bulletRow}>
+              <Text style={resultStyles.bulletNum}>{`${i + 1}`}</Text>
+              <Text style={resultStyles.bulletText}>{rec}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {result.usage && (
+        <View style={resultStyles.usageBox}>
+          <Text style={resultStyles.usageText}>
+            {'이번 달 분석 '}{result.usage.used}{'/'}{result.usage.limit}{'회 사용 (남은 횟수: '}{result.usage.remaining}{'회)'}
+          </Text>
+        </View>
+      )}
+
+      <View style={resultStyles.disclaimerBox}>
+        <Text style={resultStyles.disclaimerText}>
+          {'이 분석 결과는 참고용이며 의학적 진단을 대체하지 않습니다.'}
+        </Text>
+      </View>
+
+      <TouchableOpacity style={resultStyles.resetBtn} onPress={onReset} activeOpacity={0.7}>
+        <Text style={resultStyles.resetBtnText}>{'다시 분석하기'}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+/* ── 스타일 ── */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COACHING_COLORS.bg },
+  container: { flex: 1, backgroundColor: COLORS.bg },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 56,
-    paddingBottom: 14,
-    backgroundColor: COACHING_COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COACHING_COLORS.border,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 56 : 44,
+    paddingBottom: 14, backgroundColor: COLORS.white,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
   },
-  backBtn: { fontSize: 22, color: COACHING_COLORS.text },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: COACHING_COLORS.text,
-  },
-  headerSpacer: { width: 22 },
+  backBtn: { fontSize: 22, fontWeight: '600', color: COLORS.text, paddingRight: 8 },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text },
+  headerSpacer: { width: 30 },
   scroll: { flex: 1 },
-  scrollContent: { padding: 20, paddingBottom: 40 },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COACHING_COLORS.text,
-    marginBottom: 12,
-    marginTop: 8,
+  scrollContent: { padding: 20, paddingBottom: 60 },
+
+  guideCard: {
+    backgroundColor: COLORS.white, borderRadius: 16, padding: 24,
+    alignItems: 'center', marginBottom: 24,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
   },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 20,
+  guideEmoji: { fontSize: 48, marginBottom: 12 },
+  guideImage: { width: 80, height: 80, marginBottom: 12 },
+  guideTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 8 },
+  guideDesc: { fontSize: 13, color: COLORS.textSub, lineHeight: 20, textAlign: 'center' },
+
+  photoButtonRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
+  photoBtn: {
+    flex: 1, backgroundColor: COLORS.white, borderRadius: 16,
+    paddingVertical: 32, alignItems: 'center',
+    borderWidth: 2, borderColor: COLORS.border, borderStyle: 'dashed',
   },
-  colorItem: {
-    width: '30%',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: 'transparent',
+  photoBtnEmoji: { fontSize: 36, marginBottom: 10 },
+  photoBtnText: { fontSize: 14, fontWeight: '600', color: COLORS.textSub },
+
+  photoPreviewWrap: {
+    position: 'relative', alignSelf: 'center',
+    borderRadius: 16, overflow: 'hidden', marginBottom: 20,
   },
-  colorSelected: { borderColor: COACHING_COLORS.accent },
-  colorCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    marginBottom: 6,
-    borderWidth: 2,
-    borderColor: '#E0D5C8',
+  photoPreview: {
+    width: SCREEN_WIDTH - 80, height: SCREEN_WIDTH - 80, borderRadius: 16,
   },
-  dangerBorder: { borderColor: '#FF4444', borderWidth: 3 },
-  warningBorder: { borderColor: '#FFA500', borderWidth: 3 },
-  colorLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COACHING_COLORS.text,
-    textAlign: 'center',
+  photoRemoveBtn: {
+    position: 'absolute', top: 10, right: 10,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  levelBadgeDanger: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#D32F2F',
-    marginTop: 4,
-  },
-  levelBadgeWarning: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#E67E22',
-    marginTop: 4,
-  },
-  pillRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 20,
-  },
-  pill: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: COACHING_COLORS.border,
-  },
-  pillSelected: {
-    backgroundColor: COACHING_COLORS.accent,
-    borderColor: COACHING_COLORS.accent,
-  },
-  pillText: { fontSize: 13, fontWeight: '600', color: COACHING_COLORS.text },
-  pillTextSelected: { color: '#FFFFFF' },
-  textInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
-    fontSize: 14,
-    color: COACHING_COLORS.text,
-    minHeight: 80,
-    textAlignVertical: 'top',
-    marginBottom: 24,
-  },
+  photoRemoveText: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
+
   analyzeBtn: {
-    backgroundColor: COACHING_COLORS.accent,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
+    backgroundColor: COLORS.accent, borderRadius: 14,
+    paddingVertical: 16, alignItems: 'center', marginBottom: 16,
   },
-  analyzeBtnOff: { opacity: 0.5 },
-  analyzeBtnText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
+  analyzeBtnDisabled: { opacity: 0.45 },
+  analyzeBtnText: { fontSize: 16, fontWeight: '700', color: COLORS.white },
+  analyzingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+
+  disclaimerBox: { backgroundColor: '#F5F0EB', borderRadius: 12, padding: 14 },
+  disclaimerText: { fontSize: 12, color: COLORS.textSub, lineHeight: 18, textAlign: 'center' },
+});
+
+const resultStyles = StyleSheet.create({
+  container: { gap: 16 },
+
+  urgentBanner: {
+    flexDirection: 'row', backgroundColor: COLORS.urgentBg, borderRadius: 16,
+    padding: 16, borderWidth: 2, borderColor: COLORS.urgentBorder, gap: 12,
+  },
+  urgentIcon: { fontSize: 28 },
+  urgentTextWrap: { flex: 1 },
+  urgentTitle: { fontSize: 16, fontWeight: '800', color: '#D32F2F', marginBottom: 6 },
+  urgentDesc: { fontSize: 13, color: '#C62828', lineHeight: 20 },
+
+  analysisCard: {
+    backgroundColor: COLORS.white, borderRadius: 16, padding: 20,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+  },
+  analysisTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 10 },
+  analysisText: { fontSize: 14, color: COLORS.text, lineHeight: 22 },
+
+  sectionCard: { backgroundColor: COLORS.white, borderRadius: 16, padding: 18 },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
+
+  possibilityRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  possibilityLabel: { fontSize: 14, fontWeight: '600', color: COLORS.text },
+  likelihoodBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
+  likelihoodText: { fontSize: 12, fontWeight: '700' },
+
+  bulletRow: { flexDirection: 'row', marginBottom: 8, gap: 10 },
+  bulletNum: { fontSize: 13, fontWeight: '700', color: COLORS.accent, width: 16 },
+  bulletText: { flex: 1, fontSize: 14, color: COLORS.text, lineHeight: 22 },
+
+  disclaimerBox: { backgroundColor: '#F5F0EB', borderRadius: 12, padding: 14 },
+  disclaimerText: { fontSize: 12, color: COLORS.textSub, lineHeight: 18, textAlign: 'center' },
+
+  usageBox: { backgroundColor: '#F5F0EB', borderRadius: 12, padding: 12, alignItems: 'center' },
+  usageText: { fontSize: 12, color: COLORS.textSub, fontWeight: '600' },
+
+  resetBtn: { backgroundColor: COLORS.accent, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
+  resetBtnText: { fontSize: 16, fontWeight: '700', color: COLORS.white },
 });

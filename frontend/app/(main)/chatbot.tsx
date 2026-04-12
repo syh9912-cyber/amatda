@@ -10,12 +10,13 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { coachingApi, memoriesApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
+import { scheduleCoachingFollowup } from '../../services/pushNotifications';
 import { CoachMessage } from '../../components/coaching/CoachMessage';
 import { ParentMessage } from '../../components/coaching/ParentMessage';
-import { CheckinCard } from '../../components/coaching/CheckinCard';
+import { FirstTalkCard } from '../../components/coaching/FirstTalkCard';
 import { CategoryBar } from '../../components/coaching/CategoryBar';
 import { FollowupCard } from '../../components/coaching/FollowupCard';
 import { CoachingInput } from '../../components/coaching/CoachingInput';
@@ -28,15 +29,17 @@ import {
 
 export default function CoachingScreen() {
   const router = useRouter();
+  const { firstMessage } = useLocalSearchParams<{ firstMessage?: string }>();
   const child = useChildStore((s) => s.selectedChild);
   const [messages, setMessages] = useState<CoachingMessage[]>([]);
   const [followups, setFollowups] = useState<FollowupItem[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [checkedIn, setCheckedIn] = useState(false);
+  const [firstTalkDone, setFirstTalkDone] = useState(false);
   const [yearAgoMemory, setYearAgoMemory] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const firstMessageHandled = useRef(false);
 
   useEffect(() => {
     if (child) {
@@ -75,6 +78,17 @@ export default function CoachingScreen() {
             (session.reply as string | undefined) ??
             '';
           if (coachText) {
+            // followup from history can be { days, question } object or string
+            const histFollowup = session.followup;
+            let histFollowupText: string | undefined;
+            if (typeof histFollowup === 'string') {
+              histFollowupText = histFollowup;
+            } else if (histFollowup && typeof histFollowup === 'object' && 'question' in (histFollowup as Record<string, unknown>)) {
+              histFollowupText = String((histFollowup as { question: unknown }).question);
+            } else if (typeof session.followupQuestion === 'string') {
+              histFollowupText = session.followupQuestion;
+            }
+
             mapped.push({
               id: `h-c-${session.id as string}`,
               isCoach: true,
@@ -89,15 +103,14 @@ export default function CoachingScreen() {
                 ? (session.reasons as string[])
                 : undefined,
               medical: (session.medical as string | undefined) ?? undefined,
-              followup: (session.followup as string | undefined) ??
-                (session.followupQuestion as string | undefined) ?? undefined,
+              followup: histFollowupText,
               createdAt: ts,
             });
           }
         }
         if (mapped.length > 0) {
           setMessages(mapped);
-          setCheckedIn(true);
+          setFirstTalkDone(true);
         }
       }
     } catch {
@@ -157,21 +170,33 @@ export default function CoachingScreen() {
 
       try {
         const res = await coachingApi.send(child.id, text.trim(), category);
-        const reply = res.data?.data;
+        const reply = res.data?.data as Record<string, unknown> | undefined;
+        // followup from API can be { days, question } object or string
+        const rawFollowup = reply?.followup;
+        let followupText: string | undefined;
+        if (typeof rawFollowup === 'string') {
+          followupText = rawFollowup;
+        } else if (rawFollowup && typeof rawFollowup === 'object' && 'question' in rawFollowup) {
+          followupText = String((rawFollowup as { question: unknown }).question);
+        }
+
         const coachMsg: CoachingMessage = {
           id: `c-${Date.now()}`,
           isCoach: true,
-          text: reply?.answer ?? reply?.text ?? reply?.reply ?? '답변을 준비하고 있어요.',
-          reason: reply?.reason,
-          solutions: reply?.solutions,
-          source: reply?.source ?? 'ai',
-          redFlag: reply?.redFlag ?? undefined,
-          reasons: reply?.reasons ?? undefined,
-          medical: reply?.medical ?? undefined,
-          followup: reply?.followup ?? undefined,
+          text: (reply?.answer as string | undefined) ?? (reply?.text as string | undefined) ?? (reply?.reply as string | undefined) ?? '답변을 준비하고 있어요.',
+          reason: reply?.reason as string | undefined,
+          solutions: Array.isArray(reply?.solutions) ? (reply.solutions as string[]) : undefined,
+          source: (reply?.source as CoachingMessage['source']) ?? 'ai',
+          redFlag: (reply?.redFlag as string | undefined) ?? undefined,
+          reasons: Array.isArray(reply?.reasons) ? (reply.reasons as string[]) : undefined,
+          medical: (reply?.medical as string | undefined) ?? undefined,
+          followup: followupText,
           createdAt: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, coachMsg]);
+
+        // Schedule coaching follow-up notification for next day
+        scheduleCoachingFollowup(child.name).catch(() => { /* silent */ });
       } catch {
         const errMsg: CoachingMessage = {
           id: `e-${Date.now()}`,
@@ -188,32 +213,21 @@ export default function CoachingScreen() {
     [sending, child, photoUri, scrollToBottom]
   );
 
-  const handleCheckin = useCallback(
-    async (mood: string) => {
-      if (!child) return;
-      setCheckedIn(true);
-      try {
-        await coachingApi.checkin(child.id, mood);
-      } catch {
-        // ignore
-      }
-      const moodLabel =
-        mood === 'good'
-          ? '좋아요'
-          : mood === 'normal'
-            ? '보통이에요'
-            : '안 좋아요';
-      sendMessage(
-        `오늘 아이 컨디션: ${moodLabel}`
-      );
+  const handleFirstTalkSelect = useCallback(
+    (option: string) => {
+      setFirstTalkDone(true);
+      sendMessage(option);
     },
-    [child, sendMessage]
+    [sendMessage]
   );
+
+  const [showCategories, setShowCategories] = useState(false);
 
   const handleCategorySelect = useCallback(
     (key: string, label: string) => {
       const text = `아이가 ${label} 관련해서 고민이 있어요`;
       setInput(text);
+      setShowCategories(false);
     },
     []
   );
@@ -251,15 +265,31 @@ export default function CoachingScreen() {
     []
   );
 
+  // Auto-send firstMessage from analysis report navigation
+  useEffect(() => {
+    if (!firstMessage || firstMessageHandled.current) return;
+    if (!child) return; // child 로드 대기
+    firstMessageHandled.current = true;
+    setFirstTalkDone(true);
+    const timer = setTimeout(async () => {
+      try {
+        await sendMessage(firstMessage);
+      } catch {
+        // 에러 발생해도 크래시 방지
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [firstMessage, child?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const childName = child?.name ?? '아이';
   const isEmpty = messages.length === 0;
-  const showCheckin = isEmpty && !checkedIn;
+  const showFirstTalk = isEmpty && !firstTalkDone && !!child && !firstMessage;
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <Stack.Screen options={{ headerShown: false }} />
 
@@ -275,18 +305,31 @@ export default function CoachingScreen() {
               style={styles.headerPhoto}
             />
           ) : (
-            <View style={styles.headerPhotoPlaceholder}>
-              <Text style={styles.headerPhotoEmoji}>
-                {child?.gender === 'F' ? '👧' : '👦'}
-              </Text>
-            </View>
+            <Image
+              source={child?.gender === 'F' ? require('../../assets/avatar-girl.png') : require('../../assets/avatar-boy.png')}
+              style={styles.headerPhotoPlaceholder}
+              resizeMode="cover"
+            />
           )}
           <Text style={styles.headerName}>{childName}</Text>
         </View>
       </View>
 
-      {/* Category Quick Buttons */}
-      <CategoryBar onSelect={handleCategorySelect} />
+      {/* Category toggle (hidden during first talk) */}
+      {!showFirstTalk && (
+        <View>
+          <TouchableOpacity
+            style={styles.categoryToggle}
+            onPress={() => setShowCategories((v) => !v)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.categoryToggleText}>
+              {showCategories ? '카테고리 닫기' : '카테고리 선택'}
+            </Text>
+          </TouchableOpacity>
+          {showCategories && <CategoryBar onSelect={handleCategorySelect} ageGroup={child?.ageInfo?.group} />}
+        </View>
+      )}
 
       {/* Chat Area */}
       <ScrollView
@@ -295,6 +338,7 @@ export default function CoachingScreen() {
         contentContainerStyle={styles.chatContent}
         onContentSizeChange={scrollToBottom}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
       >
         {/* Year Ago Memory Banner */}
         {yearAgoMemory ? (
@@ -311,9 +355,9 @@ export default function CoachingScreen() {
           />
         ))}
 
-        {/* Check-in Card */}
-        {showCheckin ? (
-          <CheckinCard onSelect={handleCheckin} />
+        {/* First Talk Card */}
+        {showFirstTalk ? (
+          <FirstTalkCard childId={child.id} onSelect={handleFirstTalkSelect} />
         ) : null}
 
         {/* Messages */}
@@ -328,9 +372,7 @@ export default function CoachingScreen() {
         {/* Sending indicator */}
         {sending ? (
           <View style={styles.typingRow}>
-            <View style={styles.typingAvatar}>
-              <Text style={styles.typingAvatarText}>{'🤖'}</Text>
-            </View>
+            <Image source={require('../../assets/coach-avatar.png')} style={styles.typingAvatarImg} resizeMode="cover" />
             <View style={styles.typingBubble}>
               <ActivityIndicator
                 size="small"
@@ -354,36 +396,38 @@ export default function CoachingScreen() {
         </View>
       ) : null}
 
-      {/* Analyzer shortcuts */}
-      <View style={styles.analyzerRow}>
-        <TouchableOpacity
-          style={styles.analyzerPill}
-          onPress={() => router.push('/(main)/poop-analyzer')}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.analyzerPillText}>
-            {'🔍 대변 분석'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.analyzerPill}
-          onPress={() => router.push('/(main)/cry-analyzer')}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.analyzerPillText}>
-            {'🔍 울음 분석'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {/* Analyzer shortcuts (hidden during first talk) */}
+      {!showFirstTalk && (
+        <View style={styles.analyzerRow}>
+          <TouchableOpacity
+            style={styles.analyzerPill}
+            onPress={() => router.push('/(main)/poop-analyzer')}
+            activeOpacity={0.7}
+          >
+            <Image source={require('../../assets/trait-analyst-small.png')} style={styles.analyzerPillIcon} resizeMode="contain" />
+            <Text style={styles.analyzerPillText}>{'대변 분석'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.analyzerPill}
+            onPress={() => router.push('/(main)/cry-analyzer')}
+            activeOpacity={0.7}
+          >
+            <Image source={require('../../assets/trait-analyst-small.png')} style={styles.analyzerPillIcon} resizeMode="contain" />
+            <Text style={styles.analyzerPillText}>{'울음 분석'}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-      {/* Input Area */}
-      <CoachingInput
-        value={input}
-        onChangeText={setInput}
-        onSend={handleSend}
-        onPhoto={handlePhoto}
-        disabled={sending}
-      />
+      {/* Input Area (hidden during first talk - input is inside FirstTalkCard) */}
+      {!showFirstTalk && (
+        <CoachingInput
+          value={input}
+          onChangeText={setInput}
+          onSend={handleSend}
+          onPhoto={handlePhoto}
+          disabled={sending}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -426,13 +470,9 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: COACHING_COLORS.coachAvatar,
-    alignItems: 'center',
-    justifyContent: 'center',
     borderWidth: 2,
     borderColor: COACHING_COLORS.accent,
   },
-  headerPhotoEmoji: { fontSize: 16 },
   headerName: {
     fontSize: 14,
     fontWeight: '600',
@@ -452,15 +492,11 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 16,
   },
-  typingAvatar: {
+  typingAvatarImg: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COACHING_COLORS.coachAvatar,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  typingAvatarText: { fontSize: 18 },
   typingBubble: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -505,6 +541,9 @@ const styles = StyleSheet.create({
     borderTopColor: COACHING_COLORS.border,
   },
   analyzerPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -512,7 +551,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COACHING_COLORS.accent,
   },
+  analyzerPillIcon: {
+    width: 14,
+    height: 14,
+  },
   analyzerPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COACHING_COLORS.accent,
+  },
+  categoryToggle: {
+    alignSelf: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#FFF5EC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COACHING_COLORS.accent,
+    marginVertical: 6,
+  },
+  categoryToggleText: {
     fontSize: 12,
     fontWeight: '600',
     color: COACHING_COLORS.accent,

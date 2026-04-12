@@ -10,7 +10,7 @@ export interface SocialUserInfo {
 }
 
 /** Mock 소셜 인증 응답 */
-function mockSocialUser(provider: SocialProvider, accessToken: string): SocialUserInfo {
+function mockSocialUser(provider: SocialProvider): SocialUserInfo {
   const mockId = `mock_${provider.toLowerCase()}_${Date.now()}`;
   return {
     provider,
@@ -35,7 +35,7 @@ async function verifyGoogleToken(accessToken: string): Promise<SocialUserInfo> {
   };
 }
 
-/** Kakao 토큰 검증 */
+/** Kakao 토큰 검증 (access token으로 사용자 정보 조회) */
 async function verifyKakaoToken(accessToken: string): Promise<SocialUserInfo> {
   const res = await fetch('https://kapi.kakao.com/v2/user/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -76,7 +76,7 @@ export async function verifySocialToken(
   accessToken: string
 ): Promise<SocialUserInfo> {
   if (env.MOCK_SOCIAL) {
-    return mockSocialUser(provider, accessToken);
+    return mockSocialUser(provider);
   }
 
   switch (provider) {
@@ -85,4 +85,115 @@ export async function verifySocialToken(
     case 'NAVER': return verifyNaverToken(accessToken);
     default: throw new Error(`지원하지 않는 소셜 프로바이더: ${provider}`);
   }
+}
+
+// ──────────────────────────────────────────────────────────
+// Authorization Code -> Access Token 교환 (서버사이드)
+// ──────────────────────────────────────────────────────────
+
+interface KakaoTokenResponse {
+  access_token: string;
+  token_type: string;
+  refresh_token?: string;
+  expires_in: number;
+  scope?: string;
+}
+
+interface NaverTokenResponse {
+  access_token: string;
+  refresh_token?: string;
+  token_type: string;
+  expires_in: number;
+}
+
+/** Kakao 인가 코드 -> 액세스 토큰 교환 */
+async function exchangeKakaoCode(
+  code: string,
+  redirectUri: string,
+): Promise<string> {
+  const params = new URLSearchParams({
+    grant_type: 'authorization_code',
+    client_id: env.KAKAO_REST_API_KEY,
+    redirect_uri: redirectUri,
+    code,
+  });
+
+  // client_secret이 설정된 경우에만 포함
+  if (env.KAKAO_CLIENT_SECRET) {
+    params.set('client_secret', env.KAKAO_CLIENT_SECRET);
+  }
+
+  const res = await fetch('https://kauth.kakao.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString(),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`카카오 토큰 교환 실패: ${errBody}`);
+  }
+
+  const data = (await res.json()) as KakaoTokenResponse;
+  return data.access_token;
+}
+
+/** Naver 인가 코드 -> 액세스 토큰 교환 */
+async function exchangeNaverCode(
+  code: string,
+  redirectUri: string,
+): Promise<string> {
+  const params = new URLSearchParams({
+    grant_type: 'authorization_code',
+    client_id: env.NAVER_CLIENT_ID,
+    client_secret: env.NAVER_CLIENT_SECRET,
+    redirect_uri: redirectUri,
+    code,
+  });
+
+  const res = await fetch('https://nid.naver.com/oauth2.0/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString(),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`네이버 토큰 교환 실패: ${errBody}`);
+  }
+
+  const data = (await res.json()) as NaverTokenResponse;
+  return data.access_token;
+}
+
+/**
+ * 인가 코드 -> 토큰 교환 -> 사용자 정보 조회 통합
+ * 프론트에서 client_secret 없이 인가 코드만 받아 백엔드에서 처리
+ */
+export async function exchangeCodeAndVerify(
+  provider: SocialProvider,
+  code: string,
+  redirectUri: string,
+): Promise<SocialUserInfo> {
+  if (env.MOCK_SOCIAL) {
+    return mockSocialUser(provider);
+  }
+
+  let accessToken: string;
+
+  switch (provider) {
+    case 'KAKAO':
+      accessToken = await exchangeKakaoCode(code, redirectUri);
+      break;
+    case 'NAVER':
+      accessToken = await exchangeNaverCode(code, redirectUri);
+      break;
+    default:
+      throw new Error(
+        `${provider}는 코드 교환 방식을 지원하지 않습니다. accessToken으로 /auth/social을 사용하세요.`,
+      );
+  }
+
+  // 교환된 토큰으로 사용자 정보 조회
+  return verifySocialToken(provider, accessToken);
 }

@@ -3,10 +3,11 @@ import { authMiddleware } from '../middleware/auth';
 import { env } from '../config/env';
 import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 import { maskChildName } from '../utils/masking';
 
 // ─── 새 코칭 서비스 ───
-import { CoachingAIResponse, UserTier, TIER_CONFIGS } from '../services/coaching/types';
+import { CoachingAIResponse, UserTier, TIER_CONFIGS, getLevelByStreak, getNextLevel } from '../services/coaching/types';
 import { filterUselessQuestion } from '../services/coaching/useless.filter';
 import { detectRedFlags } from '../services/coaching/red.flag.detector';
 import { findTopCoachingEntries, formatCandidatesForPrompt } from '../services/coaching/db.searcher';
@@ -17,6 +18,14 @@ import {
   formatRecentTurns,
 } from '../services/coaching/conversation.summarizer';
 import { buildPrompt } from '../services/coaching/prompt.builder';
+import { detectParentEmotion } from '../services/coaching/emotion.detector';
+import { getTimeContext } from '../services/coaching/time.awareness';
+import { getMilestoneContext } from '../services/coaching/milestone.detector';
+import { generateDailyInsights } from '../services/coaching/proactive.insight';
+import { generateAutoDiary, AutoDiary } from '../services/coaching/auto.diary';
+import { createTimeCapsule, getOpenableCapsules, openTimeCapsule, listTimeCapsules } from '../services/coaching/time.capsule';
+import { generatePeerComparison } from '../services/coaching/peer.comparison';
+import { parseTrackingFromMessage, ParsedTracking } from '../services/coaching/tracker.parser';
 
 const router = Router();
 
@@ -87,17 +96,68 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
     // ─── Step 4: 레드 플래그 검사 ───
     const redFlag = detectRedFlags(message);
 
+    // EMERGENCY 레벨: AI 호출 없이 즉시 응급 안내 반환
+    if (redFlag.urgency === 'emergency') {
+      const emergencySessionId = genId();
+      const emergencyResponse: CoachingAIResponse = {
+        redFlag: redFlag.message,
+        judgement: '응급 상황이 의심됩니다. 아이의 상태를 먼저 확인해주세요.',
+        reasons: redFlag.flags,
+        actions: [
+          '119에 전화하거나 가까운 응급실을 방문하세요',
+          '아이의 의식, 호흡, 체온을 확인하세요',
+          '증상 시작 시간과 경과를 메모해두세요',
+        ],
+        medical: redFlag.message ?? '즉시 병원 방문을 권합니다.',
+        personalNote: '지금 많이 놀라셨을 거예요. 침착하게 아이 상태를 확인하시고, 조금이라도 이상하면 바로 병원에 가주세요.',
+        followupQuestion: '병원 방문 후 결과가 어떠셨나요?',
+      };
+
+      await collections.coachingSessions.doc(emergencySessionId).set({
+        userId: req.userId,
+        childId,
+        message,
+        category: categoryKo,
+        answer: emergencyResponse.judgement,
+        reason: emergencyResponse.personalNote,
+        solutions: emergencyResponse.actions,
+        redFlag: redFlag.message,
+        source: 'emergency',
+        createdAt: FieldValue.serverTimestamp(),
+      });
+
+      success(res, {
+        sessionId: emergencySessionId,
+        answer: emergencyResponse.judgement,
+        reason: emergencyResponse.personalNote,
+        solutions: emergencyResponse.actions,
+        source: 'emergency',
+        category: categoryKo,
+        redFlag: redFlag.message,
+        reasons: emergencyResponse.reasons,
+        medical: emergencyResponse.medical,
+        followup: { days: 1, question: emergencyResponse.followupQuestion },
+      });
+      return;
+    }
+
     // ─── Step 5: 사용자 티어 확인 ───
     const tier = await getUserTier(req.userId!);
     const config = TIER_CONFIGS[tier];
 
     // ─── Step 6: 하루 상담 횟수 체크 (무료, 레드플래그는 제외) ───
     if (tier === 'free' && !redFlag.detected) {
-      const todayCount = await getTodaySessionCount(req.userId!);
-      if (todayCount >= config.dailyLimit) {
+      const [todayCount, userStreak] = await Promise.all([
+        getTodaySessionCount(req.userId!),
+        getUserStreak(req.userId!),
+      ]);
+      const userLevel = getLevelByStreak(userStreak);
+      const dailyLimit = userLevel.dailyLimit;
+
+      if (todayCount >= dailyLimit) {
         success(res, {
           sessionId: null,
-          answer: `오늘 무료 상담 횟수(${config.dailyLimit}회)를 모두 사용했어요. 내일 다시 이용하시거나, 프리미엄으로 업그레이드하시면 무제한 상담이 가능해요.`,
+          answer: `오늘 상담 횟수(${dailyLimit}회)를 모두 사용했어요. 꾸준히 기록하면 레벨이 올라 더 많이 상담할 수 있어요! 지금은 ${userLevel.name} (Lv.${userLevel.level})이에요.`,
           reason: '',
           solutions: [],
           source: 'limit',
@@ -122,9 +182,16 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
       getConversationContext(req.userId!, childId, tier),
     ]);
 
-    // ─── Step 8: 프롬프트 조합 ───
+    // ─── Step 8: 컨텍스트 강화 + 프롬프트 조합 ───
+    const parentEmotion = detectParentEmotion(message);
+    const timeCtx = getTimeContext();
+    const milestones = getMilestoneContext(child.ageMonths);
     const dbTexts = formatCandidatesForPrompt(dbCandidates);
     const recentTurnsText = formatRecentTurns(conversation.recentTurns);
+
+    const redFlagContext = redFlag.detected && redFlag.message
+      ? `[${redFlag.urgency.toUpperCase()}] ${redFlag.flags.join(', ')} - ${redFlag.message}`
+      : '';
 
     const { systemPrompt, runtimePrompt } = buildPrompt({
       category: categoryKo,
@@ -133,6 +200,7 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
       ageInfo: child.ageInfo,
       gender: child.gender,
       temperament: `${child.temperament} (${child.temperamentDetail})`,
+      temperamentDetail: child.temperamentDetail,
       specialNotes: child.specialNotes,
       sleepSummary: tracking.sleepSummary,
       mealSummary: tracking.mealSummary,
@@ -144,6 +212,12 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
       dbCandidates: dbTexts,
       cryAnalysisInput: audioUrl ? `울음소리 녹음 제공됨 (${audioUrl})` : '',
       poopAnalysisInput: photoUrl ? `대변 사진 제공됨 (${photoUrl})` : '',
+      parentEmotion: parentEmotion.emotion,
+      emotionToneGuide: parentEmotion.toneGuide,
+      redFlagContext,
+      observedTraits: child.observedTraits,
+      timeEmpathyHint: timeCtx.empathyHint,
+      milestoneContext: milestones.combined,
     });
 
     // ─── Step 9: AI 호출 ───
@@ -155,9 +229,15 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
       aiResponse = getMockResponse(child.temperament, categoryKo);
     }
 
-    // 레드플래그가 있으면 AI 응답에 추가
+    // 레드플래그가 있으면 AI 응답에 병원 안내 보강
     if (redFlag.detected && redFlag.message) {
-      aiResponse.medical = redFlag.message;
+      // AI가 medical을 비워두거나 약하게 쓴 경우 레드플래그 메시지로 보강
+      if (!aiResponse.medical || aiResponse.medical === 'null') {
+        aiResponse.medical = redFlag.message;
+      } else {
+        aiResponse.medical = `${redFlag.message} ${aiResponse.medical}`;
+      }
+      aiResponse.redFlag = redFlag.message;
     }
 
     // ─── Step 10: 응답 포맷 + 저장 ───
@@ -219,6 +299,29 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
       answerText
     ).catch(() => {});
 
+    // ─── 트래커 자동 파싱 (fire-and-forget) ───
+    let trackerAutoSaved = false;
+    const parsed: ParsedTracking | null = parseTrackingFromMessage(message);
+    if (parsed) {
+      trackerAutoSaved = true;
+      const today = new Date().toISOString().slice(0, 10);
+      const docId = `${childId}_${today}`;
+      const updates: Record<string, unknown> = {
+        childId,
+        userId: req.userId,
+        date: today,
+        updatedAt: new Date().toISOString(),
+        autoParserSource: 'coaching',
+      };
+      if (parsed.feeding) updates.feeding = parsed.feeding;
+      if (parsed.sleep) updates.sleep = parsed.sleep;
+      if (parsed.diaper) updates.diaper = parsed.diaper;
+      if (parsed.condition) updates.condition = parsed.condition;
+      if (parsed.temperature !== undefined) updates.temperature = parsed.temperature;
+
+      collections.dailyTracking.doc(docId).set(updates, { merge: true }).catch(() => {});
+    }
+
     success(res, {
       sessionId,
       answer: answerText,
@@ -230,6 +333,7 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
       reasons: aiResponse.reasons,
       medical: aiResponse.medical ?? null,
       followup,
+      trackerAutoSaved,
     });
   } catch {
     error(res, '코칭 응답 중 오류가 발생했습니다', 500);
@@ -387,11 +491,11 @@ async function getUserTier(userId: string): Promise<UserTier> {
       if (premiumExpires && new Date(premiumExpires) > new Date()) return 'paid';
     }
 
-    // 체험판 확인 (30일)
+    // 체험판 확인 (7일)
     const trialStarted = data.trialStartedAt as string | undefined;
     if (trialStarted) {
       const trialEnd = new Date(trialStarted);
-      trialEnd.setDate(trialEnd.getDate() + 30);
+      trialEnd.setDate(trialEnd.getDate() + 7);
       if (new Date() < trialEnd) return 'paid';
     }
 
@@ -414,6 +518,45 @@ async function getTodaySessionCount(userId: string): Promise<number> {
       const src = (d.data() as Record<string, unknown>).source as string;
       return src !== 'filter' && src !== 'limit';
     }).length;
+  } catch {
+    return 0;
+  }
+}
+
+async function getUserStreak(userId: string): Promise<number> {
+  try {
+    const snap = await collections.dailyTracking
+      .where('userId', '==', userId)
+      .orderBy('date', 'desc')
+      .limit(90)
+      .get();
+
+    if (snap.empty) return 0;
+
+    const dates = snap.docs
+      .map((d) => (d.data() as Record<string, unknown>).date as string)
+      .filter(Boolean)
+      .sort()
+      .reverse();
+
+    const uniqueDates = [...new Set(dates)];
+    const today = new Date().toISOString().slice(0, 10);
+
+    let streak = 0;
+    let checkDate = today;
+
+    for (const d of uniqueDates) {
+      if (d === checkDate) {
+        streak++;
+        const prev = new Date(checkDate);
+        prev.setDate(prev.getDate() - 1);
+        checkDate = prev.toISOString().slice(0, 10);
+      } else if (d < checkDate) {
+        break;
+      }
+    }
+
+    return streak;
   } catch {
     return 0;
   }
@@ -596,7 +739,7 @@ router.post('/first-talk', authMiddleware, async (req: Request, res: Response) =
   "intro": "반갑다는 인사 + 아이 이름 호명 (1문장)",
   "traitSummary": "이 아이의 기질을 부모가 이해하기 쉽게 2~3문장으로 설명. '사주/오행' 용어 절대 금지. 기질/성향/에너지로만 표현",
   "suggestedQuestion": "이 기질과 월령에서 가장 흔한 고민을 자연스럽게 물어보는 1문장",
-  "quickOptions": ["네, 그래요!", "아니요, 다른 고민이 있어요", "아직 잘 모르겠어요"]
+  "quickOptions": ["네, 아이가 그래요! 도움이 필요해요", "아이에 대해 다른 고민이 있어요", "아이 수면 습관이 궁금해요"]
 }`;
 
         const resp = await fetch(
@@ -657,7 +800,7 @@ function getDefaultGreeting(
     intro: `${name}이를 만나게 되어 반가워요!`,
     traitSummary: traitDesc[temperament] ?? `${name}이는 고유한 기질을 가진 아이에요. 아이의 성향을 이해하면 육아가 한결 수월해질 거예요.`,
     suggestedQuestion: `${ageInfo} ${temperament} 아이에게 가장 많은 고민이 "${topConcern}"인데, 혹시 ${name}이도 비슷한가요?`,
-    quickOptions: ['네, 맞아요!', '아니요, 다른 고민이 있어요', '아직 잘 모르겠어요'],
+    quickOptions: ['네, 아이가 그래요! 도움이 필요해요', '아이에 대해 다른 고민이 있어요', '아이 수면 습관이 궁금해요'],
   };
 }
 
@@ -781,14 +924,101 @@ function getMostFrequent(arr: string[]): string | null {
 
 // ─── GET /api/coaching/milestones/:childId — 성장 마일스톤 체크 ───
 
-const MILESTONES: Array<{ months: number; label: string; items: string[] }> = [
-  { months: 12, label: '12개월', items: ['혼자 서기', '엄마/아빠 말하기', '손가락으로 가리키기'] },
-  { months: 18, label: '18개월', items: ['혼자 걷기', '단어 5~10개', '컵으로 마시기', '숟가락 사용 시도'] },
-  { months: 24, label: '24개월', items: ['두 단어 조합', '계단 오르기', '간단한 지시 따르기', '또래에 관심'] },
-  { months: 30, label: '30개월', items: ['세 단어 이상 문장', '점프하기', '이름 말하기', '옷 벗기 시도'] },
-  { months: 36, label: '36개월', items: ['질문하기', '세발자전거', '친구와 놀기', '간단한 대화'] },
-  { months: 48, label: '48개월', items: ['긴 문장 사용', '가위질', '혼자 옷 입기', '규칙 이해'] },
-  { months: 60, label: '60개월', items: ['숫자 세기', '그림 그리기', '차례 지키기', '감정 표현'] },
+interface MilestoneItemDef {
+  id: string;
+  label: string;
+  domain: string;       // 대근육 | 소근육 | 언어 | 인지 | 사회성 | 정서 | 자조
+  description: string;  // 부모에게 보여줄 구체적 설명
+}
+
+const MILESTONES: Array<{ months: number; label: string; items: MilestoneItemDef[] }> = [
+  { months: 6, label: '6개월', items: [
+    { id: 'm6_1', label: '뒤집기를 해요', domain: '대근육', description: '엎드린 자세에서 등으로, 또는 반대로 뒤집기를 시도하는지 관찰하세요.' },
+    { id: 'm6_2', label: '손에 쥔 물건을 옮겨 쥐어요', domain: '소근육', description: '한 손에서 다른 손으로 장난감을 옮기는지 확인하세요.' },
+    { id: 'm6_3', label: '옹알이를 해요', domain: '언어', description: '"바바", "마마" 같은 반복 소리를 내는지 들어보세요.' },
+    { id: 'm6_4', label: '거울 속 자신에게 반응해요', domain: '인지', description: '거울을 보고 웃거나 손을 뻗는지 관찰하세요.' },
+    { id: 'm6_5', label: '낯선 사람을 경계해요', domain: '사회성', description: '낯선 사람과 익숙한 사람을 구별하여 반응하는지 보세요.' },
+    { id: 'm6_6', label: '소리나는 방향으로 고개를 돌려요', domain: '인지', description: '이름을 부르거나 소리가 나면 그 방향을 보는지 확인하세요.' },
+  ]},
+  { months: 12, label: '12개월', items: [
+    { id: 'm12_1', label: '잡고 서 있을 수 있어요', domain: '대근육', description: '가구나 손을 잡고 스스로 서는지 확인하세요.' },
+    { id: 'm12_2', label: '"엄마", "아빠"를 말해요', domain: '언어', description: '의미를 가진 첫 단어를 말하는지 들어보세요.' },
+    { id: 'm12_3', label: '손가락으로 가리키며 원하는 것을 표현해요', domain: '인지', description: '원하는 물건이나 흥미로운 것을 손가락으로 가리키는지 보세요.' },
+    { id: 'm12_4', label: '엄지와 검지로 작은 물건을 집어요', domain: '소근육', description: '작은 과자 등을 두 손가락으로 정교하게 집는지 확인하세요.' },
+    { id: 'm12_5', label: '까꿍 놀이에 반응해요', domain: '사회성', description: '까꿍 놀이를 하면 웃거나 스스로 시도하는지 보세요.' },
+    { id: 'm12_6', label: '"안 돼"라고 하면 멈추거나 반응해요', domain: '정서', description: '간단한 금지 표현에 반응하는지 관찰하세요.' },
+    { id: 'm12_7', label: '컵으로 마시기를 시도해요', domain: '자조', description: '도움을 받아 컵으로 물을 마시려 하는지 확인하세요.' },
+  ]},
+  { months: 18, label: '18개월', items: [
+    { id: 'm18_1', label: '혼자 걸을 수 있어요', domain: '대근육', description: '잡지 않고 여러 걸음을 걷는지 확인하세요.' },
+    { id: 'm18_2', label: '단어를 5~10개 말해요', domain: '언어', description: '"맘마", "물", "이거" 등 의미 있는 단어를 5개 이상 쓰는지 세어보세요.' },
+    { id: 'm18_3', label: '크레파스로 끄적거려요', domain: '소근육', description: '크레파스나 연필을 쥐고 종이에 흔적을 남기는지 확인하세요.' },
+    { id: 'm18_4', label: '숟가락 사용을 시도해요', domain: '자조', description: '음식을 숟가락에 담아 입으로 가져가려 하는지 보세요.' },
+    { id: 'm18_5', label: '간단한 지시를 이해해요', domain: '인지', description: '"공 가져와", "신발 가져와" 같은 지시에 반응하는지 관찰하세요.' },
+    { id: 'm18_6', label: '다른 아이에게 관심을 보여요', domain: '사회성', description: '또래 아이를 바라보거나 다가가는지 확인하세요.' },
+    { id: 'm18_7', label: '좋아하는 것을 표현해요', domain: '정서', description: '좋으면 웃고, 싫으면 고개를 젓는 등 감정 표현을 하는지 보세요.' },
+  ]},
+  { months: 24, label: '24개월', items: [
+    { id: 'm24_1', label: '두 단어를 조합해 말해요', domain: '언어', description: '"엄마 물", "아빠 가" 같은 두 단어 문장을 만드는지 확인하세요.' },
+    { id: 'm24_2', label: '계단을 오를 수 있어요', domain: '대근육', description: '난간을 잡고 한 발씩 계단을 오르는지 보세요.' },
+    { id: 'm24_3', label: '블록을 4개 이상 쌓아요', domain: '소근육', description: '블록이나 컵을 4개 이상 쌓을 수 있는지 시도해보세요.' },
+    { id: 'm24_4', label: '신체 부위를 가리킬 수 있어요', domain: '인지', description: '"코 어디야?", "눈 어디야?" 하면 정확히 가리키는지 확인하세요.' },
+    { id: 'm24_5', label: '또래와 나란히 놀아요', domain: '사회성', description: '같은 공간에서 또래와 각자 놀이를 하는 병행 놀이를 하는지 보세요.' },
+    { id: 'm24_6', label: '물건의 용도를 알아요', domain: '인지', description: '전화기를 귀에 대거나 빗으로 머리를 빗는 등 흉내를 내는지 확인하세요.' },
+    { id: 'm24_7', label: '혼자 신발을 벗을 수 있어요', domain: '자조', description: '벨크로 신발 등을 스스로 벗으려 시도하는지 보세요.' },
+  ]},
+  { months: 36, label: '36개월', items: [
+    { id: 'm36_1', label: '세 단어 이상 문장을 말해요', domain: '언어', description: '"엄마 나 배고파" 같은 문장을 말하는지 들어보세요.' },
+    { id: 'm36_2', label: '세발자전거 페달을 밟아요', domain: '대근육', description: '세발자전거를 타고 페달을 돌려 이동하는지 확인하세요.' },
+    { id: 'm36_3', label: '가위를 사용해봐요', domain: '소근육', description: '안전가위로 종이를 자르려 시도하는지 보세요.' },
+    { id: 'm36_4', label: '"왜?"라고 질문해요', domain: '인지', description: '궁금한 것에 대해 질문을 하기 시작하는지 관찰하세요.' },
+    { id: 'm36_5', label: '친구와 함께 놀아요', domain: '사회성', description: '또래와 역할을 나누거나 함께 놀이하는지 보세요.' },
+    { id: 'm36_6', label: '자기 이름을 말할 수 있어요', domain: '인지', description: '"이름이 뭐야?" 하면 대답하는지 확인하세요.' },
+    { id: 'm36_7', label: '혼자 손을 씻을 수 있어요', domain: '자조', description: '물을 틀고 비누칠 후 헹구는 과정을 시도하는지 보세요.' },
+    { id: 'm36_8', label: '감정을 말로 표현해요', domain: '정서', description: '"화났어", "슬퍼" 같은 감정 단어를 사용하는지 들어보세요.' },
+  ]},
+  { months: 48, label: '48개월', items: [
+    { id: 'm48_1', label: '한 발로 잠깐 서 있을 수 있어요', domain: '대근육', description: '한 발로 2~3초 이상 균형을 잡는지 확인하세요.' },
+    { id: 'm48_2', label: '긴 문장으로 이야기해요', domain: '언어', description: '오늘 있었던 일을 4~5단어 이상 문장으로 설명하는지 들어보세요.' },
+    { id: 'm48_3', label: '가위로 직선을 따라 자를 수 있어요', domain: '소근육', description: '선을 따라 종이를 자르는 것이 가능한지 시도해보세요.' },
+    { id: 'm48_4', label: '색깔 이름을 4가지 이상 알아요', domain: '인지', description: '"이건 무슨 색이야?" 하면 빨강, 파랑, 노랑, 초록 등을 맞추는지 확인하세요.' },
+    { id: 'm48_5', label: '혼자 옷을 입을 수 있어요', domain: '자조', description: '단추나 지퍼 없는 옷을 스스로 입고 벗는지 보세요.' },
+    { id: 'm48_6', label: '차례를 기다릴 수 있어요', domain: '사회성', description: '놀이나 식사에서 자기 차례를 기다리는지 관찰하세요.' },
+    { id: 'm48_7', label: '상상 놀이를 해요', domain: '정서', description: '인형에게 밥 주기 등 상상 속 역할놀이를 하는지 보세요.' },
+  ]},
+  { months: 60, label: '60개월', items: [
+    { id: 'm60_1', label: '10까지 숫자를 세요', domain: '인지', description: '물건을 짚어가며 1~10까지 정확히 세는지 확인하세요.' },
+    { id: 'm60_2', label: '사람 그림에 팔다리가 있어요', domain: '소근육', description: '사람을 그릴 때 머리, 몸통, 팔, 다리가 구분되는지 보세요.' },
+    { id: 'm60_3', label: '규칙이 있는 게임에 참여해요', domain: '사회성', description: '간단한 보드게임이나 술래잡기 규칙을 이해하고 따르는지 확인하세요.' },
+    { id: 'm60_4', label: '한 발로 깡충 뛸 수 있어요', domain: '대근육', description: '한 발로 여러 번 연속 점프가 가능한지 시도해보세요.' },
+    { id: 'm60_5', label: '이야기의 순서를 이해해요', domain: '언어', description: '동화를 듣고 "그 다음에?" 하면 이어서 말하는지 확인하세요.' },
+    { id: 'm60_6', label: '자기 감정의 이유를 설명해요', domain: '정서', description: '"왜 화났어?" 하면 "OO가 나를 때렸어" 같이 이유를 말하는지 들어보세요.' },
+    { id: 'm60_7', label: '혼자 화장실에 가요', domain: '자조', description: '화장실 사용과 뒤처리를 스스로 하는지 확인하세요.' },
+  ]},
+  { months: 72, label: '72개월 (초등 입학)', items: [
+    { id: 'm72_1', label: '자기 이름을 쓸 수 있어요', domain: '소근육', description: '한글로 자신의 이름을 쓸 수 있는지 확인하세요.' },
+    { id: 'm72_2', label: '간단한 덧뺄셈을 해요', domain: '인지', description: '5 이내의 덧셈 뺄셈을 손가락으로 할 수 있는지 보세요.' },
+    { id: 'm72_3', label: '줄넘기를 할 수 있어요', domain: '대근육', description: '줄넘기를 연속으로 3회 이상 뛸 수 있는지 시도해보세요.' },
+    { id: 'm72_4', label: '하루 일과를 설명할 수 있어요', domain: '언어', description: '"오늘 뭐 했어?" 하면 순서대로 이야기하는지 확인하세요.' },
+    { id: 'm72_5', label: '규칙을 지키려 노력해요', domain: '사회성', description: '게임이나 생활 규칙을 이해하고 지키려 하는지 관찰하세요.' },
+    { id: 'm72_6', label: '다른 사람 감정에 공감해요', domain: '정서', description: '친구가 울면 위로하거나 걱정하는 모습을 보이는지 확인하세요.' },
+  ]},
+  { months: 96, label: '96개월 (초등 저학년)', items: [
+    { id: 'm96_1', label: '긴 글을 읽고 이해해요', domain: '인지', description: '짧은 동화책을 혼자 읽고 내용을 설명할 수 있는지 확인하세요.' },
+    { id: 'm96_2', label: '공을 정확히 던지고 받아요', domain: '대근육', description: '2~3m 거리에서 공을 주고받을 수 있는지 해보세요.' },
+    { id: 'm96_3', label: '자기 생각을 글로 써요', domain: '소근육', description: '일기나 편지를 3~4문장 이상 쓸 수 있는지 확인하세요.' },
+    { id: 'm96_4', label: '시간 개념을 이해해요', domain: '인지', description: '시계를 보고 "지금 3시야" 같이 말할 수 있는지 확인하세요.' },
+    { id: 'm96_5', label: '그룹 활동에서 협력해요', domain: '사회성', description: '모둠 활동에서 역할을 나누고 협동하는지 관찰하세요.' },
+    { id: 'm96_6', label: '실수했을 때 사과할 수 있어요', domain: '정서', description: '자신의 잘못을 인정하고 "미안해"라고 말하는지 보세요.' },
+  ]},
+  { months: 120, label: '120개월 (초등 고학년)', items: [
+    { id: 'm120_1', label: '스스로 학습 계획을 세워요', domain: '인지', description: '할 일 목록을 만들거나 시간을 나누어 공부하는지 확인하세요.' },
+    { id: 'm120_2', label: '복잡한 규칙의 운동/게임을 해요', domain: '대근육', description: '축구, 농구 등 규칙 있는 팀 운동에 참여하는지 보세요.' },
+    { id: 'm120_3', label: '자기 의견을 논리적으로 말해요', domain: '언어', description: '"왜 그렇게 생각해?" 하면 이유를 들어 설명하는지 확인하세요.' },
+    { id: 'm120_4', label: '용돈을 계획적으로 사용해요', domain: '인지', description: '용돈을 받으면 저축과 소비를 나누려 하는지 관찰하세요.' },
+    { id: 'm120_5', label: '갈등을 스스로 해결하려 해요', domain: '사회성', description: '친구와 다툰 후 대화로 해결하려 시도하는지 보세요.' },
+    { id: 'm120_6', label: '감정을 조절하려 노력해요', domain: '정서', description: '화가 나도 심호흡 등으로 스스로 진정하려 하는지 관찰하세요.' },
+  ]},
 ];
 
 router.get('/milestones/:childId', authMiddleware, async (req: Request, res: Response) => {
@@ -801,23 +1031,50 @@ router.get('/milestones/:childId', authMiddleware, async (req: Request, res: Res
     const current = MILESTONES.filter((m) => m.months <= child.ageMonths).pop();
     const next = MILESTONES.find((m) => m.months > child.ageMonths);
 
+    // Firestore에서 저장된 체크 상태 불러오기
+    const docId = `${req.userId}_${childId}`;
+    const savedDoc = await collections.milestoneChecks.doc(docId).get();
+    const savedChecks: Record<string, boolean> = savedDoc.exists
+      ? (savedDoc.data()?.checks as Record<string, boolean>) ?? {}
+      : {};
+
+    // 현재 마일스톤 items에 saved 상태 병합
+    const currentItems = current?.items.map((item) => ({
+      ...item,
+      completed: savedChecks[item.id] ?? false,
+    })) ?? [];
+
     success(res, {
-      childName: child.name,
-      ageMonths: child.ageMonths,
-      ageInfo: child.ageInfo,
-      temperament: child.temperament,
-      current: current ? {
-        label: `${current.label} 발달 체크`,
-        items: current.items,
-      } : null,
-      next: next ? {
-        label: `다음 목표: ${next.label}`,
-        monthsUntil: next.months - child.ageMonths,
-        items: next.items,
-      } : null,
+      ageLabel: current?.label ?? '',
+      items: currentItems,
+      nextMilestone: next ? `${next.label} 발달 목표` : '모든 발달 단계를 완료했어요!',
+      daysUntilNext: next ? Math.max(0, (next.months - child.ageMonths) * 30) : 0,
     });
   } catch {
     error(res, '마일스톤 조회 중 오류', 500);
+  }
+});
+
+// ─── POST /api/coaching/milestones/:childId/check — 체크 상태 저장 ───
+
+router.post('/milestones/:childId/check', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const childId = req.params.childId as string;
+    const { checks } = req.body as { checks: Record<string, boolean> };
+    if (!checks || typeof checks !== 'object') {
+      error(res, 'checks 객체가 필요합니다');
+      return;
+    }
+
+    const docId = `${req.userId}_${childId}`;
+    await collections.milestoneChecks.doc(docId).set(
+      { checks, updatedAt: FieldValue.serverTimestamp() },
+      { merge: true },
+    );
+
+    success(res, { saved: true });
+  } catch {
+    error(res, '체크 저장 중 오류', 500);
   }
 });
 
@@ -1551,5 +1808,348 @@ function buildMockPoopAnalysis(
     needsDoctor,
   };
 }
+
+// ─── 프로액티브 인사이트 API ───
+
+router.get('/daily-insight', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const childId = req.query.childId as string;
+    if (!childId) {
+      error(res, 'childId가 필요합니다', 400);
+      return;
+    }
+
+    const child = await buildChildContext(childId, req.userId!);
+    if (!child) {
+      error(res, '자녀 정보를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const insights = await generateDailyInsights(childId, {
+      id: childId,
+      name: child.name,
+      ageMonths: child.ageMonths,
+      temperament: child.temperament,
+      temperamentDetail: child.temperamentDetail,
+      gender: child.gender,
+    });
+
+    success(res, { insights });
+  } catch (err) {
+    console.error('Daily insight error:', err);
+    error(res, '인사이트 생성에 실패했습니다', 500);
+  }
+});
+
+// ─── 첫 상담 환영 메시지 API (아이 등록 직후 호출) ───
+
+router.get('/welcome', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const childId = req.query.childId as string;
+    if (!childId) {
+      error(res, 'childId가 필요합니다', 400);
+      return;
+    }
+
+    const child = await buildChildContext(childId, req.userId!);
+    if (!child) {
+      error(res, '자녀 정보를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const milestones = getMilestoneContext(child.ageMonths);
+    const currentMilestone = milestones.current[0] || '';
+
+    // 기질별 맞춤 환영 메시지
+    const traitMessages: Record<string, string> = {
+      '활동형': `${child.name}는 활동형 기질이라 호기심이 넘치고 새로운 경험을 좋아해요. 에너지를 잘 발산시켜주는 게 포인트예요.`,
+      '탐구형': `${child.name}는 탐구형 기질이라 관찰력이 뛰어나고 깊이 파고드는 걸 좋아해요. 질문에 성의있게 답해주시면 쑥쑥 자라요.`,
+      '조화형': `${child.name}는 조화형 기질이라 사람들과 잘 어울리고 눈치가 빨라요. 혼자만의 시간도 가끔 필요할 수 있어요.`,
+      '분석형': `${child.name}는 분석형 기질이라 꼼꼼하고 규칙적인 걸 좋아해요. 갑작스러운 변화보다는 예고를 해주시면 좋아요.`,
+      '감성형': `${child.name}는 감성형 기질이라 감정이 풍부하고 공감 능력이 뛰어나요. 감정을 말로 표현하는 연습이 중요해요.`,
+    };
+
+    const traitMsg = traitMessages[child.temperament] ||
+      `${child.name}의 기질에 맞는 맞춤 육아 조언을 준비했어요.`;
+
+    const welcomeMessage = {
+      greeting: `${child.name} 부모님, 반가워요! 아맞다 AI 코치입니다.`,
+      traitInsight: traitMsg,
+      milestone: currentMilestone
+        ? `${child.ageInfo}인 지금, ${currentMilestone.replace(/^\[.*?\]\s*/, '')}`
+        : `${child.ageInfo}인 지금 시기에 맞는 육아 팁을 매일 알려드릴게요.`,
+      cta: '궁금한 게 있으면 언제든 물어보세요. 급할 때도, 사소한 것도 다 괜찮아요!',
+    };
+
+    success(res, { welcome: welcomeMessage });
+  } catch (err) {
+    console.error('Welcome message error:', err);
+    error(res, '환영 메시지 생성에 실패했습니다', 500);
+  }
+});
+
+// ─── AI 자동 육아일기 API ───
+
+router.get('/auto-diary', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const childId = req.query.childId as string;
+    if (!childId) { error(res, 'childId 필요', 400); return; }
+
+    // VIP 전용 기능
+    const tier = await getUserTier(req.userId!);
+    if (tier !== 'paid') {
+      error(res, 'VIP 전용 기능입니다. 프리미엄 구독 후 이용해주세요.', 403);
+      return;
+    }
+
+    const child = await buildChildContext(childId, req.userId!);
+    if (!child) { error(res, '자녀 정보 없음', 404); return; }
+
+    const diary = await generateAutoDiary(childId, child.name, child.ageInfo, child.temperament);
+    success(res, { diary });
+  } catch (err) {
+    console.error('Auto diary error:', err);
+    error(res, '일기 생성 실패', 500);
+  }
+});
+
+// ─── 성장 타임캡슐 API ───
+
+router.post('/time-capsule', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { childId, message, months } = req.body as { childId: string; message: string; months: 3 | 6 | 12 };
+    if (!childId || !message || !months) { error(res, '필수 항목 누락', 400); return; }
+
+    // VIP 전용 기능
+    const tier = await getUserTier(req.userId!);
+    if (tier !== 'paid') {
+      error(res, 'VIP 전용 기능입니다. 프리미엄 구독 후 이용해주세요.', 403);
+      return;
+    }
+
+    const child = await buildChildContext(childId, req.userId!);
+    if (!child) { error(res, '자녀 정보 없음', 404); return; }
+
+    const capsule = await createTimeCapsule(
+      req.userId!, childId, child.name, child.ageInfo, child.temperament, message, months,
+    );
+    success(res, { capsule });
+  } catch (err) {
+    console.error('Time capsule error:', err);
+    error(res, '타임캡슐 생성 실패', 500);
+  }
+});
+
+router.get('/time-capsules', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const childId = req.query.childId as string;
+    if (!childId) { error(res, 'childId 필요', 400); return; }
+
+    const [all, openable] = await Promise.all([
+      listTimeCapsules(req.userId!, childId),
+      getOpenableCapsules(req.userId!),
+    ]);
+
+    success(res, { capsules: all, openable: openable.filter((c) => c.childId === childId) });
+  } catch (err) {
+    console.error('List capsules error:', err);
+    error(res, '타임캡슐 조회 실패', 500);
+  }
+});
+
+router.post('/time-capsule/:id/open', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const capsuleId = typeof req.params.id === 'string' ? req.params.id : String(req.params.id);
+    const capsule = await openTimeCapsule(capsuleId, req.userId!);
+    if (!capsule) { error(res, '열 수 없는 캡슐', 404); return; }
+    success(res, { capsule });
+  } catch (err) {
+    console.error('Open capsule error:', err);
+    error(res, '캡슐 열기 실패', 500);
+  }
+});
+
+// ─── 또래 비교 API ───
+
+router.get('/peer-comparison', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const childId = req.query.childId as string;
+    if (!childId) { error(res, 'childId 필요', 400); return; }
+
+    // VIP 전용 기능
+    const tier = await getUserTier(req.userId!);
+    if (tier !== 'paid') {
+      error(res, 'VIP 전용 기능입니다. 프리미엄 구독 후 이용해주세요.', 403);
+      return;
+    }
+
+    const child = await buildChildContext(childId, req.userId!);
+    if (!child) { error(res, '자녀 정보 없음', 404); return; }
+
+    // 최근 7일 트래킹 데이터로 평균 계산
+    const tracking = await buildTrackingSummary(childId, 7);
+
+    // 수면 평균 추출
+    const sleepMatch = tracking.sleepSummary.match(/평균\s*([\d.]+)시간/);
+    const avgSleepHours = sleepMatch ? parseFloat(sleepMatch[1]) : undefined;
+
+    // 배변 평균 추출
+    const poopMatch = tracking.poopSummary.match(/평균\s*([\d.]+)회/);
+    const avgPoop = poopMatch ? parseFloat(poopMatch[1]) : undefined;
+
+    const comparison = generatePeerComparison(child.ageMonths, {
+      avgSleepHours,
+      avgPoop,
+    });
+
+    success(res, { comparison });
+  } catch (err) {
+    console.error('Peer comparison error:', err);
+    error(res, '또래 비교 실패', 500);
+  }
+});
+
+// ─── 사용자 레벨/구독 상태 API ───
+
+router.get('/my-tier', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const tier = await getUserTier(req.userId!);
+    const streak = await getUserStreak(req.userId!);
+    const level = getLevelByStreak(streak);
+    const nextLvl = getNextLevel(level);
+
+    success(res, {
+      tier,
+      level: level.level,
+      levelName: level.name,
+      badge: level.badge,
+      streak,
+      dailyLimit: tier === 'paid' ? 999 : level.dailyLimit,
+      nextLevel: nextLvl ? {
+        name: nextLvl.name,
+        daysNeeded: nextLvl.minDays - streak,
+        dailyLimit: nextLvl.dailyLimit,
+      } : null,
+    });
+  } catch (err) {
+    console.error('My tier error:', err);
+    error(res, '티어 조회 실패', 500);
+  }
+});
+
+// ─── 캡슐 제안 API (자동일기 ↔ 타임캡슐 연결) ───
+
+router.get('/capsule-suggestion', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const childId = req.query.childId as string;
+    if (!childId) { error(res, 'childId 필요', 400); return; }
+
+    // 최근 7일 자동일기 중 감정 점수 높은 것 탐색
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const cutoffDate = sevenDaysAgo.toISOString().slice(0, 10);
+
+    const snap = await collections.autoDiaries
+      .where('childId', '==', childId)
+      .where('date', '>=', cutoffDate)
+      .orderBy('date', 'desc')
+      .limit(7)
+      .get();
+
+    if (snap.empty) {
+      success(res, { hasSuggestion: false });
+      return;
+    }
+
+    // emotionScore >= 5인 일기 중 가장 높은 것 찾기
+    interface DiaryDoc {
+      date: string;
+      diary: string;
+      emotionScore: number;
+      emotionKeywords: string[];
+      childId: string;
+    }
+
+    let bestDiary: DiaryDoc | null = null;
+    for (const doc of snap.docs) {
+      const data = doc.data() as Record<string, unknown>;
+      const emotionScore = (data.emotionScore as number) ?? 0;
+      if (emotionScore >= 5) {
+        if (!bestDiary || emotionScore > bestDiary.emotionScore) {
+          bestDiary = {
+            date: data.date as string,
+            diary: data.diary as string,
+            emotionScore,
+            emotionKeywords: (data.emotionKeywords as string[]) ?? [],
+            childId: data.childId as string,
+          };
+        }
+      }
+    }
+
+    if (!bestDiary) {
+      success(res, { hasSuggestion: false });
+      return;
+    }
+
+    // 자녀 이름 가져오기
+    const child = await buildChildContext(childId, req.userId!);
+    const childName = child?.name ?? '우리 아이';
+    const keywordsText = bestDiary.emotionKeywords.slice(0, 3).join(', ');
+
+    success(res, {
+      hasSuggestion: true,
+      diary: {
+        date: bestDiary.date,
+        content: bestDiary.diary,
+        emotionScore: bestDiary.emotionScore,
+        emotionKeywords: bestDiary.emotionKeywords,
+      },
+      capsuleMessage: bestDiary.diary,
+      promptText: `${bestDiary.date}에 ${childName}의 특별한 순간이 있었어요! (${keywordsText}) 이 감동을 1년 뒤 타임캡슐로 보관할까요?`,
+    });
+  } catch (err) {
+    console.error('Capsule suggestion error:', err);
+    error(res, '캡슐 제안 조회 실패', 500);
+  }
+});
+
+router.post('/capsule-suggestion/accept', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { childId, diaryDate } = req.body as { childId: string; diaryDate: string };
+    if (!childId || !diaryDate) { error(res, 'childId와 diaryDate 필요', 400); return; }
+
+    // 해당 날짜의 일기 조회
+    const docId = `${childId}_${diaryDate}`;
+    const diaryDoc = await collections.autoDiaries.doc(docId).get();
+    if (!diaryDoc.exists) {
+      error(res, '해당 날짜의 일기가 없습니다', 404);
+      return;
+    }
+
+    const diaryData = diaryDoc.data() as Record<string, unknown>;
+    const diaryContent = diaryData.diary as string;
+
+    // 자녀 정보 가져오기
+    const child = await buildChildContext(childId, req.userId!);
+    if (!child) { error(res, '자녀 정보 없음', 404); return; }
+
+    // 타임캡슐 생성 (12개월 뒤 오픈)
+    const capsule = await createTimeCapsule(
+      req.userId!,
+      childId,
+      child.name,
+      child.ageInfo,
+      child.temperament,
+      diaryContent,
+      12,
+    );
+
+    success(res, { capsule });
+  } catch (err) {
+    console.error('Accept capsule suggestion error:', err);
+    error(res, '타임캡슐 생성 실패', 500);
+  }
+});
 
 export default router;

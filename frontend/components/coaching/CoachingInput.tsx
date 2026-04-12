@@ -2,12 +2,17 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  Text,
+  Image,
   Alert,
   StyleSheet,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { COACHING_COLORS } from './types';
+
+/* eslint-disable @typescript-eslint/no-require-imports */
+const IC_CAMERA = require('../../assets/icon-camera.png') as number;
+const IC_SEND = require('../../assets/icon-send.png') as number;
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 interface Props {
   value: string;
@@ -44,13 +49,6 @@ export function CoachingInput({
     }
   };
 
-  const handleVoice = () => {
-    Alert.alert(
-      '준비 중',
-      '음성 입력 기능은 준비 중입니다.'
-    );
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.inputRow}>
@@ -59,14 +57,7 @@ export function CoachingInput({
           onPress={handlePhoto}
           activeOpacity={0.7}
         >
-          <Text style={styles.actionEmoji}>{'📷'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={handleVoice}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.actionEmoji}>{'🎤'}</Text>
+          <Image source={IC_CAMERA} style={styles.actionIcon} resizeMode="contain" />
         </TouchableOpacity>
         <TextInput
           style={styles.input}
@@ -85,7 +76,7 @@ export function CoachingInput({
           disabled={disabled}
           activeOpacity={0.7}
         >
-          <Text style={styles.sendEmoji}>{'📤'}</Text>
+          <Image source={IC_SEND} style={styles.sendIcon} resizeMode="contain" />
         </TouchableOpacity>
       </View>
     </View>
@@ -114,7 +105,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionEmoji: { fontSize: 18 },
+  actionIcon: { width: 20, height: 20 },
   input: {
     flex: 1,
     backgroundColor: COACHING_COLORS.bg,
@@ -134,5 +125,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sendDisabled: { opacity: 0.5 },
-  sendEmoji: { fontSize: 18 },
+  sendIcon: { width: 20, height: 20, tintColor: '#FFFFFF' },
 });

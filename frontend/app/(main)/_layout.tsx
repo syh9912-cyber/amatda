@@ -1,23 +1,26 @@
 import { Tabs } from 'expo-router';
-import { Text, View, Platform } from 'react-native';
+import { Image, ImageSourcePropType, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ACTIVE_COLOR = '#FF8C5A';
 const INACTIVE_COLOR = '#B8A690';
 
-const TAB_CONFIG = [
-  { emoji: '🏠', label: '홈' },
-  { emoji: '🧠', label: '기질분석' },
-  { emoji: '💬', label: 'AI상담' },
-  { emoji: '📸', label: '맘스타그램' },
-  { emoji: '🙋', label: '마이' },
-] as const;
+const TAB_CONFIG: { icon: ImageSourcePropType; iconActive: ImageSourcePropType; label: string }[] = [
+  { icon: require('../../assets/tab-home.png'), iconActive: require('../../assets/tab-home-active.png'), label: '홈' },
+  { icon: require('../../assets/tab-diary.png'), iconActive: require('../../assets/tab-diary-active.png'), label: '육아기록' },
+  { icon: require('../../assets/tab-chat.png'), iconActive: require('../../assets/tab-chat-active.png'), label: 'AI상담' },
+  { icon: require('../../assets/tab-diary.png'), iconActive: require('../../assets/tab-diary-active.png'), label: '가족피드' },
+  { icon: require('../../assets/tab-more.png'), iconActive: require('../../assets/tab-more-active.png'), label: '마이' },
+];
 
-function EmojiIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
+function TabIcon({ config, focused }: { config: (typeof TAB_CONFIG)[number]; focused: boolean }) {
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.45 }}>
-        {emoji}
-      </Text>
+      <Image
+        source={focused ? config.iconActive : config.icon}
+        style={{ width: 34, height: 34, borderRadius: 17, opacity: 1 }}
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -38,8 +41,12 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
 }
 
 export default function MainLayout() {
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, 16);
+
   return (
     <Tabs
+      backBehavior="history"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: ACTIVE_COLOR,
@@ -49,9 +56,9 @@ export default function MainLayout() {
           borderTopWidth: 0,
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
-          paddingTop: 8,
-          paddingBottom: Platform.OS === 'android' ? 44 : 34,
-          height: Platform.OS === 'android' ? 100 : 90,
+          paddingTop: 6,
+          paddingBottom: bottomPad - 4,
+          height: 56 + bottomPad,
           shadowColor: '#B8A690',
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.06,
@@ -65,7 +72,7 @@ export default function MainLayout() {
         name="home"
         options={{
           tabBarIcon: ({ focused }) => (
-            <EmojiIcon emoji={TAB_CONFIG[0].emoji} focused={focused} />
+            <TabIcon config={TAB_CONFIG[0]} focused={focused} />
           ),
           tabBarLabel: ({ focused }) => (
             <TabLabel label={TAB_CONFIG[0].label} focused={focused} />
@@ -73,10 +80,10 @@ export default function MainLayout() {
         }}
       />
       <Tabs.Screen
-        name="trait-detail"
+        name="baby-tracker"
         options={{
           tabBarIcon: ({ focused }) => (
-            <EmojiIcon emoji={TAB_CONFIG[1].emoji} focused={focused} />
+            <TabIcon config={TAB_CONFIG[1]} focused={focused} />
           ),
           tabBarLabel: ({ focused }) => (
             <TabLabel label={TAB_CONFIG[1].label} focused={focused} />
@@ -87,7 +94,7 @@ export default function MainLayout() {
         name="chatbot"
         options={{
           tabBarIcon: ({ focused }) => (
-            <EmojiIcon emoji={TAB_CONFIG[2].emoji} focused={focused} />
+            <TabIcon config={TAB_CONFIG[2]} focused={focused} />
           ),
           tabBarLabel: ({ focused }) => (
             <TabLabel label={TAB_CONFIG[2].label} focused={focused} />
@@ -98,7 +105,7 @@ export default function MainLayout() {
         name="momstagram"
         options={{
           tabBarIcon: ({ focused }) => (
-            <EmojiIcon emoji={TAB_CONFIG[3].emoji} focused={focused} />
+            <TabIcon config={TAB_CONFIG[3]} focused={focused} />
           ),
           tabBarLabel: ({ focused }) => (
             <TabLabel label={TAB_CONFIG[3].label} focused={focused} />
@@ -109,7 +116,7 @@ export default function MainLayout() {
         name="profile"
         options={{
           tabBarIcon: ({ focused }) => (
-            <EmojiIcon emoji={TAB_CONFIG[4].emoji} focused={focused} />
+            <TabIcon config={TAB_CONFIG[4]} focused={focused} />
           ),
           tabBarLabel: ({ focused }) => (
             <TabLabel label={TAB_CONFIG[4].label} focused={focused} />
@@ -129,7 +136,7 @@ export default function MainLayout() {
       <Tabs.Screen name="compatibility" options={{ href: null }} />
       <Tabs.Screen name="timer" options={{ href: null }} />
       <Tabs.Screen name="mates" options={{ href: null }} />
-      <Tabs.Screen name="baby-tracker" options={{ href: null }} />
+      <Tabs.Screen name="trait-detail" options={{ href: null }} />
       <Tabs.Screen name="growth-stats" options={{ href: null }} />
       <Tabs.Screen name="privacy" options={{ href: null }} />
       <Tabs.Screen name="terms" options={{ href: null }} />
@@ -138,6 +145,18 @@ export default function MainLayout() {
       <Tabs.Screen name="play-learning" options={{ href: null }} />
       <Tabs.Screen name="clinic" options={{ href: null }} />
       <Tabs.Screen name="child-card" options={{ href: null }} />
+      <Tabs.Screen name="edit-profile" options={{ href: null }} />
+      <Tabs.Screen name="notification-settings" options={{ href: null }} />
+      <Tabs.Screen name="recommendation-detail" options={{ href: null }} />
+      <Tabs.Screen name="support" options={{ href: null }} />
+      <Tabs.Screen name="monthly-characteristic" options={{ href: null }} />
+      <Tabs.Screen name="recommendations" options={{ href: null }} />
+      <Tabs.Screen name="recommendation-list" options={{ href: null }} />
+      <Tabs.Screen name="lullaby" options={{ href: null }} />
+      <Tabs.Screen name="coparenting" options={{ href: null }} />
+      <Tabs.Screen name="parent-level" options={{ href: null }} />
+      <Tabs.Screen name="sleep-predict" options={{ href: null }} />
+      <Tabs.Screen name="sos" options={{ href: null }} />
     </Tabs>
   );
 }

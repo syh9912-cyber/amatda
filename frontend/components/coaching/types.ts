@@ -37,19 +37,35 @@ export const COACHING_COLORS = {
   white: '#FFFFFF',
 };
 
+/* eslint-disable @typescript-eslint/no-require-imports */
 export const CONCERN_CATEGORIES = [
-  { emoji: '😭', label: '울음', key: 'crying' },
-  { emoji: '😴', label: '수면', key: 'sleep' },
-  { emoji: '🍽', label: '식사', key: 'eating' },
-  { emoji: '💩', label: '대변', key: 'poop' },
-  { emoji: '🏫', label: '사회성', key: 'social' },
-  { emoji: '📏', label: '성장', key: 'growth' },
-  { emoji: '😤', label: '행동', key: 'behavior' },
-  { emoji: '💬', label: '기타', key: 'etc' },
-] as const;
+  { icon: require('../../assets/cat-crying.png') as number, label: '울음', key: 'crying' },
+  { icon: require('../../assets/cat-sleep.png') as number, label: '수면', key: 'sleep' },
+  { icon: require('../../assets/cat-eating.png') as number, label: '식사', key: 'eating' },
+  { icon: require('../../assets/cat-poop.png') as number, label: '대변', key: 'poop' },
+  { icon: require('../../assets/cat-social.png') as number, label: '사회성', key: 'social' },
+  { icon: require('../../assets/cat-growth.png') as number, label: '성장', key: 'growth' },
+  { icon: require('../../assets/cat-behavior.png') as number, label: '행동', key: 'behavior' },
+  { icon: require('../../assets/cat-etc.png') as number, label: '기타', key: 'etc' },
+];
+
+// 연령별 카테고리 필터 (key 기준)
+import type { AgeGroupKey } from '../../constants/ageGroups';
+
+const CATEGORY_KEYS_BY_AGE: Record<AgeGroupKey, string[]> = {
+  infant: ['crying', 'sleep', 'eating', 'poop', 'growth', 'behavior', 'etc'],
+  toddler: ['sleep', 'eating', 'poop', 'behavior', 'social', 'growth', 'etc'],
+  elementary: ['eating', 'sleep', 'behavior', 'social', 'growth', 'etc'],
+};
+
+export function getCategoriesForAge(ageGroup: AgeGroupKey) {
+  const keys = CATEGORY_KEYS_BY_AGE[ageGroup];
+  return CONCERN_CATEGORIES.filter((c) => keys.includes(c.key));
+}
 
 export const CHECKIN_OPTIONS = [
-  { emoji: '😊', label: '좋아요', mood: 'good' },
-  { emoji: '😐', label: '보통이에요', mood: 'normal' },
-  { emoji: '😢', label: '안 좋아요', mood: 'bad' },
-] as const;
+  { icon: require('../../assets/mood-good.png') as number, label: '좋아요', mood: 'good' },
+  { icon: require('../../assets/mood-normal.png') as number, label: '보통이에요', mood: 'normal' },
+  { icon: require('../../assets/mood-bad.png') as number, label: '안 좋아요', mood: 'bad' },
+];
+/* eslint-enable @typescript-eslint/no-require-imports */

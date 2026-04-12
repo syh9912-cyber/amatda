@@ -3,7 +3,11 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { success, error } from '../utils/response';
-import { verifySocialToken, SocialProvider } from '../services/social.auth';
+import {
+  verifySocialToken,
+  exchangeCodeAndVerify,
+  SocialProvider,
+} from '../services/social.auth';
 import { collections, genId, db } from '../services/firestore';
 import { authMiddleware } from '../middleware/auth';
 
@@ -123,6 +127,217 @@ router.post('/social', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/auth/social-code
+// 프론트에서 인가 코드를 받아 백엔드에서 토큰 교환 후 로그인 처리 (Kakao, Naver)
+router.post('/social-code', async (req: Request, res: Response) => {
+  try {
+    const { provider, code, redirectUri } = req.body;
+    if (!provider || !code || !redirectUri) {
+      error(res, 'provider, code, redirectUri가 필요합니다');
+      return;
+    }
+
+    const validProviders: SocialProvider[] = ['KAKAO', 'NAVER'];
+    const upperProvider = provider.toUpperCase() as SocialProvider;
+    if (!validProviders.includes(upperProvider)) {
+      error(res, 'social-code는 KAKAO, NAVER만 지원합니다. Google은 /auth/social을 사용하세요.');
+      return;
+    }
+
+    // 인가 코드 -> 토큰 교환 -> 사용자 정보 조회
+    const socialUser = await exchangeCodeAndVerify(upperProvider, code, redirectUri);
+
+    // 기존 유저 찾기 (기존 /social 엔드포인트와 동일 로직)
+    let userId: string | null = null;
+    let userEmail: string | null = null;
+
+    const bySocial = await collections.users
+      .where('socialId', '==', socialUser.socialId)
+      .where('authProvider', '==', upperProvider).limit(1).get();
+
+    if (!bySocial.empty) {
+      userId = bySocial.docs[0].id;
+      userEmail = bySocial.docs[0].data().email;
+    } else if (socialUser.email) {
+      const byEmail = await collections.users.where('email', '==', socialUser.email).limit(1).get();
+      if (!byEmail.empty) {
+        userId = byEmail.docs[0].id;
+        userEmail = byEmail.docs[0].data().email;
+        await collections.users.doc(userId).update({ socialId: socialUser.socialId, authProvider: upperProvider });
+      }
+    }
+
+    if (!userId) {
+      userId = genId();
+      userEmail = socialUser.email;
+      await collections.users.doc(userId).set({
+        email: socialUser.email, passwordHash: null, authProvider: upperProvider,
+        socialId: socialUser.socialId, subscriptionTier: 'FREE', createdAt: new Date().toISOString(),
+      });
+    }
+
+    const childSnap = await collections.children.where('userId', '==', userId).limit(1).get();
+    const tokens = generateTokens(userId);
+    success(res, {
+      user: { id: userId, email: userEmail, authProvider: upperProvider },
+      ...tokens, isNewUser: childSnap.empty,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '소셜 로그인 처리 중 오류가 발생했습니다';
+    console.error('[social-code] error:', msg);
+    error(res, msg, 500);
+  }
+});
+
+// 카카오 로그인 임시 저장소 (메모리, 5분 후 자동 삭제)
+const kakaoLoginResults = new Map<string, { data: Record<string, unknown>; expires: number }>();
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of kakaoLoginResults) {
+    if (now > val.expires) kakaoLoginResults.delete(key);
+  }
+}, 60000);
+
+// GET /api/auth/kakao/check/:state — 앱에서 폴링으로 결과 확인
+router.get('/kakao/check/:state', (req: Request, res: Response) => {
+  const result = kakaoLoginResults.get(req.params.state as string);
+  if (!result) {
+    success(res, { status: 'pending' });
+    return;
+  }
+  kakaoLoginResults.delete(req.params.state as string);
+  success(res, { status: 'done', ...result.data });
+});
+
+// GET /api/auth/kakao/callback — 카카오 OAuth callback
+// 카카오에서 code를 받아 직접 토큰 교환 + 로그인 처리 후 결과를 HTML로 표시
+router.get('/kakao/callback', async (req: Request, res: Response) => {
+  const { code, state, error: kakaoError, error_description } = req.query;
+
+  if (kakaoError || !code) {
+    const errMsg = String(error_description || kakaoError || 'no_code');
+    res.send(`<html><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;background:#FFF5EC;">
+      <div style="text-align:center;"><h2>로그인 실패</h2><p>${errMsg}</p><p>앱으로 돌아가주세요.</p></div>
+    </body></html>`);
+    return;
+  }
+
+  const stateKey = String(state || '');
+
+  try {
+    const redirectUri = 'https://api-usglfifguq-uc.a.run.app/api/auth/kakao/callback';
+    const socialUser = await exchangeCodeAndVerify('KAKAO', String(code), redirectUri);
+
+    let userId: string | null = null;
+    let userEmail: string | null = null;
+    let isNewUser = false;
+
+    const bySocial = await collections.users
+      .where('socialId', '==', socialUser.socialId)
+      .where('authProvider', '==', 'KAKAO').limit(1).get();
+
+    if (!bySocial.empty) {
+      userId = bySocial.docs[0].id;
+      userEmail = bySocial.docs[0].data().email as string;
+    } else if (socialUser.email) {
+      const byEmail = await collections.users.where('email', '==', socialUser.email).limit(1).get();
+      if (!byEmail.empty) {
+        userId = byEmail.docs[0].id;
+        userEmail = byEmail.docs[0].data().email as string;
+        await collections.users.doc(userId).update({ socialId: socialUser.socialId, authProvider: 'KAKAO' });
+      }
+    }
+
+    if (!userId) {
+      userId = genId();
+      userEmail = socialUser.email;
+      isNewUser = true;
+      await collections.users.doc(userId).set({
+        email: socialUser.email, passwordHash: null, authProvider: 'KAKAO',
+        socialId: socialUser.socialId, subscriptionTier: 'FREE', createdAt: new Date().toISOString(),
+      });
+    }
+
+    const accessToken = jwt.sign({ userId }, env.JWT_SECRET, { expiresIn: '1h' });
+    const refreshToken = jwt.sign({ userId }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+
+    // 기존 유저인 경우 닉네임 조회
+    let nickname: string | null = null;
+    if (!isNewUser) {
+      const userDoc = await collections.users.doc(userId!).get();
+      nickname = (userDoc.data()?.nickname as string) ?? null;
+    }
+
+    // 딥링크로 앱 자동복귀 (인앱 브라우저가 감지 → 자동 닫힘)
+    const deepParams = new URLSearchParams({
+      accessToken,
+      refreshToken,
+      userId: userId!,
+      email: userEmail || '',
+      nickname: nickname || '',
+      isNewUser: String(isNewUser),
+    });
+    const deepLink = `amatda://auth/callback?${deepParams.toString()}`;
+
+    // polling 저장소에도 저장 (하위호환)
+    if (stateKey) {
+      kakaoLoginResults.set(stateKey, {
+        data: {
+          user: { id: userId, email: userEmail, nickname },
+          accessToken, refreshToken, isNewUser,
+        },
+        expires: Date.now() + 5 * 60 * 1000,
+      });
+    }
+
+    // HTML 리디렉트 (브라우저 호환성 극대화)
+    res.send(`<html><head><meta charset="utf-8">
+      <meta http-equiv="refresh" content="0;url=${deepLink}">
+    </head><body>
+      <script>window.location.href="${deepLink}";</script>
+      <p style="text-align:center;margin-top:40vh;font-family:sans-serif;color:#999;">앱으로 돌아가는 중...</p>
+    </body></html>`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'unknown error';
+    console.error('[kakao/callback] error:', msg);
+    const errorDeep = `amatda://auth/callback?error=${encodeURIComponent(msg)}`;
+    res.send(`<html><head><meta charset="utf-8">
+      <meta http-equiv="refresh" content="0;url=${errorDeep}">
+    </head><body>
+      <script>window.location.href="${errorDeep}";</script>
+      <p style="text-align:center;margin-top:40vh;font-family:sans-serif;color:#999;">앱으로 돌아가는 중...</p>
+    </body></html>`);
+  }
+});
+
+// PUT /api/auth/nickname — 별명 설정/변경
+router.put('/nickname', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { nickname } = req.body as { nickname: string };
+    if (!nickname || nickname.trim().length < 2 || nickname.trim().length > 10) {
+      error(res, '별명은 2~10자로 입력해주세요');
+      return;
+    }
+    await collections.users.doc(req.userId!).update({ nickname: nickname.trim() });
+    success(res, { nickname: nickname.trim() });
+  } catch { error(res, '별명 설정 중 오류', 500); }
+});
+
+// GET /api/auth/me — 현재 유저 정보 조회
+router.get('/me', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const doc = await collections.users.doc(req.userId!).get();
+    if (!doc.exists) { error(res, '사용자 없음', 404); return; }
+    const data = doc.data() as Record<string, unknown>;
+    success(res, {
+      id: doc.id,
+      email: data.email,
+      nickname: data.nickname ?? null,
+      authProvider: data.authProvider,
+    });
+  } catch { error(res, '정보 조회 중 오류', 500); }
+});
+
 // POST /api/auth/change-password
 router.post('/change-password', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -143,6 +358,34 @@ router.post('/change-password', authMiddleware, async (req: Request, res: Respon
     success(res, { message: '비밀번호가 변경되었습니다' });
   } catch { error(res, '비밀번호 변경 중 오류가 발생했습니다', 500); }
 });
+
+// POST /api/auth/set-password — 소셜 로그인 유저가 비밀번호를 처음 설정
+router.post('/set-password', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      error(res, '비밀번호는 6자 이상이어야 합니다');
+      return;
+    }
+
+    const doc = await collections.users.doc(req.userId!).get();
+    if (!doc.exists) { error(res, '사용자를 찾을 수 없습니다', 404); return; }
+    const user = doc.data()!;
+
+    // 이미 비밀번호가 있으면 change-password 사용 안내
+    if (user.passwordHash) {
+      error(res, '이미 비밀번호가 설정되어 있습니다. 변경은 /auth/change-password를 사용하세요.');
+      return;
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    await collections.users.doc(req.userId!).update({ passwordHash: newHash });
+    success(res, { message: '비밀번호가 설정되었습니다' });
+  } catch { error(res, '비밀번호 설정 중 오류가 발생했습니다', 500); }
+});
+
+// GET /api/auth/me — 현재 유저 정보 조회 (확장)
+// (기존 /me 엔드포인트가 위에 있으므로 여기서는 추가하지 않음)
 
 // DELETE /api/auth/account — required by Google Play & Apple App Store
 router.delete('/account', authMiddleware, async (req: Request, res: Response) => {

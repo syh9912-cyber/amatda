@@ -1,4 +1,6 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { SPACING } from '../../constants/theme';
 
 const STORY_COLORS = [
@@ -31,6 +33,26 @@ function getColor(name: string): string {
 }
 
 export function StoriesRow() {
+  const handleMyStory = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('권한 필요', '사진 접근 권한이 필요합니다.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [9, 16],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      router.push({
+        pathname: '/(main)/momstagram-post',
+        params: { prefillImage: result.assets[0].uri },
+      });
+    }
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -46,6 +68,7 @@ export function StoriesRow() {
               key={user.id}
               style={styles.storyItem}
               activeOpacity={0.7}
+              onPress={isMyStory ? handleMyStory : undefined}
             >
               <View
                 style={[

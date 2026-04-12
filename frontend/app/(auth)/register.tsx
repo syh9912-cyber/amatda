@@ -70,7 +70,7 @@ export default function RegisterScreen() {
         <View style={styles.body}>
           <View style={styles.form}>
             <AuthInput
-              icon="📧"
+              icon={require('../../assets/icon-comment.png')}
               placeholder="이메일"
               value={email}
               onChangeText={setEmail}
@@ -78,14 +78,14 @@ export default function RegisterScreen() {
               autoCapitalize="none"
             />
             <AuthInput
-              icon="🔒"
+              icon={require('../../assets/icon-lock.png')}
               placeholder="비밀번호 (6자 이상)"
               value={password}
               onChangeText={setPassword}
               secureTextEntry
             />
             <AuthInput
-              icon="🔒"
+              icon={require('../../assets/icon-lock.png')}
               placeholder="비밀번호 확인"
               value={confirm}
               onChangeText={setConfirm}

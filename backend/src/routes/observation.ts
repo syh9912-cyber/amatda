@@ -4,6 +4,7 @@ import { analyzeObservation, generateCrossReport } from '../services/ai.service'
 import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
 import { parseInnateDataFull } from '../utils/parse';
+import { getChildIfAccessible } from '../utils/childAccess';
 
 const router = Router();
 
@@ -12,10 +13,10 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     const { childId, content, type } = req.body;
     if (!childId || !content) { error(res, '자녀 ID와 내용을 입력해주세요'); return; }
 
-    const childDoc = await collections.children.doc(childId).get();
-    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) { error(res, '자녀를 찾을 수 없습니다', 404); return; }
+    const access = await getChildIfAccessible(childId, req.userId, 'editRecords', res);
+    if (!access) return;
 
-    const extractedTraits = await analyzeObservation(content, childDoc.data()!.name as string);
+    const extractedTraits = await analyzeObservation(content, access.data.name as string);
     const id = genId();
     const now = new Date().toISOString();
     await collections.observations.doc(id).set({
@@ -24,7 +25,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     });
 
     // observedTraits 업데이트
-    const existing = childDoc.data()!.observedTraits;
+    const existing = access.data.observedTraits;
     const parsed = existing ? (typeof existing === 'string' ? JSON.parse(existing) : existing) : { entries: [] };
     parsed.entries.push({ date: now, traits: extractedTraits });
     if (parsed.entries.length > 10) parsed.entries = parsed.entries.slice(-10);
@@ -36,8 +37,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 
 router.get('/:childId', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const childDoc = await collections.children.doc(req.params.childId as string).get();
-    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) { error(res, '자녀를 찾을 수 없습니다', 404); return; }
+    const access = await getChildIfAccessible(req.params.childId as string, req.userId, 'viewRecords', res);
+    if (!access) return;
 
     const snap = await collections.observations
       .where('childId', '==', req.params.childId)
@@ -58,8 +59,8 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const doc = await collections.observations.doc(req.params.id as string).get();
     if (!doc.exists) { error(res, '관찰 일기를 찾을 수 없습니다', 404); return; }
-    const childDoc = await collections.children.doc(doc.data()!.childId).get();
-    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) { error(res, '관찰 일기를 찾을 수 없습니다', 404); return; }
+    const access = await getChildIfAccessible(doc.data()!.childId, req.userId, 'editRecords', res);
+    if (!access) return;
 
     await collections.observations.doc(req.params.id as string).delete();
     success(res, { id: req.params.id, message: '삭제되었습니다' });
@@ -68,10 +69,10 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
 
 router.get('/report/:childId', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const childDoc = await collections.children.doc(req.params.childId as string).get();
-    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) { error(res, '자녀를 찾을 수 없습니다', 404); return; }
+    const access = await getChildIfAccessible(req.params.childId as string, req.userId, 'viewRecords', res);
+    if (!access) return;
 
-    const data = childDoc.data()!;
+    const data = access.data;
     const innate = parseInnateDataFull(data.innateData) as { dominantType: string; fiveElements: Record<string, number> };
     const observed = data.observedTraits ? (typeof data.observedTraits === 'string' ? JSON.parse(data.observedTraits as string) : data.observedTraits) as Record<string, unknown> : null;
     const entries = observed?.entries as Array<{ traits: Record<string, unknown> }> | undefined;

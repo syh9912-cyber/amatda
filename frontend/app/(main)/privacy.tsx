@@ -19,12 +19,12 @@ export default function PrivacyPolicyScreen() {
       <Text style={styles.heading}>개인정보 처리방침</Text>
       <Text style={styles.meta}>
         시행일: 2026년 4월 5일{'\n'}
-        회사명: Bloomin Corp.{'\n'}
+        회사명: SY Labs{'\n'}
         서비스명: 아맞다 (아이맞춤다이어리)
       </Text>
 
       <Text style={styles.intro}>
-        Bloomin Corp.(이하 "회사")는 「개인정보 보호법」에 따라 이용자의
+        SY Labs(이하 &quot;회사&quot;)는 「개인정보 보호법」에 따라 이용자의
         개인정보를 보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수
         있도록 다음과 같이 개인정보 처리방침을 수립하여 공개합니다.
       </Text>
@@ -106,7 +106,7 @@ export default function PrivacyPolicyScreen() {
 
 권리 행사 방법:
 - 앱 내 [더보기 > 설정 > 계정 삭제]를 통해 직접 처리
-- 이메일 요청: privacy@bloomincorp.com
+- 이메일 요청: privacy@sylabs.kr
 - 회사는 요청을 받은 날로부터 10일 이내에 처리합니다.`}
       </Section>
 
@@ -114,8 +114,8 @@ export default function PrivacyPolicyScreen() {
         {`회사는 개인정보 처리에 관한 업무를 총괄하여 책임지고, 이용자의 불만 처리 및 피해 구제를 위해 아래와 같이 개인정보 보호 책임자를 지정하고 있습니다.
 
 개인정보 보호 책임자
-- 이메일: privacy@bloomincorp.com
-- 회사명: Bloomin Corp.
+- 이메일: privacy@sylabs.kr
+- 회사명: SY Labs
 
 개인정보 침해 관련 신고 및 상담:
 - 개인정보침해신고센터 (한국인터넷진흥원): 118, privacy.kisa.or.kr
@@ -153,7 +153,7 @@ export default function PrivacyPolicyScreen() {
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          Bloomin Corp. | privacy@bloomincorp.com
+          SY Labs | privacy@sylabs.kr
         </Text>
       </View>
     </ScrollView>

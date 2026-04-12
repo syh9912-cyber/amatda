@@ -4,7 +4,7 @@ import { success, error } from '../utils/response';
 import { collections } from '../services/firestore';
 import { calculateAge } from '../services/age.calculator';
 import { safeParse } from '../utils/parse';
-import { getChildIfOwned } from '../utils/child';
+import { getChildIfAccessible } from '../utils/childAccess';
 
 const router = Router();
 
@@ -47,7 +47,6 @@ const TIPS_BY_TEMPERAMENT: Record<string, string[]> = {
     '식물 키우기를 통해 생명의 성장 과정을 배우게 해주세요.',
     '사진 찍기를 통해 관찰력과 표현력을 키워보세요.',
     '시계나 달력으로 시간의 흐름을 함께 이해해보세요.',
-    '다양한 소리를 듣고 무슨 소리인지 맞추는 놀이를 해보세요.',
     '냄새 맡기 놀이로 후각 감각을 발달시켜 주세요.',
     '그림자 놀이로 빛과 어둠의 관계를 탐구해보세요.',
     '비 오는 날 우산 쓰고 빗소리를 들으며 산책해보세요.',
@@ -241,11 +240,11 @@ interface StreakLevel {
 }
 
 const STREAK_LEVELS: StreakLevel[] = [
-  { level: 1, name: '새싹부모', minDays: 1, maxDays: 3 },
-  { level: 2, name: '성장부모', minDays: 4, maxDays: 7 },
-  { level: 3, name: '열정부모', minDays: 8, maxDays: 14 },
-  { level: 4, name: '베테랑부모', minDays: 15, maxDays: 30 },
-  { level: 5, name: '마스터부모', minDays: 31, maxDays: Infinity },
+  { level: 1, name: '새싹 부모', minDays: 1, maxDays: 13 },
+  { level: 2, name: '줄기 부모', minDays: 14, maxDays: 29 },
+  { level: 3, name: '꽃봉오리 부모', minDays: 30, maxDays: 59 },
+  { level: 4, name: '만개 부모', minDays: 60, maxDays: 99 },
+  { level: 5, name: '열매 부모', minDays: 100, maxDays: Infinity },
 ];
 
 function getStreakLevel(streak: number): StreakLevel {
@@ -295,7 +294,7 @@ interface PushScheduleBody {
 router.get('/daily-card/:childId', authMiddleware, async (req: Request, res: Response) => {
   try {
     const childId = req.params.childId as string;
-    const childData = await getChildIfOwned(childId, req.userId, res);
+    const childData = await getChildIfAccessible(childId, req.userId, 'viewRecords', res).then(r => r?.data ?? null);
     if (!childData) return;
 
     const name = childData.name as string;
@@ -349,7 +348,7 @@ router.get('/daily-card/:childId', authMiddleware, async (req: Request, res: Res
 router.get('/streak/:childId', authMiddleware, async (req: Request, res: Response) => {
   try {
     const childId = req.params.childId as string;
-    const childData = await getChildIfOwned(childId, req.userId, res);
+    const childData = await getChildIfAccessible(childId, req.userId, 'viewRecords', res).then(r => r?.data ?? null);
     if (!childData) return;
 
     // 코칭 세션에서 날짜별 활동 기록 조회
@@ -439,7 +438,7 @@ router.get('/streak/:childId', authMiddleware, async (req: Request, res: Respons
 router.get('/countdown/:childId', authMiddleware, async (req: Request, res: Response) => {
   try {
     const childId = req.params.childId as string;
-    const childData = await getChildIfOwned(childId, req.userId, res);
+    const childData = await getChildIfAccessible(childId, req.userId, 'viewRecords', res).then(r => r?.data ?? null);
     if (!childData) return;
 
     const name = childData.name as string;
@@ -497,7 +496,7 @@ router.post('/push-schedule', authMiddleware, async (req: Request, res: Response
     }
 
     // 자녀 소유권 확인
-    const childData = await getChildIfOwned(childId, req.userId, res);
+    const childData = await getChildIfAccessible(childId, req.userId, 'viewRecords', res).then(r => r?.data ?? null);
     if (!childData) return;
 
     const scheduleId = `${req.userId}_${childId}`;
@@ -531,7 +530,7 @@ router.post('/push-schedule', authMiddleware, async (req: Request, res: Response
 router.get('/push-content/:childId', authMiddleware, async (req: Request, res: Response) => {
   try {
     const childId = req.params.childId as string;
-    const childData = await getChildIfOwned(childId, req.userId, res);
+    const childData = await getChildIfAccessible(childId, req.userId, 'viewRecords', res).then(r => r?.data ?? null);
     if (!childData) return;
 
     const name = childData.name as string;

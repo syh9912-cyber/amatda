@@ -63,6 +63,8 @@ export interface Child {
   observedTraits: Record<string, unknown> | null;
   analysisReport: AnalysisReport | null;
   ageInfo: AgeInfo;
+  height?: number | null;
+  weight?: number | null;
 }
 
 interface ChildState {

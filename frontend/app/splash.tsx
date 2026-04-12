@@ -1,180 +1,330 @@
-import { useEffect, useRef } from 'react';
-import { View, Text, Image, Animated, Easing, StyleSheet, Dimensions } from 'react-native';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import {
+  View, Text, Animated, Easing, StyleSheet, Dimensions, StatusBar,
+} from 'react-native';
 import { router } from 'expo-router';
 import { useAuthStore } from '../stores/authStore';
 
-const BG = '#FFFFFF';
-const INDIGO = '#4338CA';
-const GRAY = '#9CA3AF';
-const { height: SCREEN_H } = Dimensions.get('window');
+const { width: SW, height: SH } = Dimensions.get('window');
+
+/* eslint-disable @typescript-eslint/no-require-imports */
+const SPLASH_VIDEO = require('../assets/splash-video.mp4') as number;
+/* eslint-enable @typescript-eslint/no-require-imports */
+
+/* ── Colors ── */
+const C = {
+  accent: '#FF8C5A',
+  white: '#2D2016',
+  shadow: 'rgba(0,0,0,0.08)',
+  gray: '#8C7A6B',
+  lightGray: '#B5A99A',
+};
+
+/* ================================================================== */
+/*  Splash Screen                                                      */
+/*  Phase 1: Full-screen anime video                                   */
+/*  Phase 2: "아맞다" → "아이맞춤다이어리" text overlay animation       */
+/*  Phase 3: 1s hold → navigate                                        */
+/* ================================================================== */
 
 export default function SplashScreen() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  const imgOp = useRef(new Animated.Value(0)).current;
-  const imgScale = useRef(new Animated.Value(0.7)).current;
-  const imgY = useRef(new Animated.Value(40)).current;
-  const writeRot = useRef(new Animated.Value(0)).current;
-  const sp1 = useRef(new Animated.Value(0)).current;
-  const sp2 = useRef(new Animated.Value(0)).current;
-  const sp3 = useRef(new Animated.Value(0)).current;
-  // 처음: 아맞다 (붙어서)
-  const titleOp = useRef(new Animated.Value(0)).current;
-  // 벌어지면서 사이 글자 등장
-  const expandW = useRef(new Animated.Value(0)).current; // 아_이 사이
-  const expandW2 = useRef(new Animated.Value(0)).current; // 다_이어리
-  const subOp1 = useRef(new Animated.Value(0)).current; // 이
-  const chumOp = useRef(new Animated.Value(0)).current; // 춤
-  const chumSc = useRef(new Animated.Value(0.3)).current;
-  const subOp2 = useRef(new Animated.Value(0)).current; // 이어리
-  const subSc1 = useRef(new Animated.Value(0.3)).current;
-  const subSc2 = useRef(new Animated.Value(0.3)).current;
-  const lineW = useRef(new Animated.Value(0)).current;
-  const engOp = useRef(new Animated.Value(0)).current;
-  const coOp = useRef(new Animated.Value(0)).current;
-  const fadeOut = useRef(new Animated.Value(1)).current;
+  /* ── Video module (dynamic import per CLAUDE.md rule 6) ── */
+  const [VideoComp, setVideoComp] = useState<React.ComponentType<Record<string, unknown>> | null>(null);
+  const videoLoaded = useRef(false);
 
   useEffect(() => {
-    const e = Easing.out(Easing.cubic);
-
-    const writeLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(writeRot, { toValue: 1.5, duration: 400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(writeRot, { toValue: -1, duration: 350, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(writeRot, { toValue: 1.2, duration: 300, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(writeRot, { toValue: -0.8, duration: 350, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(writeRot, { toValue: 0, duration: 300, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ])
-    );
-
-    Animated.sequence([
-      Animated.delay(400),
-      // 1. 캐릭터 등장
-      Animated.parallel([
-        Animated.timing(imgOp, { toValue: 1, duration: 1200, easing: e, useNativeDriver: true }),
-        Animated.timing(imgScale, { toValue: 1, duration: 1400, easing: Easing.out(Easing.back(1.1)), useNativeDriver: true }),
-        Animated.timing(imgY, { toValue: 0, duration: 1200, easing: Easing.out(Easing.back(1.15)), useNativeDriver: true }),
-      ]),
-      // 2. 반짝이
-      Animated.stagger(200, [
-        Animated.timing(sp1, { toValue: 1, duration: 350, useNativeDriver: true }),
-        Animated.timing(sp2, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.timing(sp3, { toValue: 1, duration: 300, useNativeDriver: true }),
-      ]),
-      Animated.delay(300),
-      // 3. "아맞춤다" 등장 (처음엔 "아맞다"만 보임, 맞춤은 붙어있음)
-      Animated.timing(titleOp, { toValue: 1, duration: 800, easing: e, useNativeDriver: true }),
-      Animated.delay(500),
-      // 4. "이" + "춤" 동시에 등장 (아_이_맞춤_다)
-      Animated.parallel([
-        Animated.timing(expandW, { toValue: 1, duration: 600, easing: e, useNativeDriver: false }),
-        Animated.timing(subOp1, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.timing(subSc1, { toValue: 1, duration: 500, easing: Easing.out(Easing.back(1.3)), useNativeDriver: true }),
-        Animated.timing(chumOp, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.timing(chumSc, { toValue: 1, duration: 500, easing: Easing.out(Easing.back(1.3)), useNativeDriver: true }),
-      ]),
-      // 5. "이어리" 등장
-      Animated.parallel([
-        Animated.timing(expandW2, { toValue: 1, duration: 600, easing: e, useNativeDriver: false }),
-        Animated.timing(subOp2, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.timing(subSc2, { toValue: 1, duration: 500, easing: Easing.out(Easing.back(1.3)), useNativeDriver: true }),
-      ]),
-      Animated.delay(300),
-      // 6. 구분선 + 영문 + 회사
-      Animated.timing(lineW, { toValue: 56, duration: 500, easing: e, useNativeDriver: false }),
-      Animated.timing(engOp, { toValue: 1, duration: 500, easing: e, useNativeDriver: true }),
-      Animated.delay(200),
-      Animated.timing(coOp, { toValue: 1, duration: 400, easing: e, useNativeDriver: true }),
-      // 7. 2초 멈춤
-      Animated.delay(2000),
-      // 8. 페이드아웃
-      Animated.timing(fadeOut, { toValue: 0, duration: 500, easing: e, useNativeDriver: true }),
-    ]).start(() => {
-      writeLoop.stop();
+    let mounted = true;
+    (async () => {
       try {
-        const target = isAuthenticated ? '/(main)/home' : '/(auth)/login';
-        setTimeout(() => {
-          router.replace(target as never);
-        }, 100);
+        const mod = await import('expo-av');
+        if (mounted) { setVideoComp(() => mod.Video); videoLoaded.current = true; }
       } catch {
-        // fallback: try again after a longer delay
-        setTimeout(() => {
-          router.replace('/(auth)/login' as never);
-        }, 500);
+        // fallback: skip video
+        if (mounted) startTextAnim();
       }
-    });
-    setTimeout(() => writeLoop.start(), 2000);
+    })();
+    return () => { mounted = false; };
   }, []);
 
-  const rotStr = writeRot.interpolate({ inputRange: [-2, 2], outputRange: ['-2deg', '2deg'] });
-  const gapW1 = expandW.interpolate({ inputRange: [0, 1], outputRange: [0, 18] });
-  const chumW = expandW.interpolate({ inputRange: [0, 1], outputRange: [0, 16] });
+  /* ── Animated values ── */
+  // Video overlay
+  const overlayOp = useRef(new Animated.Value(0)).current;
+  // Big title: 아 맞 다  (always visible once shown)
+  const titleOp = useRef(new Animated.Value(0)).current;
+  const titleScale = useRef(new Animated.Value(0.5)).current;
+  // Sub chars expanding
+  const gap1W = useRef(new Animated.Value(0)).current;   // "이" between 아-맞
+  const sub1Op = useRef(new Animated.Value(0)).current;
+  const sub1Sc = useRef(new Animated.Value(0.2)).current;
+  const gap2W = useRef(new Animated.Value(0)).current;   // "춤" between 맞-다
+  const sub2Op = useRef(new Animated.Value(0)).current;
+  const sub2Sc = useRef(new Animated.Value(0.2)).current;
+  const gap3W = useRef(new Animated.Value(0)).current;   // "이어리" after 다
+  const sub3Op = useRef(new Animated.Value(0)).current;
+  const sub3Sc = useRef(new Animated.Value(0.2)).current;
+  // Subtitle
+  const engOp = useRef(new Animated.Value(0)).current;
+  // Footer
+  const footOp = useRef(new Animated.Value(0)).current;
+  const footY = useRef(new Animated.Value(20)).current;
+  // Whole screen fade out
+  const fadeOut = useRef(new Animated.Value(1)).current;
+
+  /* ── Navigate ── */
+  const navigate = useCallback(() => {
+    try {
+      const target = isAuthenticated ? '/(main)/home' : '/(auth)/login';
+      setTimeout(() => router.replace(target as never), 100);
+    } catch {
+      setTimeout(() => router.replace('/(auth)/login' as never), 500);
+    }
+  }, [isAuthenticated]);
+
+  /* ── Text animation sequence ── */
+  const startTextAnim = useCallback(() => {
+    const ease = Easing.out(Easing.cubic);
+    const spring = Easing.out(Easing.back(1.6));
+
+    Animated.sequence([
+      // 0. Show dark overlay behind text
+      Animated.timing(overlayOp, { toValue: 1, duration: 400, useNativeDriver: true }),
+
+      // 1. "아맞다" appear big + scale bounce
+      Animated.parallel([
+        Animated.timing(titleOp, { toValue: 1, duration: 500, easing: ease, useNativeDriver: true }),
+        Animated.timing(titleScale, { toValue: 1, duration: 700, easing: spring, useNativeDriver: true }),
+      ]),
+
+      Animated.delay(600),
+
+      // 2. "이" expands between 아-맞
+      Animated.parallel([
+        Animated.timing(gap1W, { toValue: 1, duration: 500, easing: ease, useNativeDriver: false }),
+        Animated.timing(sub1Op, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(sub1Sc, { toValue: 1, duration: 400, easing: spring, useNativeDriver: true }),
+      ]),
+
+      Animated.delay(200),
+
+      // 3. "춤" expands between 맞-다
+      Animated.parallel([
+        Animated.timing(gap2W, { toValue: 1, duration: 500, easing: ease, useNativeDriver: false }),
+        Animated.timing(sub2Op, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(sub2Sc, { toValue: 1, duration: 400, easing: spring, useNativeDriver: true }),
+      ]),
+
+      Animated.delay(200),
+
+      // 4. "이어리" expands after 다
+      Animated.parallel([
+        Animated.timing(gap3W, { toValue: 1, duration: 600, easing: ease, useNativeDriver: false }),
+        Animated.timing(sub3Op, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.timing(sub3Sc, { toValue: 1, duration: 500, easing: spring, useNativeDriver: true }),
+      ]),
+
+      Animated.delay(300),
+
+      // 5. English subtitle
+      Animated.timing(engOp, { toValue: 1, duration: 400, easing: ease, useNativeDriver: true }),
+
+      // 6. Footer
+      Animated.parallel([
+        Animated.timing(footOp, { toValue: 1, duration: 400, easing: ease, useNativeDriver: true }),
+        Animated.timing(footY, { toValue: 0, duration: 400, easing: ease, useNativeDriver: true }),
+      ]),
+
+      // 7. Hold 1 second
+      Animated.delay(1000),
+
+      // 8. Fade out everything
+      Animated.timing(fadeOut, { toValue: 0, duration: 500, easing: ease, useNativeDriver: true }),
+    ]).start(() => navigate());
+  }, [overlayOp, titleOp, titleScale, gap1W, sub1Op, sub1Sc, gap2W, sub2Op, sub2Sc, gap3W, sub3Op, sub3Sc, engOp, footOp, footY, fadeOut, navigate]);
+
+  /* ── Video end handler ── */
+  const onVideoEnd = useCallback(() => {
+    startTextAnim();
+  }, [startTextAnim]);
+
+  /* ── Fallback timeout (if video fails to trigger end) ── */
+  useEffect(() => {
+    const fallback = setTimeout(() => {
+      if ((titleOp as unknown as { _value: number })._value === 0) startTextAnim();
+    }, 8000);
+    return () => clearTimeout(fallback);
+  }, [startTextAnim, titleOp]);
+
+  /* ── Interpolations ── */
+  const gapW1 = gap1W.interpolate({ inputRange: [0, 1], outputRange: [0, 22] });
+  const gapW2 = gap2W.interpolate({ inputRange: [0, 1], outputRange: [0, 20] });
+  const gapW3 = gap3W.interpolate({ inputRange: [0, 1], outputRange: [0, 56] });
 
   return (
-    <View style={styles.container}>
-      <Animated.View style={[styles.content, { opacity: fadeOut }]}>
-        {/* 캐릭터 */}
-        <Animated.View style={[styles.imgWrap, {
-          opacity: imgOp,
-          transform: [{ translateY: imgY }, { scale: imgScale }, { rotate: rotStr }],
-        }]}>
-          <Image source={require('../assets/child-diary.png')} style={styles.img} resizeMode="contain" />
-        </Animated.View>
+    <Animated.View style={[s.root, { opacity: fadeOut }]}>
+      <StatusBar hidden />
 
-        {/* 반짝이 */}
-        <Animated.Text style={[styles.sp, { top: '12%', left: '8%', opacity: sp1 }]}>✨</Animated.Text>
-        <Animated.Text style={[styles.sp, { top: '8%', right: '10%', opacity: sp2 }]}>⭐</Animated.Text>
-        <Animated.Text style={[styles.sp, { top: '38%', right: '5%', opacity: sp3 }]}>💜</Animated.Text>
+      {/* ═══ Full-screen video background ═══ */}
+      {VideoComp && (
+        <VideoComp
+          source={SPLASH_VIDEO}
+          style={s.video}
+          resizeMode="cover"
+          shouldPlay
+          isLooping={false}
+          isMuted
+          onPlaybackStatusUpdate={(status: Record<string, unknown>) => {
+            if (status.didJustFinish) onVideoEnd();
+          }}
+        />
+      )}
 
-        {/* 아이 맞춤 다이어리 — 한 줄, flexbox row, 중앙 정렬 */}
-        {/* "아"크게 + "이"작게 + "맞춤"크게(붙어있음) + "다"크게 + "이어리"작게 */}
-        <Animated.View style={[styles.nameRow, { opacity: titleOp }]}>
-          <Text style={styles.bigChar}>아</Text>
+      {/* ═══ Dark overlay for text readability ═══ */}
+      <Animated.View style={[s.overlay, { opacity: overlayOp }]} />
+
+      {/* ═══ Text animation ═══ */}
+      <View style={s.textCenter}>
+        <Animated.View
+          style={[
+            s.nameRow,
+            { opacity: titleOp, transform: [{ scale: titleScale }] },
+          ]}
+        >
+          {/* 아 */}
+          <Text style={s.bigChar}>{'아'}</Text>
+
+          {/* (이) */}
           <Animated.View style={{ width: gapW1, overflow: 'hidden', alignItems: 'center' }}>
-            <Animated.Text style={[styles.smallChar, { opacity: subOp1, transform: [{ scale: subSc1 }] }]}>이</Animated.Text>
+            <Animated.Text
+              style={[s.subChar, { opacity: sub1Op, transform: [{ scale: sub1Sc }] }]}
+            >
+              {'이'}
+            </Animated.Text>
           </Animated.View>
-          <Text style={styles.bigChar}>맞</Text>
-          <Animated.View style={{ width: chumW, overflow: 'hidden' }}>
-            <Animated.Text style={[styles.smallCharFixed, { opacity: chumOp, transform: [{ scale: chumSc }] }]}>춤</Animated.Text>
+
+          {/* 맞 */}
+          <Text style={s.bigChar}>{'맞'}</Text>
+
+          {/* (춤) */}
+          <Animated.View style={{ width: gapW2, overflow: 'hidden', alignItems: 'center' }}>
+            <Animated.Text
+              style={[s.subChar, { opacity: sub2Op, transform: [{ scale: sub2Sc }] }]}
+            >
+              {'춤'}
+            </Animated.Text>
           </Animated.View>
-          <Text style={styles.bigChar}>다</Text>
-          <Animated.View style={{ overflow: 'hidden' }}>
-            <Animated.Text style={[styles.smallChar, { opacity: subOp2, transform: [{ scale: subSc2 }] }]}>이어리</Animated.Text>
+
+          {/* 다 */}
+          <Text style={s.bigChar}>{'다'}</Text>
+
+          {/* (이어리) */}
+          <Animated.View style={{ width: gapW3, overflow: 'hidden' }}>
+            <Animated.Text
+              style={[s.subChar, { opacity: sub3Op, transform: [{ scale: sub3Sc }] }]}
+            >
+              {'이어리'}
+            </Animated.Text>
           </Animated.View>
         </Animated.View>
 
-        <Animated.View style={[styles.line, { width: lineW }]} />
-        <Animated.Text style={[styles.eng, { opacity: engOp }]}>Child-Customized Diary</Animated.Text>
-      </Animated.View>
+        {/* English subtitle */}
+        <Animated.Text style={[s.eng, { opacity: engOp }]}>
+          {'Child-Customized Diary'}
+        </Animated.Text>
+      </View>
 
-      {/* 회사 정보 — 화면 하단 고정 */}
-      <Animated.View style={[styles.co, { opacity: coOp }]}>
-        <Text style={styles.coName}>Bloomin Corp.</Text>
-        <Text style={styles.coSub}>Growing with every child</Text>
+      {/* ═══ Footer ═══ */}
+      <Animated.View
+        style={[s.footer, { opacity: footOp, transform: [{ translateY: footY }] }]}
+      >
+        <Text style={s.footerName}>{'SY Labs'}</Text>
+        <Text style={s.footerSub}>{'Growing with every child'}</Text>
       </Animated.View>
-    </View>
+    </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: BG, justifyContent: 'center', alignItems: 'center' },
-  content: { alignItems: 'center', width: '100%' },
-  imgWrap: { alignItems: 'center', marginBottom: 4 },
-  img: { width: 320, height: 320 },
-  sp: { position: 'absolute', fontSize: 20 },
+/* ── Styles ── */
+const s = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#F5E3C3',
+  },
+
+  /* Full-screen video (same bg color = seamless) */
+  video: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: SW,
+    height: SH,
+  },
+
+  /* Semi-transparent overlay for text contrast */
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FFF5EC',
+  },
+
+  /* Text center */
+  textCenter: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   nameRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'center',
-    marginTop: 8,
-    marginBottom: 10,
+    marginBottom: 16,
   },
-  bigChar: { fontSize: 34, fontWeight: '800', color: INDIGO },
-  smallChar: { fontSize: 15, fontWeight: '500', color: GRAY },
-  smallCharFixed: { fontSize: 15, fontWeight: '500', color: GRAY, marginRight: 1 },
-  line: { height: 1.5, backgroundColor: '#D4C8BE', marginBottom: 10, borderRadius: 1 },
-  eng: { fontSize: 11, color: GRAY, letterSpacing: 1.5 },
-  co: { position: 'absolute', bottom: 50, alignItems: 'center' },
-  coName: { fontSize: 11, color: '#B0A89E', fontWeight: '600', letterSpacing: 1 },
-  coSub: { fontSize: 9, color: '#C8C0B8', marginTop: 2, letterSpacing: 0.5 },
+
+  bigChar: {
+    fontSize: 44,
+    fontWeight: '900',
+    color: C.white,
+    textShadowColor: C.shadow,
+    textShadowOffset: { width: 0, height: 3 },
+    textShadowRadius: 12,
+  },
+
+  subChar: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: C.accent,
+    textShadowColor: 'rgba(255,140,90,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
+
+  eng: {
+    fontSize: 13,
+    color: C.gray,
+    letterSpacing: 3,
+    fontWeight: '600',
+    textShadowColor: C.shadow,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+
+  footer: {
+    position: 'absolute',
+    bottom: 50,
+    alignSelf: 'center',
+    alignItems: 'center',
+  },
+  footerName: {
+    fontSize: 12,
+    color: '#1A1A1A',
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
+  footerSub: {
+    fontSize: 9,
+    color: 'rgba(0,0,0,0.4)',
+    marginTop: 3,
+    letterSpacing: 0.8,
+  },
 });

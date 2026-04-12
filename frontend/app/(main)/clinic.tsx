@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { clinicApi } from '../../services/api';
+import { useLocationStore } from '../../stores/locationStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
 // ── Types ──
@@ -46,7 +47,7 @@ interface Review {
 const DEFAULT_LAT = 34.815;
 const DEFAULT_LNG = 126.463;
 
-const RADIUS_OPTIONS = [1, 3, 5, 10] as const;
+const RADIUS_OPTIONS = [10, 20, 40, 60] as const;
 
 const RATING_LABELS: { key: keyof ClinicRatings; label: string }[] = [
   { key: 'kindness', label: '친절도' },
@@ -107,12 +108,14 @@ function StarRow({
 export default function ClinicScreen() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchRadius, setSearchRadius] = useState<number>(5);
+  const [searchRadius, setSearchRadius] = useState<number>(10);
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const userLocation = useLocationStore((s) => s.userLocation);
 
   // Review form state
   const [formClinicName, setFormClinicName] = useState('');
@@ -125,10 +128,13 @@ export default function ClinicScreen() {
     expertise: 0,
   });
 
+  const lat = userLocation?.latitude ?? DEFAULT_LAT;
+  const lng = userLocation?.longitude ?? DEFAULT_LNG;
+
   const loadClinics = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await clinicApi.nearby(DEFAULT_LAT, DEFAULT_LNG, searchRadius);
+      const res = await clinicApi.nearby(lat, lng, searchRadius);
       if (res.data?.data) {
         setClinics(res.data.data as Clinic[]);
       }
@@ -137,7 +143,7 @@ export default function ClinicScreen() {
     } finally {
       setLoading(false);
     }
-  }, [searchRadius]);
+  }, [lat, lng, searchRadius]);
 
   useEffect(() => {
     loadClinics();

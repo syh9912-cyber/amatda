@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
+import Constants from 'expo-constants';
 import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
 
 interface ProfileFooterProps {
@@ -28,7 +29,7 @@ export function ProfileFooter({ onLogout, onDeleteAccount }: ProfileFooterProps)
         <Text style={styles.deleteText}>계정 삭제</Text>
       </TouchableOpacity>
 
-      <Text style={styles.versionText}>v1.0.0</Text>
+      <Text style={styles.versionText}>v{Constants.expoConfig?.version ?? '1.5.0'}</Text>
     </View>
   );
 }

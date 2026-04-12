@@ -15,22 +15,30 @@ const PARENTING_KEYWORDS = [
   '젖', '젖병', '유모차', '카시트', '목욕', '양치', '어떻게',
 ];
 
-const GREETING_PATTERNS = /^(안녕|하이|헬로|반갑|감사합니다|고마워|ㅎㅎ|ㅋㅋ|ㅠㅠ|ㅜㅜ|네|응|ok|hi|hello)[\s!.?]*$/i;
+const GREETING_PATTERNS = /^(안녕|하이|헬로|반갑|감사합니다|고마워|ㅎㅎ|ㅋㅋ|ㅠㅠ|ㅜㅜ|ok|hi|hello)[\s!.?]*$/i;
 const JOKE_PATTERNS = /^(ㅋ{3,}|ㅎ{3,}|ㅠ{3,}|\.{3,}|ㅡ{3,}|test|테스트|아무거나|몰라|뭐|asdf|qwer)/i;
+
+// 대화 응답 패턴: 첫 질문이나 이전 질문에 대한 짧은 답변 (차단하면 안 됨)
+const REPLY_PATTERNS = /^(네|응|예|아니|아뇨|맞아|그래|좋아|싫어|괜찮|잘|못|많이|조금|가끔|자주|별로|항상|전혀|보통|심해|안|잘 자|잘 먹|잘 안|잘 못)/;
 
 export function filterUselessQuestion(message: string): FilterResult {
   const trimmed = message.trim();
 
-  // 너무 짧은 입력
-  if (trimmed.replace(/\s/g, '').length < 4) {
+  // 너무 짧은 입력 (2자 이하)
+  if (trimmed.replace(/\s/g, '').length < 3) {
     return {
       isUseless: true,
       rejectionType: 'vague',
-      rejectionMessage: '조금 더 정확히 보려면 아이 월령과 어떤 상황에서 그런지 알려주세요.\n예: 수면, 식사, 대변, 울음 중 어떤 고민인지 함께 적어주시면 더 정확히 도와드릴 수 있어요.',
+      rejectionMessage: '조금 더 자세히 알려주시면 도움드릴 수 있어요.\n예: "밤에 자주 깨요", "밥을 잘 안 먹어요" 처럼 적어주세요.',
     };
   }
 
-  // 인사/감사만
+  // 대화 응답 패턴은 항상 통과 (첫 질문 답변, 후속 질문 답변 등)
+  if (REPLY_PATTERNS.test(trimmed)) {
+    return { isUseless: false };
+  }
+
+  // 인사/감사만 (네/응은 위에서 이미 통과)
   if (GREETING_PATTERNS.test(trimmed)) {
     return {
       isUseless: true,
@@ -44,7 +52,7 @@ export function filterUselessQuestion(message: string): FilterResult {
     return {
       isUseless: true,
       rejectionType: 'joke',
-      rejectionMessage: '지금 입력만으로는 육아 상담으로 보기 어려워요.\n아이 상황을 조금만 더 구체적으로 적어주시면 필요한 도움만 짧고 정확하게 드릴게요.',
+      rejectionMessage: '아이 상황을 조금만 더 구체적으로 적어주시면 도움드릴게요.',
     };
   }
 

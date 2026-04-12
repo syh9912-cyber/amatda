@@ -1,11 +1,11 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
+  timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -50,8 +50,14 @@ export const authApi = {
     api.post('/auth/register', { email, password }),
   socialLogin: (provider: string, accessToken: string) =>
     api.post('/auth/social', { provider, accessToken }),
+  socialLoginWithCode: (provider: string, code: string, redirectUri: string) =>
+    api.post('/auth/social-code', { provider, code, redirectUri }),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post('/auth/change-password', { currentPassword, newPassword }),
+  setPassword: (newPassword: string) =>
+    api.post('/auth/set-password', { newPassword }),
+  getProfile: () =>
+    api.get('/auth/me'),
   deleteAccount: () =>
     api.delete('/auth/account'),
 };
@@ -60,7 +66,7 @@ export const authApi = {
 export const childApi = {
   list: () => api.get('/children'),
   get: (id: string) => api.get(`/children/${id}`),
-  create: (data: { name: string; gender: string; birthDate: string; birthTime: string }) =>
+  create: (data: Record<string, unknown>) =>
     api.post('/children', data),
   update: (id: string, data: Record<string, unknown>) =>
     api.put(`/children/${id}`, data),
@@ -180,6 +186,8 @@ export const momstagramApi = {
     content: string;
     imageUrl?: string;
     thumbnailUrl?: string;
+    videoUrl?: string;
+    mediaType?: 'image' | 'video' | 'none';
     sourceType: 'album' | 'diary' | 'manual';
     childAge?: string;
     childGender?: string;
@@ -227,8 +235,8 @@ export const coachingApi = {
     api.post('/coaching/weekly-report', { childId }),
   dailyDiary: (childId: string) =>
     api.post('/coaching/daily-diary', { childId }),
-  analyzeMedia: (childId: string, type: 'cry' | 'poop', description: string) =>
-    api.post('/coaching/analyze-media', { childId, type, description }),
+  analyzeMedia: (childId: string, type: 'cry' | 'poop', description?: string, mediaBase64?: string, mediaMimeType?: string) =>
+    api.post('/coaching/analyze-media', { childId, type, description, mediaBase64, mediaMimeType }),
   firstTalk: (childId: string) =>
     api.post('/coaching/first-talk', { childId }),
   parentMental: (childId: string) =>
@@ -239,6 +247,28 @@ export const coachingApi = {
     api.post('/coaching/now-activity', { childId }),
   milestones: (childId: string) =>
     api.get(`/coaching/milestones/${childId}`),
+  saveMilestoneChecks: (childId: string, checks: Record<string, boolean>) =>
+    api.post(`/coaching/milestones/${childId}/check`, { checks }),
+  dailyInsight: (childId: string) =>
+    api.get(`/coaching/daily-insight?childId=${childId}`),
+  welcome: (childId: string) =>
+    api.get(`/coaching/welcome?childId=${childId}`),
+  autoDiary: (childId: string) =>
+    api.get(`/coaching/auto-diary?childId=${childId}`),
+  createTimeCapsule: (childId: string, message: string, months: 3 | 6 | 12) =>
+    api.post('/coaching/time-capsule', { childId, message, months }),
+  listTimeCapsules: (childId: string) =>
+    api.get(`/coaching/time-capsules?childId=${childId}`),
+  openTimeCapsule: (capsuleId: string) =>
+    api.post(`/coaching/time-capsule/${capsuleId}/open`),
+  peerComparison: (childId: string) =>
+    api.get(`/coaching/peer-comparison?childId=${childId}`),
+  myTier: () =>
+    api.get('/coaching/my-tier'),
+  capsuleSuggestion: (childId: string) =>
+    api.get(`/coaching/capsule-suggestion?childId=${childId}`),
+  acceptCapsuleSuggestion: (childId: string, diaryDate: string) =>
+    api.post('/coaching/capsule-suggestion/accept', { childId, diaryDate }),
 };
 
 // Retention (growth countdown, daily tip, streak)
@@ -253,6 +283,20 @@ export const retentionApi = {
     api.post('/retention/push-schedule', data),
   pushContent: (childId: string) =>
     api.get(`/retention/push-content/${childId}`),
+};
+
+// Growth Analysis (성장 분석)
+export const growthApi = {
+  analysis: (childId: string, tracker?: { diaper?: number; feeding?: number; sleep?: number }) => {
+    const params = new URLSearchParams();
+    if (tracker?.diaper != null) params.set('diaper', String(tracker.diaper));
+    if (tracker?.feeding != null) params.set('feeding', String(tracker.feeding));
+    if (tracker?.sleep != null) params.set('sleep', String(tracker.sleep));
+    const qs = params.toString();
+    return api.get(`/growth/analysis/${childId}${qs ? `?${qs}` : ''}`);
+  },
+  update: (childId: string, data: { height?: number; weight?: number }) =>
+    api.post(`/growth/update/${childId}`, data),
 };
 
 // Clinic (소아과 리뷰)
@@ -277,6 +321,58 @@ export const premiumApi = {
     api.post('/subscriptions/premium/start-trial', {}),
   subscribe: (planId: string, paymentMethod: string) =>
     api.post('/subscriptions/premium/subscribe', { planId, paymentMethod }),
+};
+
+// Recommendations (DB캐시 + AI 폴백)
+export const recommendationApi = {
+  get: (title: string, ageGroup: string, temperament: string, childId: string, category?: string) =>
+    api.get('/recommendations', {
+      params: { title, ageGroup, temperament, childId, category: category ?? '' },
+    }),
+  list: (category: string, ageGroup: string, temperament: string) =>
+    api.get('/recommendations/list', {
+      params: { category, ageGroup, temperament },
+    }),
+  seed: () =>
+    api.post('/recommendations/seed'),
+};
+
+// Sleep Prediction (수면 예측)
+export const sleepApi = {
+  predict: (childId: string) =>
+    api.post('/sleep/predict', { childId }),
+  history: (childId: string) =>
+    api.get('/sleep/history', { params: { childId } }),
+  pattern: (months: number) =>
+    api.get('/sleep/pattern', { params: { months } }),
+};
+
+// Coparenting (공동육아)
+export const coparentingApi = {
+  invite: (childId: string, role: string, nickname: string, permissions: string[], phone?: string) =>
+    api.post('/coparenting/invite', { childId, role, nickname, permissions, phone }),
+  accept: (inviteCode: string) =>
+    api.post('/coparenting/accept', { inviteCode }),
+  members: (childId: string) =>
+    api.get(`/coparenting/members/${childId}`),
+  updatePermissions: (memberId: string, permissions: string[]) =>
+    api.put(`/coparenting/permissions/${memberId}`, { permissions }),
+  removeMember: (memberId: string) =>
+    api.delete(`/coparenting/members/${memberId}`),
+  myPermissions: (childId: string) =>
+    api.get(`/coparenting/my-permissions/${childId}`),
+  presets: () =>
+    api.get('/coparenting/presets'),
+};
+
+// SOS Fast Track (긴급 증상 체크)
+export const sosApi = {
+  checkSymptom: (childId: string, symptoms: string[], temperature?: number) =>
+    api.post('/sos/check-symptom', { childId, symptoms, temperature }),
+  feverCalculator: (childId: string, temperature?: number) =>
+    api.get('/sos/fever-calculator', { params: { childId, temperature: temperature ? String(temperature) : undefined } }),
+  notifyFamily: (childId: string, situation: string, temperature?: number) =>
+    api.post('/sos/notify-family', { childId, situation, temperature }),
 };
 
 export default api;

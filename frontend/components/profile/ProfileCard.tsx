@@ -46,7 +46,7 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
     return (
       <View style={styles.card}>
         <View style={styles.photoCircle}>
-          <Text style={styles.photoEmoji}>{'👶'}</Text>
+          <Image source={require('../../assets/mascot-waving.png')} style={styles.photoImage} resizeMode="cover" />
         </View>
         <Text style={styles.nameText}>
           {'아이를 등록해주세요'}
@@ -56,7 +56,9 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
   }
 
   const age = calcAge(child.birthDate);
-  const emoji = child.gender === 'F' ? '👧' : '👦';
+  const avatarSource = child.gender === 'F'
+    ? require('../../assets/avatar-girl.png')
+    : require('../../assets/avatar-boy.png');
   const temperament = getTemperamentLabel(
     child.innateData?.dominantType ?? ''
   );
@@ -103,14 +105,16 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
         {child.photoUri ? (
           <Image source={{ uri: child.photoUri }} style={styles.photoImage} />
         ) : (
-          <Text style={styles.photoEmoji}>{emoji}</Text>
+          <Image
+            source={child.gender === 'F'
+              ? require('../../assets/avatar-girl.png')
+              : require('../../assets/avatar-boy.png')}
+            style={styles.photoImage}
+            resizeMode="cover"
+          />
         )}
         <View style={styles.editBadge}>
-          <Text style={styles.editBadgeText}>
-            {uploading
-              ? '…'
-              : '📷'}
-          </Text>
+          <Image source={require('../../assets/icon-camera.png')} style={styles.editBadgeIcon} resizeMode="contain" />
         </View>
       </TouchableOpacity>
 
@@ -203,6 +207,10 @@ const styles = StyleSheet.create({
   },
   editBadgeText: {
     fontSize: 14,
+  },
+  editBadgeIcon: {
+    width: 14,
+    height: 14,
   },
   nameText: {
     fontSize: FONT_SIZE.xl,

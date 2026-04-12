@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView,
+  View, Text, Image, ImageSourcePropType, StyleSheet, ScrollView,
   ActivityIndicator, TouchableOpacity, Alert, Linking,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
@@ -59,6 +59,24 @@ const FILTER_TABS: { key: FilterTab; label: string }[] = [
 
 const CORAL = '#FF6B6B';
 const CORAL_LIGHT = '#FFF0F0';
+
+const CATEGORY_ICONS: Record<string, ImageSourcePropType> = {
+  '미술': require('../../assets/academy-art.png'),
+  '코딩': require('../../assets/academy-coding.png'),
+  '무용': require('../../assets/academy-dance.png'),
+  '영어': require('../../assets/academy-english.png'),
+  '수학': require('../../assets/academy-math.png'),
+  '음악': require('../../assets/academy-music.png'),
+  '과학': require('../../assets/academy-science.png'),
+  '체육': require('../../assets/academy-sports.png'),
+};
+
+function getCategoryIcon(category: string): ImageSourcePropType | null {
+  for (const [key, icon] of Object.entries(CATEGORY_ICONS)) {
+    if (category.includes(key)) return icon;
+  }
+  return null;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Main Screen                                                        */
@@ -264,7 +282,11 @@ function AcademyCard({ item }: { item: Recommendation }) {
   return (
     <TouchableOpacity style={styles.card} onPress={openNaverMap} activeOpacity={0.7}>
       <View style={styles.cardLeft}>
-        <Text style={styles.cardEmoji}>{item.emoji}</Text>
+        {getCategoryIcon(item.category) ? (
+          <Image source={getCategoryIcon(item.category) as ImageSourcePropType} style={styles.cardIcon} resizeMode="contain" />
+        ) : (
+          <Text style={styles.cardEmoji}>{item.emoji}</Text>
+        )}
       </View>
       <View style={styles.cardCenter}>
         <Text style={styles.cardTitle}>{item.category}</Text>
@@ -474,6 +496,7 @@ const styles = StyleSheet.create({
     marginRight: SPACING.md,
   },
   cardEmoji: { fontSize: 22 },
+  cardIcon: { width: 32, height: 32 },
   cardCenter: { flex: 1, marginRight: SPACING.sm },
   cardTitle: {
     fontSize: FONT_SIZE.md,

@@ -2,12 +2,17 @@ import { useState } from 'react';
 import {
   View,
   Text,
+  Image,
   TextInput,
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FollowupItem, COACHING_COLORS } from './types';
+
+/* eslint-disable @typescript-eslint/no-require-imports */
+const IC_BELL = require('../../assets/icon-bell.png') as number;
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 interface Props {
   followup: FollowupItem;
@@ -43,7 +48,7 @@ export function FollowupCard({ followup, onRespond, onDismiss }: Props) {
       end={{ x: 1, y: 1 }}
       style={styles.card}
     >
-      <Text style={styles.bellIcon}>{'🔔'}</Text>
+      <Image source={IC_BELL} style={styles.bellIconImg} resizeMode="contain" />
       <Text style={styles.questionText}>{followup.followupText}</Text>
 
       {inputMode ? (
@@ -105,8 +110,9 @@ const styles = StyleSheet.create({
     padding: 18,
     marginBottom: 12,
   },
-  bellIcon: {
-    fontSize: 20,
+  bellIconImg: {
+    width: 22,
+    height: 22,
     marginBottom: 6,
   },
   questionText: {

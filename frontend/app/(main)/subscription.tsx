@@ -33,44 +33,40 @@ interface PremiumStatus {
 const FALLBACK_PLANS: PremiumPlan[] = [
   {
     id: 'monthly',
-    name: '월간 플랜',
-    price: 4900,
-    priceLabel: '4,900원/월',
+    name: 'VIP 월간',
+    price: 3900,
+    priceLabel: '3,900원/월',
     period: 'monthly',
     features: [
       'AI 맞춤 육아 코칭 무제한',
-      '발달 리포트 주간 생성',
-      '소아과 후기 열람',
-      '맘스타그램 광고 제거',
-      '우선 고객 지원',
+      'AI 자동 육아일기',
+      '성장 타임캡슐',
+      '또래 비교 인사이트',
+      '대화 맥락 7일 유지',
+      '주간 AI 리포트',
     ],
   },
   {
     id: 'yearly',
-    name: '연간 플랜',
-    price: 39900,
-    priceLabel: '39,900원/년',
+    name: 'VIP 연간',
+    price: 33900,
+    priceLabel: '33,900원/년',
     period: 'yearly',
     badge: 'BEST',
-    discount: '32% 할인',
+    discount: '28% 할인',
     features: [
-      'AI 맞춤 육아 코칭 무제한',
-      '발달 리포트 주간 생성',
-      '소아과 후기 열람',
-      '맘스타그램 광고 제거',
-      '우선 고객 지원',
-      '미래 예측 리포트',
-      '형제 궁합 분석',
+      'VIP 월간의 모든 기능',
+      '월 2,825원꼴',
     ],
   },
 ];
 
 const FREE_FEATURES = [
-  { label: 'AI 코칭 질문', free: '하루 3회', premium: '무제한' },
-  { label: '주간 리포트', free: '요약만', premium: '상세 분석' },
-  { label: '소아과 후기', free: '3개 미리보기', premium: '전체 열람' },
-  { label: '맘스타그램 광고', free: '있음', premium: '없음' },
-  { label: '미래 예측', free: '-', premium: '제공' },
+  { label: 'AI 상담', free: '레벨업으로 증가', premium: '무제한' },
+  { label: 'AI 자동 일기', free: '-', premium: 'O' },
+  { label: '타임캡슐', free: '-', premium: 'O' },
+  { label: '또래 비교', free: '-', premium: 'O' },
+  { label: '대화 맥락', free: '3일', premium: '7일' },
 ];
 
 const PAYMENT_METHODS = [

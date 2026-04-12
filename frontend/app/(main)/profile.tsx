@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { useState } from 'react';
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
@@ -112,7 +112,7 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ProfileHeader onSettingsPress={handleChangePassword} />
+      <ProfileHeader onSettingsPress={() => router.push('/(main)/edit-profile')} />
 
       <ProfileCard child={selectedChild} onDeleteChild={handleDeleteChild} />
 
@@ -138,7 +138,7 @@ function ProfileHeader({ onSettingsPress }: { onSettingsPress: () => void }) {
       </TouchableOpacity>
       <Text style={styles.headerTitle}>마이페이지</Text>
       <TouchableOpacity onPress={onSettingsPress}>
-        <Text style={styles.headerGear}>{'⚙️'}</Text>
+        <Image source={require('../../assets/icon-settings.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />
       </TouchableOpacity>
     </View>
   );
