@@ -69,7 +69,7 @@
           "icon": "./assets/icon.png",
           "color": "#FF8C5A",
           "sounds": [
-            "./assets/sounds/amatda-chime.wav"
+            "./assets/sounds/amatda_chime.wav"
           ]
         }
       ],
