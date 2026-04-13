@@ -51,8 +51,8 @@ const MENU_ITEMS: MenuItem[] = [
   },
   {
     icon: require('../../assets/icon-heart.png'),
-    label: '맘스타그램',
-    description: '엄마들의 인스타그램',
+    label: '가족피드',
+    description: '가족과 소중한 순간을 공유해보세요',
     route: '/(main)/momstagram',
   },
   {
@@ -64,7 +64,7 @@ const MENU_ITEMS: MenuItem[] = [
   {
     icon: require('../../assets/premium-badge.png'),
     label: '프리미엄 플랜',
-    description: 'AI 코칭 무제한 이용',
+    description: '상담이모 무제한 이용',
     route: '/(main)/subscription',
   },
   {

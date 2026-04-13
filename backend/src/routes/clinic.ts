@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
+import { env } from '../config/env';
 
 const router = Router();
 
@@ -72,7 +73,129 @@ interface ReviewData {
   createdAt: string;
 }
 
-// GET /nearby - 주변 소아과 조회
+// GET /search - 카카오 로컬 API로 소아과/아동병원 검색
+router.get(
+  '/search',
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const lat = req.query.lat as string;
+      const lng = req.query.lng as string;
+      const radiusKm = parseFloat(req.query.radius as string) || 5;
+      const keyword = (req.query.keyword as string) || '';
+
+      if (!lat || !lng || isNaN(parseFloat(lat)) || isNaN(parseFloat(lng))) {
+        error(res, '위도(lat)와 경도(lng)를 입력해주세요');
+        return;
+      }
+
+      const apiKey = env.KAKAO_REST_API_KEY;
+      if (!apiKey) {
+        error(res, '카카오 API 키가 설정되지 않았습니다', 500);
+        return;
+      }
+
+      const radiusM = Math.min(radiusKm * 1000, 20000);
+      const queries = keyword
+        ? [keyword]
+        : ['소아과', '아동병원'];
+
+      interface KakaoPlace {
+        id: string;
+        place_name: string;
+        address_name: string;
+        road_address_name: string;
+        phone: string;
+        x: string;
+        y: string;
+        distance: string;
+        category_name: string;
+        place_url: string;
+      }
+
+      const allPlaces = new Map<string, KakaoPlace>();
+
+      for (const q of queries) {
+        const url = new URL('https://dapi.kakao.com/v2/local/search/keyword.json');
+        url.searchParams.set('query', q);
+        url.searchParams.set('x', lng);
+        url.searchParams.set('y', lat);
+        url.searchParams.set('radius', String(radiusM));
+        url.searchParams.set('size', '15');
+        url.searchParams.set('sort', 'distance');
+
+        const resp = await fetch(url.toString(), {
+          headers: { Authorization: `KakaoAK ${apiKey}` },
+        });
+
+        if (resp.ok) {
+          const json = await resp.json() as { documents: KakaoPlace[] };
+          for (const doc of json.documents) {
+            if (!allPlaces.has(doc.id)) {
+              allPlaces.set(doc.id, doc);
+            }
+          }
+        }
+      }
+
+      // 응급실 검색 (같은 반경)
+      const erUrl = new URL('https://dapi.kakao.com/v2/local/search/keyword.json');
+      erUrl.searchParams.set('query', '응급실');
+      erUrl.searchParams.set('x', lng);
+      erUrl.searchParams.set('y', lat);
+      erUrl.searchParams.set('radius', String(radiusM));
+      erUrl.searchParams.set('size', '15');
+      erUrl.searchParams.set('sort', 'distance');
+
+      const erResp = await fetch(erUrl.toString(), {
+        headers: { Authorization: `KakaoAK ${apiKey}` },
+      });
+
+      const erIds = new Set<string>();
+      const erNames = new Set<string>();
+      if (erResp.ok) {
+        const erJson = await erResp.json() as { documents: KakaoPlace[] };
+        for (const doc of erJson.documents) {
+          erIds.add(doc.id);
+          // 병원 이름에서 핵심 부분 추출하여 매칭
+          const baseName = doc.place_name.replace(/\s*(응급실|응급센터|응급의료센터)\s*/g, '').trim();
+          if (baseName) erNames.add(baseName);
+        }
+      }
+
+      const results = Array.from(allPlaces.values()).map((p) => {
+        const distKm = Math.round(parseFloat(p.distance) / 100) / 10;
+        const category = p.category_name || '';
+        const hasER = erIds.has(p.id) ||
+          erNames.has(p.place_name) ||
+          category.includes('응급') ||
+          p.place_name.includes('응급');
+
+        return {
+          id: p.id,
+          name: p.place_name,
+          address: p.road_address_name || p.address_name,
+          phone: p.phone,
+          distance: distKm,
+          category,
+          hasEmergency: hasER,
+          placeUrl: p.place_url,
+          latitude: parseFloat(p.y),
+          longitude: parseFloat(p.x),
+        };
+      });
+
+      results.sort((a, b) => a.distance - b.distance);
+
+      success(res, results);
+    } catch (err: unknown) {
+      console.error('clinic search error:', err);
+      error(res, '병원 검색 중 오류가 발생했습니다', 500);
+    }
+  }
+);
+
+// GET /nearby - 주변 소아과 조회 (레거시: 리뷰 기반)
 router.get(
   '/nearby',
   authMiddleware,

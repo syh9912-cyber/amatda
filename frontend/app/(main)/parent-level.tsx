@@ -53,7 +53,7 @@ export const LEVELS: LevelConfig[] = [
   {
     level: 4, name: '만개 부모', icon: '🌻',
     minDays: 60, passportColors: ['#BF953F', '#D4AF37'],
-    premiumDays: 7, desc: '60일 연속! AI코칭 무제한',
+    premiumDays: 7, desc: '60일 연속! 상담이모 무제한',
     stampIcon: '🏅',
   },
   {

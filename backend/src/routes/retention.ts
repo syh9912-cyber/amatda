@@ -351,11 +351,9 @@ router.get('/streak/:childId', authMiddleware, async (req: Request, res: Respons
     const childData = await getChildIfAccessible(childId, req.userId, 'viewRecords', res).then(r => r?.data ?? null);
     if (!childData) return;
 
-    // 코칭 세션에서 날짜별 활동 기록 조회
+    // 계정 단위 스트릭: 모든 아이의 코칭 세션을 합산
     const sessionsSnap = await collections.coachingSessions
-      .where('childId', '==', childId)
       .where('userId', '==', req.userId)
-      .orderBy('createdAt', 'desc')
       .get();
 
     // 고유 날짜 추출
@@ -442,6 +440,32 @@ router.get('/countdown/:childId', authMiddleware, async (req: Request, res: Resp
     if (!childData) return;
 
     const name = childData.name as string;
+    const isPregnant = (childData.isPregnant as boolean) === true;
+    const dueDate = childData.dueDate as string | undefined;
+
+    // 임산부: 출산예정일 기준 D-day
+    if (isPregnant && dueDate) {
+      const dueDateObj = new Date(dueDate + 'T00:00:00');
+      const now = new Date();
+      const daysUntilDue = Math.ceil(
+        (dueDateObj.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+      );
+      const daysPregnant = 280 - daysUntilDue;
+      const pregnancyWeeks = Math.max(1, Math.floor(daysPregnant / 7));
+
+      success(res, {
+        childName: name,
+        isPregnant: true,
+        daysUntilDue,
+        pregnancyWeeks,
+        daysSinceBirth: 0,
+        displayText: `출산까지 D-${daysUntilDue}`,
+        nextMilestone: { label: '출산 예정일', daysUntil: daysUntilDue },
+        passedMilestones: [],
+      });
+      return;
+    }
+
     const birthDate = new Date(childData.birthDate as string);
     const now = new Date();
     const daysSinceBirth = Math.floor(

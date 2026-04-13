@@ -3,7 +3,7 @@
     "name": "아맞다",
     "slug": "amatda",
     "scheme": "amatda",
-    "version": "2.0.5",
+    "version": "2.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

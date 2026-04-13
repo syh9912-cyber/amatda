@@ -37,7 +37,7 @@ export default function IntakeFormScreen() {
     try {
       const res = await questionApi.list(
         child.ageInfo.months,
-        child.innateData.dominantType
+        child.innateData?.dominantType ?? ''
       );
       setQuestions(res.data.data);
     } catch {

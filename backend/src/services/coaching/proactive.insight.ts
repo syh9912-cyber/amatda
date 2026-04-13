@@ -238,25 +238,38 @@ async function generateEncouragement(
 
 /** 임산부 전용 인사이트 생성 */
 async function generatePregnancyInsights(child: ChildProfile): Promise<ProactiveInsight[]> {
-  const week = child.pregnancyWeeks ?? 0;
-  const insights: ProactiveInsight[] = [];
+  try {
+    const week = child.pregnancyWeeks ?? 0;
+    console.log(`[PregnancyInsights] week=${week}, name=${child.name}`);
+    const insights: ProactiveInsight[] = [];
 
-  // 1. 주수별 맞춤 팁
-  const weeklyTip = getPregnancyWeeklyTip(week);
-  if (weeklyTip) {
-    insights.push(weeklyTip);
+    // 1. 주수별 맞춤 팁
+    const weeklyTip = getPregnancyWeeklyTip(week);
+    if (weeklyTip) {
+      insights.push(weeklyTip);
+    }
+
+    // 2. 오늘의 산모 추천 활동
+    const activity = getPregnancyActivity(week);
+    insights.push(activity);
+
+    // 3. 격려 메시지 (AI 생성 시도, 실패 시 폴백)
+    const encouragement = await generatePregnancyEncouragement(child, week);
+    insights.push(encouragement);
+
+    console.log(`[PregnancyInsights] generated ${insights.length} insights`);
+    insights.sort((a, b) => b.priority - a.priority);
+    return insights.slice(0, 3);
+  } catch (err) {
+    console.error('[PregnancyInsights] error:', err);
+    // 에러 시에도 최소 폴백 인사이트 1개 반환
+    return [{
+      type: 'encouragement',
+      title: '오늘의 한마디',
+      message: '오늘도 아가와 함께 건강한 하루 보내세요. 엄마의 긍정적인 마음이 아가에게 전해져요.',
+      priority: 2,
+    }];
   }
-
-  // 2. 오늘의 산모 추천 활동
-  const activity = getPregnancyActivity(week);
-  insights.push(activity);
-
-  // 3. 격려 메시지 (AI 생성 시도, 실패 시 폴백)
-  const encouragement = await generatePregnancyEncouragement(child, week);
-  insights.push(encouragement);
-
-  insights.sort((a, b) => b.priority - a.priority);
-  return insights.slice(0, 3);
 }
 
 /** 주수별 임산부 팁 */

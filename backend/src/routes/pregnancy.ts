@@ -904,7 +904,6 @@ router.get('/gdm', authMiddleware, async (req: Request, res: Response) => {
       .where('childId', '==', childId)
       .where('date', '>=', since.toISOString().slice(0, 10))
       .orderBy('date', 'desc')
-      .orderBy('measuredAt', 'desc')
       .limit(200)
       .get();
 

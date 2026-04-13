@@ -101,7 +101,7 @@ export default function AcademyScreen() {
     try {
       const [recRes, staticRes] = await Promise.all([
         academyApi.recommend(
-          selectedChild.innateData.dominantType,
+          selectedChild.innateData?.dominantType ?? '',
           selectedChild.ageInfo.months,
           location.lat,
           location.lng,
@@ -111,7 +111,7 @@ export default function AcademyScreen() {
           location.lat,
           location.lng,
           selectedChild.ageInfo.months,
-          selectedChild.innateData.dominantType,
+          selectedChild.innateData?.dominantType ?? '',
         ),
       ]);
       setRecData(recRes.data.data);

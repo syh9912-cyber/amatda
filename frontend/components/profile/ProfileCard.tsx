@@ -3,9 +3,8 @@ import { useState } from 'react';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
-import { Child } from '../../stores/childStore';
+import { Child, useChildStore } from '../../stores/childStore';
 import { childApi } from '../../services/api';
-import { useChildStore } from '../../stores/childStore';
 
 interface ProfileCardProps {
   child: Child | null;
@@ -57,9 +56,6 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
   }
 
   const age = child.birthDate ? calcAge(child.birthDate) : (child.isPregnant ? `${child.pregnancyWeeks ?? 0}주차` : '');
-  const avatarSource = child.gender === 'F'
-    ? require('../../assets/avatar-girl.png')
-    : require('../../assets/avatar-boy.png');
   const temperament = getTemperamentLabel(
     child.innateData?.dominantType ?? ''
   );

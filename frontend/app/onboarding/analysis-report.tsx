@@ -143,7 +143,7 @@ export default function AnalysisReportScreen() {
       .catch(() => {
         // fallback: show default question
         setFirstTalk({
-          intro: 'AI 코치가 준비되었어요!',
+          intro: '상담이모가 준비되었어요!',
           traitSummary: '',
           suggestedQuestion: '아이에 대해 궁금한 점을 물어보세요',
           quickOptions: [],
@@ -197,7 +197,7 @@ export default function AnalysisReportScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerSubtitle}>{safeString(child.name)}의 종합 분석</Text>
-        <Text style={styles.headerTitle}>{safeString(child.innateData.dominantType)}</Text>
+        <Text style={styles.headerTitle}>{safeString(child.innateData?.dominantType ?? '')}</Text>
       </View>
 
       {/* Summary card */}
@@ -331,7 +331,7 @@ export default function AnalysisReportScreen() {
         >
           <View style={styles.ftLoadingWrap}>
             <ActivityIndicator size="small" color="#FFFFFF" />
-            <Text style={styles.ftLoadingText}>AI 코치가 준비 중이에요...</Text>
+            <Text style={styles.ftLoadingText}>상담이모가 준비 중이에요...</Text>
           </View>
         </LinearGradient>
       ) : firstTalk ? (
@@ -345,7 +345,7 @@ export default function AnalysisReportScreen() {
             <View style={styles.ftAvatar}>
               <Text style={styles.ftAvatarEmoji}>{'🤖'}</Text>
             </View>
-            <Text style={styles.ftCoachLabel}>AI 코치</Text>
+            <Text style={styles.ftCoachLabel}>상담이모</Text>
           </View>
           {firstTalk.intro ? (
             <Text style={styles.ftIntro}>{firstTalk.intro}</Text>

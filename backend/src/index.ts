@@ -25,6 +25,8 @@ import growthRoutes from './routes/growth';
 import sleepRoutes from './routes/sleep';
 import coparentingRoutes from './routes/coparenting';
 import sosRoutes from './routes/sos';
+import pregnancyRoutes from './routes/pregnancy';
+import vaccinationRoutes from './routes/vaccination';
 
 const app = express();
 
@@ -54,6 +56,8 @@ app.use('/api/growth', growthRoutes);
 app.use('/api/sleep', sleepRoutes);
 app.use('/api/coparenting', coparentingRoutes);
 app.use('/api/sos', sosRoutes);
+app.use('/api/pregnancy', pregnancyRoutes);
+app.use('/api/vaccination', vaccinationRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() } });

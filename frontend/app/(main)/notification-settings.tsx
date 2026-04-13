@@ -55,7 +55,7 @@ const SMART_ITEMS: ToggleItem[] = [
   {
     key: 'coachingFollowup',
     emoji: '💬',
-    label: 'AI 상담 팔로업',
+    label: '상담이모 팔로업',
     description: '상담 다음날 "어제는 잘 지나갔나요?" 체크',
     time: '상담 다음날 오전 10:00',
   },

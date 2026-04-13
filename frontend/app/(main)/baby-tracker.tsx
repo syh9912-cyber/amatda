@@ -31,6 +31,7 @@ import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/the
 import { growthApi } from '../../services/api';
 import { getTrackerTabs, getFeedingTypes } from '../../constants/ageFeatures';
 import type { AgeGroupKey } from '../../constants/ageGroups';
+import PregnancyScreen from './pregnancy';
 
 /* ================================================================== */
 /*  Types                                                              */
@@ -1193,6 +1194,11 @@ const modalStyles = StyleSheet.create({
 
 export default function BabyTrackerScreen() {
   const selectedChild = useChildStore((s) => s.selectedChild);
+
+  // 임신 아이면 임신기록 화면 렌더
+  if (selectedChild?.isPregnant) {
+    return <PregnancyScreen />;
+  }
 
   const ageGroup: AgeGroupKey = selectedChild?.ageInfo?.group ?? 'infant';
   const ageTabs = useMemo(() => {

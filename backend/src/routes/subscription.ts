@@ -100,8 +100,8 @@ router.get('/premium/status', authMiddleware, async (req: Request, res: Response
 
     const freeRestrictions = effectiveTier === 'FREE' ? [
       '레벨에 따라 상담 횟수 제한 (레벨업으로 증가)',
-      'AI 자동 일기, 타임캡슐, 또래 비교 이용 불가',
-      '대화 맥락 3일 유지 (VIP: 7일)',
+      '울음/대변 분석 하루 3회',
+      '광고 포함',
     ] : [];
 
     success(res, {
@@ -219,13 +219,11 @@ router.get('/premium/plans', async (_req: Request, res: Response) => {
       {
         ...PLANS.monthly,
         features: [
-          '무제한 AI 상담',
-          '풍부한 맞춤 답변 (1200토큰)',
-          '대화 맥락 7일 유지',
-          'AI 자동 육아일기',
-          '성장 타임캡슐',
-          '또래 비교 인사이트',
-          '주간 AI 리포트',
+          '상담이모 무제한',
+          '울음/대변 분석 무제한',
+          '타임라인 AI 자동기록',
+          '타임캡슐 보관',
+          '광고 제거',
         ],
       },
       {
@@ -242,7 +240,7 @@ router.get('/premium/plans', async (_req: Request, res: Response) => {
     freeFeatures: [
       '레벨업으로 상담 횟수 증가 (최대 50회/일)',
       'DB 전체 참고 맞춤 답변',
-      '대화 맥락 3일 유지',
+      '대화 맥락 7일 유지',
       '기질 기반 개인화 상담',
       '레드플래그 긴급 안내 (무제한)',
     ],

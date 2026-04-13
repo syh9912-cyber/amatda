@@ -32,7 +32,15 @@ export default function ResultScreen() {
     );
   }
 
-  const { fiveElements, dominantType, label } = child.innateData;
+  const innateData = child.innateData;
+  if (!innateData) {
+    return (
+      <View style={styles.container}>
+        <Text>기질 분석 데이터가 없습니다</Text>
+      </View>
+    );
+  }
+  const { fiveElements, dominantType, label } = innateData;
   const maxVal = Math.max(...Object.values(fiveElements));
 
   return (

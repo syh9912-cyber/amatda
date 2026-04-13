@@ -85,7 +85,7 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
       >
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="small" color="#FFFFFF" />
-          <Text style={styles.loadingText}>AI 코치가 준비 중이에요...</Text>
+          <Text style={styles.loadingText}>상담이모가 준비 중이에요...</Text>
         </View>
       </LinearGradient>
     );
@@ -101,7 +101,7 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
       >
         <View style={styles.avatarRow}>
           <Image source={IC_COACH} style={styles.avatarImg} resizeMode="cover" />
-          <Text style={styles.coachLabel}>AI 코치</Text>
+          <Text style={styles.coachLabel}>상담이모</Text>
         </View>
         <Text style={styles.intro}>
           안녕하세요! 아이에 대해 가장 궁금한 점을 알려주세요.
@@ -140,7 +140,7 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
       {/* Coach avatar */}
       <View style={styles.avatarRow}>
         <Image source={IC_COACH} style={styles.avatarImg} resizeMode="cover" />
-        <Text style={styles.coachLabel}>AI 코치</Text>
+        <Text style={styles.coachLabel}>상담이모</Text>
       </View>
 
       {/* Intro greeting */}

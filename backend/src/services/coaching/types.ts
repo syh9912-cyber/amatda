@@ -82,6 +82,12 @@ export interface ChildContext {
   specialNotes: string;
   baseline: string;
   observedTraits: string;
+  // ─── 임산부 전용 ───
+  isPregnant: boolean;
+  pregnancyWeeks?: number;
+  dueDate?: string;
+  babyNickname?: string;    // 태명
+  pregnancyNotes?: string;  // 임신 특이사항
 }
 
 export interface TrackingSummary {
@@ -123,7 +129,7 @@ export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
     maxOutputTokens: 900,
     dbCandidateCount: 4,      // 무료도 DB 전체 참고 (유료 전환을 위해 무료 경험 강화)
     summaryLines: 5,
-    contextDays: 3,
+    contextDays: 7,
     dailyLimit: 10,            // 레벨업으로 증가 가능
   },
   paid: {

@@ -1,23 +1,24 @@
 import { Tabs } from 'expo-router';
 import { Image, ImageSourcePropType, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useChildStore } from '../../stores/childStore';
 
 const ACTIVE_COLOR = '#FF8C5A';
 const INACTIVE_COLOR = '#B8A690';
 
-const TAB_CONFIG: { icon: ImageSourcePropType; iconActive: ImageSourcePropType; label: string }[] = [
-  { icon: require('../../assets/tab-home.png'), iconActive: require('../../assets/tab-home-active.png'), label: '홈' },
-  { icon: require('../../assets/tab-diary.png'), iconActive: require('../../assets/tab-diary-active.png'), label: '육아기록' },
-  { icon: require('../../assets/tab-chat.png'), iconActive: require('../../assets/tab-chat-active.png'), label: 'AI상담' },
-  { icon: require('../../assets/tab-diary.png'), iconActive: require('../../assets/tab-diary-active.png'), label: '가족피드' },
-  { icon: require('../../assets/tab-more.png'), iconActive: require('../../assets/tab-more-active.png'), label: '마이' },
-];
+const TAB_ICONS = {
+  home: { icon: require('../../assets/tab-home.png'), active: require('../../assets/tab-home-active.png') },
+  diary: { icon: require('../../assets/tab-diary.png'), active: require('../../assets/tab-diary-active.png') },
+  chat: { icon: require('../../assets/tab-chat.png'), active: require('../../assets/tab-chat-active.png') },
+  more: { icon: require('../../assets/tab-more.png'), active: require('../../assets/tab-more-active.png') },
+} as const;
 
-function TabIcon({ config, focused }: { config: (typeof TAB_CONFIG)[number]; focused: boolean }) {
+function TabIcon({ iconKey, focused }: { iconKey: keyof typeof TAB_ICONS; focused: boolean }) {
+  const cfg = TAB_ICONS[iconKey];
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center' }}>
       <Image
-        source={focused ? config.iconActive : config.icon}
+        source={focused ? cfg.active : cfg.icon}
         style={{ width: 34, height: 34, borderRadius: 17, opacity: 1 }}
         resizeMode="contain"
       />
@@ -43,6 +44,10 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
 export default function MainLayout() {
   const insets = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, 16);
+  const selectedChild = useChildStore((s) => s.selectedChild);
+  const ageGroup = selectedChild?.ageInfo?.group;
+  const isElementary = ageGroup === 'elementary';
+  const isPregnant = ageGroup === 'pregnant';
 
   return (
     <Tabs
@@ -67,60 +72,39 @@ export default function MainLayout() {
         },
       }}
     >
-      {/* === Visible tabs === */}
       <Tabs.Screen
         name="home"
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon config={TAB_CONFIG[0]} focused={focused} />
-          ),
-          tabBarLabel: ({ focused }) => (
-            <TabLabel label={TAB_CONFIG[0].label} focused={focused} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon iconKey="home" focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={'\uD648'} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="baby-tracker"
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon config={TAB_CONFIG[1]} focused={focused} />
-          ),
-          tabBarLabel: ({ focused }) => (
-            <TabLabel label={TAB_CONFIG[1].label} focused={focused} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon iconKey="diary" focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={isPregnant ? '\uC784\uC2E0\uAE30\uB85D' : isElementary ? '\uC0DD\uD65C\uAE30\uB85D' : '\uC721\uC544\uAE30\uB85D'} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="chatbot"
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon config={TAB_CONFIG[2]} focused={focused} />
-          ),
-          tabBarLabel: ({ focused }) => (
-            <TabLabel label={TAB_CONFIG[2].label} focused={focused} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon iconKey="chat" focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={'\uC0C1\uB2F4\uC774\uBAA8'} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="momstagram"
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon config={TAB_CONFIG[3]} focused={focused} />
-          ),
-          tabBarLabel: ({ focused }) => (
-            <TabLabel label={TAB_CONFIG[3].label} focused={focused} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon iconKey="diary" focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={'\uAC00\uC871\uD53C\uB4DC'} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon config={TAB_CONFIG[4]} focused={focused} />
-          ),
-          tabBarLabel: ({ focused }) => (
-            <TabLabel label={TAB_CONFIG[4].label} focused={focused} />
-          ),
+          tabBarIcon: ({ focused }) => <TabIcon iconKey="more" focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={'\uB9C8\uC774'} focused={focused} />,
         }}
       />
 
@@ -157,6 +141,8 @@ export default function MainLayout() {
       <Tabs.Screen name="parent-level" options={{ href: null }} />
       <Tabs.Screen name="sleep-predict" options={{ href: null }} />
       <Tabs.Screen name="sos" options={{ href: null }} />
+      <Tabs.Screen name="pregnancy" options={{ href: null }} />
+      <Tabs.Screen name="vaccination" options={{ href: null }} />
     </Tabs>
   );
 }

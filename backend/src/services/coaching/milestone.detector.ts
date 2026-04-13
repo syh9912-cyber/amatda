@@ -1,15 +1,38 @@
 /**
  * 발달 마일스톤 감지 모듈
- * - 아이의 월령에 따라 현재/다가오는 발달 이정표를 파악
+ * - 임신 주수 / 아이 월령에 따라 현재/다가오는 발달 이정표를 파악
  * - AI가 자연스럽게 "이 시기에는~" 언급할 수 있게 컨텍스트 제공
  */
 
 interface Milestone {
-  ageRange: [number, number]; // [시작월, 끝월]
+  ageRange: [number, number]; // [시작월, 끝월] (임신은 음수: -10~0)
   area: string;
   description: string;
   parentTip: string;
 }
+
+// ─── 임신 주수별 마일스톤 (ageRange를 음수 월로 환산: -10~0) ───
+const PREGNANCY_MILESTONES: Milestone[] = [
+  // 임신 초기 (1-12주 ≈ -9~-7월)
+  { ageRange: [-10, -8], area: '태아발달', description: '심장이 뛰기 시작, 주요 장기 형성 중 (8주 약 1.6cm)', parentTip: '엽산 복용이 가장 중요한 시기예요. 첫 산전검진을 받아보세요' },
+  { ageRange: [-10, -8], area: '엄마몸', description: '입덧 시작, 피로감, 가슴 변화', parentTip: '소량씩 자주 먹고, 충분히 쉬세요. 입덧은 대부분 16주면 줄어들어요' },
+
+  // 임신 중기 시작 (13-16주 ≈ -7~-6월)
+  { ageRange: [-7, -6], area: '태아발달', description: '태아 얼굴 완성, 손가락/발가락 구분, 성별 확인 가능 (14주 약 8cm)', parentTip: '정밀초음파 시기가 다가와요. 카메라로 초음파 사진을 꼭 남기세요' },
+  { ageRange: [-7, -6], area: '엄마몸', description: '입덧 줄어들기 시작, 배가 나오기 시작', parentTip: '가장 편안한 안정기 시작이에요. 가벼운 운동을 시작하기 좋아요' },
+
+  // 임신 중기 (17-24주 ≈ -6~-4월)
+  { ageRange: [-6, -4], area: '태아발달', description: '태동 느끼기 시작! 청각 발달, 눈을 뜰 수 있음 (20주 약 25cm)', parentTip: '태동을 느끼면 말을 걸어주세요. 태교 음악도 이 시기부터 효과적이에요' },
+  { ageRange: [-6, -4], area: '검진', description: '정밀초음파(20-24주), 임신성 당뇨 검사(24-28주)', parentTip: '이 시기 검진이 중요해요. 정밀초음파로 태아 구조를 확인합니다' },
+
+  // 임신 후기 시작 (25-32주 ≈ -4~-2월)
+  { ageRange: [-4, -2], area: '태아발달', description: '폐 성숙 진행, 체중 급격히 증가 (28주 약 1kg)', parentTip: '태동 체크를 매일 해주세요. 2시간에 10회 미만이면 병원에 연락하세요' },
+  { ageRange: [-4, -2], area: '준비', description: '분만 병원 결정, 출산 가방 준비 시작', parentTip: '입원 가방을 36주 전에 준비해두면 마음이 편해요' },
+
+  // 만삭 (33-40주 ≈ -2~0월)
+  { ageRange: [-2, 0], area: '태아발달', description: '폐 성숙 완료, 출산 준비 완료 (38주 약 3kg)', parentTip: '진통 징후(이슬, 규칙적 배 뭉침, 양수 파수)를 알아두세요' },
+  { ageRange: [-2, 0], area: '준비', description: '매주 NST 검사, 진통 징후 모니터링', parentTip: '호흡법을 연습하시고, 출산 계획서를 병원과 공유해주세요' },
+];
 
 const MILESTONES: Milestone[] = [
   // 0~3개월
@@ -70,8 +93,36 @@ export interface MilestoneContext {
   combined: string;
 }
 
-export function getMilestoneContext(ageMonths: number): MilestoneContext {
-  // 현재 해당되는 마일스톤
+/** 임신 주수를 음수 월령으로 변환 (40주 = 10개월, 주수→월: -10+floor(weeks/4)) */
+export function pregnancyWeeksToAgeMonths(weeks: number): number {
+  return Math.floor(weeks / 4) - 10;
+}
+
+export function getMilestoneContext(ageMonths: number, isPregnant = false, pregnancyWeeks?: number): MilestoneContext {
+  // 임산부: 임신 주수 기반 마일스톤
+  if (isPregnant && pregnancyWeeks !== undefined) {
+    const pregAge = pregnancyWeeksToAgeMonths(pregnancyWeeks);
+
+    const current = PREGNANCY_MILESTONES
+      .filter((m) => pregAge >= m.ageRange[0] && pregAge <= m.ageRange[1])
+      .map((m) => `[${m.area}] ${m.description} - ${m.parentTip}`);
+
+    const upcoming = PREGNANCY_MILESTONES
+      .filter((m) => m.ageRange[0] > pregAge && m.ageRange[0] <= pregAge + 2)
+      .map((m) => `곧 다가올 [${m.area}] ${m.description} - ${m.parentTip}`);
+
+    const parts: string[] = [];
+    if (current.length > 0) parts.push(...current.slice(0, 2));
+    if (upcoming.length > 0) parts.push(upcoming[0]);
+
+    return {
+      current,
+      upcoming,
+      combined: parts.length > 0 ? parts.join('\n') : '',
+    };
+  }
+
+  // 아이: 월령 기반 마일스톤
   const current = MILESTONES
     .filter((m) => ageMonths >= m.ageRange[0] && ageMonths <= m.ageRange[1])
     .map((m) => `[${m.area}] ${m.description} - ${m.parentTip}`);
@@ -90,4 +141,64 @@ export function getMilestoneContext(ageMonths: number): MilestoneContext {
     upcoming,
     combined: parts.length > 0 ? parts.join('\n') : '',
   };
+}
+
+/** 전체 마일스톤 타임라인 (임신~육아 연속) — 프론트 마일스톤 화면용 */
+export function getFullMilestoneTimeline(): Array<{
+  period: string;
+  label: string;
+  milestones: Array<{ area: string; description: string; tip: string }>;
+}> {
+  const timeline: Array<{
+    period: string;
+    label: string;
+    milestones: Array<{ area: string; description: string; tip: string }>;
+  }> = [];
+
+  // 임신 마일스톤
+  const pregGroups = [
+    { period: 'pregnant-early', label: '임신 초기 (1-12주)', range: [-10, -8] as [number, number] },
+    { period: 'pregnant-mid1', label: '임신 중기 시작 (13-16주)', range: [-7, -6] as [number, number] },
+    { period: 'pregnant-mid2', label: '임신 중기 (17-24주)', range: [-6, -4] as [number, number] },
+    { period: 'pregnant-late1', label: '임신 후기 (25-32주)', range: [-4, -2] as [number, number] },
+    { period: 'pregnant-late2', label: '만삭 (33-40주)', range: [-2, 0] as [number, number] },
+  ];
+
+  for (const g of pregGroups) {
+    const ms = PREGNANCY_MILESTONES
+      .filter((m) => m.ageRange[0] >= g.range[0] && m.ageRange[1] <= g.range[1])
+      .map((m) => ({ area: m.area, description: m.description, tip: m.parentTip }));
+    if (ms.length > 0) timeline.push({ period: g.period, label: g.label, milestones: ms });
+  }
+
+  // 출산 마일스톤
+  timeline.push({
+    period: 'birth', label: '출산',
+    milestones: [{ area: '탄생', description: '아기가 세상에 나왔어요!', tip: '첫 수유(골든아워)를 시도해보세요. 피부접촉이 중요해요' }],
+  });
+
+  // 아이 마일스톤
+  const childGroups = [
+    { period: '0-3m', label: '0~3개월', range: [0, 3] as [number, number] },
+    { period: '4-6m', label: '4~6개월', range: [4, 6] as [number, number] },
+    { period: '7-9m', label: '7~9개월', range: [7, 9] as [number, number] },
+    { period: '10-12m', label: '10~12개월', range: [10, 12] as [number, number] },
+    { period: '13-18m', label: '13~18개월', range: [13, 18] as [number, number] },
+    { period: '19-24m', label: '19~24개월', range: [19, 24] as [number, number] },
+    { period: '25-36m', label: '25~36개월', range: [25, 36] as [number, number] },
+    { period: '37-48m', label: '37~48개월', range: [37, 48] as [number, number] },
+    { period: '49-60m', label: '49~60개월', range: [49, 60] as [number, number] },
+    { period: '61-72m', label: '61~72개월', range: [61, 72] as [number, number] },
+    { period: '73-96m', label: '초등 저학년', range: [73, 96] as [number, number] },
+    { period: '97-144m', label: '초등 고학년', range: [97, 144] as [number, number] },
+  ];
+
+  for (const g of childGroups) {
+    const ms = MILESTONES
+      .filter((m) => m.ageRange[0] >= g.range[0] && m.ageRange[1] <= g.range[1])
+      .map((m) => ({ area: m.area, description: m.description, tip: m.parentTip }));
+    if (ms.length > 0) timeline.push({ period: g.period, label: g.label, milestones: ms });
+  }
+
+  return timeline;
 }

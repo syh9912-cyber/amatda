@@ -6,9 +6,18 @@ import { COACHING_KNOWLEDGE_ELEM_LOW3 } from '../coaching.knowledge.elementary-l
 import { COACHING_KNOWLEDGE_ELEM_HIGH } from '../coaching.knowledge.elementary-high';
 import { COACHING_KNOWLEDGE_ELEM_HIGH2 } from '../coaching.knowledge.elementary-high2';
 import { COACHING_KNOWLEDGE_ELEM_HIGH3 } from '../coaching.knowledge.elementary-high3';
+import { COACHING_KNOWLEDGE_PREGNANT } from '../coaching.knowledge.pregnant';
+import { COACHING_KNOWLEDGE_PREGNANT2 } from '../coaching.knowledge.pregnant2';
 
-/** 연령대별 DB 선택 */
-function getKnowledgeByAge(ageMonths: number): CoachingEntry[] {
+/** 연령대별 DB 선택 (isPregnant이면 임산부 DB) */
+function getKnowledgeByAge(ageMonths: number, isPregnant = false): CoachingEntry[] {
+  if (isPregnant) {
+    // 임산부 DB (77개: 증상15 + 영양12 + 운동10 + 감정10 + 검진15 + 출산준비15)
+    return [
+      ...COACHING_KNOWLEDGE_PREGNANT,
+      ...COACHING_KNOWLEDGE_PREGNANT2,
+    ];
+  }
   if (ageMonths <= 72) {
     // 0~6세: 영유아 DB (기존 140개)
     return COACHING_KNOWLEDGE;
@@ -78,15 +87,16 @@ function scoreEntry(
   return score;
 }
 
-/** DB에서 상위 N개 유사 엔트리 검색 (연령대별 자동 분기) */
+/** DB에서 상위 N개 유사 엔트리 검색 (연령대별 자동 분기, 임산부 지원) */
 export function findTopCoachingEntries(
   message: string,
   category?: string,
   dominantType?: string,
   limit = 3,
-  ageMonths = 12
+  ageMonths = 12,
+  isPregnant = false
 ): DBCandidate[] {
-  const db = getKnowledgeByAge(ageMonths);
+  const db = getKnowledgeByAge(ageMonths, isPregnant);
   const scored: Array<{ entry: CoachingEntry; score: number }> = [];
 
   for (const entry of db) {

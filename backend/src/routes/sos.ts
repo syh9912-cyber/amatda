@@ -11,6 +11,7 @@ const router = Router();
 /* ------------------------------------------------------------------ */
 
 type Symptom = 'fever' | 'vomiting' | 'seizure' | 'breathing' | 'bleeding' | 'rash' | 'consciousness';
+type PregnancySymptom = 'bleeding' | 'severe_pain' | 'headache' | 'swelling' | 'vision' | 'leaking' | 'no_movement' | 'fever' | 'breathing' | 'contractions';
 
 type UrgencyLevel = 'EMERGENCY' | 'HOSPITAL' | 'URGENT' | 'MONITOR';
 
@@ -232,6 +233,187 @@ function assessUrgency(
   };
 }
 
+/** 임산부 증상 긴급도 판정 */
+function assessPregnancyUrgency(
+  symptoms: PregnancySymptom[],
+  temperature: number | undefined,
+): UrgencyResult {
+  const has = (s: PregnancySymptom) => symptoms.includes(s);
+  const temp = temperature ?? 0;
+
+  // EMERGENCY: 양수 파수, 대량 출혈, 호흡곤란, 경련급 두통+시야장애
+  if (has('leaking')) {
+    return {
+      urgency: 'EMERGENCY',
+      message: '양수 파수 의심 - 즉시 병원으로 가세요!',
+      actions: [
+        '움직이지 말고 누운 자세를 유지하세요',
+        '깨끗한 패드나 수건을 대세요',
+        '양수 색깔(투명/녹색/혈액)을 확인하세요',
+        '119 또는 담당 산부인과에 즉시 연락하세요',
+      ],
+      showEmergencyCall: true,
+    };
+  }
+  if (has('breathing')) {
+    return {
+      urgency: 'EMERGENCY',
+      message: '호흡곤란 - 즉시 119에 전화하세요!',
+      actions: [
+        '편안한 자세(반좌위)로 앉으세요',
+        '창문을 열어 환기하세요',
+        '119에 즉시 전화하세요',
+      ],
+      showEmergencyCall: true,
+    };
+  }
+  if (has('bleeding') && (has('severe_pain') || symptoms.length >= 3)) {
+    return {
+      urgency: 'EMERGENCY',
+      message: '출혈 + 복통 - 즉시 응급실로 가세요!',
+      actions: [
+        '절대 움직이지 말고 누워 계세요',
+        '출혈량과 색깔을 기록하세요',
+        '119 또는 담당 산부인과에 즉시 연락하세요',
+        '태반 조기 박리 가능성이 있어요',
+      ],
+      showEmergencyCall: true,
+    };
+  }
+
+  // HOSPITAL: 출혈, 심한 복통, 두통+시야 흐림(전자간증), 태동 감소
+  if (has('bleeding')) {
+    return {
+      urgency: 'HOSPITAL',
+      message: '출혈 - 병원에 방문하세요',
+      actions: [
+        '패드를 대고 출혈량을 확인하세요',
+        '담당 산부인과에 연락하세요',
+        '움직임을 최소화하고 안정하세요',
+        '선홍색 출혈이면 즉시 응급실로 가세요',
+      ],
+      showEmergencyCall: false,
+    };
+  }
+  if (has('severe_pain')) {
+    return {
+      urgency: 'HOSPITAL',
+      message: '심한 복통 - 병원에 방문하세요',
+      actions: [
+        '통증 위치와 간격을 기록하세요',
+        '담당 산부인과에 연락하세요',
+        '편안한 자세로 눕고 안정하세요',
+        '규칙적 간격이면 진통일 수 있어요',
+      ],
+      showEmergencyCall: false,
+    };
+  }
+  if (has('headache') && has('vision')) {
+    return {
+      urgency: 'HOSPITAL',
+      message: '전자간증 의심 - 즉시 병원에 방문하세요!',
+      actions: [
+        '혈압을 측정해보세요',
+        '어둡고 조용한 곳에서 안정하세요',
+        '담당 산부인과에 즉시 연락하세요',
+        '손발 부종이 심해지는지 확인하세요',
+      ],
+      showEmergencyCall: true,
+    };
+  }
+  if (has('no_movement')) {
+    return {
+      urgency: 'HOSPITAL',
+      message: '태동 감소 - 병원에서 확인하세요',
+      actions: [
+        '왼쪽으로 누워서 30분간 태동을 세어보세요',
+        '차가운 음료를 마시고 다시 확인하세요',
+        '2시간 내 태동 10회 미만이면 병원으로 가세요',
+        '담당 산부인과에 연락하세요',
+      ],
+      showEmergencyCall: false,
+    };
+  }
+
+  // URGENT: 규칙적 수축, 고열, 심한 부종, 심한 두통
+  if (has('contractions')) {
+    return {
+      urgency: 'URGENT',
+      message: '규칙적 수축 - 간격을 체크하세요',
+      actions: [
+        '수축 시작/끝 시간과 간격을 기록하세요',
+        '5분 간격으로 1시간 이상 지속되면 병원으로 가세요',
+        '따뜻한 물로 샤워하면 가진통은 줄어들어요',
+        '양수가 터지면 즉시 병원으로 가세요',
+      ],
+      showEmergencyCall: false,
+    };
+  }
+  if (temp >= 38) {
+    return {
+      urgency: 'URGENT',
+      message: '임산부 발열 - 병원 방문을 권장합니다',
+      actions: [
+        '수분을 충분히 섭취하세요',
+        '담당 산부인과에 연락하세요',
+        '임의로 해열제를 복용하지 마세요',
+        '38.5도 이상이면 즉시 병원으로 가세요',
+      ],
+      showEmergencyCall: false,
+    };
+  }
+  if (has('headache')) {
+    return {
+      urgency: 'URGENT',
+      message: '심한 두통 - 경과를 주의 깊게 관찰하세요',
+      actions: [
+        '어둡고 조용한 곳에서 쉬세요',
+        '혈압을 측정해보세요',
+        '시야 흐림이나 부종이 동반되면 즉시 병원으로 가세요',
+        '담당 산부인과에 연락하세요',
+      ],
+      showEmergencyCall: false,
+    };
+  }
+  if (has('swelling')) {
+    return {
+      urgency: 'URGENT',
+      message: '심한 부종 - 병원에서 확인하세요',
+      actions: [
+        '발을 높이 올리고 쉬세요',
+        '염분 섭취를 줄이세요',
+        '얼굴/손이 갑자기 부으면 전자간증 가능성이 있어요',
+        '두통이나 시야 변화가 동반되면 즉시 병원으로 가세요',
+      ],
+      showEmergencyCall: false,
+    };
+  }
+  if (has('vision')) {
+    return {
+      urgency: 'URGENT',
+      message: '시야 이상 - 병원 방문을 권장합니다',
+      actions: [
+        '혈압을 측정해보세요',
+        '눈 앞에 별이 보이거나 번쩍이면 전자간증 신호예요',
+        '담당 산부인과에 연락하세요',
+      ],
+      showEmergencyCall: false,
+    };
+  }
+
+  // MONITOR: 경미한 증상
+  return {
+    urgency: 'MONITOR',
+    message: '증상을 관찰하세요',
+    actions: [
+      '증상 변화를 주의 깊게 관찰하세요',
+      '악화되면 담당 산부인과에 연락하세요',
+      '수분을 충분히 섭취하고 안정하세요',
+    ],
+    showEmergencyCall: false,
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* POST /api/sos/check-symptom                                         */
 /* ------------------------------------------------------------------ */
@@ -257,7 +439,18 @@ router.post('/check-symptom', authMiddleware, async (req: Request, res: Response
     }
 
     const childData = childDoc.data()!;
-    const ageMonths = calcAgeMonths(childData.birthDate as string);
+    const isPregnant = childData.isPregnant === true;
+
+    // 임산부: 전용 판정 로직 사용
+    if (isPregnant) {
+      const result = assessPregnancyUrgency(symptoms as PregnancySymptom[], temperature);
+      success(res, result);
+      return;
+    }
+
+    const ageMonths = childData.birthDate
+      ? calcAgeMonths(childData.birthDate as string)
+      : 999;
     const result = assessUrgency(symptoms as Symptom[], temperature, ageMonths);
 
     success(res, result);
@@ -290,7 +483,9 @@ router.get('/fever-calculator', authMiddleware, async (req: Request, res: Respon
     }
 
     const childData = childDoc.data()!;
-    const ageMonths = calcAgeMonths(childData.birthDate as string);
+    const ageMonths = childData.birthDate
+      ? calcAgeMonths(childData.birthDate as string)
+      : 999;
 
     // 체중 결정: DB > 나이 기반 추정
     const childWeight: number =

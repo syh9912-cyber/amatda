@@ -1,9 +1,9 @@
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Modal, Animated } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Modal, Animated, LayoutChangeEvent } from 'react-native';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Stack, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useChildStore } from '../../stores/childStore';
-import { childApi, coachingApi, growthApi } from '../../services/api';
+import { childApi, coachingApi, growthApi, pregnancyApi } from '../../services/api';
 import { getTodayQuestion } from '../../constants/dailyQuestions';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
@@ -202,6 +202,23 @@ function getPercentileLabel(percentile: number): string {
 export default function GrowthStatsScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>('physical');
   const selectedChild = useChildStore((s) => s.selectedChild);
+  const isPregnant = selectedChild?.isPregnant === true;
+
+  if (isPregnant) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={styles.backArrow}>{'<'}</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>주수별 발달</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        <PregnancyWeeklyDevelopment />
+      </ScrollView>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -237,6 +254,469 @@ function GrowthHeader() {
     </View>
   );
 }
+
+/* ---- Pregnancy Weekly Development ---- */
+
+interface WeekDev {
+  week: number;
+  size: string;
+  length: string;
+  weight: string;
+  features: string[];
+  momTip: string;
+}
+
+interface TimelineItem {
+  id: string;
+  source: string;
+  type: string;
+  title: string;
+  mediaUri?: string;
+  mediaType?: string;
+}
+
+/* Static weekly development data — embedded to avoid API dependency */
+const WEEKLY_DEVELOPMENT: WeekDev[] = [
+  { week: 4, size: '양귀비씨', length: '0.1cm', weight: '1g 미만', features: ['수정란이 자궁벽에 착상 완료', '태반과 양막 형성 시작', '심장 원시 박동이 시작됨', '배아가 3개 세포층으로 분화', '신경관(뇌+척수 원형) 형성 시작'], momTip: '엽산 400~800mcg을 매일 복용하세요' },
+  { week: 5, size: '참깨', length: '0.2cm', weight: '1g 미만', features: ['심장이 본격적으로 뛰기 시작', '뇌와 척수가 빠르게 발달', '탯줄이 형성되어 영양 공급 시작', '눈/코/입 자리가 잡히기 시작', '팔다리의 아주 작은 싹이 돋아남'], momTip: '입덧이 시작될 수 있어요. 소량씩 자주 드세요' },
+  { week: 6, size: '렌즈콩', length: '0.5cm', weight: '1g 미만', features: ['얼굴 윤곽이 형성되기 시작', '심장 박동을 초음파로 확인 가능', '내이(균형감각 기관) 형성 시작', '폐의 기초 구조 발달', '간에서 혈액 세포 생산 시작'], momTip: '첫 산부인과 방문을 계획하세요' },
+  { week: 7, size: '블루베리', length: '1cm', weight: '1g', features: ['뇌가 분당 100개의 신경세포를 생성', '손가락과 발가락 형성 시작', '간과 콩팥이 기능을 시작', '입술과 혀가 형성됨', '팔꿈치 관절이 생기기 시작'], momTip: '수분을 하루 2L 이상 섭취하세요' },
+  { week: 8, size: '라즈베리', length: '1.6cm', weight: '1g', features: ['모든 주요 장기의 기초가 완성됨', '손가락과 발가락이 구분되기 시작', '얼굴의 이목구비가 뚜렷해짐', '귀의 외부 형태가 잡히기 시작', '꼬리뼈가 줄어들기 시작'], momTip: '첫 초음파 검사로 심장 박동을 확인하세요' },
+  { week: 9, size: '체리', length: '2.3cm', weight: '2g', features: ['꼬리가 완전히 사라지고 사람 형태', '근육이 형성되어 미세한 움직임 시작', '생식기 발달 시작', '눈꺼풀이 형성되어 눈을 덮기 시작', '손목/발목 관절이 형성됨'], momTip: '극심한 피로감이 올 수 있어요. 충분히 쉬세요' },
+  { week: 10, size: '대추', length: '3.1cm', weight: '4g', features: ['뼈와 연골이 형성되기 시작', '치아의 기초가 잇몸 안에서 형성', '손톱과 발톱이 자라기 시작', '뇌에서 뇌파 활동 시작', '콩팥이 소변을 만들어 양수로 배출'], momTip: '11~14주 사이 NT 검사를 예약하세요' },
+  { week: 11, size: '무화과', length: '4.1cm', weight: '7g', features: ['손가락을 펴고 오므릴 수 있게 됨', '횡격막이 형성되어 호흡 연습 시작', '얼굴 근육이 발달하여 표정 변화 가능', '머리가 전체 길이의 약 절반을 차지', '외부 생식기가 분화되기 시작'], momTip: '입덧이 서서히 줄어들 수 있어요' },
+  { week: 12, size: '라임', length: '5.4cm', weight: '14g', features: ['반사 반응이 시작됨', '성대가 형성됨', '골수에서 백혈구 생산 시작', '뇌하수체에서 호르몬 분비 시작', '손가락에 지문 패턴이 잡히기 시작'], momTip: '12주 정밀 초음파(1차 기형아 검사) 시기예요' },
+  { week: 13, size: '완두콩 꼬투리', length: '7.4cm', weight: '23g', features: ['지문이 형성됨', '뼈가 점점 단단해짐', '성별 구분이 가능해지기 시작', '장에서 태변 형성 시작', '몸 전체에 솜털이 자라기 시작'], momTip: '안정기에 접어들어요!' },
+  { week: 14, size: '레몬', length: '8.7cm', weight: '43g', features: ['얼굴 표정을 지을 수 있게 됨', '온몸에 솜털(라누고)이 자라기 시작', '갑상선에서 호르몬을 분비하기 시작', '목이 길어져 머리를 돌릴 수 있음', '입천장이 완성됨'], momTip: '철분이 풍부한 음식을 챙겨 드세요' },
+  { week: 15, size: '사과', length: '10cm', weight: '70g', features: ['눈이 빛에 반응하기 시작', '양수를 마시고 배출하는 연습 시작', '다리 길이가 팔보다 길어짐', '두피에 머리카락 패턴이 결정됨', '관절이 유연해져 활발한 움직임'], momTip: '태교 음악이나 아빠의 목소리를 들려주세요' },
+  { week: 16, size: '아보카도', length: '11.6cm', weight: '100g', features: ['손가락 빨기 시작', '청각이 발달하여 엄마 심장 소리를 들음', '눈이 정면을 향하도록 위치 이동', '태반이 완성되어 본격적 영양/산소 공급', '발톱이 형성됨'], momTip: '16~18주 쿼드 검사 시기예요' },
+  { week: 17, size: '배', length: '13cm', weight: '140g', features: ['피부 아래 지방 축적 시작', '탯줄이 두꺼워지고 강해짐', '뼈 석회화가 진행됨', '엄마 항체가 태반을 통해 전달 시작', '태동을 느낄 수 있음'], momTip: '처음으로 태동을 느낄 수 있어요!' },
+  { week: 18, size: '고구마', length: '14.2cm', weight: '190g', features: ['하품과 딸꾹질을 시작', '귀의 외부 형태가 완성됨', '수초화 시작', '양수 속에서 회전하며 자세를 바꿈', '맥박이 청진기로 들릴 수 있음'], momTip: '18~22주 정밀 초음파 시기예요' },
+  { week: 19, size: '망고', length: '15.3cm', weight: '240g', features: ['피부에 태지가 형성 시작', '오감 발달 가속', '뇌에서 감각 전담 영역이 분화', '팔다리 비율이 신생아에 가까워짐', '여아: 원시 난포 약 600만 개 형성'], momTip: '왼쪽으로 눕는 습관을 들이세요' },
+  { week: 20, size: '바나나', length: '25cm', weight: '300g', features: ['삼킴 연습이 활발해짐', '손톱이 손끝까지 자람', '머리카락이 자라기 시작', '남아: 고환이 하강 준비', '태동 패턴이 뚜렷해짐'], momTip: '임신 절반 왔어요! 성별 확인 가능한 시기예요' },
+  { week: 21, size: '큰 바나나', length: '26.7cm', weight: '360g', features: ['양수를 통해 엄마가 먹은 음식 맛을 경험', '눈꺼풀과 눈썹이 완성됨', '피부가 불투명으로 변하기 시작', '소장에서 영양분 흡수 연습', '움직임이 더 힘차짐'], momTip: '배가 눈에 띄게 나오기 시작해요' },
+  { week: 22, size: '파파야', length: '27.8cm', weight: '430g', features: ['눈썹과 속눈썹이 뚜렷하게 형성', '외부 소리에 놀라는 반응', '미각이 발달하여 단맛/쓴맛 구분', '뇌의 주름이 형성되기 시작', '피부에 주름이 많음'], momTip: '칼슘 섭취를 충분히 하세요' },
+  { week: 23, size: '큰 망고', length: '28.9cm', weight: '500g', features: ['빠른 안구 운동(REM)이 시작됨', '폐에서 계면활성제 소량 생산 시작', '청각이 거의 완성', '손바닥 잡기 반사 연습', '균형감각이 발달'], momTip: '태교 음악이나 동화책 읽어주기를 시작해보세요' },
+  { week: 24, size: '옥수수', length: '30cm', weight: '600g', features: ['폐 발달이 가속화', '눈을 뜰 수 있게 됨', '생존 가능 시기 진입 (NICU)', '피부 세포에서 멜라닌 생산 시작', '규칙적인 수면-각성 주기'], momTip: '24~28주 임신성 당뇨 검사 시기예요' },
+  { week: 25, size: '큰 옥수수', length: '34.6cm', weight: '660g', features: ['콧구멍이 열리기 시작', '복잡한 움직임 가능', '피하지방이 쌓이기 시작', '대뇌 피질 층이 형성됨', '손을 꽉 쥐었다 펴는 동작 반복'], momTip: '소변이 자주 마려울 수 있어요' },
+  { week: 26, size: '양배추', length: '35.6cm', weight: '760g', features: ['눈을 깜빡일 수 있게 됨', '폐에서 계면활성제 생산 증가', '뇌파 활동이 활발해짐', '면역체계가 발달', '엄마 목소리와 다른 소리를 구분'], momTip: '태동 횟수를 체크하세요' },
+  { week: 27, size: '콜리플라워', length: '36.6cm', weight: '875g', features: ['맛과 냄새를 구별하는 능력 향상', '눈의 망막 층이 형성 완료', '뇌가 매우 활발하게 성장', '딸꾹질이 빈번해짐', '빛에 반응하여 고개를 돌림'], momTip: '출산 준비 교실을 알아보세요' },
+  { week: 28, size: '큰 가지', length: '37.6cm', weight: '1kg', features: ['꿈을 꾸기 시작', '맛을 구별하고 선호도가 생김', '체온 조절 능력 발달 시작', '뇌 표면 주름이 뚜렷해짐', '엄마에게서 받은 항체로 면역 강화'], momTip: '3분기 시작!' },
+  { week: 29, size: '버터넛 호박', length: '38.6cm', weight: '1.15kg', features: ['뼈가 단단해지며 칼슘을 많이 흡수', '뇌에서 수십억 개의 뉴런이 발달', '피하지방이 늘어 체온 유지 향상', '태아가 머리를 아래로 하는 두정위 시도', '부신에서 스테로이드 호르몬 생산'], momTip: '등과 허리 통증이 심해질 수 있어요' },
+  { week: 30, size: '양상추', length: '39.9cm', weight: '1.3kg', features: ['골수에서 적혈구를 생산하기 시작', '머리카락이 풍성해짐', '체지방 비율 증가', '폐 발달이 빠르게 진행', '그립 반사가 강해짐'], momTip: '분만법, 산후조리원을 알아보세요' },
+  { week: 31, size: '코코넛', length: '41.1cm', weight: '1.5kg', features: ['뇌 연결(시냅스)이 급격히 증가', '홍채가 빛에 따라 수축/확장', '5가지 감각이 모두 기능함', '피부가 분홍빛으로 변화', '양수량이 최대치에 가까워짐'], momTip: '잠들기 어려울 수 있어요. 옆으로 누우세요' },
+  { week: 32, size: '큰 코코넛', length: '42.4cm', weight: '1.7kg', features: ['폐가 거의 완성', '피부 주름이 펴지며 통통해짐', '면역 항체 대량 전달', '발톱이 발가락 끝까지 자람', '간에 철분 저장'], momTip: 'NST(비수축검사) 시작 시기예요' },
+  { week: 33, size: '파인애플', length: '43.7cm', weight: '1.9kg', features: ['두개골은 유연함 유지 (산도 통과)', '면역 체계가 더 강화됨', '호흡 연습이 규칙적', '동공이 빛에 반응하여 수축', '뇌의 무게가 빠르게 증가'], momTip: '숨이 찰 수 있어요. 자궁이 횡격막을 밀어 올려요' },
+  { week: 34, size: '멜론', length: '45cm', weight: '2.1kg', features: ['폐 성숙이 거의 완료', '뇌가 급속 성장', '손톱이 손끝을 넘어감', '태지가 두꺼워져 피부 보호 강화', '수면-각성 주기가 신생아와 비슷해짐'], momTip: '출산가방을 준비하세요' },
+  { week: 35, size: '큰 멜론', length: '46.2cm', weight: '2.4kg', features: ['신장이 완전히 성숙', '팔다리가 통통해짐', '반사 반응이 대부분 완성', '태아 자세가 웅크린 형태로', '청각이 출생 후와 거의 같은 수준'], momTip: '부종이 심해질 수 있어요' },
+  { week: 36, size: '큰 파인애플', length: '47.4cm', weight: '2.6kg', features: ['태지가 줄어들기 시작', '대부분 머리가 아래를 향함', '피하지방이 완성되어 통통한 모습', '소화계가 완성되어 모유 소화 준비', '이슬이 나올 수 있음'], momTip: 'GBS(B군 연쇄상구균) 검사를 받으세요' },
+  { week: 37, size: '겨울호박', length: '48.6cm', weight: '2.9kg', features: ['만삭 기준 진입 (37주부터 조산 아님)', '폐와 뇌의 최종 성숙 단계', '면역 체계가 출생 후 독립 가능', '지방이 하루 약 14g씩 증가', '장내에 태변이 가득 참'], momTip: '이슬이나 불규칙 수축은 출산이 가까운 신호예요' },
+  { week: 38, size: '참외', length: '49.8cm', weight: '3.1kg', features: ['태지가 거의 사라짐', '모든 장기가 독립적으로 기능 가능', '쥐기 반사가 매우 강함', '폐포에 충분한 계면활성제 비축', '뇌 무게가 출생 시의 약 70%에 도달'], momTip: '분만 징후를 잘 관찰하세요' },
+  { week: 39, size: '작은 수박', length: '50.7cm', weight: '3.3kg', features: ['반사 신경 80가지 이상 완성', '모든 출생 준비 완료', '탯줄 길이 약 50cm로 최종', '뇌가 매 초 수백만 개의 연결을 만드는 중', '움직임이 줄지만 힘차게 발차기'], momTip: '곧 만나요! 호흡법을 연습하세요' },
+  { week: 40, size: '수박', length: '51.2cm', weight: '3.5kg', features: ['출산 예정일!', '모든 장기 발달 완료', '두개골 봉합선이 유연해 산도 통과 가능', '폐가 첫 호흡을 위한 준비 완료', '예정일 +-2주는 정상 범위'], momTip: '예정일이에요! 40주 2일까지 안 오면 유도분만을 상의하세요' },
+];
+
+const SIZE_EMOJI: Record<string, string> = {
+  '양귀비씨': '🌸', '참깨': '🫘', '렌즈콩': '🫘', '블루베리': '🫐',
+  '라즈베리': '🫐', '체리': '🍒', '대추': '🫒', '무화과': '🫒',
+  '라임': '🍋', '완두콩 꼬투리': '🫛', '레몬': '🍋', '사과': '🍎',
+  '아보카도': '🥑', '배': '🍐', '고구마': '🍠', '망고': '🥭',
+  '큰 망고': '🥭', '바나나': '🍌', '큰 바나나': '🍌', '파파야': '🥭',
+  '옥수수': '🌽', '큰 옥수수': '🌽', '양배추': '🥬', '콜리플라워': '🥦',
+  '큰 가지': '🍆', '버터넛 호박': '🎃', '양상추': '🥬', '코코넛': '🥥',
+  '큰 코코넛': '🥥', '파인애플': '🍍', '멜론': '🍈', '큰 멜론': '🍈',
+  '큰 파인애플': '🍍', '겨울호박': '🎃', '참외': '🍈', '작은 수박': '🍉', '수박': '🍉',
+};
+
+function getTrimesterInfo(week: number) {
+  if (week <= 13) return { label: '1분기 (초기)', color: '#E8F5E9', textColor: '#2E7D32' };
+  if (week <= 27) return { label: '2분기 (안정기)', color: '#E3F2FD', textColor: '#1565C0' };
+  return { label: '3분기 (후기)', color: '#FCE4EC', textColor: '#C62828' };
+}
+
+function PregnancyWeeklyDevelopment() {
+  const selectedChild = useChildStore((s) => s.selectedChild);
+  const weeks = WEEKLY_DEVELOPMENT;
+  const [imagesByWeek, setImagesByWeek] = useState<Record<number, TimelineItem[]>>({});
+  const [loading, setLoading] = useState(false);
+  const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const weekPositions = useRef<Record<number, number>>({});
+
+  const currentWeek = selectedChild?.pregnancyWeeks ?? 0;
+
+  // Only fetch timeline images from API (user photos per week)
+  useEffect(() => {
+    if (!selectedChild?.id) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const tlRes = await pregnancyApi.getTimeline(selectedChild.id);
+        if (cancelled) return;
+        if (tlRes?.data?.data && Array.isArray(tlRes.data.data)) {
+          const map: Record<number, TimelineItem[]> = {};
+          for (const entry of tlRes.data.data as Array<{ week: number; items: TimelineItem[] }>) {
+            const imgs = entry.items.filter((it) => it.source === 'record' && it.mediaUri);
+            if (imgs.length > 0) map[entry.week] = imgs;
+          }
+          setImagesByWeek(map);
+        }
+      } catch { /* silent */ }
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [selectedChild?.id]);
+
+  // Auto-expand and scroll to current week after data loads
+  useEffect(() => {
+    if (weeks.length > 0 && currentWeek > 0) {
+      setExpandedWeek(currentWeek);
+      // Scroll after layout
+      setTimeout(() => {
+        const y = weekPositions.current[currentWeek];
+        if (y != null && scrollRef.current) {
+          // This scrollRef won't work since parent ScrollView owns scrolling.
+          // We'll use the onLayout to at least highlight the current week.
+        }
+      }, 500);
+    }
+  }, [weeks.length, currentWeek]);
+
+  const handleWeekLayout = useCallback((week: number, e: LayoutChangeEvent) => {
+    weekPositions.current[week] = e.nativeEvent.layout.y;
+  }, []);
+
+  if (weeks.length === 0) {
+    return null;
+  }
+
+  // Find closest week data to currentWeek
+  const currentDev = weeks.find((w) => w.week === currentWeek)
+    ?? weeks.reduce((prev, curr) =>
+      Math.abs(curr.week - currentWeek) < Math.abs(prev.week - currentWeek) ? curr : prev,
+    );
+
+  // Pre-compute trimester separators
+  const weekItems = weeks.map((dev, idx) => {
+    const tri = getTrimesterInfo(dev.week);
+    const prevTri = idx > 0 ? getTrimesterInfo(weeks[idx - 1].week) : null;
+    return { dev, showTrimester: !prevTri || prevTri.label !== tri.label, trimester: tri };
+  });
+
+  return (
+    <View>
+      {/* Current Week Summary Card */}
+      {currentWeek > 0 && currentDev && (
+        <LinearGradient
+          colors={['#FF8C94', '#FFAAA5']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={pwStyles.currentCard}
+        >
+          <Text style={pwStyles.currentLabel}>현재 임신</Text>
+          <Text style={pwStyles.currentWeekText}>{currentWeek}주차</Text>
+          <Text style={pwStyles.currentSize}>
+            {SIZE_EMOJI[currentDev.size] ?? '🤰'} {currentDev.size} 크기
+          </Text>
+          <Text style={pwStyles.currentMeasure}>
+            {currentDev.length} / {currentDev.weight}
+          </Text>
+        </LinearGradient>
+      )}
+
+      {/* Week Cards */}
+      {weekItems.map(({ dev, showTrimester, trimester }) => {
+        const isCurrent = dev.week === currentDev?.week;
+        const isFuture = dev.week > currentWeek;
+        const isExpanded = expandedWeek === dev.week;
+        const emoji = SIZE_EMOJI[dev.size] ?? '🤰';
+        const imgs = imagesByWeek[dev.week] ?? [];
+
+        return (
+          <View key={dev.week} onLayout={(e) => handleWeekLayout(dev.week, e)}>
+            {showTrimester && (
+              <View style={[pwStyles.trimesterBar, { backgroundColor: trimester.color }]}>
+                <Text style={[pwStyles.trimesterText, { color: trimester.textColor }]}>
+                  {trimester.label}
+                </Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={[
+                pwStyles.weekCard,
+                isCurrent && pwStyles.weekCardCurrent,
+                isFuture && pwStyles.weekCardFuture,
+              ]}
+              onPress={() => setExpandedWeek(isExpanded ? null : dev.week)}
+              activeOpacity={0.7}
+            >
+              {/* Header row */}
+              <View style={pwStyles.weekHeader}>
+                <Text style={pwStyles.weekEmoji}>{emoji}</Text>
+                <View style={pwStyles.weekMeta}>
+                  <View style={pwStyles.weekLabelRow}>
+                    <Text style={[pwStyles.weekNum, isCurrent && pwStyles.weekNumCurrent]}>
+                      {dev.week}주
+                    </Text>
+                    {isCurrent && (
+                      <View style={pwStyles.nowBadge}>
+                        <Text style={pwStyles.nowBadgeText}>NOW</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={pwStyles.weekSizeText}>{dev.size} 크기</Text>
+                  <Text style={pwStyles.weekMeasure}>{dev.length} / {dev.weight}</Text>
+                </View>
+                <Text style={pwStyles.expandIcon}>{isExpanded ? '▲' : '▼'}</Text>
+              </View>
+
+              {/* Expanded content */}
+              {isExpanded && (
+                <View style={pwStyles.expandedBox}>
+                  {/* Features */}
+                  <View style={pwStyles.featBox}>
+                    <Text style={pwStyles.featTitle}>이번 주 발달</Text>
+                    {dev.features.map((f, i) => (
+                      <View key={i} style={pwStyles.featRow}>
+                        <Text style={pwStyles.featDot}>{'•'}</Text>
+                        <Text style={pwStyles.featText}>{f}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Mom tip */}
+                  <View style={pwStyles.momTipBox}>
+                    <Text style={pwStyles.momTipIcon}>{'💡'}</Text>
+                    <Text style={pwStyles.momTipText}>{dev.momTip}</Text>
+                  </View>
+
+                  {/* User images for this week */}
+                  {imgs.length > 0 && (
+                    <View style={pwStyles.imgSection}>
+                      <Text style={pwStyles.imgTitle}>{'📷'} 이 주의 기록 사진</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={pwStyles.imgScroll}>
+                        {imgs.map((img) => (
+                          <Image
+                            key={img.id}
+                            source={{ uri: img.mediaUri }}
+                            style={pwStyles.imgThumb}
+                            resizeMode="cover"
+                          />
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        );
+      })}
+
+      {/* Bottom hint */}
+      <View style={pwStyles.bottomHint}>
+        <Text style={pwStyles.bottomHintText}>
+          임신 기록에서 사진을 올리면 해당 주수에 자동으로 표시돼요
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const pwStyles = StyleSheet.create({
+  loadingWrap: {
+    alignItems: 'center',
+    paddingVertical: SPACING.xl * 2,
+  },
+  loadingText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.sm,
+  },
+  currentCard: {
+    borderRadius: 20,
+    padding: SPACING.lg,
+    marginBottom: SPACING.lg,
+    alignItems: 'center',
+  },
+  currentLabel: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 4,
+  },
+  currentWeekText: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  currentSize: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  currentMeasure: {
+    fontSize: FONT_SIZE.sm,
+    color: 'rgba(255,255,255,0.85)',
+  },
+  trimesterBar: {
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+    marginBottom: SPACING.sm,
+    marginTop: SPACING.sm,
+  },
+  trimesterText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+  },
+  weekCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+    ...SHADOWS.soft,
+  },
+  weekCardCurrent: {
+    borderWidth: 2,
+    borderColor: '#FF8C94',
+    backgroundColor: '#FFF5F5',
+  },
+  weekCardFuture: {
+    opacity: 0.6,
+  },
+  weekHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  weekEmoji: {
+    fontSize: 36,
+    marginRight: SPACING.md,
+  },
+  weekMeta: {
+    flex: 1,
+  },
+  weekLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  weekNum: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  weekNumCurrent: {
+    color: '#FF8C94',
+  },
+  nowBadge: {
+    backgroundColor: '#FF8C94',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  nowBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  weekSizeText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  weekMeasure: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textLight,
+  },
+  expandIcon: {
+    fontSize: 12,
+    color: COLORS.textLight,
+    marginLeft: SPACING.sm,
+  },
+  expandedBox: {
+    marginTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+    paddingTop: SPACING.md,
+  },
+  featBox: {
+    marginBottom: SPACING.md,
+  },
+  featTitle: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+  },
+  featRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
+    paddingLeft: 4,
+  },
+  featDot: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.primary,
+    marginRight: 6,
+    lineHeight: 20,
+  },
+  featText: {
+    flex: 1,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+  },
+  momTipBox: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF8F0',
+    borderRadius: RADIUS.sm,
+    padding: SPACING.md,
+    gap: 8,
+    marginBottom: SPACING.sm,
+  },
+  momTipIcon: {
+    fontSize: 16,
+  },
+  momTipText: {
+    flex: 1,
+    fontSize: FONT_SIZE.sm,
+    color: '#8B6914',
+    lineHeight: 20,
+  },
+  imgSection: {
+    marginTop: SPACING.sm,
+  },
+  imgTitle: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+  },
+  imgScroll: {
+    marginBottom: 4,
+  },
+  imgThumb: {
+    width: 80,
+    height: 80,
+    borderRadius: RADIUS.sm,
+    marginRight: SPACING.sm,
+    backgroundColor: COLORS.surfaceLight,
+  },
+  bottomHint: {
+    alignItems: 'center',
+    paddingVertical: SPACING.lg,
+  },
+  bottomHintText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textLight,
+    textAlign: 'center',
+  },
+});
+
+/* ---- End Pregnancy Weekly Development ---- */
 
 function FilterTabs({
   activeTab,
@@ -732,7 +1212,8 @@ function PhysicalTab({ childName }: { childName: string }) {
   const initialHeight = selectedChild?.height ?? null;
   const initialWeight = selectedChild?.weight ?? null;
   const ageMonths = selectedChild?.ageInfo.months ?? 0;
-  const gender = selectedChild?.gender ?? 'M';
+  const rawGender = selectedChild?.gender ?? 'M';
+  const gender = rawGender === 'U' ? 'M' : rawGender;
   const ageLabel = selectedChild?.ageInfo.label ?? '';
 
   // 로컬 기록 로드
@@ -1021,7 +1502,7 @@ interface TraitInsight {
 
 function TraitTab() {
   const selectedChild = useChildStore((s) => s.selectedChild);
-  const dominantType = selectedChild?.innateData.dominantType ?? '--';
+  const dominantType = selectedChild?.innateData?.dominantType ?? '--';
   const [insights, setInsights] = useState<TraitInsight[]>([]);
   const [loadingTraits, setLoadingTraits] = useState(false);
   const [responseCount, setResponseCount] = useState(0);

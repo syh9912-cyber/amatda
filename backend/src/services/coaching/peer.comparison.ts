@@ -155,7 +155,7 @@ export function generatePeerComparison(
   } else if (normalCount === items.length) {
     overallComment = '전체적으로 또래 평균 범위 안에서 잘 성장하고 있어요!';
   } else if (belowCount > 0) {
-    overallComment = '일부 항목이 또래 평균보다 낮지만, 아이마다 속도가 달라요. AI 코치에게 맞춤 팁을 받아보세요.';
+    overallComment = '일부 항목이 또래 평균보다 낮지만, 아이마다 속도가 달라요. 상담이모에게 맞춤 팁을 받아보세요.';
   } else {
     overallComment = '전반적으로 건강한 패턴이에요. 지금처럼 꾸준히 기록해주세요!';
   }

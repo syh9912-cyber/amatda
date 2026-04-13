@@ -348,7 +348,7 @@ export default function ChildCardScreen() {
                     </View>
                     <View>
                       <Text style={s.footerBrandS}>A-matda</Text>
-                      <Text style={s.footerDescS}>{'AI 육아 코치'}</Text>
+                      <Text style={s.footerDescS}>{'상담이모'}</Text>
                     </View>
                   </View>
                 </View>

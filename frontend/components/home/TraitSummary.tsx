@@ -9,10 +9,10 @@ interface Props {
 }
 
 export function TraitSummary({ child, compact }: Props) {
-  const { dominantType } = child.innateData;
+  const dominantType = child.innateData?.dominantType ?? '';
   const report = child.analysisReport;
 
-  const summaryText = report?.summary ?? child.innateData.label;
+  const summaryText = report?.summary ?? child.innateData?.label ?? '';
 
   return (
     <View style={[styles.card, compact && styles.cardCompact]}>

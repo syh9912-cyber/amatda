@@ -44,7 +44,7 @@ export default function NutritionScreen() {
   const selectedChild = useChildStore((s) => s.selectedChild);
 
   const temperamentKey = resolveTemperamentKey(
-    selectedChild?.innateData.dominantType ?? '',
+    selectedChild?.innateData?.dominantType ?? '',
   );
   const foods = FOOD_RECOMMENDATIONS[temperamentKey];
 
@@ -64,7 +64,7 @@ export default function NutritionScreen() {
 
   const childName = selectedChild?.name ?? '';
   const dominantLabel =
-    selectedChild?.innateData.dominantType.split('(')[0] ?? '';
+    selectedChild?.innateData?.dominantType?.split('(')[0] ?? '';
 
   return (
     <View style={styles.screen}>

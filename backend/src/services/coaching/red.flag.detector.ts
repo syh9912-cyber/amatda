@@ -6,7 +6,8 @@ interface FlagRule {
   urgency: 'emergency' | 'urgent' | 'monitor';
 }
 
-const FLAG_RULES: FlagRule[] = [
+// ─── 아이 관련 레드 플래그 ───
+const CHILD_FLAG_RULES: FlagRule[] = [
   // ─── Emergency (즉시 병원) ───
   { pattern: /(?:열|체온).*(?:3[89]|4[01])\s*도/i, label: '38도 이상 발열', urgency: 'emergency' },
   { pattern: /(?:3[89]|4[01])(?:\.\d)?\s*도/, label: '고열', urgency: 'emergency' },
@@ -32,12 +33,43 @@ const FLAG_RULES: FlagRule[] = [
   { pattern: /설사.*(?:며칠|계속|반복)/, label: '지속 설사', urgency: 'monitor' },
 ];
 
-export function detectRedFlags(message: string): RedFlagResult {
+// ─── 임산부 전용 레드 플래그 ───
+const PREGNANT_FLAG_RULES: FlagRule[] = [
+  // ─── Emergency (즉시 병원) ───
+  { pattern: /양수.*(?:터|파|흐름|줄줄|파수)|파수/, label: '양수 파수 의심', urgency: 'emergency' },
+  { pattern: /(?:조기|빠른).*진통|37주.*전.*진통/, label: '조기진통 의심', urgency: 'emergency' },
+  { pattern: /(?:대량|다량|심한).*(?:출혈|피)|피.*(?:많이|쏟|흐름)/, label: '대량 출혈', urgency: 'emergency' },
+  { pattern: /전자간증|자간|임신중독/, label: '전자간증 의심', urgency: 'emergency' },
+  { pattern: /(?:심한|갑작스런).*두통.*(?:시야|눈|시력|부종)|시야.*(?:흐려|흐림|번쩍)/, label: '전자간증 증상(두통+시야변화)', urgency: 'emergency' },
+  { pattern: /태동.*(?:없|안.*느|급감|감소|줄)|아기.*(?:안.*움직|안.*놀)/, label: '태동 감소/소실', urgency: 'emergency' },
+  { pattern: /경련|발작|의식.*(?:잃|없)/, label: '경련/의식소실', urgency: 'emergency' },
+  { pattern: /탯줄.*(?:나|빠져|보|느껴)/, label: '탯줄 탈출 의심', urgency: 'emergency' },
+
+  // ─── Urgent (24시간 내 진료) ───
+  { pattern: /(?:출혈|피).*(?:나|묻|보|있)|질.*(?:출혈|피)/, label: '질 출혈', urgency: 'urgent' },
+  { pattern: /(?:규칙|반복).*(?:뭉침|수축|배.*아파)|배.*뭉침.*(?:반복|규칙)/, label: '규칙적 자궁 수축', urgency: 'urgent' },
+  { pattern: /(?:심한|극심|참을수없).*(?:복통|배.*아파|하복부)/, label: '심한 복통', urgency: 'urgent' },
+  { pattern: /(?:갑자기|급격).*(?:부종|붓|부어)|얼굴.*(?:붓|부)/, label: '급격한 부종', urgency: 'urgent' },
+  { pattern: /소변.*(?:안|없|감소|줄)|24시간.*소변/, label: '소변량 급감', urgency: 'urgent' },
+  { pattern: /(?:5|다섯).*회.*(?:이상|넘).*(?:토|구토)|구토.*(?:계속|멈추지)/, label: '심한 구토(임신오조 의심)', urgency: 'urgent' },
+  { pattern: /140.*90|(?:높|올).*혈압/, label: '혈압 상승', urgency: 'urgent' },
+
+  // ─── Monitor (경과 관찰) ───
+  { pattern: /(?:가끔|가벼운).*(?:뭉침|수축)/, label: '간헐적 배 뭉침', urgency: 'monitor' },
+  { pattern: /(?:갈색|묽은).*(?:분비물|냉)/, label: '비정상 분비물', urgency: 'monitor' },
+  { pattern: /(?:소량|약간).*(?:피|출혈|이슬)/, label: '소량 출혈/이슬', urgency: 'monitor' },
+  { pattern: /(?:심한|극심).*(?:입덧|구역|토)/, label: '심한 입덧', urgency: 'monitor' },
+];
+
+const FLAG_RULES = CHILD_FLAG_RULES;
+
+export function detectRedFlags(message: string, isPregnant = false): RedFlagResult {
+  const rules = isPregnant ? PREGNANT_FLAG_RULES : CHILD_FLAG_RULES;
   const flags: string[] = [];
   let highestUrgency: 'emergency' | 'urgent' | 'monitor' | 'none' = 'none';
   const urgencyOrder = { emergency: 3, urgent: 2, monitor: 1, none: 0 };
 
-  for (const rule of FLAG_RULES) {
+  for (const rule of rules) {
     if (rule.pattern.test(message)) {
       flags.push(rule.label);
       if (urgencyOrder[rule.urgency] > urgencyOrder[highestUrgency]) {
@@ -50,10 +82,13 @@ export function detectRedFlags(message: string): RedFlagResult {
     return { detected: false, flags: [], urgency: 'none' };
   }
 
+  const hospitalLabel = isPregnant ? '산부인과나 응급실' : '소아과나 응급실';
+  const clinicLabel = isPregnant ? '산부인과' : '소아과';
+
   const messages: Record<string, string> = {
-    emergency: `주의가 필요해요. ${flags.join(', ')} 증상이 있다면, 가까운 소아과나 응급실 방문을 먼저 권합니다. 아래 조언은 참고용이에요.`,
-    urgent: `${flags.join(', ')} 증상이 보이시면 오늘 중으로 소아과 진료를 받아보시는 게 좋겠어요.`,
-    monitor: `${flags.join(', ')}이 있으시군요. 경과를 지켜보시되, 악화되면 소아과 방문을 권합니다.`,
+    emergency: `주의가 필요해요. ${flags.join(', ')} 증상이 있다면, 가까운 ${hospitalLabel} 방문을 먼저 권합니다. 아래 조언은 참고용이에요.`,
+    urgent: `${flags.join(', ')} 증상이 보이시면 오늘 중으로 ${clinicLabel} 진료를 받아보시는 게 좋겠어요.`,
+    monitor: `${flags.join(', ')}이 있으시군요. 경과를 지켜보시되, 악화되면 ${clinicLabel} 방문을 권합니다.`,
   };
 
   return {

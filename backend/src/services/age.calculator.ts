@@ -1,4 +1,4 @@
-type AgeGroup = 'infant' | 'toddler' | 'elementary';
+type AgeGroup = 'pregnant' | 'infant' | 'toddler' | 'elementary';
 
 interface AgeInfo {
   months: number;

@@ -44,7 +44,7 @@ export default function MomstagramPostScreen() {
   const childAge = selectedChild
     ? `${selectedChild.ageInfo.months}개월`
     : '';
-  const dominantType = selectedChild?.innateData.dominantType ?? '';
+  const dominantType = selectedChild?.innateData?.dominantType ?? '';
 
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();

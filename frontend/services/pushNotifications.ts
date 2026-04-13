@@ -492,7 +492,7 @@ export async function scheduleFirstCoachingNudge(childName: string): Promise<voi
   const id = await Notifications.scheduleNotificationAsync({
     content: {
       title: `${childName} 맞춤 육아 팁이 준비됐어요`,
-      body: '궁금한 거 뭐든 물어보세요. AI 코치가 기다리고 있어요!',
+      body: '궁금한 거 뭐든 물어보세요. 상담이모가 기다리고 있어요!',
       data: { screen: 'chatbot' },
       sound: 'amatda_chime.wav',
     },

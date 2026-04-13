@@ -16,10 +16,10 @@ interface Step {
 }
 
 const STEPS: Step[] = [
-  { title: 'AI 육아 코칭', desc: '아이 기질에 맞는 맞춤 상담을\n언제든 받을 수 있어요', icon: '💬' },
+  { title: '상담이모', desc: '아이 기질에 맞는 맞춤 상담을\n언제든 받을 수 있어요\n울음 분석, 대변 분석도 상담이모에서!', icon: '💬' },
   { title: '육아 기록', desc: '수유, 수면, 배변을\n간편하게 기록하세요', icon: '📋' },
   { title: '성장 타임라인', desc: '아이의 소중한 순간을\n사진과 함께 남겨보세요', icon: '📸' },
-  { title: '맘스타그램', desc: '다른 부모들과\n육아 이야기를 나눠보세요', icon: '👥' },
+  { title: '가족피드', desc: '가족끼리 소중한 순간을\n공유하고 함께 기록해보세요', icon: '👨‍👩‍👧' },
 ];
 
 export function OnboardingGuide() {

@@ -88,18 +88,45 @@ export async function buildChildContext(
     } catch { observedTraits = '없음'; }
   }
 
-  const gender = (d.gender as string) === 'M' ? '남자아이' : '여자아이';
+  const isPregnant = (d.isPregnant as boolean) === true;
+  const gender = isPregnant ? '태아' : ((d.gender as string) === 'M' ? '남자아이' : '여자아이');
+
+  // 임산부: 주수 계산 (dueDate 기준)
+  let pregnancyWeeks: number | undefined;
+  let dueDate: string | undefined;
+  let babyNickname: string | undefined;
+  let pregnancyNotes: string | undefined;
+
+  if (isPregnant) {
+    dueDate = d.dueDate as string | undefined;
+    babyNickname = (d.name as string) || undefined;  // 태명
+    pregnancyNotes = d.pregnancyNotes as string | undefined;
+
+    if (dueDate) {
+      const due = new Date(dueDate);
+      const now = new Date();
+      // 출산예정일에서 역산: 임신 40주 = 280일
+      const daysUntilDue = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      const daysPregnant = 280 - daysUntilDue;
+      pregnancyWeeks = Math.max(1, Math.floor(daysPregnant / 7));
+    }
+  }
 
   return {
-    name: (d.name as string) || '아이',
-    ageInfo,
-    ageMonths,
+    name: (d.name as string) || (isPregnant ? '태명 미정' : '아이'),
+    ageInfo: isPregnant ? (pregnancyWeeks ? `임신 ${pregnancyWeeks}주차` : '임신 중') : ageInfo,
+    ageMonths: isPregnant ? -1 : ageMonths,
     gender,
-    temperament: dominantType,
-    temperamentDetail,
-    specialNotes,
+    temperament: isPregnant ? '없음' : dominantType,
+    temperamentDetail: isPregnant ? '' : temperamentDetail,
+    specialNotes: isPregnant ? (pregnancyNotes || '') : specialNotes,
     baseline,
-    observedTraits,
+    observedTraits: isPregnant ? '없음' : observedTraits,
+    isPregnant,
+    pregnancyWeeks,
+    dueDate,
+    babyNickname,
+    pregnancyNotes,
   };
 }
 

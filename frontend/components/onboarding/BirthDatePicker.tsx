@@ -5,6 +5,9 @@ import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 interface BirthDatePickerProps {
   birthDate: string;
   onChangeBirthDate: (date: string) => void;
+  /** 미래 날짜 허용 (출산예정일 등) — 기본 false */
+  allowFuture?: boolean;
+  placeholder?: string;
 }
 
 function formatDateLabel(date: Date): string {
@@ -21,14 +24,25 @@ function toISODate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-export function BirthDatePicker({ birthDate, onChangeBirthDate }: BirthDatePickerProps) {
+export function BirthDatePicker({ birthDate, onChangeBirthDate, allowFuture, placeholder }: BirthDatePickerProps) {
   const [show, setShow] = useState(false);
+
+  const defaultPlaceholder = allowFuture ? '날짜를 선택해주세요' : '생년월일을 선택해주세요';
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const maxDate = allowFuture
+    ? new Date(now.getFullYear() + 2, 11, 31)
+    : new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  const minDate = allowFuture ? todayStart : new Date(2000, 0, 1);
+  const defaultDate = allowFuture
+    ? new Date(now.getFullYear(), now.getMonth() + 6, now.getDate())
+    : new Date(2020, 0, 1);
 
   if (Platform.OS === 'web') {
     return (
       <TextInput
         style={styles.input}
-        placeholder="2020-01-15"
+        placeholder={placeholder ?? '2020-01-15'}
         placeholderTextColor={COLORS.textLight}
         value={birthDate}
         onChangeText={onChangeBirthDate}
@@ -39,7 +53,7 @@ export function BirthDatePicker({ birthDate, onChangeBirthDate }: BirthDatePicke
 
   const DateTimePicker = require('@react-native-community/datetimepicker').default;
 
-  const currentValue = birthDate ? new Date(birthDate + 'T00:00:00') : new Date(2020, 0, 1);
+  const currentValue = birthDate ? new Date(birthDate + 'T00:00:00') : defaultDate;
 
   const handleChange = (_event: unknown, selectedDate?: Date) => {
     setShow(Platform.OS === 'ios');
@@ -52,17 +66,17 @@ export function BirthDatePicker({ birthDate, onChangeBirthDate }: BirthDatePicke
     <View>
       <TouchableOpacity style={styles.input} onPress={() => setShow(true)}>
         <Text style={birthDate ? styles.valueText : styles.placeholderText}>
-          {birthDate ? formatDateLabel(currentValue) : '생년월일을 선택해주세요'}
+          {birthDate ? formatDateLabel(currentValue) : placeholder ?? defaultPlaceholder}
         </Text>
       </TouchableOpacity>
       {show && (
         <DateTimePicker
           value={currentValue}
           mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          display={Platform.OS === 'ios' || allowFuture ? 'spinner' : 'default'}
           onChange={handleChange}
-          maximumDate={new Date()}
-          minimumDate={new Date(2000, 0, 1)}
+          maximumDate={maxDate}
+          minimumDate={minDate}
         />
       )}
     </View>

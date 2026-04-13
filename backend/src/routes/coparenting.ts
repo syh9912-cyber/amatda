@@ -303,8 +303,8 @@ router.get('/presets', authMiddleware, async (_req: Request, res: Response) => {
     permissionLabels: {
       viewRecords: '육아 기록 열람',
       editRecords: '육아 기록 작성/수정',
-      viewCoaching: 'AI 코칭 열람',
-      useCoaching: 'AI 코칭 사용',
+      viewCoaching: '상담이모 열람',
+      useCoaching: '상담이모 사용',
       viewGrowth: '성장 통계 열람',
       viewTimeline: '타임라인 열람',
       editTimeline: '타임라인 사진 추가',

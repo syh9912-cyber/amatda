@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Linking,
   Modal,
 } from 'react-native';
 import { Stack } from 'expo-router';
@@ -17,6 +18,19 @@ import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
 // ── Types ──
 
+interface KakaoClinic {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  distance: number;
+  category: string;
+  hasEmergency: boolean;
+  placeUrl: string;
+  latitude: number;
+  longitude: number;
+}
+
 interface ClinicRatings {
   kindness: number;
   waitTime: number;
@@ -24,119 +38,36 @@ interface ClinicRatings {
   expertise: number;
 }
 
-interface Clinic {
-  id: string;
-  name: string;
-  address: string;
-  ratings: ClinicRatings;
-  reviewCount: number;
-  distance?: number;
-}
-
-interface Review {
-  id: string;
-  clinicId: string;
-  userName: string;
-  ratings: ClinicRatings;
-  comment: string;
-  createdAt: string;
-}
-
 // ── Constants ──
 
 const DEFAULT_LAT = 34.815;
 const DEFAULT_LNG = 126.463;
 
-const RADIUS_OPTIONS = [10, 20, 40, 60] as const;
-
-const RATING_LABELS: { key: keyof ClinicRatings; label: string }[] = [
-  { key: 'kindness', label: '친절도' },
-  { key: 'waitTime', label: '대기시간' },
-  { key: 'convenience', label: '편의성' },
-  { key: 'expertise', label: '전문성' },
-];
+const RADIUS_OPTIONS = [3, 5, 10, 20] as const;
 
 // ── Sub-components ──
-
-function RatingBars({ ratings }: { ratings: ClinicRatings }) {
-  return (
-    <View style={styles.ratingBarsContainer}>
-      {RATING_LABELS.map(({ key, label }) => {
-        const value = ratings[key] ?? 0;
-        const pct = (value / 5) * 100;
-        return (
-          <View key={key} style={styles.ratingBarRow}>
-            <Text style={styles.ratingBarLabel}>{label}</Text>
-            <View style={styles.ratingBarTrack}>
-              <View style={[styles.ratingBarFill, { width: `${pct}%` }]} />
-            </View>
-            <Text style={styles.ratingBarValue}>{value.toFixed(1)}</Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-function StarRow({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <View style={styles.starRow}>
-      <Text style={styles.starLabel}>{label}</Text>
-      <View style={styles.starsContainer}>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <TouchableOpacity key={n} onPress={() => onChange(n)}>
-            <Text style={[styles.star, n <= value && styles.starActive]}>
-              {'★'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-}
 
 // ── Main Screen ──
 
 export default function ClinicScreen() {
-  const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [clinics, setClinics] = useState<KakaoClinic[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchRadius, setSearchRadius] = useState<number>(10);
-  const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [searchRadius, setSearchRadius] = useState<number>(5);
+  const [keyword, setKeyword] = useState('');
 
   const userLocation = useLocationStore((s) => s.userLocation);
-
-  // Review form state
-  const [formClinicName, setFormClinicName] = useState('');
-  const [formAddress, setFormAddress] = useState('');
-  const [formComment, setFormComment] = useState('');
-  const [formRatings, setFormRatings] = useState<ClinicRatings>({
-    kindness: 0,
-    waitTime: 0,
-    convenience: 0,
-    expertise: 0,
-  });
-
   const lat = userLocation?.latitude ?? DEFAULT_LAT;
   const lng = userLocation?.longitude ?? DEFAULT_LNG;
 
-  const loadClinics = useCallback(async () => {
+  const loadClinics = useCallback(async (kw?: string) => {
     setLoading(true);
     try {
-      const res = await clinicApi.nearby(lat, lng, searchRadius);
-      if (res.data?.data) {
-        setClinics(res.data.data as Clinic[]);
+      const res = await clinicApi.search(lat, lng, searchRadius, kw || undefined);
+      const data = res.data?.data;
+      if (Array.isArray(data)) {
+        setClinics(data as KakaoClinic[]);
+      } else {
+        setClinics([]);
       }
     } catch {
       setClinics([]);
@@ -149,147 +80,54 @@ export default function ClinicScreen() {
     loadClinics();
   }, [loadClinics]);
 
-  const handleSelectClinic = async (clinic: Clinic) => {
-    setSelectedClinic(clinic);
-    setReviewsLoading(true);
-    try {
-      const res = await clinicApi.reviews(clinic.id);
-      if (res.data?.data) {
-        setReviews(res.data.data as Review[]);
-      }
-    } catch {
-      setReviews([]);
-    } finally {
-      setReviewsLoading(false);
-    }
+  const handleSearch = () => {
+    loadClinics(keyword.trim() || undefined);
   };
 
-  const handleBackToList = () => {
-    setSelectedClinic(null);
-    setReviews([]);
-  };
-
-  const openReviewForm = () => {
-    setFormClinicName(selectedClinic?.name ?? '');
-    setFormAddress(selectedClinic?.address ?? '');
-    setFormComment('');
-    setFormRatings({ kindness: 0, waitTime: 0, convenience: 0, expertise: 0 });
-    setShowReviewModal(true);
-  };
-
-  const updateFormRating = (key: keyof ClinicRatings, value: number) => {
-    setFormRatings((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const handleSubmitReview = async () => {
-    if (!formClinicName.trim()) {
-      Alert.alert('알림', '병원 이름을 입력해주세요.');
+  const callPhone = (phone: string) => {
+    if (!phone) {
+      Alert.alert('알림', '전화번호가 등록되지 않은 병원입니다.');
       return;
     }
-    const hasZero = Object.values(formRatings).some((v) => v === 0);
-    if (hasZero) {
-      Alert.alert('알림', '모든 항목에 별점을 매겨주세요.');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await clinicApi.postReview({
-        clinicId: selectedClinic?.id,
-        clinicName: formClinicName,
-        address: formAddress,
-        ratings: formRatings,
-        comment: formComment,
-      });
-      Alert.alert('감사합니다', '후기가 등록되었습니다!');
-      setShowReviewModal(false);
-      if (selectedClinic) {
-        handleSelectClinic(selectedClinic);
-      }
-    } catch {
-      Alert.alert('오류', '후기 등록에 실패했습니다.');
-    } finally {
-      setSubmitting(false);
-    }
+    Linking.openURL(`tel:${phone.replace(/[^0-9]/g, '')}`).catch(() => {
+      Alert.alert('오류', '전화 연결에 실패했습니다.');
+    });
   };
 
-  // ── Detail View ──
+  const openMap = (clinic: KakaoClinic) => {
+    const url = `https://map.kakao.com/link/map/${encodeURIComponent(clinic.name)},${clinic.latitude},${clinic.longitude}`;
+    Linking.openURL(url).catch(() => {
+      Alert.alert('오류', '지도를 열 수 없습니다.');
+    });
+  };
 
-  if (selectedClinic) {
-    return (
-      <View style={styles.container}>
-        <Stack.Screen options={{ title: selectedClinic.name, headerShown: true }} />
-        <ScrollView contentContainerStyle={styles.content}>
-          {/* Clinic info */}
-          <View style={styles.detailCard}>
-            <Text style={styles.detailName}>{selectedClinic.name}</Text>
-            <Text style={styles.detailAddress}>{selectedClinic.address}</Text>
-            <RatingBars ratings={selectedClinic.ratings} />
-            <Text style={styles.reviewCountText}>
-              후기 {selectedClinic.reviewCount}개
-            </Text>
-          </View>
-
-          {/* Reviews */}
-          <Text style={styles.sectionTitle}>후기 목록</Text>
-          {reviewsLoading ? (
-            <ActivityIndicator color={COLORS.primary} style={styles.loader} />
-          ) : reviews.length > 0 ? (
-            reviews.map((r) => (
-              <View key={r.id} style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  <Text style={styles.reviewUser}>{r.userName}</Text>
-                  <Text style={styles.reviewDate}>
-                    {r.createdAt.split('T')[0]}
-                  </Text>
-                </View>
-                <RatingBars ratings={r.ratings} />
-                {r.comment ? (
-                  <Text style={styles.reviewComment}>{r.comment}</Text>
-                ) : null}
-              </View>
-            ))
-          ) : (
-            <Text style={styles.emptyText}>아직 후기가 없습니다.</Text>
-          )}
-
-          <TouchableOpacity style={styles.backBtn} onPress={handleBackToList}>
-            <Text style={styles.backBtnText}>목록으로 돌아가기</Text>
-          </TouchableOpacity>
-        </ScrollView>
-
-        {/* Floating review button */}
-        <TouchableOpacity style={styles.fab} onPress={openReviewForm}>
-          <Text style={styles.fabText}>후기 작성</Text>
-        </TouchableOpacity>
-
-        {/* Review Modal */}
-        <ReviewModal
-          visible={showReviewModal}
-          clinicName={formClinicName}
-          address={formAddress}
-          comment={formComment}
-          ratings={formRatings}
-          submitting={submitting}
-          onChangeClinicName={setFormClinicName}
-          onChangeAddress={setFormAddress}
-          onChangeComment={setFormComment}
-          onChangeRating={updateFormRating}
-          onSubmit={handleSubmitReview}
-          onClose={() => setShowReviewModal(false)}
-        />
-      </View>
-    );
-  }
-
-  // ── List View ──
+  const formatDistance = (d: number) => {
+    if (d < 1) return `${Math.round(d * 1000)}m`;
+    return `${d.toFixed(1)}km`;
+  };
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: '우리 동네 소아과', headerShown: true }} />
+      <Stack.Screen options={{ title: '소아과 / 아동병원', headerShown: true }} />
 
-      {/* Radius filter */}
-      <View style={styles.filterSection}>
-        <Text style={styles.filterLabel}>검색 반경</Text>
+      {/* Search bar */}
+      <View style={styles.searchSection}>
+        <View style={styles.searchRow}>
+          <TextInput
+            style={styles.searchInput}
+            value={keyword}
+            onChangeText={setKeyword}
+            placeholder="소아과, 아동병원, 응급실..."
+            placeholderTextColor={COLORS.textLight}
+            returnKeyType="search"
+            onSubmitEditing={handleSearch}
+          />
+          <TouchableOpacity style={styles.searchBtn} onPress={handleSearch}>
+            <Text style={styles.searchBtnText}>검색</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Radius filter */}
         <View style={styles.radiusRow}>
           {RADIUS_OPTIONS.map((r) => {
             const isActive = searchRadius === r;
@@ -308,173 +146,81 @@ export default function ClinicScreen() {
         </View>
       </View>
 
-      {/* Clinic list */}
+      {/* Results */}
       {loading ? (
         <ActivityIndicator color={COLORS.primary} style={styles.loader} />
       ) : clinics.length > 0 ? (
         <ScrollView contentContainerStyle={styles.listContent}>
+          <Text style={styles.resultCount}>
+            {clinics.length}개 병원
+          </Text>
           {clinics.map((clinic) => (
-            <TouchableOpacity
-              key={clinic.id}
-              style={styles.clinicCard}
-              onPress={() => handleSelectClinic(clinic)}
-              activeOpacity={0.7}
-            >
+            <View key={clinic.id} style={styles.clinicCard}>
               <View style={styles.clinicHeader}>
-                <Text style={styles.clinicName}>{clinic.name}</Text>
-                {clinic.distance !== undefined && (
-                  <Text style={styles.clinicDistance}>
-                    {clinic.distance < 1
-                      ? `${Math.round(clinic.distance * 1000)}m`
-                      : `${clinic.distance.toFixed(1)}km`}
-                  </Text>
-                )}
+                <View style={styles.clinicNameRow}>
+                  <Text style={styles.clinicName} numberOfLines={1}>{clinic.name}</Text>
+                  {clinic.hasEmergency && (
+                    <View style={styles.erBadge}>
+                      <Text style={styles.erBadgeText}>응급실</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.clinicDistance}>
+                  {formatDistance(clinic.distance)}
+                </Text>
               </View>
-              <Text style={styles.clinicAddress}>{clinic.address}</Text>
-              <RatingBars ratings={clinic.ratings} />
-              <Text style={styles.clinicReviewCount}>
-                후기 {clinic.reviewCount}개
-              </Text>
-            </TouchableOpacity>
+              <Text style={styles.clinicAddress} numberOfLines={1}>{clinic.address}</Text>
+              {clinic.category ? (
+                <Text style={styles.clinicCategory} numberOfLines={1}>{clinic.category}</Text>
+              ) : null}
+              {clinic.phone ? (
+                <Text style={styles.clinicPhone}>{clinic.phone}</Text>
+              ) : null}
+
+              {/* Action buttons */}
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={() => callPhone(clinic.phone)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.actionIcon}>{'📞'}</Text>
+                  <Text style={styles.actionText}>전화</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={() => openMap(clinic)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.actionIcon}>{'🗺️'}</Text>
+                  <Text style={styles.actionText}>지도</Text>
+                </TouchableOpacity>
+                {clinic.placeUrl ? (
+                  <TouchableOpacity
+                    style={styles.actionBtn}
+                    onPress={() => Linking.openURL(clinic.placeUrl).catch(() => {})}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.actionIcon}>{'ℹ️'}</Text>
+                    <Text style={styles.actionText}>상세</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </View>
           ))}
         </ScrollView>
       ) : (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyEmoji}>{'🏥'}</Text>
           <Text style={styles.emptyText}>
-            주변에 등록된 소아과가 없습니다.
+            주변에 소아과/아동병원을 찾을 수 없습니다.
           </Text>
           <Text style={styles.emptySubText}>
-            검색 반경을 넓혀보세요.
+            검색어를 변경하거나 반경을 넓혀보세요.
           </Text>
         </View>
       )}
-
-      {/* Floating review button */}
-      <TouchableOpacity style={styles.fab} onPress={() => {
-        setFormClinicName('');
-        setFormAddress('');
-        setFormComment('');
-        setFormRatings({ kindness: 0, waitTime: 0, convenience: 0, expertise: 0 });
-        setShowReviewModal(true);
-      }}>
-        <Text style={styles.fabText}>후기 작성</Text>
-      </TouchableOpacity>
-
-      {/* Review Modal */}
-      <ReviewModal
-        visible={showReviewModal}
-        clinicName={formClinicName}
-        address={formAddress}
-        comment={formComment}
-        ratings={formRatings}
-        submitting={submitting}
-        onChangeClinicName={setFormClinicName}
-        onChangeAddress={setFormAddress}
-        onChangeComment={setFormComment}
-        onChangeRating={updateFormRating}
-        onSubmit={handleSubmitReview}
-        onClose={() => setShowReviewModal(false)}
-      />
     </View>
-  );
-}
-
-// ── Review Modal Component ──
-
-function ReviewModal({
-  visible,
-  clinicName,
-  address,
-  comment,
-  ratings,
-  submitting,
-  onChangeClinicName,
-  onChangeAddress,
-  onChangeComment,
-  onChangeRating,
-  onSubmit,
-  onClose,
-}: {
-  visible: boolean;
-  clinicName: string;
-  address: string;
-  comment: string;
-  ratings: ClinicRatings;
-  submitting: boolean;
-  onChangeClinicName: (v: string) => void;
-  onChangeAddress: (v: string) => void;
-  onChangeComment: (v: string) => void;
-  onChangeRating: (key: keyof ClinicRatings, value: number) => void;
-  onSubmit: () => void;
-  onClose: () => void;
-}) {
-  return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.modalTitle}>후기 작성</Text>
-
-            <Text style={styles.inputLabel}>병원 이름</Text>
-            <TextInput
-              style={styles.input}
-              value={clinicName}
-              onChangeText={onChangeClinicName}
-              placeholder="병원 이름을 입력하세요"
-              placeholderTextColor={COLORS.textLight}
-            />
-
-            <Text style={styles.inputLabel}>주소</Text>
-            <TextInput
-              style={styles.input}
-              value={address}
-              onChangeText={onChangeAddress}
-              placeholder="주소를 입력하세요"
-              placeholderTextColor={COLORS.textLight}
-            />
-
-            <Text style={styles.inputLabel}>별점</Text>
-            {RATING_LABELS.map(({ key, label }) => (
-              <StarRow
-                key={key}
-                label={label}
-                value={ratings[key]}
-                onChange={(v) => onChangeRating(key, v)}
-              />
-            ))}
-
-            <Text style={styles.inputLabel}>한줄 후기</Text>
-            <TextInput
-              style={[styles.input, styles.commentInput]}
-              value={comment}
-              onChangeText={(t) => onChangeComment(t.slice(0, 100))}
-              placeholder="후기를 작성해주세요 (최대 100자)"
-              placeholderTextColor={COLORS.textLight}
-              multiline
-              maxLength={100}
-            />
-            <Text style={styles.charCount}>{comment.length}/100</Text>
-
-            <TouchableOpacity
-              style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
-              onPress={onSubmit}
-              disabled={submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <Text style={styles.submitBtnText}>등록하기</Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-              <Text style={styles.cancelBtnText}>취소</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
   );
 }
 
@@ -482,22 +228,43 @@ function ReviewModal({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: SPACING.lg, paddingBottom: 100 },
   listContent: { padding: SPACING.lg, paddingBottom: 100 },
   loader: { marginTop: SPACING.xl },
 
-  // Filter
-  filterSection: {
+  // Search
+  searchSection: {
     backgroundColor: COLORS.surface,
     padding: SPACING.lg,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.borderLight,
+    gap: 10,
   },
-  filterLabel: {
+  searchRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 10,
     fontSize: FONT_SIZE.sm,
-    fontWeight: '600',
     color: COLORS.text,
-    marginBottom: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  searchBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchBtnText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: FONT_SIZE.sm,
   },
   radiusRow: { flexDirection: 'row', gap: 8 },
   radiusBtn: {
@@ -519,6 +286,12 @@ const styles = StyleSheet.create({
   },
   radiusBtnTextActive: { color: COLORS.primary },
 
+  resultCount: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.sm,
+  },
+
   // Clinic card
   clinicCard: {
     backgroundColor: COLORS.surface,
@@ -532,131 +305,76 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
   },
+  clinicNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 8,
+  },
   clinicName: {
     fontSize: FONT_SIZE.md,
     fontWeight: '700',
     color: COLORS.text,
-    flex: 1,
+    flexShrink: 1,
+  },
+  erBadge: {
+    backgroundColor: '#FF3B30',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  erBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   clinicDistance: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.secondary,
     fontWeight: '600',
+    marginLeft: 8,
   },
   clinicAddress: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.textSecondary,
+    marginBottom: 2,
+  },
+  clinicCategory: {
+    fontSize: 11,
+    color: COLORS.textLight,
+    marginBottom: 2,
+  },
+  clinicPhone: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.primary,
+    fontWeight: '500',
     marginBottom: SPACING.sm,
   },
-  clinicReviewCount: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textLight,
-    marginTop: SPACING.xs,
-  },
 
-  // Rating bars
-  ratingBarsContainer: { gap: 6 },
-  ratingBarRow: {
+  // Action buttons
+  actionRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: 8,
+    marginTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+    paddingTop: SPACING.sm,
   },
-  ratingBarLabel: {
-    width: 55,
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-  },
-  ratingBarTrack: {
+  actionBtn: {
     flex: 1,
-    height: 8,
-    backgroundColor: COLORS.borderLight,
-    borderRadius: 4,
-    marginHorizontal: 8,
-    overflow: 'hidden',
-  },
-  ratingBarFill: {
-    height: 8,
-    backgroundColor: COLORS.primary,
-    borderRadius: 4,
-  },
-  ratingBarValue: {
-    width: 28,
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.text,
-    fontWeight: '600',
-    textAlign: 'right',
-  },
-
-  // Detail
-  detailCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.lg,
-  },
-  detailName: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  detailAddress: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.md,
-  },
-  reviewCountText: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textLight,
-    marginTop: SPACING.sm,
-  },
-  sectionTitle: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: SPACING.md,
-  },
-
-  // Review card
-  reviewCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm,
-  },
-  reviewHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.background,
   },
-  reviewUser: {
-    fontSize: FONT_SIZE.sm,
+  actionIcon: { fontSize: 14 },
+  actionText: {
+    fontSize: FONT_SIZE.xs,
     fontWeight: '600',
     color: COLORS.text,
-  },
-  reviewDate: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textLight,
-  },
-  reviewComment: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.sm,
-    lineHeight: 20,
-  },
-
-  // Back button
-  backBtn: {
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    alignItems: 'center',
-    marginTop: SPACING.md,
-  },
-  backBtnText: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
   },
 
   // Empty
@@ -676,115 +394,5 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.sm,
     color: COLORS.textLight,
     marginTop: SPACING.xs,
-  },
-
-  // FAB
-  fab: {
-    position: 'absolute',
-    bottom: 100,
-    right: SPACING.lg,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    elevation: 6,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  fabText: {
-    color: '#FFF',
-    fontWeight: '700',
-    fontSize: FONT_SIZE.sm,
-  },
-
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: RADIUS.xl,
-    borderTopRightRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    maxHeight: '85%',
-  },
-  modalTitle: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: '700',
-    color: COLORS.text,
-    textAlign: 'center',
-    marginBottom: SPACING.lg,
-  },
-
-  // Form
-  inputLabel: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
-    marginTop: SPACING.md,
-  },
-  input: {
-    backgroundColor: COLORS.background,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.text,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  commentInput: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  charCount: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textLight,
-    textAlign: 'right',
-    marginTop: 4,
-  },
-
-  // Stars
-  starRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  starLabel: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    width: 60,
-  },
-  starsContainer: { flexDirection: 'row', gap: 4 },
-  star: { fontSize: 24, color: COLORS.borderLight },
-  starActive: { color: '#FFB800' },
-
-  // Submit
-  submitBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    alignItems: 'center',
-    marginTop: SPACING.lg,
-  },
-  submitBtnDisabled: { opacity: 0.5 },
-  submitBtnText: {
-    color: '#FFF',
-    fontWeight: '700',
-    fontSize: FONT_SIZE.md,
-  },
-  cancelBtn: {
-    padding: SPACING.md,
-    alignItems: 'center',
-    marginTop: SPACING.sm,
-  },
-  cancelBtnText: {
-    color: COLORS.textSecondary,
-    fontSize: FONT_SIZE.sm,
   },
 });

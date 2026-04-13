@@ -24,6 +24,7 @@ const ALL_TRACKER_TABS: Record<TrackerTab, TrackerTabConfig> = {
 
 // 연령별 활성 트래커 탭
 const TRACKER_TABS_BY_AGE: Record<AgeGroupKey, TrackerTab[]> = {
+  pregnant: ['feeding', 'sleep'],               // 임산부: 영양/수면만
   infant: ['diaper', 'feeding', 'sleep'],
   toddler: ['diaper', 'feeding', 'sleep'],    // 배변훈련 시기라 유지
   elementary: ['feeding', 'sleep'],             // 기저귀 제거
@@ -41,6 +42,11 @@ export interface FeedingType {
 }
 
 const FEEDING_TYPES_BY_AGE: Record<AgeGroupKey, FeedingType[]> = {
+  pregnant: [
+    { key: 'meal', label: '식사' },
+    { key: 'snack', label: '간식' },
+    { key: 'supplement', label: '영양제' },
+  ],
   infant: [
     { key: 'breast', label: '모유' },
     { key: 'formula', label: '분유' },
@@ -72,6 +78,15 @@ export interface CoachingCategory {
 }
 
 const COACHING_CATEGORIES_BY_AGE: Record<AgeGroupKey, CoachingCategory[]> = {
+  pregnant: [
+    { key: 'symptoms', label: '증상/입덧', emoji: '🤢' },
+    { key: 'nutrition', label: '영양', emoji: '🥗' },
+    { key: 'checkup', label: '검진', emoji: '🏥' },
+    { key: 'exercise', label: '운동', emoji: '🧘' },
+    { key: 'emotion', label: '감정/심리', emoji: '💭' },
+    { key: 'birth_prep', label: '출산준비', emoji: '🍼' },
+    { key: 'etc', label: '기타', emoji: '💬' },
+  ],
   infant: [
     { key: 'crying', label: '울음', emoji: '😢' },
     { key: 'sleep', label: '수면', emoji: '😴' },
@@ -116,8 +131,14 @@ export interface QuickMenu {
 }
 
 const HOME_MENUS_BY_AGE: Record<AgeGroupKey, QuickMenu[]> = {
+  pregnant: [
+    { key: 'tracker', label: '임신기록', route: '/(main)/pregnancy', emoji: '📝' },
+    { key: 'growth', label: '주수별 발달', route: '/(main)/pregnancy', emoji: '📊' },
+    { key: 'clinic', label: '산부인과', route: '/(main)/clinic', emoji: '🏥' },
+  ],
   infant: [
     { key: 'tracker', label: '육아기록', route: '/(main)/baby-tracker', emoji: '📝' },
+    { key: 'vaccine', label: '접종달력', route: '/(main)/vaccination', emoji: '💉' },
     { key: 'cry', label: '울음분석', route: '/(main)/cry-analyzer', emoji: '😢' },
     { key: 'poop', label: '대변분석', route: '/(main)/poop-analyzer', emoji: '💩' },
     { key: 'growth', label: '성장통계', route: '/(main)/growth-stats', emoji: '📊' },
@@ -125,6 +146,7 @@ const HOME_MENUS_BY_AGE: Record<AgeGroupKey, QuickMenu[]> = {
   ],
   toddler: [
     { key: 'tracker', label: '육아기록', route: '/(main)/baby-tracker', emoji: '📝' },
+    { key: 'vaccine', label: '접종달력', route: '/(main)/vaccination', emoji: '💉' },
     { key: 'poop', label: '배변분석', route: '/(main)/poop-analyzer', emoji: '🚽' },
     { key: 'growth', label: '성장통계', route: '/(main)/growth-stats', emoji: '📊' },
     { key: 'play', label: '놀이/학습', route: '/(main)/play-learning', emoji: '🎨' },

@@ -20,7 +20,7 @@ export function CheckinCard({ onSelect }: Props) {
     >
       <View style={styles.avatarRow}>
         <Image source={IC_COACH} style={styles.avatarImg} resizeMode="cover" />
-        <Text style={styles.coachLabel}>AI {'코치'}</Text>
+        <Text style={styles.coachLabel}>{'상담이모'}</Text>
       </View>
       <Text style={styles.question}>
         {'오늘 아이의 컨디션은 어떤가요?'}

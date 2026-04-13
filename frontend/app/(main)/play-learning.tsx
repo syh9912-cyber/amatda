@@ -29,9 +29,10 @@ export default function PlayLearningScreen() {
   const selectedChild = useChildStore((s) => s.selectedChild);
 
   const temperamentKey = resolvePlayTemperament(
-    selectedChild?.innateData.dominantType ?? '',
+    selectedChild?.innateData?.dominantType ?? '',
   );
-  const ageGroup = selectedChild?.ageInfo.group ?? 'toddler';
+  const rawGroup = selectedChild?.ageInfo.group ?? 'toddler';
+  const ageGroup = rawGroup === 'pregnant' ? 'infant' as const : rawGroup;
   const allActivities = PLAY_ACTIVITIES[temperamentKey];
   const filtered = allActivities.filter((a) =>
     a.ageGroups.includes(ageGroup),
@@ -43,7 +44,7 @@ export default function PlayLearningScreen() {
 
   const childName = selectedChild?.name ?? '';
   const dominantLabel =
-    selectedChild?.innateData.dominantType.split('(')[0] ?? '';
+    selectedChild?.innateData?.dominantType?.split('(')[0] ?? '';
 
   return (
     <View style={styles.screen}>

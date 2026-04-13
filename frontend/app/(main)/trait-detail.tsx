@@ -24,7 +24,8 @@ export default function TraitDetailScreen() {
 
   if (!child) return null;
 
-  const { innateData, analysisReport } = child;
+  const innateData = child.innateData;
+  const analysisReport = child.analysisReport;
   const analysisDate = child.birthDate
     ? child.birthDate.replace(/-/g, '.')
     : '';
@@ -35,7 +36,7 @@ export default function TraitDetailScreen() {
       : '';
 
     const lines: string[] = [
-      `${child.name}의 기질 유형: ${innateData.label}`,
+      `${child.name}의 기질 유형: ${innateData?.label ?? ''}`,
     ];
 
     if (personalityTraits) {
@@ -131,9 +132,10 @@ function SummaryContent({
   summary,
 }: {
   name: string;
-  innateData: { fiveElements: Record<string, number>; dominantType: string; label: string };
+  innateData: { fiveElements: Record<string, number>; dominantType: string; label: string } | null;
   summary: string | undefined;
 }) {
+  if (!innateData) return null;
   return (
     <>
       <TraitTypeCard

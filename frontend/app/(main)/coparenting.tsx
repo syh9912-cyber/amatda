@@ -35,8 +35,8 @@ interface FamilyMember {
 const PERMISSION_LIST = [
   { key: 'viewRecords', label: '육아 기록 열람', desc: '수유/수면/기저귀 기록 보기', icon: '📋' },
   { key: 'editRecords', label: '육아 기록 작성', desc: '기록 추가/수정', icon: '✏️' },
-  { key: 'viewCoaching', label: 'AI 코칭 열람', desc: 'AI 상담 내역 보기', icon: '💬' },
-  { key: 'useCoaching', label: 'AI 코칭 사용', desc: '직접 AI에 질문하기', icon: '🤖' },
+  { key: 'viewCoaching', label: '상담이모 열람', desc: '상담 내역 보기', icon: '💬' },
+  { key: 'useCoaching', label: '상담이모 사용', desc: '직접 상담이모에 질문하기', icon: '🤖' },
   { key: 'viewGrowth', label: '성장 통계 열람', desc: '성장 분석/그래프 보기', icon: '📊' },
   { key: 'viewTimeline', label: '타임라인 열람', desc: '성장 사진 보기', icon: '📸' },
   { key: 'editTimeline', label: '타임라인 추가', desc: '사진/마일스톤 추가', icon: '🖼' },
@@ -370,7 +370,7 @@ export default function CoparentingScreen() {
               <Text style={styles.benefitItem}>{'•'} 아빠가 수유 기록하면 엄마에게 즉시 반영</Text>
               <Text style={styles.benefitItem}>{'•'} 조부모는 열람만 가능해서 기록 실수 방지</Text>
               <Text style={styles.benefitItem}>{'•'} 도우미에게 필요한 권한만 부여 가능</Text>
-              <Text style={styles.benefitItem}>{'•'} 모든 가족의 기록이 AI 코칭에 반영</Text>
+              <Text style={styles.benefitItem}>{'•'} 모든 가족의 기록이 상담이모에 반영</Text>
             </View>
           </>
         )}

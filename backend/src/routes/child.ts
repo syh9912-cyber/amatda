@@ -47,11 +47,19 @@ function formatChild(id: string, data: Record<string, unknown>) {
       : ageInfo,
     height: typeof data.height === 'number' ? data.height : null,
     weight: typeof data.weight === 'number' ? data.weight : null,
+    // 건강 정보
+    bloodType: (data.bloodType as string) || null,
+    specialNotes: (data.specialNotes as string) || null,
     // 임신 전용 필드
     isPregnant,
     dueDate: (data.dueDate as string) || null,
     pregnancyWeeks,
     pregnancyNotes: (data.pregnancyNotes as string) || null,
+    // 산모 건강 정보
+    momHeight: typeof data.momHeight === 'number' ? data.momHeight : null,
+    momWeight: typeof data.momWeight === 'number' ? data.momWeight : null,
+    momBloodType: (data.momBloodType as string) || null,
+    momSpecialNotes: (data.momSpecialNotes as string) || null,
   };
 }
 

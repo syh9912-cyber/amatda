@@ -23,16 +23,26 @@ import { useChildStore } from '../../stores/childStore';
 type SeverityLevel = 'EMERGENCY' | 'HOSPITAL' | 'URGENT' | 'MONITOR';
 
 interface SymptomCheckResult {
-  level: SeverityLevel;
+  urgency: SeverityLevel;
   message: string;
   actions: string[];
+  showEmergencyCall: boolean;
+}
+
+interface DoseInfo {
+  doseMg: string;
+  syrupMl: string;
+  interval: string;
+  maxDaily: string;
+  ageRestriction?: string;
 }
 
 interface MedicineDose {
-  tylenol: { tablet: string; syrup: string };
-  ibuprofen: { tablet: string; syrup: string };
-  warningInfant: boolean;
-  schedule: string[];
+  childWeight: number;
+  acetaminophen: DoseInfo;
+  ibuprofen: DoseInfo;
+  alternatingSchedule: string[];
+  warning: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -62,11 +72,24 @@ interface SymptomItem {
 
 const SYMPTOMS: SymptomItem[] = [
   { id: 'fever', emoji: '🌡️', label: '발열 38+' },
-  { id: 'vomit', emoji: '🤢', label: '구토/설사' },
+  { id: 'vomiting', emoji: '🤢', label: '구토/설사' },
   { id: 'seizure', emoji: '⚡', label: '경련' },
   { id: 'breathing', emoji: '💨', label: '호흡곤란' },
   { id: 'bleeding', emoji: '🩸', label: '출혈/상처' },
   { id: 'rash', emoji: '🔴', label: '발진/두드러기' },
+];
+
+const PREGNANCY_SYMPTOMS: SymptomItem[] = [
+  { id: 'bleeding', emoji: '🩸', label: '출혈' },
+  { id: 'severe_pain', emoji: '😣', label: '심한 복통' },
+  { id: 'headache', emoji: '🤕', label: '심한 두통' },
+  { id: 'swelling', emoji: '🦶', label: '심한 부종' },
+  { id: 'vision', emoji: '👁️', label: '시야 흐림' },
+  { id: 'leaking', emoji: '💧', label: '양수 파수' },
+  { id: 'no_movement', emoji: '🤰', label: '태동 감소' },
+  { id: 'fever', emoji: '🌡️', label: '발열 38+' },
+  { id: 'breathing', emoji: '💨', label: '호흡곤란' },
+  { id: 'contractions', emoji: '⏱️', label: '규칙적 수축' },
 ];
 
 const SEVERITY_CONFIG: Record<SeverityLevel, {
@@ -108,6 +131,8 @@ const SEVERITY_CONFIG: Record<SeverityLevel, {
 export default function SOSScreen() {
   const insets = useSafeAreaInsets();
   const { selectedChild } = useChildStore();
+  const isPregnant = selectedChild?.isPregnant === true;
+  const activeSymptoms = isPregnant ? PREGNANCY_SYMPTOMS : SYMPTOMS;
 
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [temperature, setTemperature] = useState('');
@@ -157,7 +182,7 @@ export default function SOSScreen() {
       const data = res.data?.data as SymptomCheckResult | undefined;
       if (data) {
         setResult(data);
-        if (temp && temp >= 37.5) {
+        if (!isPregnant && temp && temp >= 37.5) {
           setShowFeverCalc(true);
           loadMedicineDose();
         }
@@ -220,7 +245,7 @@ export default function SOSScreen() {
     setNotifyingFamily(true);
     try {
       const symptomLabels = selectedSymptoms
-        .map((id) => SYMPTOMS.find((s) => s.id === id)?.label ?? id)
+        .map((id) => activeSymptoms.find((s) => s.id === id)?.label ?? id)
         .join(', ');
       const situation = temperature
         ? `${symptomLabels} (체온 ${temperature}도)`
@@ -236,10 +261,11 @@ export default function SOSScreen() {
 
   /* -- Open hospital map -- */
   const openHospitalMap = useCallback(() => {
-    Linking.openURL('https://map.kakao.com/link/search/소아과+응급').catch(() => {
+    const query = isPregnant ? '산부인과+응급' : '소아과+응급';
+    Linking.openURL(`https://map.kakao.com/link/search/${query}`).catch(() => {
       Alert.alert('오류', '지도 앱을 열 수 없습니다.');
     });
-  }, []);
+  }, [isPregnant]);
 
   /* -- Render -- */
   return (
@@ -255,7 +281,7 @@ export default function SOSScreen() {
         <View style={styles.titleBar}>
           <Text style={styles.screenTitle}>SOS</Text>
           <Text style={styles.screenSubtitle}>
-            {selectedChild ? `${selectedChild.name}` : '응급 도우미'}
+            {selectedChild ? (isPregnant ? `${selectedChild.name} 엄마` : selectedChild.name) : '응급 도우미'}
           </Text>
         </View>
 
@@ -282,11 +308,11 @@ export default function SOSScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>증상 빠른 확인</Text>
           <Text style={styles.sectionDesc}>
-            해당하는 증상을 모두 선택해주세요
+            {isPregnant ? '엄마/태아 관련 증상을 선택해주세요' : '해당하는 증상을 모두 선택해주세요'}
           </Text>
 
           <View style={styles.symptomGrid}>
-            {SYMPTOMS.map((symptom) => {
+            {activeSymptoms.map((symptom) => {
               const isSelected = selectedSymptoms.includes(symptom.id);
               return (
                 <TouchableOpacity
@@ -351,9 +377,9 @@ export default function SOSScreen() {
         </View>
 
         {/* ============================================ */}
-        {/* Section 3: Fever Medicine Calculator         */}
+        {/* Section 3: Fever Medicine Calculator (아기만) */}
         {/* ============================================ */}
-        {!showFeverCalc && (
+        {!isPregnant && !showFeverCalc && (
           <TouchableOpacity
             style={styles.feverCalcToggle}
             onPress={() => {
@@ -367,7 +393,7 @@ export default function SOSScreen() {
           </TouchableOpacity>
         )}
 
-        {showFeverCalc && (
+        {!isPregnant && showFeverCalc && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>해열제 계산기</Text>
             {feverLoading ? (
@@ -399,7 +425,7 @@ export default function SOSScreen() {
             activeOpacity={0.7}
           >
             <Text style={styles.quickActionIcon}>{'🏥'}</Text>
-            <Text style={styles.quickActionText}>가까운 병원 찾기</Text>
+            <Text style={styles.quickActionText}>{isPregnant ? '가까운 산부인과 찾기' : '가까운 병원 찾기'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -438,7 +464,7 @@ function ResultCard({
   onCall119: () => void;
   onOpenMap: () => void;
 }) {
-  const config = SEVERITY_CONFIG[result.level];
+  const config = SEVERITY_CONFIG[result.urgency];
 
   return (
     <View
@@ -465,7 +491,7 @@ function ResultCard({
         </View>
       )}
 
-      {result.level === 'EMERGENCY' && (
+      {result.urgency === 'EMERGENCY' && (
         <TouchableOpacity
           style={[styles.resultBtn, { backgroundColor: EMERGENCY_RED }]}
           onPress={onCall119}
@@ -475,7 +501,7 @@ function ResultCard({
         </TouchableOpacity>
       )}
 
-      {(result.level === 'URGENT' || result.level === 'HOSPITAL') && (
+      {(result.urgency === 'URGENT' || result.urgency === 'HOSPITAL') && (
         <TouchableOpacity
           style={[styles.resultBtn, { backgroundColor: config.border }]}
           onPress={onOpenMap}
@@ -497,7 +523,13 @@ function MedicineCard({
 }) {
   return (
     <View style={styles.medicineCard}>
-      {/* Tylenol */}
+      {/* 체중 기준 */}
+      <View style={styles.weightRow}>
+        <Text style={styles.weightLabel}>체중 기준</Text>
+        <Text style={styles.weightValue}>{dose.childWeight}kg</Text>
+      </View>
+
+      {/* Tylenol (acetaminophen) */}
       <View style={styles.medicineRow}>
         <View style={[styles.medicineBadge, { backgroundColor: '#E3F2FD' }]}>
           <Text style={[styles.medicineBadgeText, { color: '#1565C0' }]}>
@@ -506,10 +538,13 @@ function MedicineCard({
         </View>
         <View style={styles.medicineDoseWrap}>
           <Text style={styles.medicineDoseText}>
-            {dose.tylenol.tablet}
+            {dose.acetaminophen.doseMg}
           </Text>
           <Text style={styles.medicineSyrup}>
-            시럽 {dose.tylenol.syrup}
+            {dose.acetaminophen.syrupMl}
+          </Text>
+          <Text style={styles.medicineInterval}>
+            {dose.acetaminophen.interval} / {dose.acetaminophen.maxDaily}
           </Text>
         </View>
       </View>
@@ -523,29 +558,32 @@ function MedicineCard({
         </View>
         <View style={styles.medicineDoseWrap}>
           <Text style={styles.medicineDoseText}>
-            {dose.ibuprofen.tablet}
+            {dose.ibuprofen.doseMg}
           </Text>
           <Text style={styles.medicineSyrup}>
-            시럽 {dose.ibuprofen.syrup}
+            {dose.ibuprofen.syrupMl}
+          </Text>
+          <Text style={styles.medicineInterval}>
+            {dose.ibuprofen.interval} / {dose.ibuprofen.maxDaily}
           </Text>
         </View>
       </View>
 
-      {/* Infant warning */}
-      {dose.warningInfant && (
+      {/* Age restriction warning */}
+      {dose.ibuprofen.ageRestriction && (
         <View style={styles.warningBox}>
           <Text style={styles.warningIcon}>{'⚠️'}</Text>
           <Text style={styles.warningText}>
-            6개월 미만 영아는 이부프로펜(부루펜) 복용을 피해주세요.
+            {dose.ibuprofen.ageRestriction}
           </Text>
         </View>
       )}
 
       {/* Schedule */}
-      {dose.schedule.length > 0 && (
+      {dose.alternatingSchedule.length > 0 && (
         <View style={styles.scheduleSection}>
           <Text style={styles.scheduleTitle}>교대 복용 스케줄</Text>
-          {dose.schedule.map((item, idx) => (
+          {dose.alternatingSchedule.map((item, idx) => (
             <View key={`sched-${idx}`} style={styles.scheduleRow}>
               <View
                 style={[
@@ -558,6 +596,12 @@ function MedicineCard({
           ))}
         </View>
       )}
+
+      {/* Warning */}
+      <View style={styles.warningBox}>
+        <Text style={styles.warningIcon}>{'💡'}</Text>
+        <Text style={styles.warningText}>{dose.warning}</Text>
+      </View>
 
       {/* Notification button */}
       <TouchableOpacity
@@ -826,6 +870,30 @@ const styles = StyleSheet.create({
   /* Medicine card */
   medicineCard: {
     marginTop: 12,
+  },
+  weightRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: COLOR.border,
+  },
+  weightLabel: {
+    fontSize: 13,
+    color: COLOR.textSub,
+  },
+  weightValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLOR.text,
+  },
+  medicineInterval: {
+    fontSize: 12,
+    color: COLOR.accent,
+    marginTop: 2,
+    fontWeight: '500',
   },
   medicineRow: {
     flexDirection: 'row',

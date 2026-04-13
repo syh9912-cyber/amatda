@@ -9,6 +9,7 @@ import { registerParentMentalHandler } from './parentMental.handler';
 import { registerFuturePredictHandler } from './futurePredict.handler';
 import { registerNowActivityHandler } from './nowActivity.handler';
 import { registerAnalyzeMediaHandler } from './analyzeMedia.handler';
+import { registerDailyInsightHandler } from './dailyInsight.handler';
 
 const router = Router();
 
@@ -22,5 +23,6 @@ registerParentMentalHandler(router);
 registerFuturePredictHandler(router);
 registerNowActivityHandler(router);
 registerAnalyzeMediaHandler(router);
+registerDailyInsightHandler(router);
 
 export default router;
