@@ -34,6 +34,7 @@ export async function generateAutoDiary(
   childName: string,
   ageInfo: string,
   temperament: string,
+  isPregnant?: boolean,
 ): Promise<AutoDiary | null> {
   const today = new Date().toISOString().slice(0, 10);
 
@@ -45,8 +46,32 @@ export async function generateAutoDiary(
     return null;
   }
 
+  // 임산부: 트래킹 데이터 없어도 코칭 세션만으로 생성 가능
+  if (isPregnant && !dayData.notes && dayData.coachingSessions.length === 0) {
+    // 임신 기록 확인
+    try {
+      const recSnap = await collections.pregnancyRecords
+        .where('childId', '==', childId)
+        .orderBy('createdAt', 'desc')
+        .limit(3)
+        .get();
+      if (!recSnap.empty) {
+        const recNotes = recSnap.docs.map((d) => {
+          const r = d.data() as Record<string, unknown>;
+          return `${r.title ?? ''}: ${(r.content as string ?? '').slice(0, 50)}`;
+        }).join(', ');
+        dayData.notes = recNotes;
+      }
+    } catch { /* ignore */ }
+  }
+
+  // 데이터가 전혀 없으면 생성 불가 (재확인)
+  if (!dayData.sleep && !dayData.feeding && !dayData.diaper && !dayData.notes && dayData.coachingSessions.length === 0) {
+    return null;
+  }
+
   // 2. AI 일기 생성
-  const diary = await writeDiary(childName, ageInfo, temperament, today, dayData);
+  const diary = await writeDiary(childName, ageInfo, temperament, today, dayData, isPregnant);
 
   // 3. 감정 점수 산출 (일기 텍스트 + 원본 메모/노트에서 감정 키워드 감지)
   const textForScoring = [diary.diary, dayData.notes || '', dayData.feeding?.note || ''].join(' ');
@@ -126,13 +151,14 @@ async function writeDiary(
   temperament: string,
   date: string,
   data: DayData,
+  isPregnant?: boolean,
 ): Promise<AutoDiary> {
   // 하이라이트 추출
   const highlights: string[] = [];
   if (data.sleep?.totalHours) highlights.push(`수면 ${data.sleep.totalHours}시간`);
   if (data.feeding?.mealCount) highlights.push(`식사 ${data.feeding.mealCount}회`);
   if (data.diaper?.poopCount) highlights.push(`배변 ${data.diaper.poopCount}회`);
-  if (data.coachingSessions.length > 0) highlights.push(`AI상담 ${data.coachingSessions.length}건`);
+  if (data.coachingSessions.length > 0) highlights.push(`상담이모 ${data.coachingSessions.length}건`);
   if (data.notes) highlights.push(data.notes.slice(0, 20));
 
   // 무드 판단
@@ -149,7 +175,26 @@ async function writeDiary(
         ? data.coachingSessions.map((s) => `${s.category}: "${s.message}" → "${s.answer}"`).join('\n')
         : '오늘은 상담 없음';
 
-      const prompt = `너는 육아 일기 작가다. 아래 데이터를 바탕으로 따뜻한 육아일기를 써라.
+      const prompt = isPregnant
+        ? `너는 임산부 일기 작가다. 아래 데이터를 바탕으로 따뜻한 임신일기를 써라.
+
+태명: ${childName} (${ageInfo})
+날짜: ${date}
+
+오늘의 기록:
+${dataDesc}
+
+오늘의 상담:
+${coachingDesc}
+
+규칙:
+- 3~5문장. 임산부 시점 일기체로.
+- 데이터를 자연스러운 이야기로 녹여라. 숫자 나열 금지.
+- 태명을 사용하고, 임신 주수에 맞는 감성을 담아라.
+- 몸이 힘든 날이면 위로를, 좋은 날이면 기쁨을 함께 나눠라.
+- 마지막 문장은 아가에 대한 기대나 따뜻한 마무리로.
+- 100~200자 사이.`
+        : `너는 육아 일기 작가다. 아래 데이터를 바탕으로 따뜻한 육아일기를 써라.
 
 아이: ${childName} (${ageInfo}, ${temperament} 기질)
 날짜: ${date}

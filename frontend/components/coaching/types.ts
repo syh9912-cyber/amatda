@@ -39,6 +39,7 @@ export const COACHING_COLORS = {
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 export const CONCERN_CATEGORIES = [
+  // Baby categories
   { icon: require('../../assets/cat-crying.png') as number, label: '울음', key: 'crying' },
   { icon: require('../../assets/cat-sleep.png') as number, label: '수면', key: 'sleep' },
   { icon: require('../../assets/cat-eating.png') as number, label: '식사', key: 'eating' },
@@ -47,12 +48,20 @@ export const CONCERN_CATEGORIES = [
   { icon: require('../../assets/cat-growth.png') as number, label: '성장', key: 'growth' },
   { icon: require('../../assets/cat-behavior.png') as number, label: '행동', key: 'behavior' },
   { icon: require('../../assets/cat-etc.png') as number, label: '기타', key: 'etc' },
+  // Pregnancy categories
+  { icon: require('../../assets/cat-etc.png') as number, label: '임신 증상', key: 'symptoms' },
+  { icon: require('../../assets/cat-eating.png') as number, label: '영양/식단', key: 'nutrition' },
+  { icon: require('../../assets/cat-growth.png') as number, label: '검진/검사', key: 'checkup' },
+  { icon: require('../../assets/cat-behavior.png') as number, label: '산모 운동', key: 'exercise' },
+  { icon: require('../../assets/cat-social.png') as number, label: '감정/멘탈', key: 'emotion' },
+  { icon: require('../../assets/cat-crying.png') as number, label: '출산 준비', key: 'birth_prep' },
 ];
 
 // 연령별 카테고리 필터 (key 기준)
 import type { AgeGroupKey } from '../../constants/ageGroups';
 
 const CATEGORY_KEYS_BY_AGE: Record<AgeGroupKey, string[]> = {
+  pregnant: ['symptoms', 'nutrition', 'checkup', 'exercise', 'emotion', 'birth_prep', 'etc'],
   infant: ['crying', 'sleep', 'eating', 'poop', 'growth', 'behavior', 'etc'],
   toddler: ['sleep', 'eating', 'poop', 'behavior', 'social', 'growth', 'etc'],
   elementary: ['eating', 'sleep', 'behavior', 'social', 'growth', 'etc'],

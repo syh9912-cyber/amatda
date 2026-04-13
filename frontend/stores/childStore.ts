@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 interface AgeInfo {
   months: number;
-  group: 'infant' | 'toddler' | 'elementary';
+  group: 'pregnant' | 'infant' | 'toddler' | 'elementary';
   label: string;
 }
 
@@ -54,17 +54,28 @@ export interface AnalysisReport {
 export interface Child {
   id: string;
   name: string;
-  gender: 'M' | 'F';
-  birthDate: string;
-  birthTime: string;
+  gender: 'M' | 'F' | 'U';
+  birthDate: string | null;
+  birthTime: string | null;
   photoUri: string | null;
-  innateData: InnateDataPublic;
+  innateData: InnateDataPublic | null;
   baseline: Record<string, unknown> | null;
   observedTraits: Record<string, unknown> | null;
   analysisReport: AnalysisReport | null;
   ageInfo: AgeInfo;
   height?: number | null;
   weight?: number | null;
+  bloodType?: string | null;
+  specialNotes?: string | null;
+  // 임산부 전용
+  isPregnant?: boolean;
+  dueDate?: string | null;
+  pregnancyWeeks?: number | null;
+  pregnancyNotes?: string | null;
+  momHeight?: number | null;
+  momWeight?: number | null;
+  momBloodType?: string | null;
+  momSpecialNotes?: string | null;
 }
 
 interface ChildState {

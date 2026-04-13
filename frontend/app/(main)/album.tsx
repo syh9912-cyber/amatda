@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,11 +12,13 @@ import {
   Dimensions,
   ImageSourcePropType,
   Switch,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useChildStore } from '../../stores/childStore';
-import { momstagramApi } from '../../services/api';
+import { momstagramApi, coachingApi, pregnancyApi } from '../../services/api';
 import { useMomstagramStore } from '../../stores/momstagramStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { PhotoViewer } from '../../components/album/PhotoViewer';
@@ -455,7 +457,406 @@ function formatDate(d: Date): string {
 /* Screen                                                              */
 /* ------------------------------------------------------------------ */
 
+interface TimeCapsule {
+  id: string;
+  message: string;
+  createdAt: string;
+  openAt: string;
+  opened: boolean;
+}
+
+/* ------------------------------------------------------------------ */
+/* Pregnancy Timeline (for pregnant users)                             */
+/* ------------------------------------------------------------------ */
+
+interface PregnancyTimelineWeek {
+  week: number;
+  items: Array<{
+    id: string;
+    source: string;
+    type: string;
+    title: string;
+    emoji?: string;
+    content?: string;
+    mediaUri?: string;
+    mediaType?: string;
+    createdAt: string;
+  }>;
+}
+
+function PregnancyTimeline() {
+  const child = useChildStore((s) => s.selectedChild);
+  const childId = child?.id ?? '';
+  const currentWeek = child?.pregnancyWeeks ?? 0;
+  const [timeline, setTimeline] = useState<PregnancyTimelineWeek[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  /* AI Diary */
+  const [diaryText, setDiaryText] = useState<string | null>(null);
+  const [diaryLoading, setDiaryLoading] = useState(false);
+  const [diaryDate, setDiaryDate] = useState<string | null>(null);
+
+  /* Time Capsule */
+  const [capsules, setCapsules] = useState<TimeCapsule[]>([]);
+  const [capsuleModal, setCapsuleModal] = useState(false);
+  const [capsuleMsg, setCapsuleMsg] = useState('');
+  const [capsuleMonths, setCapsuleMonths] = useState(3);
+  const [capsuleLoading, setCapsuleLoading] = useState(false);
+
+  const loadTimeline = useCallback(async () => {
+    if (!childId) return;
+    try {
+      const res = await pregnancyApi.getTimeline(childId);
+      setTimeline(res.data.data ?? []);
+    } catch { /* silent */ }
+  }, [childId]);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      await loadTimeline();
+      setLoading(false);
+    })();
+  }, [loadTimeline]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadTimeline();
+    setRefreshing(false);
+  };
+
+  const handleDelete = (id: string) => {
+    if (id.startsWith('dev-')) return;
+    Alert.alert('삭제', '이 기록을 삭제할까요?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제', style: 'destructive',
+        onPress: async () => {
+          try {
+            await pregnancyApi.deleteRecord(id);
+            loadTimeline();
+          } catch { Alert.alert('오류', '삭제에 실패했습니다'); }
+        },
+      },
+    ]);
+  };
+
+  /* -- AI Diary -- */
+  const generateDiary = useCallback(async () => {
+    if (!childId) return;
+    setDiaryLoading(true);
+    try {
+      const res = await coachingApi.dailyDiary(childId);
+      const data = res.data?.data as { diary?: string; date?: string } | undefined;
+      if (data?.diary) {
+        setDiaryText(data.diary);
+        setDiaryDate(data.date ?? new Date().toISOString().slice(0, 10));
+      } else {
+        Alert.alert('알림', '오늘의 기록이 아직 없어서 일기를 생성할 수 없어요.');
+      }
+    } catch {
+      Alert.alert('오류', 'AI 일기 생성에 실패했습니다.');
+    } finally {
+      setDiaryLoading(false);
+    }
+  }, [childId]);
+
+  /* -- Time Capsule -- */
+  const loadCapsules = useCallback(async () => {
+    if (!childId) return;
+    try {
+      const res = await coachingApi.listTimeCapsules(childId);
+      const data = res.data?.data as TimeCapsule[] | undefined;
+      if (Array.isArray(data)) setCapsules(data);
+    } catch { /* ignore */ }
+  }, [childId]);
+
+  const createCapsule = useCallback(async () => {
+    if (!childId || !capsuleMsg.trim()) return;
+    setCapsuleLoading(true);
+    try {
+      await coachingApi.createTimeCapsule(childId, capsuleMsg.trim(), capsuleMonths as 3 | 6 | 12);
+      Alert.alert('타임캡슐 저장', `${capsuleMonths}개월 후에 열어볼 수 있어요!`);
+      setCapsuleMsg('');
+      setCapsuleModal(false);
+      loadCapsules();
+    } catch {
+      Alert.alert('오류', '타임캡슐 저장에 실패했습니다.');
+    } finally {
+      setCapsuleLoading(false);
+    }
+  }, [childId, capsuleMsg, capsuleMonths, loadCapsules]);
+
+  const openCapsule = useCallback(async (capsuleId: string) => {
+    try {
+      const res = await coachingApi.openTimeCapsule(capsuleId);
+      const data = res.data?.data as { message?: string } | undefined;
+      if (data?.message) {
+        Alert.alert('타임캡슐', data.message);
+      }
+      loadCapsules();
+    } catch {
+      Alert.alert('오류', '아직 열 수 없는 타임캡슐이에요.');
+    }
+  }, [loadCapsules]);
+
+  return (
+    <View style={styles.container}>
+      <Stack.Screen options={{ title: `${child?.name ?? '아가'} 임신 타임라인`, headerShown: true }} />
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <Text style={styles.childLabel}>{child?.name ?? '아가'}의 임신 타임라인</Text>
+
+        {/* Current week badge */}
+        {currentWeek > 0 && (
+          <View style={pStyles.currentBadge}>
+            <Text style={pStyles.currentBadgeText}>{'🤰'} 현재 임신 {currentWeek}주차</Text>
+          </View>
+        )}
+
+        {/* AI Diary + Time Capsule Actions */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={generateDiary}
+            activeOpacity={0.7}
+            disabled={diaryLoading}
+          >
+            {diaryLoading ? (
+              <ActivityIndicator color={COLORS.primary} size="small" />
+            ) : (
+              <>
+                <Text style={styles.actionEmoji}>{'📝'}</Text>
+                <Text style={styles.actionTitle}>AI 오늘 일기</Text>
+                <Text style={styles.actionSub}>임신 기록 자동 정리</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => { setCapsuleModal(true); loadCapsules(); }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionEmoji}>{'💌'}</Text>
+            <Text style={styles.actionTitle}>타임캡슐</Text>
+            <Text style={styles.actionSub}>
+              {capsules.filter((c) => !c.opened).length > 0
+                ? `${capsules.filter((c) => !c.opened).length}개 보관 중`
+                : '소중한 순간 보관'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* AI Diary Result */}
+        {diaryText && (
+          <View style={styles.diaryCard}>
+            <View style={styles.diaryHeader}>
+              <Text style={styles.diaryHeaderText}>{'📝'} AI 일기 - {diaryDate}</Text>
+              <TouchableOpacity onPress={() => setDiaryText(null)}>
+                <Text style={styles.diaryClose}>{'✕'}</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.diaryBody}>{diaryText}</Text>
+          </View>
+        )}
+
+        {loading && <ActivityIndicator style={{ marginTop: 20 }} color={COLORS.primary} />}
+
+        {/* Timeline weeks */}
+        {timeline.map((weekGroup) => (
+          <View key={weekGroup.week} style={pStyles.weekGroup}>
+            <View style={pStyles.weekHeaderRow}>
+              <View style={[pStyles.weekBadge, weekGroup.week === currentWeek && pStyles.weekBadgeCurrent]}>
+                <Text style={pStyles.weekBadgeText}>임신 {weekGroup.week}주차</Text>
+              </View>
+              <View style={pStyles.weekLine} />
+            </View>
+
+            {weekGroup.items.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  pStyles.card,
+                  item.source === 'development' && pStyles.cardDev,
+                  item.source === 'health' && pStyles.cardHealth,
+                ]}
+                onLongPress={() => handleDelete(item.id)}
+                activeOpacity={0.7}
+              >
+                <Text style={pStyles.cardEmoji}>{item.emoji || '📌'}</Text>
+                <View style={pStyles.cardBody}>
+                  <Text style={pStyles.cardTitle}>{item.title}</Text>
+                  {item.content ? <Text style={pStyles.cardContent} numberOfLines={3}>{item.content}</Text> : null}
+                  {item.mediaUri ? (
+                    <Image source={{ uri: item.mediaUri }} style={pStyles.cardImage} resizeMode="cover" />
+                  ) : null}
+                  {item.createdAt ? (
+                    <Text style={pStyles.cardDate}>{new Date(item.createdAt).toLocaleDateString('ko-KR')}</Text>
+                  ) : null}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ))}
+
+        {!loading && timeline.length === 0 && (
+          <View style={{ alignItems: 'center', paddingVertical: 60 }}>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>{'📝'}</Text>
+            <Text style={{ fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.text }}>아직 기록이 없어요</Text>
+            <Text style={{ fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 4, textAlign: 'center' }}>
+              임신 기록에서 초음파, 마일스톤, 엄마 상태를 기록하면{'\n'}타임라인에 자동으로 나타나요
+            </Text>
+          </View>
+        )}
+
+        <View style={{ height: 80 }} />
+      </ScrollView>
+
+      {/* FAB → pregnancy record */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => router.push('/(main)/pregnancy' as never)}
+        activeOpacity={0.85}
+      >
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
+
+      {/* Time Capsule Modal */}
+      <Modal visible={capsuleModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.capsuleHeader}>
+              <Text style={styles.modalTitle}>{'💌'} 타임캡슐</Text>
+              <TouchableOpacity onPress={() => setCapsuleModal(false)}>
+                <Text style={styles.diaryClose}>{'✕'}</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSub}>소중한 순간을 미래의 나에게 보내세요</Text>
+
+            <TextInput
+              style={[styles.modalInput, { height: 80 }]}
+              placeholder="아가에게, 또는 미래의 나에게 한마디..."
+              placeholderTextColor="#B5A99A"
+              value={capsuleMsg}
+              onChangeText={setCapsuleMsg}
+              multiline
+            />
+
+            <View style={styles.capsuleMonthRow}>
+              {[3, 6, 12].map((m) => (
+                <TouchableOpacity
+                  key={m}
+                  style={[styles.capsuleMonthBtn, capsuleMonths === m && styles.capsuleMonthBtnActive]}
+                  onPress={() => setCapsuleMonths(m)}
+                >
+                  <Text style={[styles.capsuleMonthText, capsuleMonths === m && styles.capsuleMonthTextActive]}>
+                    {m}개월 후
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.modalBtnSave, { marginBottom: 16 }]}
+              onPress={createCapsule}
+              disabled={capsuleLoading || !capsuleMsg.trim()}
+            >
+              {capsuleLoading ? (
+                <ActivityIndicator color="#FFF" size="small" />
+              ) : (
+                <Text style={styles.modalBtnSaveText}>타임캡슐 보관하기</Text>
+              )}
+            </TouchableOpacity>
+
+            {capsules.length > 0 && (
+              <ScrollView style={{ maxHeight: 200 }} showsVerticalScrollIndicator={false}>
+                <Text style={styles.capsuleListTitle}>보관함</Text>
+                {capsules.map((c) => {
+                  const canOpen = !c.opened && new Date(c.openAt) <= new Date();
+                  return (
+                    <View key={c.id} style={styles.capsuleItem}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.capsuleItemText} numberOfLines={1}>
+                          {c.opened ? c.message : '***'}
+                        </Text>
+                        <Text style={styles.capsuleItemDate}>
+                          {c.opened
+                            ? `${c.createdAt.slice(0, 10)} 작성`
+                            : `${c.openAt.slice(0, 10)} 오픈 예정`}
+                        </Text>
+                      </View>
+                      {canOpen && (
+                        <TouchableOpacity
+                          style={styles.capsuleOpenBtn}
+                          onPress={() => openCapsule(c.id)}
+                        >
+                          <Text style={styles.capsuleOpenBtnText}>열기</Text>
+                        </TouchableOpacity>
+                      )}
+                      {c.opened && (
+                        <Text style={styles.capsuleOpenedBadge}>열람</Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const pStyles = StyleSheet.create({
+  currentBadge: {
+    backgroundColor: '#FCE4EC', borderRadius: RADIUS.full,
+    paddingHorizontal: 16, paddingVertical: 8, alignSelf: 'center', marginBottom: SPACING.md,
+  },
+  currentBadgeText: { fontSize: FONT_SIZE.md, fontWeight: '700', color: '#C2185B' },
+  weekGroup: { marginBottom: SPACING.lg },
+  weekHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
+  weekBadge: {
+    backgroundColor: '#E91E63', borderRadius: RADIUS.full,
+    paddingHorizontal: 12, paddingVertical: 4,
+  },
+  weekBadgeCurrent: { backgroundColor: '#C2185B' },
+  weekBadgeText: { color: '#FFF', fontSize: FONT_SIZE.sm, fontWeight: '700' },
+  weekLine: { flex: 1, height: 1, backgroundColor: COLORS.border, marginLeft: SPACING.sm },
+  card: {
+    flexDirection: 'row', backgroundColor: COLORS.surface, borderRadius: RADIUS.md,
+    padding: SPACING.md, marginBottom: SPACING.sm, marginLeft: 20, ...SHADOWS.soft,
+  },
+  cardDev: { backgroundColor: '#FFF3E0', borderLeftWidth: 3, borderLeftColor: '#FF9800' },
+  cardHealth: { backgroundColor: '#FCE4EC', borderLeftWidth: 3, borderLeftColor: '#E91E63' },
+  cardEmoji: { fontSize: 24, marginRight: SPACING.sm },
+  cardBody: { flex: 1 },
+  cardTitle: { fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.text },
+  cardContent: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 4, lineHeight: 20 },
+  cardDate: { fontSize: FONT_SIZE.xs, color: COLORS.textLight, marginTop: 4 },
+  cardImage: { width: '100%', height: 160, borderRadius: RADIUS.sm, marginTop: SPACING.sm, backgroundColor: COLORS.surfaceLight },
+});
+
+/* ------------------------------------------------------------------ */
+/* Baby Album (original)                                               */
+/* ------------------------------------------------------------------ */
+
 export default function AlbumScreen() {
+  const selectedChild = useChildStore((s) => s.selectedChild);
+
+  // Pregnant users see pregnancy timeline
+  if (selectedChild?.isPregnant) {
+    return <PregnancyTimeline />;
+  }
+
+  return <BabyAlbum />;
+}
+
+function BabyAlbum() {
   const [photos, setPhotos] = useState<MilestonePhoto[]>([]);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [milestoneModal, setMilestoneModal] = useState(false);
@@ -465,6 +866,18 @@ export default function AlbumScreen() {
   const [modalCategory, setModalCategory] = useState<MilestoneCategory | 'all'>('all');
   const [shareToMomstagram, setShareToMomstagram] = useState(false);
   const selectedChild = useChildStore((s) => s.selectedChild);
+
+  /* AI Diary */
+  const [diaryText, setDiaryText] = useState<string | null>(null);
+  const [diaryLoading, setDiaryLoading] = useState(false);
+  const [diaryDate, setDiaryDate] = useState<string | null>(null);
+
+  /* Time Capsule */
+  const [capsules, setCapsules] = useState<TimeCapsule[]>([]);
+  const [capsuleModal, setCapsuleModal] = useState(false);
+  const [capsuleMsg, setCapsuleMsg] = useState('');
+  const [capsuleMonths, setCapsuleMonths] = useState(3);
+  const [capsuleLoading, setCapsuleLoading] = useState(false);
   const addPost = useMomstagramStore((s) => s.addPost);
 
   const childMonths = selectedChild?.birthDate
@@ -496,6 +909,63 @@ export default function AlbumScreen() {
     }
   }, []);
 
+  /* -- AI Diary -- */
+  const generateDiary = useCallback(async () => {
+    if (!selectedChild) return;
+    setDiaryLoading(true);
+    try {
+      const res = await coachingApi.dailyDiary(selectedChild.id);
+      const data = res.data?.data as { diary?: string; date?: string } | undefined;
+      if (data?.diary) {
+        setDiaryText(data.diary);
+        setDiaryDate(data.date ?? new Date().toISOString().slice(0, 10));
+      }
+    } catch {
+      Alert.alert('오류', 'AI 일기 생성에 실패했습니다.');
+    } finally {
+      setDiaryLoading(false);
+    }
+  }, [selectedChild]);
+
+  /* -- Time Capsule -- */
+  const loadCapsules = useCallback(async () => {
+    if (!selectedChild) return;
+    try {
+      const res = await coachingApi.listTimeCapsules(selectedChild.id);
+      const data = res.data?.data as TimeCapsule[] | undefined;
+      if (Array.isArray(data)) setCapsules(data);
+    } catch { /* ignore */ }
+  }, [selectedChild]);
+
+  const createCapsule = useCallback(async () => {
+    if (!selectedChild || !capsuleMsg.trim()) return;
+    setCapsuleLoading(true);
+    try {
+      await coachingApi.createTimeCapsule(selectedChild.id, capsuleMsg.trim(), capsuleMonths as 3 | 6 | 12);
+      Alert.alert('타임캡슐 저장', `${capsuleMonths}개월 후에 열어볼 수 있어요!`);
+      setCapsuleMsg('');
+      setCapsuleModal(false);
+      loadCapsules();
+    } catch {
+      Alert.alert('오류', '타임캡슐 저장에 실패했습니다.');
+    } finally {
+      setCapsuleLoading(false);
+    }
+  }, [selectedChild, capsuleMsg, capsuleMonths, loadCapsules]);
+
+  const openCapsule = useCallback(async (capsuleId: string) => {
+    try {
+      const res = await coachingApi.openTimeCapsule(capsuleId);
+      const data = res.data?.data as { message?: string } | undefined;
+      if (data?.message) {
+        Alert.alert('타임캡슐', data.message);
+      }
+      loadCapsules();
+    } catch {
+      Alert.alert('오류', '아직 열 수 없는 타임캡슐이에요.');
+    }
+  }, [loadCapsules]);
+
   const saveMilestonePhoto = useCallback(async () => {
     if (!pendingUri) return;
     const newPhoto: MilestonePhoto = {
@@ -509,7 +979,7 @@ export default function AlbumScreen() {
     setMilestoneModal(false);
     setPendingUri(null);
 
-    // 맘스타그램에도 공유
+    // 가족피드에도 공유
     if (shareToMomstagram && selectedChild) {
       const milestoneText = selectedMilestone
         ? `${selectedMilestone.emoji} ${selectedMilestone.label}`
@@ -547,9 +1017,9 @@ export default function AlbumScreen() {
           createdAt: apiPost?.createdAt ?? new Date().toISOString(),
           isPrivate: false,
         });
-        Alert.alert('공유 완료', '맘스타그램에도 게시되었습니다.');
+        Alert.alert('공유 완료', '가족피드에도 게시되었습니다.');
       } catch {
-        Alert.alert('알림', '타임라인은 저장되었지만 맘스타그램 공유에 실패했습니다.');
+        Alert.alert('알림', '타임라인은 저장되었지만 가족피드 공유에 실패했습니다.');
       }
     }
   }, [pendingUri, selectedMilestone, memo, shareToMomstagram, selectedChild, addPost]);
@@ -643,6 +1113,55 @@ export default function AlbumScreen() {
             })}
           </View>
         </View>
+
+        {/* ============================================ */}
+        {/* AI Diary + Time Capsule Actions              */}
+        {/* ============================================ */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={generateDiary}
+            activeOpacity={0.7}
+            disabled={diaryLoading}
+          >
+            {diaryLoading ? (
+              <ActivityIndicator color={COLORS.primary} size="small" />
+            ) : (
+              <>
+                <Text style={styles.actionEmoji}>{'📝'}</Text>
+                <Text style={styles.actionTitle}>AI 오늘 일기</Text>
+                <Text style={styles.actionSub}>하루 기록 자동 정리</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => { setCapsuleModal(true); loadCapsules(); }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionEmoji}>{'💌'}</Text>
+            <Text style={styles.actionTitle}>타임캡슐</Text>
+            <Text style={styles.actionSub}>
+              {capsules.filter((c) => !c.opened).length > 0
+                ? `${capsules.filter((c) => !c.opened).length}개 보관 중`
+                : '소중한 순간 보관'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* AI Diary Result */}
+        {diaryText && (
+          <View style={styles.diaryCard}>
+            <View style={styles.diaryHeader}>
+              <Text style={styles.diaryHeaderText}>{'📝'} AI 일기 - {diaryDate}</Text>
+              <TouchableOpacity onPress={() => setDiaryText(null)}>
+                <Text style={styles.diaryClose}>{'✕'}</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.diaryBody}>{diaryText}</Text>
+          </View>
+        )}
 
         {photos.length === 0 ? (
           <View style={styles.emptyWrap}>
@@ -761,7 +1280,7 @@ export default function AlbumScreen() {
             />
 
             <View style={styles.shareRow}>
-              <Text style={styles.shareLabel}>맘스타그램에도 공유</Text>
+              <Text style={styles.shareLabel}>가족피드에도 공유</Text>
               <Switch
                 value={shareToMomstagram}
                 onValueChange={setShareToMomstagram}
@@ -778,6 +1297,92 @@ export default function AlbumScreen() {
                 <Text style={styles.modalBtnSaveText}>저장</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Time Capsule Modal */}
+      <Modal visible={capsuleModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.capsuleHeader}>
+              <Text style={styles.modalTitle}>{'💌'} 타임캡슐</Text>
+              <TouchableOpacity onPress={() => setCapsuleModal(false)}>
+                <Text style={styles.diaryClose}>{'✕'}</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSub}>소중한 순간을 미래의 나에게 보내세요</Text>
+
+            {/* Write new capsule */}
+            <TextInput
+              style={[styles.modalInput, { height: 80 }]}
+              placeholder="아이에게, 또는 미래의 나에게 한마디..."
+              placeholderTextColor="#B5A99A"
+              value={capsuleMsg}
+              onChangeText={setCapsuleMsg}
+              multiline
+            />
+
+            <View style={styles.capsuleMonthRow}>
+              {[3, 6, 12].map((m) => (
+                <TouchableOpacity
+                  key={m}
+                  style={[styles.capsuleMonthBtn, capsuleMonths === m && styles.capsuleMonthBtnActive]}
+                  onPress={() => setCapsuleMonths(m)}
+                >
+                  <Text style={[styles.capsuleMonthText, capsuleMonths === m && styles.capsuleMonthTextActive]}>
+                    {m}개월 후
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={[styles.modalBtnSave, { marginBottom: 16 }]}
+              onPress={createCapsule}
+              disabled={capsuleLoading || !capsuleMsg.trim()}
+            >
+              {capsuleLoading ? (
+                <ActivityIndicator color="#FFF" size="small" />
+              ) : (
+                <Text style={styles.modalBtnSaveText}>타임캡슐 보관하기</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Saved capsules */}
+            {capsules.length > 0 && (
+              <ScrollView style={{ maxHeight: 200 }} showsVerticalScrollIndicator={false}>
+                <Text style={styles.capsuleListTitle}>보관함</Text>
+                {capsules.map((c) => {
+                  const canOpen = !c.opened && new Date(c.openAt) <= new Date();
+                  return (
+                    <View key={c.id} style={styles.capsuleItem}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.capsuleItemText} numberOfLines={1}>
+                          {c.opened ? c.message : '***'}
+                        </Text>
+                        <Text style={styles.capsuleItemDate}>
+                          {c.opened
+                            ? `${c.createdAt.slice(0, 10)} 작성`
+                            : `${c.openAt.slice(0, 10)} 오픈 예정`}
+                        </Text>
+                      </View>
+                      {canOpen && (
+                        <TouchableOpacity
+                          style={styles.capsuleOpenBtn}
+                          onPress={() => openCapsule(c.id)}
+                        >
+                          <Text style={styles.capsuleOpenBtnText}>열기</Text>
+                        </TouchableOpacity>
+                      )}
+                      {c.opened && (
+                        <Text style={styles.capsuleOpenedBadge}>열람</Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
           </View>
         </View>
       </Modal>
@@ -951,4 +1556,64 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary, alignItems: 'center',
   },
   modalBtnSaveText: { fontSize: 15, fontWeight: '700', color: '#FFF' },
+
+  /* Action row (AI Diary + Capsule) */
+  actionRow: {
+    flexDirection: 'row', gap: 10, marginBottom: 16,
+  },
+  actionCard: {
+    flex: 1, backgroundColor: '#FFF', borderRadius: 16,
+    padding: 16, alignItems: 'center', justifyContent: 'center',
+    minHeight: 90, ...SHADOWS.soft,
+  },
+  actionEmoji: { fontSize: 28, marginBottom: 6 },
+  actionTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text },
+  actionSub: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
+
+  /* AI Diary card */
+  diaryCard: {
+    backgroundColor: '#FFFDF5', borderRadius: 16, padding: 16,
+    marginBottom: 16, borderWidth: 1, borderColor: '#F5E6C8',
+  },
+  diaryHeader: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: 10,
+  },
+  diaryHeaderText: { fontSize: 14, fontWeight: '700', color: COLORS.text },
+  diaryClose: { fontSize: 18, color: COLORS.textSecondary, padding: 4 },
+  diaryBody: { fontSize: 14, color: COLORS.text, lineHeight: 22 },
+
+  /* Capsule modal extras */
+  capsuleHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+  },
+  capsuleMonthRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  capsuleMonthBtn: {
+    flex: 1, paddingVertical: 10, borderRadius: 12,
+    backgroundColor: '#F8F4F0', alignItems: 'center',
+    borderWidth: 1, borderColor: '#E8E0D8',
+  },
+  capsuleMonthBtnActive: { backgroundColor: '#FFF0E6', borderColor: COLORS.primary },
+  capsuleMonthText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
+  capsuleMonthTextActive: { color: COLORS.primary, fontWeight: '700' },
+  capsuleListTitle: {
+    fontSize: 14, fontWeight: '700', color: COLORS.text, marginBottom: 8,
+  },
+  capsuleItem: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#F8F4F0', borderRadius: 12,
+    padding: 12, marginBottom: 8,
+  },
+  capsuleItemText: { fontSize: 13, fontWeight: '600', color: COLORS.text },
+  capsuleItemDate: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
+  capsuleOpenBtn: {
+    backgroundColor: COLORS.primary, borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 6,
+  },
+  capsuleOpenBtnText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
+  capsuleOpenedBadge: {
+    fontSize: 11, fontWeight: '600', color: COLORS.textLight,
+    backgroundColor: '#F0EBE4', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 4,
+  },
 });

@@ -12,19 +12,46 @@ const router = Router();
 
 function formatChild(id: string, data: Record<string, unknown>) {
   const publicInnate = parseInnateData(data.innateData);
-  const bd = data.birthDate instanceof Date ? data.birthDate : new Date(data.birthDate as string);
+  const isPregnant = (data.isPregnant as boolean) === true;
+
+  // 임산부: birthDate 없을 수 있음
+  let birthDateStr: string | null = null;
+  let ageInfo: ReturnType<typeof calculateAge> | null = null;
+  if (data.birthDate) {
+    const bd = data.birthDate instanceof Date ? data.birthDate : new Date(data.birthDate as string);
+    birthDateStr = bd.toISOString().split('T')[0];
+    ageInfo = calculateAge(bd);
+  }
+
+  // 임신 주수 계산
+  let pregnancyWeeks: number | null = null;
+  if (isPregnant && data.dueDate) {
+    const due = new Date(data.dueDate as string);
+    const now = new Date();
+    const daysUntilDue = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const daysPregnant = 280 - daysUntilDue;
+    pregnancyWeeks = Math.max(1, Math.floor(daysPregnant / 7));
+  }
+
   return {
     id, name: data.name, gender: data.gender,
-    birthDate: bd.toISOString().split('T')[0],
-    birthTime: data.birthTime,
+    birthDate: birthDateStr,
+    birthTime: data.birthTime || null,
     photoUri: data.photoUri || null,
     innateData: publicInnate,
     baseline: safeParse(data.baseline),
     observedTraits: safeParse(data.observedTraits),
     analysisReport: safeParse(data.analysisReport),
-    ageInfo: calculateAge(bd),
+    ageInfo: isPregnant
+      ? { label: pregnancyWeeks ? `임신 ${pregnancyWeeks}주차` : '임신 중', months: -1, group: 'pregnant' as const }
+      : ageInfo,
     height: typeof data.height === 'number' ? data.height : null,
     weight: typeof data.weight === 'number' ? data.weight : null,
+    // 임신 전용 필드
+    isPregnant,
+    dueDate: (data.dueDate as string) || null,
+    pregnancyWeeks,
+    pregnancyNotes: (data.pregnancyNotes as string) || null,
   };
 }
 
@@ -53,14 +80,129 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     const heightVal = typeof req.body.height === 'number' ? req.body.height : null;
     const weightVal = typeof req.body.weight === 'number' ? req.body.weight : null;
     const photoUri = typeof req.body.photoUri === 'string' ? req.body.photoUri : null;
+    const bloodType = typeof req.body.bloodType === 'string' ? req.body.bloodType : null;
+    const specialNotes = typeof req.body.specialNotes === 'string' ? req.body.specialNotes : null;
     const data: Record<string, unknown> = {
       userId: req.userId!, name, gender, birthDate, birthTime,
       innateData: JSON.stringify(innateData), baseline: null, observedTraits: null,
-      height: heightVal, weight: weightVal, photoUri,
+      height: heightVal, weight: weightVal, bloodType, specialNotes, photoUri,
+      isPregnant: false,
     };
     await collections.children.doc(id).set(data);
     success(res, formatChild(id, data), 201);
   } catch { error(res, '자녀 등록 중 오류가 발생했습니다', 500); }
+});
+
+// ─── POST /api/child/pregnant — 임신 중 아기 등록 (태명 + 출산예정일) ───
+router.post('/pregnant', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { name, dueDate, gender, pregnancyNotes } = req.body as {
+      name: string;        // 태명
+      dueDate: string;     // 출산예정일 (YYYY-MM-DD)
+      gender?: string;     // 성별 (모르면 'U')
+      pregnancyNotes?: string; // 특이사항 (쌍둥이, 고위험 등)
+    };
+
+    if (!name || !dueDate) {
+      error(res, '태명과 출산예정일을 입력해주세요');
+      return;
+    }
+
+    // 출산예정일 유효성 검사
+    const due = new Date(dueDate);
+    if (isNaN(due.getTime())) {
+      error(res, '유효한 날짜 형식이 아닙니다 (YYYY-MM-DD)');
+      return;
+    }
+
+    const id = genId();
+    const photoUri = typeof req.body.photoUri === 'string' ? req.body.photoUri : null;
+    const momHeight = typeof req.body.momHeight === 'number' ? req.body.momHeight : null;
+    const momWeight = typeof req.body.momWeight === 'number' ? req.body.momWeight : null;
+    const momBloodType = typeof req.body.momBloodType === 'string' ? req.body.momBloodType : null;
+    const momSpecialNotes = typeof req.body.momSpecialNotes === 'string' ? req.body.momSpecialNotes : null;
+    const data: Record<string, unknown> = {
+      userId: req.userId!,
+      name,                              // 태명
+      gender: gender || 'U',             // 모르면 U(unknown)
+      isPregnant: true,
+      dueDate,
+      pregnancyNotes: pregnancyNotes || null,
+      birthDate: null,                   // 아직 태어나지 않음
+      birthTime: null,
+      innateData: null,                  // 출산 후 생성
+      baseline: null,
+      observedTraits: null,
+      height: null,
+      weight: null,
+      momHeight,                         // 산모 키
+      momWeight,                         // 산모 몸무게
+      momBloodType,                      // 산모 혈액형
+      momSpecialNotes,                   // 산모 특이사항 (알레르기 등)
+      photoUri,                          // 초음파 사진 등
+      createdAt: new Date().toISOString(),
+    };
+
+    await collections.children.doc(id).set(data);
+    success(res, formatChild(id, data), 201);
+  } catch { error(res, '임신 등록 중 오류가 발생했습니다', 500); }
+});
+
+// ─── POST /api/child/:id/birth — 출산 전환 (임신→육아) ───
+router.post('/:id/birth', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const childDoc = await collections.children.doc(req.params.id as string).get();
+    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) {
+      error(res, '자녀를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const data = childDoc.data()!;
+    if (data.isPregnant !== true) {
+      error(res, '이미 출산 완료된 아이입니다');
+      return;
+    }
+
+    const { birthDate, birthTime, name, gender, height, weight } = req.body as {
+      birthDate: string;     // YYYY-MM-DD
+      birthTime: string;     // HH:MM
+      name?: string;         // 정식 이름 (태명에서 변경)
+      gender?: string;       // 성별 확정
+      height?: number;       // 출생 키
+      weight?: number;       // 출생 체중
+    };
+
+    if (!birthDate || !birthTime) {
+      error(res, '생년월일과 출생시각을 입력해주세요');
+      return;
+    }
+
+    // 사주/기질 분석
+    const innateData = calculateSaju(new Date(birthDate), birthTime);
+
+    const updates: Record<string, unknown> = {
+      isPregnant: false,
+      birthDate,
+      birthTime,
+      innateData: JSON.stringify(innateData),
+      bornAt: new Date().toISOString(),  // 전환 시점 기록
+    };
+
+    // 선택적 필드 업데이트
+    if (name) updates.name = name;                  // 태명→정식 이름
+    if (gender && gender !== 'U') updates.gender = gender;
+    if (typeof height === 'number') updates.height = height;
+    if (typeof weight === 'number') updates.weight = weight;
+
+    await collections.children.doc(req.params.id as string).update(updates);
+
+    const updated = await collections.children.doc(req.params.id as string).get();
+    success(res, {
+      ...formatChild(updated.id, updated.data()!),
+      message: '축하합니다! 아이가 태어났어요. 이제부터 육아 코칭이 시작됩니다.',
+      innateData: parseInnateData(JSON.stringify(innateData)),
+    });
+  } catch { error(res, '출산 전환 중 오류가 발생했습니다', 500); }
 });
 
 router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
@@ -88,6 +230,18 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
       updates.birthTime = bt;
       updates.innateData = JSON.stringify(calculateSaju(new Date(bd), bt));
     }
+    // 건강 정보 필드
+    if (req.body.height !== undefined) updates.height = typeof req.body.height === 'number' ? req.body.height : null;
+    if (req.body.weight !== undefined) updates.weight = typeof req.body.weight === 'number' ? req.body.weight : null;
+    if (req.body.bloodType !== undefined) updates.bloodType = req.body.bloodType || null;
+    if (req.body.specialNotes !== undefined) updates.specialNotes = req.body.specialNotes || null;
+    // 임산부 건강 정보
+    if (req.body.momHeight !== undefined) updates.momHeight = typeof req.body.momHeight === 'number' ? req.body.momHeight : null;
+    if (req.body.momWeight !== undefined) updates.momWeight = typeof req.body.momWeight === 'number' ? req.body.momWeight : null;
+    if (req.body.momBloodType !== undefined) updates.momBloodType = req.body.momBloodType || null;
+    if (req.body.momSpecialNotes !== undefined) updates.momSpecialNotes = req.body.momSpecialNotes || null;
+    if (req.body.dueDate !== undefined) updates.dueDate = req.body.dueDate || null;
+    if (req.body.pregnancyNotes !== undefined) updates.pregnancyNotes = req.body.pregnancyNotes || null;
 
     await collections.children.doc(req.params.id as string).update(updates);
     const updated = await collections.children.doc(req.params.id as string).get();

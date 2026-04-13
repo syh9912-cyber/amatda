@@ -116,6 +116,43 @@ export const DAILY_QUESTIONS: Record<string, DailyQuestion[]> = {
       hint: '예: 학습 태도 변화, 관심 분야 확장, 책임감 등',
     },
   ],
+  pregnant: [
+    {
+      dayOfWeek: 0,
+      question: '오늘 엄마의 컨디션은 어떠신가요?',
+      hint: '예: 입덧이 심했어요, 오늘은 괜찮았어요 등',
+    },
+    {
+      dayOfWeek: 1,
+      question: '오늘 산모 운동이나 산책은 하셨나요?',
+      hint: '예: 동네 한 바퀴, 요가, 스트레칭 등',
+    },
+    {
+      dayOfWeek: 2,
+      question: '태동은 느껴지시나요? 오늘은 어땠어요?',
+      hint: '예: 아직 못 느껴요, 자주 차요, 딸꾹질 했어요 등',
+    },
+    {
+      dayOfWeek: 3,
+      question: '아가에게 해주고 싶은 이야기가 있나요?',
+      hint: '예: 태교 동화, 오늘 있었던 일, 사랑한다는 말 등',
+    },
+    {
+      dayOfWeek: 4,
+      question: '오늘 파트너에게 받은 마사지나 도움이 있었나요?',
+      hint: '예: 발 마사지, 집안일 도움, 병원 동행 등',
+    },
+    {
+      dayOfWeek: 5,
+      question: '오늘 식사는 잘 하셨나요? 영양 균형은 어떠세요?',
+      hint: '예: 철분제 복용, 과일 챙겨먹음, 입덧으로 못 먹음 등',
+    },
+    {
+      dayOfWeek: 6,
+      question: '이번 주 임신 생활에서 특별했던 순간이 있나요?',
+      hint: '예: 초음파 보러 감, 태명 정함, 아기방 준비 등',
+    },
+  ],
 };
 
 export function getTodayQuestion(ageGroup: string): DailyQuestion {

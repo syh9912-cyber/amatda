@@ -42,6 +42,12 @@ export default function CoachingScreen() {
   const firstMessageHandled = useRef(false);
 
   useEffect(() => {
+    // 아이 전환 시 기존 상태 초기화
+    setMessages([]);
+    setFollowups([]);
+    setYearAgoMemory(null);
+    setFirstTalkDone(false);
+    firstMessageHandled.current = false;
     if (child) {
       loadHistory();
       loadFollowups();
@@ -223,13 +229,17 @@ export default function CoachingScreen() {
 
   const [showCategories, setShowCategories] = useState(false);
 
+  const isPregnant = child?.isPregnant === true;
+
   const handleCategorySelect = useCallback(
     (key: string, label: string) => {
-      const text = `아이가 ${label} 관련해서 고민이 있어요`;
+      const text = isPregnant
+        ? `임신 중 ${label} 관련해서 고민이 있어요`
+        : `아이가 ${label} 관련해서 고민이 있어요`;
       setInput(text);
       setShowCategories(false);
     },
-    []
+    [isPregnant]
   );
 
   const handleSend = useCallback(() => {
@@ -288,7 +298,7 @@ export default function CoachingScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <Stack.Screen options={{ headerShown: false }} />
@@ -296,7 +306,7 @@ export default function CoachingScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>
-          AI {'육아 코칭'}
+          {'상담이모'}
         </Text>
         <View style={styles.headerChild}>
           {child?.photoUri ? (
@@ -396,8 +406,8 @@ export default function CoachingScreen() {
         </View>
       ) : null}
 
-      {/* Analyzer shortcuts (hidden during first talk) */}
-      {!showFirstTalk && (
+      {/* Analyzer shortcuts (hidden during first talk and for pregnant users) */}
+      {!showFirstTalk && !isPregnant && (
         <View style={styles.analyzerRow}>
           <TouchableOpacity
             style={styles.analyzerPill}

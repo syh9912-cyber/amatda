@@ -83,6 +83,12 @@ export const childApi = {
     api.post(`/children/${childId}/daily-trait`, data),
   getDailyTraits: (childId: string) =>
     api.get(`/children/${childId}/daily-traits`),
+  // 임신 등록
+  registerPregnant: (data: Record<string, unknown>) =>
+    api.post('/children/pregnant', data),
+  // 출산 전환 (임신→육아)
+  birth: (childId: string, data: { birthDate: string; birthTime: string; name?: string; gender?: string; height?: number; weight?: number }) =>
+    api.post(`/children/${childId}/birth`, data),
 };
 
 // Questions
@@ -215,7 +221,7 @@ export const memoriesApi = {
     api.get(`/memories/timeline/${childId}`),
 };
 
-// Coaching (AI 육아 코칭)
+// Coaching (상담이모)
 export const coachingApi = {
   ask: (childId: string, message: string, category?: string, photoUrl?: string) =>
     api.post('/coaching/ask', { childId, message, category, photoUrl }),
@@ -301,6 +307,12 @@ export const growthApi = {
 
 // Clinic (소아과 리뷰)
 export const clinicApi = {
+  search: (lat: number, lng: number, radius?: number, keyword?: string) => {
+    const params: Record<string, string> = { lat: String(lat), lng: String(lng) };
+    if (radius) params.radius = String(radius);
+    if (keyword) params.keyword = keyword;
+    return api.get('/clinics/search', { params });
+  },
   nearby: (lat: number, lng: number, radius?: number) =>
     api.get(`/clinics/nearby?lat=${lat}&lng=${lng}&radius=${radius || 5}`),
   postReview: (data: Record<string, unknown>) =>
@@ -363,6 +375,64 @@ export const coparentingApi = {
     api.get(`/coparenting/my-permissions/${childId}`),
   presets: () =>
     api.get('/coparenting/presets'),
+};
+
+// Pregnancy (임신 기록)
+export const pregnancyApi = {
+  createRecord: (data: {
+    childId: string;
+    type: 'ultrasound' | 'heartbeat' | 'doctor_note' | 'milestone' | 'memo';
+    title?: string;
+    content?: string;
+    mediaUri?: string;
+    mediaType?: 'photo' | 'video';
+    milestoneType?: string;
+    week?: number;
+  }) => api.post('/pregnancy/records', data),
+  getRecords: (childId: string) =>
+    api.get('/pregnancy/records', { params: { childId } }),
+  deleteRecord: (id: string) =>
+    api.delete(`/pregnancy/records/${id}`),
+  getSymptomPresets: () =>
+    api.get('/pregnancy/mom-symptoms/presets'),
+  saveMomHealth: (data: {
+    childId: string;
+    symptoms: string[];
+    severity: number;
+    memo?: string;
+  }) => api.post('/pregnancy/mom-health', data),
+  getMomHealth: (childId: string) =>
+    api.get('/pregnancy/mom-health', { params: { childId } }),
+  getWeeklyDevelopment: (week?: number) =>
+    api.get('/pregnancy/weekly-development', { params: week ? { week: String(week) } : {} }),
+  getTimeline: (childId: string) =>
+    api.get('/pregnancy/timeline', { params: { childId } }),
+  // 임당관리 (GDM)
+  saveGdm: (data: {
+    childId: string;
+    glucoseLevel: number;
+    mealType: 'fasting' | 'before_meal' | 'after_meal_1h' | 'after_meal_2h' | 'bedtime';
+    memo?: string;
+    measuredAt?: string;
+  }) => api.post('/pregnancy/gdm', data),
+  getGdm: (childId: string, days = 30) =>
+    api.get('/pregnancy/gdm', { params: { childId, days: String(days) } }),
+  deleteGdm: (id: string) =>
+    api.delete(`/pregnancy/gdm/${id}`),
+};
+
+// Vaccination (예방접종)
+export const vaccinationApi = {
+  schedule: (childId: string) =>
+    api.get('/vaccination/schedule', { params: { childId } }),
+  upcoming: (childId: string, limit = 5) =>
+    api.get('/vaccination/upcoming', { params: { childId, limit: String(limit) } }),
+  complete: (childId: string, vaccineId: string, completedAt?: string, hospitalName?: string) =>
+    api.post('/vaccination/complete', { childId, vaccineId, completedAt, hospitalName }),
+  undoComplete: (id: string) =>
+    api.delete(`/vaccination/complete/${id}`),
+  scheduleAlerts: (childId: string) =>
+    api.post('/vaccination/schedule-alerts', { childId }),
 };
 
 // SOS Fast Track (긴급 증상 체크)

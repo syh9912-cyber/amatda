@@ -17,7 +17,7 @@ import {
   updateConversationSummary,
   formatRecentTurns,
 } from '../services/coaching/conversation.summarizer';
-import { buildPrompt } from '../services/coaching/prompt.builder';
+import { buildPrompt, PregnantPromptExtra } from '../services/coaching/prompt.builder';
 import { detectParentEmotion } from '../services/coaching/emotion.detector';
 import { getTimeContext } from '../services/coaching/time.awareness';
 import { getMilestoneContext } from '../services/coaching/milestone.detector';
@@ -34,6 +34,9 @@ const router = Router();
 const CATEGORY_KO: Record<string, string> = {
   crying: '울음', sleep: '수면', eating: '식사', poop: '대변',
   social: '사회성', growth: '성장', behavior: '행동', etc: '기타',
+  // 임산부 카테고리
+  symptoms: '입덧', nutrition: '영양', exercise: '운동',
+  checkup: '검진', birth_prep: '출산준비', emotion: '감정',
 };
 
 // ─── POST /api/coaching/ask — 10단계 파이프라인 ───
@@ -93,23 +96,34 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
       return;
     }
 
-    // ─── Step 4: 레드 플래그 검사 ───
-    const redFlag = detectRedFlags(message);
+    // ─── Step 4: 레드 플래그 검사 (임산부는 별도 룰셋) ───
+    const redFlag = detectRedFlags(message, child.isPregnant);
 
     // EMERGENCY 레벨: AI 호출 없이 즉시 응급 안내 반환
     if (redFlag.urgency === 'emergency') {
       const emergencySessionId = genId();
+      const isPreg = child.isPregnant;
       const emergencyResponse: CoachingAIResponse = {
         redFlag: redFlag.message,
-        judgement: '응급 상황이 의심됩니다. 아이의 상태를 먼저 확인해주세요.',
+        judgement: isPreg
+          ? '응급 상황이 의심됩니다. 즉시 산부인과 또는 응급실에 연락해주세요.'
+          : '응급 상황이 의심됩니다. 아이의 상태를 먼저 확인해주세요.',
         reasons: redFlag.flags,
-        actions: [
-          '119에 전화하거나 가까운 응급실을 방문하세요',
-          '아이의 의식, 호흡, 체온을 확인하세요',
-          '증상 시작 시간과 경과를 메모해두세요',
-        ],
+        actions: isPreg
+          ? [
+            '119에 전화하거나 가까운 산부인과/응급실을 방문하세요',
+            '누워서 안정을 취하고, 출혈량/양수/통증을 체크하세요',
+            '증상 시작 시간과 경과를 메모해두세요',
+          ]
+          : [
+            '119에 전화하거나 가까운 응급실을 방문하세요',
+            '아이의 의식, 호흡, 체온을 확인하세요',
+            '증상 시작 시간과 경과를 메모해두세요',
+          ],
         medical: redFlag.message ?? '즉시 병원 방문을 권합니다.',
-        personalNote: '지금 많이 놀라셨을 거예요. 침착하게 아이 상태를 확인하시고, 조금이라도 이상하면 바로 병원에 가주세요.',
+        personalNote: isPreg
+          ? '지금 많이 놀라셨을 거예요. 침착하게 몸 상태를 확인하시고, 바로 병원에 연락해주세요. 산모수첩도 꼭 챙기세요.'
+          : '지금 많이 놀라셨을 거예요. 침착하게 아이 상태를 확인하시고, 조금이라도 이상하면 바로 병원에 가주세요.',
         followupQuestion: '병원 방문 후 결과가 어떠셨나요?',
       };
 
@@ -176,7 +190,7 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
 
     const [dbCandidates, tracking, conversation] = await Promise.all([
       Promise.resolve(findTopCoachingEntries(
-        message, category, child.temperament, config.dbCandidateCount, child.ageMonths
+        message, category, child.temperament, config.dbCandidateCount, child.ageMonths, child.isPregnant
       )),
       buildTrackingSummary(childId, config.contextDays),
       getConversationContext(req.userId!, childId, tier),
@@ -185,7 +199,7 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
     // ─── Step 8: 컨텍스트 강화 + 프롬프트 조합 ───
     const parentEmotion = detectParentEmotion(message);
     const timeCtx = getTimeContext();
-    const milestones = getMilestoneContext(child.ageMonths);
+    const milestones = getMilestoneContext(child.ageMonths, child.isPregnant, child.pregnancyWeeks);
     const dbTexts = formatCandidatesForPrompt(dbCandidates);
     const recentTurnsText = formatRecentTurns(conversation.recentTurns);
 
@@ -218,7 +232,13 @@ router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
       observedTraits: child.observedTraits,
       timeEmpathyHint: timeCtx.empathyHint,
       milestoneContext: milestones.combined,
-    });
+    }, child.isPregnant ? {
+      isPregnant: true,
+      pregnancyWeeks: child.pregnancyWeeks,
+      dueDate: child.dueDate,
+      babyNickname: child.babyNickname,
+      pregnancyNotes: child.pregnancyNotes,
+    } : undefined);
 
     // ─── Step 9: AI 호출 ───
     let aiResponse: CoachingAIResponse;
@@ -932,6 +952,34 @@ interface MilestoneItemDef {
 }
 
 const MILESTONES: Array<{ months: number; label: string; items: MilestoneItemDef[] }> = [
+  // ─── 임신 마일스톤 (음수 월로 표현) ───
+  { months: -9, label: '임신 초기 (4-12주)', items: [
+    { id: 'mp1_1', label: '첫 초음파로 심장 소리를 확인했어요', domain: '검진', description: '첫 산전검진에서 태아 심박을 확인하셨나요? 작은 심장이 뛰는 순간이에요.' },
+    { id: 'mp1_2', label: 'NT 검사(1차 기형아 검사)를 받았어요', domain: '검진', description: '11-13주 사이 NT 초음파와 혈액검사를 받아보세요.' },
+    { id: 'mp1_3', label: '엽산을 매일 복용하고 있어요', domain: '영양', description: '엽산 400-800mcg을 매일 챙기고 계신가요?' },
+    { id: 'mp1_4', label: '태명을 지어줬어요', domain: '태교', description: '아기에게 첫 이름(태명)을 지어주셨나요? 태교의 시작이에요.' },
+  ]},
+  { months: -6, label: '임신 중기 (13-24주)', items: [
+    { id: 'mp2_1', label: '첫 태동을 느꼈어요!', domain: '태교', description: '배 속에서 콩닥콩닥, 작은 움직임을 처음 느낀 순간을 기록해보세요.' },
+    { id: 'mp2_2', label: '성별을 확인했어요', domain: '검진', description: '16-20주 사이 초음파로 성별을 확인하셨나요?' },
+    { id: 'mp2_3', label: '정밀초음파를 받았어요', domain: '검진', description: '20-24주 정밀초음파로 태아 구조를 꼼꼼히 확인해보세요.' },
+    { id: 'mp2_4', label: '임신성 당뇨 검사를 받았어요', domain: '검진', description: '24-28주 사이 당부하 검사를 받아보세요.' },
+    { id: 'mp2_5', label: '태교 음악을 시작했어요', domain: '태교', description: '태아의 청각이 발달하는 시기! 좋아하는 음악을 아기에게 들려주세요.' },
+  ]},
+  { months: -3, label: '임신 후기 (25-36주)', items: [
+    { id: 'mp3_1', label: '분만 병원을 정했어요', domain: '준비', description: '어디서 출산할지 결정하셨나요? 28주 전 예약을 권장해요.' },
+    { id: 'mp3_2', label: '출산 가방을 준비했어요', domain: '준비', description: '산모용+아기용+서류를 나눠 36주까지 준비해보세요.' },
+    { id: 'mp3_3', label: '모유수유 교실/산전교실을 다녀왔어요', domain: '준비', description: '분만 호흡법, 모유수유 자세를 미리 배워두면 큰 도움이 돼요.' },
+    { id: 'mp3_4', label: '카시트를 준비했어요', domain: '준비', description: '신생아용 카시트는 퇴원 시부터 필요해요. 미리 설치해두세요.' },
+    { id: 'mp3_5', label: 'GBS(B군 연쇄상구균) 검사를 받았어요', domain: '검진', description: '35-37주 사이 GBS 검사를 받으셨나요?' },
+  ]},
+  { months: -1, label: '만삭 (37-40주)', items: [
+    { id: 'mp4_1', label: '출산 계획서를 작성했어요', domain: '준비', description: '분만 방법, 무통분만 여부, 캥거루 케어 등 계획을 정리해보세요.' },
+    { id: 'mp4_2', label: '진통 징후를 알고 있어요', domain: '준비', description: '이슬, 규칙적 진통, 양수 파수 구분법을 숙지하셨나요?' },
+    { id: 'mp4_3', label: 'Tdap 예방접종을 맞았어요', domain: '검진', description: '27-36주 사이 백일해 예방접종을 하셨나요?' },
+    { id: 'mp4_4', label: '신생아 이름을 정했어요', domain: '준비', description: '출생 후 14일 내 출생신고가 필요해요. 이름을 미리 정해두세요.' },
+  ]},
+  // ─── 출산 후 마일스톤 ───
   { months: 6, label: '6개월', items: [
     { id: 'm6_1', label: '뒤집기를 해요', domain: '대근육', description: '엎드린 자세에서 등으로, 또는 반대로 뒤집기를 시도하는지 관찰하세요.' },
     { id: 'm6_2', label: '손에 쥔 물건을 옮겨 쥐어요', domain: '소근육', description: '한 손에서 다른 손으로 장난감을 옮기는지 확인하세요.' },
@@ -1027,9 +1075,14 @@ router.get('/milestones/:childId', authMiddleware, async (req: Request, res: Res
     const child = await buildChildContext(childId, req.userId!);
     if (!child) { error(res, '자녀 정보 없음', 404); return; }
 
+    // 임산부: 주수를 음수 월로 변환하여 마일스톤 매칭
+    const effectiveAge = child.isPregnant && child.pregnancyWeeks
+      ? Math.floor(child.pregnancyWeeks / 4) - 10  // 임신 주수→음수 월
+      : child.ageMonths;
+
     // 현재 월령에 해당하는 마일스톤 + 다음 마일스톤
-    const current = MILESTONES.filter((m) => m.months <= child.ageMonths).pop();
-    const next = MILESTONES.find((m) => m.months > child.ageMonths);
+    const current = MILESTONES.filter((m) => m.months <= effectiveAge).pop();
+    const next = MILESTONES.find((m) => m.months > effectiveAge);
 
     // Firestore에서 저장된 체크 상태 불러오기
     const docId = `${req.userId}_${childId}`;
@@ -1075,6 +1128,45 @@ router.post('/milestones/:childId/check', authMiddleware, async (req: Request, r
     success(res, { saved: true });
   } catch {
     error(res, '체크 저장 중 오류', 500);
+  }
+});
+
+// ─── GET /api/coaching/milestones/:childId/timeline — 임신~육아 전체 마일스톤 타임라인 ───
+
+router.get('/milestones/:childId/timeline', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const childId = req.params.childId as string;
+    const child = await buildChildContext(childId, req.userId!);
+    if (!child) { error(res, '자녀 정보 없음', 404); return; }
+
+    const { getFullMilestoneTimeline, pregnancyWeeksToAgeMonths } = await import('../services/coaching/milestone.detector');
+    const timeline = getFullMilestoneTimeline();
+
+    // 현재 위치 계산
+    const effectiveAge = child.isPregnant && child.pregnancyWeeks
+      ? pregnancyWeeksToAgeMonths(child.pregnancyWeeks)
+      : child.ageMonths;
+
+    // 체크 상태
+    const docId = `${req.userId}_${childId}`;
+    const savedDoc = await collections.milestoneChecks.doc(docId).get();
+    const savedChecks: Record<string, boolean> = savedDoc.exists
+      ? (savedDoc.data()?.checks as Record<string, boolean>) ?? {}
+      : {};
+
+    // 각 마일스톤 항목에 현재 구간 표시
+    const currentMilestone = MILESTONES.filter((m) => m.months <= effectiveAge).pop();
+
+    success(res, {
+      timeline,
+      currentPeriod: currentMilestone?.label ?? '',
+      effectiveAge,
+      isPregnant: child.isPregnant,
+      pregnancyWeeks: child.pregnancyWeeks ?? null,
+      checks: savedChecks,
+    });
+  } catch {
+    error(res, '타임라인 조회 중 오류', 500);
   }
 });
 
@@ -1832,6 +1924,8 @@ router.get('/daily-insight', authMiddleware, async (req: Request, res: Response)
       temperament: child.temperament,
       temperamentDetail: child.temperamentDetail,
       gender: child.gender,
+      isPregnant: child.isPregnant,
+      pregnancyWeeks: child.pregnancyWeeks,
     });
 
     success(res, { insights });
@@ -1857,7 +1951,7 @@ router.get('/welcome', authMiddleware, async (req: Request, res: Response): Prom
       return;
     }
 
-    const milestones = getMilestoneContext(child.ageMonths);
+    const milestones = getMilestoneContext(child.ageMonths, child.isPregnant, child.pregnancyWeeks);
     const currentMilestone = milestones.current[0] || '';
 
     // 기질별 맞춤 환영 메시지
@@ -1873,7 +1967,7 @@ router.get('/welcome', authMiddleware, async (req: Request, res: Response): Prom
       `${child.name}의 기질에 맞는 맞춤 육아 조언을 준비했어요.`;
 
     const welcomeMessage = {
-      greeting: `${child.name} 부모님, 반가워요! 아맞다 AI 코치입니다.`,
+      greeting: `${child.name} 부모님, 반가워요! 아맞다 상담이모입니다.`,
       traitInsight: traitMsg,
       milestone: currentMilestone
         ? `${child.ageInfo}인 지금, ${currentMilestone.replace(/^\[.*?\]\s*/, '')}`
@@ -1905,7 +1999,7 @@ router.get('/auto-diary', authMiddleware, async (req: Request, res: Response): P
     const child = await buildChildContext(childId, req.userId!);
     if (!child) { error(res, '자녀 정보 없음', 404); return; }
 
-    const diary = await generateAutoDiary(childId, child.name, child.ageInfo, child.temperament);
+    const diary = await generateAutoDiary(childId, child.name, child.ageInfo, child.temperament, child.isPregnant);
     success(res, { diary });
   } catch (err) {
     console.error('Auto diary error:', err);

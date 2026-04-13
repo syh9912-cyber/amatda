@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
+  TextInput,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -29,6 +30,24 @@ import {
 import { getCharacteristicForChild } from '../../constants/monthlyCharacteristics';
 import { OnboardingGuide } from '../../components/common/OnboardingGuide';
 import { AgeGroupKey } from '../../constants/ageGroups';
+
+/* ------------------------------------------------------------------ */
+/* Pregnancy week-appropriate questions                                */
+/* ------------------------------------------------------------------ */
+
+function getWeeklyQuestion(name: string, week: number): { emoji: string; text: string; desc: string } {
+  if (week <= 6) return { emoji: '🌱', text: `${name}의 첫 초음파, 확인하셨나요?`, desc: '탭하면 출산 등록으로 전환돼요' };
+  if (week <= 10) return { emoji: '💓', text: `${name} 심장소리는 들으셨나요?`, desc: '출산하셨다면 탭해주세요' };
+  if (week <= 13) return { emoji: '🔬', text: `${name} 목투명대 검사는 받으셨나요?`, desc: '출산하셨다면 탭해주세요' };
+  if (week <= 16) return { emoji: '🌿', text: `안정기에요! ${name}가 잘 크고 있나요?`, desc: '출산하셨다면 탭해주세요' };
+  if (week <= 20) return { emoji: '🎀', text: `${name}가 왕자인가요 공주인가요?`, desc: '출산하셨다면 탭해주세요' };
+  if (week <= 24) return { emoji: '🦶', text: `${name} 태동을 자주 느끼시나요?`, desc: '출산하셨다면 탭해주세요' };
+  if (week <= 28) return { emoji: '📋', text: `${name} 키는 많이 컸나요? 잘 크고 있나요?`, desc: '출산하셨다면 탭해주세요' };
+  if (week <= 32) return { emoji: '📚', text: `출산 준비는 시작하셨나요?`, desc: '출산하셨다면 탭해주세요' };
+  if (week <= 36) return { emoji: '🧳', text: `${name} 출산가방은 준비되었나요?`, desc: '출산하셨다면 탭해주세요' };
+  if (week <= 39) return { emoji: '🤰', text: `${name} 만날 준비 되셨나요?`, desc: '출산하셨다면 탭해주세요' };
+  return { emoji: '👶', text: `${name} 만나셨나요?`, desc: '탭하면 육아 모드로 전환됩니다' };
+}
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
@@ -59,28 +78,47 @@ interface QuickAction {
 }
 
 const ALL_ACTIONS: QuickAction[] = [
+  // 임산부 전용
+  { icon: require('../../assets/quick-learning.png'), label: '임신 기록', route: '/(main)/pregnancy', bg: '#FCE4EC', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-report.png'), label: '주수별 발달', route: '/(main)/growth-stats', bg: '#F3E5F5', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-report.png'), label: '임당 관리', route: '/(main)/gdm', bg: '#FCE4EC', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-timeline.png'), label: '타임라인', route: '/(main)/album', bg: '#E0F2F1', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
+  { icon: require('../../assets/quick-lullaby.png'), label: '태교 음악', route: '/(main)/lullaby', bg: '#EDE7F6', ages: ['pregnant'] },
   // 공통
   { icon: require('../../assets/quick-learning.png'), label: '육아 기록', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['infant', 'toddler'] },
   { icon: require('../../assets/quick-learning.png'), label: '생활 기록', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['elementary'] },
+  { icon: require('../../assets/quick-report.png'), label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['infant', 'toddler'] },
   { icon: require('../../assets/quick-report.png'), label: '성장 통계', route: '/(main)/growth-stats', bg: COLOR.mintBg, ages: ['infant', 'toddler', 'elementary'] },
-  // 영아 전용
-  { icon: require('../../assets/cat-crying.png'), label: '울음 분석', route: '/(main)/cry-analyzer', bg: '#FFF0E6', ages: ['infant'] },
-  { icon: require('../../assets/cat-poop.png'), label: '대변 분석', route: '/(main)/poop-analyzer', bg: '#FFF0E6', ages: ['infant', 'toddler'] },
   // 영유아
   { icon: require('../../assets/quick-sleep.png'), label: '수면 예측', route: '/(main)/sleep-predict', bg: '#EDE7F6', ages: ['infant', 'toddler'] },
   { icon: require('../../assets/quick-lullaby.png'), label: '자장가', route: '/(main)/lullaby', bg: '#EDE7F6', ages: ['infant', 'toddler'] },
   // 유아 + 초등
   { icon: require('../../assets/play-activity.png'), label: '놀이 학습', route: '/(main)/play-learning', bg: COLOR.yellowBg, ages: ['toddler', 'elementary'] },
-  // 초등
-  { icon: require('../../assets/icon-hospital.png'), label: '소아과', route: '/(main)/clinic', bg: '#E8F5E9', ages: ['infant', 'toddler', 'elementary'] },
   // 공통
-  { icon: require('../../assets/quick-timeline.png'), label: '타임라인', route: '/(main)/album', bg: '#E0F2F1', ages: ['infant', 'toddler', 'elementary'] },
-  { icon: require('../../assets/quick-coparenting.png'), label: '공동육아', route: '/(main)/coparenting', bg: '#FFF3E0', ages: ['infant', 'toddler', 'elementary'] },
-  { icon: require('../../assets/quick-parent-level.png'), label: '새싹부모', route: '/(main)/parent-level', bg: '#E8F5E9', ages: ['infant', 'toddler', 'elementary'] },
+  { icon: require('../../assets/quick-coparenting.png'), label: '공동육아', route: '/(main)/coparenting', bg: '#FFF3E0', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
+  { icon: require('../../assets/quick-parent-level.png'), label: '새싹부모', route: '/(main)/parent-level', bg: '#E8F5E9', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
 ];
 
-function getActionsForAge(ageGroup: AgeGroupKey): QuickAction[] {
-  return ALL_ACTIONS.filter((a) => a.ages.includes(ageGroup)).slice(0, 8);
+const VACCINE_ACTION: QuickAction = {
+  icon: require('../../assets/quick-report.png'), label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['pregnant'],
+};
+
+function getActionsForAge(ageGroup: AgeGroupKey, child?: Child | null): QuickAction[] {
+  const filtered = ALL_ACTIONS.filter((a) => a.ages.includes(ageGroup));
+
+  // 임산부: 출산 1달전부터 접종달력 표시
+  if (ageGroup === 'pregnant' && child?.dueDate) {
+    const daysUntilDue = Math.ceil((new Date(child.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (daysUntilDue <= 30) {
+      filtered.push(VACCINE_ACTION);
+    }
+  }
+
+  // 새싹부모는 반드시 포함
+  const hasSprout = filtered.some((a) => a.route === '/(main)/parent-level');
+  const sprout = ALL_ACTIONS.find((a) => a.route === '/(main)/parent-level');
+  if (!hasSprout && sprout) filtered.push(sprout);
+  return filtered.slice(0, 8);
 }
 
 /* ------------------------------------------------------------------ */
@@ -92,6 +130,9 @@ interface CountdownData {
   childName: string;
   displayText: string;
   nextMilestone: { label: string; daysUntil: number; monthsUntil?: number } | null;
+  isPregnant?: boolean;
+  daysUntilDue?: number;
+  pregnancyWeeks?: number;
 }
 
 interface DailyCardData {
@@ -173,6 +214,14 @@ export default function HomeScreen() {
   const { updateChild } = useChildStore();
   const logout = useAuthStore((s) => s.logout);
   const [trialPopupVisible, setTrialPopupVisible] = useState(false);
+
+  // ── 출산 전환 모달 상태 ──
+  const [birthModalVisible, setBirthModalVisible] = useState(false);
+  const [birthName, setBirthName] = useState('');
+  const [birthGender, setBirthGender] = useState<'M' | 'F' | null>(null);
+  const [birthDateVal, setBirthDateVal] = useState('');
+  const [birthTimeVal, setBirthTimeVal] = useState('');
+  const [birthLoading, setBirthLoading] = useState(false);
 
   const loadRetentionData = useCallback(async (childId: string) => {
     const results = await Promise.allSettled([
@@ -284,6 +333,45 @@ export default function HomeScreen() {
       loadProactiveInsights(selectedChild.id);
     }
   }, [selectedChild?.id, loadRetentionData, loadWeeklyReport, loadDailyDiary, loadProactiveInsights]);
+
+  const handleBirthSubmit = useCallback(async () => {
+    if (!selectedChild || !birthDateVal || !birthTimeVal) {
+      Alert.alert('알림', '생년월일과 출생시각을 입력해주세요');
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDateVal)) {
+      Alert.alert('알림', 'YYYY-MM-DD 형식으로 입력해주세요');
+      return;
+    }
+    if (!/^\d{2}:\d{2}$/.test(birthTimeVal)) {
+      Alert.alert('알림', 'HH:MM 형식으로 입력해주세요');
+      return;
+    }
+    setBirthLoading(true);
+    try {
+      const payload: Record<string, unknown> = {
+        birthDate: birthDateVal,
+        birthTime: birthTimeVal,
+      };
+      if (birthName.trim()) payload.name = birthName;
+      if (birthGender) payload.gender = birthGender;
+      const res = await childApi.birth(selectedChild.id, payload as {
+        birthDate: string; birthTime: string; name?: string; gender?: string;
+      });
+      const updatedChild = res.data?.data;
+      if (updatedChild) {
+        updateChild(updatedChild);
+      }
+      setBirthModalVisible(false);
+      Alert.alert('축하합니다!', '아이가 태어났어요! 이제부터 육아 코칭이 시작됩니다.');
+      // 새로고침
+      loadChildren();
+    } catch {
+      Alert.alert('오류', '출산 전환에 실패했습니다');
+    } finally {
+      setBirthLoading(false);
+    }
+  }, [selectedChild, birthDateVal, birthTimeVal, birthName, birthGender, updateChild]);
 
   const handleDismissWeeklyReport = useCallback(async () => {
     setWeeklyReport(null);
@@ -457,6 +545,51 @@ export default function HomeScreen() {
 
       {child && (
         <>
+          {/* === 임산부: 출산했어요 카드 === */}
+          {child.isPregnant && (() => {
+            const q = getWeeklyQuestion(child.name || '아가', child.pregnancyWeeks ?? 0);
+            const isNearDue = (child.pregnancyWeeks ?? 0) >= 37;
+            return (
+              <>
+                {/* 주수별 질문 → 임신 기록으로 이동 */}
+                <TouchableOpacity
+                  style={styles.birthCard}
+                  activeOpacity={0.8}
+                  onPress={() => router.push('/(main)/pregnancy' as never)}
+                >
+                  <Text style={styles.birthCardEmoji}>{q.emoji}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.birthCardTitle}>{q.text}</Text>
+                    <Text style={styles.birthCardDesc}>탭해서 기록하기</Text>
+                  </View>
+                  <Text style={styles.birthCardArrow}>{'>'}</Text>
+                </TouchableOpacity>
+
+                {/* 만삭(37주+)이면 출산 등록 버튼 별도 표시 */}
+                {isNearDue && (
+                  <TouchableOpacity
+                    style={[styles.birthCard, { backgroundColor: '#FFF0F5', borderColor: '#FFB6C1', borderWidth: 1, marginTop: 8 }]}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setBirthName(child.name || '');
+                      setBirthGender(null);
+                      setBirthDateVal('');
+                      setBirthTimeVal('');
+                      setBirthModalVisible(true);
+                    }}
+                  >
+                    <Text style={styles.birthCardEmoji}>{'🎉'}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.birthCardTitle}>출산하셨나요?</Text>
+                      <Text style={styles.birthCardDesc}>탭하면 육아 모드로 전환됩니다</Text>
+                    </View>
+                    <Text style={styles.birthCardArrow}>{'>'}</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            );
+          })()}
+
           {/* === Compact Stats (D-day + Streak) === */}
           <CompactStats countdown={countdown} streak={streak} />
 
@@ -469,7 +602,7 @@ export default function HomeScreen() {
           <TodayCard child={child} />
 
           {/* === Quick Actions (8 icons, 2 rows) === */}
-          <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} />
+          <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} child={child} />
 
           {/* === Monthly Characteristic === */}
           <MonthlyCharCard child={child} />
@@ -532,7 +665,7 @@ export default function HomeScreen() {
             <Text style={styles.trialEmoji}>{'👑'}</Text>
             <Text style={styles.trialTitle}>무료 체험이 종료되었습니다</Text>
             <Text style={styles.trialDesc}>
-              프리미엄으로 업그레이드하면 AI 코칭 무제한, 상세 리포트 등 모든 기능을 이용할 수 있어요.
+              프리미엄으로 업그레이드하면 상담이모 무제한, 상세 리포트 등 모든 기능을 이용할 수 있어요.
             </Text>
             <TouchableOpacity
               style={styles.trialPremiumBtn}
@@ -553,6 +686,95 @@ export default function HomeScreen() {
               activeOpacity={0.7}
             >
               <Text style={styles.trialFreeText}>무료로 계속하기</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Birth Transition Modal */}
+      <Modal
+        visible={birthModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setBirthModalVisible(false)}
+      >
+        <View style={styles.birthOverlay}>
+          <View style={styles.birthModalCard}>
+            <Text style={styles.birthModalEmoji}>{'👶'}</Text>
+            <Text style={styles.birthModalTitle}>출산 정보 입력</Text>
+            <Text style={styles.birthModalDesc}>축하합니다! 아이 정보를 입력해주세요</Text>
+
+            <View style={styles.birthField}>
+              <Text style={styles.birthFieldLabel}>이름 (정식 이름)</Text>
+              <TextInput
+                style={styles.birthInput}
+                value={birthName}
+                onChangeText={setBirthName}
+                placeholder="아이 이름"
+                placeholderTextColor={COLOR.textLight}
+              />
+            </View>
+
+            <View style={styles.birthField}>
+              <Text style={styles.birthFieldLabel}>성별</Text>
+              <View style={styles.birthGenderRow}>
+                <TouchableOpacity
+                  style={[styles.birthGenderBtn, birthGender === 'M' && styles.birthGenderActive]}
+                  onPress={() => setBirthGender('M')}
+                >
+                  <Text style={[styles.birthGenderText, birthGender === 'M' && styles.birthGenderActiveText]}>남아</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.birthGenderBtn, birthGender === 'F' && styles.birthGenderActive]}
+                  onPress={() => setBirthGender('F')}
+                >
+                  <Text style={[styles.birthGenderText, birthGender === 'F' && styles.birthGenderActiveText]}>여아</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.birthField}>
+              <Text style={styles.birthFieldLabel}>생년월일 *</Text>
+              <TextInput
+                style={styles.birthInput}
+                value={birthDateVal}
+                onChangeText={setBirthDateVal}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor={COLOR.textLight}
+                keyboardType="numbers-and-punctuation"
+              />
+            </View>
+
+            <View style={styles.birthField}>
+              <Text style={styles.birthFieldLabel}>출생시각 *</Text>
+              <TextInput
+                style={styles.birthInput}
+                value={birthTimeVal}
+                onChangeText={setBirthTimeVal}
+                placeholder="HH:MM"
+                placeholderTextColor={COLOR.textLight}
+                keyboardType="numbers-and-punctuation"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.birthSubmitBtn, birthLoading && { opacity: 0.6 }]}
+              onPress={handleBirthSubmit}
+              disabled={birthLoading}
+              activeOpacity={0.8}
+            >
+              {birthLoading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.birthSubmitText}>출산 완료!</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.birthCancelBtn}
+              onPress={() => setBirthModalVisible(false)}
+            >
+              <Text style={styles.birthCancelText}>취소</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -605,7 +827,9 @@ function Header({
           <Text style={styles.headerName}>
             {child?.name ?? '아이'}{' '}
             <Text style={styles.headerAge}>
-              ({child ? getAgeText(child.ageInfo.months) : ''})
+              ({child?.isPregnant
+                ? `${child.pregnancyWeeks ?? 0}주차`
+                : child ? getAgeText(child.ageInfo.months) : ''})
             </Text>
           </Text>
         </View>
@@ -630,10 +854,37 @@ function Header({
   );
 }
 
-function TodayCard({ child }: { child: Child }) {
-  const report = child.analysisReport;
-  const summaryRaw = report?.summary ?? child.innateData.label;
+const PREGNANCY_ENCOURAGEMENTS = [
+  '오늘도 아가를 위해 건강하게 보내고 계시네요. 정말 대단해요!',
+  '엄마가 행복하면 아가도 행복해요. 오늘 하루도 수고하셨어요.',
+  '뱃속 아가가 엄마 목소리를 듣고 있어요. 사랑스러운 하루 되세요.',
+  '임신은 마라톤이에요. 오늘 하루도 잘 해내고 계세요!',
+  '충분히 쉬어도 괜찮아요. 엄마의 건강이 곧 아가의 건강이에요.',
+  '매일 조금씩 자라고 있는 아가를 상상해보세요. 기적 같은 시간이에요.',
+  '오늘 산책 한번 어떠세요? 신선한 공기가 엄마와 아가 모두에게 좋아요.',
+];
 
+function TodayCard({ child }: { child: Child }) {
+  if (child.isPregnant) {
+    const idx = new Date().getDate() % PREGNANCY_ENCOURAGEMENTS.length;
+    const text = PREGNANCY_ENCOURAGEMENTS[idx];
+    return (
+      <LinearGradient
+        colors={['#E91E63', '#FF6090']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.todayCard}
+      >
+        <Text style={styles.todayQuoteIcon}>{'🤰'}</Text>
+        <Text style={styles.todayLabel}>{child.name} 엄마에게</Text>
+        <Text style={styles.todayText}>{text}</Text>
+        <Text style={styles.todaySparkle}>{'💕'}</Text>
+      </LinearGradient>
+    );
+  }
+
+  const report = child.analysisReport;
+  const summaryRaw = report?.summary ?? child.innateData?.label ?? '특별한 아이';
   const displayText = `${child.name}은(는) ${summaryRaw}`;
 
   return (
@@ -684,23 +935,27 @@ function MonthlyCharCard({ child }: { child: Child }) {
   );
 }
 
-function AllActionsGrid({ ageGroup }: { ageGroup: AgeGroupKey }) {
-  const actions = getActionsForAge(ageGroup);
+function AllActionsGrid({ ageGroup, child }: { ageGroup: AgeGroupKey; child?: Child | null }) {
+  const actions = getActionsForAge(ageGroup, child);
   return (
     <View style={styles.quickSection}>
-      {actions.map((action) => (
-        <TouchableOpacity
-          key={action.label}
-          style={styles.quickItem}
-          onPress={() => router.push(action.route as never)}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.quickCircle, { backgroundColor: action.bg }]}>
-            <Image source={action.icon} style={styles.quickIcon} resizeMode="contain" />
-          </View>
-          <Text style={styles.quickLabel}>{action.label}</Text>
-        </TouchableOpacity>
-      ))}
+      {actions.map((action) => {
+        const isSprout = action.route === '/(main)/parent-level';
+        return (
+          <TouchableOpacity
+            key={action.label}
+            style={styles.quickItem}
+            onPress={() => router.push(action.route as never)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.quickCircle, { backgroundColor: action.bg }]}>
+              <Image source={action.icon} style={styles.quickIcon} resizeMode="contain" />
+              {isSprout && <View style={styles.sproutBadge}><Text style={styles.sproutBadgeText}>GO</Text></View>}
+            </View>
+            <Text style={[styles.quickLabel, isSprout && styles.sproutLabel]}>{action.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -758,7 +1013,9 @@ function CompactStats({
     >
       {countdown && (
         <View style={styles.compactStatItem}>
-          <Text style={styles.compactStatValue}>D+{countdown.daysSinceBirth}</Text>
+          <Text style={styles.compactStatValue}>
+            {countdown.isPregnant ? `D-${countdown.daysUntilDue}` : `D+${countdown.daysSinceBirth}`}
+          </Text>
           <Text style={styles.compactStatLabel}>{countdown.childName}</Text>
         </View>
       )}
@@ -1036,12 +1293,12 @@ const styles = StyleSheet.create({
   quickSection: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-around',
     marginBottom: 28,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     rowGap: 16,
   },
   quickItem: {
+    width: '25%',
     alignItems: 'center',
     gap: 8,
   },
@@ -1062,6 +1319,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: COLOR.text,
+  },
+  sproutBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: COLOR.accent,
+    borderRadius: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  sproutBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  sproutLabel: {
+    color: COLOR.accent,
+    fontWeight: '700',
   },
 
 
@@ -1291,6 +1566,132 @@ const styles = StyleSheet.create({
   },
   trialFreeBtn: { paddingVertical: 12 },
   trialFreeText: {
+    color: COLOR.textLight,
+    fontSize: 14,
+    fontWeight: '600' as const,
+  },
+
+  /* === Birth Card === */
+  birthCard: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: '#FFF0F5',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: '#F8BBD0',
+    ...CARD_SHADOW,
+  },
+  birthCardEmoji: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  birthCardTitle: {
+    fontSize: 15,
+    fontWeight: '700' as const,
+    color: '#E91E63',
+    marginBottom: 2,
+  },
+  birthCardDesc: {
+    fontSize: 12,
+    color: COLOR.textSub,
+  },
+  birthCardArrow: {
+    fontSize: 20,
+    color: '#E91E63',
+    fontWeight: '300' as const,
+    marginLeft: 8,
+  },
+
+  /* === Birth Modal === */
+  birthOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    padding: 24,
+  },
+  birthModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 28,
+    alignItems: 'center' as const,
+    width: '100%' as const,
+  },
+  birthModalEmoji: { fontSize: 44, marginBottom: 12 },
+  birthModalTitle: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    color: COLOR.text,
+    marginBottom: 6,
+  },
+  birthModalDesc: {
+    fontSize: 13,
+    color: COLOR.textSub,
+    marginBottom: 20,
+    textAlign: 'center' as const,
+  },
+  birthField: {
+    width: '100%' as const,
+    marginBottom: 14,
+  },
+  birthFieldLabel: {
+    fontSize: 13,
+    fontWeight: '600' as const,
+    color: COLOR.text,
+    marginBottom: 6,
+  },
+  birthInput: {
+    backgroundColor: '#F8F4F0',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    color: COLOR.text,
+    borderWidth: 1,
+    borderColor: '#F0E6DC',
+  },
+  birthGenderRow: {
+    flexDirection: 'row' as const,
+    gap: 12,
+  },
+  birthGenderBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#F0E6DC',
+    alignItems: 'center' as const,
+    backgroundColor: '#F8F4F0',
+  },
+  birthGenderActive: {
+    borderColor: '#E91E63',
+    backgroundColor: '#FFF0F5',
+  },
+  birthGenderText: {
+    fontSize: 15,
+    fontWeight: '600' as const,
+    color: COLOR.textSub,
+  },
+  birthGenderActiveText: {
+    color: '#E91E63',
+  },
+  birthSubmitBtn: {
+    backgroundColor: '#E91E63',
+    borderRadius: 14,
+    paddingVertical: 16,
+    width: '100%' as const,
+    alignItems: 'center' as const,
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  birthSubmitText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700' as const,
+  },
+  birthCancelBtn: { paddingVertical: 12 },
+  birthCancelText: {
     color: COLOR.textLight,
     fontSize: 14,
     fontWeight: '600' as const,

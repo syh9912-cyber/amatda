@@ -1,5 +1,6 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useState } from 'react';
+import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
 import { Child } from '../../stores/childStore';
@@ -55,7 +56,7 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
     );
   }
 
-  const age = calcAge(child.birthDate);
+  const age = child.birthDate ? calcAge(child.birthDate) : (child.isPregnant ? `${child.pregnancyWeeks ?? 0}주차` : '');
   const avatarSource = child.gender === 'F'
     ? require('../../assets/avatar-girl.png')
     : require('../../assets/avatar-boy.png');
@@ -140,8 +141,14 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
         ) : null}
       </View>
 
-      {/* Temperament */}
-      {temperament ? (
+      {/* Temperament or Pregnancy week */}
+      {child.isPregnant ? (
+        <View style={[styles.temperamentBadge, { backgroundColor: '#FCE4EC' }]}>
+          <Text style={[styles.temperamentText, { color: '#E91E63' }]}>
+            {'임신 '}{child.pregnancyWeeks ?? 0}{'주차'}
+          </Text>
+        </View>
+      ) : temperament ? (
         <View style={styles.temperamentBadge}>
           <Text style={styles.temperamentText}>
             {'기질: '}
@@ -150,17 +157,36 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
         </View>
       ) : null}
 
-      {/* Delete button */}
-      {onDeleteChild ? (
-        <TouchableOpacity
-          style={styles.deleteBtn}
-          onPress={onDeleteChild}
-        >
-          <Text style={styles.deleteBtnText}>
-            {'아이 삭제'}
-          </Text>
-        </TouchableOpacity>
-      ) : null}
+      {/* Health info pills */}
+      {(child.bloodType || child.momBloodType) && (
+        <View style={styles.infoRow}>
+          {child.isPregnant && child.momBloodType ? (
+            <View style={styles.infoPill}><Text style={styles.infoPillText}>{child.momBloodType}형</Text></View>
+          ) : child.bloodType ? (
+            <View style={styles.infoPill}><Text style={styles.infoPillText}>{child.bloodType}형</Text></View>
+          ) : null}
+          {child.isPregnant && child.momHeight ? (
+            <View style={styles.infoPill}><Text style={styles.infoPillText}>{child.momHeight}cm</Text></View>
+          ) : child.height ? (
+            <View style={styles.infoPill}><Text style={styles.infoPillText}>{child.height}cm</Text></View>
+          ) : null}
+          {child.isPregnant && child.momWeight ? (
+            <View style={styles.infoPill}><Text style={styles.infoPillText}>{child.momWeight}kg</Text></View>
+          ) : child.weight ? (
+            <View style={styles.infoPill}><Text style={styles.infoPillText}>{child.weight}kg</Text></View>
+          ) : null}
+        </View>
+      )}
+
+      {/* Manage button */}
+      <TouchableOpacity
+        style={styles.manageBtn}
+        onPress={() => router.push('/(main)/child-edit')}
+      >
+        <Text style={styles.manageBtnText}>
+          {child.isPregnant ? '임신 정보 관리' : '아이 정보 관리'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -248,17 +274,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.primary,
   },
-  deleteBtn: {
+  manageBtn: {
     marginTop: SPACING.sm,
     borderWidth: 1,
-    borderColor: '#E8847C',
+    borderColor: COLORS.primary,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  deleteBtnText: {
+  manageBtnText: {
     fontSize: FONT_SIZE.sm,
-    color: '#E8847C',
+    color: COLORS.primary,
     fontWeight: '600',
   },
 });

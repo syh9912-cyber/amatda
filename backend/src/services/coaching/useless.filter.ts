@@ -13,13 +13,21 @@ const PARENTING_KEYWORDS = [
   '때리', '안아', '안기', '무서', '겁', '싫어', '거부', '화',
   '소변', '기질', '성향', '적응', '분리', '불안', '낯가림',
   '젖', '젖병', '유모차', '카시트', '목욕', '양치', '어떻게',
+  // 임산부 관련
+  '임신', '입덧', '태동', '태아', '주수', '출산', '분만', '진통', '양수',
+  '검진', '초음파', '태교', '태명', '엽산', '철분', '칼슘', '비타민',
+  '배', '뭉침', '부종', '부어', '허리', '요통', '변비', '속쓰림',
+  '두통', '피곤', '피로', '잠', '불면', '다리', '경련', '어지러',
+  '출혈', '이슬', '조산', '전자간증', '당뇨', '혈압', '체중',
+  '모유수유', '산후', '조리원', '제왕', '무통', '병원', '산부인과',
+  '회음', '라마즈', '호흡법', '카시트', '입원', '가방', '준비물',
 ];
 
 const GREETING_PATTERNS = /^(안녕|하이|헬로|반갑|감사합니다|고마워|ㅎㅎ|ㅋㅋ|ㅠㅠ|ㅜㅜ|ok|hi|hello)[\s!.?]*$/i;
 const JOKE_PATTERNS = /^(ㅋ{3,}|ㅎ{3,}|ㅠ{3,}|\.{3,}|ㅡ{3,}|test|테스트|아무거나|몰라|뭐|asdf|qwer)/i;
 
 // 대화 응답 패턴: 첫 질문이나 이전 질문에 대한 짧은 답변 (차단하면 안 됨)
-const REPLY_PATTERNS = /^(네|응|예|아니|아뇨|맞아|그래|좋아|싫어|괜찮|잘|못|많이|조금|가끔|자주|별로|항상|전혀|보통|심해|안|잘 자|잘 먹|잘 안|잘 못)/;
+const REPLY_PATTERNS = /^(네|응|예|아니|아뇨|맞아|그래|좋아|싫어|괜찮|잘|못|많이|조금|가끔|자주|별로|항상|전혀|보통|심해|안|잘 자|잘 먹|잘 안|잘 못|아직|없어|있어|그냥|몰라|좀|약간|그런|아닌|됐어|아직은|별로 없|그래요|됐어요|없어요|있어요)/;
 
 export function filterUselessQuestion(message: string): FilterResult {
   const trimmed = message.trim();
@@ -43,7 +51,7 @@ export function filterUselessQuestion(message: string): FilterResult {
     return {
       isUseless: true,
       rejectionType: 'vague',
-      rejectionMessage: '안녕하세요! 아이에 대한 고민이 있으시면 편하게 말씀해주세요.\n울음, 수면, 식사, 대변, 사회성, 행동, 성장 관련 고민으로 질문해주시면 정확히 도와드릴게요.',
+      rejectionMessage: '안녕하세요! 육아나 임신에 대한 고민이 있으시면 편하게 말씀해주세요.\n수면, 식사, 발달, 임신 증상, 검진 등 다양한 고민으로 질문해주시면 도와드릴게요.',
     };
   }
 
@@ -52,17 +60,17 @@ export function filterUselessQuestion(message: string): FilterResult {
     return {
       isUseless: true,
       rejectionType: 'joke',
-      rejectionMessage: '아이 상황을 조금만 더 구체적으로 적어주시면 도움드릴게요.',
+      rejectionMessage: '상황을 조금만 더 구체적으로 적어주시면 도움드릴게요.',
     };
   }
 
-  // 육아 키워드가 하나도 없고 짧으면 무관 질문 (15자 이상이면 통과)
+  // 육아/임신 키워드가 하나도 없고 짧으면 무관 질문 (15자 이상이면 통과)
   const hasParentingContext = PARENTING_KEYWORDS.some((kw) => trimmed.includes(kw));
   if (!hasParentingContext && trimmed.length < 15) {
     return {
       isUseless: true,
       rejectionType: 'irrelevant',
-      rejectionMessage: '이 채팅은 아이 육아 고민 상담에 맞춰져 있어요.\n울음, 수면, 식사, 대변, 사회성, 행동, 성장 관련 고민으로 질문해주시면 더 정확히 도와드릴게요.',
+      rejectionMessage: '이 채팅은 육아/임신 고민 상담에 맞춰져 있어요.\n아이 또는 임신 관련 고민을 말씀해주시면 도와드릴게요.',
     };
   }
 

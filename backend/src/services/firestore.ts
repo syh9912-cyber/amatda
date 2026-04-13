@@ -39,6 +39,10 @@ export const collections = {
   familyMembers: db.collection('familyMembers'),
   autoDiaries: db.collection('autoDiaries'),
   timeCapsules: db.collection('timeCapsules'),
+  pregnancyRecords: db.collection('pregnancyRecords'),
+  momHealthChecks: db.collection('momHealthChecks'),
+  vaccinations: db.collection('vaccinations'),
+  gdmRecords: db.collection('gdmRecords'),
 };
 
 /** 문서 ID 생성 */
