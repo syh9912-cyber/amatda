@@ -18,6 +18,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [parentRole, setParentRole] = useState<string>('엄마');
   const [loading, setLoading] = useState(false);
   const { setTokens, setUser } = useAuthStore();
 
@@ -36,7 +37,7 @@ export default function RegisterScreen() {
     }
     setLoading(true);
     try {
-      const res = await authApi.register(email, password);
+      const res = await authApi.register(email, password, parentRole);
       const { user, accessToken, refreshToken } = res.data.data;
       setTokens(accessToken, refreshToken);
       setUser(user.id, user.email);
@@ -91,6 +92,22 @@ export default function RegisterScreen() {
               onChangeText={setConfirm}
               secureTextEntry
             />
+          </View>
+
+          <Text style={styles.roleLabel}>누구로 가입하시나요?</Text>
+          <View style={styles.roleWrap}>
+            {['엄마', '아빠', '할머니', '할아버지', '고모/이모', '삼촌', '기타'].map((role) => (
+              <TouchableOpacity
+                key={role}
+                style={[styles.roleBtn, parentRole === role && styles.roleBtnActive]}
+                onPress={() => setParentRole(role)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.roleBtnText, parentRole === role && styles.roleBtnTextActive]}>
+                  {role}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
           <TouchableOpacity
@@ -184,5 +201,41 @@ const styles = StyleSheet.create({
   loginBold: {
     color: '#4338CA',
     fontWeight: '600',
+  },
+  roleLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginTop: 20,
+    marginBottom: 10,
+    alignSelf: 'center',
+  },
+  roleWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'center',
+  },
+  roleBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    minWidth: '28%',
+  },
+  roleBtnActive: {
+    borderColor: '#FF8C5A',
+    backgroundColor: '#FFF5F0',
+  },
+  roleBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9CA3AF',
+  },
+  roleBtnTextActive: {
+    color: '#FF8C5A',
   },
 });

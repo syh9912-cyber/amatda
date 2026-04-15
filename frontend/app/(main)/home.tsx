@@ -15,14 +15,11 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { childApi, coachingApi, retentionApi, premiumApi } from '../../services/api';
+import { childApi, coachingApi, retentionApi, premiumApi, uploadApi } from '../../services/api';
 import { useChildStore, Child } from '../../stores/childStore';
-import { useAuthStore } from '../../stores/authStore';
 import { ChildSelector } from '../../components/home/ChildSelector';
-import { WeeklyReportCard } from '../../components/home/WeeklyReportCard';
-import { DailyDiaryCard } from '../../components/home/DailyDiaryCard';
+// AI Insights UI 제거됨 (WeeklyReportCard, DailyDiaryCard 미사용)
 import {
   ProactivePopup,
   PopupReason,
@@ -54,19 +51,19 @@ function getWeeklyQuestion(name: string, week: number): { emoji: string; text: s
 /* ------------------------------------------------------------------ */
 
 const COLOR = {
-  bg: '#FFF5EC',
+  bg: '#FAFAFA',
   card: '#FFFFFF',
   accent: '#FF8C5A',
-  accentLight: '#FFF0E6',
-  text: '#2D2016',
-  textSub: '#8C7A6B',
-  textLight: '#B5A99A',
-  mint: '#7DD3B8',
-  mintBg: '#E8F8F0',
+  accentLight: '#FFF5EE',
+  text: '#1A1A1A',
+  textSub: '#777777',
+  textLight: '#B0B0B0',
+  mint: '#5CBFAB',
+  mintBg: '#F0FAF7',
   yellow: '#FFD76E',
-  yellowBg: '#FFF8E1',
-  coralBg: '#FFF0E6',
-  shadow: '#2D2016',
+  yellowBg: '#FFFCF0',
+  coralBg: '#FFF8F3',
+  shadow: '#000',
 };
 
 interface QuickAction {
@@ -82,10 +79,11 @@ const ALL_ACTIONS: QuickAction[] = [
   { icon: require('../../assets/quick-learning.png'), label: '임신 기록', route: '/(main)/pregnancy', bg: '#FCE4EC', ages: ['pregnant'] },
   { icon: require('../../assets/quick-report.png'), label: '주수별 발달', route: '/(main)/growth-stats', bg: '#F3E5F5', ages: ['pregnant'] },
   { icon: require('../../assets/quick-report.png'), label: '임당 관리', route: '/(main)/gdm', bg: '#FCE4EC', ages: ['pregnant'] },
-  { icon: require('../../assets/quick-timeline.png'), label: '타임라인', route: '/(main)/album', bg: '#E0F2F1', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
+  { icon: require('../../assets/quick-timeline.png'), label: '성장앨범', route: '/(main)/album', bg: '#E0F2F1', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
   { icon: require('../../assets/quick-lullaby.png'), label: '태교 음악', route: '/(main)/lullaby', bg: '#EDE7F6', ages: ['pregnant'] },
   // 공통
-  { icon: require('../../assets/quick-learning.png'), label: '육아 기록', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['infant', 'toddler'] },
+  { icon: require('../../assets/quick-learning.png'), label: '아기시간', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['infant', 'toddler'] },
+  { icon: require('../../assets/quick-report.png'), label: '열나', route: '/(main)/fever', bg: '#FFF0F0', ages: ['infant', 'toddler'] },
   { icon: require('../../assets/quick-learning.png'), label: '생활 기록', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['elementary'] },
   { icon: require('../../assets/quick-report.png'), label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['infant', 'toddler'] },
   { icon: require('../../assets/quick-report.png'), label: '성장 통계', route: '/(main)/growth-stats', bg: COLOR.mintBg, ages: ['infant', 'toddler', 'elementary'] },
@@ -96,7 +94,7 @@ const ALL_ACTIONS: QuickAction[] = [
   { icon: require('../../assets/play-activity.png'), label: '놀이 학습', route: '/(main)/play-learning', bg: COLOR.yellowBg, ages: ['toddler', 'elementary'] },
   // 공통
   { icon: require('../../assets/quick-coparenting.png'), label: '공동육아', route: '/(main)/coparenting', bg: '#FFF3E0', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
-  { icon: require('../../assets/quick-parent-level.png'), label: '새싹부모', route: '/(main)/parent-level', bg: '#E8F5E9', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
+  { icon: require('../../assets/quick-parent-level.png'), label: '새싹부모', route: '/(main)/parent-level', bg: '#E8F5E9', ages: ['infant', 'toddler', 'elementary'] },
 ];
 
 const VACCINE_ACTION: QuickAction = {
@@ -114,10 +112,12 @@ function getActionsForAge(ageGroup: AgeGroupKey, child?: Child | null): QuickAct
     }
   }
 
-  // 새싹부모는 반드시 포함
-  const hasSprout = filtered.some((a) => a.route === '/(main)/parent-level');
-  const sprout = ALL_ACTIONS.find((a) => a.route === '/(main)/parent-level');
-  if (!hasSprout && sprout) filtered.push(sprout);
+  // 새싹부모는 임신부 제외하고 반드시 포함
+  if (ageGroup !== 'pregnant') {
+    const hasSprout = filtered.some((a) => a.route === '/(main)/parent-level');
+    const sprout = ALL_ACTIONS.find((a) => a.route === '/(main)/parent-level');
+    if (!hasSprout && sprout) filtered.push(sprout);
+  }
   return filtered.slice(0, 8);
 }
 
@@ -149,19 +149,6 @@ interface StreakData {
   nextLevelDays: number;
   totalSessions: number;
 }
-
-interface WeeklyReportData {
-  period: string;
-  totalSessions: number;
-  report: string;
-}
-
-interface DailyDiaryData {
-  diary: string;
-  hasSessions: boolean;
-}
-
-const WEEKLY_REPORT_DISMISSED_KEY = 'amatda_weekly_report_dismissed';
 
 function getAgeText(months: number): string {
   if (months < 12) return `${months}개월`;
@@ -199,20 +186,16 @@ export default function HomeScreen() {
   >(undefined);
 
   const [countdown, setCountdown] = useState<CountdownData | null>(null);
-  const [dailyCard, setDailyCard] = useState<DailyCardData | null>(null);
+  const [, setDailyCard] = useState<DailyCardData | null>(null);
   const [streak, setStreak] = useState<StreakData | null>(null);
-  const [weeklyReport, setWeeklyReport] = useState<WeeklyReportData | null>(null);
-  const [dailyDiary, setDailyDiary] = useState<string | null>(null);
 
-  const [aiInsightsOpen, setAiInsightsOpen] = useState(false);
-  const [proactiveInsights, setProactiveInsights] = useState<Array<{
+  const [proactiveInsights, setProactiveInsights] = useState<{
     type: string; title: string; message: string; actionLabel?: string; actionRoute?: string;
-  }>>([]);
+  }[]>([]);
 
   const { children, selectedChild, setChildren, selectChild } =
     useChildStore();
   const { updateChild } = useChildStore();
-  const logout = useAuthStore((s) => s.logout);
   const [trialPopupVisible, setTrialPopupVisible] = useState(false);
 
   // ── 출산 전환 모달 상태 ──
@@ -273,50 +256,13 @@ export default function HomeScreen() {
     loadChildren();
     checkProactivePopup();
     checkTrialStatus();
-  }, []);
-
-  const loadWeeklyReport = useCallback(async (childId: string) => {
-    try {
-      const dismissedWeek = await AsyncStorage.getItem(WEEKLY_REPORT_DISMISSED_KEY);
-      const now = new Date();
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - now.getDay() + 1);
-      const weekKey = weekStart.toISOString().slice(0, 10);
-      if (dismissedWeek === weekKey) return;
-
-      const isMonday = now.getDay() === 1;
-      if (!isMonday && dismissedWeek) return;
-
-      const res = await coachingApi.weeklyReport(childId);
-      const data = res.data?.data;
-      if (data?.report) {
-        setWeeklyReport({
-          period: data.period as string,
-          totalSessions: data.totalSessions as number,
-          report: data.report as string,
-        });
-      }
-    } catch {
-      // endpoint not available yet
-    }
-  }, []);
-
-  const loadDailyDiary = useCallback(async (childId: string) => {
-    try {
-      const res = await coachingApi.dailyDiary(childId);
-      const data = res.data?.data as DailyDiaryData | undefined;
-      if (data?.hasSessions && data?.diary) {
-        setDailyDiary(data.diary);
-      }
-    } catch {
-      // endpoint not available yet
-    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadProactiveInsights = useCallback(async (childId: string) => {
     try {
       const res = await coachingApi.dailyInsight(childId);
-      const data = res.data?.data as { insights?: Array<{ type: string; title: string; message: string; actionLabel?: string; actionRoute?: string }> } | undefined;
+      const data = res.data?.data as { insights?: { type: string; title: string; message: string; actionLabel?: string; actionRoute?: string }[] } | undefined;
       if (data?.insights && data.insights.length > 0) {
         setProactiveInsights(data.insights);
       }
@@ -326,13 +272,16 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
+    // selectedChild 변경 시 이전 아이의 countdown 즉시 초기화 (D-day 오표시 방지)
+    setCountdown(null);
+    setStreak(null);
+    setProactiveInsights([]);
     if (selectedChild) {
       loadRetentionData(selectedChild.id);
-      loadWeeklyReport(selectedChild.id);
-      loadDailyDiary(selectedChild.id);
       loadProactiveInsights(selectedChild.id);
     }
-  }, [selectedChild?.id, loadRetentionData, loadWeeklyReport, loadDailyDiary, loadProactiveInsights]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedChild?.id, loadRetentionData, loadProactiveInsights]);
 
   const handleBirthSubmit = useCallback(async () => {
     if (!selectedChild || !birthDateVal || !birthTimeVal) {
@@ -371,20 +320,10 @@ export default function HomeScreen() {
     } finally {
       setBirthLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild, birthDateVal, birthTimeVal, birthName, birthGender, updateChild]);
 
-  const handleDismissWeeklyReport = useCallback(async () => {
-    setWeeklyReport(null);
-    try {
-      const now = new Date();
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - now.getDay() + 1);
-      const weekKey = weekStart.toISOString().slice(0, 10);
-      await AsyncStorage.setItem(WEEKLY_REPORT_DISMISSED_KEY, weekKey);
-    } catch {
-      // ignore
-    }
-  }, []);
+  /* 주간 리포트 닫기 — 향후 복원 시 사용 */
 
   const loadChildren = async () => {
     try {
@@ -466,12 +405,12 @@ export default function HomeScreen() {
     if (selectedChild) {
       await Promise.allSettled([
         loadRetentionData(selectedChild.id),
-        loadWeeklyReport(selectedChild.id),
-        loadDailyDiary(selectedChild.id),
+        loadProactiveInsights(selectedChild.id),
       ]);
     }
     setRefreshing(false);
-  }, [selectedChild?.id, loadRetentionData, loadWeeklyReport, loadDailyDiary]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedChild?.id, loadRetentionData, loadProactiveInsights]);
 
   const pickPhoto = async () => {
     if (!selectedChild) return;
@@ -488,15 +427,20 @@ export default function HomeScreen() {
       quality: 0.8,
     });
     if (result.canceled || !result.assets[0]) return;
-    const uri = result.assets[0].uri;
-    const updated = { ...selectedChild, photoUri: uri };
+    const localUri = result.assets[0].uri;
+    // 즉시 로컬 프리뷰 반영
+    const updated = { ...selectedChild, photoUri: localUri };
     updateChild(updated);
     try {
+      // Firebase Storage에 업로드 후 클라우드 URL 저장
+      const uploaded = await uploadApi.upload(localUri, 'profiles');
       await childApi.update(selectedChild.id, {
-        photoUri: uri,
+        photoUri: uploaded.url,
       } as Record<string, unknown>);
+      // 로컬 상태도 클라우드 URL로 갱신
+      updateChild({ ...selectedChild, photoUri: uploaded.url });
     } catch {
-      // photo saved locally even if backend fails
+      Alert.alert('알림', '사진 업로드에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -594,42 +538,15 @@ export default function HomeScreen() {
           <CompactStats countdown={countdown} streak={streak} />
 
           {/* === Proactive Insight (AI가 먼저 말 거는 카드) === */}
-          {proactiveInsights.length > 0 && (
-            <InsightCards insights={proactiveInsights} />
+          {proactiveInsights.filter(i => i.type !== 'milestone_tip').length > 0 && (
+            <InsightCards insights={proactiveInsights.filter(i => i.type !== 'milestone_tip')} />
           )}
-
-          {/* === Today's Card === */}
-          <TodayCard child={child} />
 
           {/* === Quick Actions (8 icons, 2 rows) === */}
           <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} child={child} />
 
           {/* === Monthly Characteristic === */}
           <MonthlyCharCard child={child} />
-
-          {/* === AI Insights (collapsible) === */}
-          {(weeklyReport || dailyDiary) && (
-            <View style={styles.insightsSection}>
-              <TouchableOpacity
-                style={styles.insightsHeader}
-                onPress={() => setAiInsightsOpen((v) => !v)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.insightsTitle}>AI 인사이트</Text>
-                <Text style={styles.insightsArrow}>{aiInsightsOpen ? '∧' : '∨'}</Text>
-              </TouchableOpacity>
-              {aiInsightsOpen && (
-                <View style={styles.insightsBody}>
-                  {weeklyReport ? (
-                    <WeeklyReportCard report={weeklyReport} onDismiss={handleDismissWeeklyReport} />
-                  ) : null}
-                  {dailyDiary ? (
-                    <DailyDiaryCard diary={dailyDiary} />
-                  ) : null}
-                </View>
-              )}
-            </View>
-          )}
 
           {/* === Recommendations === */}
           <RecommendationSection />
@@ -854,53 +771,7 @@ function Header({
   );
 }
 
-const PREGNANCY_ENCOURAGEMENTS = [
-  '오늘도 아가를 위해 건강하게 보내고 계시네요. 정말 대단해요!',
-  '엄마가 행복하면 아가도 행복해요. 오늘 하루도 수고하셨어요.',
-  '뱃속 아가가 엄마 목소리를 듣고 있어요. 사랑스러운 하루 되세요.',
-  '임신은 마라톤이에요. 오늘 하루도 잘 해내고 계세요!',
-  '충분히 쉬어도 괜찮아요. 엄마의 건강이 곧 아가의 건강이에요.',
-  '매일 조금씩 자라고 있는 아가를 상상해보세요. 기적 같은 시간이에요.',
-  '오늘 산책 한번 어떠세요? 신선한 공기가 엄마와 아가 모두에게 좋아요.',
-];
-
-function TodayCard({ child }: { child: Child }) {
-  if (child.isPregnant) {
-    const idx = new Date().getDate() % PREGNANCY_ENCOURAGEMENTS.length;
-    const text = PREGNANCY_ENCOURAGEMENTS[idx];
-    return (
-      <LinearGradient
-        colors={['#E91E63', '#FF6090']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.todayCard}
-      >
-        <Text style={styles.todayQuoteIcon}>{'🤰'}</Text>
-        <Text style={styles.todayLabel}>{child.name} 엄마에게</Text>
-        <Text style={styles.todayText}>{text}</Text>
-        <Text style={styles.todaySparkle}>{'💕'}</Text>
-      </LinearGradient>
-    );
-  }
-
-  const report = child.analysisReport;
-  const summaryRaw = report?.summary ?? child.innateData?.label ?? '특별한 아이';
-  const displayText = `${child.name}은(는) ${summaryRaw}`;
-
-  return (
-    <LinearGradient
-      colors={['#FF8C5A', '#FFB88C']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.todayCard}
-    >
-      <Text style={styles.todayQuoteIcon}>{'✨'}</Text>
-      <Text style={styles.todayLabel}>오늘의 한마디</Text>
-      <Text style={styles.todayText}>{displayText}</Text>
-      <Text style={styles.todaySparkle}>{'✨'}</Text>
-    </LinearGradient>
-  );
-}
+/* TodayCard 제거됨 — 홈화면에서 미사용 */
 
 function MonthlyCharCard({ child }: { child: Child }) {
   const ageMonths = child.birthDate
@@ -1011,40 +882,43 @@ function CompactStats({
       onPress={() => router.push('/(main)/parent-level')}
       activeOpacity={0.7}
     >
-      {countdown && (
-        <View style={styles.compactStatItem}>
-          <Text style={styles.compactStatValue}>
-            {countdown.isPregnant ? `D-${countdown.daysUntilDue}` : `D+${countdown.daysSinceBirth}`}
-          </Text>
-          <Text style={styles.compactStatLabel}>{countdown.childName}</Text>
-        </View>
-      )}
-      {countdown && streak && <View style={styles.compactDivider} />}
-      {streak && (
-        <View style={styles.compactStatItem}>
-          <Text style={styles.compactStatValue}>
-            {LEVEL_ICONS[streak.level] ?? '🌱'} {streak.currentStreak}{'일째'}
-          </Text>
-          <Text style={styles.compactStatLabel}>{streak.levelName}</Text>
-        </View>
-      )}
-      {countdown?.nextMilestone && (
-        <>
-          <View style={styles.compactDivider} />
+      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+        {countdown && (
           <View style={styles.compactStatItem}>
-            <Text style={styles.compactStatValue}>D-{countdown.nextMilestone.daysUntil}</Text>
-            <Text style={styles.compactStatLabel}>{countdown.nextMilestone.label}</Text>
+            <Text style={styles.compactStatValue}>
+              {countdown.isPregnant ? `D-${countdown.daysUntilDue}` : `D+${countdown.daysSinceBirth}`}
+            </Text>
+            <Text style={styles.compactStatLabel}>{countdown.childName}</Text>
           </View>
-        </>
-      )}
+        )}
+        {countdown && streak && <View style={styles.compactDivider} />}
+        {streak && (
+          <View style={styles.compactStatItem}>
+            <Text style={styles.compactStatValue}>
+              {LEVEL_ICONS[streak.level] ?? '🌱'} {streak.currentStreak}{'일째'}
+            </Text>
+            <Text style={styles.compactStatLabel}>{streak.levelName}</Text>
+          </View>
+        )}
+        {countdown?.nextMilestone && (
+          <>
+            <View style={styles.compactDivider} />
+            <View style={styles.compactStatItem}>
+              <Text style={styles.compactStatValue}>D-{countdown.nextMilestone.daysUntil}</Text>
+              <Text style={styles.compactStatLabel}>{countdown.nextMilestone.label}</Text>
+            </View>
+          </>
+        )}
+      </View>
+      <Text style={{ fontSize: 18, color: COLOR.textLight, marginLeft: 4 }}>{'>'}</Text>
     </TouchableOpacity>
   );
 }
 
-function InsightCards({ insights }: { insights: Array<{ type: string; title: string; message: string; actionLabel?: string; actionRoute?: string }> }) {
+function InsightCards({ insights }: { insights: { type: string; title: string; message: string; actionLabel?: string; actionRoute?: string }[] }) {
   const TYPE_COLORS: Record<string, { bg: string; accent: string; icon: string }> = {
     pattern_alert: { bg: '#FFF0E6', accent: '#FF8C5A', icon: '!' },
-    milestone_tip: { bg: '#E8F8F0', accent: '#7DD3B8', icon: '\u2605' },
+    // milestone_tip 삭제됨 — 사용자 요청으로 발달포인트 카드 제거
     encouragement: { bg: '#FFF8E1', accent: '#FFD76E', icon: '\u2665' },
     smart_question: { bg: '#EEEDFC', accent: '#7C83EC', icon: '?' },
     weekly_summary: { bg: '#E8F4FD', accent: '#5BA8D9', icon: '\u03A3' },
@@ -1058,12 +932,14 @@ function InsightCards({ insights }: { insights: Array<{ type: string; title: str
           <TouchableOpacity
             key={`${ins.type}-${idx}`}
             style={{
-              backgroundColor: colors.bg,
-              borderRadius: 16,
+              backgroundColor: '#FFFFFF',
+              borderRadius: 14,
               padding: 16,
-              marginBottom: idx < insights.length - 1 ? 10 : 0,
-              borderLeftWidth: 4,
+              marginBottom: idx < insights.length - 1 ? 8 : 0,
+              borderLeftWidth: 3,
               borderLeftColor: colors.accent,
+              borderWidth: 1,
+              borderColor: '#F0F0F0',
             }}
             activeOpacity={ins.actionRoute ? 0.7 : 1}
             onPress={() => {
@@ -1115,12 +991,13 @@ function EmptyState() {
 /* Styles                                                              */
 /* ------------------------------------------------------------------ */
 
+/* 은은하고 부드러운 그림자 — 투명도 5% 이하, blur 높게 */
 const CARD_SHADOW = {
-  shadowColor: COLOR.shadow,
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.06,
-  shadowRadius: 12,
-  elevation: 3,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.04,
+  shadowRadius: 16,
+  elevation: 1,
 };
 
 const styles = StyleSheet.create({
@@ -1202,62 +1079,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLOR.card,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F5F5F5',
     alignItems: 'center',
     justifyContent: 'center',
-    ...CARD_SHADOW,
   },
   iconEmoji: {
     fontSize: 18,
   },
 
-  /* === 2. Today's Card === */
-  todayCard: {
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 24,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  todayQuoteIcon: {
-    fontSize: 20,
-    marginBottom: 4,
-  },
-  todayLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.85)',
-    marginBottom: 8,
-  },
-  todayText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    lineHeight: 26,
-  },
-  todaySparkle: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
-    fontSize: 28,
-    opacity: 0.3,
-  },
-
   /* === Monthly Characteristic Card === */
   monthlyCard: {
     backgroundColor: COLOR.card,
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 20,
-    shadowColor: COLOR.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-    borderLeftWidth: 4,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    borderLeftWidth: 3,
     borderLeftColor: COLOR.mint,
   },
   monthlyTop: {
@@ -1305,15 +1146,14 @@ const styles = StyleSheet.create({
   quickCircle: {
     width: 64,
     height: 64,
-    borderRadius: 32,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    ...CARD_SHADOW,
   },
   quickIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
   },
   quickLabel: {
     fontSize: 12,
@@ -1364,24 +1204,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLOR.card,
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 16,
-    marginBottom: 10,
-    ...CARD_SHADOW,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
   },
   recoEmojiWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: COLOR.accentLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
   },
   recoIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
   },
   recoTextWrap: {
     flex: 1,
@@ -1408,14 +1249,18 @@ const styles = StyleSheet.create({
   compactStats: {
     flexDirection: 'row' as const,
     backgroundColor: COLOR.card,
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 14,
     marginBottom: 16,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    borderWidth: 1,
-    borderColor: '#FFE0CC',
-    ...CARD_SHADOW,
+    borderWidth: 1.5,
+    borderColor: '#FFD4BB',
+    shadowColor: '#FF8C5A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    elevation: 3,
   },
   compactStatItem: {
     alignItems: 'center' as const,
@@ -1575,13 +1420,12 @@ const styles = StyleSheet.create({
   birthCard: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    backgroundColor: '#FFF0F5',
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
     padding: 16,
-    marginBottom: 16,
-    borderWidth: 1.5,
-    borderColor: '#F8BBD0',
-    ...CARD_SHADOW,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#F0E0E8',
   },
   birthCardEmoji: {
     fontSize: 28,

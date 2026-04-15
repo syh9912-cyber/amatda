@@ -46,10 +46,10 @@ const PERMISSION_LIST = [
 ] as const;
 
 const ROLE_OPTIONS = [
-  { key: 'parent', label: '부모', icon: '👨‍👩‍👦', desc: '모든 권한' },
-  { key: 'grandparent', label: '조부모', icon: '👴', desc: '열람 위주' },
-  { key: 'helper', label: '도우미', icon: '🧑‍🍼', desc: '기록 작성 위주' },
-  { key: 'viewer', label: '열람자', icon: '👀', desc: '보기만 가능' },
+  { key: 'parent', label: '부모', icon: '🫂', desc: '모든 권한 (기록·열람·관리)' },
+  { key: 'grandparent', label: '조부모', icon: '🧓', desc: '기록 작성 + 열람' },
+  { key: 'helper', label: '고모·이모·삼촌', icon: '🤝', desc: '기록 작성 + 열람' },
+  { key: 'viewer', label: '열람만', icon: '👁️', desc: '보기만 가능' },
 ];
 
 const ROLE_PRESETS: Record<string, string[]> = {
@@ -60,7 +60,7 @@ const ROLE_PRESETS: Record<string, string[]> = {
 };
 
 const COLOR = {
-  bg: '#FFF5EC',
+  bg: '#FAFAFA',
   card: '#FFFFFF',
   accent: '#FF8C5A',
   accentLight: '#FFF0E6',
@@ -117,6 +117,7 @@ export default function CoparentingScreen() {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild?.id]);
 
   useEffect(() => { loadMembers(); }, [loadMembers]);
@@ -283,7 +284,7 @@ export default function CoparentingScreen() {
               <Text style={styles.sectionTitle}>나</Text>
               <View style={styles.memberCard}>
                 <View style={styles.memberAvatar}>
-                  <Text style={styles.memberIcon}>{'👩'}</Text>
+                  <Text style={styles.memberIcon}>{'⭐'}</Text>
                 </View>
                 <View style={styles.memberInfo}>
                   <Text style={styles.memberName}>나 (소유자)</Text>
@@ -360,7 +361,7 @@ export default function CoparentingScreen() {
                 style={styles.acceptBtn}
                 onPress={() => setAcceptVisible(true)}
               >
-                <Text style={styles.acceptBtnText}>{'🔑'} 초대 코드 입력</Text>
+                <Text style={styles.acceptBtnText}>{'🎫'} 초대 코드 입력</Text>
               </TouchableOpacity>
             </View>
 
@@ -569,8 +570,7 @@ const styles = StyleSheet.create({
   memberCard: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLOR.card, borderRadius: 16, padding: 16,
-    marginBottom: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    marginBottom: 8, borderWidth: 1, borderColor: '#F0F0F0',
   },
   memberAvatar: {
     width: 48, height: 48, borderRadius: 24,

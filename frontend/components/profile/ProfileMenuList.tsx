@@ -68,6 +68,12 @@ const MENU_ITEMS: MenuItem[] = [
     route: '/(main)/subscription',
   },
   {
+    icon: require('../../assets/icon-mic.png'),
+    label: '음성 기록 설정',
+    description: '음성 명령 가이드 및 기본값 설정',
+    route: '/(main)/voice-settings',
+  },
+  {
     icon: require('../../assets/icon-bell.png'),
     label: '알림 설정',
     description: '푸시 알림 관리',
@@ -75,7 +81,7 @@ const MENU_ITEMS: MenuItem[] = [
   },
   {
     icon: require('../../assets/icon-share.png'),
-    label: '데이터 내보내기',
+    label: '성장앨범만들기',
     description: '아이 성장 기록 PDF로 저장',
   },
   {
@@ -97,12 +103,12 @@ export function ProfileMenuList() {
     try {
       await exportChildDataAsPDF(selectedChild);
     } catch {
-      Alert.alert('오류', '데이터 내보내기에 실패했습니다.');
+      Alert.alert('오류', '성장앨범만들기에 실패했습니다.');
     }
   };
 
   const getOnPress = (item: MenuItem) => {
-    if (item.label === '데이터 내보내기') return handleExport;
+    if (item.label === '성장앨범만들기') return handleExport;
     return () => router.push(item.route as never);
   };
 

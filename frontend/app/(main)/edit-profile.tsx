@@ -7,7 +7,7 @@ import {
 import { Stack, useRouter } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
 import apiInstance, { authApi } from '../../services/api';
-import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -18,6 +18,7 @@ interface UserProfile {
   email: string;
   nickname: string | null;
   authProvider: string;
+  parentRole?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -26,14 +27,15 @@ interface UserProfile {
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { userId, email, setUser } = useAuthStore();
+  const { userId, setUser } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
-  // Nickname
+  // Nickname + parentRole
   const [nickname, setNickname] = useState('');
+  const [parentRole, setParentRole] = useState<string>('엄마');
 
   // Password section
   const [showPasswordSection, setShowPasswordSection] = useState(false);
@@ -55,6 +57,7 @@ export default function EditProfileScreen() {
       const data = res.data?.data as UserProfile;
       setProfile(data);
       setNickname(data.nickname ?? '');
+      if (data.parentRole) setParentRole(data.parentRole);
     } catch {
       Alert.alert('오류', '프로필 정보를 불러오지 못했어요.');
     } finally {
@@ -75,7 +78,7 @@ export default function EditProfileScreen() {
 
     setSaving(true);
     try {
-      await apiInstance.put('/auth/nickname', { nickname: trimmed });
+      await apiInstance.put('/auth/nickname', { nickname: trimmed, parentRole });
       setUser(userId ?? '', trimmed);
       Alert.alert('완료', '별명이 변경되었습니다');
       // Reload profile to reflect change
@@ -211,6 +214,26 @@ export default function EditProfileScreen() {
                 {saving ? '...' : '저장'}
               </Text>
             </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Parent Role */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>부모 역할</Text>
+          <Text style={styles.cardSubtitle}>상담이모가 호칭에 사용해요</Text>
+          <View style={styles.roleWrap}>
+            {['엄마', '아빠', '할머니', '할아버지', '고모/이모', '삼촌', '기타'].map((role) => (
+              <TouchableOpacity
+                key={role}
+                style={[styles.roleBtn, parentRole === role && styles.roleBtnActive]}
+                onPress={() => setParentRole(role)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.roleBtnText, parentRole === role && styles.roleBtnTextActive]}>
+                  {role}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
@@ -536,5 +559,32 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: FONT_SIZE.md,
     fontWeight: '600',
+  },
+  roleWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  roleBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    minWidth: '28%',
+  },
+  roleBtnActive: {
+    borderColor: '#FF8C5A',
+    backgroundColor: '#FFF5F0',
+  },
+  roleBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textLight,
+  },
+  roleBtnTextActive: {
+    color: '#FF8C5A',
   },
 });

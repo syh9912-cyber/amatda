@@ -75,7 +75,7 @@ export default function VaccinationScreen() {
   const childId = child?.id ?? '';
 
   const [schedule, setSchedule] = useState<VaccineItem[]>([]);
-  const [ageMonths, setAgeMonths] = useState(0);
+  const [, setAgeMonths] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterKey>('upcoming');
@@ -93,11 +93,15 @@ export default function VaccinationScreen() {
     if (!childId) return;
     try {
       const res = await vaccinationApi.schedule(childId);
-      const data = res.data.data;
+      const data = res.data?.data;
+      if (!data) throw new Error('응답 데이터 없음');
       setSchedule(data.schedule ?? []);
       setAgeMonths(data.ageMonths ?? 0);
-    } catch { /* silent */ }
-    setLoading(false);
+    } catch {
+      Alert.alert('오류', '접종 일정을 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해주세요.');
+    } finally {
+      setLoading(false);
+    }
   }, [childId]);
 
   useEffect(() => { loadSchedule(); }, [loadSchedule]);

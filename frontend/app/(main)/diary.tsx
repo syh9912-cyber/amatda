@@ -9,9 +9,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  TouchableOpacity,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { observationApi } from '../../services/api';
+import { observationApi, uploadApi, coachingApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { WriteArea } from '../../components/diary/WriteArea';
@@ -31,12 +32,20 @@ interface ObservationItem {
   createdAt: string;
 }
 
+interface AiDiaryData {
+  childName: string;
+  date: string;
+  diary: string;
+}
+
 export default function DiaryScreen() {
   const [content, setContent] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [observations, setObservations] = useState<ObservationItem[]>([]);
   const [listLoading, setListLoading] = useState(true);
+  const [aiDiary, setAiDiary] = useState<AiDiaryData | null>(null);
+  const [aiDiaryLoading, setAiDiaryLoading] = useState(false);
   const selectedChild = useChildStore((s) => s.selectedChild);
 
   const dailyQuestion = useMemo(() => {
@@ -44,21 +53,41 @@ export default function DiaryScreen() {
     const ageGroup = selectedChild.ageInfo.group;
     const q = getTodayQuestion(ageGroup);
     return { question: q.question, hint: q.hint };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild?.ageInfo.group]);
 
   useEffect(() => {
     if (selectedChild) loadObservations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild?.id]);
 
   const loadObservations = async () => {
     if (!selectedChild) return;
     try {
       const res = await observationApi.list(selectedChild.id);
-      setObservations(res.data.data);
+      setObservations(res.data.data ?? []);
     } catch {
-      // ignore
+      Alert.alert('오류', '관찰 기록을 불러오지 못했습니다');
     } finally {
       setListLoading(false);
+    }
+  };
+
+  const handleGenerateAiDiary = async () => {
+    if (!selectedChild) return;
+    setAiDiaryLoading(true);
+    try {
+      const res = await coachingApi.dailyDiary(selectedChild.id);
+      const data = res.data?.data as AiDiaryData | undefined;
+      if (data?.diary) {
+        setAiDiary(data);
+      } else {
+        Alert.alert('알림', 'AI 일기를 생성하지 못했습니다. 오늘 상담 내역이 있어야 생성됩니다.');
+      }
+    } catch {
+      Alert.alert('오류', 'AI 일기 생성에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
+      setAiDiaryLoading(false);
     }
   };
 
@@ -73,7 +102,17 @@ export default function DiaryScreen() {
     }
     setLoading(true);
     try {
-      const res = await observationApi.create(selectedChild.id, content.trim());
+      // 사진이 있으면 Firebase Storage에 업로드
+      let uploadedPhotoUrl: string | undefined;
+      if (photoUri) {
+        try {
+          const uploaded = await uploadApi.upload(photoUri, 'diary');
+          uploadedPhotoUrl = uploaded.url;
+        } catch {
+          // 사진 업로드 실패해도 텍스트는 저장
+        }
+      }
+      const res = await observationApi.create(selectedChild.id, content.trim(), uploadedPhotoUrl ? 'PHOTO' : 'TEXT');
       setObservations((prev) => [res.data.data.observation, ...prev]);
       setContent('');
       setPhotoUri(null);
@@ -113,6 +152,40 @@ export default function DiaryScreen() {
           photoUri={photoUri}
           onChangePhoto={setPhotoUri}
         />
+
+        {/* AI 오늘 일기 섹션 */}
+        <View style={styles.aiDiarySection}>
+          <View style={styles.listHeader}>
+            <Text style={styles.sectionTitle}>AI 오늘 일기</Text>
+          </View>
+          {aiDiary ? (
+            <View style={styles.aiDiaryCard}>
+              <Text style={styles.aiDiaryDate}>{aiDiary.date} · {aiDiary.childName}</Text>
+              <Text style={styles.aiDiaryText}>{aiDiary.diary}</Text>
+              <TouchableOpacity
+                style={styles.aiDiaryRefreshBtn}
+                onPress={handleGenerateAiDiary}
+                disabled={aiDiaryLoading}
+              >
+                <Text style={styles.aiDiaryRefreshText}>
+                  {aiDiaryLoading ? '생성 중...' : '다시 생성'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.aiDiaryGenBtn, aiDiaryLoading && styles.btnDisabled]}
+              onPress={handleGenerateAiDiary}
+              disabled={aiDiaryLoading}
+            >
+              {aiDiaryLoading ? (
+                <ActivityIndicator color={COLORS.primary} />
+              ) : (
+                <Text style={styles.aiDiaryGenText}>✨ AI 오늘 일기 생성</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
 
         <View style={styles.listHeader}>
           <Text style={styles.sectionTitle}>이전 기록</Text>
@@ -190,6 +263,56 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   loader: { marginTop: SPACING.xl },
+  aiDiarySection: { marginBottom: SPACING.lg },
+  aiDiaryCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primary,
+  },
+  aiDiaryDate: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.sm,
+    fontWeight: '600',
+  },
+  aiDiaryText: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text,
+    lineHeight: 22,
+    marginBottom: SPACING.md,
+  },
+  aiDiaryRefreshBtn: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  aiDiaryRefreshText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  aiDiaryGenBtn: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderStyle: 'dashed',
+    minHeight: 52,
+    justifyContent: 'center',
+  },
+  aiDiaryGenText: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  btnDisabled: { opacity: 0.6 },
   emptyWrap: {
     alignItems: 'center',
     padding: SPACING.xl,

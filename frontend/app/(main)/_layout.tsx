@@ -1,10 +1,11 @@
 import { Tabs } from 'expo-router';
-import { Image, ImageSourcePropType, Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChildStore } from '../../stores/childStore';
 
+/* 네비게이션 컬러: 활성 = 브랜드 메인, 비활성 = 깔끔한 연회색 */
 const ACTIVE_COLOR = '#FF8C5A';
-const INACTIVE_COLOR = '#B8A690';
+const INACTIVE_COLOR = '#8E8E93';
 
 const TAB_ICONS = {
   home: { icon: require('../../assets/tab-home.png'), active: require('../../assets/tab-home-active.png') },
@@ -19,9 +20,22 @@ function TabIcon({ iconKey, focused }: { iconKey: keyof typeof TAB_ICONS; focuse
     <View style={{ alignItems: 'center', justifyContent: 'center' }}>
       <Image
         source={focused ? cfg.active : cfg.icon}
-        style={{ width: 34, height: 34, borderRadius: 17, opacity: 1 }}
+        style={{
+          width: 32,
+          height: 32,
+          opacity: focused ? 1 : 0.65,
+        }}
         resizeMode="contain"
       />
+      {focused && (
+        <View style={{
+          width: 4,
+          height: 4,
+          borderRadius: 2,
+          backgroundColor: ACTIVE_COLOR,
+          marginTop: 4,
+        }} />
+      )}
     </View>
   );
 }
@@ -30,10 +44,10 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
   return (
     <Text
       style={{
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: focused ? '700' : '400',
         color: focused ? ACTIVE_COLOR : INACTIVE_COLOR,
-        marginTop: 2,
+        marginTop: 0,
       }}
     >
       {label}
@@ -58,17 +72,17 @@ export default function MainLayout() {
         tabBarInactiveTintColor: INACTIVE_COLOR,
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
-          borderTopWidth: 0,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-          paddingTop: 6,
+          borderTopWidth: 0.5,
+          borderTopColor: '#F0F0F0',
+          paddingTop: 10,
           paddingBottom: bottomPad - 4,
-          height: 56 + bottomPad,
-          shadowColor: '#B8A690',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 8,
-          elevation: 8,
+          height: 64 + bottomPad,
+          /* 은은한 상단 그림자 */
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -1 },
+          shadowOpacity: 0.04,
+          shadowRadius: 12,
+          elevation: 4,
         },
       }}
     >
@@ -76,35 +90,35 @@ export default function MainLayout() {
         name="home"
         options={{
           tabBarIcon: ({ focused }) => <TabIcon iconKey="home" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TabLabel label={'\uD648'} focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={'홈'} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="baby-tracker"
         options={{
           tabBarIcon: ({ focused }) => <TabIcon iconKey="diary" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TabLabel label={isPregnant ? '\uC784\uC2E0\uAE30\uB85D' : isElementary ? '\uC0DD\uD65C\uAE30\uB85D' : '\uC721\uC544\uAE30\uB85D'} focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={isPregnant ? '임신기록' : isElementary ? '생활기록' : '아기시간'} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="chatbot"
         options={{
           tabBarIcon: ({ focused }) => <TabIcon iconKey="chat" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TabLabel label={'\uC0C1\uB2F4\uC774\uBAA8'} focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={'상담이모'} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="momstagram"
         options={{
           tabBarIcon: ({ focused }) => <TabIcon iconKey="diary" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TabLabel label={'\uAC00\uC871\uD53C\uB4DC'} focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={'가족피드'} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           tabBarIcon: ({ focused }) => <TabIcon iconKey="more" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TabLabel label={'\uB9C8\uC774'} focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={'마이'} focused={focused} />,
         }}
       />
 
@@ -143,6 +157,10 @@ export default function MainLayout() {
       <Tabs.Screen name="sos" options={{ href: null }} />
       <Tabs.Screen name="pregnancy" options={{ href: null }} />
       <Tabs.Screen name="vaccination" options={{ href: null }} />
+      <Tabs.Screen name="gdm" options={{ href: null }} />
+      <Tabs.Screen name="child-edit" options={{ href: null }} />
+      <Tabs.Screen name="fever" options={{ href: null }} />
+      <Tabs.Screen name="voice-settings" options={{ href: null }} />
     </Tabs>
   );
 }
