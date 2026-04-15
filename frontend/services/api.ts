@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { router } from 'expo-router';
 import { useAuthStore } from '../stores/authStore';
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -10,19 +9,6 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// 로그아웃 + 로그인 화면 이동 (interceptor에서 호출)
-function handleForcedLogout() {
-  useAuthStore.getState().logout();
-  // router가 초기화된 뒤에 실행되도록 microtask 큐 이후로 밀기
-  setTimeout(() => {
-    try {
-      router.replace('/(auth)/login');
-    } catch {
-      // 라우터 미초기화 상태면 무시 (이미 로그인 화면)
-    }
-  }, 0);
-}
-
 // 토큰 자동 주입
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
@@ -32,7 +18,8 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// 401 시 토큰 갱신 → 실패하면 강제 로그아웃 + 로그인 화면 이동
+// 401 시 토큰 갱신 시도 → 실패하면 logout()만 호출
+// 화면 이동은 (main)/_layout.tsx 의 isAuthenticated 감시가 처리함
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
@@ -48,12 +35,10 @@ api.interceptors.response.use(
           original.headers.Authorization = `Bearer ${accessToken}`;
           return api(original);
         } catch {
-          // refresh 실패 → 강제 로그아웃 + 로그인 화면
-          handleForcedLogout();
+          useAuthStore.getState().logout(); // 레이아웃이 로그인 화면으로 보냄
         }
       } else {
-        // refreshToken 자체가 없음 → 강제 로그아웃
-        handleForcedLogout();
+        useAuthStore.getState().logout();
       }
     }
     return Promise.reject(err);

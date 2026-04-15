@@ -20,7 +20,7 @@ export default function RegisterScreen() {
   const [confirm, setConfirm] = useState('');
   const [parentRole, setParentRole] = useState<string>('엄마');
   const [loading, setLoading] = useState(false);
-  const { setTokens, setUser } = useAuthStore();
+  const { setAuth } = useAuthStore();
 
   const handleRegister = async () => {
     if (!email || !password) {
@@ -39,8 +39,7 @@ export default function RegisterScreen() {
     try {
       const res = await authApi.register(email, password, parentRole);
       const { user, accessToken, refreshToken } = res.data.data;
-      setTokens(accessToken, refreshToken);
-      setUser(user.id, user.email);
+      setAuth({ accessToken, refreshToken, userId: user.id, email: user.email });
       router.replace('/onboarding/child-info');
     } catch {
       Alert.alert('가입 실패', '이미 사용 중인 이메일이거나 서버 오류입니다');

@@ -12,7 +12,7 @@ export function useLoginHandlers() {
   const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(
     null,
   );
-  const { setAuth, setTokens, setUser } = useAuthStore();
+  const { setAuth } = useAuthStore();
 
   const handleLogin = async () => {
     if (!email || !password) {

@@ -1,6 +1,7 @@
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { Image, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuthStore } from '../../stores/authStore';
 import { useChildStore } from '../../stores/childStore';
 
 /* 네비게이션 컬러: 활성 = 브랜드 메인, 비활성 = 깔끔한 연회색 */
@@ -59,10 +60,16 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
 export default function MainLayout() {
   const insets = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, 16);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const selectedChild = useChildStore((s) => s.selectedChild);
   const ageGroup = selectedChild?.ageInfo?.group;
   const isElementary = ageGroup === 'elementary';
   const isPregnant = ageGroup === 'pregnant';
+
+  // 인증 상태가 false가 되는 순간 (logout, 토큰 만료) 즉시 로그인 화면으로
+  if (!isAuthenticated) {
+    return <Redirect href="/(auth)/login" />;
+  }
 
   return (
     <Tabs
