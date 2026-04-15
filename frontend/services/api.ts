@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { router } from 'expo-router';
 import { useAuthStore } from '../stores/authStore';
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -9,6 +10,19 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// 로그아웃 + 로그인 화면 이동 (interceptor에서 호출)
+function handleForcedLogout() {
+  useAuthStore.getState().logout();
+  // router가 초기화된 뒤에 실행되도록 microtask 큐 이후로 밀기
+  setTimeout(() => {
+    try {
+      router.replace('/(auth)/login');
+    } catch {
+      // 라우터 미초기화 상태면 무시 (이미 로그인 화면)
+    }
+  }, 0);
+}
+
 // 토큰 자동 주입
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
@@ -18,7 +32,7 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// 401 시 토큰 갱신 시도
+// 401 시 토큰 갱신 → 실패하면 강제 로그아웃 + 로그인 화면 이동
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
@@ -34,8 +48,12 @@ api.interceptors.response.use(
           original.headers.Authorization = `Bearer ${accessToken}`;
           return api(original);
         } catch {
-          useAuthStore.getState().logout();
+          // refresh 실패 → 강제 로그아웃 + 로그인 화면
+          handleForcedLogout();
         }
+      } else {
+        // refreshToken 자체가 없음 → 강제 로그아웃
+        handleForcedLogout();
       }
     }
     return Promise.reject(err);
@@ -46,8 +64,8 @@ api.interceptors.response.use(
 export const authApi = {
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
-  register: (email: string, password: string) =>
-    api.post('/auth/register', { email, password }),
+  register: (email: string, password: string, parentRole?: string) =>
+    api.post('/auth/register', { email, password, parentRole }),
   socialLogin: (provider: string, accessToken: string) =>
     api.post('/auth/social', { provider, accessToken }),
   socialLoginWithCode: (provider: string, code: string, redirectUri: string) =>
@@ -198,6 +216,8 @@ export const momstagramApi = {
     childAge?: string;
     childGender?: string;
     dominantType?: string;
+    milestone?: string;
+    milestoneEmoji?: string;
   }) => api.post('/momstagram/posts', data),
   toggleLike: (postId: string) =>
     api.post(`/momstagram/posts/${postId}/like`),
@@ -301,7 +321,7 @@ export const growthApi = {
     const qs = params.toString();
     return api.get(`/growth/analysis/${childId}${qs ? `?${qs}` : ''}`);
   },
-  update: (childId: string, data: { height?: number; weight?: number }) =>
+  update: (childId: string, data: { date?: string; height?: number; weight?: number }) =>
     api.post(`/growth/update/${childId}`, data),
 };
 
@@ -377,6 +397,68 @@ export const coparentingApi = {
     api.get('/coparenting/presets'),
 };
 
+// Upload (이미지/영상 → Firebase Storage)
+export const uploadApi = {
+  /**
+   * 파일을 Firebase Storage에 업로드하고 공개 URL 반환
+   * @param fileUri 로컬 파일 URI (file:///...)
+   * @param folder  저장 폴더 (default: "pregnancy")
+   * @returns { url, mediaType, storagePath }
+   */
+  upload: async (fileUri: string, folder = 'pregnancy'): Promise<{ url: string; mediaType: 'photo' | 'video' | 'audio'; storagePath: string }> => {
+    const token = useAuthStore.getState().accessToken;
+    const filename = fileUri.split('/').pop() || 'file';
+    const ext = filename.split('.').pop()?.toLowerCase() || 'jpg';
+    const mimeMap: Record<string, string> = {
+      jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+      webp: 'image/webp', heic: 'image/heic', heif: 'image/heif',
+      mp4: 'video/mp4', mov: 'video/quicktime',
+      // 오디오
+      m4a: 'audio/mp4', caf: 'audio/x-caf', '3gp': 'audio/3gpp',
+      wav: 'audio/wav', aac: 'audio/aac', mp3: 'audio/mpeg',
+    };
+    const mimeType = mimeMap[ext] || 'image/jpeg';
+
+    const formData = new FormData();
+    formData.append('file', {
+      uri: fileUri,
+      name: filename,
+      type: mimeType,
+    } as unknown as Blob);
+    formData.append('folder', folder);
+
+    const res = await fetch(`${API_URL}/upload`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      throw new Error((body as Record<string, string>).error || '업로드 실패');
+    }
+    const json = await res.json().catch(() => null) as { success?: boolean; data?: { url: string; mediaType: 'photo' | 'video' | 'audio'; storagePath: string }; error?: string } | null;
+    if (!json || !json.data) throw new Error(json?.error || '업로드 응답 파싱 실패');
+    return json.data;
+  },
+};
+
+// Album (마일스톤 앨범)
+export const albumApi = {
+  save: (data: {
+    childId: string;
+    uri: string;
+    milestone?: string;
+    milestoneEmoji?: string;
+    memo?: string;
+    date?: string;
+  }) => api.post('/album/photos', data),
+  list: (childId: string) => api.get(`/album/photos/${childId}`),
+  remove: (id: string) => api.delete(`/album/photos/${id}`),
+};
+
 // Pregnancy (임신 기록)
 export const pregnancyApi = {
   createRecord: (data: {
@@ -433,6 +515,39 @@ export const vaccinationApi = {
     api.delete(`/vaccination/complete/${id}`),
   scheduleAlerts: (childId: string) =>
     api.post('/vaccination/schedule-alerts', { childId }),
+};
+
+// Tracker (음성 기록 + 엑셀 가져오기)
+export const trackerApi = {
+  voiceParse: (text: string) =>
+    api.post('/tracker/voice-parse', { text }),
+  importExcel: async (fileUri: string) => {
+    const token = useAuthStore.getState().accessToken;
+    const filename = fileUri.split('/').pop() || 'data.xlsx';
+    const ext = filename.split('.').pop()?.toLowerCase() || 'xlsx';
+    const mimeMap: Record<string, string> = {
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      xls: 'application/vnd.ms-excel',
+      csv: 'text/csv',
+    };
+    const mimeType = mimeMap[ext] || mimeMap.xlsx;
+
+    const formData = new FormData();
+    formData.append('file', {
+      uri: fileUri,
+      name: filename,
+      type: mimeType,
+    } as unknown as Blob);
+
+    const res = await fetch(`${API_URL}/tracker/import`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.error || '가져오기 실패');
+    return json.data;
+  },
 };
 
 // SOS Fast Track (긴급 증상 체크)

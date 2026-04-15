@@ -8,6 +8,9 @@ interface AuthState {
   email: string | null;
   isAuthenticated: boolean;
   isHydrated: boolean;
+  // 통합 로그인 완료 (토큰 + 유저 정보 동시 저장 → saveAuth 누락 없음)
+  setAuth: (params: { accessToken: string; refreshToken: string; userId: string; email: string }) => void;
+  // 토큰만 갱신 (refresh 시) — userId/email은 이미 스토어에 있음
   setTokens: (access: string, refresh: string) => void;
   setUser: (userId: string, email: string) => void;
   logout: () => void;
@@ -22,6 +25,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isHydrated: false,
 
+  // ✅ 로그인 완료 시 항상 이 메서드 사용 — 토큰+유저를 원자적으로 저장
+  setAuth: ({ accessToken, refreshToken, userId, email }) => {
+    set({ accessToken, refreshToken, userId, email, isAuthenticated: true });
+    saveAuth({ accessToken, refreshToken, userId, email });
+  },
+
+  // ✅ refresh 토큰 갱신 시 — userId/email은 스토어에 이미 있음
   setTokens: (access, refresh) => {
     set({ accessToken: access, refreshToken: refresh, isAuthenticated: true });
     const state = get();
@@ -72,7 +82,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ isHydrated: true });
       }
     } catch {
-      // SecureStore or AsyncStorage failure — proceed unauthenticated
       set({ isHydrated: true });
     }
   },

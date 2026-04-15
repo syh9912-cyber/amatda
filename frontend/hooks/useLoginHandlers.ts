@@ -12,7 +12,7 @@ export function useLoginHandlers() {
   const [socialLoading, setSocialLoading] = useState<SocialProvider | null>(
     null,
   );
-  const { setTokens, setUser } = useAuthStore();
+  const { setAuth, setTokens, setUser } = useAuthStore();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -23,8 +23,7 @@ export function useLoginHandlers() {
     try {
       const res = await authApi.login(email, password);
       const { user, accessToken, refreshToken } = res.data.data;
-      setTokens(accessToken, refreshToken);
-      setUser(user.id, user.email);
+      setAuth({ accessToken, refreshToken, userId: user.id, email: user.email });
       router.replace('/(main)/home');
     } catch (e: unknown) {
       const msg =
@@ -49,13 +48,10 @@ export function useLoginHandlers() {
 
       if (result.directLogin) {
         const dl = result.directLogin;
-        setTokens(dl.accessToken, dl.refreshToken);
         const displayName = dl.nickname || dl.email || `${provider} 유저`;
-        setUser(dl.userId, displayName);
+        setAuth({ accessToken: dl.accessToken, refreshToken: dl.refreshToken, userId: dl.userId, email: displayName });
 
-        if (dl.isNewUser) {
-          router.replace('/(auth)/set-nickname');
-        } else if (!dl.nickname) {
+        if (dl.isNewUser || !dl.nickname) {
           router.replace('/(auth)/set-nickname');
         } else {
           router.replace('/(main)/home');
@@ -75,8 +71,7 @@ export function useLoginHandlers() {
           );
 
       const { user, accessToken, refreshToken, isNewUser } = res.data.data;
-      setTokens(accessToken, refreshToken);
-      setUser(user.id, user.email ?? `${provider} 유저`);
+      setAuth({ accessToken, refreshToken, userId: user.id, email: user.email ?? `${provider} 유저` });
       router.replace(isNewUser ? '/onboarding/child-info' : '/(main)/home');
     } catch (e: unknown) {
       const rawMsg = e instanceof Error ? e.message : '알 수 없는 오류가 발생했습니다';

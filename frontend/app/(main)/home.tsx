@@ -326,9 +326,9 @@ export default function HomeScreen() {
 
   /* 주간 리포트 닫기 — 향후 복원 시 사용 */
 
-  const loadChildren = async (isRetry = false) => {
+  const loadChildren = async (isRetry = false, _retryCount = 0) => {
     if (isRetry) setLoading(true);
-    setLoadError(false);
+    if (_retryCount === 0) setLoadError(false);
     try {
       const res = await childApi.list();
       setChildren(res.data?.data ?? []);
@@ -336,12 +336,17 @@ export default function HomeScreen() {
       const axErr = e as { response?: { status?: number }; message?: string };
       console.error('loadChildren failed:', axErr.response?.status, axErr.message);
       if (axErr.response?.status === 401) {
-        Alert.alert('인증 만료', '다시 로그인해주세요.');
+        // 인터셉터가 refresh 시도 → 실패 시 이미 로그인 화면으로 이동
+        // 여기까지 오면 할 일 없음
+      } else if (_retryCount < 2) {
+        // OTA 재시작 직후 네트워크 재연결 타이밍 → 1.5초 후 자동 재시도
+        await new Promise(r => setTimeout(r, 1500));
+        return loadChildren(false, _retryCount + 1);
       } else {
         setLoadError(true);
       }
     } finally {
-      setLoading(false);
+      if (_retryCount === 0) setLoading(false);
     }
   };
 
