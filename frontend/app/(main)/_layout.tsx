@@ -10,6 +10,7 @@ const INACTIVE_COLOR = '#8E8E93';
 const TAB_ICONS = {
   home: { icon: require('../../assets/tab-home.png'), active: require('../../assets/tab-home-active.png') },
   diary: { icon: require('../../assets/tab-diary.png'), active: require('../../assets/tab-diary-active.png') },
+  family: { icon: require('../../assets/icon-heart.png'), active: require('../../assets/icon-heart.png') },
   chat: { icon: require('../../assets/tab-chat.png'), active: require('../../assets/tab-chat-active.png') },
   more: { icon: require('../../assets/tab-more.png'), active: require('../../assets/tab-more-active.png') },
 } as const;
@@ -110,7 +111,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="momstagram"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon iconKey="diary" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon iconKey="family" focused={focused} />,
           tabBarLabel: ({ focused }) => <TabLabel label={'가족피드'} focused={focused} />,
         }}
       />

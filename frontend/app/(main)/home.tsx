@@ -178,6 +178,7 @@ const TRIAL_POPUP_KEY = 'amatda_trial_popup_dismissed';
 
 export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupReason, setPopupReason] = useState<PopupReason>('inactive');
@@ -325,7 +326,9 @@ export default function HomeScreen() {
 
   /* 주간 리포트 닫기 — 향후 복원 시 사용 */
 
-  const loadChildren = async () => {
+  const loadChildren = async (isRetry = false) => {
+    if (isRetry) setLoading(true);
+    setLoadError(false);
     try {
       const res = await childApi.list();
       setChildren(res.data?.data ?? []);
@@ -334,6 +337,8 @@ export default function HomeScreen() {
       console.error('loadChildren failed:', axErr.response?.status, axErr.message);
       if (axErr.response?.status === 401) {
         Alert.alert('인증 만료', '다시 로그인해주세요.');
+      } else {
+        setLoadError(true);
       }
     } finally {
       setLoading(false);
@@ -401,6 +406,7 @@ export default function HomeScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    setLoadError(false);
     await loadChildren();
     if (selectedChild) {
       await Promise.allSettled([
@@ -449,6 +455,27 @@ export default function HomeScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLOR.accent} />
+      </View>
+    );
+  }
+
+  /* Network error state */
+  if (loadError) {
+    return (
+      <View style={styles.center}>
+        <Text style={{ fontSize: 40, marginBottom: 16 }}>{'😥'}</Text>
+        <Text style={{ fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 8 }}>
+          {'서버 연결에 실패했어요'}
+        </Text>
+        <Text style={{ fontSize: 13, color: '#888', marginBottom: 24, textAlign: 'center', paddingHorizontal: 32 }}>
+          {'인터넷 연결을 확인하고 다시 시도해주세요'}
+        </Text>
+        <TouchableOpacity
+          onPress={() => loadChildren(true)}
+          style={{ backgroundColor: COLOR.accent, paddingHorizontal: 32, paddingVertical: 12, borderRadius: 24 }}
+        >
+          <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 15 }}>{'다시 시도'}</Text>
+        </TouchableOpacity>
       </View>
     );
   }

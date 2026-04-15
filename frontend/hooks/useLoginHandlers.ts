@@ -43,6 +43,7 @@ export function useLoginHandlers() {
       console.log('[SocialLogin] Result:', result ? 'got result' : 'null');
       if (!result) {
         setSocialLoading(null);
+        Alert.alert('로그인 실패', '로그인이 완료되지 않았습니다. 다시 시도해주세요.');
         return;
       }
 
@@ -78,12 +79,24 @@ export function useLoginHandlers() {
       setUser(user.id, user.email ?? `${provider} 유저`);
       router.replace(isNewUser ? '/onboarding/child-info' : '/(main)/home');
     } catch (e: unknown) {
-      const detail =
-        e instanceof Error ? e.message : '알 수 없는 오류가 발생했습니다';
-      console.error(`[SocialLogin] ${provider} error:`, detail);
+      const rawMsg = e instanceof Error ? e.message : '알 수 없는 오류가 발생했습니다';
+      console.error(`[SocialLogin] ${provider} error:`, rawMsg);
+
+      // 사용자 친화적 메시지
+      let friendlyMsg = rawMsg;
+      if (rawMsg.includes('cancel') || rawMsg.includes('Cancel') || rawMsg.includes('RNKakaoLogins')) {
+        friendlyMsg = '로그인을 취소했습니다.';
+      } else if (rawMsg.includes('KakaoTalkNotInstalled')) {
+        friendlyMsg = '카카오톡이 설치되어 있지 않습니다.\n카카오톡을 설치 후 다시 시도해주세요.';
+      } else if (rawMsg.includes('network') || rawMsg.includes('Network') || rawMsg.includes('timeout')) {
+        friendlyMsg = '네트워크 연결을 확인해주세요.';
+      } else if (rawMsg.includes('카카오 토큰 검증 실패')) {
+        friendlyMsg = '카카오 인증 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.';
+      }
+
       Alert.alert(
-        '소셜 로그인 실패',
-        `${provider} 로그인 중 오류가 발생했습니다.\n${detail}`,
+        provider === 'KAKAO' ? '카카오 로그인 실패' : '소셜 로그인 실패',
+        friendlyMsg,
       );
     } finally {
       setSocialLoading(null);
