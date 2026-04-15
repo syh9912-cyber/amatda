@@ -14,7 +14,8 @@ import siblingRoutes from './routes/sibling';
 import chatbotRoutes from './routes/chatbot';
 import mateRoutes from './routes/mate';
 import adRoutes from './routes/ad';
-import seedRoutes from './routes/seed';
+// seed 라우트 제거 — 프로덕션에서 인증 없이 DB 삭제 가능한 보안 취약점
+// import seedRoutes from './routes/seed';
 import momstagramRoutes from './routes/momstagram';
 import coachingRoutes from './routes/coaching/index';
 import clinicRoutes from './routes/clinic';
@@ -27,6 +28,9 @@ import coparentingRoutes from './routes/coparenting';
 import sosRoutes from './routes/sos';
 import pregnancyRoutes from './routes/pregnancy';
 import vaccinationRoutes from './routes/vaccination';
+import uploadRoutes from './routes/upload';
+import albumRoutes from './routes/album';
+import trackerRoutes from './routes/tracker';
 
 const app = express();
 
@@ -45,7 +49,7 @@ app.use('/api/siblings', siblingRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/mates', mateRoutes);
 app.use('/api/ads', adRoutes);
-app.use('/api/seed', seedRoutes);
+// app.use('/api/seed', seedRoutes); // 프로덕션 제거
 app.use('/api/momstagram', momstagramRoutes);
 app.use('/api/coaching', coachingRoutes);
 app.use('/api/clinics', clinicRoutes);
@@ -58,14 +62,25 @@ app.use('/api/coparenting', coparentingRoutes);
 app.use('/api/sos', sosRoutes);
 app.use('/api/pregnancy', pregnancyRoutes);
 app.use('/api/vaccination', vaccinationRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/album', albumRoutes);
+app.use('/api/tracker', trackerRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() } });
 });
 
 // Firebase Functions export (public access)
+// memory: 512MiB — 코칭 지식 DB(~900KB) + Express + Gemini 버퍼가 기본 256MiB 초과
+// concurrency: 20 — 동시 요청 과다 시 메모리 스파이크 방지 (기본 80 → 20)
 export const api = functions.https.onRequest(
-  { cors: true, invoker: 'public' },
+  {
+    cors: true,
+    invoker: 'public',
+    memory: '512MiB',
+    concurrency: 20,
+    timeoutSeconds: 300,
+  },
   app
 );
 
