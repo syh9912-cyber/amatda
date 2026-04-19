@@ -1055,14 +1055,16 @@ router.get('/gdm/food', authMiddleware, async (req: Request, res: Response) => {
 
     const since = new Date();
     since.setDate(since.getDate() - days);
+    const sinceKey = since.toISOString().slice(0, 10);
 
     const snap = await collections.gdmFoodLogs
       .where('childId', '==', childId)
-      .where('date', '>=', since.toISOString().slice(0, 10))
       .limit(300)
       .get();
 
-    const records = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const records = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((r) => ((r as { date?: string }).date ?? '') >= sinceKey);
     records.sort((a, b) => ((b as { eatenAt?: string }).eatenAt ?? '').localeCompare((a as { eatenAt?: string }).eatenAt ?? ''));
 
     success(res, { records });
