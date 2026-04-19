@@ -1180,4 +1180,188 @@ router.post('/gdm/food/analyze', authMiddleware, async (req: Request, res: Respo
   }
 });
 
+/* ================================================================== */
+/*  8. 임당 주간 AI 리포트 (혈당 + 식단 종합 분석)                     */
+/* ================================================================== */
+
+const WEEKLY_REPORT_LIMITS = { free: 1, paid: 3 } as const;
+
+async function checkAndIncrementWeeklyReport(
+  userId: string,
+  tier: 'free' | 'paid',
+): Promise<{ allowed: boolean; used: number; limit: number }> {
+  const limit = WEEKLY_REPORT_LIMITS[tier];
+  const today = new Date().toISOString().slice(0, 10);
+  const docId = `gdm_report_${userId}_${today}`;
+  const ref = collections.rateLimits.doc(docId);
+  const doc = await ref.get();
+  const used = doc.exists ? (((doc.data() as Record<string, unknown>).count as number) ?? 0) : 0;
+  if (used >= limit) return { allowed: false, used, limit };
+  await ref.set({
+    count: admin.firestore.FieldValue.increment(1),
+    userId,
+    date: today,
+    tier,
+    kind: 'gdm_weekly_report',
+    lastUsedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return { allowed: true, used: used + 1, limit };
+}
+
+/** POST /api/pregnancy/gdm/weekly-report — 최근 7일 혈당+식단 AI 분석 */
+router.post('/gdm/weekly-report', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { childId } = req.body as { childId: string };
+    if (!childId) { error(res, 'childId 필요'); return; }
+
+    const childDoc = await collections.children.doc(childId).get();
+    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) {
+      error(res, '아이를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const tier = await getUserTierForFood(req.userId!);
+    const usage = await checkAndIncrementWeeklyReport(req.userId!, tier);
+    if (!usage.allowed) {
+      const msg = tier === 'free'
+        ? `오늘 AI 분석 횟수를 사용했어요 (무료 하루 ${usage.limit}회). 내일 다시 이용해주세요.`
+        : `오늘 AI 분석 횟수를 모두 사용했어요 (프리미엄 하루 ${usage.limit}회).`;
+      res.status(429).json({ success: false, error: msg });
+      return;
+    }
+
+    // 최근 7일 데이터 수집
+    const since = new Date();
+    since.setDate(since.getDate() - 7);
+    const sinceKey = since.toISOString().slice(0, 10);
+
+    const [gdmSnap, foodSnap] = await Promise.all([
+      collections.gdmRecords.where('childId', '==', childId).limit(200).get(),
+      collections.gdmFoodLogs.where('childId', '==', childId).limit(200).get(),
+    ]);
+
+    interface GlucoseItem { glucoseLevel: number; mealType: string; status: string; measuredAt: string; date: string; memo?: string | null }
+    interface FoodItem { foodName: string; mealType: string; eatenAt: string; date: string; carbs?: number | null; calories?: number | null }
+
+    const glucose = gdmSnap.docs
+      .map((d) => d.data() as unknown as GlucoseItem)
+      .filter((r) => (r.date ?? '') >= sinceKey)
+      .sort((a, b) => (a.measuredAt ?? '').localeCompare(b.measuredAt ?? ''));
+
+    const foods = foodSnap.docs
+      .map((d) => d.data() as unknown as FoodItem)
+      .filter((r) => (r.date ?? '') >= sinceKey)
+      .sort((a, b) => (a.eatenAt ?? '').localeCompare(b.eatenAt ?? ''));
+
+    if (glucose.length === 0 && foods.length === 0) {
+      res.status(200).json({
+        success: true,
+        data: {
+          summary: '최근 7일간 기록이 없어요. 며칠간 꾸준히 기록해주시면 분석해드릴게요.',
+          highlights: [],
+          cautions: [],
+          suggestions: ['하루 1회 이상 혈당 측정', '매끼 음식 이름+시간 기록', '식후 1시간 혈당은 임당 관리 핵심'],
+          disclaimer: '이 분석은 참고용이며 의료 진단이 아닙니다. 정확한 관리는 담당 의료진과 상담해주세요.',
+        },
+      });
+      return;
+    }
+
+    // 통계 요약
+    const MEAL_KR: Record<string, string> = {
+      fasting: '공복', before_meal: '식전', after_meal_1h: '식후1h', after_meal_2h: '식후2h', bedtime: '취침전',
+      breakfast: '아침', lunch: '점심', dinner: '저녁', snack: '간식',
+    };
+    const levels = glucose.map((r) => r.glucoseLevel);
+    const avg = levels.length ? Math.round(levels.reduce((a, b) => a + b, 0) / levels.length) : 0;
+    const max = levels.length ? Math.max(...levels) : 0;
+    const min = levels.length ? Math.min(...levels) : 0;
+    const cautionCount = glucose.filter((r) => r.status === 'caution').length;
+    const warningCount = glucose.filter((r) => r.status === 'warning').length;
+
+    const glucoseLines = glucose.slice(-40).map((r) =>
+      `[${r.date} ${r.measuredAt.slice(11, 16)}] ${MEAL_KR[r.mealType] ?? r.mealType} ${r.glucoseLevel}mg/dL (${r.status})${r.memo ? ` - ${r.memo}` : ''}`,
+    ).join('\n');
+
+    const foodLines = foods.slice(-40).map((f) =>
+      `[${f.date} ${f.eatenAt.slice(11, 16)}] ${MEAL_KR[f.mealType] ?? f.mealType}: ${f.foodName}${typeof f.carbs === 'number' ? ` (탄수 ${f.carbs}g)` : ''}${typeof f.calories === 'number' ? ` (${f.calories}kcal)` : ''}`,
+    ).join('\n');
+
+    const prompt = `당신은 임신성 당뇨(GDM)를 관리하는 산모를 돕는 따뜻한 영양/건강 코치입니다.
+아래 최근 7일 기록을 보고 산모가 쉽게 이해할 수 있는 분석을 제공하세요.
+
+[기준 수치]
+- 공복: 95 이하
+- 식후 1시간: 140 이하
+- 식후 2시간: 120 이하
+
+[7일 통계]
+- 혈당 측정 ${glucose.length}회, 평균 ${avg}, 최고 ${max}, 최저 ${min}
+- 주의 ${cautionCount}회, 위험 ${warningCount}회
+- 식단 기록 ${foods.length}회
+
+[혈당 기록]
+${glucoseLines || '(기록 없음)'}
+
+[식단 기록]
+${foodLines || '(기록 없음)'}
+
+반드시 아래 JSON 형식만 출력하세요. 의학 용어는 피하고 친근하고 따뜻한 말투로 작성하세요:
+{
+  "summary": "이번 주 전반 상태 요약 (2~3문장, 잘하고 있는 점 먼저)",
+  "highlights": ["잘한 점 1", "잘한 점 2"],
+  "cautions": ["주의할 점 1 (구체적 데이터 인용)", "주의할 점 2"],
+  "suggestions": ["이번 주 실천 팁 1", "팁 2", "팁 3"]
+}
+
+주의:
+- 의료 진단/처방 금지
+- 특정 음식 금지하지 말고 "대체 추천" 형식으로
+- highlights/cautions는 없으면 빈 배열
+- 각 항목 1~2문장, 구체적이고 실행 가능하게`;
+
+    try {
+      if (!isGeminiAvailable()) {
+        res.status(200).json({
+          success: true,
+          data: {
+            summary: `최근 7일간 혈당 ${glucose.length}회, 식단 ${foods.length}회 기록하셨어요. 평균 혈당 ${avg}mg/dL예요.`,
+            highlights: glucose.length >= 7 ? ['꾸준한 혈당 기록 멋져요'] : [],
+            cautions: warningCount > 0 ? [`위험 범위가 ${warningCount}회 있었어요. 담당 의료진과 상의하세요`] : [],
+            suggestions: ['AI 분석 서버 점검 중입니다. 잠시 후 다시 시도해주세요'],
+            disclaimer: '이 분석은 참고용이며 의료 진단이 아닙니다.',
+          },
+        });
+        return;
+      }
+
+      const parsed = await callGeminiJSON<{
+        summary?: string;
+        highlights?: string[];
+        cautions?: string[];
+        suggestions?: string[];
+      }>(prompt, { temperature: 0.4, maxTokens: 900 });
+
+      success(res, {
+        summary: parsed.summary || '',
+        highlights: Array.isArray(parsed.highlights) ? parsed.highlights : [],
+        cautions: Array.isArray(parsed.cautions) ? parsed.cautions : [],
+        suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+        stats: { days: 7, measurements: glucose.length, meals: foods.length, avg, max, min, cautionCount, warningCount },
+        disclaimer: '이 분석은 참고용이며 의료 진단이 아닙니다. 정확한 임당 관리는 담당 의료진과 상담해주세요.',
+      });
+    } catch {
+      success(res, {
+        summary: `최근 7일 혈당 ${glucose.length}회 평균 ${avg}mg/dL, 식단 ${foods.length}회 기록됐어요.`,
+        highlights: [],
+        cautions: warningCount > 0 ? [`위험 범위 ${warningCount}회 발생 — 담당 의료진 상담 권장`] : [],
+        suggestions: ['AI 분석이 일시적으로 불가해요. 잠시 후 다시 시도해주세요'],
+        disclaimer: '이 분석은 참고용이며 의료 진단이 아닙니다.',
+      });
+    }
+  } catch {
+    error(res, 'AI 분석 중 오류가 발생했습니다', 500);
+  }
+});
+
 export default router;

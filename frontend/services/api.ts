@@ -558,6 +558,8 @@ export const pregnancyApi = {
     api.delete(`/pregnancy/gdm/food/${id}`),
   analyzeFoodPhoto: (mediaBase64: string, mediaMimeType: string) =>
     api.post('/pregnancy/gdm/food/analyze', { mediaBase64, mediaMimeType }),
+  gdmWeeklyReport: (childId: string) =>
+    api.post('/pregnancy/gdm/weekly-report', { childId }),
 };
 
 // Vaccination (예방접종)

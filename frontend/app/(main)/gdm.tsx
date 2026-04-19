@@ -85,6 +85,33 @@ interface AnalyzeResult {
   usage?: { used: number; limit: number; remaining: number; tier: 'free' | 'paid' };
 }
 
+interface WeeklyReport {
+  summary: string;
+  highlights: string[];
+  cautions: string[];
+  suggestions: string[];
+  stats?: { days: number; measurements: number; meals: number; avg: number; max: number; min: number; cautionCount: number; warningCount: number };
+  disclaimer: string;
+}
+
+const GLUCOSE_ADVICE: Record<string, { title: string; body: string }> = {
+  caution: {
+    title: '살짝 주의가 필요해요',
+    body: '기준치보다 조금 높아요.\n· 식후라면 10~15분 가벼운 산책이 도움돼요\n· 다음 끼니는 탄수화물 양을 조금 줄여보세요\n· 물을 충분히 드시고, 1~2시간 후 재측정을 권해요',
+  },
+  warning: {
+    title: '위험 범위예요',
+    body: '기준치보다 많이 높아요.\n· 물을 충분히 드시고 안정을 취하세요\n· 같은 패턴이 반복되면 담당 의료진과 상의하세요\n· 이번 식사 내용을 식단 탭에 기록해두면 원인 파악에 도움돼요',
+  },
+};
+
+const MEAL_CARB_LIMIT: Record<FoodMealType, number> = {
+  breakfast: 45,
+  lunch: 60,
+  dinner: 60,
+  snack: 20,
+};
+
 export default function GdmScreen() {
   const child = useChildStore((s) => s.selectedChild);
   const childId = child?.id ?? '';
@@ -117,6 +144,11 @@ export default function GdmScreen() {
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeResult, setAnalyzeResult] = useState<AnalyzeResult | null>(null);
   const [savingFood, setSavingFood] = useState(false);
+
+  // 주간 AI 리포트
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [report, setReport] = useState<WeeklyReport | null>(null);
 
   const loadData = useCallback(async () => {
     if (!childId) return;
@@ -155,16 +187,21 @@ export default function GdmScreen() {
     }
     setSaving(true);
     try {
-      await pregnancyApi.saveGdm({
+      const res = await pregnancyApi.saveGdm({
         childId,
         glucoseLevel: level,
         mealType,
         memo: memo.trim() || undefined,
       });
+      const saved = (res.data?.data ?? res.data) as { status?: string };
       setGlucose('');
       setMemo('');
       setShowGlucoseModal(false);
       await loadData();
+      if (saved?.status && GLUCOSE_ADVICE[saved.status]) {
+        const a = GLUCOSE_ADVICE[saved.status];
+        Alert.alert(a.title, a.body);
+      }
     } catch {
       Alert.alert('오류', '혈당 기록 저장에 실패했습니다.');
     } finally {
@@ -294,12 +331,38 @@ export default function GdmScreen() {
         memo: foodMemo.trim() || undefined,
       });
       setShowFoodModal(false);
+      const savedCarbs = isNaN(carbsNum) ? null : carbsNum;
+      const savedMealType = foodMealType;
       resetFoodModal();
       await loadData();
+      if (savedCarbs !== null && savedCarbs > MEAL_CARB_LIMIT[savedMealType]) {
+        Alert.alert(
+          '탄수화물이 조금 많아요',
+          `이번 ${FOOD_MEAL_LABELS[savedMealType]}의 탄수화물이 ${savedCarbs}g이에요. (${FOOD_MEAL_LABELS[savedMealType]} 권장 ${MEAL_CARB_LIMIT[savedMealType]}g 내외)\n· 식후 1시간 혈당을 꼭 재보세요\n· 다음 끼니는 채소/단백질 비율을 높여보세요\n· 식후 10~15분 가벼운 산책이 혈당 상승을 완화해줘요`,
+        );
+      }
     } catch {
       Alert.alert('오류', '식단 기록 저장에 실패했습니다.');
     } finally {
       setSavingFood(false);
+    }
+  };
+
+  const handleLoadReport = async () => {
+    if (!childId) return;
+    setShowReportModal(true);
+    setReportLoading(true);
+    setReport(null);
+    try {
+      const res = await pregnancyApi.gdmWeeklyReport(childId);
+      const data = (res.data?.data ?? res.data) as WeeklyReport;
+      setReport(data);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      Alert.alert('알림', msg || 'AI 분석을 가져오지 못했어요. 잠시 후 다시 시도해주세요.');
+      setShowReportModal(false);
+    } finally {
+      setReportLoading(false);
     }
   };
 
@@ -346,6 +409,16 @@ export default function GdmScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* AI 주간 분석 버튼 */}
+        <TouchableOpacity
+          style={styles.reportBtn}
+          onPress={handleLoadReport}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.reportBtnText}>🤖 이번 주 AI 분석 받기</Text>
+          <Text style={styles.reportBtnSub}>최근 7일 혈당+식단 종합 코칭</Text>
+        </TouchableOpacity>
+
         {/* 산모 정보 */}
         {child && (
           <View style={styles.infoCard}>
@@ -562,6 +635,91 @@ export default function GdmScreen() {
             >
               <Text style={styles.saveBtnText}>{saving ? '저장 중...' : '기록 저장'}</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 주간 AI 리포트 모달 */}
+      <Modal visible={showReportModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '88%' }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowReportModal(false)}>
+                <Text style={styles.modalBack}>{'< 닫기'}</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>이번 주 AI 분석</Text>
+              <View style={{ width: 50 }} />
+            </View>
+
+            {reportLoading && (
+              <View style={{ paddingVertical: 60, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color="#E91E63" />
+                <Text style={{ marginTop: 12, color: COLORS.textSecondary }}>최근 7일 기록을 분석하고 있어요...</Text>
+              </View>
+            )}
+
+            {!reportLoading && report && (
+              <ScrollView style={{ maxHeight: 560 }}>
+                {report.stats && (
+                  <View style={styles.reportStatsRow}>
+                    <View style={styles.reportStat}>
+                      <Text style={styles.reportStatVal}>{report.stats.avg}</Text>
+                      <Text style={styles.reportStatLabel}>평균혈당</Text>
+                    </View>
+                    <View style={styles.reportStat}>
+                      <Text style={styles.reportStatVal}>{report.stats.measurements}</Text>
+                      <Text style={styles.reportStatLabel}>측정</Text>
+                    </View>
+                    <View style={styles.reportStat}>
+                      <Text style={styles.reportStatVal}>{report.stats.meals}</Text>
+                      <Text style={styles.reportStatLabel}>식단</Text>
+                    </View>
+                    {report.stats.warningCount > 0 && (
+                      <View style={styles.reportStat}>
+                        <Text style={[styles.reportStatVal, { color: '#C62828' }]}>{report.stats.warningCount}</Text>
+                        <Text style={styles.reportStatLabel}>위험</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {report.summary ? (
+                  <View style={styles.reportSection}>
+                    <Text style={styles.reportSummary}>{report.summary}</Text>
+                  </View>
+                ) : null}
+
+                {report.highlights.length > 0 && (
+                  <View style={[styles.reportSection, { backgroundColor: '#E8F5E9' }]}>
+                    <Text style={[styles.reportSectionTitle, { color: '#2E7D32' }]}>👍 잘하고 있는 점</Text>
+                    {report.highlights.map((h, i) => (
+                      <Text key={i} style={styles.reportListItem}>• {h}</Text>
+                    ))}
+                  </View>
+                )}
+
+                {report.cautions.length > 0 && (
+                  <View style={[styles.reportSection, { backgroundColor: '#FFF8E1' }]}>
+                    <Text style={[styles.reportSectionTitle, { color: '#F57F17' }]}>⚠️ 주의할 점</Text>
+                    {report.cautions.map((c, i) => (
+                      <Text key={i} style={styles.reportListItem}>• {c}</Text>
+                    ))}
+                  </View>
+                )}
+
+                {report.suggestions.length > 0 && (
+                  <View style={[styles.reportSection, { backgroundColor: '#FCE4EC' }]}>
+                    <Text style={[styles.reportSectionTitle, { color: '#AD1457' }]}>💡 이번 주 실천 팁</Text>
+                    {report.suggestions.map((s, i) => (
+                      <Text key={i} style={styles.reportListItem}>• {s}</Text>
+                    ))}
+                  </View>
+                )}
+
+                <Text style={styles.disclaimerBottom}>⚠️ {report.disclaimer}</Text>
+                <View style={{ height: 20 }} />
+              </ScrollView>
+            )}
           </View>
         </View>
       </Modal>
@@ -977,4 +1135,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   usageText: { fontSize: 11, color: COLORS.textLight, marginTop: 6, textAlign: 'right' },
+
+  /* Weekly AI report */
+  reportBtn: {
+    backgroundColor: '#E91E63',
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.md,
+    alignItems: 'center',
+    ...SHADOWS.medium,
+  },
+  reportBtnText: { color: '#FFF', fontSize: FONT_SIZE.md, fontWeight: '700' },
+  reportBtnSub: { color: '#FCE4EC', fontSize: 11, marginTop: 3 },
+  reportStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: COLORS.background,
+    borderRadius: RADIUS.md,
+    paddingVertical: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  reportStat: { alignItems: 'center' },
+  reportStatVal: { fontSize: 20, fontWeight: '700', color: '#AD1457' },
+  reportStatLabel: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
+  reportSection: {
+    backgroundColor: COLORS.background,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  reportSectionTitle: { fontSize: FONT_SIZE.sm, fontWeight: '700', marginBottom: 6 },
+  reportSummary: { fontSize: FONT_SIZE.md, color: COLORS.text, lineHeight: 22 },
+  reportListItem: { fontSize: FONT_SIZE.sm, color: COLORS.text, lineHeight: 20, marginTop: 3 },
 });
