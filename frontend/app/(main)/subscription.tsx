@@ -41,7 +41,6 @@ const FALLBACK_PLANS: PremiumPlan[] = [
       '상담이모 무제한',
       '울음/대변 분석 무제한',
       '타임라인 AI 자동기록',
-      '타임캡슐 보관',
       '광고 제거',
     ],
   },
@@ -64,7 +63,6 @@ const FREE_FEATURES = [
   { label: '상담이모', free: '하루 10회', premium: '무제한' },
   { label: '울음/대변 분석', free: '하루 3회', premium: '무제한' },
   { label: 'AI 자동기록', free: '-', premium: 'O' },
-  { label: '타임캡슐', free: '-', premium: 'O' },
   { label: '대화 맥락', free: '7일', premium: '7일' },
   { label: '광고', free: '있음', premium: '없음' },
 ];
@@ -79,7 +77,6 @@ const FEATURE_GUIDES: FeatureGuide[] = [
   { emoji: '💬', title: '상담이모', desc: '아이 기질에 맞는 맞춤 육아 답변을 받아보세요. 수면, 식사, 행동 등 모든 고민을 상담할 수 있어요.' },
   { emoji: '😢', title: '울음/대변 분석', desc: '상담이모 탭에서 아이 울음소리를 녹음하거나 대변 사진을 찍으면 분석해드려요.' },
   { emoji: '📝', title: '자동기록', desc: '타임라인에서 "오늘 하루 정리" 버튼을 누르면 수유, 수면, 상담 기록을 일기로 만들어줘요.' },
-  { emoji: '💌', title: '타임캡슐', desc: '타임라인의 소중한 순간을 타임캡슐에 보관하면 3/6/12개월 후 다시 열어볼 수 있어요.' },
   { emoji: '🚫', title: '광고 제거', desc: '앱 내 모든 광고가 사라져서 쾌적하게 이용할 수 있어요.' },
 ];
 

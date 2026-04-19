@@ -10,7 +10,7 @@ const INACTIVE_COLOR = '#8E8E93';
 
 const TAB_ICONS = {
   home: { icon: require('../../assets/tab-home.png'), active: require('../../assets/tab-home-active.png') },
-  diary: { icon: require('../../assets/tab-diary.png'), active: require('../../assets/tab-diary-active.png') },
+  diary: { icon: require('../../assets/quick-learning.png'), active: require('../../assets/quick-learning.png') },
   family: { icon: require('../../assets/icon-heart.png'), active: require('../../assets/icon-heart.png') },
   chat: { icon: require('../../assets/tab-chat.png'), active: require('../../assets/tab-chat-active.png') },
   more: { icon: require('../../assets/tab-more.png'), active: require('../../assets/tab-more-active.png') },
@@ -26,18 +26,10 @@ function TabIcon({ iconKey, focused }: { iconKey: keyof typeof TAB_ICONS; focuse
           width: 32,
           height: 32,
           opacity: focused ? 1 : 0.65,
+          tintColor: focused ? ACTIVE_COLOR : undefined,
         }}
         resizeMode="contain"
       />
-      {focused && (
-        <View style={{
-          width: 4,
-          height: 4,
-          borderRadius: 2,
-          backgroundColor: ACTIVE_COLOR,
-          marginTop: 4,
-        }} />
-      )}
     </View>
   );
 }
@@ -62,6 +54,7 @@ export default function MainLayout() {
   const bottomPad = Math.max(insets.bottom, 16);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const selectedChild = useChildStore((s) => s.selectedChild);
+
   const ageGroup = selectedChild?.ageInfo?.group;
   const isElementary = ageGroup === 'elementary';
   const isPregnant = ageGroup === 'pregnant';
