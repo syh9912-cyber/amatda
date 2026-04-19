@@ -5,6 +5,7 @@ if (!admin.apps.length) {
 }
 
 export const db = admin.firestore();
+export const storage = admin.storage().bucket('amatda-parenting.firebasestorage.app');
 
 // 컬렉션 레퍼런스
 export const collections = {
@@ -43,6 +44,15 @@ export const collections = {
   momHealthChecks: db.collection('momHealthChecks'),
   vaccinations: db.collection('vaccinations'),
   gdmRecords: db.collection('gdmRecords'),
+  gdmFoodLogs: db.collection('gdmFoodLogs'),
+  milestonePhotos: db.collection('milestonePhotos'),
+  // 코칭 하루 상담 횟수 카운터 (문서 ID: {userId}_{YYYY-MM-DD})
+  // getTodaySessionCount() 전체 컬렉션 쿼리 대체 → 단일 문서 읽기로 성능 개선
+  rateLimits: db.collection('rateLimits'),
+
+  // 성장 앨범 — 생성된 PDF 앨범 목록
+  // 문서: { userId, childId, title, dateFrom, dateTo, pdfUrl, status, pageCount, photoCount, createdAt, completedAt }
+  growthAlbums: db.collection('growthAlbums'),
 };
 
 /** 문서 ID 생성 */

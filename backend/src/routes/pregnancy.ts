@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
+import * as admin from 'firebase-admin';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
+import { isGeminiAvailable, callGeminiJSON } from '../services/coaching/gemini.client';
 
 const router = Router();
 
@@ -133,7 +135,6 @@ router.get('/records', authMiddleware, async (req: Request, res: Response) => {
 
     const snap = await collections.pregnancyRecords
       .where('childId', '==', childId)
-      .orderBy('createdAt', 'desc')
       .limit(200)
       .get();
 
@@ -335,7 +336,6 @@ router.get('/mom-health', authMiddleware, async (req: Request, res: Response) =>
 
     const snap = await collections.momHealthChecks
       .where('childId', '==', childId)
-      .orderBy('createdAt', 'desc')
       .limit(50)
       .get();
 
@@ -350,6 +350,9 @@ router.get('/mom-health', authMiddleware, async (req: Request, res: Response) =>
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.createdAt,
       };
     });
+
+    // 최신순 정렬 (코드에서)
+    records.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
 
     success(res, records);
   } catch {
@@ -735,16 +738,16 @@ router.get('/timeline', authMiddleware, async (req: Request, res: Response) => {
     const childId = req.query.childId as string;
     if (!childId) { error(res, 'childId는 필수입니다'); return; }
 
-    // 임신기록 조회
+    // 임신기록 조회 (인덱스 불필요하도록 orderBy 제거, 코드에서 정렬)
     const recSnap = await collections.pregnancyRecords
       .where('childId', '==', childId)
-      .orderBy('createdAt', 'asc')
+      .limit(500)
       .get();
 
     // 엄마상태 기록 조회
     const healthSnap = await collections.momHealthChecks
       .where('childId', '==', childId)
-      .orderBy('createdAt', 'asc')
+      .limit(500)
       .get();
 
     // 주수별 그룹핑
@@ -939,6 +942,239 @@ router.delete('/gdm/:id', authMiddleware, async (req: Request, res: Response) =>
     success(res, { id: gdmId, message: '삭제되었습니다' });
   } catch {
     error(res, '삭제 중 오류가 발생했습니다', 500);
+  }
+});
+
+/* ================================================================== */
+/*  7. 임당 식단 기록 + AI 사진 분석                                   */
+/* ================================================================== */
+
+type FoodMealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+async function getUserTierForFood(userId: string): Promise<'free' | 'paid'> {
+  try {
+    const doc = await collections.users.doc(userId).get();
+    if (!doc.exists) return 'free';
+    const data = doc.data() as Record<string, unknown>;
+    if ((data.subscriptionTier as string) === 'PAID') {
+      const exp = data.premiumExpiresAt as string | undefined;
+      if (exp && new Date(exp) > new Date()) return 'paid';
+    }
+    const trial = data.trialStartedAt as string | undefined;
+    if (trial) {
+      const end = new Date(trial);
+      end.setDate(end.getDate() + 7);
+      if (new Date() < end) return 'paid';
+    }
+    return 'free';
+  } catch { return 'free'; }
+}
+
+const FOOD_ANALYZE_LIMITS = { free: 2, paid: 10 } as const;
+
+async function checkAndIncrementFoodAnalyze(
+  userId: string,
+  tier: 'free' | 'paid',
+): Promise<{ allowed: boolean; used: number; limit: number; remaining: number }> {
+  const limit = FOOD_ANALYZE_LIMITS[tier];
+  const today = new Date().toISOString().slice(0, 10);
+  const docId = `food_${userId}_${today}`;
+  const ref = collections.rateLimits.doc(docId);
+  const doc = await ref.get();
+  const used = doc.exists ? (((doc.data() as Record<string, unknown>).count as number) ?? 0) : 0;
+  if (used >= limit) {
+    return { allowed: false, used, limit, remaining: 0 };
+  }
+  await ref.set({
+    count: admin.firestore.FieldValue.increment(1),
+    userId,
+    date: today,
+    tier,
+    kind: 'food_analyze',
+    lastUsedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return { allowed: true, used: used + 1, limit, remaining: limit - used - 1 };
+}
+
+/** POST /api/pregnancy/gdm/food — 식단 기록 저장 */
+router.post('/gdm/food', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { childId, foodName, mealType, eatenAt, carbs, calories, photoUrl, memo, linkedGlucoseId } = req.body as {
+      childId: string;
+      foodName: string;
+      mealType: FoodMealType;
+      eatenAt?: string;
+      carbs?: number;
+      calories?: number;
+      photoUrl?: string;
+      memo?: string;
+      linkedGlucoseId?: string;
+    };
+
+    if (!childId || !foodName || !mealType) {
+      error(res, 'childId, foodName, mealType은 필수입니다');
+      return;
+    }
+
+    const childDoc = await collections.children.doc(childId).get();
+    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) {
+      error(res, '아이를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const id = genId();
+    const now = eatenAt || new Date().toISOString();
+    const data = {
+      childId,
+      userId: req.userId!,
+      foodName,
+      mealType,
+      eatenAt: now,
+      date: now.slice(0, 10),
+      carbs: typeof carbs === 'number' ? carbs : null,
+      calories: typeof calories === 'number' ? calories : null,
+      photoUrl: photoUrl || null,
+      memo: memo || null,
+      linkedGlucoseId: linkedGlucoseId || null,
+      createdAt: FieldValue.serverTimestamp(),
+    };
+
+    await collections.gdmFoodLogs.doc(id).set(data);
+    success(res, { id, ...data, createdAt: now }, 201);
+  } catch {
+    error(res, '식단 기록 저장 중 오류가 발생했습니다', 500);
+  }
+});
+
+/** GET /api/pregnancy/gdm/food?childId=xxx&days=30 — 식단 기록 조회 */
+router.get('/gdm/food', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const childId = req.query.childId as string;
+    const days = Math.min(90, Math.max(1, parseInt(req.query.days as string, 10) || 30));
+    if (!childId) { error(res, 'childId 필요'); return; }
+
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const snap = await collections.gdmFoodLogs
+      .where('childId', '==', childId)
+      .where('date', '>=', since.toISOString().slice(0, 10))
+      .limit(300)
+      .get();
+
+    const records = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    records.sort((a, b) => ((b as { eatenAt?: string }).eatenAt ?? '').localeCompare((a as { eatenAt?: string }).eatenAt ?? ''));
+
+    success(res, { records });
+  } catch {
+    error(res, '식단 기록 조회 중 오류가 발생했습니다', 500);
+  }
+});
+
+/** DELETE /api/pregnancy/gdm/food/:id — 식단 기록 삭제 */
+router.delete('/gdm/food/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const foodId = req.params.id as string;
+    const doc = await collections.gdmFoodLogs.doc(foodId).get();
+    if (!doc.exists || doc.data()!.userId !== req.userId) {
+      error(res, '기록을 찾을 수 없습니다', 404);
+      return;
+    }
+    await collections.gdmFoodLogs.doc(foodId).delete();
+    success(res, { id: foodId, message: '삭제되었습니다' });
+  } catch {
+    error(res, '삭제 중 오류가 발생했습니다', 500);
+  }
+});
+
+/** POST /api/pregnancy/gdm/food/analyze — AI 사진 분석 (참고용, 의료 진단 아님) */
+router.post('/gdm/food/analyze', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { mediaBase64, mediaMimeType } = req.body as {
+      mediaBase64?: string;
+      mediaMimeType?: string;
+    };
+
+    if (!mediaBase64 || !mediaMimeType) {
+      error(res, '사진 파일이 필요합니다');
+      return;
+    }
+
+    const tier = await getUserTierForFood(req.userId!);
+    const usage = await checkAndIncrementFoodAnalyze(req.userId!, tier);
+    if (!usage.allowed) {
+      const msg = tier === 'free'
+        ? `오늘의 사진 분석 횟수를 모두 사용했어요 (무료 하루 ${usage.limit}장). 프리미엄 구독 시 하루 10장까지 이용 가능합니다.`
+        : `오늘의 사진 분석 횟수를 모두 사용했어요 (프리미엄 하루 ${usage.limit}장). 내일 다시 이용해주세요.`;
+      res.status(429).json({
+        success: false,
+        error: msg,
+        usage: { used: usage.used, limit: usage.limit, remaining: usage.remaining, tier },
+      });
+      return;
+    }
+
+    if (!isGeminiAvailable()) {
+      success(res, {
+        foodName: '분석 불가',
+        carbs: null,
+        calories: null,
+        notes: 'AI 분석을 사용할 수 없습니다. 수동으로 입력해주세요.',
+        disclaimer: '이 결과는 참고용이며 의료 진단이 아닙니다.',
+        usage: { used: usage.used, limit: usage.limit, remaining: usage.remaining, tier },
+      });
+      return;
+    }
+
+    const prompt = `당신은 임신성 당뇨 식단 관리를 돕는 영양 분석 보조입니다.
+첨부된 음식 사진을 분석해 다음 정보를 추정해주세요. 정확한 의료/영양 수치가 아니라 참고용 추정치입니다.
+
+반드시 아래 JSON 형식만 출력하세요:
+{
+  "foodName": "음식 이름 (가장 대표적인 음식 1~3개, 한국어)",
+  "carbs": 탄수화물 추정 그램 수 (숫자),
+  "calories": 칼로리 추정 (숫자),
+  "notes": "임당 관점에서 간단 코멘트 (1~2문장, 혈당 영향/섭취 팁)"
+}
+
+주의:
+- 사진이 음식이 아니면 foodName을 "음식 아님"으로, 수치는 0으로
+- 사람/배경만 있다면 인식 불가를 표시
+- 추정치는 일반적인 한국 식단 기준
+- 의료적 진단이나 처방은 절대 하지 말 것`;
+
+    try {
+      const parsed = await callGeminiJSON<{
+        foodName?: string;
+        carbs?: number;
+        calories?: number;
+        notes?: string;
+      }>(prompt, {
+        temperature: 0.2,
+        maxTokens: 400,
+        mediaData: { mimeType: mediaMimeType, base64: mediaBase64 },
+      });
+
+      success(res, {
+        foodName: parsed.foodName || '알 수 없음',
+        carbs: typeof parsed.carbs === 'number' ? parsed.carbs : null,
+        calories: typeof parsed.calories === 'number' ? parsed.calories : null,
+        notes: parsed.notes || '',
+        disclaimer: 'AI 분석 결과는 참고용 추정치이며, 의료 진단이나 영양 처방이 아닙니다. 정확한 임당 관리는 담당 의료진과 상담해주세요.',
+        usage: { used: usage.used, limit: usage.limit, remaining: usage.remaining, tier },
+      });
+    } catch {
+      success(res, {
+        foodName: '분석 실패',
+        carbs: null,
+        calories: null,
+        notes: '사진 분석에 실패했어요. 수동으로 입력해주세요.',
+        disclaimer: 'AI 분석 결과는 참고용이며 의료 진단이 아닙니다.',
+        usage: { used: usage.used, limit: usage.limit, remaining: usage.remaining, tier },
+      });
+    }
+  } catch {
+    error(res, '사진 분석 중 오류가 발생했습니다', 500);
   }
 });
 

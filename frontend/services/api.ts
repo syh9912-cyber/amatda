@@ -1,49 +1,77 @@
-import axios from 'axios';
+import axios, { type AxiosInstance } from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
+// ─── URL 설정 ───────────────────────────────────────────────
+// api: auth, children, food, weather 등 경량 라우트 (Firebase 'api' 함수)
+// coachingApi: Gemini AI 코칭 전용 (Firebase 'coachingApi' 함수, 별도 Cloud Run)
+//   → 코칭 느려져도 로그인/홈 API 무영향
+// 릴리스(프로덕션) 빌드에서 EXPO_PUBLIC_API_URL 누락 시 localhost로 떨어지지 않도록 명시적 경고.
+// __DEV__ 일 때만 localhost fallback 허용.
+function resolveApiUrl(envValue: string | undefined, name: string): string {
+  if (envValue && envValue.length > 0) return envValue;
+  if (__DEV__) return 'http://localhost:3001/api';
+  console.error(`[api] ${name} 환경변수 누락 — 릴리스 빌드에서 API 호출 실패 예정`);
+  return 'https://api-usglfifguq-uc.a.run.app/api';
+}
 
+export const API_URL = resolveApiUrl(process.env.EXPO_PUBLIC_API_URL, 'EXPO_PUBLIC_API_URL');
+export const COACHING_API_URL = process.env.EXPO_PUBLIC_COACHING_API_URL || API_URL;
+
+// ─── 공통 인터셉터 세터 ─────────────────────────────────────
+function applyInterceptors(instance: AxiosInstance): void {
+  // 토큰 자동 주입
+  instance.interceptors.request.use((config) => {
+    const token = useAuthStore.getState().accessToken;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  });
+
+  // 401 시 토큰 갱신 시도 → 실패하면 logout()만 호출
+  // 화면 이동은 (main)/_layout.tsx 의 isAuthenticated 감시가 처리함
+  instance.interceptors.response.use(
+    (res) => res,
+    async (err) => {
+      const original = err.config;
+      if (err.response?.status === 401 && !original._retry) {
+        original._retry = true;
+        const refreshToken = useAuthStore.getState().refreshToken;
+        if (refreshToken) {
+          try {
+            const res = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
+            const { accessToken, refreshToken: newRefresh } = res.data.data;
+            useAuthStore.getState().setTokens(accessToken, newRefresh);
+            original.headers.Authorization = `Bearer ${accessToken}`;
+            return instance(original);
+          } catch {
+            useAuthStore.getState().logout(); // 레이아웃이 로그인 화면으로 보냄
+          }
+        } else {
+          useAuthStore.getState().logout();
+        }
+      }
+      return Promise.reject(err);
+    },
+  );
+}
+
+// ─── 경량 API 인스턴스 (auth, children, food 등) ─────────────
 const api = axios.create({
   baseURL: API_URL,
   timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
 });
+applyInterceptors(api);
 
-// 토큰 자동 주입
-api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+// ─── 코칭 전용 API 인스턴스 (Gemini AI, 별도 Cloud Run) ──────
+// timeout 60초: Gemini 응답 최대 5~10초 + 네트워크 여유
+const coachingAxios = axios.create({
+  baseURL: COACHING_API_URL,
+  timeout: 60000,
+  headers: { 'Content-Type': 'application/json' },
 });
-
-// 401 시 토큰 갱신 시도 → 실패하면 logout()만 호출
-// 화면 이동은 (main)/_layout.tsx 의 isAuthenticated 감시가 처리함
-api.interceptors.response.use(
-  (res) => res,
-  async (err) => {
-    const original = err.config;
-    if (err.response?.status === 401 && !original._retry) {
-      original._retry = true;
-      const refreshToken = useAuthStore.getState().refreshToken;
-      if (refreshToken) {
-        try {
-          const res = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
-          const { accessToken, refreshToken: newRefresh } = res.data.data;
-          useAuthStore.getState().setTokens(accessToken, newRefresh);
-          original.headers.Authorization = `Bearer ${accessToken}`;
-          return api(original);
-        } catch {
-          useAuthStore.getState().logout(); // 레이아웃이 로그인 화면으로 보냄
-        }
-      } else {
-        useAuthStore.getState().logout();
-      }
-    }
-    return Promise.reject(err);
-  }
-);
+applyInterceptors(coachingAxios);
 
 // Auth
 export const authApi = {
@@ -226,60 +254,61 @@ export const memoriesApi = {
     api.get(`/memories/timeline/${childId}`),
 };
 
-// Coaching (상담이모)
+// Coaching (상담이모) — coachingAxios 사용 (별도 Cloud Run 인스턴스)
+// 코칭 API가 느려져도 auth/children/food 등 경량 API는 무영향
 export const coachingApi = {
   ask: (childId: string, message: string, category?: string, photoUrl?: string) =>
-    api.post('/coaching/ask', { childId, message, category, photoUrl }),
+    coachingAxios.post('coaching/ask', { childId, message, category, photoUrl }),
   send: (childId: string, message: string, category?: string) =>
-    api.post('/coaching/ask', { childId, message, category }),
+    coachingAxios.post('coaching/ask', { childId, message, category }),
   history: (childId: string) =>
-    api.get(`/coaching/history/${childId}`),
+    coachingAxios.get(`coaching/history/${childId}`),
   checkin: (childId: string, mood: string) =>
-    api.post('/coaching/ask', { childId, message: `오늘 아이 컨디션: ${mood}`, category: '체크인' }),
+    coachingAxios.post('coaching/ask', { childId, message: `오늘 아이 컨디션: ${mood}`, category: '체크인' }),
   followups: (childId: string) =>
-    api.get(`/coaching/followups/${childId}`),
+    coachingAxios.get(`coaching/followups/${childId}`),
   dismissFollowup: (followupId: string) =>
-    api.post(`/coaching/followup/${followupId}/respond`, { answer: '나중에' }),
+    coachingAxios.post(`coaching/followup/${followupId}/respond`, { answer: '나중에' }),
   respondFollowup: (followupId: string, response: string) =>
-    api.post(`/coaching/followup/${followupId}/respond`, { answer: response }),
+    coachingAxios.post(`coaching/followup/${followupId}/respond`, { answer: response }),
   weeklyReport: (childId: string) =>
-    api.post('/coaching/weekly-report', { childId }),
+    coachingAxios.post('coaching/weekly-report', { childId }),
   dailyDiary: (childId: string) =>
-    api.post('/coaching/daily-diary', { childId }),
+    coachingAxios.post('coaching/daily-diary', { childId }),
   analyzeMedia: (childId: string, type: 'cry' | 'poop', description?: string, mediaBase64?: string, mediaMimeType?: string) =>
-    api.post('/coaching/analyze-media', { childId, type, description, mediaBase64, mediaMimeType }),
+    coachingAxios.post('coaching/analyze-media', { childId, type, description, mediaBase64, mediaMimeType }),
   firstTalk: (childId: string) =>
-    api.post('/coaching/first-talk', { childId }),
+    coachingAxios.post('coaching/first-talk', { childId }),
   parentMental: (childId: string) =>
-    api.post('/coaching/parent-mental', { childId }),
+    coachingAxios.post('coaching/parent-mental', { childId }),
   futurePredict: (childId: string) =>
-    api.post('/coaching/future-predict', { childId }),
+    coachingAxios.post('coaching/future-predict', { childId }),
   nowActivity: (childId: string) =>
-    api.post('/coaching/now-activity', { childId }),
+    coachingAxios.post('coaching/now-activity', { childId }),
   milestones: (childId: string) =>
-    api.get(`/coaching/milestones/${childId}`),
+    coachingAxios.get(`coaching/milestones/${childId}`),
   saveMilestoneChecks: (childId: string, checks: Record<string, boolean>) =>
-    api.post(`/coaching/milestones/${childId}/check`, { checks }),
+    coachingAxios.post(`coaching/milestones/${childId}/check`, { checks }),
   dailyInsight: (childId: string) =>
-    api.get(`/coaching/daily-insight?childId=${childId}`),
+    coachingAxios.get(`coaching/daily-insight?childId=${childId}`),
   welcome: (childId: string) =>
-    api.get(`/coaching/welcome?childId=${childId}`),
+    coachingAxios.get(`coaching/welcome?childId=${childId}`),
   autoDiary: (childId: string) =>
-    api.get(`/coaching/auto-diary?childId=${childId}`),
+    coachingAxios.get(`coaching/auto-diary?childId=${childId}`),
   createTimeCapsule: (childId: string, message: string, months: 3 | 6 | 12) =>
-    api.post('/coaching/time-capsule', { childId, message, months }),
+    coachingAxios.post('coaching/time-capsule', { childId, message, months }),
   listTimeCapsules: (childId: string) =>
-    api.get(`/coaching/time-capsules?childId=${childId}`),
+    coachingAxios.get(`coaching/time-capsules?childId=${childId}`),
   openTimeCapsule: (capsuleId: string) =>
-    api.post(`/coaching/time-capsule/${capsuleId}/open`),
+    coachingAxios.post(`coaching/time-capsule/${capsuleId}/open`),
   peerComparison: (childId: string) =>
-    api.get(`/coaching/peer-comparison?childId=${childId}`),
+    coachingAxios.get(`coaching/peer-comparison?childId=${childId}`),
   myTier: () =>
-    api.get('/coaching/my-tier'),
+    coachingAxios.get('coaching/my-tier'),
   capsuleSuggestion: (childId: string) =>
-    api.get(`/coaching/capsule-suggestion?childId=${childId}`),
+    coachingAxios.get(`coaching/capsule-suggestion?childId=${childId}`),
   acceptCapsuleSuggestion: (childId: string, diaryDate: string) =>
-    api.post('/coaching/capsule-suggestion/accept', { childId, diaryDate }),
+    coachingAxios.post('coaching/capsule-suggestion/accept', { childId, diaryDate }),
 };
 
 // Retention (growth countdown, daily tip, streak)
@@ -432,16 +461,41 @@ export const uploadApi = {
 
 // Album (마일스톤 앨범)
 export const albumApi = {
+  // ─── 사진 CRUD ───────────────────────────────────────────────
+  /** 사진 메타데이터 저장 (thumbUrl + printUrl 포함) */
   save: (data: {
     childId: string;
-    uri: string;
+    uri: string;        // thumbUrl (표시용)
+    printUrl?: string;  // 1800px 인쇄용
     milestone?: string;
     milestoneEmoji?: string;
+    milestoneColor?: string; // 카테고리 색상 (#RRGGBB) — PDF 배지용
     memo?: string;
     date?: string;
   }) => api.post('/album/photos', data),
   list: (childId: string) => api.get(`/album/photos/${childId}`),
   remove: (id: string) => api.delete(`/album/photos/${id}`),
+
+  // ─── 앨범 PDF 생성 ───────────────────────────────────────────
+  /**
+   * 앨범 생성 시작 → 즉시 { albumId, status: 'generating' } 반환
+   * dateFrom/dateTo: "YYYY-MM" 형식
+   */
+  generateAlbum: (data: {
+    childId: string;
+    title?: string;
+    dateFrom: string;
+    dateTo: string;
+  }) => api.post('/album/generate', data),
+
+  /** 생성된 앨범 목록 */
+  listAlbums: (childId: string) => api.get(`/album/albums/${childId}`),
+
+  /** 앨범 생성 상태 폴링 (3~5초마다 호출) */
+  albumStatus: (albumId: string) => api.get(`/album/albums/${albumId}/status`),
+
+  /** 앨범 삭제 */
+  deleteAlbum: (albumId: string) => api.delete(`/album/albums/${albumId}`),
 };
 
 // Pregnancy (임신 기록)
@@ -486,6 +540,24 @@ export const pregnancyApi = {
     api.get('/pregnancy/gdm', { params: { childId, days: String(days) } }),
   deleteGdm: (id: string) =>
     api.delete(`/pregnancy/gdm/${id}`),
+  // 임당 식단 기록
+  saveFoodLog: (data: {
+    childId: string;
+    foodName: string;
+    mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+    eatenAt?: string;
+    carbs?: number;
+    calories?: number;
+    photoUrl?: string;
+    memo?: string;
+    linkedGlucoseId?: string;
+  }) => api.post('/pregnancy/gdm/food', data),
+  getFoodLogs: (childId: string, days = 7) =>
+    api.get('/pregnancy/gdm/food', { params: { childId, days: String(days) } }),
+  deleteFoodLog: (id: string) =>
+    api.delete(`/pregnancy/gdm/food/${id}`),
+  analyzeFoodPhoto: (mediaBase64: string, mediaMimeType: string) =>
+    api.post('/pregnancy/gdm/food/analyze', { mediaBase64, mediaMimeType }),
 };
 
 // Vaccination (예방접종)

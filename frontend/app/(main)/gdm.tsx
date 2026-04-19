@@ -9,13 +9,19 @@ import {
   ScrollView,
   Modal,
   RefreshControl,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { Stack } from 'expo-router';
+import * as FileSystem from 'expo-file-system/legacy';
 import { pregnancyApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { pickImageFromLibrary, pickImageFromCamera } from '../../utils/imagePicker';
 
 type MealType = 'fasting' | 'before_meal' | 'after_meal_1h' | 'after_meal_2h' | 'bedtime';
+type FoodMealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+type TabMode = 'glucose' | 'food';
 
 const MEAL_LABELS: Record<MealType, string> = {
   fasting: '공복',
@@ -23,6 +29,13 @@ const MEAL_LABELS: Record<MealType, string> = {
   after_meal_1h: '식후 1시간',
   after_meal_2h: '식후 2시간',
   bedtime: '취침 전',
+};
+
+const FOOD_MEAL_LABELS: Record<FoodMealType, string> = {
+  breakfast: '아침',
+  lunch: '점심',
+  dinner: '저녁',
+  snack: '간식',
 };
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
@@ -51,29 +64,72 @@ interface GdmStats {
   days: number;
 }
 
+interface FoodLog {
+  id: string;
+  foodName: string;
+  mealType: FoodMealType;
+  eatenAt: string;
+  date: string;
+  carbs: number | null;
+  calories: number | null;
+  photoUrl: string | null;
+  memo: string | null;
+}
+
+interface AnalyzeResult {
+  foodName: string;
+  carbs: number | null;
+  calories: number | null;
+  notes: string;
+  disclaimer: string;
+  usage?: { used: number; limit: number; remaining: number; tier: 'free' | 'paid' };
+}
+
 export default function GdmScreen() {
   const child = useChildStore((s) => s.selectedChild);
   const childId = child?.id ?? '';
 
+  const [tab, setTab] = useState<TabMode>('glucose');
+
   const [records, setRecords] = useState<GdmRecord[]>([]);
   const [stats, setStats] = useState<GdmStats | null>(null);
+  const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // 입력 모달
-  const [showModal, setShowModal] = useState(false);
+  // 혈당 모달
+  const [showGlucoseModal, setShowGlucoseModal] = useState(false);
   const [glucose, setGlucose] = useState('');
   const [mealType, setMealType] = useState<MealType>('fasting');
   const [memo, setMemo] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // 식단 모달
+  const [showFoodModal, setShowFoodModal] = useState(false);
+  const [foodName, setFoodName] = useState('');
+  const [foodMealType, setFoodMealType] = useState<FoodMealType>('breakfast');
+  const [eatenTime, setEatenTime] = useState(''); // HH:mm
+  const [carbs, setCarbs] = useState('');
+  const [calories, setCalories] = useState('');
+  const [foodMemo, setFoodMemo] = useState('');
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoMime, setPhotoMime] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeResult, setAnalyzeResult] = useState<AnalyzeResult | null>(null);
+  const [savingFood, setSavingFood] = useState(false);
+
   const loadData = useCallback(async () => {
     if (!childId) return;
     try {
-      const res = await pregnancyApi.getGdm(childId, 30);
-      const data = res.data?.data ?? res.data;
-      if (data?.records) setRecords(data.records as GdmRecord[]);
-      if (data?.stats) setStats(data.stats as GdmStats);
+      const [gdmRes, foodRes] = await Promise.all([
+        pregnancyApi.getGdm(childId, 30),
+        pregnancyApi.getFoodLogs(childId, 30),
+      ]);
+      const gdmData = gdmRes.data?.data ?? gdmRes.data;
+      if (gdmData?.records) setRecords(gdmData.records as GdmRecord[]);
+      if (gdmData?.stats) setStats(gdmData.stats as GdmStats);
+      const foodData = foodRes.data?.data ?? foodRes.data;
+      if (foodData?.records) setFoodLogs(foodData.records as FoodLog[]);
     } catch { /* silent */ }
   }, [childId]);
 
@@ -91,7 +147,7 @@ export default function GdmScreen() {
     setRefreshing(false);
   };
 
-  const handleSave = async () => {
+  const handleSaveGlucose = async () => {
     const level = parseFloat(glucose);
     if (isNaN(level) || level < 30 || level > 500) {
       Alert.alert('알림', '혈당 수치를 올바르게 입력해주세요 (30~500 mg/dL)');
@@ -107,7 +163,7 @@ export default function GdmScreen() {
       });
       setGlucose('');
       setMemo('');
-      setShowModal(false);
+      setShowGlucoseModal(false);
       await loadData();
     } catch {
       Alert.alert('오류', '혈당 기록 저장에 실패했습니다.');
@@ -134,21 +190,157 @@ export default function GdmScreen() {
     ]);
   };
 
+  const handleDeleteFood = (id: string) => {
+    Alert.alert('삭제', '이 식단 기록을 삭제할까요?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await pregnancyApi.deleteFoodLog(id);
+            await loadData();
+          } catch {
+            Alert.alert('오류', '삭제에 실패했습니다.');
+          }
+        },
+      },
+    ]);
+  };
+
+  const resetFoodModal = () => {
+    setFoodName('');
+    setFoodMealType('breakfast');
+    setEatenTime('');
+    setCarbs('');
+    setCalories('');
+    setFoodMemo('');
+    setPhotoUri(null);
+    setPhotoMime(null);
+    setAnalyzeResult(null);
+  };
+
+  const openFoodModal = () => {
+    resetFoodModal();
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    setEatenTime(`${hh}:${mm}`);
+    const h = now.getHours();
+    if (h < 10) setFoodMealType('breakfast');
+    else if (h < 14) setFoodMealType('lunch');
+    else if (h < 20) setFoodMealType('dinner');
+    else setFoodMealType('snack');
+    setShowFoodModal(true);
+  };
+
+  const handlePickPhoto = async (source: 'library' | 'camera') => {
+    const pick = source === 'library' ? pickImageFromLibrary : pickImageFromCamera;
+    const result = await pick({ quality: 0.7 });
+    if (!result) return;
+    setPhotoUri(result.uri);
+    setPhotoMime(result.mimeType || 'image/jpeg');
+    setAnalyzeResult(null);
+  };
+
+  const handleAnalyze = async () => {
+    if (!photoUri || !photoMime) {
+      Alert.alert('알림', '먼저 사진을 선택해주세요.');
+      return;
+    }
+    setAnalyzing(true);
+    try {
+      const base64 = await FileSystem.readAsStringAsync(photoUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const res = await pregnancyApi.analyzeFoodPhoto(base64, photoMime);
+      const data = (res.data?.data ?? res.data) as AnalyzeResult;
+      setAnalyzeResult(data);
+      if (!foodName && data.foodName) setFoodName(data.foodName);
+      if (!carbs && typeof data.carbs === 'number') setCarbs(String(data.carbs));
+      if (!calories && typeof data.calories === 'number') setCalories(String(data.calories));
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      Alert.alert('분석 불가', msg || 'AI 분석에 실패했어요.');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleSaveFood = async () => {
+    if (!foodName.trim()) {
+      Alert.alert('알림', '음식 이름을 입력해주세요.');
+      return;
+    }
+    setSavingFood(true);
+    try {
+      let eatenAt = new Date().toISOString();
+      if (eatenTime && /^\d{2}:\d{2}$/.test(eatenTime)) {
+        const [h, m] = eatenTime.split(':').map(Number);
+        const d = new Date();
+        d.setHours(h, m, 0, 0);
+        eatenAt = d.toISOString();
+      }
+      const carbsNum = parseFloat(carbs);
+      const caloriesNum = parseFloat(calories);
+      await pregnancyApi.saveFoodLog({
+        childId,
+        foodName: foodName.trim(),
+        mealType: foodMealType,
+        eatenAt,
+        carbs: isNaN(carbsNum) ? undefined : carbsNum,
+        calories: isNaN(caloriesNum) ? undefined : caloriesNum,
+        photoUrl: photoUri || undefined,
+        memo: foodMemo.trim() || undefined,
+      });
+      setShowFoodModal(false);
+      resetFoodModal();
+      await loadData();
+    } catch {
+      Alert.alert('오류', '식단 기록 저장에 실패했습니다.');
+    } finally {
+      setSavingFood(false);
+    }
+  };
+
   // 날짜별 그룹핑
-  const grouped: Record<string, GdmRecord[]> = {};
+  const groupedGlucose: Record<string, GdmRecord[]> = {};
   for (const r of records) {
     const key = r.date ?? r.measuredAt?.slice(0, 10) ?? 'unknown';
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push(r);
+    if (!groupedGlucose[key]) groupedGlucose[key] = [];
+    groupedGlucose[key].push(r);
   }
-  const dateKeys = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+  const glucoseDateKeys = Object.keys(groupedGlucose).sort((a, b) => b.localeCompare(a));
 
-  // 기준 수치 안내
+  const groupedFood: Record<string, FoodLog[]> = {};
+  for (const f of foodLogs) {
+    const key = f.date ?? f.eatenAt?.slice(0, 10) ?? 'unknown';
+    if (!groupedFood[key]) groupedFood[key] = [];
+    groupedFood[key].push(f);
+  }
+  const foodDateKeys = Object.keys(groupedFood).sort((a, b) => b.localeCompare(a));
+
   const thresholdInfo = `공복: 95 이하 | 식후1h: 140 이하 | 식후2h: 120 이하`;
 
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ title: '임당 관리', headerShown: true }} />
+
+      {/* 탭 */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={[styles.tabBtn, tab === 'glucose' && styles.tabBtnActive]}
+          onPress={() => setTab('glucose')}
+        >
+          <Text style={[styles.tabText, tab === 'glucose' && styles.tabTextActive]}>🩸 혈당</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabBtn, tab === 'food' && styles.tabBtnActive]}
+          onPress={() => setTab('food')}
+        >
+          <Text style={[styles.tabText, tab === 'food' && styles.tabTextActive]}>🍚 식단</Text>
+        </TouchableOpacity>
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -164,91 +356,144 @@ export default function GdmScreen() {
                 {child.momBloodType ? ` / ${child.momBloodType}형` : ''}
               </Text>
             ) : null}
-            <Text style={styles.thresholdText}>{thresholdInfo}</Text>
-          </View>
-        )}
-
-        {/* 통계 카드 */}
-        {stats && stats.total > 0 && (
-          <View style={styles.statsCard}>
-            <Text style={styles.statsTitle}>최근 {stats.days}일 통계</Text>
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{stats.avg}</Text>
-                <Text style={styles.statLabel}>평균</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{stats.min}</Text>
-                <Text style={styles.statLabel}>최저</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{stats.max}</Text>
-                <Text style={styles.statLabel}>최고</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{stats.total}</Text>
-                <Text style={styles.statLabel}>측정</Text>
-              </View>
-            </View>
-            {(stats.cautionCount > 0 || stats.warningCount > 0) && (
-              <View style={styles.alertRow}>
-                {stats.cautionCount > 0 && (
-                  <View style={[styles.alertPill, { backgroundColor: '#FFF8E1' }]}>
-                    <Text style={{ color: '#F57F17', fontSize: 12, fontWeight: '600' }}>
-                      주의 {stats.cautionCount}회
-                    </Text>
-                  </View>
-                )}
-                {stats.warningCount > 0 && (
-                  <View style={[styles.alertPill, { backgroundColor: '#FFEBEE' }]}>
-                    <Text style={{ color: '#C62828', fontSize: 12, fontWeight: '600' }}>
-                      위험 {stats.warningCount}회
-                    </Text>
-                  </View>
-                )}
-              </View>
+            {tab === 'glucose' && <Text style={styles.thresholdText}>{thresholdInfo}</Text>}
+            {tab === 'food' && (
+              <Text style={styles.thresholdText}>
+                임당은 탄수화물 섭취량 관리가 핵심이에요. 매끼 식사 내용과 시간을 남겨주세요.
+              </Text>
             )}
           </View>
         )}
 
-        {/* 기록 리스트 */}
-        {!loading && dateKeys.length === 0 && (
-          <View style={styles.emptyWrap}>
-            <Text style={styles.emptyEmoji}>{'🩸'}</Text>
-            <Text style={styles.emptyTitle}>아직 기록이 없어요</Text>
-            <Text style={styles.emptySub}>+ 버튼으로 혈당을 기록해보세요</Text>
-          </View>
+        {tab === 'glucose' && (
+          <>
+            {stats && stats.total > 0 && (
+              <View style={styles.statsCard}>
+                <Text style={styles.statsTitle}>최근 {stats.days}일 통계</Text>
+                <View style={styles.statsRow}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>{stats.avg}</Text>
+                    <Text style={styles.statLabel}>평균</Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>{stats.min}</Text>
+                    <Text style={styles.statLabel}>최저</Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>{stats.max}</Text>
+                    <Text style={styles.statLabel}>최고</Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>{stats.total}</Text>
+                    <Text style={styles.statLabel}>측정</Text>
+                  </View>
+                </View>
+                {(stats.cautionCount > 0 || stats.warningCount > 0) && (
+                  <View style={styles.alertRow}>
+                    {stats.cautionCount > 0 && (
+                      <View style={[styles.alertPill, { backgroundColor: '#FFF8E1' }]}>
+                        <Text style={{ color: '#F57F17', fontSize: 12, fontWeight: '600' }}>
+                          주의 {stats.cautionCount}회
+                        </Text>
+                      </View>
+                    )}
+                    {stats.warningCount > 0 && (
+                      <View style={[styles.alertPill, { backgroundColor: '#FFEBEE' }]}>
+                        <Text style={{ color: '#C62828', fontSize: 12, fontWeight: '600' }}>
+                          위험 {stats.warningCount}회
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+
+            {!loading && glucoseDateKeys.length === 0 && (
+              <View style={styles.emptyWrap}>
+                <Text style={styles.emptyEmoji}>{'🩸'}</Text>
+                <Text style={styles.emptyTitle}>아직 기록이 없어요</Text>
+                <Text style={styles.emptySub}>+ 버튼으로 혈당을 기록해보세요</Text>
+              </View>
+            )}
+
+            {glucoseDateKeys.map((date) => (
+              <View key={date} style={styles.dateGroup}>
+                <Text style={styles.dateLabel}>{formatKoreanDate(date)}</Text>
+                {groupedGlucose[date].map((r) => {
+                  const sc = STATUS_COLORS[r.status] ?? STATUS_COLORS.normal;
+                  return (
+                    <TouchableOpacity
+                      key={r.id}
+                      style={styles.recordCard}
+                      onLongPress={() => handleDelete(r.id)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.recordLeft}>
+                        <Text style={styles.recordGlucose}>{r.glucoseLevel}</Text>
+                        <Text style={styles.recordUnit}>mg/dL</Text>
+                      </View>
+                      <View style={styles.recordCenter}>
+                        <Text style={styles.recordMeal}>{MEAL_LABELS[r.mealType] ?? r.mealType}</Text>
+                        {r.memo ? <Text style={styles.recordMemo} numberOfLines={1}>{r.memo}</Text> : null}
+                        <Text style={styles.recordTime}>{r.measuredAt?.slice(11, 16) ?? ''}</Text>
+                      </View>
+                      <View style={[styles.statusBadge, { backgroundColor: sc.bg }]}>
+                        <Text style={[styles.statusText, { color: sc.text }]}>{sc.label}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))}
+          </>
         )}
 
-        {dateKeys.map((date) => (
-          <View key={date} style={styles.dateGroup}>
-            <Text style={styles.dateLabel}>{formatKoreanDate(date)}</Text>
-            {grouped[date].map((r) => {
-              const sc = STATUS_COLORS[r.status] ?? STATUS_COLORS.normal;
-              return (
-                <TouchableOpacity
-                  key={r.id}
-                  style={styles.recordCard}
-                  onLongPress={() => handleDelete(r.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.recordLeft}>
-                    <Text style={styles.recordGlucose}>{r.glucoseLevel}</Text>
-                    <Text style={styles.recordUnit}>mg/dL</Text>
-                  </View>
-                  <View style={styles.recordCenter}>
-                    <Text style={styles.recordMeal}>{MEAL_LABELS[r.mealType] ?? r.mealType}</Text>
-                    {r.memo ? <Text style={styles.recordMemo} numberOfLines={1}>{r.memo}</Text> : null}
-                    <Text style={styles.recordTime}>{r.measuredAt?.slice(11, 16) ?? ''}</Text>
-                  </View>
-                  <View style={[styles.statusBadge, { backgroundColor: sc.bg }]}>
-                    <Text style={[styles.statusText, { color: sc.text }]}>{sc.label}</Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ))}
+        {tab === 'food' && (
+          <>
+            {!loading && foodDateKeys.length === 0 && (
+              <View style={styles.emptyWrap}>
+                <Text style={styles.emptyEmoji}>{'🍚'}</Text>
+                <Text style={styles.emptyTitle}>아직 식단 기록이 없어요</Text>
+                <Text style={styles.emptySub}>+ 버튼으로 먹은 음식과 시간을 남겨보세요</Text>
+              </View>
+            )}
+
+            {foodDateKeys.map((date) => (
+              <View key={date} style={styles.dateGroup}>
+                <Text style={styles.dateLabel}>{formatKoreanDate(date)}</Text>
+                {groupedFood[date].map((f) => (
+                  <TouchableOpacity
+                    key={f.id}
+                    style={styles.foodCard}
+                    onLongPress={() => handleDeleteFood(f.id)}
+                    activeOpacity={0.7}
+                  >
+                    {f.photoUrl ? (
+                      <Image source={{ uri: f.photoUrl }} style={styles.foodThumb} />
+                    ) : (
+                      <View style={[styles.foodThumb, styles.foodThumbEmpty]}>
+                        <Text style={{ fontSize: 22 }}>🍽️</Text>
+                      </View>
+                    )}
+                    <View style={styles.foodInfo}>
+                      <View style={styles.foodHeader}>
+                        <Text style={styles.foodName} numberOfLines={1}>{f.foodName}</Text>
+                        <Text style={styles.foodMealTag}>{FOOD_MEAL_LABELS[f.mealType] ?? f.mealType}</Text>
+                      </View>
+                      <Text style={styles.foodTime}>
+                        {f.eatenAt?.slice(11, 16) ?? ''}
+                        {typeof f.carbs === 'number' ? ` · 탄수 ${f.carbs}g` : ''}
+                        {typeof f.calories === 'number' ? ` · ${f.calories}kcal` : ''}
+                      </Text>
+                      {f.memo ? <Text style={styles.foodMemo} numberOfLines={1}>{f.memo}</Text> : null}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))}
+          </>
+        )}
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -256,18 +501,18 @@ export default function GdmScreen() {
       {/* FAB */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => setShowModal(true)}
+        onPress={() => (tab === 'glucose' ? setShowGlucoseModal(true) : openFoodModal())}
         activeOpacity={0.85}
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
-      {/* 입력 모달 */}
-      <Modal visible={showModal} transparent animationType="slide">
+      {/* 혈당 모달 */}
+      <Modal visible={showGlucoseModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setShowModal(false)}>
+              <TouchableOpacity onPress={() => setShowGlucoseModal(false)}>
                 <Text style={styles.modalBack}>{'< 뒤로'}</Text>
               </TouchableOpacity>
               <Text style={styles.modalTitle}>혈당 기록</Text>
@@ -312,12 +557,170 @@ export default function GdmScreen() {
 
             <TouchableOpacity
               style={[styles.saveBtn, saving && { opacity: 0.6 }]}
-              onPress={handleSave}
+              onPress={handleSaveGlucose}
               disabled={saving}
             >
               <Text style={styles.saveBtnText}>{saving ? '저장 중...' : '기록 저장'}</Text>
             </TouchableOpacity>
           </View>
+        </View>
+      </Modal>
+
+      {/* 식단 모달 */}
+      <Modal visible={showFoodModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <ScrollView
+            style={{ maxHeight: '90%' }}
+            contentContainerStyle={{ flexGrow: 0 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => setShowFoodModal(false)}>
+                  <Text style={styles.modalBack}>{'< 뒤로'}</Text>
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>식단 기록</Text>
+                <View style={{ width: 50 }} />
+              </View>
+
+              {/* 사진 선택 영역 */}
+              <View style={styles.photoBox}>
+                {photoUri ? (
+                  <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+                ) : (
+                  <View style={styles.photoPlaceholder}>
+                    <Text style={{ fontSize: 36 }}>📷</Text>
+                    <Text style={styles.photoHint}>사진을 추가하면 AI가 음식을 분석해줘요</Text>
+                  </View>
+                )}
+                <View style={styles.photoBtnRow}>
+                  <TouchableOpacity style={styles.photoBtn} onPress={() => handlePickPhoto('camera')}>
+                    <Text style={styles.photoBtnText}>📷 촬영</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.photoBtn} onPress={() => handlePickPhoto('library')}>
+                    <Text style={styles.photoBtnText}>🖼️ 앨범</Text>
+                  </TouchableOpacity>
+                  {photoUri && (
+                    <TouchableOpacity
+                      style={[styles.photoBtn, styles.photoBtnAnalyze]}
+                      onPress={handleAnalyze}
+                      disabled={analyzing}
+                    >
+                      {analyzing ? (
+                        <ActivityIndicator size="small" color="#FFF" />
+                      ) : (
+                        <Text style={[styles.photoBtnText, { color: '#FFF' }]}>🤖 AI 분석</Text>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+
+              {analyzeResult && (
+                <View style={styles.analyzeCard}>
+                  <Text style={styles.analyzeTitle}>AI 분석 결과 (참고용)</Text>
+                  <Text style={styles.analyzeLine}>음식: {analyzeResult.foodName}</Text>
+                  {typeof analyzeResult.carbs === 'number' && (
+                    <Text style={styles.analyzeLine}>탄수화물 추정: {analyzeResult.carbs}g</Text>
+                  )}
+                  {typeof analyzeResult.calories === 'number' && (
+                    <Text style={styles.analyzeLine}>칼로리 추정: {analyzeResult.calories}kcal</Text>
+                  )}
+                  {analyzeResult.notes ? (
+                    <Text style={styles.analyzeNote}>{analyzeResult.notes}</Text>
+                  ) : null}
+                  <Text style={styles.disclaimer}>⚠️ {analyzeResult.disclaimer}</Text>
+                  {analyzeResult.usage && (
+                    <Text style={styles.usageText}>
+                      오늘 사진 분석 {analyzeResult.usage.used}/{analyzeResult.usage.limit}회 사용 ({analyzeResult.usage.tier === 'paid' ? '프리미엄' : '무료'})
+                    </Text>
+                  )}
+                </View>
+              )}
+
+              <Text style={styles.modalLabel}>음식 이름</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={foodName}
+                onChangeText={setFoodName}
+                placeholder="예: 잡곡밥, 된장국, 시금치나물"
+                placeholderTextColor={COLORS.textLight}
+              />
+
+              <Text style={styles.modalLabel}>먹은 시간 (HH:mm)</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={eatenTime}
+                onChangeText={setEatenTime}
+                placeholder="예: 08:30"
+                placeholderTextColor={COLORS.textLight}
+                keyboardType="numbers-and-punctuation"
+              />
+
+              <Text style={styles.modalLabel}>끼니</Text>
+              <View style={styles.mealGrid}>
+                {(Object.keys(FOOD_MEAL_LABELS) as FoodMealType[]).map((key) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={[styles.mealChip, foodMealType === key && styles.mealChipActive]}
+                    onPress={() => setFoodMealType(key)}
+                  >
+                    <Text style={[styles.mealChipText, foodMealType === key && styles.mealChipTextActive]}>
+                      {FOOD_MEAL_LABELS[key]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.modalLabel}>탄수화물(g)</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={carbs}
+                    onChangeText={setCarbs}
+                    placeholder="선택"
+                    placeholderTextColor={COLORS.textLight}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.modalLabel}>칼로리(kcal)</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={calories}
+                    onChangeText={setCalories}
+                    placeholder="선택"
+                    placeholderTextColor={COLORS.textLight}
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.modalLabel}>메모 (선택)</Text>
+              <TextInput
+                style={[styles.modalInput, { height: 50 }]}
+                value={foodMemo}
+                onChangeText={setFoodMemo}
+                placeholder="식후 혈당, 맛/컨디션 등"
+                placeholderTextColor={COLORS.textLight}
+                multiline
+              />
+
+              <Text style={styles.disclaimerBottom}>
+                ⚠️ AI 사진 분석은 참고용 추정치이며, 의료 진단이나 영양 처방이 아닙니다.
+                정확한 임당 관리는 담당 의료진과 상담해주세요.
+              </Text>
+
+              <TouchableOpacity
+                style={[styles.saveBtn, savingFood && { opacity: 0.6 }]}
+                onPress={handleSaveFood}
+                disabled={savingFood}
+              >
+                <Text style={styles.saveBtnText}>{savingFood ? '저장 중...' : '식단 저장'}</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -333,6 +736,30 @@ function formatKoreanDate(dateStr: string): string {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { padding: SPACING.lg, paddingTop: SPACING.md },
+
+  /* Tab */
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.sm,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  tabBtnActive: { backgroundColor: '#FCE4EC', borderColor: '#E91E63' },
+  tabText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, fontWeight: '600' },
+  tabTextActive: { color: '#AD1457' },
 
   /* Info card */
   infoCard: {
@@ -389,6 +816,39 @@ const styles = StyleSheet.create({
   recordTime: { fontSize: 11, color: COLORS.textLight, marginTop: 2 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   statusText: { fontSize: 12, fontWeight: '700' },
+
+  /* Food card */
+  foodCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: 6,
+    ...SHADOWS.soft,
+  },
+  foodThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: RADIUS.sm,
+    marginRight: SPACING.md,
+    backgroundColor: COLORS.background,
+  },
+  foodThumbEmpty: { alignItems: 'center', justifyContent: 'center' },
+  foodInfo: { flex: 1 },
+  foodHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  foodName: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text, flex: 1 },
+  foodMealTag: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#AD1457',
+    backgroundColor: '#FCE4EC',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  foodTime: { fontSize: 12, color: COLORS.textSecondary, marginTop: 3 },
+  foodMemo: { fontSize: 12, color: COLORS.textLight, marginTop: 2 },
 
   /* Empty */
   emptyWrap: { alignItems: 'center', paddingVertical: 60 },
@@ -468,4 +928,53 @@ const styles = StyleSheet.create({
     marginTop: SPACING.lg,
   },
   saveBtnText: { color: '#FFF', fontSize: FONT_SIZE.lg, fontWeight: '600' },
+
+  /* Photo picker */
+  photoBox: {
+    backgroundColor: COLORS.background,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
+  },
+  photoPreview: { width: '100%', height: 180, borderRadius: RADIUS.sm, marginBottom: SPACING.sm },
+  photoPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.lg,
+  },
+  photoHint: { fontSize: 12, color: COLORS.textSecondary, marginTop: 6, textAlign: 'center' },
+  photoBtnRow: { flexDirection: 'row', gap: 8, marginTop: SPACING.sm },
+  photoBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+  },
+  photoBtnAnalyze: { backgroundColor: '#E91E63', borderColor: '#E91E63' },
+  photoBtnText: { fontSize: FONT_SIZE.sm, color: COLORS.text, fontWeight: '600' },
+
+  /* Analyze result */
+  analyzeCard: {
+    backgroundColor: '#F3E5F5',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.md,
+  },
+  analyzeTitle: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: '#6A1B9A', marginBottom: 6 },
+  analyzeLine: { fontSize: FONT_SIZE.sm, color: COLORS.text, marginBottom: 2 },
+  analyzeNote: { fontSize: 12, color: COLORS.textSecondary, marginTop: 6, lineHeight: 17 },
+  disclaimer: { fontSize: 11, color: '#C62828', marginTop: 8, lineHeight: 15 },
+  disclaimerBottom: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.md,
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+  usageText: { fontSize: 11, color: COLORS.textLight, marginTop: 6, textAlign: 'right' },
 });
