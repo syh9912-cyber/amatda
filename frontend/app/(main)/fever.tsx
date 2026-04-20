@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sosApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -54,12 +55,12 @@ interface HistoryEntry {
 /* ------------------------------------------------------------------ */
 
 const COLOR = {
-  bg: '#FFF5EC',
+  bg: '#F2F2F7',
   card: '#FFFFFF',
-  text: '#2D2016',
-  textSub: '#8C7A6B',
-  textLight: '#B5A99A',
-  border: '#F0E6DA',
+  text: '#1C1C1E',
+  textSub: '#636366',
+  textLight: '#ABABAB',
+  border: '#E5E5EA',
   accent: '#FF8C5A',
 };
 
@@ -571,6 +572,7 @@ export default function FeverScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      <AdSlot />
     </View>
   );
 }

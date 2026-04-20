@@ -51,13 +51,13 @@ function getWeeklyQuestion(name: string, week: number): { emoji: string; text: s
 /* ------------------------------------------------------------------ */
 
 const COLOR = {
-  bg: '#FAFAFA',
+  bg: '#F2F2F7',
   card: '#FFFFFF',
   accent: '#FF8C5A',
-  accentLight: '#FFF5EE',
-  text: '#1A1A1A',
-  textSub: '#777777',
-  textLight: '#B0B0B0',
+  accentLight: '#FFF0E6',
+  text: '#1C1C1E',
+  textSub: '#636366',
+  textLight: '#ABABAB',
   mint: '#5CBFAB',
   mintBg: '#F0FAF7',
   yellow: '#FFD76E',
@@ -1141,7 +1141,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F2F2F7',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1338,7 +1338,7 @@ const styles = StyleSheet.create({
   compactDivider: {
     width: 1,
     height: 28,
-    backgroundColor: '#F0E6DC',
+    backgroundColor: '#E5E5EA',
     marginHorizontal: 8,
   },
   compactStatsHint: {
@@ -1348,7 +1348,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 6,
     borderTopWidth: 1,
-    borderTopColor: '#F0E6DC',
+    borderTopColor: '#E5E5EA',
   },
 
   /* === AI Insights === */
@@ -1412,7 +1412,7 @@ const styles = StyleSheet.create({
   /* === Add more === */
   addMore: {
     borderWidth: 1.5,
-    borderColor: '#F0E6DC',
+    borderColor: '#E5E5EA',
     borderStyle: 'dashed',
     borderRadius: 14,
     padding: 16,
@@ -1561,7 +1561,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLOR.text,
     borderWidth: 1,
-    borderColor: '#F0E6DC',
+    borderColor: '#E5E5EA',
   },
   birthGenderRow: {
     flexDirection: 'row' as const,
@@ -1572,7 +1572,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#F0E6DC',
+    borderColor: '#E5E5EA',
     alignItems: 'center' as const,
     backgroundColor: '#F8F4F0',
   },

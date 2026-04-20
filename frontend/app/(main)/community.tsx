@@ -17,7 +17,7 @@ import {
 } from '../../stores/momstagramStore';
 
 const CORAL = '#FF6B6B';
-const BG = '#FFF5EC';
+const BG = '#F2F2F7';
 const WARM_GRAY = '#9E8E82';
 
 const CATEGORIES = [

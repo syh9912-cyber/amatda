@@ -53,6 +53,7 @@ export default function CoachingScreen() {
       loadFollowups();
       loadYearAgoMemory();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [child?.id]);
 
   const loadHistory = async () => {
@@ -159,7 +160,17 @@ export default function CoachingScreen() {
 
   const sendMessage = useCallback(
     async (text: string, category?: string) => {
-      if (!text.trim() || sending || !child) return;
+      if (!text.trim() || sending) return;
+      if (!child) {
+        const noChildMsg: CoachingMessage = {
+          id: `e-${Date.now()}`,
+          isCoach: true,
+          text: '아이 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.',
+          createdAt: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, noChildMsg]);
+        return;
+      }
       setInput('');
       setSending(true);
 
@@ -203,11 +214,21 @@ export default function CoachingScreen() {
 
         // Schedule coaching follow-up notification for next day
         scheduleCoachingFollowup(child.name).catch(() => { /* silent */ });
-      } catch {
+      } catch (err: unknown) {
+        // axios 에러에서 서버 메시지 추출
+        let errDetail = '';
+        if (err && typeof err === 'object' && 'response' in err) {
+          const axErr = err as { response?: { status?: number; data?: { error?: string } } };
+          const status = axErr.response?.status;
+          const serverMsg = axErr.response?.data?.error;
+          errDetail = serverMsg ? ` (${serverMsg})` : status ? ` (HTTP ${status})` : '';
+        } else if (err instanceof Error) {
+          errDetail = ` (${err.message})`;
+        }
         const errMsg: CoachingMessage = {
           id: `e-${Date.now()}`,
           isCoach: true,
-          text: '응답을 가져오지 못했어요. 다시 시도해주세요.',
+          text: `응답을 가져오지 못했어요. 다시 시도해주세요.${errDetail}`,
           createdAt: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, errMsg]);
@@ -557,7 +578,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#FFF5EC',
+    backgroundColor: '#F2F2F7',
     borderWidth: 1,
     borderColor: COACHING_COLORS.accent,
   },
@@ -574,7 +595,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#FFF5EC',
+    backgroundColor: '#F2F2F7',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: COACHING_COLORS.accent,

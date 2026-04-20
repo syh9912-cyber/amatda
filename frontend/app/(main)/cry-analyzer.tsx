@@ -18,13 +18,13 @@ import { isScreenAvailable } from '../../constants/ageFeatures';
 
 /* ── 색상 ── */
 const COLORS = {
-  bg: '#FFF5EC',
+  bg: '#F2F2F7',
   white: '#FFFFFF',
-  text: '#2D2016',
-  textSub: '#8C7A6B',
-  textLight: '#B8A690',
+  text: '#1C1C1E',
+  textSub: '#636366',
+  textLight: '#ABABAB',
   accent: '#FF8C5A',
-  border: '#F0E6DA',
+  border: '#E5E5EA',
   normal: '#7DD3B8',
   normalBg: '#E8FAF8',
   attention: '#FFD76E',
@@ -43,16 +43,16 @@ interface UsageInfo {
 
 interface AnalysisResult {
   analysis: string;
-  possibilities: Array<{ label: string; likelihood: string }>;
+  possibilities: { label: string; likelihood: string }[];
   recommendations: string[];
   needsDoctor: boolean;
   usage?: UsageInfo;
 }
 
 const LIKELIHOOD_CONFIG: Record<string, { color: string; bg: string }> = {
-  '\uB192\uC74C': { color: '#D32F2F', bg: '#FFF0F0' },
-  '\uBCF4\uD1B5': { color: '#F57C00', bg: '#FFF8E1' },
-  '\uB0AE\uC74C': { color: COLORS.normal, bg: COLORS.normalBg },
+  '높음': { color: '#D32F2F', bg: '#FFF0F0' },
+  '보통': { color: '#F57C00', bg: '#FFF8E1' },
+  '낮음': { color: COLORS.normal, bg: COLORS.normalBg },
 };
 
 export default function CryAnalyzerScreen() {
@@ -269,7 +269,7 @@ function ResultView({ result, onReset }: { result: AnalysisResult; onReset: () =
         <View style={resultStyles.sectionCard}>
           <Text style={resultStyles.sectionTitle}>{'가능성 분석'}</Text>
           {result.possibilities.map((p, i) => {
-            const cfg = LIKELIHOOD_CONFIG[p.likelihood] ?? LIKELIHOOD_CONFIG['\uBCF4\uD1B5'];
+            const cfg = LIKELIHOOD_CONFIG[p.likelihood] ?? LIKELIHOOD_CONFIG['보통'];
             return (
               <View key={i} style={resultStyles.possibilityRow}>
                 <Text style={resultStyles.possibilityLabel}>{p.label}</Text>
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white, borderRadius: 16, padding: 24,
     alignItems: 'center', marginBottom: 24,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+    shadowOpacity: 0.04, shadowRadius: 16, elevation: 1,
   },
   guideEmoji: { fontSize: 48, marginBottom: 12 },
   guideImage: { width: 80, height: 80, marginBottom: 12 },
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white, borderRadius: 20, padding: 32,
     alignItems: 'center', marginBottom: 20,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+    shadowOpacity: 0.04, shadowRadius: 16, elevation: 1,
   },
   selectBtn: {
     width: '100%', paddingVertical: 28, alignItems: 'center',
@@ -399,7 +399,7 @@ const resultStyles = StyleSheet.create({
   analysisCard: {
     backgroundColor: COLORS.white, borderRadius: 16, padding: 20,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+    shadowOpacity: 0.04, shadowRadius: 16, elevation: 1,
   },
   analysisTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 10 },
   analysisText: { fontSize: 14, color: COLORS.text, lineHeight: 22 },

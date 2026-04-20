@@ -164,6 +164,15 @@ export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
         </Text>
       )}
 
+      {/* Milestone badge */}
+      {post.milestone && (
+        <View style={styles.milestoneBadge}>
+          <Text style={styles.milestoneText}>
+            {post.milestoneEmoji ? `${post.milestoneEmoji} ` : ''}{post.milestone}
+          </Text>
+        </View>
+      )}
+
       {/* Caption: username + content */}
       <View style={styles.captionWrap}>
         <Text style={styles.captionText}>
@@ -280,7 +289,7 @@ const styles = StyleSheet.create({
   postImage: {
     width: SCREEN_WIDTH,
     aspectRatio: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#F2F2F7',
   },
   placeholderImage: {
     width: SCREEN_WIDTH,
@@ -327,6 +336,23 @@ const styles = StyleSheet.create({
     color: '#262626',
     paddingHorizontal: SPACING.md - 2,
     marginBottom: 4,
+  },
+  /* Milestone badge */
+  milestoneBadge: {
+    marginHorizontal: SPACING.md - 2,
+    marginBottom: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFF5F0',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#FFD5C0',
+  },
+  milestoneText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#E8713A',
   },
   /* Caption */
   captionWrap: {

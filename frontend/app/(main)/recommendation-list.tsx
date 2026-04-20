@@ -7,6 +7,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
 import { recommendationApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 /* ------------------------------------------------------------------ */
 /*  Category styling                                                    */
@@ -202,6 +203,7 @@ export default function RecommendationListScreen() {
           })}
         </ScrollView>
       )}
+      <AdSlot />
     </View>
   );
 }
@@ -250,7 +252,7 @@ const styles = StyleSheet.create({
   },
   cardCollapsed: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F0EDE8',
+    borderBottomColor: '#E5E5EA',
   },
   cardHeader: {
     flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm,
@@ -273,7 +275,7 @@ const styles = StyleSheet.create({
   tapHintRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end',
     marginTop: SPACING.sm, paddingTop: SPACING.sm,
-    borderTopWidth: 1, borderTopColor: '#F0EDE8',
+    borderTopWidth: 1, borderTopColor: '#E5E5EA',
   },
   tapHintText: {
     fontSize: FONT_SIZE.xs, fontWeight: '600',

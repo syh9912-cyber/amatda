@@ -6,14 +6,14 @@ interface AppNameDisplayProps {
 }
 
 const CONFIG = {
-  large: { main: 52, sub: 20 },
-  small: { main: 32, sub: 14 },
+  large: { main: 48, sub: 18 },
+  small: { main: 30, sub: 13 },
 } as const;
 
-const INDIGO = '#4338CA';
-const GRAY = '#9CA3AF';
+/* 단일 브랜드 컬러 — Bold/Regular 굵기로만 대비 */
+const BRAND = '#1C1C1E';
 
-const PARTS: Array<{ text: string; isMain: boolean }> = [
+const PARTS: { text: string; isMain: boolean }[] = [
   { text: '아', isMain: true },
   { text: '이', isMain: false },
   { text: '맞', isMain: true },
@@ -33,8 +33,8 @@ export function AppNameDisplay({ size = 'large' }: AppNameDisplayProps) {
           style={[
             styles.base,
             part.isMain
-              ? { fontSize: cfg.main, color: INDIGO, fontWeight: '800' }
-              : { fontSize: cfg.sub, color: GRAY, fontWeight: '500' },
+              ? { fontSize: cfg.main, color: BRAND, fontWeight: '800' }
+              : { fontSize: cfg.sub, color: BRAND, fontWeight: '400', opacity: 0.5 },
           ]}
         >
           {part.text}
@@ -50,6 +50,6 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
   },
   base: {
-    letterSpacing: -0.3,
+    letterSpacing: -0.5,
   },
 });

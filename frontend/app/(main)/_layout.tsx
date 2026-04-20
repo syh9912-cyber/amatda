@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../stores/authStore';
 import { useChildStore } from '../../stores/childStore';
 
-/* 네비게이션 컬러: 활성 = 브랜드 메인, 비활성 = 깔끔한 연회색 */
 const ACTIVE_COLOR = '#FF8C5A';
 const INACTIVE_COLOR = '#8E8E93';
 
@@ -73,17 +72,16 @@ export default function MainLayout() {
         tabBarInactiveTintColor: INACTIVE_COLOR,
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
-          borderTopWidth: 0.5,
-          borderTopColor: '#F0F0F0',
-          paddingTop: 10,
+          borderTopWidth: 0.33,
+          borderTopColor: '#C6C6C8',
+          paddingTop: 8,
           paddingBottom: bottomPad - 4,
-          height: 64 + bottomPad,
-          /* 은은한 상단 그림자 */
+          height: 62 + bottomPad,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -1 },
-          shadowOpacity: 0.04,
-          shadowRadius: 12,
-          elevation: 4,
+          shadowOpacity: 0.05,
+          shadowRadius: 8,
+          elevation: 8,
         },
       }}
     >
@@ -159,6 +157,9 @@ export default function MainLayout() {
       <Tabs.Screen name="pregnancy" options={{ href: null }} />
       <Tabs.Screen name="vaccination" options={{ href: null }} />
       <Tabs.Screen name="gdm" options={{ href: null }} />
+      <Tabs.Screen name="labor-monitor" options={{ href: null }} />
+      <Tabs.Screen name="mom-wellness" options={{ href: null }} />
+      <Tabs.Screen name="mom-group" options={{ href: null }} />
       <Tabs.Screen name="child-edit" options={{ href: null }} />
       <Tabs.Screen name="fever" options={{ href: null }} />
       <Tabs.Screen name="voice-settings" options={{ href: null }} />

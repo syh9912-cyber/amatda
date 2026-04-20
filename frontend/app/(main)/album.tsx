@@ -6,19 +6,21 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  Image,
   TextInput,
   Switch,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
+import { Asset } from 'expo-asset';
 import { Stack } from 'expo-router';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 import { useChildStore } from '../../stores/childStore';
+import { AdSlot } from '../../components/ads/AdSlot';
 import { momstagramApi, coachingApi, pregnancyApi, uploadApi, albumApi, API_URL } from '../../services/api';
 import { uploadGrowthPhoto } from '../../services/imageUpload';
 import { useMomstagramStore } from '../../stores/momstagramStore';
@@ -500,13 +502,21 @@ async function uriToDataUri(uri: string): Promise<string> {
  * Image.resolveAssetSource로 번들 URI 획득 → uriToDataUri로 base64 변환
  */
 async function getDefaultCoverDataUri(): Promise<string | null> {
-  if (_defaultCoverB64) return _defaultCoverB64;
+  if (_defaultCoverB64 && _defaultCoverB64.startsWith('data:')) return _defaultCoverB64;
   try {
-    const resolved = Image.resolveAssetSource(DEFAULT_COVER_SOURCE);
-    if (!resolved?.uri) return null;
-    _defaultCoverB64 = await uriToDataUri(resolved.uri);
+    const asset = Asset.fromModule(DEFAULT_COVER_SOURCE);
+    await asset.downloadAsync();
+    const localUri = asset.localUri || asset.uri;
+    if (!localUri) return null;
+    const converted = await uriToDataUri(localUri);
+    if (!converted.startsWith('data:')) {
+      console.warn('[album] default cover conversion failed:', localUri.slice(0, 80));
+      return null;
+    }
+    _defaultCoverB64 = converted;
     return _defaultCoverB64;
-  } catch {
+  } catch (e) {
+    console.warn('[album] getDefaultCoverDataUri error', e);
     return null;
   }
 }
@@ -570,7 +580,7 @@ function MilestoneBadgeIcon({
       <Image
         source={{ uri: milestoneImgUrl(label) }}
         style={styles.feedBadgeImg}
-        resizeMode="contain"
+        contentFit="contain"
         onLoad={onLoad}
         onError={onError}
       />
@@ -1011,7 +1021,7 @@ function generateAlbumHTML(
     }
     .photo-date {
       font-family: 'Jua', sans-serif;
-      font-size: 13px; color: #8B7355;
+      font-size: 13px; color: #636366;
       letter-spacing: 0.5px;
     }
     /* 마일스톤 행 */
@@ -1255,7 +1265,7 @@ function PregnancyTimeline() {
                   <Text style={pStyles.cardTitle}>{item.title}</Text>
                   {item.content ? <Text style={pStyles.cardContent} numberOfLines={3}>{item.content}</Text> : null}
                   {item.mediaUri ? (
-                    <Image source={{ uri: item.mediaUri }} style={pStyles.cardImage} resizeMode="cover" />
+                    <Image source={{ uri: item.mediaUri }} style={pStyles.cardImage} contentFit="cover" />
                   ) : null}
                   {item.createdAt ? (
                     <Text style={pStyles.cardDate}>{new Date(item.createdAt).toLocaleDateString('ko-KR')}</Text>
@@ -1584,10 +1594,11 @@ function BabyAlbum() {
       );
       console.log(`[album] 📊 변환 결과: 성공 ${filtered.length - convertFailCount} / 실패 ${convertFailCount}`);
 
-      const coverDataUri = albumCoverUri
+      const rawCoverDataUri = albumCoverUri
         ? await uriToDataUri(albumCoverUri)
         : await getDefaultCoverDataUri();
-      console.log('[album] 표지:', coverDataUri?.startsWith('data:') ? '✓ data URI' : '✗ fallback/null');
+      const coverDataUri = rawCoverDataUri && rawCoverDataUri.startsWith('data:') ? rawCoverDataUri : null;
+      console.log('[album] 표지:', coverDataUri ? '✓ data URI' : '✗ fallback/null');
 
       // 마일스톤 아이콘 HTTPS URL → base64 data URI 변환 (중복 제거)
       const uniqueMilestones = Array.from(
@@ -1678,7 +1689,7 @@ function BabyAlbum() {
           {/* Photo picker / preview */}
           {pendingUri ? (
             <View>
-              <Image source={{ uri: pendingUri }} style={styles.composePhoto} resizeMode="cover" />
+              <Image source={{ uri: pendingUri }} style={styles.composePhoto} contentFit="cover" />
               <TouchableOpacity style={styles.composePhotoChange} onPress={pickImage} activeOpacity={0.7}>
                 <Text style={styles.composePhotoChangeText}>변경</Text>
               </TouchableOpacity>
@@ -1824,7 +1835,7 @@ function BabyAlbum() {
             <Image
               source={require('../../assets/empty-album.png')}
               style={styles.emptyImage}
-              resizeMode="contain"
+              contentFit="contain"
             />
             <Text style={styles.emptyText}>아직 사진이 없습니다</Text>
             <Text style={styles.emptyHint}>위에서 사진을 추가해보세요</Text>
@@ -1846,7 +1857,7 @@ function BabyAlbum() {
                   onLongPress={() => deleteEntry(idx)}
                   activeOpacity={0.85}
                 >
-                  <Image source={{ uri: photo.uri }} style={styles.feedImage} resizeMode="cover" />
+                  <Image source={{ uri: photo.uri }} style={styles.feedImage} contentFit="cover" />
                   {/* 카테고리 컬러 좌측 스트립 */}
                   {photo.milestone && (
                     <View style={[styles.feedStrip, { backgroundColor: feedColor }]} />
@@ -1888,6 +1899,15 @@ function BabyAlbum() {
           <Text style={styles.albumSectionDesc}>
             {'기간을 선택하면 기기에서 바로 PDF를 만들어요.\n생성 후 카카오톡 · 드라이브 · 인쇄소로 공유하세요'}
           </Text>
+
+          {/* 임신기록 자동 병합 안내 */}
+          <View style={styles.pregMergeHint}>
+            <Text style={styles.pregMergeEmoji}>🤰</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.pregMergeTitle}>임신기록이 자동으로 포함돼요</Text>
+              <Text style={styles.pregMergeDesc}>임신 중 저장한 사진·초음파가 날짜순으로 앨범 앞부분에 이어져요</Text>
+            </View>
+          </View>
 
           {/* 앨범 생성 폼 */}
           {showAlbumForm && (
@@ -1941,7 +1961,7 @@ function BabyAlbum() {
                     <Image
                       source={{ uri: albumCoverUri }}
                       style={styles.albumCoverPreview}
-                      resizeMode="cover"
+                      contentFit="cover"
                     />
                     <TouchableOpacity
                       style={styles.albumCoverClear}
@@ -1956,7 +1976,7 @@ function BabyAlbum() {
                     <Image
                       source={DEFAULT_COVER_SOURCE}
                       style={styles.albumCoverPreview}
-                      resizeMode="cover"
+                      contentFit="cover"
                     />
                     <View style={styles.albumCoverDefaultOverlay}>
                       <Text style={styles.albumCoverDefaultText}>{'기본 표지 · 탭하여 변경'}</Text>
@@ -1993,6 +2013,8 @@ function BabyAlbum() {
           onClose={() => setViewerIndex(null)}
         />
       )}
+
+      <AdSlot />
     </View>
   );
 }
@@ -2108,7 +2130,7 @@ const styles = StyleSheet.create({
   feedDate: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginBottom: 6, fontWeight: '700' },
   feedBadge: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#FAFAFA', borderRadius: RADIUS.sm,
+    backgroundColor: '#F2F2F7', borderRadius: RADIUS.sm,
     borderWidth: 1,
     paddingHorizontal: 8, paddingVertical: 5, alignSelf: 'flex-start', marginBottom: 6,
   },
@@ -2119,7 +2141,7 @@ const styles = StyleSheet.create({
   },
   feedBadgeImg: {
     width: 28, height: 28, borderRadius: 6,
-    marginRight: 6, backgroundColor: '#F5F5F5',
+    marginRight: 6, backgroundColor: '#F2F2F7',
   },
   feedBadgeEmojiInner: { fontSize: 15 },
   feedBadgeText: { fontSize: FONT_SIZE.sm, fontWeight: '700' },
@@ -2149,6 +2171,15 @@ const styles = StyleSheet.create({
   },
   albumSectionTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text },
   albumSectionDesc: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, lineHeight: 20, marginBottom: SPACING.sm, fontWeight: '600' },
+  pregMergeHint: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#FCE4EC', borderRadius: RADIUS.md,
+    padding: SPACING.md, marginBottom: SPACING.md,
+    borderWidth: 1, borderColor: '#F8BBD0',
+  },
+  pregMergeEmoji: { fontSize: 24 },
+  pregMergeTitle: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: '#C2185B', marginBottom: 2 },
+  pregMergeDesc: { fontSize: FONT_SIZE.xs, color: '#880E4F', lineHeight: 16 },
   albumNewBtn: {
     backgroundColor: '#FFF0E8', borderRadius: RADIUS.sm,
     paddingHorizontal: 12, paddingVertical: 6,

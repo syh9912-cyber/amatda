@@ -5,9 +5,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const GUIDE_SHOWN_KEY = 'amatda_onboarding_guide_shown';
 const { width: SW } = Dimensions.get('window');
 
-/* eslint-disable @typescript-eslint/no-require-imports */
+ 
 const MASCOT = require('../../assets/mascot-waving.png') as number;
-/* eslint-enable @typescript-eslint/no-require-imports */
+ 
 
 interface Step {
   title: string;
@@ -104,7 +104,7 @@ const s = StyleSheet.create({
   },
   skipText: {
     fontSize: 13,
-    color: '#B5A99A',
+    color: '#ABABAB',
     fontWeight: '500',
   },
   mascot: {
@@ -119,12 +119,12 @@ const s = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#2D2016',
+    color: '#1C1C1E',
     marginBottom: 8,
   },
   desc: {
     fontSize: 14,
-    color: '#8C7A6B',
+    color: '#636366',
     lineHeight: 22,
     textAlign: 'center',
     marginBottom: 24,

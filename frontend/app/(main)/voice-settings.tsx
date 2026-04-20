@@ -539,7 +539,7 @@ const s = StyleSheet.create({
   /* Default inputs */
   inputRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F5EDE4' },
   inputLabel: { fontSize: FONT_SIZE.md, color: COLORS.text, fontWeight: '500', flex: 1 },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF9F5', borderRadius: RADIUS.sm, paddingHorizontal: 12, borderWidth: 1, borderColor: '#F0E6DA' },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF9F5', borderRadius: RADIUS.sm, paddingHorizontal: 12, borderWidth: 1, borderColor: '#E5E5EA' },
   inputField: { width: 60, height: 40, fontSize: FONT_SIZE.md, color: COLORS.text, fontWeight: '600', textAlign: 'center' },
   inputUnit: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginLeft: 4 },
   saveBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center', marginTop: SPACING.md },
@@ -576,7 +576,7 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#FDFAF7', borderRadius: RADIUS.md,
     padding: 14, marginBottom: 10,
-    borderWidth: 1, borderColor: '#F0E6DA',
+    borderWidth: 1, borderColor: '#E5E5EA',
   },
   assistantDot: { width: 12, height: 12, borderRadius: 6, marginRight: 12 },
   assistantInfo: { flex: 1 },

@@ -16,19 +16,20 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useChildStore } from '../../stores/childStore';
 import { coachingApi } from '../../services/api';
 import { isScreenAvailable } from '../../constants/ageFeatures';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const COLORS = {
-  bg: '#FFF5EC',
+  bg: '#F2F2F7',
   white: '#FFFFFF',
-  text: '#2D2016',
-  textSub: '#8C7A6B',
-  textLight: '#B5A99A',
+  text: '#1C1C1E',
+  textSub: '#636366',
+  textLight: '#ABABAB',
   accent: '#FF8C5A',
-  border: '#F0E6DA',
+  border: '#E5E5EA',
   urgentBg: '#FFF0F0',
-  urgentBorder: '#FF4444',
+  urgentBorder: '#FF3B30',
   normalBg: '#E8FAF8',
   normal: '#7DD3B8',
   attentionBg: '#FFF9E6',
@@ -232,6 +233,7 @@ export default function PoopAnalyzerScreen() {
           </>
         )}
       </ScrollView>
+      <AdSlot />
     </View>
   );
 }

@@ -6,6 +6,7 @@ import { useChildStore } from '../../stores/childStore';
 import { childApi, coachingApi, growthApi, pregnancyApi } from '../../services/api';
 import { getTodayQuestion } from '../../constants/dailyQuestions';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 type TabKey = 'physical' | 'trait';
 
@@ -94,7 +95,7 @@ const LEVEL_COLORS: Record<string, { bg: string; text: string }> = {
 };
 
 function getLevelColor(level: string): { bg: string; text: string } {
-  return LEVEL_COLORS[level] ?? { bg: '#F5F5F5', text: '#888888' };
+  return LEVEL_COLORS[level] ?? { bg: '#F2F2F7', text: '#888888' };
 }
 
 function getLevelLabel(level: string): string {
@@ -206,17 +207,20 @@ export default function GrowthStatsScreen() {
 
   if (isPregnant) {
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Stack.Screen options={{ headerShown: false }} />
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.backArrow}>{'<'}</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>주수별 발달</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-        <PregnancyWeeklyDevelopment />
-      </ScrollView>
+      <View style={{ flex: 1 }}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+          <Stack.Screen options={{ headerShown: false }} />
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={styles.backArrow}>{'<'}</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>주수별 발달</Text>
+            <View style={styles.headerSpacer} />
+          </View>
+          <PregnancyWeeklyDevelopment />
+        </ScrollView>
+        <AdSlot />
+      </View>
     );
   }
 
@@ -239,6 +243,7 @@ export default function GrowthStatsScreen() {
         )}
         {activeTab === 'trait' && <TraitTab />}
       </ScrollView>
+      <AdSlot />
     </KeyboardAvoidingView>
   );
 }
@@ -328,6 +333,46 @@ const SIZE_EMOJI: Record<string, string> = {
   '큰 파인애플': '🍍', '겨울호박': '🎃', '참외': '🍈', '작은 수박': '🍉', '수박': '🍉',
 };
 
+/* ── 주차별 할 일/검사 체크리스트 ── */
+interface WeeklyTask {
+  minWeek: number;
+  maxWeek: number;
+  emoji: string;
+  title: string;
+  type: 'exam' | 'todo';
+}
+
+const WEEKLY_TASKS: WeeklyTask[] = [
+  { minWeek: 1, maxWeek: 12, emoji: '💊', title: '엽산 매일 복용 (400~800mcg)', type: 'todo' },
+  { minWeek: 6, maxWeek: 10, emoji: '🏥', title: '첫 산부인과 방문 + 심장소리 확인', type: 'exam' },
+  { minWeek: 11, maxWeek: 14, emoji: '🔬', title: '1차 기형아 검사 (NT, 목투명대)', type: 'exam' },
+  { minWeek: 14, maxWeek: 16, emoji: '🥬', title: '철분 섭취 시작 (시금치/붉은 고기)', type: 'todo' },
+  { minWeek: 15, maxWeek: 20, emoji: '🧪', title: '2차 기형아 검사 (쿼드/트리플)', type: 'exam' },
+  { minWeek: 18, maxWeek: 22, emoji: '📋', title: '정밀 초음파 (레벨 2)', type: 'exam' },
+  { minWeek: 20, maxWeek: 24, emoji: '🎀', title: '성별 확인 가능 시기', type: 'todo' },
+  { minWeek: 24, maxWeek: 28, emoji: '🩸', title: '임신성 당뇨 검사 (GCT)', type: 'exam' },
+  { minWeek: 28, maxWeek: 32, emoji: '📚', title: '출산 준비 교실 수강', type: 'todo' },
+  { minWeek: 28, maxWeek: 36, emoji: '🦶', title: '태동 카운터 매일 체크', type: 'todo' },
+  { minWeek: 32, maxWeek: 36, emoji: '🏥', title: 'NST (비수축검사)', type: 'exam' },
+  { minWeek: 35, maxWeek: 37, emoji: '🔬', title: 'GBS 검사 (B군 연쇄상구균)', type: 'exam' },
+  { minWeek: 32, maxWeek: 40, emoji: '🧳', title: '출산가방 준비', type: 'todo' },
+  { minWeek: 36, maxWeek: 40, emoji: '⏱️', title: '진통 간격 타이머 준비', type: 'todo' },
+];
+
+function getTasksForWeek(week: number): WeeklyTask[] {
+  return WEEKLY_TASKS.filter((t) => week >= t.minWeek && week <= t.maxWeek);
+}
+
+function calculateDDay(dueDate?: string | null): number | null {
+  if (!dueDate) return null;
+  const due = new Date(dueDate);
+  if (isNaN(due.getTime())) return null;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  return Math.round((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 function getTrimesterInfo(week: number) {
   if (week <= 13) return { label: '1분기 (초기)', color: '#E8F5E9', textColor: '#2E7D32' };
   if (week <= 27) return { label: '2분기 (안정기)', color: '#E3F2FD', textColor: '#1565C0' };
@@ -338,12 +383,41 @@ function PregnancyWeeklyDevelopment() {
   const selectedChild = useChildStore((s) => s.selectedChild);
   const weeks = WEEKLY_DEVELOPMENT;
   const [imagesByWeek, setImagesByWeek] = useState<Record<number, TimelineItem[]>>({});
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const weekPositions = useRef<Record<number, number>>({});
 
   const currentWeek = selectedChild?.pregnancyWeeks ?? 0;
+  const dDay = calculateDDay(selectedChild?.dueDate);
+  const weeklyTasks = getTasksForWeek(currentWeek);
+
+  // 금기 검색
+  const [showSafetyModal, setShowSafetyModal] = useState(false);
+  const [safetyQuery, setSafetyQuery] = useState('');
+  const [safetyLoading, setSafetyLoading] = useState(false);
+  const [safetyResult, setSafetyResult] = useState<{
+    level: 'safe' | 'caution' | 'avoid';
+    title: string; summary: string;
+    dos: string[]; donts: string[];
+    disclaimer?: string;
+  } | null>(null);
+
+  const handleSafetyCheck = async () => {
+    const q = safetyQuery.trim();
+    if (q.length === 0) return;
+    setSafetyLoading(true);
+    setSafetyResult(null);
+    try {
+      const res = await pregnancyApi.safetyCheck(q, currentWeek || undefined);
+      setSafetyResult(res.data.data);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
+        ?? '검색에 실패했어요. 잠시 후 다시 시도해주세요.';
+      Alert.alert('알림', msg);
+    }
+    setSafetyLoading(false);
+  };
 
   // Only fetch timeline images from API (user photos per week)
   useEffect(() => {
@@ -356,7 +430,7 @@ function PregnancyWeeklyDevelopment() {
         if (cancelled) return;
         if (tlRes?.data?.data && Array.isArray(tlRes.data.data)) {
           const map: Record<number, TimelineItem[]> = {};
-          for (const entry of tlRes.data.data as Array<{ week: number; items: TimelineItem[] }>) {
+          for (const entry of tlRes.data.data as { week: number; items: TimelineItem[] }[]) {
             const imgs = entry.items.filter((it) => it.source === 'record' && it.mediaUri);
             if (imgs.length > 0) map[entry.week] = imgs;
           }
@@ -397,10 +471,13 @@ function PregnancyWeeklyDevelopment() {
       Math.abs(curr.week - currentWeek) < Math.abs(prev.week - currentWeek) ? curr : prev,
     );
 
-  // Pre-compute trimester separators
-  const weekItems = weeks.map((dev, idx) => {
+  // Pre-compute trimester separators — show current week and future only
+  const visibleWeeks = currentWeek > 0
+    ? weeks.filter((w) => w.week >= currentWeek)
+    : weeks;
+  const weekItems = visibleWeeks.map((dev, idx) => {
     const tri = getTrimesterInfo(dev.week);
-    const prevTri = idx > 0 ? getTrimesterInfo(weeks[idx - 1].week) : null;
+    const prevTri = idx > 0 ? getTrimesterInfo(visibleWeeks[idx - 1].week) : null;
     return { dev, showTrimester: !prevTri || prevTri.label !== tri.label, trimester: tri };
   });
 
@@ -424,6 +501,58 @@ function PregnancyWeeklyDevelopment() {
           </Text>
         </LinearGradient>
       )}
+
+      {/* D-Day 카드 */}
+      {dDay !== null && (
+        <View style={pwStyles.dDayCard}>
+          <View style={pwStyles.dDayLeft}>
+            <Text style={pwStyles.dDayLabel}>출산예정일까지</Text>
+            <Text style={pwStyles.dDayValue}>
+              {dDay > 0 ? `D-${dDay}` : dDay === 0 ? 'D-Day!' : `D+${Math.abs(dDay)}`}
+            </Text>
+            <Text style={pwStyles.dDayHint}>📅 주요 검사·출산일 알림이 자동 등록돼요</Text>
+          </View>
+          <View style={pwStyles.dDayRight}>
+            <Text style={pwStyles.dDayDate}>
+              {selectedChild?.dueDate ? new Date(selectedChild.dueDate).toLocaleDateString('ko-KR') : ''}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* 이번 주 할 일 / 검사 */}
+      {weeklyTasks.length > 0 && (
+        <View style={pwStyles.tasksCard}>
+          <Text style={pwStyles.tasksTitle}>📋 이번 주 할 일 · 검사</Text>
+          {weeklyTasks.map((t, i) => (
+            <View key={`${t.type}-${i}`} style={pwStyles.taskRow}>
+              <Text style={pwStyles.taskEmoji}>{t.emoji}</Text>
+              <Text style={pwStyles.taskText}>{t.title}</Text>
+              <View style={[
+                pwStyles.taskBadge,
+                t.type === 'exam' ? { backgroundColor: '#FCE4EC' } : { backgroundColor: '#E3F2FD' },
+              ]}>
+                <Text style={[
+                  pwStyles.taskBadgeText,
+                  t.type === 'exam' ? { color: '#C2185B' } : { color: '#1565C0' },
+                ]}>
+                  {t.type === 'exam' ? '검사' : '할 일'}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* 금기 검색 버튼 */}
+      <TouchableOpacity style={pwStyles.safetyBtn} onPress={() => setShowSafetyModal(true)}>
+        <Text style={pwStyles.safetyBtnEmoji}>🔍</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={pwStyles.safetyBtnTitle}>임산부 금기 검색</Text>
+          <Text style={pwStyles.safetyBtnSub}>음식·약물·카페인 안전성 확인</Text>
+        </View>
+        <Text style={pwStyles.safetyBtnArrow}>{'>'}</Text>
+      </TouchableOpacity>
 
       {/* Week Cards */}
       {weekItems.map(({ dev, showTrimester, trimester }) => {
@@ -520,6 +649,93 @@ function PregnancyWeeklyDevelopment() {
           임신 기록에서 사진을 올리면 해당 주수에 자동으로 표시돼요
         </Text>
       </View>
+
+      {/* 금기 검색 Modal */}
+      <Modal visible={showSafetyModal} animationType="slide" transparent>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={pwStyles.safetyModalOverlay}>
+            <View style={pwStyles.safetyModalCard}>
+              <View style={pwStyles.safetyModalHeader}>
+                <TouchableOpacity
+                  onPress={() => { setShowSafetyModal(false); setSafetyResult(null); setSafetyQuery(''); }}
+                >
+                  <Text style={{ color: COLORS.primary, fontSize: FONT_SIZE.md, fontWeight: '600' }}>{'< 닫기'}</Text>
+                </TouchableOpacity>
+                <Text style={{ fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text }}>금기 검색</Text>
+                <View style={{ width: 50 }} />
+              </View>
+
+              <View style={pwStyles.safetyInputRow}>
+                <TextInput
+                  style={pwStyles.safetyInput}
+                  placeholder="예: 커피, 회, 타이레놀, 홍삼..."
+                  placeholderTextColor={COLORS.textLight}
+                  value={safetyQuery}
+                  onChangeText={setSafetyQuery}
+                  onSubmitEditing={handleSafetyCheck}
+                  returnKeyType="search"
+                />
+                <TouchableOpacity
+                  style={[pwStyles.safetyGoBtn, safetyLoading && { opacity: 0.5 }]}
+                  onPress={handleSafetyCheck}
+                  disabled={safetyLoading || safetyQuery.trim().length === 0}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>검색</Text>
+                </TouchableOpacity>
+              </View>
+
+              {safetyLoading && (
+                <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+                  <ActivityIndicator size="large" color={COLORS.primary} />
+                  <Text style={{ marginTop: SPACING.md, color: COLORS.textSecondary }}>AI가 분석 중이에요...</Text>
+                </View>
+              )}
+
+              {safetyResult && !safetyLoading && (
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <View style={[
+                    pwStyles.safetyResultCard,
+                    safetyResult.level === 'safe' && { backgroundColor: '#E8F5E9', borderColor: '#4CAF50' },
+                    safetyResult.level === 'caution' && { backgroundColor: '#FFF8E1', borderColor: '#FFA726' },
+                    safetyResult.level === 'avoid' && { backgroundColor: '#FFEBEE', borderColor: '#E53935' },
+                  ]}>
+                    <Text style={pwStyles.safetyLevelBadge}>
+                      {safetyResult.level === 'safe' ? '✅ 안전' : safetyResult.level === 'caution' ? '⚠️ 주의' : '🚫 피하세요'}
+                    </Text>
+                    <Text style={pwStyles.safetyResultTitle}>{safetyResult.title}</Text>
+                    <Text style={pwStyles.safetyResultSummary}>{safetyResult.summary}</Text>
+                  </View>
+
+                  {safetyResult.dos.length > 0 && (
+                    <View style={pwStyles.safetyListCard}>
+                      <Text style={[pwStyles.safetyListTitle, { color: '#2E7D32' }]}>✓ 이렇게 드세요</Text>
+                      {safetyResult.dos.map((d, i) => (
+                        <Text key={i} style={pwStyles.safetyListItem}>• {d}</Text>
+                      ))}
+                    </View>
+                  )}
+
+                  {safetyResult.donts.length > 0 && (
+                    <View style={pwStyles.safetyListCard}>
+                      <Text style={[pwStyles.safetyListTitle, { color: '#C62828' }]}>✗ 주의사항</Text>
+                      {safetyResult.donts.map((d, i) => (
+                        <Text key={i} style={pwStyles.safetyListItem}>• {d}</Text>
+                      ))}
+                    </View>
+                  )}
+
+                  {safetyResult.disclaimer && (
+                    <Text style={pwStyles.safetyDisclaimer}>{safetyResult.disclaimer}</Text>
+                  )}
+                </ScrollView>
+              )}
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -713,6 +929,111 @@ const pwStyles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     color: COLORS.textLight,
     textAlign: 'center',
+  },
+
+  /* D-Day 카드 */
+  dDayCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FCE4EC',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+  },
+  dDayLeft: { flex: 1 },
+  dDayLabel: { fontSize: FONT_SIZE.sm, color: '#880E4F', marginBottom: 4 },
+  dDayValue: { fontSize: 32, fontWeight: '700', color: '#C2185B' },
+  dDayRight: { alignItems: 'flex-end' },
+  dDayDate: { fontSize: FONT_SIZE.sm, color: '#880E4F', fontWeight: '600' },
+  dDayHint: { fontSize: FONT_SIZE.xs, color: '#AD1457', marginTop: 6, lineHeight: 16 },
+
+  /* 이번 주 할 일 */
+  tasksCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    ...SHADOWS.soft,
+  },
+  tasksTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.sm },
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    gap: 8,
+  },
+  taskEmoji: { fontSize: 18 },
+  taskText: { flex: 1, fontSize: FONT_SIZE.sm, color: COLORS.text },
+  taskBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: RADIUS.full },
+  taskBadgeText: { fontSize: 11, fontWeight: '600' },
+
+  /* 금기 검색 버튼 */
+  safetyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3E5F5',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    gap: 12,
+  },
+  safetyBtnEmoji: { fontSize: 24 },
+  safetyBtnTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: '#6A1B9A' },
+  safetyBtnSub: { fontSize: FONT_SIZE.xs, color: '#8E24AA', marginTop: 2 },
+  safetyBtnArrow: { fontSize: 18, color: '#8E24AA', fontWeight: '700' },
+
+  /* 금기 검색 Modal */
+  safetyModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  safetyModalCard: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: SPACING.lg, maxHeight: '90%',
+  },
+  safetyModalHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: SPACING.md,
+  },
+  safetyInputRow: { flexDirection: 'row', gap: 8, marginBottom: SPACING.md },
+  safetyInput: {
+    flex: 1,
+    backgroundColor: '#F8F5F2',
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  safetyGoBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    justifyContent: 'center',
+  },
+  safetyResultCard: {
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+  },
+  safetyLevelBadge: { fontSize: FONT_SIZE.md, fontWeight: '700', marginBottom: SPACING.sm },
+  safetyResultTitle: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text, marginBottom: 4 },
+  safetyResultSummary: { fontSize: FONT_SIZE.sm, color: COLORS.text, lineHeight: 20 },
+  safetyListCard: {
+    backgroundColor: '#F5F0EB',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  safetyListTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', marginBottom: SPACING.sm },
+  safetyListItem: { fontSize: FONT_SIZE.sm, color: COLORS.text, lineHeight: 22, marginBottom: 2 },
+  safetyDisclaimer: {
+    fontSize: FONT_SIZE.xs, color: COLORS.textLight, textAlign: 'center',
+    marginVertical: SPACING.md, paddingHorizontal: SPACING.md, lineHeight: 16,
   },
 });
 
@@ -1228,6 +1549,7 @@ function PhysicalTab({ childName }: { childName: string }) {
       } catch { /* ignore */ }
     };
     loadRecords();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild?.id]);
 
   const standard = useMemo(
@@ -1266,6 +1588,12 @@ function PhysicalTab({ childName }: { childName: string }) {
       setRecords(updated);
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       await AsyncStorage.setItem(`growth_records_${selectedChild.id}`, JSON.stringify(updated));
+      // 서버에도 싱크 (fire-and-forget)
+      growthApi.update(selectedChild.id, {
+        date: recordDate,
+        height: height ? parseFloat(height) : undefined,
+        weight: weight ? parseFloat(weight) : undefined,
+      }).catch(() => { /* 서버 싱크 실패해도 로컬은 유지 */ });
       Alert.alert('저장 완료', `${recordDate} 성장 기록이 저장되었습니다`);
       setHeight('');
       setWeight('');
@@ -1512,6 +1840,7 @@ function TraitTab() {
   const dailyQuestion = useMemo(() => {
     if (!selectedChild) return null;
     return getTodayQuestion(selectedChild.ageInfo.group);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild?.ageInfo.group]);
 
   useEffect(() => {
@@ -1528,6 +1857,7 @@ function TraitTab() {
         // silently fail
       })
       .finally(() => setLoadingTraits(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild?.id]);
 
   const handleSaveTrait = async () => {
@@ -1751,6 +2081,7 @@ function getDefaultMilestones(months: number): MilestoneItem[] {
 /* Milestones Tab                                                      */
 /* ------------------------------------------------------------------ */
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function MilestonesTab() {
   const selectedChild = useChildStore((s) => s.selectedChild);
   const [loading, setLoading] = useState(false);
@@ -1804,7 +2135,15 @@ function MilestonesTab() {
         setError(false);
       })
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild?.id]);
+
+  // saveTimerRef unmount cleanup (메모리 누수 방지)
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
 
   // 토글 후 1초 뒤 자동 저장 (디바운스)
   const saveToServer = useCallback((checks: Record<string, boolean>) => {
@@ -1863,7 +2202,7 @@ function MilestonesTab() {
   function getDomainTag(item: MilestoneItem) {
     const style = DOMAIN_STYLE[item.domain];
     if (style) return { ...style, label: item.domain };
-    return { emoji: '📋', label: item.domain || '발달', color: '#8C7A6B' };
+    return { emoji: '📋', label: item.domain || '발달', color: '#636366' };
   }
 
   // 발달 진행 요약 통계
@@ -1879,7 +2218,7 @@ function MilestonesTab() {
     label,
     ...counts,
     emoji: DOMAIN_STYLE[label]?.emoji ?? '📋',
-    color: DOMAIN_STYLE[label]?.color ?? '#8C7A6B',
+    color: DOMAIN_STYLE[label]?.color ?? '#636366',
   }));
 
   return (
@@ -2274,7 +2613,7 @@ const traitInsightStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF5EC',
+    backgroundColor: '#F2F2F7',
   },
   content: {
     paddingHorizontal: SPACING.lg,

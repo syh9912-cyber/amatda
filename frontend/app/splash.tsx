@@ -177,7 +177,7 @@ export default function SplashScreen() {
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#F2F2F7',
   },
 
   /* Full-screen video (same bg color = seamless) */
@@ -192,7 +192,7 @@ const s = StyleSheet.create({
   /* Semi-transparent overlay for text contrast */
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#F2F2F7',
   },
 
   /* Text center */

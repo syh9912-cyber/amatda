@@ -10,6 +10,10 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
+  Modal,
+  Image,
+  Dimensions,
+  ImageSourcePropType,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,22 +33,6 @@ interface SymptomCheckResult {
   showEmergencyCall: boolean;
 }
 
-interface DoseInfo {
-  doseMg: string;
-  syrupMl: string;
-  interval: string;
-  maxDaily: string;
-  ageRestriction?: string;
-}
-
-interface MedicineDose {
-  childWeight: number;
-  acetaminophen: DoseInfo;
-  ibuprofen: DoseInfo;
-  alternatingSchedule: string[];
-  warning: string;
-}
-
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
 /* ------------------------------------------------------------------ */
@@ -55,12 +43,12 @@ const URGENT_YELLOW = '#FFCC00';
 const MONITOR_GREEN = '#34C759';
 
 const COLOR = {
-  bg: '#FFFFFF',
+  bg: '#F2F2F7',
   card: '#FFFFFF',
-  text: '#2D2016',
-  textSub: '#8C7A6B',
-  textLight: '#B5A99A',
-  border: '#F0E6DA',
+  text: '#1C1C1E',
+  textSub: '#636366',
+  textLight: '#ABABAB',
+  border: '#E5E5EA',
   accent: '#FF8C5A',
 };
 
@@ -125,6 +113,83 @@ const SEVERITY_CONFIG: Record<SeverityLevel, {
 };
 
 /* ------------------------------------------------------------------ */
+/* Emergency Guide Data                                                */
+/* ------------------------------------------------------------------ */
+
+const SOS_IMAGES: Record<string, ImageSourcePropType> = {
+  heimlich: require('../../assets/sos-heimlich.png'),
+  cpr: require('../../assets/sos-cpr.png'),
+  burn_fall: require('../../assets/sos-burn-fall.png'),
+  foreign: require('../../assets/sos-foreign.png'),
+};
+
+const EMERGENCY_GUIDES = [
+  { key: 'heimlich', emoji: '🫁', label: '하임리히', color: '#D32F2F', bg: '#FFEBEE' },
+  { key: 'cpr', emoji: '❤️', label: 'CPR', color: '#C62828', bg: '#FCE4EC' },
+  { key: 'burn_fall', emoji: '🔥', label: '화상/낙상', color: '#E65100', bg: '#FFF3E0' },
+  { key: 'foreign', emoji: '⚠️', label: '이물질', color: '#F57F17', bg: '#FFFDE7' },
+] as const;
+
+interface GuideData {
+  title: string;
+  subtitle: string;
+  headerColor: string;
+  quickSteps: string[];
+  warning: string;
+}
+
+const GUIDE_CONTENT: Record<string, GuideData> = {
+  heimlich: {
+    title: '하임리히법 (기도 폐쇄)',
+    subtitle: '아이가 이물질로 숨을 못 쉴 때',
+    headerColor: '#D32F2F',
+    quickSteps: [
+      '1세 미만: 얼굴 아래로 → 등 5회 두드리기',
+      '뒤집어서 가슴 중앙 손가락 2개로 5회 압박',
+      '1세 이상: 뒤에서 배꼽 위 주먹으로 밀어올리기',
+      '나올 때까지 반복! 의식 잃으면 CPR + 119',
+    ],
+    warning: '손가락으로 억지로 빼지 마세요! 의식 잃으면 즉시 CPR',
+  },
+  cpr: {
+    title: '심폐소생술 (CPR)',
+    subtitle: '아이가 반응 없거나 숨을 안 쉴 때',
+    headerColor: '#C62828',
+    quickSteps: [
+      '반응 확인 → 즉시 119 신고 (스피커폰)',
+      '머리 뒤로 젖혀 기도 열기',
+      '가슴 중앙 압박 30회 (깊이 4~5cm, 분당 100~120)',
+      '인공호흡 2회 → 30:2 반복, 멈추지 않기!',
+    ],
+    warning: '구급대 올 때까지 절대 멈추면 안 됩니다!',
+  },
+  burn_fall: {
+    title: '화상/낙상 대처',
+    subtitle: '데이거나 떨어졌을 때',
+    headerColor: '#E65100',
+    quickSteps: [
+      '화상: 흐르는 찬물 10분 이상 (얼음 금지!)',
+      '연고/된장/치약 바르지 않기, 물집 터뜨리지 않기',
+      '낙상: 바로 일으키지 말고 그 자리에서 안정',
+      '머리 부딪혔으면 24시간 관찰 (구토/경련 시 응급실)',
+    ],
+    warning: '2도 이상 화상/넓은 범위/의식 변화 → 즉시 119',
+  },
+  foreign: {
+    title: '이물질 삼킴/삽입',
+    subtitle: '아이가 이물질을 삼키거나 넣었을 때',
+    headerColor: '#F57F17',
+    quickSteps: [
+      '억지로 빼내지 않기 (더 깊이 들어감)',
+      '코: 반대쪽 막고 훌! 불기, 안 나오면 병원',
+      '귀: 면봉/핀셋 금지, 병원으로',
+      '배터리/자석 삼킴 → 즉시 응급실! (구토 유도 금지)',
+    ],
+    warning: '배터리/자석은 2시간 내 장 천공 가능! 즉시 응급실',
+  },
+};
+
+/* ------------------------------------------------------------------ */
 /* Main Screen                                                         */
 /* ------------------------------------------------------------------ */
 
@@ -139,11 +204,8 @@ export default function SOSScreen() {
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<SymptomCheckResult | null>(null);
 
-  const [showFeverCalc, setShowFeverCalc] = useState(false);
-  const [feverLoading, setFeverLoading] = useState(false);
-  const [medicineDose, setMedicineDose] = useState<MedicineDose | null>(null);
-
   const [notifyingFamily, setNotifyingFamily] = useState(false);
+  const [guideKey, setGuideKey] = useState<string | null>(null);
 
   /* -- Symptom toggle -- */
   const toggleSymptom = useCallback((id: string) => {
@@ -182,10 +244,6 @@ export default function SOSScreen() {
       const data = res.data?.data as SymptomCheckResult | undefined;
       if (data) {
         setResult(data);
-        if (!isPregnant && temp && temp >= 37.5) {
-          setShowFeverCalc(true);
-          loadMedicineDose();
-        }
       }
     } catch {
       Alert.alert('오류', '증상 확인 중 오류가 발생했습니다. 다시 시도해주세요.');
@@ -193,51 +251,6 @@ export default function SOSScreen() {
       setChecking(false);
     }
   }, [selectedSymptoms, selectedChild, temperature]);
-
-  /* -- Load medicine dose -- */
-  const loadMedicineDose = useCallback(async () => {
-    if (!selectedChild) return;
-    setFeverLoading(true);
-    try {
-      const temp = temperature ? parseFloat(temperature) : undefined;
-      const res = await sosApi.feverCalculator(selectedChild.id, temp);
-      const data = res.data?.data as MedicineDose | undefined;
-      if (data) {
-        setMedicineDose(data);
-      }
-    } catch {
-      Alert.alert('오류', '해열제 정보를 불러올 수 없습니다.');
-    } finally {
-      setFeverLoading(false);
-    }
-  }, [selectedChild, temperature]);
-
-  /* -- Schedule notification -- */
-  const scheduleNotification = useCallback(async (minutes: number, label: string) => {
-    try {
-      const Notifications = await import('expo-notifications');
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('권한 필요', '알림 권한을 허용해주세요.');
-        return;
-      }
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: '해열제 복용 시간',
-          body: `${label} 복용 시간입니다.`,
-          sound: true,
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-          seconds: minutes * 60,
-          repeats: false,
-        },
-      });
-      Alert.alert('알림 설정 완료', `${minutes}분 후 알림이 실행됩니다.`);
-    } catch {
-      Alert.alert('알림 오류', '알림을 설정할 수 없습니다.');
-    }
-  }, []);
 
   /* -- Notify family -- */
   const notifyFamily = useCallback(async () => {
@@ -257,6 +270,7 @@ export default function SOSScreen() {
     } finally {
       setNotifyingFamily(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild, selectedSymptoms, temperature]);
 
   /* -- Open hospital map -- */
@@ -303,7 +317,36 @@ export default function SOSScreen() {
         </View>
 
         {/* ============================================ */}
-        {/* Section 2: Symptom Quick Checker             */}
+        {/* Section 2: Emergency Guides                  */}
+        {/* ============================================ */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>응급 대처법</Text>
+          <Text style={styles.sectionDesc}>
+            버튼을 누르면 대처 방법을 바로 확인할 수 있어요
+          </Text>
+          <View style={styles.guideGrid}>
+            {EMERGENCY_GUIDES.map((g) => (
+              <TouchableOpacity
+                key={g.key}
+                style={[styles.guideBtn, { backgroundColor: g.bg }]}
+                onPress={() => setGuideKey(g.key)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.guideBtnEmoji}>{g.emoji}</Text>
+                <Text style={[styles.guideBtnLabel, { color: g.color }]}>{g.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Emergency Guide Modal */}
+        <EmergencyGuideModal
+          guideKey={guideKey}
+          onClose={() => setGuideKey(null)}
+        />
+
+        {/* ============================================ */}
+        {/* Section 3: Symptom Quick Checker             */}
         {/* ============================================ */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>증상 빠른 확인</Text>
@@ -375,45 +418,6 @@ export default function SOSScreen() {
           {/* Result card */}
           {result && <ResultCard result={result} onCall119={call119} onOpenMap={openHospitalMap} />}
         </View>
-
-        {/* ============================================ */}
-        {/* Section 3: Fever Medicine Calculator (아기만) */}
-        {/* ============================================ */}
-        {!isPregnant && !showFeverCalc && (
-          <TouchableOpacity
-            style={styles.feverCalcToggle}
-            onPress={() => {
-              setShowFeverCalc(true);
-              if (!medicineDose) loadMedicineDose();
-            }}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.feverCalcToggleIcon}>{'💊'}</Text>
-            <Text style={styles.feverCalcToggleText}>해열제 계산기</Text>
-          </TouchableOpacity>
-        )}
-
-        {!isPregnant && showFeverCalc && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>해열제 계산기</Text>
-            {feverLoading ? (
-              <ActivityIndicator
-                color={COLOR.accent}
-                size="large"
-                style={styles.loadingIndicator}
-              />
-            ) : medicineDose ? (
-              <MedicineCard
-                dose={medicineDose}
-                onScheduleNotification={scheduleNotification}
-              />
-            ) : (
-              <Text style={styles.noDataText}>
-                아이 정보를 불러올 수 없습니다.
-              </Text>
-            )}
-          </View>
-        )}
 
         {/* ============================================ */}
         {/* Section 4: Quick Actions                     */}
@@ -514,107 +518,188 @@ function ResultCard({
   );
 }
 
-function MedicineCard({
-  dose,
-  onScheduleNotification,
-}: {
-  dose: MedicineDose;
-  onScheduleNotification: (minutes: number, label: string) => void;
-}) {
+/* ------------------------------------------------------------------ */
+/* Emergency Guide Modal (이미지 중심)                                  */
+/* ------------------------------------------------------------------ */
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; onClose: () => void }) {
+  if (!guideKey) return null;
+  const guide = GUIDE_CONTENT[guideKey];
+  const img = SOS_IMAGES[guideKey];
+  if (!guide || !img) return null;
+
   return (
-    <View style={styles.medicineCard}>
-      {/* 체중 기준 */}
-      <View style={styles.weightRow}>
-        <Text style={styles.weightLabel}>체중 기준</Text>
-        <Text style={styles.weightValue}>{dose.childWeight}kg</Text>
+    <Modal visible animationType="slide" transparent={false} onRequestClose={onClose}>
+      <View style={guideStyles.container}>
+        {/* 닫기 버튼 (항상 위에) */}
+        <TouchableOpacity style={guideStyles.closeBtn} onPress={onClose} hitSlop={16}>
+          <Text style={guideStyles.closeBtnText}>{'X'}</Text>
+        </TouchableOpacity>
+
+        <ScrollView
+          style={guideStyles.scroll}
+          contentContainerStyle={guideStyles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* 제목 */}
+          <View style={[guideStyles.titleBar, { backgroundColor: guide.headerColor }]}>
+            <Text style={guideStyles.titleText}>{guide.title}</Text>
+            <Text style={guideStyles.subtitleText}>{guide.subtitle}</Text>
+          </View>
+
+          {/* 이미지 (핵심!) */}
+          <View style={guideStyles.imageWrap}>
+            <Image
+              source={img}
+              style={guideStyles.guideImage}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* 빠른 요약 텍스트 */}
+          <View style={guideStyles.stepsCard}>
+            {guide.quickSteps.map((step, idx) => (
+              <View key={`qs-${idx}`} style={guideStyles.stepRow}>
+                <View style={[guideStyles.stepDot, { backgroundColor: guide.headerColor }]}>
+                  <Text style={guideStyles.stepDotText}>{idx + 1}</Text>
+                </View>
+                <Text style={guideStyles.stepText}>{step}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* 경고 */}
+          <View style={guideStyles.warningCard}>
+            <Text style={guideStyles.warningIcon}>{'⚠️'}</Text>
+            <Text style={guideStyles.warningText}>{guide.warning}</Text>
+          </View>
+
+          <View style={{ height: 100 }} />
+        </ScrollView>
+
+        {/* 119 고정 버튼 (하단) */}
+        <View style={guideStyles.bottomBar}>
+          <TouchableOpacity
+            style={guideStyles.call119Btn}
+            onPress={() =>
+              Linking.openURL('tel:119').catch((err) => {
+                console.error('[sos] tel:119 failed', err);
+                Alert.alert('전화 연결 실패', '직접 119로 전화해주세요.');
+              })
+            }
+            activeOpacity={0.8}
+          >
+            <Text style={guideStyles.call119Text}>{'🚨  119 응급전화'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-
-      {/* Tylenol (acetaminophen) */}
-      <View style={styles.medicineRow}>
-        <View style={[styles.medicineBadge, { backgroundColor: '#E3F2FD' }]}>
-          <Text style={[styles.medicineBadgeText, { color: '#1565C0' }]}>
-            타이레놀
-          </Text>
-        </View>
-        <View style={styles.medicineDoseWrap}>
-          <Text style={styles.medicineDoseText}>
-            {dose.acetaminophen.doseMg}
-          </Text>
-          <Text style={styles.medicineSyrup}>
-            {dose.acetaminophen.syrupMl}
-          </Text>
-          <Text style={styles.medicineInterval}>
-            {dose.acetaminophen.interval} / {dose.acetaminophen.maxDaily}
-          </Text>
-        </View>
-      </View>
-
-      {/* Ibuprofen */}
-      <View style={styles.medicineRow}>
-        <View style={[styles.medicineBadge, { backgroundColor: '#FFF3E0' }]}>
-          <Text style={[styles.medicineBadgeText, { color: '#E65100' }]}>
-            부루펜
-          </Text>
-        </View>
-        <View style={styles.medicineDoseWrap}>
-          <Text style={styles.medicineDoseText}>
-            {dose.ibuprofen.doseMg}
-          </Text>
-          <Text style={styles.medicineSyrup}>
-            {dose.ibuprofen.syrupMl}
-          </Text>
-          <Text style={styles.medicineInterval}>
-            {dose.ibuprofen.interval} / {dose.ibuprofen.maxDaily}
-          </Text>
-        </View>
-      </View>
-
-      {/* Age restriction warning */}
-      {dose.ibuprofen.ageRestriction && (
-        <View style={styles.warningBox}>
-          <Text style={styles.warningIcon}>{'⚠️'}</Text>
-          <Text style={styles.warningText}>
-            {dose.ibuprofen.ageRestriction}
-          </Text>
-        </View>
-      )}
-
-      {/* Schedule */}
-      {dose.alternatingSchedule.length > 0 && (
-        <View style={styles.scheduleSection}>
-          <Text style={styles.scheduleTitle}>교대 복용 스케줄</Text>
-          {dose.alternatingSchedule.map((item, idx) => (
-            <View key={`sched-${idx}`} style={styles.scheduleRow}>
-              <View
-                style={[
-                  styles.scheduleIndicator,
-                  { backgroundColor: idx % 2 === 0 ? '#1565C0' : '#E65100' },
-                ]}
-              />
-              <Text style={styles.scheduleText}>{item}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* Warning */}
-      <View style={styles.warningBox}>
-        <Text style={styles.warningIcon}>{'💡'}</Text>
-        <Text style={styles.warningText}>{dose.warning}</Text>
-      </View>
-
-      {/* Notification button */}
-      <TouchableOpacity
-        style={styles.notifyBtn}
-        onPress={() => onScheduleNotification(240, '해열제')}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.notifyBtnIcon}>{'🔔'}</Text>
-        <Text style={styles.notifyBtnText}>다음 복용 알림 설정</Text>
-      </TouchableOpacity>
-    </View>
+    </Modal>
   );
 }
+
+const guideStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F8F5F2' },
+  closeBtn: {
+    position: 'absolute',
+    top: 50,
+    right: 16,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtnText: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 20 },
+  titleBar: {
+    paddingTop: 54,
+    paddingBottom: 18,
+    paddingHorizontal: 24,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  titleText: { fontSize: 22, fontWeight: '800', color: '#FFFFFF', marginBottom: 4 },
+  subtitleText: { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.85)' },
+  imageWrap: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 1,
+  },
+  guideImage: {
+    width: SCREEN_WIDTH - 56,
+    height: SCREEN_WIDTH - 56,
+  },
+  stepsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 16,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  stepDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    marginTop: 1,
+  },
+  stepDotText: { fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
+  stepText: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1C1C1E', lineHeight: 21 },
+  warningCard: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF3E0',
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#FFB74D',
+  },
+  warningIcon: { fontSize: 20, marginRight: 10 },
+  warningText: { flex: 1, fontSize: 13, fontWeight: '700', color: '#E65100', lineHeight: 20 },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+    backgroundColor: 'rgba(248,245,242,0.95)',
+  },
+  call119Btn: {
+    backgroundColor: EMERGENCY_RED,
+    borderRadius: 16,
+    paddingVertical: 18,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+  call119Text: { fontSize: 22, fontWeight: '900', color: '#FFFFFF' },
+});
 
 /* ------------------------------------------------------------------ */
 /* Styles                                                              */
@@ -665,11 +750,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    shadowColor: EMERGENCY_RED,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
     shadowRadius: 16,
-    elevation: 8,
+    elevation: 2,
   },
   emergencyButtonIcon: {
     fontSize: 28,
@@ -704,6 +789,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLOR.textSub,
     marginBottom: 16,
+  },
+
+  /* Emergency Guide grid */
+  guideGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  guideBtn: {
+    width: '48%',
+    borderRadius: 16,
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  guideBtnEmoji: {
+    fontSize: 36,
+    marginBottom: 8,
+  },
+  guideBtnLabel: {
+    fontSize: 15,
+    fontWeight: '700',
   },
 
   /* Symptom grid */
@@ -844,156 +953,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
-  /* Fever calc toggle */
-  feverCalcToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLOR.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: COLOR.border,
-    borderStyle: 'dashed',
-  },
-  feverCalcToggleIcon: {
-    fontSize: 20,
-  },
-  feverCalcToggleText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLOR.accent,
-  },
-
-  /* Medicine card */
-  medicineCard: {
-    marginTop: 12,
-  },
-  weightRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLOR.border,
-  },
-  weightLabel: {
-    fontSize: 13,
-    color: COLOR.textSub,
-  },
-  weightValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLOR.text,
-  },
-  medicineInterval: {
-    fontSize: 12,
-    color: COLOR.accent,
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  medicineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 12,
-  },
-  medicineBadge: {
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    minWidth: 72,
-    alignItems: 'center',
-  },
-  medicineBadgeText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  medicineDoseWrap: {
-    flex: 1,
-  },
-  medicineDoseText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLOR.text,
-  },
-  medicineSyrup: {
-    fontSize: 13,
-    color: COLOR.textSub,
-    marginTop: 2,
-  },
-
-  /* Warning */
-  warningBox: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF8E1',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    gap: 8,
-    alignItems: 'flex-start',
-  },
-  warningIcon: {
-    fontSize: 16,
-    marginTop: 1,
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#B8860B',
-    lineHeight: 20,
-  },
-
-  /* Schedule */
-  scheduleSection: {
-    marginBottom: 12,
-  },
-  scheduleTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLOR.text,
-    marginBottom: 10,
-  },
-  scheduleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 10,
-  },
-  scheduleIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  scheduleText: {
-    fontSize: 13,
-    color: COLOR.text,
-    lineHeight: 20,
-  },
-
-  /* Notify button */
-  notifyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#F0F7FF',
-    borderRadius: 12,
-    paddingVertical: 14,
-    minHeight: 48,
-  },
-  notifyBtnIcon: {
-    fontSize: 16,
-  },
-  notifyBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1565C0',
-  },
-
   /* Quick Actions */
   quickActions: {
     flexDirection: 'row',
@@ -1020,16 +979,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLOR.text,
     textAlign: 'center',
-  },
-
-  /* Loading */
-  loadingIndicator: {
-    marginVertical: 24,
-  },
-  noDataText: {
-    fontSize: 14,
-    color: COLOR.textSub,
-    textAlign: 'center',
-    marginVertical: 16,
   },
 });

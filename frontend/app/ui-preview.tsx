@@ -505,7 +505,7 @@ function StyleBWidgets() {
 
       {/* 2 Medium Widgets side by side */}
       <View style={sb.medRow}>
-        <View style={[sb.medWidget, { backgroundColor: '#FFF5EC' }]}>
+        <View style={[sb.medWidget, { backgroundColor: '#F2F2F7' }]}>
           <Text style={sb.medIcon}>{'\📔'}</Text>
           <Text style={sb.medTitle}>Diary</Text>
           <Text style={sb.medSub}>What happened today?</Text>
@@ -888,7 +888,7 @@ function StyleCTimeline() {
 }
 
 const sc = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: '#FAFAFA' },
+  bg: { flex: 1, backgroundColor: '#F2F2F7' },
   content: { paddingBottom: 80 },
   greetRow: {
     flexDirection: 'row',
@@ -974,7 +974,7 @@ const sc = StyleSheet.create({
   expandMsg: { fontSize: 14, fontWeight: '600', color: '#111', marginTop: 8 },
   expandTags: { flexDirection: 'row', gap: 8, marginTop: 10 },
   expandTag: {
-    backgroundColor: '#FFF5EC',
+    backgroundColor: '#F2F2F7',
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -1006,7 +1006,7 @@ const sc = StyleSheet.create({
     gap: 12,
     marginTop: 8,
     padding: 10,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#F2F2F7',
     borderRadius: 12,
   },
   featureItemEmoji: { fontSize: 24 },
@@ -1513,7 +1513,7 @@ const se = StyleSheet.create({
   wideSub: { fontSize: 12, color: '#999' },
   wideRight: { flexDirection: 'row', gap: 6 },
   wideTag: {
-    backgroundColor: '#FFF5EC',
+    backgroundColor: '#F2F2F7',
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 4,

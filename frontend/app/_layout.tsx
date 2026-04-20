@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, Component, ErrorInfo, ReactNode } from 'react';
-import { View, ActivityIndicator, Text, Image, Animated, Easing, StyleSheet, Dimensions } from 'react-native';
+import { useEffect, useRef, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
+import { View, ActivityIndicator, Text, Image, Animated, Easing, StyleSheet, Dimensions, AppState, AppStateStatus } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
@@ -22,9 +22,9 @@ import {
 } from '../services/pushNotifications';
 import { COLORS } from '../constants/theme';
 
-/* eslint-disable @typescript-eslint/no-require-imports */
+ 
 const MASCOT_HAPPY = require('../assets/mascot-happy.png') as number;
-/* eslint-enable @typescript-eslint/no-require-imports */
+ 
 
 const queryClient = new QueryClient();
 
@@ -86,31 +86,85 @@ function useNotificationSetup() {
         responseListener.current.remove();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, selectedChild?.id]);
 }
 
+type UpdateStatus = 'idle' | 'checking' | 'downloading' | 'ready' | 'restarting';
+
 function useOTAUpdate() {
-  const [updating, setUpdating] = useState(false);
+  const [status, setStatus] = useState<UpdateStatus>('idle');
+  const [progress, setProgress] = useState(0);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const checkingRef = useRef(false);
 
-  useEffect(() => {
-    if (__DEV__) return; // 개발 모드에서는 스킵
+  const checkAndApply = useCallback(async () => {
+    if (__DEV__ || checkingRef.current) return;
+    checkingRef.current = true;
 
-    const check = async () => {
-      try {
-        const update = await Updates.checkForUpdateAsync();
-        if (update.isAvailable) {
-          setUpdating(true);
-          await Updates.fetchUpdateAsync();
-          await Updates.reloadAsync();
-        }
-      } catch {
-        // 업데이트 체크 실패해도 앱은 정상 실행
+    try {
+      setStatus('checking');
+      const update = await Updates.checkForUpdateAsync();
+
+      if (!update.isAvailable) {
+        setStatus('idle');
+        checkingRef.current = false;
+        return;
       }
-    };
-    check();
+
+      // 다운로드 시작 — 실제 진행률 시뮬레이션
+      setStatus('downloading');
+      setProgress(0);
+
+      const startTime = Date.now();
+      const progressTimer = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        // 0~3초: 0→70%, 3~6초: 70→90% (점점 느려지는 느낌)
+        const p = elapsed < 3000
+          ? (elapsed / 3000) * 0.7
+          : 0.7 + Math.min((elapsed - 3000) / 6000, 1) * 0.2;
+        setProgress(Math.min(p, 0.9));
+      }, 100);
+
+      await Updates.fetchUpdateAsync();
+
+      clearInterval(progressTimer);
+      setProgress(1);
+      setStatus('ready');
+
+      // 다운로드 완료 UI 잠깐 보여준 뒤 자동 재시작
+      await new Promise(r => setTimeout(r, 600));
+      setStatus('restarting');
+      await Updates.reloadAsync();
+    } catch (error) {
+      captureError(
+        error instanceof Error ? error : new Error(String(error)),
+        { context: 'OTA update check' },
+      );
+      setStatus('idle');
+    } finally {
+      checkingRef.current = false;
+    }
   }, []);
 
-  return updating;
+  useEffect(() => {
+    if (__DEV__) return;
+
+    // 앱 시작 후 2초 뒤 체크 (스플래시 끝난 직후, API 호출 전에 OTA 우선 수신)
+    const delayedCheck = setTimeout(() => checkAndApply(), 2000);
+
+    // 백그라운드 → 포그라운드 복귀 시 자동 체크
+    const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
+      if (appStateRef.current.match(/inactive|background/) && next === 'active') {
+        checkAndApply();
+      }
+      appStateRef.current = next;
+    });
+
+    return () => { clearTimeout(delayedCheck); sub.remove(); };
+  }, [checkAndApply]);
+
+  return { status, progress };
 }
 
 function useLocationSetup() {
@@ -120,143 +174,150 @@ function useLocationSetup() {
   useEffect(() => {
     if (!isAuthenticated) return;
     requestLocation().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 }
 
-/* ── Update Screen ── */
-const { width: _SW } = Dimensions.get('window');
+/* ── Update Screen (Modern) ── */
+const { width: SCREEN_W } = Dimensions.get('window');
+const PROGRESS_BAR_W = SCREEN_W * 0.65;
 
-function UpdateScreen() {
-  const spin = useRef(new Animated.Value(0)).current;
+const STATUS_TEXT: Record<UpdateStatus, string> = {
+  idle: '',
+  checking: '새로운 버전을 확인하고 있어요',
+  downloading: '업데이트를 다운로드하고 있어요',
+  ready: '다운로드 완료!',
+  restarting: '새 버전을 적용하고 있어요',
+};
+
+function UpdateScreen({ status, progress }: { status: UpdateStatus; progress: number }) {
   const bounce = useRef(new Animated.Value(0)).current;
-  const dotOp1 = useRef(new Animated.Value(0.3)).current;
-  const dotOp2 = useRef(new Animated.Value(0.3)).current;
-  const dotOp3 = useRef(new Animated.Value(0.3)).current;
-  const progressW = useRef(new Animated.Value(0)).current;
+  const fadeIn = useRef(new Animated.Value(0)).current;
+  const checkScale = useRef(new Animated.Value(0)).current;
+  const barWidth = useRef(new Animated.Value(0)).current;
 
+  // 마스코트 부드러운 바운스
   useEffect(() => {
-    // Mascot gentle bounce
     Animated.loop(
       Animated.sequence([
-        Animated.timing(bounce, { toValue: -10, duration: 1000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(bounce, { toValue: 10, duration: 1000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(bounce, { toValue: -8, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(bounce, { toValue: 8, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
     ).start();
-
-    // Spinner rotation
-    Animated.loop(
-      Animated.timing(spin, { toValue: 1, duration: 2000, easing: Easing.linear, useNativeDriver: true }),
-    ).start();
-
-    // Dot animation (typing effect)
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(dotOp1, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.timing(dotOp2, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.timing(dotOp3, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.delay(400),
-        Animated.parallel([
-          Animated.timing(dotOp1, { toValue: 0.3, duration: 200, useNativeDriver: true }),
-          Animated.timing(dotOp2, { toValue: 0.3, duration: 200, useNativeDriver: true }),
-          Animated.timing(dotOp3, { toValue: 0.3, duration: 200, useNativeDriver: true }),
-        ]),
-        Animated.delay(200),
-      ]),
-    ).start();
-
-    // Progress bar (fake, loops slowly)
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(progressW, { toValue: _SW * 0.55, duration: 6000, easing: Easing.inOut(Easing.cubic), useNativeDriver: false }),
-        Animated.timing(progressW, { toValue: 0, duration: 0, useNativeDriver: false }),
-      ]),
-    ).start();
+    Animated.timing(fadeIn, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const spinDeg = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  // 진행률 바 애니메이션
+  useEffect(() => {
+    Animated.timing(barWidth, {
+      toValue: progress * PROGRESS_BAR_W,
+      duration: 300,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress]);
+
+  // 완료 체크마크 애니메이션
+  useEffect(() => {
+    if (status === 'ready' || status === 'restarting') {
+      Animated.spring(checkScale, { toValue: 1, friction: 4, tension: 100, useNativeDriver: true }).start();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
+  const pct = Math.round(progress * 100);
+  const isComplete = status === 'ready' || status === 'restarting';
 
   return (
     <View style={upS.root}>
       <LinearGradient
-        colors={['#FFF5EC', '#FFE0CC', '#FFDAB3']}
+        colors={['#FFF8F2', '#FFF0E4', '#FFE8D6']}
         locations={[0, 0.5, 1]}
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Mascot */}
-      <Animated.View style={{ transform: [{ translateY: bounce }], marginBottom: 24 }}>
-        <Image source={MASCOT_HAPPY} style={upS.mascot} resizeMode="contain" />
+      <Animated.View style={{ opacity: fadeIn, alignItems: 'center' }}>
+        {/* 마스코트 */}
+        <Animated.View style={{ transform: [{ translateY: bounce }], marginBottom: 32 }}>
+          <View style={upS.mascotGlow} />
+          <Image source={MASCOT_HAPPY} style={upS.mascot} resizeMode="contain" />
+        </Animated.View>
+
+        {/* 완료 체크마크 or 퍼센트 */}
+        {isComplete ? (
+          <Animated.View style={[upS.checkCircle, { transform: [{ scale: checkScale }] }]}>
+            <Text style={upS.checkMark}>{'✓'}</Text>
+          </Animated.View>
+        ) : (
+          <Text style={upS.pctText}>{`${pct}%`}</Text>
+        )}
+
+        {/* 진행률 바 */}
+        <View style={upS.progressTrack}>
+          <Animated.View
+            style={[
+              upS.progressFill,
+              { width: barWidth, backgroundColor: isComplete ? '#4CAF50' : '#FF8C5A' },
+            ]}
+          />
+        </View>
+
+        {/* 상태 텍스트 */}
+        <Text style={upS.statusText}>{STATUS_TEXT[status]}</Text>
+
+        {/* 하단 안내 */}
+        <Text style={upS.footer}>
+          {isComplete ? '잠시 후 자동으로 시작됩니다' : '잠시만 기다려주세요'}
+        </Text>
       </Animated.View>
-
-      {/* Spinner ring */}
-      <Animated.View style={[upS.spinnerRing, { transform: [{ rotate: spinDeg }] }]}>
-        <View style={upS.spinnerDot} />
-      </Animated.View>
-
-      {/* Title */}
-      <Text style={upS.title}>{'업데이트 중'}</Text>
-      <View style={upS.dotRow}>
-        <Animated.Text style={[upS.dot, { opacity: dotOp1 }]}>{'.'}</Animated.Text>
-        <Animated.Text style={[upS.dot, { opacity: dotOp2 }]}>{'.'}</Animated.Text>
-        <Animated.Text style={[upS.dot, { opacity: dotOp3 }]}>{'.'}</Animated.Text>
-      </View>
-
-      {/* Subtitle */}
-      <Text style={upS.sub}>{'더 나은 아맞다를 준비하고 있어요'}</Text>
-
-      {/* Progress bar */}
-      <View style={upS.progressBg}>
-        <Animated.View style={[upS.progressFill, { width: progressW }]} />
-      </View>
-
-      {/* Footer */}
-      <Text style={upS.footer}>{'잠시만 기다려주세요'}</Text>
     </View>
   );
 }
 
 const upS = StyleSheet.create({
-  root: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF5EC' },
+  root: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF8F2' },
+  mascotGlow: {
+    position: 'absolute', top: 10, left: 10, right: 10, bottom: 10,
+    borderRadius: 60, backgroundColor: 'rgba(255,140,90,0.08)',
+  },
   mascot: { width: 120, height: 120, borderRadius: 60 },
-  spinnerRing: {
-    width: 48, height: 48, borderRadius: 24,
-    borderWidth: 3, borderColor: 'rgba(255,140,90,0.15)',
-    borderTopColor: '#FF8C5A',
-    marginBottom: 20,
+  pctText: { fontSize: 36, fontWeight: '800', color: '#FF8C5A', marginBottom: 16 },
+  checkCircle: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: '#4CAF50', alignItems: 'center', justifyContent: 'center',
+    marginBottom: 16,
   },
-  spinnerDot: {
-    position: 'absolute', top: -4, left: 18,
-    width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF8C5A',
+  checkMark: { fontSize: 28, color: '#FFF', fontWeight: '700' },
+  progressTrack: {
+    width: PROGRESS_BAR_W, height: 8, borderRadius: 4,
+    backgroundColor: 'rgba(255,140,90,0.12)', overflow: 'hidden', marginBottom: 20,
   },
-  title: { fontSize: 22, fontWeight: '800', color: '#2D2016' },
-  dotRow: { flexDirection: 'row', marginTop: -2, marginBottom: 8 },
-  dot: { fontSize: 22, fontWeight: '800', color: '#FF8C5A', marginHorizontal: 1 },
-  sub: { fontSize: 14, color: '#8C7A6B', fontWeight: '500', marginBottom: 28 },
-  progressBg: {
-    width: _SW * 0.6, height: 6, borderRadius: 3,
-    backgroundColor: 'rgba(255,140,90,0.15)', overflow: 'hidden',
-  },
-  progressFill: { height: 6, borderRadius: 3, backgroundColor: '#FF8C5A' },
-  footer: { marginTop: 16, fontSize: 12, color: '#B5A99A' },
+  progressFill: { height: 8, borderRadius: 4 },
+  statusText: { fontSize: 16, fontWeight: '600', color: '#1C1C1E', marginBottom: 6 },
+  footer: { fontSize: 13, color: '#ABABAB', fontWeight: '400' },
 });
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const hydrate = useAuthStore((s) => s.hydrate);
-  const updating = useOTAUpdate();
+  const { status, progress } = useOTAUpdate();
 
   useEffect(() => {
     initSentry();
     hydrate()
       .catch(() => {})
       .finally(() => setReady(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useNotificationSetup();
   useLocationSetup();
 
-  if (updating) {
-    return <UpdateScreen />;
+  // 업데이트 다운로드/적용 중이면 업데이트 화면 표시
+  if (status === 'downloading' || status === 'ready' || status === 'restarting') {
+    return <UpdateScreen status={status} progress={progress} />;
   }
 
   if (!ready) {

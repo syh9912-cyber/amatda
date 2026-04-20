@@ -11,6 +11,7 @@ import {
   resolvePlayTemperament,
 } from '../../constants/playActivities';
 import type { PlayActivity } from '../../constants/playActivities';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                           */
@@ -88,6 +89,7 @@ export default function PlayLearningScreen() {
           ))
         )}
       </ScrollView>
+      <AdSlot />
     </View>
   );
 }
@@ -264,7 +266,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
     borderLeftWidth: 4,
     borderLeftColor: ACCENT,
-    shadowColor: '#B8A690',
+    shadowColor: '#ABABAB',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,

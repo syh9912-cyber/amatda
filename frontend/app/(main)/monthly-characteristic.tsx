@@ -4,15 +4,16 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 const COLOR = {
-  bg: '#FFF5EC',
+  bg: '#F2F2F7',
   card: '#FFFFFF',
   accent: '#FF8C5A',
-  text: '#2D2016',
-  textSub: '#8C7A6B',
-  textLight: '#B5A99A',
-  border: '#F0E6DC',
+  text: '#1C1C1E',
+  textSub: '#636366',
+  textLight: '#ABABAB',
+  border: '#E5E5EA',
   physical: '#FF8C5A',
   cognitive: '#9B59B6',
   language: '#4285F4',
@@ -48,6 +49,7 @@ export default function MonthlyCharacteristicScreen() {
 
   useEffect(() => {
     loadCharacteristic();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild?.id]);
 
   const loadCharacteristic = async () => {
@@ -149,6 +151,7 @@ export default function MonthlyCharacteristicScreen() {
           ) : null}
         </ScrollView>
       )}
+      <AdSlot />
     </View>
   );
 }
@@ -182,7 +185,7 @@ const s = StyleSheet.create({
 
   domainCard: {
     backgroundColor: COLOR.card, borderRadius: 16, padding: 16, marginBottom: 12,
-    shadowColor: '#2D2016', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 16, elevation: 1,
   },
   domainHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   domainEmoji: { fontSize: 20 },

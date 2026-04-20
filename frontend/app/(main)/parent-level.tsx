@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { retentionApi, premiumApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -65,13 +66,13 @@ export const LEVELS: LevelConfig[] = [
 ];
 
 const COLOR = {
-  bg: '#FFF5EC',
+  bg: '#F2F2F7',
   card: '#FFFFFF',
-  text: '#2D2016',
-  textSub: '#8C7A6B',
+  text: '#1C1C1E',
+  textSub: '#636366',
   accent: '#FF8C5A',
   gold: '#BF953F',
-  locked: '#D5CFC7',
+  locked: '#ABABAB',
 };
 
 /* ------------------------------------------------------------------ */
@@ -273,6 +274,7 @@ export default function ParentLevelScreen() {
 
         <View style={{ height: insets.bottom + 30 }} />
       </ScrollView>
+      <AdSlot />
     </View>
   );
 }

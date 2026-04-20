@@ -32,6 +32,7 @@ import { growthApi } from '../../services/api';
 import { getTrackerTabs, getFeedingTypes } from '../../constants/ageFeatures';
 import type { AgeGroupKey } from '../../constants/ageGroups';
 import PregnancyScreen from './pregnancy';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 /* ================================================================== */
 /*  Types                                                              */
@@ -85,7 +86,7 @@ interface TrackerAnalysisResult {
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const TRACKER_COLORS = {
-  bg: '#FFF5EC',
+  bg: '#F2F2F7',
   card: '#FFFFFF',
   accent: '#FF8C5A',
   accentLight: '#FFF0E6',
@@ -98,10 +99,10 @@ const TRACKER_COLORS = {
   sleep: '#B8A0D2',
   sleepLight: '#F0EBF7',
   sleepDark: '#8F73B5',
-  text: '#2D2016',
-  textSub: '#8B7355',
-  textLight: '#B8A690',
-  border: '#F0E6DA',
+  text: '#1C1C1E',
+  textSub: '#636366',
+  textLight: '#ABABAB',
+  border: '#E5E5EA',
   danger: '#FF6B6B',
   white: '#FFFFFF',
 };
@@ -385,6 +386,7 @@ function TimePicker({ value, onChange, label }: TimePickerProps) {
             </TouchableOpacity>
           ))}
         </ScrollView>
+        <AdSlot />
       </View>
     </View>
   );

@@ -14,10 +14,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
+import { pickImageFromLibrary } from '../../utils/imagePicker';
 import { useChildStore } from '../../stores/childStore';
 import { useMomstagramStore, PostCategory, MomstagramPost } from '../../stores/momstagramStore';
-import { momstagramApi } from '../../services/api';
+import { momstagramApi, uploadApi } from '../../services/api';
 import { FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
 const MAX_CONTENT = 500;
@@ -47,19 +47,8 @@ export default function MomstagramPostScreen() {
   const dominantType = selectedChild?.innateData?.dominantType ?? '';
 
   const pickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('권한 필요', '사진 접근 권한이 필요합니다.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.8,
-      allowsMultipleSelection: false,
-    });
-    if (!result.canceled && result.assets.length > 0) {
-      setImageUri(result.assets[0].uri);
-    }
+    const picked = await pickImageFromLibrary({ quality: 0.8 });
+    if (picked) setImageUri(picked.uri);
   };
 
   const handleSubmit = async () => {
@@ -97,9 +86,22 @@ export default function MomstagramPostScreen() {
     // Public post: call real API
     setSubmitting(true);
     try {
+      // 이미지가 있으면 Firebase Storage에 먼저 업로드
+      let uploadedImageUrl: string | undefined;
+      if (imageUri) {
+        try {
+          const uploaded = await uploadApi.upload(imageUri, 'momstagram');
+          uploadedImageUrl = uploaded.url;
+        } catch {
+          Alert.alert('오류', '이미지 업로드에 실패했습니다. 다시 시도해주세요.');
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const res = await momstagramApi.createPost({
         content: content.trim(),
-        imageUrl: imageUri ?? undefined,
+        imageUrl: uploadedImageUrl,
         sourceType: 'manual',
         childAge: childAge || undefined,
         childGender: selectedChild?.gender ?? undefined,
@@ -332,7 +334,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 4 / 3,
     borderRadius: RADIUS.lg,
-    backgroundColor: '#F0EDE8',
+    backgroundColor: '#E5E5EA',
   },
   removeImageBtn: {
     position: 'absolute',
@@ -391,7 +393,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.xs + 2,
     borderRadius: RADIUS.full,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F2F2F7',
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },

@@ -813,7 +813,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 32,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#F2F2F7',
   },
   mediaPlaceholderIcon: { fontSize: 32, color: COLORS.textLight, marginBottom: 4 },
   mediaPlaceholderText: { fontSize: FONT_SIZE.sm, color: COLORS.textLight },

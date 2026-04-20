@@ -86,6 +86,7 @@ export default function ProfileScreen() {
     );
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleChangePassword = () => {
     if (Platform.OS === 'ios') {
       Alert.prompt('비밀번호 변경', '현재 비밀번호를 입력하세요', (currentPw) => {
@@ -147,7 +148,7 @@ function ProfileHeader({ onSettingsPress }: { onSettingsPress: () => void }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF5EC',
+    backgroundColor: '#F2F2F7',
   },
   content: {
     paddingHorizontal: SPACING.lg,

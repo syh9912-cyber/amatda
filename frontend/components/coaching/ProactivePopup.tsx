@@ -9,11 +9,11 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { COACHING_COLORS } from './types';
 
-/* eslint-disable @typescript-eslint/no-require-imports */
+ 
 const IC_WAVING = require('../../assets/mascot-waving.png') as number;
 const IC_SUNNY = require('../../assets/weather-sunny.png') as number;
 const IC_BELL = require('../../assets/icon-bell.png') as number;
-/* eslint-enable @typescript-eslint/no-require-imports */
+ 
 
 export type PopupReason = 'inactive' | 'weekend' | 'followup';
 
@@ -69,7 +69,7 @@ export function ProactivePopup({
     >
       <View style={styles.overlay}>
         <LinearGradient
-          colors={['#FFF5EC', '#FFE4D6']}
+          colors={['#F2F2F7', '#FFE4D6']}
           style={styles.card}
         >
           <Image source={content.icon} style={styles.popupIcon} resizeMode="contain" />

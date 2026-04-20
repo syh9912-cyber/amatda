@@ -439,7 +439,7 @@ const s = StyleSheet.create({
 
   /* Mascot */
   mascot: { width: 100, height: 100, marginBottom: 24 },
-  statusText: { fontSize: 18, fontWeight: '700', color: '#2D2016', textAlign: 'center' },
+  statusText: { fontSize: 18, fontWeight: '700', color: '#1C1C1E', textAlign: 'center' },
   errorText: { fontSize: 18, fontWeight: '700', color: '#FF6B6B', textAlign: 'center' },
 
   /* Mic listening UI */
@@ -460,7 +460,7 @@ const s = StyleSheet.create({
   },
   micIcon: { width: 36, height: 36, tintColor: '#FFFFFF' },
   listeningTitle: {
-    fontSize: 22, fontWeight: '800', color: '#2D2016',
+    fontSize: 22, fontWeight: '800', color: '#1C1C1E',
     marginBottom: 8, textAlign: 'center',
   },
   listeningHint: {
@@ -477,7 +477,7 @@ const s = StyleSheet.create({
     maxWidth: '90%',
   },
   bubbleText: {
-    fontSize: 16, color: '#2D2016', fontWeight: '600', textAlign: 'center',
+    fontSize: 16, color: '#1C1C1E', fontWeight: '600', textAlign: 'center',
   },
 
   /* Done badge */

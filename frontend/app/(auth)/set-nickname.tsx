@@ -88,7 +88,7 @@ export default function SetNicknameScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#F2F2F7',
   },
   content: {
     flex: 1,
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#2D2016',
+    color: '#1C1C1E',
     marginBottom: 8,
   },
   subtitle: {
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 16,
     fontSize: 16,
-    color: '#2D2016',
+    color: '#1C1C1E',
     borderWidth: 1,
     borderColor: '#E8D8C8',
     marginBottom: 24,

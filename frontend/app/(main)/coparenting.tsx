@@ -17,6 +17,7 @@ import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChildStore } from '../../stores/childStore';
 import { coparentingApi } from '../../services/api';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 /* ------------------------------------------------------------------ */
 /* Types & Constants                                                   */
@@ -60,17 +61,17 @@ const ROLE_PRESETS: Record<string, string[]> = {
 };
 
 const COLOR = {
-  bg: '#FAFAFA',
+  bg: '#F2F2F7',
   card: '#FFFFFF',
   accent: '#FF8C5A',
   accentLight: '#FFF0E6',
-  text: '#2D2016',
-  textSub: '#8C7A6B',
-  textLight: '#B5A99A',
+  text: '#1C1C1E',
+  textSub: '#636366',
+  textLight: '#ABABAB',
   mint: '#4ECDC4',
   mintBg: '#E8FAF8',
-  border: '#F0EBE4',
-  danger: '#E53935',
+  border: '#E5E5EA',
+  danger: '#FF3B30',
   dangerBg: '#FFEBEE',
 };
 
@@ -378,6 +379,7 @@ export default function CoparentingScreen() {
 
         <View style={{ height: insets.bottom + 30 }} />
       </ScrollView>
+      <AdSlot />
 
       {/* ── Invite Modal ── */}
       <Modal visible={inviteVisible} transparent animationType="slide">
@@ -440,7 +442,7 @@ export default function CoparentingScreen() {
                     value={invitePerms.includes(p.key)}
                     onValueChange={() => toggleInvitePerm(p.key)}
                     trackColor={{ false: '#E0D8D0', true: '#FFD0B5' }}
-                    thumbColor={invitePerms.includes(p.key) ? COLOR.accent : '#F0EBE4'}
+                    thumbColor={invitePerms.includes(p.key) ? COLOR.accent : '#E5E5EA'}
                   />
                 </TouchableOpacity>
               ))}
@@ -495,7 +497,7 @@ export default function CoparentingScreen() {
                     value={editPerms.includes(p.key)}
                     onValueChange={() => toggleEditPerm(p.key)}
                     trackColor={{ false: '#E0D8D0', true: '#FFD0B5' }}
-                    thumbColor={editPerms.includes(p.key) ? COLOR.accent : '#F0EBE4'}
+                    thumbColor={editPerms.includes(p.key) ? COLOR.accent : '#E5E5EA'}
                   />
                 </TouchableOpacity>
               ))}
@@ -621,7 +623,7 @@ const styles = StyleSheet.create({
   modalBtns: { flexDirection: 'row', gap: 12, marginTop: 20, marginBottom: 10 },
   modalBtnCancel: {
     flex: 1, paddingVertical: 14, borderRadius: 14,
-    backgroundColor: '#F0EBE4', alignItems: 'center',
+    backgroundColor: '#E5E5EA', alignItems: 'center',
   },
   modalBtnCancelText: { fontSize: 15, fontWeight: '700', color: COLOR.textSub },
   modalBtnSave: {
@@ -653,7 +655,7 @@ const styles = StyleSheet.create({
   /* Permission rows */
   permRow: {
     flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F0EBE4',
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#E5E5EA',
   },
   permIcon: { fontSize: 20, width: 32 },
   permInfo: { flex: 1 },

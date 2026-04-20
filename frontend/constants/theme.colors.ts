@@ -1,35 +1,35 @@
 export const COLORS = {
-  // Main
+  // Brand
   primary: '#FF8C5A',
-  primaryLight: '#FFE4D6',
+  primaryLight: '#FFF0E6',
   primaryDark: '#E67040',
   secondary: '#4ECDC4',
   secondaryLight: '#D4F5F2',
 
-  // Background
-  background: '#FFF5EC',
-  surface: '#FFFFFF',
-  surfaceLight: '#FFF9F5',
+  // Background — iOS system grouped style
+  background: '#F2F2F7',       // iOS systemGroupedBackground
+  surface: '#FFFFFF',           // iOS secondarySystemGroupedBackground (card)
+  surfaceLight: '#F9F9F9',
 
-  // Text
-  text: '#2D2016',
-  textSecondary: '#8B7355',
-  textLight: '#B8A690',
+  // Text — iOS label scale
+  text: '#1C1C1E',             // iOS label
+  textSecondary: '#636366',    // iOS secondaryLabel
+  textLight: '#ABABAB',        // iOS tertiaryLabel
 
-  // Border
-  border: '#F0E6DA',
-  borderLight: '#F7F0E8',
+  // Border — iOS separator
+  border: '#C6C6C8',           // iOS separator
+  borderLight: '#E5E5EA',      // iOS opaqueSeparator (lighter)
 
   // Status
-  success: '#4ECDC4',
-  successLight: '#D4F5F2',
-  successDark: '#2BA89E',
-  error: '#FF6B6B',
-  warning: '#FFD93D',
-  info: '#6C9CE2',
-  infoLight: '#E0ECFA',
+  success: '#34C759',          // iOS green
+  successLight: '#D4F5E9',
+  successDark: '#248A3D',
+  error: '#FF3B30',            // iOS red
+  warning: '#FF9500',          // iOS orange
+  info: '#007AFF',             // iOS blue
+  infoLight: '#E5F0FF',
 
-  // Trait colors
+  // Trait colors (kept for personality display)
   wood: '#7BC67E',
   fire: '#FF8C5A',
   earth: '#FFD93D',

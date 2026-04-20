@@ -17,7 +17,7 @@ import { AuthDivider } from '../../components/ui/AuthDivider';
 import { SocialLoginButtons } from '../../components/ui/SocialLoginButtons';
 import { useLoginHandlers } from '../../hooks/useLoginHandlers';
 
-const BG = '#FAFAFA';
+const BG = '#F2F2F7';
 const { width: SW } = Dimensions.get('window');
 
 export default function LoginScreen() {
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   button: {
-    backgroundColor: '#2D2016',
+    backgroundColor: '#1C1C1E',
     borderRadius: 14,
     height: 48,
     justifyContent: 'center',
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     color: '#A0A0A0',
   },
   registerBold: {
-    color: '#2D2016',
+    color: '#1C1C1E',
     fontWeight: '600',
   },
 
