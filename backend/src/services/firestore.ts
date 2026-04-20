@@ -39,12 +39,16 @@ export const collections = {
   sleepKnowledgeCache: db.collection('sleepKnowledgeCache'),
   familyMembers: db.collection('familyMembers'),
   autoDiaries: db.collection('autoDiaries'),
-  timeCapsules: db.collection('timeCapsules'),
   pregnancyRecords: db.collection('pregnancyRecords'),
   momHealthChecks: db.collection('momHealthChecks'),
   vaccinations: db.collection('vaccinations'),
   gdmRecords: db.collection('gdmRecords'),
   gdmFoodLogs: db.collection('gdmFoodLogs'),
+  kickSessions: db.collection('kickSessions'),
+  momMentalChecks: db.collection('momMentalChecks'),
+  momGroupPosts: db.collection('momGroupPosts'),
+  momGroupComments: db.collection('momGroupComments'),
+  momGroupBookmarks: db.collection('momGroupBookmarks'),
   milestonePhotos: db.collection('milestonePhotos'),
   // 코칭 하루 상담 횟수 카운터 (문서 ID: {userId}_{YYYY-MM-DD})
   // getTodaySessionCount() 전체 컬렉션 쿼리 대체 → 단일 문서 읽기로 성능 개선

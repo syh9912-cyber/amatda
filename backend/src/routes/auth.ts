@@ -22,10 +22,10 @@ function generateTokens(userId: string) {
 // POST /api/auth/register
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, parentRole } = req.body;
     if (!email || !password) { error(res, '이메일과 비밀번호를 입력해주세요'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { error(res, '올바른 이메일 형식을 입력해주세요'); return; }
-    if (password.length < 6) { error(res, '비밀번호는 6자 이상이어야 합니다'); return; }
+    if (password.length < 8) { error(res, '비밀번호는 8자 이상이어야 합니다'); return; }
 
     const existing = await collections.users.where('email', '==', email).limit(1).get();
     if (!existing.empty) { error(res, '이미 가입된 이메일입니다', 409); return; }
@@ -35,6 +35,7 @@ router.post('/register', async (req: Request, res: Response) => {
     await collections.users.doc(id).set({
       email, passwordHash, authProvider: 'LOCAL', socialId: null,
       subscriptionTier: 'FREE', createdAt: new Date().toISOString(),
+      parentRole: parentRole || '',
     });
 
     const tokens = generateTokens(id);
@@ -189,33 +190,46 @@ router.post('/social-code', async (req: Request, res: Response) => {
   }
 });
 
-// 카카오 로그인 임시 저장소 (메모리, 5분 후 자동 삭제)
-const kakaoLoginResults = new Map<string, { data: Record<string, unknown>; expires: number }>();
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, val] of kakaoLoginResults) {
-    if (now > val.expires) kakaoLoginResults.delete(key);
-  }
-}, 60000);
+// 카카오 로그인 임시 저장소 — Firestore 기반 (Cloud Functions 인스턴스 간 공유)
+const KAKAO_STATE_COLLECTION = 'kakaoOAuthState';
+const KAKAO_STATE_TTL_MS = 5 * 60 * 1000; // 5분
 
 // GET /api/auth/kakao/check/:state — 앱에서 폴링으로 결과 확인
-router.get('/kakao/check/:state', (req: Request, res: Response) => {
-  const result = kakaoLoginResults.get(req.params.state as string);
-  if (!result) {
+router.get('/kakao/check/:state', async (req: Request, res: Response) => {
+  try {
+    const stateKey = req.params.state as string;
+    const docRef = db.collection(KAKAO_STATE_COLLECTION).doc(stateKey);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      success(res, { status: 'pending' });
+      return;
+    }
+    const data = doc.data()!;
+    // TTL 체크
+    if (Date.now() > (data.expires as number)) {
+      await docRef.delete().catch(() => {});
+      success(res, { status: 'pending' });
+      return;
+    }
+    // 결과 반환 후 삭제 (1회 소비)
+    await docRef.delete().catch(() => {});
+    success(res, { status: 'done', ...data.result as Record<string, unknown> });
+  } catch {
     success(res, { status: 'pending' });
-    return;
   }
-  kakaoLoginResults.delete(req.params.state as string);
-  success(res, { status: 'done', ...result.data });
 });
 
 // GET /api/auth/kakao/callback — 카카오 OAuth callback
 // 카카오에서 code를 받아 직접 토큰 교환 + 로그인 처리 후 결과를 HTML로 표시
 router.get('/kakao/callback', async (req: Request, res: Response) => {
   const { code, state, error: kakaoError, error_description } = req.query;
+  const statePreview = typeof state === 'string' && state.length > 8 ? `${state.slice(0, 8)}…` : '(none)';
+  console.log('[kakao/callback] hit! state:', statePreview, 'hasCode:', !!code, 'error:', kakaoError || 'none');
 
   if (kakaoError || !code) {
-    const errMsg = String(error_description || kakaoError || 'no_code');
+    // XSS 방지: HTML 특수문자 이스케이프
+    const rawMsg = String(error_description || kakaoError || 'no_code');
+    const errMsg = rawMsg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     res.send(`<html><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;background:#FFF5EC;">
       <div style="text-align:center;"><h2>로그인 실패</h2><p>${errMsg}</p><p>앱으로 돌아가주세요.</p></div>
     </body></html>`);
@@ -279,14 +293,14 @@ router.get('/kakao/callback', async (req: Request, res: Response) => {
     });
     const deepLink = `amatda://auth/callback?${deepParams.toString()}`;
 
-    // polling 저장소에도 저장 (하위호환)
+    // polling 저장소 — Firestore에 저장 (인스턴스 간 공유)
     if (stateKey) {
-      kakaoLoginResults.set(stateKey, {
-        data: {
+      await db.collection(KAKAO_STATE_COLLECTION).doc(stateKey).set({
+        result: {
           user: { id: userId, email: userEmail, nickname },
           accessToken, refreshToken, isNewUser,
         },
-        expires: Date.now() + 5 * 60 * 1000,
+        expires: Date.now() + KAKAO_STATE_TTL_MS,
       });
     }
 
@@ -313,13 +327,15 @@ router.get('/kakao/callback', async (req: Request, res: Response) => {
 // PUT /api/auth/nickname — 별명 설정/변경
 router.put('/nickname', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { nickname } = req.body as { nickname: string };
+    const { nickname, parentRole } = req.body as { nickname: string; parentRole?: string };
     if (!nickname || nickname.trim().length < 2 || nickname.trim().length > 10) {
       error(res, '별명은 2~10자로 입력해주세요');
       return;
     }
-    await collections.users.doc(req.userId!).update({ nickname: nickname.trim() });
-    success(res, { nickname: nickname.trim() });
+    const updateData: Record<string, unknown> = { nickname: nickname.trim() };
+    if (parentRole) updateData.parentRole = parentRole;
+    await collections.users.doc(req.userId!).update(updateData);
+    success(res, { nickname: nickname.trim(), parentRole: parentRole || '' });
   } catch { error(res, '별명 설정 중 오류', 500); }
 });
 
@@ -334,6 +350,7 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
       email: data.email,
       nickname: data.nickname ?? null,
       authProvider: data.authProvider,
+      parentRole: data.parentRole ?? '',
     });
   } catch { error(res, '정보 조회 중 오류', 500); }
 });
@@ -343,7 +360,7 @@ router.post('/change-password', authMiddleware, async (req: Request, res: Respon
   try {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) { error(res, '현재 비밀번호와 새 비밀번호를 입력해주세요'); return; }
-    if (newPassword.length < 6) { error(res, '새 비밀번호는 6자 이상이어야 합니다'); return; }
+    if (newPassword.length < 8) { error(res, '새 비밀번호는 8자 이상이어야 합니다'); return; }
 
     const doc = await collections.users.doc(req.userId!).get();
     if (!doc.exists) { error(res, '사용자를 찾을 수 없습니다', 404); return; }
@@ -363,8 +380,8 @@ router.post('/change-password', authMiddleware, async (req: Request, res: Respon
 router.post('/set-password', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { newPassword } = req.body;
-    if (!newPassword || newPassword.length < 6) {
-      error(res, '비밀번호는 6자 이상이어야 합니다');
+    if (!newPassword || newPassword.length < 8) {
+      error(res, '비밀번호는 8자 이상이어야 합니다');
       return;
     }
 
@@ -400,21 +417,45 @@ router.delete('/account', authMiddleware, async (req: Request, res: Response) =>
     const childIds = childrenSnap.docs.map((d) => d.id);
     childrenSnap.docs.forEach((d) => refs.push(d.ref));
 
-    // 2. Delete related data for each child
+    // 2. Delete ALL related data for each child (GDPR/앱스토어 컴플라이언스)
     for (const childId of childIds) {
-      const [obsSnap, trackSnap, subSnap] = await Promise.all([
+      const childSnaps = await Promise.all([
         collections.observations.where('childId', '==', childId).get(),
         collections.dailyTracking.where('childId', '==', childId).get(),
         collections.subscriptions.where('childId', '==', childId).get(),
+        collections.coachingSessions.where('childId', '==', childId).get(),
+        collections.followups.where('childId', '==', childId).get(),
+        collections.learnedKnowledge.where('childId', '==', childId).get(),
+        collections.pregnancyRecords.where('childId', '==', childId).get(),
+        collections.momHealthChecks.where('childId', '==', childId).get(),
+        collections.gdmRecords.where('childId', '==', childId).get(),
+        collections.vaccinations.where('childId', '==', childId).get(),
+        collections.dailyTraits.where('childId', '==', childId).get(),
+        collections.milestoneChecks.where('childId', '==', childId).get(),
+        collections.sleepPredictions.where('childId', '==', childId).get(),
+        collections.autoDiaries.where('childId', '==', childId).get(),
+        collections.recommendationCache.where('childId', '==', childId).get(),
+        collections.analysisUsage.where('childId', '==', childId).get(),
       ]);
-      obsSnap.docs.forEach((d) => refs.push(d.ref));
-      trackSnap.docs.forEach((d) => refs.push(d.ref));
-      subSnap.docs.forEach((d) => refs.push(d.ref));
+      for (const snap of childSnaps) {
+        snap.docs.forEach((d) => refs.push(d.ref));
+      }
     }
 
-    // 3. Delete chat logs for this user
-    const chatSnap = await collections.chatLogs.where('userId', '==', userId).get();
-    chatSnap.docs.forEach((d) => refs.push(d.ref));
+    // 3. Delete user-level data (userId 기반)
+    const userSnaps = await Promise.all([
+      collections.chatLogs.where('userId', '==', userId).get(),
+      collections.posts.where('userId', '==', userId).get(),
+      collections.postLikes.where('userId', '==', userId).get(),
+      collections.postComments.where('userId', '==', userId).get(),
+      collections.pushSchedules.where('userId', '==', userId).get(),
+      collections.familyMembers.where('userId', '==', userId).get(),
+      collections.conversationSummaries.where('userId', '==', userId).get(),
+      collections.clinicReviews.where('userId', '==', userId).get(),
+    ]);
+    for (const snap of userSnaps) {
+      snap.docs.forEach((d) => refs.push(d.ref));
+    }
 
     // 4. Delete the user document itself
     refs.push(collections.users.doc(userId));

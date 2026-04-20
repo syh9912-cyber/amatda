@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, Animated, Easing, StyleSheet, Dimensions, StatusBar,
 } from 'react-native';
@@ -7,17 +7,13 @@ import { useAuthStore } from '../stores/authStore';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
-/* eslint-disable @typescript-eslint/no-require-imports */
-const SPLASH_VIDEO = require('../assets/splash-video.mp4') as number;
-/* eslint-enable @typescript-eslint/no-require-imports */
-
-/* ── Colors ── */
+/* ── Colors — 브랜드 통일 ── */
 const C = {
   accent: '#FF8C5A',
-  white: '#2D2016',
-  shadow: 'rgba(0,0,0,0.08)',
-  gray: '#8C7A6B',
-  lightGray: '#B5A99A',
+  white: '#1A1A1A',
+  shadow: 'rgba(0,0,0,0.05)',
+  gray: '#999999',
+  lightGray: '#B0B0B0',
 };
 
 /* ================================================================== */
@@ -30,23 +26,7 @@ const C = {
 export default function SplashScreen() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  /* ── Video module (dynamic import per CLAUDE.md rule 6) ── */
-  const [VideoComp, setVideoComp] = useState<React.ComponentType<Record<string, unknown>> | null>(null);
-  const videoLoaded = useRef(false);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const mod = await import('expo-av');
-        if (mounted) { setVideoComp(() => mod.Video); videoLoaded.current = true; }
-      } catch {
-        // fallback: skip video
-        if (mounted) startTextAnim();
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
+  const animStarted = useRef(false);
 
   /* ── Animated values ── */
   // Video overlay
@@ -76,9 +56,9 @@ export default function SplashScreen() {
   const navigate = useCallback(() => {
     try {
       const target = isAuthenticated ? '/(main)/home' : '/(auth)/login';
-      setTimeout(() => router.replace(target as never), 100);
+      router.replace(target as never);
     } catch {
-      setTimeout(() => router.replace('/(auth)/login' as never), 500);
+      router.replace('/(auth)/login' as never);
     }
   }, [isAuthenticated]);
 
@@ -88,73 +68,36 @@ export default function SplashScreen() {
     const spring = Easing.out(Easing.back(1.6));
 
     Animated.sequence([
-      // 0. Show dark overlay behind text
-      Animated.timing(overlayOp, { toValue: 1, duration: 400, useNativeDriver: true }),
-
-      // 1. "아맞다" appear big + scale bounce
+      Animated.timing(overlayOp, { toValue: 1, duration: 120, useNativeDriver: true }),
       Animated.parallel([
-        Animated.timing(titleOp, { toValue: 1, duration: 500, easing: ease, useNativeDriver: true }),
-        Animated.timing(titleScale, { toValue: 1, duration: 700, easing: spring, useNativeDriver: true }),
+        Animated.timing(titleOp, { toValue: 1, duration: 200, easing: ease, useNativeDriver: true }),
+        Animated.timing(titleScale, { toValue: 1, duration: 280, easing: spring, useNativeDriver: true }),
       ]),
-
-      Animated.delay(600),
-
-      // 2. "이" expands between 아-맞
       Animated.parallel([
-        Animated.timing(gap1W, { toValue: 1, duration: 500, easing: ease, useNativeDriver: false }),
-        Animated.timing(sub1Op, { toValue: 1, duration: 400, useNativeDriver: true }),
-        Animated.timing(sub1Sc, { toValue: 1, duration: 400, easing: spring, useNativeDriver: true }),
+        Animated.timing(gap1W, { toValue: 1, duration: 180, easing: ease, useNativeDriver: false }),
+        Animated.timing(sub1Op, { toValue: 1, duration: 150, useNativeDriver: true }),
+        Animated.timing(sub1Sc, { toValue: 1, duration: 150, easing: spring, useNativeDriver: true }),
+        Animated.timing(gap2W, { toValue: 1, duration: 180, easing: ease, useNativeDriver: false }),
+        Animated.timing(sub2Op, { toValue: 1, duration: 150, useNativeDriver: true }),
+        Animated.timing(sub2Sc, { toValue: 1, duration: 150, easing: spring, useNativeDriver: true }),
+        Animated.timing(gap3W, { toValue: 1, duration: 220, easing: ease, useNativeDriver: false }),
+        Animated.timing(sub3Op, { toValue: 1, duration: 180, useNativeDriver: true }),
+        Animated.timing(sub3Sc, { toValue: 1, duration: 180, easing: spring, useNativeDriver: true }),
+        Animated.timing(engOp, { toValue: 1, duration: 180, easing: ease, useNativeDriver: true }),
+        Animated.timing(footOp, { toValue: 1, duration: 180, easing: ease, useNativeDriver: true }),
+        Animated.timing(footY, { toValue: 0, duration: 180, easing: ease, useNativeDriver: true }),
       ]),
-
-      Animated.delay(200),
-
-      // 3. "춤" expands between 맞-다
-      Animated.parallel([
-        Animated.timing(gap2W, { toValue: 1, duration: 500, easing: ease, useNativeDriver: false }),
-        Animated.timing(sub2Op, { toValue: 1, duration: 400, useNativeDriver: true }),
-        Animated.timing(sub2Sc, { toValue: 1, duration: 400, easing: spring, useNativeDriver: true }),
-      ]),
-
-      Animated.delay(200),
-
-      // 4. "이어리" expands after 다
-      Animated.parallel([
-        Animated.timing(gap3W, { toValue: 1, duration: 600, easing: ease, useNativeDriver: false }),
-        Animated.timing(sub3Op, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.timing(sub3Sc, { toValue: 1, duration: 500, easing: spring, useNativeDriver: true }),
-      ]),
-
-      Animated.delay(300),
-
-      // 5. English subtitle
-      Animated.timing(engOp, { toValue: 1, duration: 400, easing: ease, useNativeDriver: true }),
-
-      // 6. Footer
-      Animated.parallel([
-        Animated.timing(footOp, { toValue: 1, duration: 400, easing: ease, useNativeDriver: true }),
-        Animated.timing(footY, { toValue: 0, duration: 400, easing: ease, useNativeDriver: true }),
-      ]),
-
-      // 7. Hold 1 second
-      Animated.delay(1000),
-
-      // 8. Fade out everything
-      Animated.timing(fadeOut, { toValue: 0, duration: 500, easing: ease, useNativeDriver: true }),
+      Animated.delay(3000),
+      Animated.timing(fadeOut, { toValue: 0, duration: 200, easing: ease, useNativeDriver: true }),
     ]).start(() => navigate());
   }, [overlayOp, titleOp, titleScale, gap1W, sub1Op, sub1Sc, gap2W, sub2Op, sub2Sc, gap3W, sub3Op, sub3Sc, engOp, footOp, footY, fadeOut, navigate]);
 
-  /* ── Video end handler ── */
-  const onVideoEnd = useCallback(() => {
-    startTextAnim();
-  }, [startTextAnim]);
-
-  /* ── Fallback timeout (if video fails to trigger end) ── */
   useEffect(() => {
-    const fallback = setTimeout(() => {
-      if ((titleOp as unknown as { _value: number })._value === 0) startTextAnim();
-    }, 8000);
-    return () => clearTimeout(fallback);
-  }, [startTextAnim, titleOp]);
+    if (!animStarted.current) {
+      animStarted.current = true;
+      startTextAnim();
+    }
+  }, [startTextAnim]);
 
   /* ── Interpolations ── */
   const gapW1 = gap1W.interpolate({ inputRange: [0, 1], outputRange: [0, 22] });
@@ -164,21 +107,6 @@ export default function SplashScreen() {
   return (
     <Animated.View style={[s.root, { opacity: fadeOut }]}>
       <StatusBar hidden />
-
-      {/* ═══ Full-screen video background ═══ */}
-      {VideoComp && (
-        <VideoComp
-          source={SPLASH_VIDEO}
-          style={s.video}
-          resizeMode="cover"
-          shouldPlay
-          isLooping={false}
-          isMuted
-          onPlaybackStatusUpdate={(status: Record<string, unknown>) => {
-            if (status.didJustFinish) onVideoEnd();
-          }}
-        />
-      )}
 
       {/* ═══ Dark overlay for text readability ═══ */}
       <Animated.View style={[s.overlay, { opacity: overlayOp }]} />
@@ -249,7 +177,7 @@ export default function SplashScreen() {
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#F5E3C3',
+    backgroundColor: '#FAFAFA',
   },
 
   /* Full-screen video (same bg color = seamless) */
@@ -264,7 +192,7 @@ const s = StyleSheet.create({
   /* Semi-transparent overlay for text contrast */
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#FFF5EC',
+    backgroundColor: '#FAFAFA',
   },
 
   /* Text center */

@@ -14,7 +14,7 @@ import {
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
+import { pickImageFromLibrary } from '../../utils/imagePicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { childApi, coachingApi, retentionApi, premiumApi, uploadApi } from '../../services/api';
 import { useChildStore, Child } from '../../stores/childStore';
@@ -79,8 +79,10 @@ const ALL_ACTIONS: QuickAction[] = [
   { icon: require('../../assets/quick-learning.png'), label: '임신 기록', route: '/(main)/pregnancy', bg: '#FCE4EC', ages: ['pregnant'] },
   { icon: require('../../assets/quick-report.png'), label: '주수별 발달', route: '/(main)/growth-stats', bg: '#F3E5F5', ages: ['pregnant'] },
   { icon: require('../../assets/quick-report.png'), label: '임당 관리', route: '/(main)/gdm', bg: '#FCE4EC', ages: ['pregnant'] },
-  { icon: require('../../assets/quick-timeline.png'), label: '성장앨범', route: '/(main)/album', bg: '#E0F2F1', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
-  { icon: require('../../assets/quick-lullaby.png'), label: '태교 음악', route: '/(main)/lullaby', bg: '#EDE7F6', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-sleep.png'), label: '태동 체크', route: '/(main)/labor-monitor?tab=kick', bg: '#FCE4EC', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-parent-level.png'), label: '맘 체크인', route: '/(main)/mom-wellness', bg: '#F8BBD0', ages: ['pregnant'] },
+  { icon: require('../../assets/icon-heart.png'), label: '맘스톡', route: '/(main)/mom-group', bg: '#FCE4EC', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
+  { icon: require('../../assets/quick-timeline.png'), label: '성장앨범', route: '/(main)/album', bg: '#E0F2F1', ages: ['infant', 'toddler', 'elementary'] },
   // 공통
   { icon: require('../../assets/quick-learning.png'), label: '아기시간', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['infant', 'toddler'] },
   { icon: require('../../assets/quick-report.png'), label: '열나', route: '/(main)/fever', bg: '#FFF0F0', ages: ['infant', 'toddler'] },
@@ -88,12 +90,12 @@ const ALL_ACTIONS: QuickAction[] = [
   { icon: require('../../assets/quick-report.png'), label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['infant', 'toddler'] },
   { icon: require('../../assets/quick-report.png'), label: '성장 통계', route: '/(main)/growth-stats', bg: COLOR.mintBg, ages: ['infant', 'toddler', 'elementary'] },
   // 영유아
-  { icon: require('../../assets/quick-sleep.png'), label: '수면 예측', route: '/(main)/sleep-predict', bg: '#EDE7F6', ages: ['infant', 'toddler'] },
+  { icon: require('../../assets/quick-lullaby.png'), label: '태교음악', route: '/(main)/lullaby', bg: '#EDE7F6', ages: ['pregnant'] },
   { icon: require('../../assets/quick-lullaby.png'), label: '자장가', route: '/(main)/lullaby', bg: '#EDE7F6', ages: ['infant', 'toddler'] },
   // 유아 + 초등
   { icon: require('../../assets/play-activity.png'), label: '놀이 학습', route: '/(main)/play-learning', bg: COLOR.yellowBg, ages: ['toddler', 'elementary'] },
   // 공통
-  { icon: require('../../assets/quick-coparenting.png'), label: '공동육아', route: '/(main)/coparenting', bg: '#FFF3E0', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
+  { icon: require('../../assets/quick-coparenting.png'), label: '가족육아', route: '/(main)/coparenting', bg: '#FFF3E0', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
   { icon: require('../../assets/quick-parent-level.png'), label: '새싹부모', route: '/(main)/parent-level', bg: '#E8F5E9', ages: ['infant', 'toddler', 'elementary'] },
 ];
 
@@ -425,20 +427,9 @@ export default function HomeScreen() {
 
   const pickPhoto = async () => {
     if (!selectedChild) return;
-    const { status } =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('권한 필요', '사진 라이브러리 접근 권한이 필요합니다.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (result.canceled || !result.assets[0]) return;
-    const localUri = result.assets[0].uri;
+    const picked = await pickImageFromLibrary({ quality: 0.8 });
+    if (!picked) return;
+    const localUri = picked.uri;
     // 즉시 로컬 프리뷰 반영
     const updated = { ...selectedChild, photoUri: localUri };
     updateChild(updated);
@@ -784,6 +775,16 @@ function Header({
         </View>
       </View>
       <View style={styles.headerRight}>
+        {child?.isPregnant && (
+          <TouchableOpacity
+            style={styles.contractionBox}
+            onPress={() => router.push('/(main)/labor-monitor?tab=contraction' as never)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.contractionBoxEmoji}>{'⏱️'}</Text>
+            <Text style={styles.contractionBoxText}>진통{'\n'}체크</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.iconBtn}
           onPress={() => router.push('/(main)/notification-settings' as never)}
@@ -914,33 +915,36 @@ function CompactStats({
       onPress={() => router.push('/(main)/parent-level')}
       activeOpacity={0.7}
     >
-      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-        {countdown && (
-          <View style={styles.compactStatItem}>
-            <Text style={styles.compactStatValue}>
-              {countdown.isPregnant ? `D-${countdown.daysUntilDue}` : `D+${countdown.daysSinceBirth}`}
-            </Text>
-            <Text style={styles.compactStatLabel}>{countdown.childName}</Text>
-          </View>
-        )}
-        {countdown && streak && <View style={styles.compactDivider} />}
-        {streak && (
-          <View style={styles.compactStatItem}>
-            <Text style={styles.compactStatValue}>
-              {LEVEL_ICONS[streak.level] ?? '🌱'} {streak.currentStreak}{'일째'}
-            </Text>
-            <Text style={styles.compactStatLabel}>{streak.levelName}</Text>
-          </View>
-        )}
-        {countdown?.nextMilestone && (
-          <>
-            <View style={styles.compactDivider} />
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {countdown && (
             <View style={styles.compactStatItem}>
-              <Text style={styles.compactStatValue}>D-{countdown.nextMilestone.daysUntil}</Text>
-              <Text style={styles.compactStatLabel}>{countdown.nextMilestone.label}</Text>
+              <Text style={styles.compactStatValue}>
+                {countdown.isPregnant ? `D-${countdown.daysUntilDue}` : `D+${countdown.daysSinceBirth}`}
+              </Text>
+              <Text style={styles.compactStatLabel}>{countdown.childName}</Text>
             </View>
-          </>
-        )}
+          )}
+          {countdown && streak && <View style={styles.compactDivider} />}
+          {streak && (
+            <View style={styles.compactStatItem}>
+              <Text style={styles.compactStatValue}>
+                {LEVEL_ICONS[streak.level] ?? '🌱'} {streak.currentStreak}{'일째'}
+              </Text>
+              <Text style={styles.compactStatLabel}>{streak.levelName}</Text>
+            </View>
+          )}
+          {countdown?.nextMilestone && (
+            <>
+              <View style={styles.compactDivider} />
+              <View style={styles.compactStatItem}>
+                <Text style={styles.compactStatValue}>D-{countdown.nextMilestone.daysUntil}</Text>
+                <Text style={styles.compactStatLabel}>{countdown.nextMilestone.label}</Text>
+              </View>
+            </>
+          )}
+        </View>
+        <Text style={styles.compactStatsHint}>👉 눌러서 부모 레벨·보상 확인</Text>
       </View>
       <Text style={{ fontSize: 18, color: COLOR.textLight, marginLeft: 4 }}>{'>'}</Text>
     </TouchableOpacity>
@@ -951,9 +955,9 @@ function InsightCards({ insights }: { insights: { type: string; title: string; m
   const TYPE_COLORS: Record<string, { bg: string; accent: string; icon: string }> = {
     pattern_alert: { bg: '#FFF0E6', accent: '#FF8C5A', icon: '!' },
     // milestone_tip 삭제됨 — 사용자 요청으로 발달포인트 카드 제거
-    encouragement: { bg: '#FFF8E1', accent: '#FFD76E', icon: '\u2665' },
+    encouragement: { bg: '#FFF8E1', accent: '#FFD76E', icon: '♥' },
     smart_question: { bg: '#EEEDFC', accent: '#7C83EC', icon: '?' },
-    weekly_summary: { bg: '#E8F4FD', accent: '#5BA8D9', icon: '\u03A3' },
+    weekly_summary: { bg: '#E8F4FD', accent: '#5BA8D9', icon: 'Σ' },
   };
 
   return (
@@ -1108,7 +1112,30 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
+  },
+  contractionBox: {
+    width: 76,
+    height: 76,
+    borderRadius: 14,
+    backgroundColor: '#FFE0E6',
+    borderWidth: 2,
+    borderColor: '#FF3B30',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
+  },
+  contractionBoxEmoji: {
+    fontSize: 26,
+  },
+  contractionBoxText: {
+    color: '#C0392B',
+    fontSize: 14,
+    fontWeight: '800' as const,
+    textAlign: 'center',
+    marginTop: 3,
+    lineHeight: 15,
   },
   iconBtn: {
     width: 36,
@@ -1313,6 +1340,15 @@ const styles = StyleSheet.create({
     height: 28,
     backgroundColor: '#F0E6DC',
     marginHorizontal: 8,
+  },
+  compactStatsHint: {
+    fontSize: 11,
+    color: '#4CAF50',
+    fontWeight: '600' as const,
+    marginTop: 8,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#F0E6DC',
   },
 
   /* === AI Insights === */
@@ -1576,11 +1612,11 @@ const styles = StyleSheet.create({
   /* === SOS Floating Button === */
   sosFab: {
     position: 'absolute',
-    right: 20,
+    right: 16,
     bottom: Platform.OS === 'ios' ? 100 : 90,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: '#FF3B30',
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
@@ -1593,7 +1629,7 @@ const styles = StyleSheet.create({
   },
   sosFabText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: '800' as const,
     letterSpacing: 1,
   },

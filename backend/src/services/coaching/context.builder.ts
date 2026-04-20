@@ -1,26 +1,32 @@
 import { collections } from '../firestore';
 import { ChildContext, TrackingSummary } from './types';
 
-/** 아이 프로필에서 프롬프트용 컨텍스트 빌드 (소유자 OR useCoaching 권한) */
+/** 아이 프로필에서 프롬프트용 컨텍스트 빌드 (소유자 OR 가족 구성원) */
 export async function buildChildContext(
   childId: string,
   userId: string
 ): Promise<ChildContext | null> {
   const doc = await collections.children.doc(childId).get();
-  if (!doc.exists) return null;
+  if (!doc.exists) {
+    console.warn('[buildChildContext] child not found: childId=%s userId=%s', childId, userId);
+    return null;
+  }
   const d = doc.data() as Record<string, unknown>;
 
-  // 소유자가 아니면 가족 멤버 확인
+  // 소유자가 아니면 가족 멤버 확인 (useCoaching 권한 불필요 - 접근 가능하면 허용)
   if (d.userId !== userId) {
+    console.warn('[buildChildContext] userId mismatch: childOwner=%s requester=%s childId=%s', d.userId, userId, childId);
     const memberSnap = await collections.familyMembers
       .where('childId', '==', childId)
       .where('inviteeUserId', '==', userId)
       .where('status', '==', 'accepted')
       .limit(1)
       .get();
-    if (memberSnap.empty) return null;
-    const perms = (memberSnap.docs[0].data().permissions as string[]) ?? [];
-    if (!perms.includes('useCoaching')) return null;
+    if (memberSnap.empty) {
+      console.warn('[buildChildContext] no familyMember entry - denying access');
+      return null;
+    }
+    // 가족 구성원이면 useCoaching 권한 체크 없이 허용
   }
 
   // 월령 계산
@@ -76,17 +82,20 @@ export async function buildChildContext(
     } catch { baseline = '없음'; }
   }
 
-  // observedTraits (관찰 특성)
+  // 최근 관찰 일기 3건을 원문 그대로 컨텍스트에 주입
   let observedTraits = '없음';
-  if (d.observedTraits) {
-    try {
-      const parsed = typeof d.observedTraits === 'string'
-        ? JSON.parse(d.observedTraits) as Record<string, unknown>
-        : d.observedTraits as Record<string, unknown>;
-      const summary = parsed.summary as string | undefined;
-      observedTraits = summary ?? '없음';
-    } catch { observedTraits = '없음'; }
-  }
+  try {
+    const obsSnap = await collections.observations
+      .where('childId', '==', childId)
+      .orderBy('createdAt', 'desc').limit(3).get();
+    const texts = obsSnap.docs
+      .map((o) => (o.data().rawContent as string | undefined)?.trim())
+      .filter((t): t is string => !!t && t.length > 0)
+      .map((t) => (t.length > 200 ? t.slice(0, 200) + '...' : t));
+    if (texts.length > 0) {
+      observedTraits = texts.map((t, i) => `${i + 1}. ${t}`).join('\n');
+    }
+  } catch { observedTraits = '없음'; }
 
   const isPregnant = (d.isPregnant as boolean) === true;
   const gender = isPregnant ? '태아' : ((d.gender as string) === 'M' ? '남자아이' : '여자아이');

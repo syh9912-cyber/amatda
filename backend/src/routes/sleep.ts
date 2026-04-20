@@ -7,6 +7,9 @@ import { getPatternForMonth, generateDbPrediction } from '../services/sleep.know
 import { callGeminiText } from '../services/coaching/gemini.client';
 import { maskChildName } from '../utils/masking';
 import { getChildIfAccessible } from '../utils/childAccess';
+import { checkDailyLimit, incrementDailyUsage } from '../utils/rateLimit';
+
+const SLEEP_FREE_DAILY_LIMIT = 3;
 
 const router = Router();
 
@@ -141,7 +144,20 @@ router.post('/predict', authMiddleware, async (req: Request, res: Response) => {
       return;
     }
 
-    // 8. AI 예측 (데이터 3일 이상 + 캐시 만료 시에만)
+    // 8. AI 예측 — 무료 유저 일일 한도 체크
+    const limit = await checkDailyLimit(userId, 'sleep_predict', SLEEP_FREE_DAILY_LIMIT);
+    if (!limit.allowed) {
+      success(res, {
+        insufficient: false,
+        prediction: dbResult.prediction,
+        dataCount,
+        source: 'db',
+        limitReached: true,
+        message: `무료 플랜은 하루 ${limit.limit}회까지 AI 수면 예측을 제공해요. 프리미엄으로 업그레이드하면 무제한 이용 가능합니다.`,
+      });
+      return;
+    }
+
     const rawName = String(child.name ?? '아이');
     const childName = maskChildName(rawName, rawName);
     const pattern = dbResult.pattern;
@@ -162,6 +178,7 @@ router.post('/predict', authMiddleware, async (req: Request, res: Response) => {
 
       if (jsonMatch) {
         const aiPrediction = JSON.parse(jsonMatch[0]);
+        await incrementDailyUsage(userId, 'sleep_predict');
 
         // 캐시에 저장 (다른 같은 월령 유저에게 재활용)
         await collections.sleepKnowledgeCache.doc(`age_${ageKey}`).set({

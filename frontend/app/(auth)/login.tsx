@@ -5,15 +5,20 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StyleSheet,
+  Dimensions,
+  ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { AppNameDisplay } from '../../components/ui/AppNameDisplay';
 import { AuthInput } from '../../components/ui/AuthInput';
 import { AuthDivider } from '../../components/ui/AuthDivider';
 import { SocialLoginButtons } from '../../components/ui/SocialLoginButtons';
 import { useLoginHandlers } from '../../hooks/useLoginHandlers';
+
+const BG = '#FAFAFA';
+const { width: SW } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const h = useLoginHandlers();
@@ -24,30 +29,34 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        bounces={false}
-      >
-        <View style={styles.header}>
-          <View style={{ width: 360, height: 360, backgroundColor: '#FDF6F0', borderRadius: 24, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
-            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#FDF6F0' }} />
-            <Image
-              source={require('../../assets/child-diary.png')}
-              style={{ width: 350, height: 350, backgroundColor: '#FDF6F0', marginLeft: -12 }}
-              resizeMode="contain"
-              fadeDuration={0}
-            />
-          </View>
-          <View style={styles.nameWrap}>
-            <AppNameDisplay size="small" />
-          </View>
+      <View style={styles.scroll}>
+        {/* ── Full-width character image + gradient fade ── */}
+        <View style={styles.imageSection}>
+          {/* 투명 배경 아티팩트 방지: 이미지 뒤에 solid 배경 */}
+          <View style={styles.imageBg} />
+          <Image
+            source={require('../../assets/child-diary.png')}
+            style={styles.bgImage}
+            resizeMode="cover"
+            fadeDuration={0}
+          />
+          <LinearGradient
+            colors={['transparent', `${BG}80`, BG]}
+            locations={[0.2, 0.6, 0.95]}
+            style={styles.gradientOverlay}
+          />
+        </View>
+
+        {/* ── Brand (overlaps gradient area) ── */}
+        <View style={styles.brandWrap}>
+          <AppNameDisplay size="small" />
           <Text style={styles.tagline}>
             아이의 기질을 기록하는 특별한 다이어리
           </Text>
         </View>
 
-        <View style={styles.body}>
+        {/* ── Login Card ── */}
+        <View style={styles.card}>
           <View style={styles.form}>
             <AuthInput
               icon={require('../../assets/icon-comment.png')}
@@ -67,17 +76,23 @@ export default function LoginScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.button, h.loading && styles.buttonDisabled]}
+            style={[styles.button, h.loading && styles.buttonLoading]}
             onPress={h.handleLogin}
             disabled={h.loading}
             activeOpacity={0.8}
           >
-            <Text style={styles.buttonText}>
-              {h.loading
-                ? '로그인 중...'
-                : '로그인'}
-            </Text>
+            {h.loading ? (
+              <View style={styles.buttonRow}>
+                <ActivityIndicator size="small" color="#FFFFFF" />
+                <Text style={styles.buttonText}>로그인 중...</Text>
+              </View>
+            ) : (
+              <Text style={styles.buttonText}>로그인</Text>
+            )}
           </TouchableOpacity>
+          {h.loading && (
+            <Text style={styles.loadingHint}>서버 연결 중이에요. 잠시만 기다려주세요…</Text>
+          )}
 
           <View style={styles.dividerWrap}>
             <AuthDivider />
@@ -94,18 +109,17 @@ export default function LoginScreen() {
           >
             <Text style={styles.registerText}>
               {'계정이 없으신가요? '}
-              <Text style={styles.registerBold}>
-                회원가입
-              </Text>
+              <Text style={styles.registerBold}>회원가입</Text>
             </Text>
           </TouchableOpacity>
         </View>
 
+        {/* ── Footer ── */}
         <View style={styles.footer}>
           <Text style={styles.version}>{`v${require('../../app.json').expo.version}`}</Text>
           <Text style={styles.companyName}>SY Labs</Text>
         </View>
-      </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -113,42 +127,88 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FDF6F0',
+    backgroundColor: BG,
   },
   scroll: {
-    flexGrow: 1,
-  },
-  header: {
-    paddingTop: 48,
-    alignItems: 'center',
-  },
-  nameWrap: {
-    marginTop: 12,
-  },
-  tagline: {
-    fontSize: 13,
-    color: '#9CA3AF',
-    marginTop: 8,
-    fontWeight: '400',
-  },
-  body: {
-    paddingHorizontal: 32,
-    marginTop: 32,
     flex: 1,
   },
+
+  /* ── Full-width image with gradient ── */
+  imageSection: {
+    width: SW,
+    height: SW * 0.55,
+    overflow: 'hidden',
+  },
+  imageBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FFF8F2',
+  },
+  bgImage: {
+    width: SW,
+    height: SW * 0.7,
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: SW * 0.4,
+  },
+
+  /* ── Brand ── */
+  brandWrap: {
+    alignItems: 'center',
+    marginTop: -8,
+    marginBottom: 12,
+  },
+  tagline: {
+    fontSize: 12,
+    color: '#A0A0A0',
+    marginTop: 4,
+    fontWeight: '400',
+    letterSpacing: -0.2,
+  },
+
+  /* ── Card — 은은한 그림자, 깨끗한 배경 ── */
+  card: {
+    marginHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 24,
+    elevation: 2,
+  },
   form: {
-    gap: 12,
+    gap: 10,
   },
   button: {
-    backgroundColor: '#4338CA',
+    backgroundColor: '#2D2016',
     borderRadius: 14,
-    height: 56,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 14,
   },
   buttonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
+  },
+  buttonLoading: {
+    opacity: 0.85,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  loadingHint: {
+    marginTop: 12,
+    textAlign: 'center',
+    fontSize: 12,
+    color: '#888',
   },
   buttonText: {
     color: '#FFFFFF',
@@ -157,36 +217,38 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   dividerWrap: {
-    marginTop: 28,
-    marginBottom: 16,
+    marginTop: 14,
+    marginBottom: 10,
   },
   registerLink: {
-    marginTop: 24,
-    marginBottom: 16,
+    marginTop: 12,
     alignItems: 'center',
   },
   registerText: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#A0A0A0',
   },
   registerBold: {
-    color: '#4338CA',
+    color: '#2D2016',
     fontWeight: '600',
   },
+
+  /* ── Footer ── */
   footer: {
-    alignItems: 'center' as const,
-    paddingBottom: 28,
-    paddingTop: 16,
+    alignItems: 'center',
+    paddingBottom: 14,
+    paddingTop: 10,
+    marginTop: 'auto',
   },
   version: {
     fontSize: 11,
-    color: '#C0C0C0',
+    color: '#C8C8C8',
   },
   companyName: {
     fontSize: 10,
-    color: '#D0C8C0',
+    color: '#D0D0D0',
     marginTop: 4,
-    letterSpacing: 1,
-    fontWeight: '500' as const,
+    letterSpacing: 1.5,
+    fontWeight: '500',
   },
 });

@@ -18,17 +18,12 @@ import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { WriteArea } from '../../components/diary/WriteArea';
 import { ObservationCard } from '../../components/diary/ObservationCard';
 import { getTodayQuestion } from '../../constants/dailyQuestions';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 interface ObservationItem {
   id: string;
   type: string;
   rawContent: string;
-  extractedTraits: {
-    emotions: string[];
-    socialStyle: string;
-    interests: string[];
-    summary: string;
-  };
   createdAt: string;
 }
 
@@ -116,7 +111,7 @@ export default function DiaryScreen() {
       setObservations((prev) => [res.data.data.observation, ...prev]);
       setContent('');
       setPhotoUri(null);
-      Alert.alert('완료', '관찰 일기가 저장되고 성향이 분석되었습니다');
+      Alert.alert('완료', '관찰 일기가 저장되었습니다');
     } catch {
       Alert.alert('오류', '저장에 실패했습니다');
     } finally {
@@ -216,10 +211,6 @@ export default function DiaryScreen() {
               key={obs.id}
               rawContent={obs.rawContent}
               createdAt={obs.createdAt}
-              emotions={obs.extractedTraits.emotions}
-              interests={obs.extractedTraits.interests}
-              socialStyle={obs.extractedTraits.socialStyle}
-              summary={obs.extractedTraits.summary}
               onShare={() => {
                 router.push({
                   pathname: '/(main)/momstagram-post',
@@ -230,6 +221,7 @@ export default function DiaryScreen() {
           ))
         )}
       </ScrollView>
+      <AdSlot />
     </KeyboardAvoidingView>
   );
 }

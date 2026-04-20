@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChildStore } from '../../stores/childStore';
 import { pregnancyApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 /* ================================================================== */
 /*  Types                                                              */
@@ -404,7 +405,13 @@ export default function PregnancyScreen() {
         {/* ── Timeline ── */}
         {loadingTimeline && <ActivityIndicator style={{ marginTop: 20 }} color={COLORS.primary} />}
 
-        {timeline.map((weekGroup) => (
+        {timeline
+          .map((weekGroup) => ({
+            ...weekGroup,
+            items: weekGroup.items.filter((it) => it.source !== 'development'),
+          }))
+          .filter((wg) => wg.items.length > 0)
+          .map((weekGroup) => (
           <View key={weekGroup.week} style={styles.weekGroup}>
             <View style={styles.weekHeaderRow}>
               <View style={styles.weekBadge}>
@@ -477,6 +484,7 @@ export default function PregnancyScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      <AdSlot />
 
       {/* ════════════════════════════════════════════════ */}
       {/*  Unified New Record Modal                        */}

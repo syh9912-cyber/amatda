@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance } from 'axios';
 import { useAuthStore } from '../stores/authStore';
+import { checkOtaOnApiError } from './otaCheck';
 
 // ─── URL 설정 ───────────────────────────────────────────────
 // api: auth, children, food, weather 등 경량 라우트 (Firebase 'api' 함수)
@@ -51,6 +52,19 @@ function applyInterceptors(instance: AxiosInstance): void {
           useAuthStore.getState().logout();
         }
       }
+
+      // 구버전 앱이 새 서버와 불일치하는 징후(404/400/405/네트워크 오류) 시 OTA 체크
+      const status = err.response?.status;
+      const shouldCheckOta =
+        !err.response ||
+        status === 404 ||
+        status === 400 ||
+        status === 405 ||
+        (typeof status === 'number' && status >= 500);
+      if (shouldCheckOta) {
+        checkOtaOnApiError();
+      }
+
       return Promise.reject(err);
     },
   );
@@ -279,36 +293,12 @@ export const coachingApi = {
     coachingAxios.post('coaching/analyze-media', { childId, type, description, mediaBase64, mediaMimeType }),
   firstTalk: (childId: string) =>
     coachingAxios.post('coaching/first-talk', { childId }),
-  parentMental: (childId: string) =>
-    coachingAxios.post('coaching/parent-mental', { childId }),
-  futurePredict: (childId: string) =>
-    coachingAxios.post('coaching/future-predict', { childId }),
-  nowActivity: (childId: string) =>
-    coachingAxios.post('coaching/now-activity', { childId }),
   milestones: (childId: string) =>
     coachingAxios.get(`coaching/milestones/${childId}`),
   saveMilestoneChecks: (childId: string, checks: Record<string, boolean>) =>
     coachingAxios.post(`coaching/milestones/${childId}/check`, { checks }),
   dailyInsight: (childId: string) =>
     coachingAxios.get(`coaching/daily-insight?childId=${childId}`),
-  welcome: (childId: string) =>
-    coachingAxios.get(`coaching/welcome?childId=${childId}`),
-  autoDiary: (childId: string) =>
-    coachingAxios.get(`coaching/auto-diary?childId=${childId}`),
-  createTimeCapsule: (childId: string, message: string, months: 3 | 6 | 12) =>
-    coachingAxios.post('coaching/time-capsule', { childId, message, months }),
-  listTimeCapsules: (childId: string) =>
-    coachingAxios.get(`coaching/time-capsules?childId=${childId}`),
-  openTimeCapsule: (capsuleId: string) =>
-    coachingAxios.post(`coaching/time-capsule/${capsuleId}/open`),
-  peerComparison: (childId: string) =>
-    coachingAxios.get(`coaching/peer-comparison?childId=${childId}`),
-  myTier: () =>
-    coachingAxios.get('coaching/my-tier'),
-  capsuleSuggestion: (childId: string) =>
-    coachingAxios.get(`coaching/capsule-suggestion?childId=${childId}`),
-  acceptCapsuleSuggestion: (childId: string, diaryDate: string) =>
-    coachingAxios.post('coaching/capsule-suggestion/accept', { childId, diaryDate }),
 };
 
 // Retention (growth countdown, daily tip, streak)
@@ -393,7 +383,7 @@ export const sleepApi = {
     api.get('/sleep/pattern', { params: { months } }),
 };
 
-// Coparenting (공동육아)
+// Coparenting (가족육아)
 export const coparentingApi = {
   invite: (childId: string, role: string, nickname: string, permissions: string[], phone?: string) =>
     api.post('/coparenting/invite', { childId, role, nickname, permissions, phone }),
@@ -560,6 +550,61 @@ export const pregnancyApi = {
     api.post('/pregnancy/gdm/food/analyze', { mediaBase64, mediaMimeType }),
   gdmWeeklyReport: (childId: string) =>
     api.post('/pregnancy/gdm/weekly-report', { childId }),
+  saveKickSession: (data: { childId: string; count: number; durationSec: number; week?: number }) =>
+    api.post('/pregnancy/kick-session', data),
+  getKickSessions: (childId: string) =>
+    api.get('/pregnancy/kick-session', { params: { childId } }),
+  weeklySummary: (childId: string) =>
+    api.post('/pregnancy/weekly-summary', { childId }),
+  safetyCheck: (query: string, week?: number) =>
+    api.post('/pregnancy/safety-check', { query, week }),
+  mentalCheckQuestions: (stage?: string) =>
+    api.get('/pregnancy/mental-check/questions', { params: stage ? { stage } : {} }),
+  saveMentalCheck: (data: {
+    childId: string;
+    answers: number[];
+    shareWithPartner: boolean;
+    extraAnswers?: number[];
+    stage?: string;
+  }) =>
+    api.post('/pregnancy/mental-check', data),
+  getMentalChecks: (childId: string) =>
+    api.get('/pregnancy/mental-check', { params: { childId } }),
+  mentalCheckAnalysis: (childId: string) =>
+    api.get('/pregnancy/mental-check/analysis', { params: { childId } }),
+};
+
+// Mom Group (예정월별 출산맘방)
+export type MomGroupCategory = 'question' | 'chat' | 'info' | 'worry' | 'celebration';
+export type MomGroupSort = 'recent' | 'popular';
+
+export const momGroupApi = {
+  listPosts: (groupKey: string, opts?: { category?: MomGroupCategory; sort?: MomGroupSort }) =>
+    api.get('/mom-group/posts', {
+      params: {
+        groupKey,
+        ...(opts?.category ? { category: opts.category } : {}),
+        ...(opts?.sort ? { sort: opts.sort } : {}),
+      },
+    }),
+  createPost: (groupKey: string, content: string, category: MomGroupCategory, anonymous: boolean, imageUrl?: string | null) =>
+    api.post('/mom-group/posts', { groupKey, content, category, anonymous, imageUrl: imageUrl ?? undefined }),
+  deletePost: (id: string) =>
+    api.delete(`/mom-group/posts/${id}`),
+  toggleLike: (id: string) =>
+    api.post(`/mom-group/posts/${id}/like`),
+  listComments: (postId: string) =>
+    api.get(`/mom-group/posts/${postId}/comments`),
+  createComment: (postId: string, content: string, anonymous = false) =>
+    api.post(`/mom-group/posts/${postId}/comments`, { content, anonymous }),
+  deleteComment: (id: string) =>
+    api.delete(`/mom-group/comments/${id}`),
+  reportPost: (id: string, reason: 'abuse' | 'ad' | 'privacy' | 'spam' | 'other' = 'other') =>
+    api.post(`/mom-group/posts/${id}/report`, { reason }),
+  toggleBookmark: (id: string) =>
+    api.post(`/mom-group/posts/${id}/bookmark`),
+  listBookmarks: () =>
+    api.get('/mom-group/bookmarks'),
 };
 
 // Vaccination (예방접종)
