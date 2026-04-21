@@ -1196,12 +1196,14 @@ const modalStyles = StyleSheet.create({
 
 export default function BabyTrackerScreen() {
   const selectedChild = useChildStore((s) => s.selectedChild);
-
-  // 임신 아이면 임신기록 화면 렌더
   if (selectedChild?.isPregnant) {
     return <PregnancyScreen />;
   }
+  return <BabyTrackerInner key={selectedChild?.id ?? 'none'} />;
+}
 
+function BabyTrackerInner() {
+  const selectedChild = useChildStore((s) => s.selectedChild);
   const ageGroup: AgeGroupKey = selectedChild?.ageInfo?.group ?? 'infant';
   const ageTabs = useMemo(() => {
     const allowed = getTrackerTabs(ageGroup);
