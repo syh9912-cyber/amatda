@@ -28,7 +28,7 @@ const IC_MASCOT_EAT = require('../../assets/mascot-eating.png') as number;
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
-import { growthApi } from '../../services/api';
+import { growthApi, childApi } from '../../services/api';
 import { getTrackerTabs, getFeedingTypes } from '../../constants/ageFeatures';
 import type { AgeGroupKey } from '../../constants/ageGroups';
 import PregnancyScreen from './pregnancy';
@@ -141,6 +141,7 @@ const SUBTYPE_LABELS: Record<string, string> = {
   snack: '간식',
   nap: '낮잠',
   night: '밤잠',
+  sleep: '수면',
 };
 
 const SUBTYPE_ICONS: Record<string, number> = {
@@ -153,6 +154,7 @@ const SUBTYPE_ICONS: Record<string, number> = {
   snack: IC_FEED,
   nap: IC_SUNNY,
   night: IC_NIGHT,
+  sleep: IC_SLEEP,
 };
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
@@ -189,6 +191,19 @@ function isToday(date: Date): boolean {
 function nowTime(): string {
   const now = new Date();
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
+
+function getRelativeTime(timeStr: string, dateStr: string): string {
+  const [h, m] = timeStr.split(':').map(Number);
+  const rec = new Date(dateStr);
+  rec.setHours(h, m, 0, 0);
+  const diffMin = Math.round((Date.now() - rec.getTime()) / 60000);
+  if (diffMin < 1) return '방금 전';
+  if (diffMin < 60) return `${diffMin}분 전`;
+  const hrs = Math.floor(diffMin / 60);
+  const mins = diffMin % 60;
+  if (mins === 0) return `${hrs}시간 전`;
+  return `${hrs}시간${mins}분 전`;
 }
 
 function calcDurationMinutes(start: string, end: string): number {
@@ -229,6 +244,46 @@ function computeSummary(records: TrackerRecord[]): DaySummary {
 
 function getStorageKey(childId: string, dateStr: string): string {
   return `baby_tracker_${childId}_${dateStr}`;
+}
+
+function getSleepSessionKey(childId: string): string {
+  return `baby_tracker_sleep_session_${childId}`;
+}
+
+interface SleepSession {
+  startTime: string; // ISO
+  startDate: string; // YYYY-MM-DD (local)
+}
+
+async function loadSleepSession(childId: string): Promise<SleepSession | null> {
+  const storage = await getStorage();
+  if (!storage) return null;
+  const raw = await storage.getItem(getSleepSessionKey(childId));
+  if (!raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      'startTime' in parsed &&
+      'startDate' in parsed
+    ) {
+      return parsed as SleepSession;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function saveSleepSession(childId: string, session: SleepSession | null): Promise<void> {
+  const storage = await getStorage();
+  if (!storage) return;
+  if (session) {
+    await storage.setItem(getSleepSessionKey(childId), JSON.stringify(session));
+  } else {
+    await storage.setItem(getSleepSessionKey(childId), '');
+  }
 }
 
 /* ================================================================== */
@@ -825,13 +880,14 @@ const chartStyles = StyleSheet.create({
 interface AddModalProps {
   visible: boolean;
   initialTab: RecordType;
+  initialSubType?: string;
   onClose: () => void;
   onSave: (record: TrackerRecord) => void;
   availableTabs: typeof TAB_CONFIG;
   feedingOptions: { key: string; label: string; icon: number }[];
 }
 
-function AddRecordModal({ visible, initialTab, onClose, onSave, availableTabs, feedingOptions }: AddModalProps) {
+function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, availableTabs, feedingOptions }: AddModalProps) {
   const [tab, setTab] = useState<RecordType>(initialTab);
   const [subType, setSubType] = useState<string>('');
   const [time, setTime] = useState(nowTime());
@@ -844,7 +900,7 @@ function AddRecordModal({ visible, initialTab, onClose, onSave, availableTabs, f
   useEffect(() => {
     if (visible) {
       setTab(initialTab);
-      resetForm(initialTab);
+      resetForm(initialTab, initialSubType);
       Animated.spring(slideAnim, {
         toValue: 1,
         useNativeDriver: true,
@@ -854,14 +910,18 @@ function AddRecordModal({ visible, initialTab, onClose, onSave, availableTabs, f
     } else {
       slideAnim.setValue(0);
     }
-  }, [visible, initialTab, slideAnim]);
+  }, [visible, initialTab, initialSubType, slideAnim]);
 
-  function resetForm(t: RecordType) {
+  function resetForm(t: RecordType, sub?: string) {
     setTime(nowTime());
     setEndTime('');
     setAmount('');
     setDurationMin('');
     setNote('');
+    if (sub) {
+      setSubType(sub);
+      return;
+    }
     if (t === 'diaper') setSubType('pee');
     else if (t === 'feeding') setSubType('breast');
     else setSubType('nap');
@@ -1223,7 +1283,11 @@ function BabyTrackerInner() {
   const [analysisResult, setAnalysisResult] = useState<TrackerAnalysisResult | null>(null);
   const [analysisExpanded, setAnalysisExpanded] = useState(true);
   const [analysisError, setAnalysisError] = useState('');
-  const fabScale = useRef(new Animated.Value(1)).current;
+  const [sleepSession, setSleepSession] = useState<SleepSession | null>(null);
+  const [sleepNow, setSleepNow] = useState(Date.now());
+  const [toastMessage, setToastMessage] = useState('');
+  const [modalSubType, setModalSubType] = useState<string>('breast');
+  const toastOpacity = useRef(new Animated.Value(0)).current;
 
   const dateStr = useMemo(() => formatDate(currentDate), [currentDate]);
   const childId = selectedChild?.id ?? 'default';
@@ -1283,6 +1347,95 @@ function BabyTrackerInner() {
     saveRecords(childId, dateStr, updated);
   }
 
+  function showToast(msg: string) {
+    setToastMessage(msg);
+    Animated.sequence([
+      Animated.timing(toastOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.delay(1400),
+      Animated.timing(toastOpacity, { toValue: 0, duration: 220, useNativeDriver: true }),
+    ]).start(() => setToastMessage(''));
+  }
+
+  function handleQuickAdd(type: RecordType, subType: string) {
+    const record: TrackerRecord = {
+      id: generateId(),
+      type,
+      subType,
+      time: nowTime(),
+    };
+    handleAddRecord(record);
+    showToast(`${SUBTYPE_LABELS[subType] ?? subType} 기록 완료`);
+  }
+
+  /* ---- Sleep session load & tick ---- */
+  useEffect(() => {
+    loadSleepSession(childId).then((s) => setSleepSession(s));
+  }, [childId]);
+
+  useEffect(() => {
+    if (!sleepSession) return;
+    const id = setInterval(() => setSleepNow(Date.now()), 60000);
+    return () => clearInterval(id);
+  }, [sleepSession]);
+
+  async function handleSleepStart() {
+    const now = new Date();
+    const session: SleepSession = {
+      startTime: now.toISOString(),
+      startDate: formatDate(now),
+    };
+    await saveSleepSession(childId, session);
+    setSleepSession(session);
+    showToast('수면 시작');
+  }
+
+  async function handleSleepWake() {
+    if (!sleepSession) return;
+    const start = new Date(sleepSession.startTime);
+    const end = new Date();
+    let diff = Math.round((end.getTime() - start.getTime()) / 60000);
+    if (diff < 1) diff = 1;
+
+    const startHHMM = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+    const endHHMM = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+
+    // Persist record (use session start date so cross-midnight sleep is tied to night-of-start date)
+    const record: TrackerRecord = {
+      id: generateId(),
+      type: 'sleep',
+      subType: 'sleep',
+      time: startHHMM,
+      endTime: endHHMM,
+      duration: diff,
+    };
+    const existing = await loadRecords(childId, sleepSession.startDate);
+    const updated = [...existing, record];
+    await saveRecords(childId, sleepSession.startDate, updated);
+    if (sleepSession.startDate === dateStr) {
+      setRecords(updated);
+    } else {
+      // Reload current date view
+      await loadData();
+    }
+
+    // Sync to backend dailyTracking for sleep-predict
+    try {
+      const hours = Math.round((diff / 60) * 10) / 10;
+      await childApi.saveDailyTracking(childId, {
+        date: sleepSession.startDate,
+        sleepStart: sleepSession.startTime,
+        sleepEnd: end.toISOString(),
+        sleepHours: hours,
+      });
+    } catch {
+      // silent: local record is saved; backend sync is best-effort
+    }
+
+    await saveSleepSession(childId, null);
+    setSleepSession(null);
+    showToast(`수면 ${formatMinutes(diff)} 기록됨`);
+  }
+
   function handleDeleteRecord(id: string) {
     Alert.alert('기록 삭제', '이 기록을 삭제할까요?', [
       { text: '취소', style: 'cancel' },
@@ -1298,12 +1451,22 @@ function BabyTrackerInner() {
     ]);
   }
 
-  function handleFabPress() {
-    Animated.sequence([
-      Animated.timing(fabScale, { toValue: 0.9, duration: 80, useNativeDriver: true }),
-      Animated.timing(fabScale, { toValue: 1, duration: 80, useNativeDriver: true }),
-    ]).start();
-    setModalVisible(true);
+  /* ---- Bottom bar action dispatcher ---- */
+  function handleBottomAction(action: BottomAction) {
+    if (action.kind === 'modal') {
+      setModalSubType(action.subType);
+      setModalVisible(true);
+    } else if (action.kind === 'quick') {
+      handleQuickAdd(action.type, action.subType);
+    } else if (action.kind === 'sleepStart') {
+      handleSleepStart();
+    } else if (action.kind === 'sleepWake') {
+      if (!sleepSession) {
+        showToast('먼저 수면 시작을 눌러주세요');
+        return;
+      }
+      handleSleepWake();
+    }
   }
 
   /* ---- Pattern Analysis ---- */
@@ -1452,6 +1615,63 @@ function BabyTrackerInner() {
           />
         </View>
 
+        {/* ---- Sleep session banner (only when active) ---- */}
+        {sleepSession && (
+          <SleepSessionCard
+            session={sleepSession}
+            now={sleepNow}
+            onStart={handleSleepStart}
+            onWake={handleSleepWake}
+          />
+        )}
+
+        {/* ---- AI 도구 섹션 ---- */}
+        <View style={toolsStyles.section}>
+          <Text style={toolsStyles.sectionTitle}>AI 도구</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={toolsStyles.row}
+          >
+            <ToolButton
+              emoji="🎤"
+              label="음성 설정"
+              sub="시리·빅스비"
+              onPress={() => router.push('/(main)/voice-settings')}
+              color="#FF8C5A"
+            />
+            <ToolButton
+              emoji="😴"
+              label="수면 예측"
+              sub="AI 예측"
+              onPress={() => router.push('/(main)/sleep-predict')}
+              color={TRACKER_COLORS.sleepDark}
+            />
+            <ToolButton
+              emoji="📊"
+              label="패턴 분석"
+              sub={analysisLoading ? '분석중…' : '배변·수유·수면'}
+              onPress={handlePatternAnalysis}
+              color={TRACKER_COLORS.accent}
+              loading={analysisLoading}
+            />
+            <ToolButton
+              emoji="💩"
+              label="대변 분석"
+              sub="사진"
+              onPress={() => router.push('/(main)/poop-analyzer')}
+              color={TRACKER_COLORS.diaperDark}
+            />
+            <ToolButton
+              emoji="🔊"
+              label="울음 분석"
+              sub="음성"
+              onPress={() => router.push('/(main)/cry-analyzer')}
+              color="#D88FB8"
+            />
+          </ScrollView>
+        </View>
+
         {/* ---- Period Selector + Chart ---- */}
         <View style={chartStyles.periodRow}>
           {([7, 14, 31] as const).map((p) => (
@@ -1478,19 +1698,7 @@ function BabyTrackerInner() {
           <WeeklyChart stats={weekStats} activeTab={activeTab} periodDays={chartPeriod} />
         )}
 
-        {/* ---- Pattern Analysis Button + Results ---- */}
-        <TouchableOpacity
-          style={analysisStyles.button}
-          onPress={handlePatternAnalysis}
-          disabled={analysisLoading}
-          activeOpacity={0.8}
-        >
-          <Image source={require('../../assets/quick-report.png')} style={analysisStyles.buttonIcon} resizeMode="contain" />
-          <Text style={analysisStyles.buttonText}>
-            {analysisLoading ? '분석 중...' : '육아 패턴 분석'}
-          </Text>
-        </TouchableOpacity>
-
+        {/* ---- Pattern Analysis Results (inline) ---- */}
         {analysisLoading && (
           <View style={analysisStyles.loadingContainer}>
             <ActivityIndicator size="large" color={TRACKER_COLORS.accent} />
@@ -1575,128 +1783,68 @@ function BabyTrackerInner() {
           </View>
         )}
 
-        {/* ---- Tab Buttons (연령별 필터) ---- */}
-        <View style={styles.tabRow}>
-          {ageTabs.map((t) => {
-            const isActive = activeTab === t.key;
-            const count = records.filter((r) => r.type === t.key).length;
-            return (
-              <TouchableOpacity
-                key={t.key}
-                style={[
-                  styles.tabBtn,
-                  isActive && { backgroundColor: t.color, borderColor: t.color },
-                ]}
-                onPress={() => setActiveTab(t.key)}
-              >
-                <View style={styles.tabBtnInner}>
-                  <Image source={t.icon} style={styles.tabIcon} resizeMode="contain" />
-                  <Text
-                    style={[
-                      styles.tabBtnText,
-                      isActive && styles.tabBtnTextActive,
-                    ]}
-                  >
-                    {t.label}
-                    {count > 0 ? ` (${count})` : ''}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* ---- Timeline ---- */}
+        {/* ---- Full Timeline ---- */}
         <View style={styles.timelineContainer}>
           <View style={styles.timelineTitleRow}>
-            <Image
-              source={TAB_CONFIG.find((t) => t.key === activeTab)?.icon ?? IC_POOP}
-              style={styles.timelineTitleIcon}
-              resizeMode="contain"
-            />
+            <Image source={IC_SLEEP} style={styles.timelineTitleIcon} resizeMode="contain" />
             <Text style={styles.timelineTitle}>
-            {TAB_CONFIG.find((t) => t.key === activeTab)?.label ?? ''} 타임라인
-          </Text>
+              타임라인 ({allRecordsSorted.length}건)
+            </Text>
           </View>
 
           {loading ? (
             <View style={emptyStyles.container}>
               <Text style={emptyStyles.sub}>불러오는 중...</Text>
             </View>
-          ) : filteredRecords.length === 0 ? (
-            <EmptyTimeline tab={activeTab} />
+          ) : allRecordsSorted.length === 0 ? (
+            <View style={emptyStyles.container}>
+              <Image source={IC_EMPTY} style={emptyStyles.iconImg} resizeMode="contain" />
+              <Text style={emptyStyles.title}>아직 기록이 없어요</Text>
+              <Text style={emptyStyles.sub}>
+                하단 버튼으로 빠르게 기록해보세요
+              </Text>
+            </View>
           ) : (
-            filteredRecords.map((r) => (
-              <RecordCard key={r.id} record={r} onDelete={handleDeleteRecord} />
+            allRecordsSorted.map((r) => (
+              <TimelineEntry
+                key={r.id}
+                record={r}
+                dateStr={dateStr}
+                showRelative={isToday(currentDate)}
+                onDelete={handleDeleteRecord}
+              />
             ))
           )}
         </View>
 
-        {/* ---- All records (mini timeline) ---- */}
-        {allRecordsSorted.length > 0 && (
-          <View style={styles.allSection}>
-            <Text style={styles.allSectionTitle}>
-              오늘의 전체 기록 ({allRecordsSorted.length}건)
-            </Text>
-            {allRecordsSorted.map((r) => {
-              const subIcon = SUBTYPE_ICONS[r.subType] ?? IC_POOP;
-              const label = SUBTYPE_LABELS[r.subType] ?? r.subType;
-              const typeColor =
-                r.type === 'diaper'
-                  ? TRACKER_COLORS.diaper
-                  : r.type === 'feeding'
-                    ? TRACKER_COLORS.feeding
-                    : TRACKER_COLORS.sleep;
-
-              return (
-                <View key={r.id} style={styles.miniRow}>
-                  <View style={[styles.miniDot, { backgroundColor: typeColor }]} />
-                  <Text style={styles.miniTime}>{r.time}</Text>
-                  <Image source={subIcon} style={styles.miniIcon} resizeMode="contain" />
-                  <Text style={styles.miniLabel}>
-                    {label}
-                  </Text>
-                  {r.amount ? (
-                    <Text style={styles.miniDetail}>{r.amount}ml</Text>
-                  ) : null}
-                  {r.duration && r.type === 'sleep' ? (
-                    <Text style={styles.miniDetail}>{formatMinutes(r.duration)}</Text>
-                  ) : null}
-                </View>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Bottom spacer for FAB */}
-        <View style={{ height: 100 }} />
+        {/* Bottom spacer for bottom action bar */}
+        <View style={{ height: 140 }} />
       </ScrollView>
 
-      {/* ---- FAB ---- */}
-      <Animated.View style={[styles.fabContainer, { transform: [{ scale: fabScale }] }]}>
-        <TouchableOpacity
-          style={[
-            styles.fab,
-            {
-              backgroundColor:
-                activeTab === 'diaper'
-                  ? TRACKER_COLORS.diaperDark
-                  : activeTab === 'feeding'
-                    ? TRACKER_COLORS.feedingDark
-                    : TRACKER_COLORS.sleepDark,
-            },
-          ]}
-          onPress={handleFabPress}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.fabText}>+ 기록하기</Text>
-        </TouchableOpacity>
-      </Animated.View>
+      {/* ---- Bottom Action Bar ---- */}
+      <BottomActionBar
+        sleepActive={!!sleepSession}
+        onAction={handleBottomAction}
+      />
+
+      {/* ---- Toast ---- */}
+      {toastMessage !== '' && (
+        <Animated.View pointerEvents="none" style={[toastStyles.container, { opacity: toastOpacity }]}>
+          <Text style={toastStyles.text}>{toastMessage}</Text>
+        </Animated.View>
+      )}
 
       {/* ---- Modal ---- */}
       <AddRecordModal
         visible={modalVisible}
-        initialTab={activeTab}
+        initialTab={
+          modalSubType === 'breast' || modalSubType === 'formula' || modalSubType === 'baby_food' || modalSubType === 'snack'
+            ? 'feeding'
+            : modalSubType === 'pee' || modalSubType === 'poop' || modalSubType === 'both'
+              ? 'diaper'
+              : 'feeding'
+        }
+        initialSubType={modalSubType}
         onClose={() => setModalVisible(false)}
         onSave={handleAddRecord}
         availableTabs={ageTabs}
@@ -1903,6 +2051,471 @@ const styles = StyleSheet.create({
   fabText: {
     color: TRACKER_COLORS.white,
     fontSize: FONT_SIZE.md,
+    fontWeight: '700',
+  },
+});
+
+/* ---- Sleep Session Card ---- */
+
+interface SleepSessionCardProps {
+  session: SleepSession | null;
+  now: number;
+  onStart: () => void;
+  onWake: () => void;
+}
+
+function SleepSessionCard({ session, now, onStart, onWake }: SleepSessionCardProps) {
+  if (!session) {
+    return (
+      <TouchableOpacity style={sleepSessionStyles.cardIdle} onPress={onStart} activeOpacity={0.85}>
+        <Image source={IC_SLEEP} style={sleepSessionStyles.icon} resizeMode="contain" />
+        <View style={{ flex: 1 }}>
+          <Text style={sleepSessionStyles.idleTitle}>수면 시작</Text>
+          <Text style={sleepSessionStyles.idleSub}>탭 한 번으로 수면 시간 측정을 시작해요</Text>
+        </View>
+        <View style={sleepSessionStyles.actionPill}>
+          <Text style={sleepSessionStyles.actionPillText}>시작</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+  const start = new Date(session.startTime);
+  const diffMin = Math.max(0, Math.round((now - start.getTime()) / 60000));
+  const startLabel = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+  return (
+    <View style={sleepSessionStyles.cardActive}>
+      <View style={sleepSessionStyles.activeHeader}>
+        <Image source={IC_SLEEP} style={sleepSessionStyles.icon} resizeMode="contain" />
+        <Text style={sleepSessionStyles.activeTitle}>수면 중</Text>
+      </View>
+      <Text style={sleepSessionStyles.activeDuration}>{formatMinutes(diffMin)}</Text>
+      <Text style={sleepSessionStyles.activeStartedAt}>시작 {startLabel}</Text>
+      <TouchableOpacity style={sleepSessionStyles.wakeBtn} onPress={onWake} activeOpacity={0.85}>
+        <Text style={sleepSessionStyles.wakeBtnText}>기상</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const sleepSessionStyles = StyleSheet.create({
+  cardIdle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: TRACKER_COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+    gap: SPACING.md,
+    ...SHADOWS.soft,
+  },
+  cardActive: {
+    backgroundColor: TRACKER_COLORS.sleepLight,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+    ...SHADOWS.soft,
+  },
+  icon: { width: 32, height: 32, borderRadius: 8 },
+  idleTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: TRACKER_COLORS.text },
+  idleSub: { fontSize: FONT_SIZE.xs, color: TRACKER_COLORS.textSub, marginTop: 2 },
+  activeHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
+  activeTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: TRACKER_COLORS.sleepDark },
+  activeDuration: { fontSize: 32, fontWeight: '800', color: TRACKER_COLORS.text, marginBottom: 2 },
+  activeStartedAt: { fontSize: FONT_SIZE.xs, color: TRACKER_COLORS.textSub, marginBottom: SPACING.md },
+  wakeBtn: {
+    backgroundColor: TRACKER_COLORS.sleepDark,
+    borderRadius: RADIUS.full,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  wakeBtnText: { color: TRACKER_COLORS.white, fontSize: FONT_SIZE.md, fontWeight: '700' },
+  actionPill: {
+    backgroundColor: TRACKER_COLORS.sleepDark,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  actionPillText: { color: TRACKER_COLORS.white, fontSize: FONT_SIZE.sm, fontWeight: '700' },
+});
+
+/* ---- Tool Button (AI 도구 섹션) ---- */
+
+interface ToolButtonProps {
+  emoji: string;
+  label: string;
+  sub: string;
+  color: string;
+  onPress: () => void;
+  loading?: boolean;
+}
+
+function ToolButton({ emoji, label, sub, color, onPress, loading }: ToolButtonProps) {
+  return (
+    <TouchableOpacity
+      style={toolsStyles.item}
+      onPress={onPress}
+      activeOpacity={0.75}
+      disabled={loading}
+    >
+      <View style={[toolsStyles.circle, { backgroundColor: color + '1A', borderColor: color + '44' }]}>
+        {loading ? (
+          <ActivityIndicator size="small" color={color} />
+        ) : (
+          <Text style={toolsStyles.emoji}>{emoji}</Text>
+        )}
+      </View>
+      <Text style={toolsStyles.label} numberOfLines={1}>{label}</Text>
+      <Text style={toolsStyles.sub} numberOfLines={1}>{sub}</Text>
+    </TouchableOpacity>
+  );
+}
+
+const toolsStyles = StyleSheet.create({
+  section: {
+    marginBottom: SPACING.md,
+  },
+  sectionTitle: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    color: TRACKER_COLORS.textSub,
+    marginBottom: SPACING.sm,
+    marginLeft: 2,
+  },
+  row: {
+    gap: SPACING.md,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+  item: {
+    alignItems: 'center',
+    width: 76,
+  },
+  circle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  emoji: { fontSize: 26 },
+  label: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '700',
+    color: TRACKER_COLORS.text,
+    marginBottom: 1,
+  },
+  sub: {
+    fontSize: 10,
+    color: TRACKER_COLORS.textLight,
+  },
+});
+
+/* ---- Full Timeline ---- */
+
+interface TimelineEntryProps {
+  record: TrackerRecord;
+  dateStr: string;
+  showRelative: boolean;
+  onDelete: (id: string) => void;
+}
+
+function TimelineEntry({ record, dateStr, showRelative, onDelete }: TimelineEntryProps) {
+  const typeColor =
+    record.type === 'diaper'
+      ? TRACKER_COLORS.diaper
+      : record.type === 'feeding'
+        ? TRACKER_COLORS.feeding
+        : TRACKER_COLORS.sleep;
+  const typeDark =
+    record.type === 'diaper'
+      ? TRACKER_COLORS.diaperDark
+      : record.type === 'feeding'
+        ? TRACKER_COLORS.feedingDark
+        : TRACKER_COLORS.sleepDark;
+  const icon = SUBTYPE_ICONS[record.subType] ?? IC_POOP;
+  const label = SUBTYPE_LABELS[record.subType] ?? record.subType;
+  const relative = showRelative ? getRelativeTime(record.time, dateStr) : '';
+
+  return (
+    <TouchableOpacity
+      style={timelineStyles.row}
+      onLongPress={() => onDelete(record.id)}
+      delayLongPress={500}
+      activeOpacity={0.85}
+    >
+      {/* Left: time */}
+      <View style={timelineStyles.timeCol}>
+        <Text style={timelineStyles.timeText}>{record.time}</Text>
+        {relative !== '' && (
+          <Text style={timelineStyles.relativeText}>{relative}</Text>
+        )}
+      </View>
+
+      {/* Dot + line */}
+      <View style={timelineStyles.dotCol}>
+        <View style={[timelineStyles.dot, { backgroundColor: typeColor }]} />
+        <View style={timelineStyles.line} />
+      </View>
+
+      {/* Right: content */}
+      <View style={[timelineStyles.content, { borderLeftColor: typeColor }]}>
+        <View style={timelineStyles.contentHeader}>
+          <Image source={icon} style={timelineStyles.icon} resizeMode="contain" />
+          <Text style={[timelineStyles.label, { color: typeDark }]}>{label}</Text>
+          {record.amount != null && record.amount > 0 && (
+            <View style={[timelineStyles.chip, { backgroundColor: typeColor + '33' }]}>
+              <Text style={[timelineStyles.chipText, { color: typeDark }]}>{record.amount}ml</Text>
+            </View>
+          )}
+          {record.duration != null && record.duration > 0 && (
+            <View style={[timelineStyles.chip, { backgroundColor: typeColor + '33' }]}>
+              <Text style={[timelineStyles.chipText, { color: typeDark }]}>{formatMinutes(record.duration)}</Text>
+            </View>
+          )}
+        </View>
+        {record.note ? (
+          <Text style={timelineStyles.note}>{record.note}</Text>
+        ) : null}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const timelineStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    paddingVertical: 6,
+    alignItems: 'flex-start',
+  },
+  timeCol: {
+    width: 54,
+    alignItems: 'flex-end',
+    paddingRight: SPACING.sm,
+    paddingTop: 4,
+  },
+  timeText: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '700',
+    color: TRACKER_COLORS.text,
+  },
+  relativeText: {
+    fontSize: 10,
+    color: TRACKER_COLORS.textLight,
+    marginTop: 1,
+  },
+  dotCol: {
+    width: 20,
+    alignItems: 'center',
+  },
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 6,
+  },
+  line: {
+    width: 2,
+    flex: 1,
+    backgroundColor: TRACKER_COLORS.border,
+    marginTop: 2,
+    minHeight: 24,
+  },
+  content: {
+    flex: 1,
+    backgroundColor: TRACKER_COLORS.white,
+    borderRadius: RADIUS.md,
+    marginLeft: SPACING.sm,
+    padding: SPACING.sm,
+    marginBottom: 4,
+    borderLeftWidth: 3,
+    ...SHADOWS.soft,
+  },
+  contentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  icon: { width: 20, height: 20, borderRadius: 4 },
+  label: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    flex: 1,
+  },
+  chip: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: RADIUS.full,
+  },
+  chipText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  note: {
+    fontSize: FONT_SIZE.xs,
+    color: TRACKER_COLORS.textSub,
+    marginTop: 4,
+  },
+});
+
+/* ---- Bottom Action Bar ---- */
+
+type BottomAction =
+  | { kind: 'modal'; subType: string }
+  | { kind: 'quick'; type: RecordType; subType: string }
+  | { kind: 'sleepStart' }
+  | { kind: 'sleepWake' };
+
+interface BottomBarItem {
+  icon: number;
+  label: string;
+  action: BottomAction;
+  color: string;
+  sleepOnly?: boolean;
+}
+
+const BAR_ITEMS: BottomBarItem[] = [
+  { icon: IC_MASCOT_EAT, label: '모유', action: { kind: 'modal', subType: 'breast' }, color: TRACKER_COLORS.feedingDark },
+  { icon: IC_FEED, label: '분유', action: { kind: 'modal', subType: 'formula' }, color: TRACKER_COLORS.feedingDark },
+  { icon: IC_FEED, label: '이유식', action: { kind: 'quick', type: 'feeding', subType: 'baby_food' }, color: TRACKER_COLORS.feedingDark },
+  { icon: IC_FEED, label: '간식', action: { kind: 'quick', type: 'feeding', subType: 'snack' }, color: TRACKER_COLORS.feedingDark },
+  { icon: IC_SLEEP, label: '수면', action: { kind: 'sleepStart' }, color: TRACKER_COLORS.sleepDark },
+  { icon: IC_SUNNY, label: '기상', action: { kind: 'sleepWake' }, color: TRACKER_COLORS.sleepDark, sleepOnly: true },
+  { icon: IC_POOP, label: '소변', action: { kind: 'quick', type: 'diaper', subType: 'pee' }, color: TRACKER_COLORS.diaperDark },
+  { icon: IC_POOP, label: '대변', action: { kind: 'quick', type: 'diaper', subType: 'poop' }, color: TRACKER_COLORS.diaperDark },
+  { icon: IC_POOP, label: '소변+대변', action: { kind: 'quick', type: 'diaper', subType: 'both' }, color: TRACKER_COLORS.diaperDark },
+];
+
+interface BottomActionBarProps {
+  sleepActive: boolean;
+  onAction: (action: BottomAction) => void;
+}
+
+function BottomActionBar({ sleepActive, onAction }: BottomActionBarProps) {
+  const items = BAR_ITEMS.filter((item) => !item.sleepOnly || sleepActive);
+  return (
+    <View style={barStyles.wrapper}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={barStyles.container}
+      >
+        {items.map((item) => {
+          const isSleep = item.action.kind === 'sleepStart';
+          const isWake = item.action.kind === 'sleepWake';
+          const active = (isSleep && sleepActive) || (isWake);
+          return (
+            <TouchableOpacity
+              key={item.label}
+              style={[
+                barStyles.item,
+                active && { backgroundColor: item.color + '22' },
+              ]}
+              onPress={() => onAction(item.action)}
+              activeOpacity={0.7}
+            >
+              <View style={[barStyles.iconWrap, { backgroundColor: item.color + '1A' }]}>
+                <Image source={item.icon} style={barStyles.icon} resizeMode="contain" />
+              </View>
+              <Text style={[barStyles.itemLabel, active && { color: item.color }]}>
+                {isSleep && sleepActive ? '수면중' : item.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+const barStyles = StyleSheet.create({
+  wrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: TRACKER_COLORS.white,
+    borderTopWidth: 1,
+    borderTopColor: TRACKER_COLORS.border,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+    paddingTop: 8,
+    ...SHADOWS.elevated,
+  },
+  container: {
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.sm,
+    alignItems: 'center',
+  },
+  item: {
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: RADIUS.md,
+    minWidth: 58,
+  },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  icon: { width: 28, height: 28 },
+  itemLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: TRACKER_COLORS.textSub,
+    textAlign: 'center',
+  },
+});
+
+/* ---- Quick Links ---- */
+
+const quickLinkStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  btn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: TRACKER_COLORS.white,
+    borderRadius: RADIUS.full,
+    paddingVertical: 12,
+    ...SHADOWS.soft,
+  },
+  emoji: { fontSize: 18 },
+  label: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    color: TRACKER_COLORS.text,
+  },
+});
+
+/* ---- Toast ---- */
+
+const toastStyles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 110 : 100,
+    left: SPACING.lg,
+    right: SPACING.lg,
+    backgroundColor: 'rgba(28,28,30,0.92)',
+    borderRadius: RADIUS.full,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  text: {
+    color: TRACKER_COLORS.white,
+    fontSize: FONT_SIZE.sm,
     fontWeight: '700',
   },
 });

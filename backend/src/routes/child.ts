@@ -262,8 +262,9 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     const doc = await collections.children.doc(req.params.id as string).get();
     if (!doc.exists || doc.data()!.userId !== req.userId) { error(res, '자녀를 찾을 수 없습니다', 404); return; }
 
-    // cascade delete all related data
     const childId = req.params.id as string;
+
+    // cascade delete — 육아 + 임신 관련 모든 컬렉션
     const relatedQueries = await Promise.all([
       collections.observations.where('childId', '==', childId).get(),
       collections.subscriptions.where('childId', '==', childId).get(),
@@ -272,16 +273,30 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
       collections.conversationSummaries.where('childId', '==', childId).get(),
       collections.dailyTracking.where('childId', '==', childId).get(),
       collections.dailyTraits.where('childId', '==', childId).get(),
+      // 임신 관련 컬렉션
+      collections.pregnancyRecords.where('childId', '==', childId).get(),
+      collections.momHealthChecks.where('childId', '==', childId).get(),
+      collections.gdmRecords.where('childId', '==', childId).get(),
     ]);
-    const batch = collections.children.firestore.batch();
-    for (const snap of relatedQueries) {
-      snap.docs.forEach((d) => batch.delete(d.ref));
-    }
-    batch.delete(doc.ref);
-    await batch.commit();
 
-    success(res, { id: req.params.id, message: '삭제되었습니다' });
-  } catch { error(res, '자녀 삭제 중 오류가 발생했습니다', 500); }
+    // Firestore batch 최대 500개 → 청크 분할 삭제
+    const db = collections.children.firestore;
+    const allRefs = [doc.ref];
+    for (const snap of relatedQueries) {
+      for (const d of snap.docs) allRefs.push(d.ref);
+    }
+    const BATCH_LIMIT = 450;
+    for (let i = 0; i < allRefs.length; i += BATCH_LIMIT) {
+      const batch = db.batch();
+      allRefs.slice(i, i + BATCH_LIMIT).forEach((ref) => batch.delete(ref));
+      await batch.commit();
+    }
+
+    success(res, { id: childId, message: '삭제되었습니다' });
+  } catch (err) {
+    console.error('[Child] Delete error:', err);
+    error(res, '자녀 삭제 중 오류가 발생했습니다', 500);
+  }
 });
 
 router.post('/:id/analyze', authMiddleware, async (req: Request, res: Response) => {
@@ -322,11 +337,11 @@ router.post('/:id/daily-tracking', authMiddleware, async (req: Request, res: Res
   try {
     const access = await getChildIfAccessible(req.params.id as string, req.userId, 'editRecords', res);
     if (!access) return;
-    const { date, feeding, diaper, sleep } = req.body;
+    const { date, feeding, diaper, sleep, sleepStart, sleepEnd, sleepHours } = req.body;
     if (!date) { error(res, '날짜가 필요합니다'); return; }
 
     const docId = `${req.params.id}_${date}`;
-    const trackingData = {
+    const trackingData: Record<string, unknown> = {
       childId: req.params.id,
       userId: req.userId!,
       date,
@@ -335,6 +350,9 @@ router.post('/:id/daily-tracking', authMiddleware, async (req: Request, res: Res
       sleep: sleep || { naps: 0, totalHours: 0 },
       updatedAt: new Date().toISOString(),
     };
+    if (typeof sleepStart === 'string') trackingData.sleepStart = sleepStart;
+    if (typeof sleepEnd === 'string') trackingData.sleepEnd = sleepEnd;
+    if (typeof sleepHours === 'number') trackingData.sleepHours = sleepHours;
     await collections.dailyTracking.doc(docId).set(trackingData, { merge: true });
     success(res, { id: docId, ...trackingData });
   } catch { error(res, '기록 저장 중 오류가 발생했습니다', 500); }
