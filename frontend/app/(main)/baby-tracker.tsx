@@ -24,6 +24,9 @@ const IC_SUNNY = require('../../assets/weather-sunny.png') as number;
 const IC_NIGHT = require('../../assets/weather-night.png') as number;
 const IC_EMPTY = require('../../assets/empty-diary.png') as number;
 const IC_MASCOT_EAT = require('../../assets/mascot-eating.png') as number;
+const IC_MIC = require('../../assets/icon-mic.png') as number;
+const IC_ANALYZING = require('../../assets/analyzing.png') as number;
+const IC_BADGE_AI = require('../../assets/badge-ai.png') as number;
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
@@ -250,9 +253,21 @@ function getSleepSessionKey(childId: string): string {
   return `baby_tracker_sleep_session_${childId}`;
 }
 
+function getBreastSessionKey(childId: string): string {
+  return `baby_tracker_breast_session_${childId}`;
+}
+
 interface SleepSession {
   startTime: string; // ISO
   startDate: string; // YYYY-MM-DD (local)
+}
+
+type BreastSide = 'left' | 'right';
+
+interface BreastSession {
+  side: BreastSide;
+  startTime: string; // ISO
+  startDate: string; // YYYY-MM-DD
 }
 
 async function loadSleepSession(childId: string): Promise<SleepSession | null> {
@@ -283,6 +298,38 @@ async function saveSleepSession(childId: string, session: SleepSession | null): 
     await storage.setItem(getSleepSessionKey(childId), JSON.stringify(session));
   } else {
     await storage.setItem(getSleepSessionKey(childId), '');
+  }
+}
+
+async function loadBreastSession(childId: string): Promise<BreastSession | null> {
+  const storage = await getStorage();
+  if (!storage) return null;
+  const raw = await storage.getItem(getBreastSessionKey(childId));
+  if (!raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      'side' in parsed &&
+      'startTime' in parsed &&
+      'startDate' in parsed
+    ) {
+      return parsed as BreastSession;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function saveBreastSession(childId: string, session: BreastSession | null): Promise<void> {
+  const storage = await getStorage();
+  if (!storage) return;
+  if (session) {
+    await storage.setItem(getBreastSessionKey(childId), JSON.stringify(session));
+  } else {
+    await storage.setItem(getBreastSessionKey(childId), '');
   }
 }
 
@@ -1285,8 +1332,12 @@ function BabyTrackerInner() {
   const [analysisError, setAnalysisError] = useState('');
   const [sleepSession, setSleepSession] = useState<SleepSession | null>(null);
   const [sleepNow, setSleepNow] = useState(Date.now());
+  const [breastSession, setBreastSession] = useState<BreastSession | null>(null);
+  const [breastNow, setBreastNow] = useState(Date.now());
+  const [breastSidePickerVisible, setBreastSidePickerVisible] = useState(false);
+  const [analyzerPickerVisible, setAnalyzerPickerVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [modalSubType, setModalSubType] = useState<string>('breast');
+  const [modalSubType, setModalSubType] = useState<string>('formula');
   const toastOpacity = useRef(new Animated.Value(0)).current;
 
   const dateStr = useMemo(() => formatDate(currentDate), [currentDate]);
@@ -1377,6 +1428,70 @@ function BabyTrackerInner() {
     const id = setInterval(() => setSleepNow(Date.now()), 60000);
     return () => clearInterval(id);
   }, [sleepSession]);
+
+  /* ---- Breast session load & tick (every 1s for live timer) ---- */
+  useEffect(() => {
+    loadBreastSession(childId).then((s) => setBreastSession(s));
+  }, [childId]);
+
+  useEffect(() => {
+    if (!breastSession) return;
+    const id = setInterval(() => setBreastNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [breastSession]);
+
+  async function handleBreastStart(side: BreastSide) {
+    const now = new Date();
+    const session: BreastSession = {
+      side,
+      startTime: now.toISOString(),
+      startDate: formatDate(now),
+    };
+    await saveBreastSession(childId, session);
+    setBreastSession(session);
+    setBreastSidePickerVisible(false);
+    showToast(`${side === 'left' ? '왼쪽' : '오른쪽'} 수유 시작`);
+  }
+
+  async function handleBreastStop() {
+    if (!breastSession) return;
+    const start = new Date(breastSession.startTime);
+    const end = new Date();
+    let diff = Math.round((end.getTime() - start.getTime()) / 60000);
+    if (diff < 1) diff = 1;
+
+    const startHHMM = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+    const endHHMM = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+
+    const record: TrackerRecord = {
+      id: generateId(),
+      type: 'feeding',
+      subType: 'breast',
+      time: startHHMM,
+      endTime: endHHMM,
+      duration: diff,
+      note: breastSession.side === 'left' ? '왼쪽' : '오른쪽',
+    };
+    const existing = await loadRecords(childId, breastSession.startDate);
+    const updated = [...existing, record];
+    await saveRecords(childId, breastSession.startDate, updated);
+    if (breastSession.startDate === dateStr) {
+      setRecords(updated);
+    } else {
+      await loadData();
+    }
+    await saveBreastSession(childId, null);
+    setBreastSession(null);
+    showToast(`모유 ${formatMinutes(diff)} 기록됨`);
+  }
+
+  function handleBreastPress() {
+    if (breastSession) {
+      handleBreastStop();
+    } else {
+      setBreastSidePickerVisible(true);
+    }
+  }
 
   async function handleSleepStart() {
     const now = new Date();
@@ -1509,6 +1624,16 @@ function BabyTrackerInner() {
     }
   }
 
+  /* ---- Breast elapsed display ---- */
+  const breastElapsed = useMemo(() => {
+    if (!breastSession) return '';
+    const startMs = new Date(breastSession.startTime).getTime();
+    const sec = Math.max(0, Math.floor((breastNow - startMs) / 1000));
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }, [breastSession, breastNow]);
+
   /* ---- Sleep display helper ---- */
   const sleepDisplay = useMemo(() => {
     const hours = Math.floor(summary.totalSleepMinutes / 60);
@@ -1625,6 +1750,40 @@ function BabyTrackerInner() {
           />
         )}
 
+        {/* ---- Breast-feeding dedicated button ---- */}
+        <TouchableOpacity
+          style={[
+            breastStyles.card,
+            breastSession && breastStyles.cardActive,
+          ]}
+          onPress={handleBreastPress}
+          activeOpacity={0.85}
+        >
+          <View style={breastStyles.iconWrap}>
+            <Image source={IC_MASCOT_EAT} style={breastStyles.icon} resizeMode="contain" />
+          </View>
+          <View style={breastStyles.textCol}>
+            <Text style={breastStyles.title}>모유 수유</Text>
+            {breastSession ? (
+              <Text style={breastStyles.sub}>
+                {breastSession.side === 'left' ? '왼쪽' : '오른쪽'} · 진행 중
+              </Text>
+            ) : (
+              <Text style={breastStyles.sub}>눌러서 시작 (왼쪽/오른쪽 선택)</Text>
+            )}
+          </View>
+          <View style={breastStyles.rightCol}>
+            {breastSession ? (
+              <>
+                <Text style={breastStyles.timer}>{breastElapsed}</Text>
+                <Text style={breastStyles.stopHint}>탭하여 중지</Text>
+              </>
+            ) : (
+              <Text style={breastStyles.startIcon}>{'\u25B6'}</Text>
+            )}
+          </View>
+        </TouchableOpacity>
+
         {/* ---- AI 도구 섹션 ---- */}
         <View style={toolsStyles.section}>
           <Text style={toolsStyles.sectionTitle}>AI 도구</Text>
@@ -1634,39 +1793,25 @@ function BabyTrackerInner() {
             contentContainerStyle={toolsStyles.row}
           >
             <ToolButton
-              emoji="🎤"
+              icon={IC_MIC}
               label="음성 설정"
               sub="시리·빅스비"
               onPress={() => router.push('/(main)/voice-settings')}
               color="#FF8C5A"
             />
             <ToolButton
-              emoji="😴"
-              label="수면 예측"
-              sub="AI 예측"
-              onPress={() => router.push('/(main)/sleep-predict')}
-              color={TRACKER_COLORS.sleepDark}
-            />
-            <ToolButton
-              emoji="📊"
+              icon={IC_ANALYZING}
               label="패턴 분석"
-              sub={analysisLoading ? '분석중…' : '배변·수유·수면'}
+              sub={analysisLoading ? '분석중…' : '수면·배변·수유'}
               onPress={handlePatternAnalysis}
               color={TRACKER_COLORS.accent}
               loading={analysisLoading}
             />
             <ToolButton
-              emoji="💩"
-              label="대변 분석"
-              sub="사진"
-              onPress={() => router.push('/(main)/poop-analyzer')}
-              color={TRACKER_COLORS.diaperDark}
-            />
-            <ToolButton
-              emoji="🔊"
-              label="울음 분석"
-              sub="음성"
-              onPress={() => router.push('/(main)/cry-analyzer')}
+              icon={IC_BADGE_AI}
+              label="아기 분석"
+              sub="사진·소리"
+              onPress={() => setAnalyzerPickerVisible(true)}
               color="#D88FB8"
             />
           </ScrollView>
@@ -1854,6 +1999,100 @@ function BabyTrackerInner() {
           icon: f.key === 'breast' ? IC_MASCOT_EAT : IC_FEED,
         }))}
       />
+
+      {/* ---- Breast Side Picker ---- */}
+      <Modal
+        visible={breastSidePickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBreastSidePickerVisible(false)}
+      >
+        <TouchableOpacity
+          style={pickerStyles.backdrop}
+          activeOpacity={1}
+          onPress={() => setBreastSidePickerVisible(false)}
+        >
+          <TouchableOpacity activeOpacity={1} style={pickerStyles.sheet}>
+            <Text style={pickerStyles.title}>모유 수유 · 어느 쪽부터?</Text>
+            <Text style={pickerStyles.subtitle}>선택 후 타이머가 시작됩니다. 다시 누르면 중지돼요.</Text>
+            <View style={pickerStyles.row}>
+              <TouchableOpacity
+                style={[pickerStyles.sideBtn, { backgroundColor: TRACKER_COLORS.feedingLight }]}
+                onPress={() => handleBreastStart('left')}
+                activeOpacity={0.8}
+              >
+                <Text style={[pickerStyles.sideEmoji, { color: TRACKER_COLORS.feedingDark }]}>{'\u25C0'}</Text>
+                <Text style={pickerStyles.sideLabel}>왼쪽</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[pickerStyles.sideBtn, { backgroundColor: TRACKER_COLORS.feedingLight }]}
+                onPress={() => handleBreastStart('right')}
+                activeOpacity={0.8}
+              >
+                <Text style={[pickerStyles.sideEmoji, { color: TRACKER_COLORS.feedingDark }]}>{'\u25B6'}</Text>
+                <Text style={pickerStyles.sideLabel}>오른쪽</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={pickerStyles.cancelBtn}
+              onPress={() => setBreastSidePickerVisible(false)}
+            >
+              <Text style={pickerStyles.cancelText}>취소</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ---- Analyzer Picker (대변/울음) ---- */}
+      <Modal
+        visible={analyzerPickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAnalyzerPickerVisible(false)}
+      >
+        <TouchableOpacity
+          style={pickerStyles.backdrop}
+          activeOpacity={1}
+          onPress={() => setAnalyzerPickerVisible(false)}
+        >
+          <TouchableOpacity activeOpacity={1} style={pickerStyles.sheet}>
+            <Text style={pickerStyles.title}>아기 분석</Text>
+            <Text style={pickerStyles.subtitle}>무엇을 분석할까요?</Text>
+            <View style={pickerStyles.row}>
+              <TouchableOpacity
+                style={[pickerStyles.sideBtn, { backgroundColor: TRACKER_COLORS.diaperLight }]}
+                onPress={() => {
+                  setAnalyzerPickerVisible(false);
+                  router.push('/(main)/poop-analyzer');
+                }}
+                activeOpacity={0.8}
+              >
+                <Image source={IC_POOP} style={pickerStyles.sideIcon} resizeMode="contain" />
+                <Text style={pickerStyles.sideLabel}>대변 분석</Text>
+                <Text style={pickerStyles.sideSub}>사진 업로드</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[pickerStyles.sideBtn, { backgroundColor: '#F7E8F0' }]}
+                onPress={() => {
+                  setAnalyzerPickerVisible(false);
+                  router.push('/(main)/cry-analyzer');
+                }}
+                activeOpacity={0.8}
+              >
+                <Image source={IC_MIC} style={pickerStyles.sideIcon} resizeMode="contain" />
+                <Text style={pickerStyles.sideLabel}>울음 분석</Text>
+                <Text style={pickerStyles.sideSub}>소리 업로드</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={pickerStyles.cancelBtn}
+              onPress={() => setAnalyzerPickerVisible(false)}
+            >
+              <Text style={pickerStyles.cancelText}>취소</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -2141,7 +2380,7 @@ const sleepSessionStyles = StyleSheet.create({
 /* ---- Tool Button (AI 도구 섹션) ---- */
 
 interface ToolButtonProps {
-  emoji: string;
+  icon: number;
   label: string;
   sub: string;
   color: string;
@@ -2149,7 +2388,7 @@ interface ToolButtonProps {
   loading?: boolean;
 }
 
-function ToolButton({ emoji, label, sub, color, onPress, loading }: ToolButtonProps) {
+function ToolButton({ icon, label, sub, color, onPress, loading }: ToolButtonProps) {
   return (
     <TouchableOpacity
       style={toolsStyles.item}
@@ -2161,7 +2400,7 @@ function ToolButton({ emoji, label, sub, color, onPress, loading }: ToolButtonPr
         {loading ? (
           <ActivityIndicator size="small" color={color} />
         ) : (
-          <Text style={toolsStyles.emoji}>{emoji}</Text>
+          <Image source={icon} style={toolsStyles.iconImg} resizeMode="contain" />
         )}
       </View>
       <Text style={toolsStyles.label} numberOfLines={1}>{label}</Text>
@@ -2199,7 +2438,7 @@ const toolsStyles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 6,
   },
-  emoji: { fontSize: 26 },
+  iconImg: { width: 30, height: 30 },
   label: {
     fontSize: FONT_SIZE.xs,
     fontWeight: '700',
@@ -2377,15 +2616,12 @@ interface BottomBarItem {
 }
 
 const BAR_ITEMS: BottomBarItem[] = [
-  { icon: IC_MASCOT_EAT, label: '모유', action: { kind: 'modal', subType: 'breast' }, color: TRACKER_COLORS.feedingDark },
   { icon: IC_FEED, label: '분유', action: { kind: 'modal', subType: 'formula' }, color: TRACKER_COLORS.feedingDark },
   { icon: IC_FEED, label: '이유식', action: { kind: 'quick', type: 'feeding', subType: 'baby_food' }, color: TRACKER_COLORS.feedingDark },
-  { icon: IC_FEED, label: '간식', action: { kind: 'quick', type: 'feeding', subType: 'snack' }, color: TRACKER_COLORS.feedingDark },
   { icon: IC_SLEEP, label: '수면', action: { kind: 'sleepStart' }, color: TRACKER_COLORS.sleepDark },
   { icon: IC_SUNNY, label: '기상', action: { kind: 'sleepWake' }, color: TRACKER_COLORS.sleepDark, sleepOnly: true },
   { icon: IC_POOP, label: '소변', action: { kind: 'quick', type: 'diaper', subType: 'pee' }, color: TRACKER_COLORS.diaperDark },
   { icon: IC_POOP, label: '대변', action: { kind: 'quick', type: 'diaper', subType: 'poop' }, color: TRACKER_COLORS.diaperDark },
-  { icon: IC_POOP, label: '소변+대변', action: { kind: 'quick', type: 'diaper', subType: 'both' }, color: TRACKER_COLORS.diaperDark },
 ];
 
 interface BottomActionBarProps {
@@ -2682,3 +2918,128 @@ const analysisStyles = StyleSheet.create({
     lineHeight: 22,
   },
 });
+
+/* ---- Breast-feeding card styles ---- */
+const breastStyles = StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: TRACKER_COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    borderWidth: 1.5,
+    borderColor: TRACKER_COLORS.border,
+    ...SHADOWS.soft,
+  },
+  cardActive: {
+    backgroundColor: TRACKER_COLORS.feedingLight,
+    borderColor: TRACKER_COLORS.feedingDark,
+  },
+  iconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: TRACKER_COLORS.feedingLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md,
+  },
+  icon: { width: 36, height: 36 },
+  textCol: { flex: 1 },
+  title: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: '700',
+    color: TRACKER_COLORS.text,
+    marginBottom: 2,
+  },
+  sub: {
+    fontSize: FONT_SIZE.xs,
+    color: TRACKER_COLORS.textSub,
+  },
+  rightCol: { alignItems: 'flex-end', minWidth: 72 },
+  timer: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: '800',
+    color: TRACKER_COLORS.feedingDark,
+    fontVariant: ['tabular-nums'],
+  },
+  stopHint: {
+    fontSize: 10,
+    color: TRACKER_COLORS.textLight,
+    marginTop: 2,
+  },
+  startIcon: {
+    fontSize: 22,
+    color: TRACKER_COLORS.feedingDark,
+  },
+});
+
+/* ---- Picker modal (breast side / analyzer) ---- */
+const pickerStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.lg,
+  },
+  sheet: {
+    backgroundColor: TRACKER_COLORS.white,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+  },
+  title: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: '700',
+    color: TRACKER_COLORS.text,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: FONT_SIZE.xs,
+    color: TRACKER_COLORS.textSub,
+    textAlign: 'center',
+    marginBottom: SPACING.md,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  sideBtn: {
+    flex: 1,
+    borderRadius: RADIUS.md,
+    paddingVertical: SPACING.lg,
+    alignItems: 'center',
+  },
+  sideEmoji: {
+    fontSize: 28,
+    marginBottom: 4,
+    fontWeight: '700',
+  },
+  sideIcon: {
+    width: 36,
+    height: 36,
+    marginBottom: 6,
+  },
+  sideLabel: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    color: TRACKER_COLORS.text,
+  },
+  sideSub: {
+    fontSize: 10,
+    color: TRACKER_COLORS.textSub,
+    marginTop: 2,
+  },
+  cancelBtn: {
+    paddingVertical: SPACING.sm,
+    alignItems: 'center',
+  },
+  cancelText: {
+    fontSize: FONT_SIZE.sm,
+    color: TRACKER_COLORS.textSub,
+    fontWeight: '600',
+  },
+});
+
