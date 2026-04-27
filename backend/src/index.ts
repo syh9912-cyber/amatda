@@ -86,12 +86,20 @@ app.get('/api/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok', service: 'api', version: '1.0.0', timestamp: new Date().toISOString() } });
 });
 
-/* ─── 로컬 개발용 통합 라우터: api + coaching 같은 포트에서 처리 ─── */
+/* ─── /api/coaching 안전망 마운트 ───
+ *
+ * 정석은 coachingApi 함수가 /api/coaching/* 를 처리하는 것 (메모리 1GB).
+ * 그러나 이전 빌드/번들이 EXPO_PUBLIC_COACHING_API_URL 누락으로
+ * 메인 api URL을 호출할 수 있음 (fallback to API_URL).
+ *
+ * 그 케이스에서도 코칭이 끊기지 않도록 메인 api에도 /api/coaching 마운트.
+ * EAS Cloud env 정비 + 신규 빌드 배포 후에는 트래픽이 자연스럽게
+ * coachingApi 함수로 옮겨감 (메모리 분리 효과 회복).
+ */
+app.use('/api/coaching', coachingRoutes);
+
+/* ─── 로컬 개발용 (devApp 통합 — 위에서 이미 마운트됨) ─── */
 const isFirebase = process.env.FUNCTIONS_EMULATOR || process.env.GCLOUD_PROJECT || process.env.K_SERVICE;
-if (!isFirebase) {
-  // 로컬에서는 단일 포트 — 코칭 라우트도 같이 마운트 (devApp 통합)
-  app.use('/api/coaching', coachingRoutes);
-}
 
 /* ─── 코칭 전용 Express ─── */
 const coachingApp = express();
