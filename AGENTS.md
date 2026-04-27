@@ -1,23 +1,11 @@
-# CLAUDE.md — 아맞다(A-matda) 핵심 규칙
+# AGENTS.md — 아맞다(A-matda) 핵심 규칙
 
----
-
-## 🚨🚨🚨 코드 동결 진행 중 (2026-04-27 ~ 출시) 🚨🚨🚨
-
-> **출시 목표일: 2026-05-15**
-> 작업 시작 전 반드시 `FREEZE.md` 를 먼저 읽어라.
-> **신기능 / 리팩토링 / 디자인 변경 금지.**
-> P0(출시 차단 버그)만 수정. 회색지대는 사용자 명시 승인 필수.
-> 위반 시 거부하고 사용자에게 보고.
-
----
-
-> 이 파일은 Claude가 **매번 읽는 최소 규칙만** 담는다.
+> 이 파일은 Codex가 **매번 읽는 최소 규칙만** 담는다.
 > 상세 구현, 배포, 에셋, 보이스, 환경설정은 분리 문서를 참조한다.
 >
 > 참조 문서:
 > - `PROJECT-STATUS.md`
-> - `claude-progress.md`
+> - `Codex-progress.md`
 > - `DEPLOY.md`
 > - `ASSET-LIST.md`
 > - `VOICE-LIST.md`
@@ -34,7 +22,7 @@ AI 기반 영유아~초등 육아 코칭 앱
 ---
 
 ## 작업 시작 필수 루틴
-- `PROJECT-STATUS.md` + `claude-progress.md` 먼저 읽기
+- `PROJECT-STATUS.md` + `Codex-progress.md` 먼저 읽기
 - 완료된 작업 중복 구현 금지 (반드시 확인 후 시작)
 - 수정할 파일 목록 먼저 알려주고 시작
 - 추측으로 코드 작성 금지 → 반드시 관련 파일 읽은 후 작업
@@ -63,11 +51,11 @@ AI 기반 영유아~초등 육아 코칭 앱
 
 ---
 
-## 🤖 Claude Code 자동 실행 프로토콜 (Harness Loop)
+## 🤖 Codex 자동 실행 프로토콜 (Harness Loop)
 > 앞으로 코드를 수정하거나 에러를 잡을 때는 무조건 아래 파이프라인을 반복한다.
 
 1. **[분석 및 보고]**
-   - 코드 수정 전 `CLAUDE.md`의 규칙과 `claude-progress.md`의 기존 구현 현황을 대조
+   - 코드 수정 전 `AGENTS.md`의 규칙과 `Codex-progress.md`의 기존 구현 현황을 대조
    - 수정 계획, 수정 파일 목록, 예상 영향 범위를 먼저 간단히 브리핑
 
 2. **[실행]**
@@ -95,7 +83,7 @@ AI 기반 영유아~초등 육아 코칭 앱
    - 위 검증에서 에러가 발생하면, 5회까지는 사람에게 묻지 말고 규칙에 맞게 자동 수정 후 재검증
 
 5. **[완료 기록]**
-   - 작업 완료 후 `claude-progress.md`에 아래를 기록
+   - 작업 완료 후 `Codex-progress.md`에 아래를 기록
      - 수정 파일
      - 작업 목적
      - 원인
@@ -264,7 +252,7 @@ Types → Config → Repository → Service → AI Layer → API Routes → UI
 - [ ] OTA 관련 설정이 프로젝트 규칙과 맞는지 확인
 
 ### 3단계: 완료 기록
-- [ ] `claude-progress.md` 업데이트
+- [ ] `Codex-progress.md` 업데이트
 - [ ] 완료 보고 전에 위 항목 전체 통과 확인
 
 ---
@@ -338,7 +326,7 @@ cd frontend && npx eas build -p android --profile preview
 
 ## 상세 정보 (필요할 때만 읽기)
 - `PROJECT-STATUS.md` → 전체 API 목록, 파일 구조, 기능 현황
-- `claude-progress.md` → 현재 진행 상태, 완료/미완료 작업
+- `Codex-progress.md` → 현재 진행 상태, 완료/미완료 작업
 - `DEPLOY.md` → 빌드/배포/OTA/버전 정책
 - `LOCAL-CONFIG.md` → 테스트 계정, API 키, 카카오 키 등 민감정보 (git 제외)
 - `ASSET-LIST.md` → 에셋 이미지 목록
