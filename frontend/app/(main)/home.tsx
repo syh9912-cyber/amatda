@@ -566,6 +566,9 @@ export default function HomeScreen() {
           {/* === AI 분석 카드 (육아패턴 · 대변 · 울음) === */}
           <AIAnalysisCard />
 
+          {/* === 기질 분석 (요약 + 전체보기/다시분석) === */}
+          <TraitAnalysisCard child={child} />
+
           {/* === Quick Actions (8 icons, 2 rows) === */}
           <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} child={child} />
 
@@ -803,6 +806,124 @@ function Header({
 }
 
 /* TodayCard 제거됨 — 홈화면에서 미사용 */
+
+function TraitAnalysisCard({ child }: { child: Child }) {
+  const temperament = child.innateData?.label ?? '';
+  if (!temperament) return null;
+
+  // 짧은 기질명만 추출 (예: '활동형 (외향적, 호기심 많은)' → '활동형')
+  const typeMatch = temperament.match(/(탐구형|활동형|조화형|분석형|감성형)/);
+  const typeName = typeMatch ? typeMatch[1] : temperament;
+
+  // 한 줄 요약 (analysisReport.personality에서 1~2개 발췌)
+  const personalityList = child.analysisReport?.personality;
+  const summary = Array.isArray(personalityList) && personalityList.length > 0
+    ? personalityList.slice(0, 2).join(' · ')
+    : '온보딩 응답 + 사주 분석 종합 결과';
+
+  return (
+    <View style={traitCardStyles.card}>
+      <View style={traitCardStyles.headerRow}>
+        <Text style={traitCardStyles.title}>{child.name}{'의 기질'}</Text>
+        <View style={traitCardStyles.typeBadge}>
+          <Text style={traitCardStyles.typeBadgeText}>{typeName}</Text>
+        </View>
+      </View>
+      <Text style={traitCardStyles.summary} numberOfLines={2}>
+        {summary}
+      </Text>
+      <View style={traitCardStyles.btnRow}>
+        <TouchableOpacity
+          style={traitCardStyles.btnPrimary}
+          activeOpacity={0.7}
+          onPress={() => router.push('/(main)/trait-detail')}
+        >
+          <Text style={traitCardStyles.btnPrimaryText}>전체 분석 보기</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={traitCardStyles.btnSecondary}
+          activeOpacity={0.7}
+          onPress={() =>
+            router.push({
+              pathname: '/onboarding/questions',
+              params: { childId: child.id },
+            })
+          }
+        >
+          <Text style={traitCardStyles.btnSecondaryText}>다시 분석</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const traitCardStyles = StyleSheet.create({
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLOR.text,
+  },
+  typeBadge: {
+    backgroundColor: '#FFF0E6',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  typeBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FF8C5A',
+  },
+  summary: {
+    fontSize: 12.5,
+    color: COLOR.textSub,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  btnPrimary: {
+    flex: 1,
+    backgroundColor: '#FF8C5A',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  btnPrimaryText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  btnSecondary: {
+    flex: 1,
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  btnSecondaryText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLOR.text,
+  },
+});
 
 function MonthlyCharCard({ child }: { child: Child }) {
   const ageMonths = child.birthDate

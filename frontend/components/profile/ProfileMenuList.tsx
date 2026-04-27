@@ -92,10 +92,10 @@ const PARENTING_ITEMS: MenuItem[] = [
     route: '/(main)/child-card',
   },
   {
-    icon: require('../../assets/quick-report.png'),
-    label: '개월별 발달 특징',
-    description: '우리 아이 월령별 성장 포인트',
-    route: '/(main)/monthly-characteristic',
+    icon: require('../../assets/badge-ai.png'),
+    label: '기질 분석',
+    description: '우리 아이 기질 결과 다시 보기 / 재분석',
+    route: '/(main)/trait-detail',
   },
   {
     icon: require('../../assets/play-activity.png'),
