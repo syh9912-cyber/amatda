@@ -1,10 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { FieldValue } from 'firebase-admin/firestore';
 import { authMiddleware } from '../../middleware/auth';
 import { success, error } from '../../utils/response';
 import { buildChildContext } from '../../services/coaching/context.builder';
 import { isGeminiAvailable, callGeminiJSON } from '../../services/coaching/gemini.client';
-import { collections, genId } from '../../services/firestore';
 
 // ─── 연령/기질별 대표 고민 ───
 
@@ -121,41 +119,13 @@ export function registerFirstTalkHandler(router: Router): void {
         greeting = getDefaultGreeting(child.name, child.ageInfo, child.temperament, concern);
       }
 
-      // ─── AI 첫 질문을 conversationSummaries에 AI 첫 턴으로 저장 ───
-      // 목적: 사용자가 "네/아니요" 같은 짧은 답변을 보낼 때
-      // ask handler의 getConversationContext가 이 첫 질문을 history로 로드
-      // → AI가 맥락 파악해 정확한 후속 답변 생성 가능
+      // NOTE: 첫 질문을 conversationSummaries에 저장하던 로직은 제거.
+      // 이유: FirstTalkCard.tsx가 이미 사용자 답변 앞에 '[코치 질문: ...]' 접두사를
+      //       넣어 AI에 맥락을 전달함. history에도 같은 질문을 저장하면 AI가
+      //       동일 질문을 중복으로 보고 혼란 → 무관한 주제로 hallucination
+      //       (예: '떼' 또는 '음식 변화')하는 회귀가 발생.
       //
-      // NOTE: ask handler는 conversationSummaries.recentTurns를 읽음.
-      //       updateConversationSummary는 parent+coach 쌍을 요구하므로
-      //       첫 질문(coach 단독)은 직접 문서에 set한다.
-      try {
-        const docId = `${req.userId}_${childId}`;
-        const now = new Date().toISOString();
-        const summaryDoc = await collections.conversationSummaries.doc(docId).get();
-
-        // 이미 존재하면(재진입) 건드리지 않음 — 기존 대화 보존
-        if (!summaryDoc.exists) {
-          await collections.conversationSummaries.doc(docId).set({
-            userId: req.userId,
-            childId,
-            summary: '',
-            recentTurns: [
-              {
-                role: 'coach',
-                text: greeting.suggestedQuestion,
-                timestamp: now,
-              },
-            ],
-            totalTurnCount: 1,
-            lastSummarizedAt: now,
-            updatedAt: now,
-          });
-        }
-      } catch (saveErr) {
-        // 저장 실패해도 사용자 응답은 정상 반환 (best-effort)
-        console.error('[first-talk] failed to persist greeting to history:', saveErr);
-      }
+      // 결과: 원래 흐름(접두사로 컨텍스트 전달, history 비어있음)이 가장 안정적.
 
       success(res, {
         childId,
