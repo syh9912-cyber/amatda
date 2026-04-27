@@ -1,18 +1,21 @@
-rules_version='2'
+rules_version = '2';
+
+// 아맞다(A-matda) Firestore 보안 규칙
+//
+// 아키텍처:
+//   [모바일 앱] → HTTPS → [백엔드 Cloud Run] → Firebase Admin SDK → [Firestore]
+//   - 프론트엔드는 Firestore에 직접 접근하지 않음 (전수 grep 0건 확인)
+//   - 모든 데이터 접근은 백엔드 라우트의 req.userId 검증을 통과해야 함
+//   - 백엔드는 Admin SDK 사용 → 본 규칙의 영향을 받지 않음
+//
+// 따라서 클라이언트 직접 접근은 전면 차단하는 것이 가장 안전.
+// 추후 클라이언트가 Firestore를 직접 사용해야 할 경우(예: 실시간 onSnapshot),
+// 그때 컬렉션별 세부 규칙을 별도 PR로 추가.
 
 service cloud.firestore {
   match /databases/{database}/documents {
     match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2026, 5, 5);
+      allow read, write: if false;
     }
   }
 }
