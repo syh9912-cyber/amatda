@@ -33,8 +33,23 @@ import albumRoutes from './routes/album';
 import trackerRoutes from './routes/tracker';
 import momGroupRoutes from './routes/mom-group';
 
-const app = express();
+/* ------------------------------------------------------------------ */
+/* 🚀 함수 분리 아키텍처 (claude-progress.md 2026-04-16 의도)          */
+/*                                                                    */
+/*   api 함수         (512MiB / concurrency 20)                        */
+/*     - 비코칭 라우트 (인증, 자녀, 앨범, 트래커 등 전부)               */
+/*     - DB CRUD 위주, 가벼운 처리                                     */
+/*                                                                    */
+/*   coachingApi 함수 (1GiB  / concurrency 5)                          */
+/*     - /api/coaching/* 만 처리 (AI 코칭 전용)                        */
+/*     - Gemini 호출 + RAG 검색 → 메모리/CPU 사용 큼                    */
+/*     - 동시처리 5로 제한해 OOM 방지                                  */
+/*                                                                    */
+/*   효과: 코칭 부하가 다른 API(로그인/앨범 등)에 영향 주지 않음.       */
+/* ------------------------------------------------------------------ */
 
+/* ─── 비코칭 라우트용 메인 Express ─── */
+const app = express();
 app.use(express.json({ limit: '10mb' }));
 setupSecurity(app);
 
@@ -52,7 +67,6 @@ app.use('/api/mates', mateRoutes);
 app.use('/api/ads', adRoutes);
 // app.use('/api/seed', seedRoutes); // 프로덕션 제거
 app.use('/api/momstagram', momstagramRoutes);
-app.use('/api/coaching', coachingRoutes);
 app.use('/api/clinics', clinicRoutes);
 app.use('/api/memories', memoriesRoutes);
 app.use('/api/retention', retentionRoutes);
@@ -69,12 +83,29 @@ app.use('/api/tracker', trackerRoutes);
 app.use('/api/mom-group', momGroupRoutes);
 
 app.get('/api/health', (_req, res) => {
-  res.json({ success: true, data: { status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() } });
+  res.json({ success: true, data: { status: 'ok', service: 'api', version: '1.0.0', timestamp: new Date().toISOString() } });
 });
 
-// Firebase Functions export (public access)
-// memory: 512MiB — 코칭 지식 DB(~900KB) + Express + Gemini 버퍼가 기본 256MiB 초과
-// concurrency: 20 — 동시 요청 과다 시 메모리 스파이크 방지 (기본 80 → 20)
+/* ─── 로컬 개발용 통합 라우터: api + coaching 같은 포트에서 처리 ─── */
+const isFirebase = process.env.FUNCTIONS_EMULATOR || process.env.GCLOUD_PROJECT || process.env.K_SERVICE;
+if (!isFirebase) {
+  // 로컬에서는 단일 포트 — 코칭 라우트도 같이 마운트 (devApp 통합)
+  app.use('/api/coaching', coachingRoutes);
+}
+
+/* ─── 코칭 전용 Express ─── */
+const coachingApp = express();
+coachingApp.use(express.json({ limit: '10mb' }));
+setupSecurity(coachingApp);
+coachingApp.use('/api/coaching', coachingRoutes);
+coachingApp.get('/api/health', (_req, res) => {
+  res.json({ success: true, data: { status: 'ok', service: 'coachingApi', version: '1.0.0', timestamp: new Date().toISOString() } });
+});
+
+/* ─── Firebase Functions exports ─── */
+
+// memory: 512MiB — 비코칭 라우트는 가벼운 CRUD가 다수
+// concurrency: 20 — 동시 요청 과다 시 메모리 스파이크 방지
 export const api = functions.https.onRequest(
   {
     cors: true,
@@ -86,10 +117,23 @@ export const api = functions.https.onRequest(
   app
 );
 
+// memory: 1GiB — 코칭 지식 DB(~900KB) + Gemini 호출 버퍼
+// concurrency: 5 — AI 호출 병목 시 OOM 방지 (claude-progress.md 2026-04-16 정책)
+export const coachingApi = functions.https.onRequest(
+  {
+    cors: true,
+    invoker: 'public',
+    memory: '1GiB',
+    concurrency: 5,
+    timeoutSeconds: 300,
+  },
+  coachingApp
+);
+
 // 로컬 개발용 (firebase deploy 시에는 실행하지 않음)
-const isFirebase = process.env.FUNCTIONS_EMULATOR || process.env.GCLOUD_PROJECT || process.env.K_SERVICE;
 if (!isFirebase && require.main === module) {
   app.listen(env.PORT, () => {
     console.log(`아맞다 Backend running on http://localhost:${env.PORT}`);
+    console.log(`  · 비코칭 + 코칭 라우트 모두 같은 포트에서 처리 (devApp)`);
   });
 }
