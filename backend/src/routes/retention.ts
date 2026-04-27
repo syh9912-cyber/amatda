@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { FieldValue } from 'firebase-admin/firestore';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections } from '../services/firestore';
@@ -343,6 +344,12 @@ router.get('/daily-card/:childId', authMiddleware, async (req: Request, res: Res
 
 // ───────────────────────────────────────────────
 // 2. GET /api/retention/streak/:childId
+//
+// 카운팅 정책 (2026-04-28~):
+//   - 코칭 세션 (coachingSessions.createdAt 날짜) +
+//   - 앱 접속 (users.{userId}.visitDates 배열)
+//   둘의 합집합으로 고유 날짜 → 연속 일수 계산
+//   → '앱을 열거나 코칭하거나' 둘 중 하나만 해도 +1
 // ───────────────────────────────────────────────
 
 router.get('/streak/:childId', authMiddleware, async (req: Request, res: Response) => {
@@ -356,7 +363,7 @@ router.get('/streak/:childId', authMiddleware, async (req: Request, res: Respons
       .where('userId', '==', req.userId)
       .get();
 
-    // 고유 날짜 추출
+    // 고유 날짜 추출 (코칭 세션 + 앱 접속 visitDates)
     const uniqueDates = new Set<string>();
     sessionsSnap.docs.forEach((doc) => {
       const data = doc.data() as Record<string, unknown>;
@@ -371,6 +378,22 @@ router.get('/streak/:childId', authMiddleware, async (req: Request, res: Respons
       }
       uniqueDates.add(dateStr);
     });
+
+    // 사용자 문서의 visitDates도 합산
+    try {
+      const userDoc = await collections.users.doc(req.userId!).get();
+      const userData = userDoc.data() as Record<string, unknown> | undefined;
+      const visitDates = userData?.visitDates;
+      if (Array.isArray(visitDates)) {
+        visitDates.forEach((d) => {
+          if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+            uniqueDates.add(d);
+          }
+        });
+      }
+    } catch {
+      // 사용자 문서 읽기 실패해도 코칭 기반 streak 반환
+    }
 
     const sortedDates = Array.from(uniqueDates).sort().reverse();
 
@@ -613,6 +636,52 @@ router.get('/push-content/:childId', authMiddleware, async (req: Request, res: R
     }
 
     success(res, content);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : '알 수 없는 오류';
+    error(res, msg, 500);
+  }
+});
+
+// ───────────────────────────────────────────────
+// 5. POST /api/retention/visit  — 앱 접속 기록 (오늘 날짜)
+//
+// 호출 시점: 프론트가 앱 진입 시 1회 (세션당 1회면 충분, 중복 호출 무해)
+// 효과: users/{userId}.visitDates 배열에 오늘 날짜(YYYY-MM-DD) 추가
+//   - 이미 있으면 무시 (Firestore arrayUnion 사용)
+//   - 90일 초과분은 잘라내 무한 증가 방지
+//   - lastVisitDate / lastVisitAt 도 갱신
+// ───────────────────────────────────────────────
+router.post('/visit', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const userRef = collections.users.doc(req.userId!);
+    const snap = await userRef.get();
+
+    if (!snap.exists) {
+      error(res, '사용자를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const data = snap.data() as Record<string, unknown>;
+    const existing = Array.isArray(data.visitDates) ? (data.visitDates as string[]) : [];
+
+    // 오늘 이미 기록됐으면 변경 없이 반환
+    if (existing.includes(today)) {
+      success(res, { recorded: false, today, totalDays: existing.length });
+      return;
+    }
+
+    // 새 날짜 추가 + 90일 초과 trim
+    const merged = Array.from(new Set([...existing, today])).sort();
+    const trimmed = merged.length > 90 ? merged.slice(merged.length - 90) : merged;
+
+    await userRef.update({
+      visitDates: trimmed,
+      lastVisitDate: today,
+      lastVisitAt: FieldValue.serverTimestamp(),
+    });
+
+    success(res, { recorded: true, today, totalDays: trimmed.length });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : '알 수 없는 오류';
     error(res, msg, 500);

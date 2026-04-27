@@ -178,6 +178,24 @@ function useLocationSetup() {
   }, [isAuthenticated]);
 }
 
+/**
+ * 앱 접속 기록 (부모 레벨 streak 카운팅용).
+ * 인증된 사용자가 앱에 진입하면 세션당 1회 POST /api/retention/visit 호출.
+ * 백엔드가 오늘 날짜를 users.{uid}.visitDates에 추가 (이미 있으면 무시).
+ * 실패해도 앱 사용에 영향 없음 (silent catch).
+ */
+function useRetentionVisit() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    retentionApi.recordVisit().catch(() => {
+      // silent — 네트워크 실패는 무시
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
+}
+
 /* ── Update Screen (Modern) ── */
 const { width: SCREEN_W } = Dimensions.get('window');
 const PROGRESS_BAR_W = SCREEN_W * 0.65;
@@ -314,6 +332,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   useNotificationSetup();
   useLocationSetup();
+  useRetentionVisit();
 
   // 업데이트 다운로드/적용 중이면 업데이트 화면 표시
   if (status === 'downloading' || status === 'ready' || status === 'restarting') {
