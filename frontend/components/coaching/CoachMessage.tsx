@@ -6,6 +6,8 @@ const IC_HOSPITAL = require('../../assets/icon-hospital.png') as number;
 const IC_CHAT = require('../../assets/icon-comment.png') as number;
 const IC_AI = require('../../assets/badge-ai.png') as number;
 const IC_DB = require('../../assets/badge-db.png') as number;
+const IC_BULB = require('../../assets/badge-ai.png') as number;
+const IC_CHECK = require('../../assets/icon-heart.png') as number;
 
 interface Props {
   message: CoachingMessage;
@@ -46,6 +48,43 @@ export function CoachMessage({ message }: Props) {
 
           {/* Main conversational text */}
           <Text style={styles.messageText}>{message.text}</Text>
+
+          {/* Reasons (가능한 이유) — AI가 추정하는 원인 목록 */}
+          {message.reasons && message.reasons.length > 0 ? (
+            <View style={styles.reasonsBox}>
+              <View style={styles.sectionRow}>
+                <SectionIcon src={IC_BULB} />
+                <Text style={styles.reasonsTitle}>{'가능한 이유'}</Text>
+              </View>
+              {message.reasons.map((r, idx) => (
+                <Text key={idx} style={styles.reasonItem}>{'  • '}{r}</Text>
+              ))}
+            </View>
+          ) : null}
+
+          {/* Reason (단일 이유 — 일부 응답 형식) */}
+          {message.reason && !(message.reasons && message.reasons.length > 0) ? (
+            <View style={styles.reasonsBox}>
+              <View style={styles.sectionRow}>
+                <SectionIcon src={IC_BULB} />
+                <Text style={styles.reasonsTitle}>{'이유'}</Text>
+              </View>
+              <Text style={styles.reasonItem}>{message.reason}</Text>
+            </View>
+          ) : null}
+
+          {/* Solutions (해결방법) */}
+          {message.solutions && message.solutions.length > 0 ? (
+            <View style={styles.solutionBox}>
+              <View style={styles.sectionRow}>
+                <SectionIcon src={IC_CHECK} />
+                <Text style={styles.solutionTitle}>{'해결 방법'}</Text>
+              </View>
+              {message.solutions.map((sol, idx) => (
+                <Text key={idx} style={styles.solutionItem}>{idx + 1}. {sol}</Text>
+              ))}
+            </View>
+          ) : null}
 
           {/* Medical notice */}
           {message.medical ? (
@@ -156,6 +195,49 @@ const styles = StyleSheet.create({
     color: '#D32F2F',
     lineHeight: 20,
     flex: 1,
+  },
+  /* Reasons (가능한 이유) — iOS 미니멀 톤 */
+  reasonsBox: {
+    backgroundColor: '#FFF8EC',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#FFE5B5',
+  },
+  reasonsTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#B8860B',
+    marginBottom: 6,
+  },
+  reasonItem: {
+    fontSize: 13,
+    color: '#1C1C1E',
+    lineHeight: 20,
+    marginTop: 2,
+  },
+  /* Solutions (해결방법) — iOS 미니멀 톤 */
+  solutionBox: {
+    backgroundColor: '#F0FFF4',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#A8D5BA',
+  },
+  solutionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#2E7D32',
+    marginBottom: 6,
+  },
+  solutionItem: {
+    fontSize: 13,
+    color: '#1C1C1E',
+    lineHeight: 20,
+    marginTop: 4,
+    paddingLeft: 4,
   },
   /* Medical */
   medicalBox: {
