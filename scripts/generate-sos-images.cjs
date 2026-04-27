@@ -1,8 +1,24 @@
 /**
- * Gemini 이미지 생성 모델로 SOS 응급 가이드 이미지 4장 생성
- * 실행: node scripts/generate-sos-images.cjs
- * (GEMINI_API_KEY는 backend/.env 에서 가져옴)
+ * ⚠️ DEPRECATED — 2026-04-27 사용 중단
+ *
+ * 이 스크립트는 Gemini로 SOS 이미지를 생성했으나, AI가 한글을 못 그려서
+ * 가짜 한글이 박힌 이미지가 만들어졌고 응급정보가 잘못 전달됨 (P0 사고).
+ *
+ * 현재 frontend/assets/sos-*.png 4장은 ChatGPT(GPT Image 1)로 사람이 직접
+ * 검수해서 만든 정본임. 이 스크립트를 다시 실행하면 그 정본을 덮어써서
+ * 다시 P0 사고가 발생함.
+ *
+ * 재실행 절대 금지. 이미지를 새로 만들어야 한다면:
+ * 1) 새 파일명으로 생성 후 사람이 글자 검수
+ * 2) 검수 통과 시에만 sos-*.png 교체
+ * 3) docs/sos-image-prompts.md (있다면) 의 검수 체크리스트 사용
  */
+process.stderr.write('[generate-sos-images] DEPRECATED — refusing to run. See file header for details.\n');
+process.exit(1);
+
+// ===== 아래 코드는 historical reference용으로만 보존 =====
+/* eslint-disable */
+//eslint-disable-next-line
 const fs = require('fs');
 const path = require('path');
 
