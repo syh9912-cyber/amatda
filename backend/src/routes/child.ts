@@ -266,19 +266,39 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     const childId = req.params.id as string;
 
-    // cascade delete — 육아 + 임신 관련 모든 컬렉션
+    // cascade delete — 자녀와 연결된 모든 컬렉션
+    // ⚠️ 신규 컬렉션이 childId를 가질 때마다 여기에 추가할 것
+    //    누락 시 자녀 삭제 후에도 stale 데이터로 푸시/추천이 발생함
     const relatedQueries = await Promise.all([
+      // 코칭/일기/관찰
       collections.observations.where('childId', '==', childId).get(),
-      collections.subscriptions.where('childId', '==', childId).get(),
       collections.coachingSessions.where('childId', '==', childId).get(),
       collections.followups.where('childId', '==', childId).get(),
       collections.conversationSummaries.where('childId', '==', childId).get(),
+      collections.autoDiaries.where('childId', '==', childId).get(),
+      collections.learnedKnowledge.where('childId', '==', childId).get(),
+      // 트래킹/기록
       collections.dailyTracking.where('childId', '==', childId).get(),
       collections.dailyTraits.where('childId', '==', childId).get(),
+      collections.analysisUsage.where('childId', '==', childId).get(),
+      collections.sleepPredictions.where('childId', '==', childId).get(),
+      // 마일스톤/앨범
+      collections.milestoneChecks.where('childId', '==', childId).get(),
+      collections.milestonePhotos.where('childId', '==', childId).get(),
+      collections.growthAlbums.where('childId', '==', childId).get(),
+      // 헬스/예방접종
+      collections.vaccinations.where('childId', '==', childId).get(),
+      // 가족/공유
+      collections.familyMembers.where('childId', '==', childId).get(),
+      // 추천 캐시
+      collections.recommendationCache.where('childId', '==', childId).get(),
+      // 구독
+      collections.subscriptions.where('childId', '==', childId).get(),
       // 임신 관련 컬렉션
       collections.pregnancyRecords.where('childId', '==', childId).get(),
       collections.momHealthChecks.where('childId', '==', childId).get(),
       collections.gdmRecords.where('childId', '==', childId).get(),
+      collections.gdmFoodLogs.where('childId', '==', childId).get(),
     ]);
 
     // Firestore batch 최대 500개 → 청크 분할 삭제
@@ -287,6 +307,10 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     for (const snap of relatedQueries) {
       for (const d of snap.docs) allRefs.push(d.ref);
     }
+
+    // pushSchedules는 docId 패턴 `{userId}_{childId}` 사용 → 직접 ref로 삭제
+    // (where 쿼리 불가능, ID 기반이라 Promise.all로 묶지 않음)
+    allRefs.push(collections.pushSchedules.doc(`${req.userId}_${childId}`));
     const BATCH_LIMIT = 450;
     for (let i = 0; i < allRefs.length; i += BATCH_LIMIT) {
       const batch = db.batch();

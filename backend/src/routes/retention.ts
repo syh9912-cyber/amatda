@@ -3,6 +3,19 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections } from '../services/firestore';
+
+/**
+ * 한국 시간(KST = UTC+9) 기준 YYYY-MM-DD 반환.
+ * 단순 toISOString()은 UTC라 한국 자정~오전 9시에 전날로 기록되는 버그 발생.
+ */
+function todayKST(date: Date = new Date()): string {
+  const kstMs = date.getTime() + 9 * 60 * 60 * 1000;
+  return new Date(kstMs).toISOString().slice(0, 10);
+}
+
+function yesterdayKST(): string {
+  return todayKST(new Date(Date.now() - 86400000));
+}
 import { calculateAge } from '../services/age.calculator';
 import { safeParse } from '../utils/parse';
 import { getChildIfAccessible } from '../utils/childAccess';
@@ -397,11 +410,11 @@ router.get('/streak/:childId', authMiddleware, async (req: Request, res: Respons
 
     const sortedDates = Array.from(uniqueDates).sort().reverse();
 
-    // 연속 일수 계산
+    // 연속 일수 계산 (KST 기준)
     let currentStreak = 0;
     if (sortedDates.length > 0) {
-      const today = new Date().toISOString().slice(0, 10);
-      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const today = todayKST();
+      const yesterday = yesterdayKST();
 
       if (sortedDates[0] === today || sortedDates[0] === yesterday) {
         currentStreak = 1;
@@ -653,7 +666,7 @@ router.get('/push-content/:childId', authMiddleware, async (req: Request, res: R
 // ───────────────────────────────────────────────
 router.post('/visit', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const today = todayKST(); // KST 기준 YYYY-MM-DD
     const userRef = collections.users.doc(req.userId!);
     const snap = await userRef.get();
 
