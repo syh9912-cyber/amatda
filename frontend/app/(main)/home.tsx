@@ -808,6 +808,46 @@ function Header({
 /* TodayCard 제거됨 — 홈화면에서 미사용 */
 
 function TraitAnalysisCard({ child }: { child: Child }) {
+  const pulse = useRef(new Animated.Value(0)).current;
+  const shimmer = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 1400,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 1400,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    const shimmerLoop = Animated.loop(
+      Animated.timing(shimmer, {
+        toValue: 1,
+        duration: 2600,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+    pulseLoop.start();
+    shimmerLoop.start();
+    return () => {
+      pulseLoop.stop();
+      shimmerLoop.stop();
+    };
+  }, [pulse, shimmer]);
+
+  const glowOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.75] });
+  const glowScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] });
+  const shimmerTranslate = shimmer.interpolate({ inputRange: [0, 1], outputRange: [-220, 420] });
+
   const temperament = child.innateData?.label ?? '';
   if (!temperament) return null;
 
@@ -815,114 +855,102 @@ function TraitAnalysisCard({ child }: { child: Child }) {
   const typeMatch = temperament.match(/(탐구형|활동형|조화형|분석형|감성형)/);
   const typeName = typeMatch ? typeMatch[1] : temperament;
 
-  // 한 줄 요약 (analysisReport.personality에서 1~2개 발췌)
-  const personalityList = child.analysisReport?.personality;
-  const summary = Array.isArray(personalityList) && personalityList.length > 0
-    ? personalityList.slice(0, 2).join(' · ')
-    : '온보딩 응답 + 사주 분석 종합 결과';
-
   return (
-    <View style={traitCardStyles.card}>
-      <View style={traitCardStyles.headerRow}>
-        <Text style={traitCardStyles.title}>{child.name}{'의 기질'}</Text>
-        <View style={traitCardStyles.typeBadge}>
-          <Text style={traitCardStyles.typeBadgeText}>{typeName}</Text>
+    <TouchableOpacity
+      style={traitCardStyles.card}
+      activeOpacity={0.85}
+      onPress={() => router.push('/(main)/trait-detail')}
+    >
+      {/* 셔머 반짝이 오버레이 */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          traitCardStyles.shimmer,
+          { transform: [{ translateX: shimmerTranslate }, { rotate: '20deg' }] },
+        ]}
+      />
+      <View style={traitCardStyles.iconWrap}>
+        <Animated.View
+          style={[
+            traitCardStyles.iconGlow,
+            { opacity: glowOpacity, transform: [{ scale: glowScale }] },
+          ]}
+        />
+        <Text style={traitCardStyles.iconText}>{'기질'}</Text>
+      </View>
+      <View style={traitCardStyles.textCol}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
+          <Text style={traitCardStyles.title}>{child.name}{'의 기질'}</Text>
+          <View style={traitCardStyles.typeBadge}>
+            <Text style={traitCardStyles.typeBadgeText}>{typeName}</Text>
+          </View>
         </View>
+        <Text style={traitCardStyles.sub}>전체 결과 보기 · 다시 분석</Text>
       </View>
-      <Text style={traitCardStyles.summary} numberOfLines={2}>
-        {summary}
-      </Text>
-      <View style={traitCardStyles.btnRow}>
-        <TouchableOpacity
-          style={traitCardStyles.btnPrimary}
-          activeOpacity={0.7}
-          onPress={() => router.push('/(main)/trait-detail')}
-        >
-          <Text style={traitCardStyles.btnPrimaryText}>전체 분석 보기</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={traitCardStyles.btnSecondary}
-          activeOpacity={0.7}
-          onPress={() =>
-            router.push({
-              pathname: '/onboarding/questions',
-              params: { childId: child.id },
-            })
-          }
-        >
-          <Text style={traitCardStyles.btnSecondaryText}>다시 분석</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+      <Text style={traitCardStyles.arrow}>{'›'}</Text>
+    </TouchableOpacity>
   );
 }
 
 const traitCardStyles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#5C1F3A',
     borderRadius: 16,
-    padding: 14,
-    marginHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-  },
-  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: '#8A3556',
+    overflow: 'hidden',
+    shadowColor: '#D45D8A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  title: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLOR.text,
+  shimmer: {
+    position: 'absolute',
+    top: -40,
+    left: 0,
+    width: 80,
+    height: 160,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#D45D8A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  iconGlow: {
+    position: 'absolute',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F2A2C1',
+  },
+  iconText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  textCol: { flex: 1 },
+  title: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
+  sub: { fontSize: 12, color: '#F2C5D6' },
   typeBadge: {
-    backgroundColor: '#FFF0E6',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
+    marginLeft: 8,
+    backgroundColor: '#FFD76E',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
   typeBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FF8C5A',
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#5C1F3A',
   },
-  summary: {
-    fontSize: 12.5,
-    color: COLOR.textSub,
-    lineHeight: 18,
-    marginBottom: 10,
-  },
-  btnRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  btnPrimary: {
-    flex: 1,
-    backgroundColor: '#FF8C5A',
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  btnPrimaryText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  btnSecondary: {
-    flex: 1,
-    backgroundColor: '#F2F2F7',
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  btnSecondaryText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLOR.text,
-  },
+  arrow: { color: '#FFFFFF', fontSize: 22, fontWeight: '300', marginLeft: 8 },
 });
 
 function MonthlyCharCard({ child }: { child: Child }) {
