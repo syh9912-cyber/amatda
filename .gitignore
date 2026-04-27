@@ -12,3 +12,39 @@ android/
 .turbo/
 coverage/
 *.log
+
+# 민감정보 문서 — git에 절대 올리지 않음
+LOCAL-CONFIG.md
+
+# Release signing / OAuth / Firebase local secrets
+*.jks
+*.p8
+*.p12
+*.key
+*.pem
+*Secret*.txt
+*secret*.txt
+*키스토어*.txt
+google-services.json
+GoogleService-Info.plist
+
+# Google OAuth client credential dump (id-secret format)
+[0-9]*-*.txt
+
+# Claude Code internals
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+.claude/settings.json
+
+# Firebase emulator/cache
+.firebase/
+
+# 일회성 로그/임시 파일
+lint_output.txt
+
+# 에셋 백업 (커밋 X)
+assets.backup/
+frontend/assets.backup/
+
+# 일회성 테스트 스크립트
+test-milestone-*.cjs
