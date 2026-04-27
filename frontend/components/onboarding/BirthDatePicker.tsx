@@ -51,6 +51,7 @@ export function BirthDatePicker({ birthDate, onChangeBirthDate, allowFuture, pla
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const DateTimePicker = require('@react-native-community/datetimepicker').default;
 
   const currentValue = birthDate ? new Date(birthDate + 'T00:00:00') : defaultDate;

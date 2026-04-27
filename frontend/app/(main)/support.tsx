@@ -4,15 +4,17 @@ import {
   TouchableOpacity, Alert, Linking, Platform,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { COLORS } from '../../constants/theme';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
 
 const COLOR = {
-  bg: '#F2F2F7',
-  card: '#FFFFFF',
-  accent: '#FF8C5A',
-  text: '#1C1C1E',
-  textSub: '#636366',
-  textLight: '#ABABAB',
-  border: '#E5E5EA',
+  bg: COLORS.background,
+  card: COLORS.surface,
+  accent: COLORS.primary,
+  text: COLORS.text,
+  textSub: COLORS.textSecondary,
+  textLight: COLORS.textLight,
+  border: COLORS.borderLight,
 };
 
 type InquiryType = 'bug' | 'feature' | 'account' | 'etc';
@@ -100,13 +102,8 @@ export default function SupportScreen() {
     <View style={s.screen}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header */}
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Text style={s.backArrow}>{'<'}</Text>
-        </TouchableOpacity>
-        <Text style={s.headerTitle}>고객센터</Text>
-        <View style={s.headerSpacer} />
+      <View style={s.headerWrap}>
+        <ScreenHeader title="고객센터" onBack={() => router.back()} />
       </View>
 
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
@@ -199,14 +196,9 @@ export default function SupportScreen() {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLOR.bg },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  headerWrap: {
     paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12,
   },
-  backBtn: { width: 36, height: 36, justifyContent: 'center' },
-  backArrow: { fontSize: 24, color: COLOR.text, fontWeight: '300' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: COLOR.text },
-  headerSpacer: { width: 36 },
 
   scroll: { flex: 1 },
   scrollContent: { padding: 20, paddingBottom: 100 },

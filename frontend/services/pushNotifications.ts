@@ -13,6 +13,18 @@ export interface NotificationPreferences {
   weekly: boolean;
   coachingFollowup: boolean;
   reengagement: boolean;
+  // 사용자가 조절 가능한 알림 시각 (HH:MM, 24시간)
+  morningTime: string;
+  afternoonTime: string;
+  eveningTime: string;
+}
+
+function parseHM(s: string, fallbackH: number, fallbackM: number): { hour: number; minute: number } {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(s ?? '');
+  if (!m) return { hour: fallbackH, minute: fallbackM };
+  const h = Math.max(0, Math.min(23, parseInt(m[1], 10)));
+  const mm = Math.max(0, Math.min(59, parseInt(m[2], 10)));
+  return { hour: h, minute: mm };
 }
 
 interface ScheduledIds {
@@ -25,6 +37,9 @@ interface ScheduledIds {
   reengagement7d: string | null;
   reengagement10d: string | null;
   reengagement14d: string | null;
+  morningScheduledAt?: string;
+  afternoonScheduledAt?: string;
+  eveningScheduledAt?: string;
 }
 
 // --- Constants ---
@@ -41,6 +56,9 @@ const DEFAULT_PREFS: NotificationPreferences = {
   weekly: true,
   coachingFollowup: true,
   reengagement: true,
+  morningTime: '08:00',
+  afternoonTime: '15:00',
+  eveningTime: '21:00',
 };
 
 const EMPTY_IDS: ScheduledIds = {
@@ -151,7 +169,7 @@ export async function loadNotificationPrefs(): Promise<NotificationPreferences> 
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
       if (isNotificationPreferences(parsed)) {
-        return parsed;
+        return mergeWithDefaults(parsed as Partial<NotificationPreferences>);
       }
     }
   } catch {
@@ -217,6 +235,10 @@ function isNotificationPreferences(value: unknown): value is NotificationPrefere
   );
 }
 
+function mergeWithDefaults(partial: Partial<NotificationPreferences>): NotificationPreferences {
+  return { ...DEFAULT_PREFS, ...partial };
+}
+
 // --- Schedule helpers ---
 
 function getNextTimeAt(hour: number, minute: number, daysFromNow: number): Date {
@@ -232,7 +254,8 @@ function getNextTimeAt(hour: number, minute: number, daysFromNow: number): Date 
 
 // --- Schedule individual notifications ---
 
-async function scheduleMorning(childName: string): Promise<string> {
+async function scheduleMorning(childName: string, time: string): Promise<string> {
+  const { hour, minute } = parseHM(time, 8, 0);
   return Notifications.scheduleNotificationAsync({
     content: {
       title: '아맞다',
@@ -242,14 +265,15 @@ async function scheduleMorning(childName: string): Promise<string> {
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: 8,
-      minute: 0,
+      hour,
+      minute,
       channelId: 'default',
     },
   });
 }
 
-async function scheduleAfternoon(childName: string): Promise<string> {
+async function scheduleAfternoon(childName: string, time: string): Promise<string> {
+  const { hour, minute } = parseHM(time, 15, 0);
   return Notifications.scheduleNotificationAsync({
     content: {
       title: '아맞다',
@@ -259,14 +283,15 @@ async function scheduleAfternoon(childName: string): Promise<string> {
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: 15,
-      minute: 0,
+      hour,
+      minute,
       channelId: 'default',
     },
   });
 }
 
-async function scheduleEvening(): Promise<string> {
+async function scheduleEvening(time: string): Promise<string> {
+  const { hour, minute } = parseHM(time, 21, 0);
   return Notifications.scheduleNotificationAsync({
     content: {
       title: '아맞다',
@@ -276,8 +301,8 @@ async function scheduleEvening(): Promise<string> {
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: 21,
-      minute: 0,
+      hour,
+      minute,
       channelId: 'default',
     },
   });
@@ -340,16 +365,18 @@ async function scheduleReengagement(childName: string): Promise<ScheduledIds> {
   const ids = await loadScheduledIds();
 
   // Cancel all existing re-engagement notifications
-  const reKeys: (keyof ScheduledIds)[] = ['reengagement3d', 'reengagement7d', 'reengagement10d', 'reengagement14d'];
+  type ReKey = 'reengagement3d' | 'reengagement7d' | 'reengagement10d' | 'reengagement14d';
+  const reKeys: ReKey[] = ['reengagement3d', 'reengagement7d', 'reengagement10d', 'reengagement14d'];
   for (const key of reKeys) {
-    if (ids[key]) {
-      try { await Notifications.cancelScheduledNotificationAsync(ids[key]); } catch { /* ok */ }
+    const existing = ids[key];
+    if (existing) {
+      try { await Notifications.cancelScheduledNotificationAsync(existing); } catch { /* ok */ }
       ids[key] = null;
     }
   }
 
   // Schedule new re-engagement at 3d, 7d, 10d, 14d from now
-  const schedules: { key: keyof ScheduledIds; msgKey: keyof typeof REENGAGEMENT_MESSAGES; days: number; hour: number }[] = [
+  const schedules: { key: ReKey; msgKey: keyof typeof REENGAGEMENT_MESSAGES; days: number; hour: number }[] = [
     { key: 'reengagement3d', msgKey: '3d', days: 3, hour: 10 },
     { key: 'reengagement7d', msgKey: '7d', days: 7, hour: 10 },
     { key: 'reengagement10d', msgKey: '10d', days: 10, hour: 14 },
@@ -391,27 +418,51 @@ export async function syncScheduledNotifications(
   const ids = await loadScheduledIds();
 
   // Morning
-  if (prefs.morning && !ids.morning) {
-    ids.morning = await scheduleMorning(childName);
-  } else if (!prefs.morning && ids.morning) {
+  const morningChanged = ids.morningScheduledAt !== prefs.morningTime;
+  if (prefs.morning) {
+    if (!ids.morning || morningChanged) {
+      if (ids.morning) {
+        try { await Notifications.cancelScheduledNotificationAsync(ids.morning); } catch { /* ok */ }
+      }
+      ids.morning = await scheduleMorning(childName, prefs.morningTime);
+      ids.morningScheduledAt = prefs.morningTime;
+    }
+  } else if (ids.morning) {
     await Notifications.cancelScheduledNotificationAsync(ids.morning);
     ids.morning = null;
+    ids.morningScheduledAt = undefined;
   }
 
   // Afternoon
-  if (prefs.afternoon && !ids.afternoon) {
-    ids.afternoon = await scheduleAfternoon(childName);
-  } else if (!prefs.afternoon && ids.afternoon) {
+  const afternoonChanged = ids.afternoonScheduledAt !== prefs.afternoonTime;
+  if (prefs.afternoon) {
+    if (!ids.afternoon || afternoonChanged) {
+      if (ids.afternoon) {
+        try { await Notifications.cancelScheduledNotificationAsync(ids.afternoon); } catch { /* ok */ }
+      }
+      ids.afternoon = await scheduleAfternoon(childName, prefs.afternoonTime);
+      ids.afternoonScheduledAt = prefs.afternoonTime;
+    }
+  } else if (ids.afternoon) {
     await Notifications.cancelScheduledNotificationAsync(ids.afternoon);
     ids.afternoon = null;
+    ids.afternoonScheduledAt = undefined;
   }
 
   // Evening
-  if (prefs.evening && !ids.evening) {
-    ids.evening = await scheduleEvening();
-  } else if (!prefs.evening && ids.evening) {
+  const eveningChanged = ids.eveningScheduledAt !== prefs.eveningTime;
+  if (prefs.evening) {
+    if (!ids.evening || eveningChanged) {
+      if (ids.evening) {
+        try { await Notifications.cancelScheduledNotificationAsync(ids.evening); } catch { /* ok */ }
+      }
+      ids.evening = await scheduleEvening(prefs.eveningTime);
+      ids.eveningScheduledAt = prefs.eveningTime;
+    }
+  } else if (ids.evening) {
     await Notifications.cancelScheduledNotificationAsync(ids.evening);
     ids.evening = null;
+    ids.eveningScheduledAt = undefined;
   }
 
   // Weekly
@@ -434,10 +485,12 @@ export async function syncReengagementNotifications(childName: string): Promise<
   if (!prefs.reengagement) {
     // Cancel all re-engagement
     const ids = await loadScheduledIds();
-    const reKeys: (keyof ScheduledIds)[] = ['reengagement3d', 'reengagement7d', 'reengagement10d', 'reengagement14d'];
+    type ReKey = 'reengagement3d' | 'reengagement7d' | 'reengagement10d' | 'reengagement14d';
+    const reKeys: ReKey[] = ['reengagement3d', 'reengagement7d', 'reengagement10d', 'reengagement14d'];
     for (const key of reKeys) {
-      if (ids[key]) {
-        try { await Notifications.cancelScheduledNotificationAsync(ids[key]); } catch { /* ok */ }
+      const existing = ids[key];
+      if (existing) {
+        try { await Notifications.cancelScheduledNotificationAsync(existing); } catch { /* ok */ }
         ids[key] = null;
       }
     }
@@ -470,6 +523,110 @@ export async function rescheduleAllNotifications(
   if (prefs.reengagement) {
     await syncReengagementNotifications(childName);
   }
+}
+
+// --- 임신 D-Day / 주요 검사 알림 ---
+
+const PREGNANCY_NOTIF_IDS_KEY = 'amatda_pregnancy_notif_ids';
+
+interface PregnancyExamSchedule {
+  weekFromLMP: number;
+  title: string;
+  body: string;
+}
+
+const PREGNANCY_EXAMS: PregnancyExamSchedule[] = [
+  { weekFromLMP: 12, title: '1차 기형아 검사 (NT)', body: '11~13주 목투명대 검사 시기예요. 병원 예약을 확인해 주세요.' },
+  { weekFromLMP: 16, title: '쿼드 검사', body: '15~20주 쿼드 검사 시기예요. 예약했는지 확인해 주세요.' },
+  { weekFromLMP: 20, title: '정밀 초음파', body: '20~24주 정밀초음파 시기예요. 아기의 발달을 자세히 볼 수 있어요.' },
+  { weekFromLMP: 25, title: '임당 검사 (GCT)', body: '24~28주 임신성 당뇨 검사 시기예요.' },
+  { weekFromLMP: 32, title: '태동 검사 (NST)', body: '32주 전후 NST 검사 시기예요.' },
+  { weekFromLMP: 36, title: 'GBS 검사', body: '36주 B형 연쇄상구균 검사 시기예요.' },
+  { weekFromLMP: 38, title: '출산 가방 준비', body: '출산 가방 체크리스트를 확인해 주세요.' },
+];
+
+function dueDateToLMP(dueDate: Date): Date {
+  const lmp = new Date(dueDate);
+  lmp.setDate(lmp.getDate() - 280);
+  return lmp;
+}
+
+async function cancelPregnancyNotifs(): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(PREGNANCY_NOTIF_IDS_KEY);
+    if (!raw) return;
+    const ids: string[] = JSON.parse(raw);
+    for (const id of ids) {
+      try { await Notifications.cancelScheduledNotificationAsync(id); } catch { /* ok */ }
+    }
+    await AsyncStorage.removeItem(PREGNANCY_NOTIF_IDS_KEY);
+  } catch { /* ok */ }
+}
+
+/**
+ * 출산예정일 기준 주요 검사 + D-7/D-3/D-Day 알림 스케줄.
+ * 이미 지난 시점은 스킵. 중복 방지 위해 기존 예약 전체 취소 후 재스케줄.
+ */
+export async function schedulePregnancyReminders(dueDateIso: string): Promise<void> {
+  await cancelPregnancyNotifs();
+
+  const due = new Date(dueDateIso);
+  if (isNaN(due.getTime())) return;
+  const lmp = dueDateToLMP(due);
+  const now = Date.now();
+  const scheduledIds: string[] = [];
+
+  for (const exam of PREGNANCY_EXAMS) {
+    const triggerDate = new Date(lmp);
+    triggerDate.setDate(triggerDate.getDate() + exam.weekFromLMP * 7);
+    triggerDate.setHours(9, 0, 0, 0);
+    if (triggerDate.getTime() <= now) continue;
+
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `아맞다 · ${exam.title}`,
+        body: exam.body,
+        data: { screen: 'pregnancy' },
+        sound: 'amatda_chime.wav',
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: triggerDate,
+        channelId: 'default',
+      },
+    });
+    scheduledIds.push(id);
+  }
+
+  const countdownDays: { offset: number; title: string; body: string }[] = [
+    { offset: -7, title: '출산 D-7', body: '출산까지 일주일! 가방과 서류를 최종 점검해 주세요.' },
+    { offset: -3, title: '출산 D-3', body: '진통 간격 타이머를 미리 확인해 두세요.' },
+    { offset: 0, title: '출산예정일 D-Day', body: '예정일이에요. 진통 시작되면 바로 병원에 연락하세요.' },
+  ];
+
+  for (const c of countdownDays) {
+    const triggerDate = new Date(due);
+    triggerDate.setDate(triggerDate.getDate() + c.offset);
+    triggerDate.setHours(9, 0, 0, 0);
+    if (triggerDate.getTime() <= now) continue;
+
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `아맞다 · ${c.title}`,
+        body: c.body,
+        data: { screen: 'pregnancy' },
+        sound: 'amatda_chime.wav',
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: triggerDate,
+        channelId: 'engagement',
+      },
+    });
+    scheduledIds.push(id);
+  }
+
+  await AsyncStorage.setItem(PREGNANCY_NOTIF_IDS_KEY, JSON.stringify(scheduledIds));
 }
 
 // --- 이탈 방지: 첫 AI 상담 유도 푸시 ---

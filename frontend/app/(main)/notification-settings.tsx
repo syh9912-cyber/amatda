@@ -1,72 +1,79 @@
-import { View, Text, TouchableOpacity, StyleSheet, Switch, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Switch, ScrollView, Platform } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
 import { Stack, router } from 'expo-router';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useChildStore } from '../../stores/childStore';
 import { retentionApi } from '../../services/api';
 import {
   loadNotificationPrefs,
   saveNotificationPrefs,
   syncScheduledNotifications,
-  syncReengagementNotifications,
   type NotificationPreferences,
 } from '../../services/pushNotifications';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
 
+type BoolKey = 'morning' | 'afternoon' | 'evening' | 'weekly';
+type TimeKey = 'morningTime' | 'afternoonTime' | 'eveningTime';
+
 interface ToggleItem {
-  key: keyof NotificationPreferences;
+  key: BoolKey;
+  timeKey?: TimeKey;
   emoji: string;
   label: string;
   description: string;
-  time: string;
+  fixedTimeLabel?: string;
 }
 
 const DAILY_ITEMS: ToggleItem[] = [
   {
     key: 'morning',
+    timeKey: 'morningTime',
     emoji: '🌅',
     label: '아침 인사 알림',
     description: '어젯밤 아이 수면 체크',
-    time: '매일 오전 8:00',
   },
   {
     key: 'afternoon',
+    timeKey: 'afternoonTime',
     emoji: '🎨',
     label: '오후 활동 추천',
     description: '아이와 함께하는 15분 놀이',
-    time: '매일 오후 3:00',
   },
   {
     key: 'evening',
+    timeKey: 'eveningTime',
     emoji: '📝',
     label: '저녁 일기 알림',
     description: '오늘의 육아일기 작성 알림',
-    time: '매일 오후 9:00',
   },
   {
     key: 'weekly',
     emoji: '📊',
     label: '주간 리포트',
     description: '이번 주 육아 리포트 도착',
-    time: '매주 월요일 오전 9:00',
+    fixedTimeLabel: '매주 월요일 오전 9:00',
   },
 ];
 
-const SMART_ITEMS: ToggleItem[] = [
-  {
-    key: 'coachingFollowup',
-    emoji: '💬',
-    label: '상담이모 팔로업',
-    description: '상담 다음날 "어제는 잘 지나갔나요?" 체크',
-    time: '상담 다음날 오전 10:00',
-  },
-  {
-    key: 'reengagement',
-    emoji: '💌',
-    label: '보고싶어요 알림',
-    description: '접속이 뜸할 때 아이 근황 리마인더',
-    time: '3일/7일/10일/14일 미접속 시',
-  },
-];
+function formatTimeLabel(hhmm: string): string {
+  const [hStr, mStr] = hhmm.split(':');
+  const h = parseInt(hStr ?? '0', 10);
+  const m = parseInt(mStr ?? '0', 10);
+  const period = h < 12 ? '오전' : '오후';
+  const h12 = ((h + 11) % 12) + 1;
+  return `매일 ${period} ${h12}:${String(m).padStart(2, '0')}`;
+}
+
+function hhmmToDate(hhmm: string): Date {
+  const [h, m] = hhmm.split(':').map((s) => parseInt(s, 10));
+  const d = new Date();
+  d.setHours(h || 0, m || 0, 0, 0);
+  return d;
+}
+
+function dateToHHMM(d: Date): string {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 export default function NotificationSettingsScreen() {
   const selectedChild = useChildStore((s) => s.selectedChild);
@@ -77,8 +84,12 @@ export default function NotificationSettingsScreen() {
     weekly: true,
     coachingFollowup: true,
     reengagement: true,
+    morningTime: '08:00',
+    afternoonTime: '15:00',
+    eveningTime: '21:00',
   });
   const [loaded, setLoaded] = useState(false);
+  const [pickerKey, setPickerKey] = useState<TimeKey | null>(null);
 
   useEffect(() => {
     loadNotificationPrefs()
@@ -89,61 +100,44 @@ export default function NotificationSettingsScreen() {
       .catch(() => setLoaded(true));
   }, []);
 
-  const handleToggle = useCallback(
-    async (key: keyof NotificationPreferences) => {
-      const updated: NotificationPreferences = { ...prefs, [key]: !prefs[key] };
+  const persist = useCallback(
+    async (updated: NotificationPreferences) => {
       setPrefs(updated);
-
       await saveNotificationPrefs(updated);
-
       if (selectedChild) {
         await syncScheduledNotifications(updated, selectedChild.name);
-
-        // Handle re-engagement sync separately
-        if (key === 'reengagement') {
-          await syncReengagementNotifications(selectedChild.name);
-        }
-
-        // Sync preference to backend
         retentionApi.pushSchedule({
           childId: selectedChild.id,
           morning: updated.morning,
           afternoon: updated.afternoon,
           evening: updated.evening,
           weekly: updated.weekly,
-        }).catch(() => {
-          // silent fail for backend sync
-        });
+        }).catch(() => { /* silent */ });
       }
     },
-    [prefs, selectedChild],
+    [selectedChild],
   );
 
-  const renderSection = (title: string, items: ToggleItem[]) => (
-    <>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.card}>
-        {items.map((item, idx) => {
-          const isLast = idx === items.length - 1;
-          return (
-            <View key={item.key} style={[styles.row, !isLast && styles.rowBorder]}>
-              <Text style={styles.emoji}>{item.emoji}</Text>
-              <View style={styles.labelCol}>
-                <Text style={styles.label}>{item.label}</Text>
-                <Text style={styles.desc}>{item.description}</Text>
-                <Text style={styles.time}>{item.time}</Text>
-              </View>
-              <Switch
-                value={prefs[item.key]}
-                onValueChange={() => handleToggle(item.key)}
-                trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
-                thumbColor={prefs[item.key] ? COLORS.primary : '#f4f3f4'}
-              />
-            </View>
-          );
-        })}
-      </View>
-    </>
+  const handleToggle = useCallback(
+    (key: BoolKey) => {
+      const updated: NotificationPreferences = { ...prefs, [key]: !prefs[key] };
+      persist(updated);
+    },
+    [prefs, persist],
+  );
+
+  const handleTimeChange = useCallback(
+    (event: DateTimePickerEvent, date?: Date) => {
+      if (!pickerKey) return;
+      if (Platform.OS !== 'ios') {
+        setPickerKey(null);
+      }
+      if (event.type === 'dismissed' || !date) return;
+      const next = dateToHHMM(date);
+      const updated: NotificationPreferences = { ...prefs, [pickerKey]: next };
+      persist(updated);
+    },
+    [pickerKey, prefs, persist],
   );
 
   if (!loaded) {
@@ -159,16 +153,19 @@ export default function NotificationSettingsScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로"
+        >
           <Text style={styles.backArrow}>{'<'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>알림 설정</Text>
         <View style={{ width: 32 }} />
       </View>
 
-      {/* Description */}
       <View style={styles.descCard}>
         <Text style={styles.descEmoji}>{'🔔'}</Text>
         <Text style={styles.descTitle}>
@@ -177,22 +174,61 @@ export default function NotificationSettingsScreen() {
             : '맞춤 알림을 설정해보세요'}
         </Text>
         <Text style={styles.descSub}>
-          원하는 시간에 육아 팁과 리마인더를 받을 수 있어요
+          알림 시간을 탭하면 원하는 시간으로 바꿀 수 있어요
         </Text>
       </View>
 
-      {/* Daily notifications */}
-      {renderSection('일상 알림', DAILY_ITEMS)}
+      <Text style={styles.sectionTitle}>일상 알림</Text>
+      <View style={styles.card}>
+        {DAILY_ITEMS.map((item, idx) => {
+          const isLast = idx === DAILY_ITEMS.length - 1;
+          const timeValue = item.timeKey ? prefs[item.timeKey] : null;
+          const timeLabel = item.fixedTimeLabel ?? (timeValue ? formatTimeLabel(timeValue) : '');
+          return (
+            <View key={item.key} style={[styles.row, !isLast && styles.rowBorder]}>
+              <Text style={styles.emoji}>{item.emoji}</Text>
+              <View style={styles.labelCol}>
+                <Text style={styles.label}>{item.label}</Text>
+                <Text style={styles.desc}>{item.description}</Text>
+                {item.timeKey ? (
+                  <TouchableOpacity
+                    onPress={() => setPickerKey(item.timeKey!)}
+                    disabled={!prefs[item.key]}
+                  >
+                    <Text style={[styles.time, !prefs[item.key] && styles.timeDisabled]}>
+                      {timeLabel}  ▸
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.time}>{timeLabel}</Text>
+                )}
+              </View>
+              <Switch
+                value={prefs[item.key]}
+                onValueChange={() => handleToggle(item.key)}
+                trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
+                thumbColor={prefs[item.key] ? COLORS.primary : '#f4f3f4'}
+              />
+            </View>
+          );
+        })}
+      </View>
 
-      {/* Smart notifications */}
-      {renderSection('스마트 알림', SMART_ITEMS)}
-
-      {/* Info note */}
       <View style={styles.infoCard}>
         <Text style={styles.infoText}>
-          알림은 기기에서 직접 전송되며 무료입니다. 진동 모드에서는 진동으로 알림됩니다. 커스텀 알림음은 다음 앱 업데이트에서 적용됩니다.
+          알림은 기기에서 직접 전송되며 무료입니다. 진동 모드에서는 진동으로 알림됩니다.
         </Text>
       </View>
+
+      {pickerKey && (
+        <DateTimePicker
+          value={hhmmToDate(prefs[pickerKey])}
+          mode="time"
+          is24Hour={false}
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleTimeChange}
+        />
+      )}
     </ScrollView>
   );
 }
@@ -294,8 +330,11 @@ const styles = StyleSheet.create({
   time: {
     fontSize: FONT_SIZE.xs,
     color: COLORS.primary,
-    marginTop: 2,
-    fontWeight: '500',
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  timeDisabled: {
+    color: COLORS.textLight,
   },
   infoCard: {
     backgroundColor: COLORS.surfaceLight,

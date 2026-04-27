@@ -36,51 +36,40 @@ import { getTrackerTabs, getFeedingTypes } from '../../constants/ageFeatures';
 import type { AgeGroupKey } from '../../constants/ageGroups';
 import PregnancyScreen from './pregnancy';
 import { AdSlot } from '../../components/ads/AdSlot';
-
-/* ================================================================== */
-/*  Types                                                              */
-/* ================================================================== */
-
-type RecordType = 'diaper' | 'feeding' | 'sleep';
-
-type DiaperSubType = 'pee' | 'poop' | 'both';
-type FeedingSubType = 'breast' | 'formula' | 'baby_food' | 'snack';
-type SleepSubType = 'nap' | 'night';
-
-interface TrackerRecord {
-  id: string;
-  type: RecordType;
-  subType: string;
-  time: string;
-  endTime?: string;
-  amount?: number;
-  duration?: number;
-  note?: string;
-}
-
-interface DaySummary {
-  diaperCount: number;
-  feedingCount: number;
-  totalMl: number;
-  totalSleepMinutes: number;
-}
-
-interface TrackerMetric {
-  metric: string;
-  value: number;
-  level: string;
-  title: string;
-  emoji: string;
-  comment: string;
-  advice: string;
-  standardRange?: string;
-  standardDetail?: string;
-}
-
-interface TrackerAnalysisResult {
-  trackerMetrics: TrackerMetric[];
-  overallSummary: string;
-}
+import { saveAnalysisHistory } from '../../utils/analysisHistory';
+import type {
+  BreastSession,
+  BreastSide,
+  DayStat,
+  DaySummary,
+  DiaperSubType,
+  FeedingSubType,
+  RecordType,
+  SleepSession,
+  SleepSubType,
+  TrackerAnalysisResult,
+  TrackerRecord,
+} from '../../features/baby-tracker/types';
+import {
+  generateId,
+  formatDate,
+  formatDateKorean,
+  isToday,
+  nowTime,
+  getRelativeTime,
+  calcDurationMinutes,
+  formatMinutes,
+} from '../../features/baby-tracker/utils/time';
+import { computeSummary } from '../../features/baby-tracker/utils/summary';
+import {
+  loadRecords,
+  saveRecords,
+  loadSleepSession,
+  saveSleepSession,
+  loadBreastSession,
+  saveBreastSession,
+  loadRangeStats,
+} from '../../features/baby-tracker/storage';
 
 /* ================================================================== */
 /*  Constants                                                          */
@@ -145,6 +134,8 @@ const SUBTYPE_LABELS: Record<string, string> = {
   nap: '낮잠',
   night: '밤잠',
   sleep: '수면',
+  sleep_start: '수면 시작',
+  sleep_end: '기상',
 };
 
 const SUBTYPE_ICONS: Record<string, number> = {
@@ -158,273 +149,17 @@ const SUBTYPE_ICONS: Record<string, number> = {
   nap: IC_SUNNY,
   night: IC_NIGHT,
   sleep: IC_SLEEP,
+  sleep_start: IC_SLEEP,
+  sleep_end: IC_SUNNY,
 };
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
 const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
 
 /* ================================================================== */
-/*  Helpers                                                            */
+/*  Helpers / Types / Storage                                          */
+/*  Moved to frontend/features/baby-tracker/* (see top-of-file imports) */
 /* ================================================================== */
-
-function generateId(): string {
-  return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-}
-
-function formatDate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-function formatDateKorean(date: Date): string {
-  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-  const m = date.getMonth() + 1;
-  const d = date.getDate();
-  const day = dayNames[date.getDay()];
-  return `${m}월 ${d}일 (${day})`;
-}
-
-function isToday(date: Date): boolean {
-  const now = new Date();
-  return formatDate(date) === formatDate(now);
-}
-
-function nowTime(): string {
-  const now = new Date();
-  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-}
-
-function getRelativeTime(timeStr: string, dateStr: string): string {
-  const [h, m] = timeStr.split(':').map(Number);
-  const rec = new Date(dateStr);
-  rec.setHours(h, m, 0, 0);
-  const diffMin = Math.round((Date.now() - rec.getTime()) / 60000);
-  if (diffMin < 1) return '방금 전';
-  if (diffMin < 60) return `${diffMin}분 전`;
-  const hrs = Math.floor(diffMin / 60);
-  const mins = diffMin % 60;
-  if (mins === 0) return `${hrs}시간 전`;
-  return `${hrs}시간${mins}분 전`;
-}
-
-function calcDurationMinutes(start: string, end: string): number {
-  const [sh, sm] = start.split(':').map(Number);
-  const [eh, em] = end.split(':').map(Number);
-  let diff = (eh * 60 + em) - (sh * 60 + sm);
-  if (diff < 0) diff += 24 * 60;
-  return diff;
-}
-
-function formatMinutes(m: number): string {
-  const hours = Math.floor(m / 60);
-  const mins = m % 60;
-  if (hours === 0) return `${mins}분`;
-  if (mins === 0) return `${hours}시간`;
-  return `${hours}시간 ${mins}분`;
-}
-
-function computeSummary(records: TrackerRecord[]): DaySummary {
-  let diaperCount = 0;
-  let feedingCount = 0;
-  let totalMl = 0;
-  let totalSleepMinutes = 0;
-
-  for (const r of records) {
-    if (r.type === 'diaper') diaperCount += 1;
-    if (r.type === 'feeding') {
-      feedingCount += 1;
-      if (r.amount) totalMl += r.amount;
-    }
-    if (r.type === 'sleep' && r.duration) {
-      totalSleepMinutes += r.duration;
-    }
-  }
-
-  return { diaperCount, feedingCount, totalMl, totalSleepMinutes };
-}
-
-function getStorageKey(childId: string, dateStr: string): string {
-  return `baby_tracker_${childId}_${dateStr}`;
-}
-
-function getSleepSessionKey(childId: string): string {
-  return `baby_tracker_sleep_session_${childId}`;
-}
-
-function getBreastSessionKey(childId: string): string {
-  return `baby_tracker_breast_session_${childId}`;
-}
-
-interface SleepSession {
-  startTime: string; // ISO
-  startDate: string; // YYYY-MM-DD (local)
-}
-
-type BreastSide = 'left' | 'right';
-
-interface BreastSession {
-  side: BreastSide;
-  startTime: string; // ISO
-  startDate: string; // YYYY-MM-DD
-}
-
-async function loadSleepSession(childId: string): Promise<SleepSession | null> {
-  const storage = await getStorage();
-  if (!storage) return null;
-  const raw = await storage.getItem(getSleepSessionKey(childId));
-  if (!raw) return null;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (
-      parsed &&
-      typeof parsed === 'object' &&
-      'startTime' in parsed &&
-      'startDate' in parsed
-    ) {
-      return parsed as SleepSession;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-async function saveSleepSession(childId: string, session: SleepSession | null): Promise<void> {
-  const storage = await getStorage();
-  if (!storage) return;
-  if (session) {
-    await storage.setItem(getSleepSessionKey(childId), JSON.stringify(session));
-  } else {
-    await storage.setItem(getSleepSessionKey(childId), '');
-  }
-}
-
-async function loadBreastSession(childId: string): Promise<BreastSession | null> {
-  const storage = await getStorage();
-  if (!storage) return null;
-  const raw = await storage.getItem(getBreastSessionKey(childId));
-  if (!raw) return null;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (
-      parsed &&
-      typeof parsed === 'object' &&
-      'side' in parsed &&
-      'startTime' in parsed &&
-      'startDate' in parsed
-    ) {
-      return parsed as BreastSession;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-async function saveBreastSession(childId: string, session: BreastSession | null): Promise<void> {
-  const storage = await getStorage();
-  if (!storage) return;
-  if (session) {
-    await storage.setItem(getBreastSessionKey(childId), JSON.stringify(session));
-  } else {
-    await storage.setItem(getBreastSessionKey(childId), '');
-  }
-}
-
-/* ================================================================== */
-/*  AsyncStorage wrapper (dynamic import + fallback)                   */
-/* ================================================================== */
-
-let _storage: {
-  getItem: (key: string) => Promise<string | null>;
-  setItem: (key: string, value: string) => Promise<void>;
-} | null = null;
-
-async function getStorage(): Promise<typeof _storage> {
-  if (_storage) return _storage;
-  try {
-    const mod = await import('@react-native-async-storage/async-storage');
-    _storage = mod.default;
-    return _storage;
-  } catch {
-    // fallback: in-memory storage
-    const mem: Record<string, string> = {};
-    _storage = {
-      getItem: async (k: string) => mem[k] ?? null,
-      setItem: async (k: string, v: string) => { mem[k] = v; },
-    };
-    return _storage;
-  }
-}
-
-async function loadRecords(childId: string, dateStr: string): Promise<TrackerRecord[]> {
-  const storage = await getStorage();
-  if (!storage) return [];
-  const raw = await storage.getItem(getStorageKey(childId, dateStr));
-  if (!raw) return [];
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed as TrackerRecord[];
-    return [];
-  } catch {
-    return [];
-  }
-}
-
-async function saveRecords(childId: string, dateStr: string, records: TrackerRecord[]): Promise<void> {
-  const storage = await getStorage();
-  if (!storage) return;
-  await storage.setItem(getStorageKey(childId, dateStr), JSON.stringify(records));
-}
-
-/* ================================================================== */
-/*  Multi-day data loader for chart                                    */
-/* ================================================================== */
-
-interface DayStat {
-  dateLabel: string; // "월", "화", etc.
-  dateStr: string;
-  diaper: number;
-  feeding: number;
-  feedingMl: number;
-  sleepMin: number;
-}
-
-async function loadRangeStats(childId: string, startDate: Date, endDate: Date): Promise<DayStat[]> {
-  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-  const stats: DayStat[] = [];
-  const start = new Date(startDate);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(endDate);
-  end.setHours(23, 59, 59, 999);
-  const diffDays = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-  const maxDays = Math.min(diffDays, 31); // 최대 1달
-  for (let i = 0; i < maxDays; i++) {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i);
-    const ds = formatDate(d);
-    const recs = await loadRecords(childId, ds);
-    const sum = computeSummary(recs);
-    stats.push({
-      dateLabel: maxDays <= 7 ? dayNames[d.getDay()] : `${d.getMonth() + 1}/${d.getDate()}`,
-      dateStr: ds,
-      diaper: sum.diaperCount,
-      feeding: sum.feedingCount,
-      feedingMl: sum.totalMl,
-      sleepMin: sum.totalSleepMinutes,
-    });
-  }
-  return stats;
-}
-
-// 하위 호환용
-async function loadWeekStats(childId: string, endDate: Date): Promise<DayStat[]> {
-  const start = new Date(endDate);
-  start.setDate(start.getDate() - 6);
-  return loadRangeStats(childId, start, endDate);
-}
 
 /* ================================================================== */
 /*  Sub-components                                                     */
@@ -536,17 +271,32 @@ interface SummaryBadgeProps {
   label: string;
   color: string;
   bgColor: string;
+  active?: boolean;
+  onPress?: () => void;
+  subValue?: string;
 }
 
-function SummaryBadge({ icon, value, label, color, bgColor }: SummaryBadgeProps) {
+function SummaryBadge({ icon, value, label, color, bgColor, active, onPress, subValue }: SummaryBadgeProps) {
+  const Wrapper: React.ComponentType<any> = onPress ? TouchableOpacity : View;
   return (
-    <View style={[badgeStyles.container, { backgroundColor: bgColor }]}>
+    <Wrapper
+      style={[
+        badgeStyles.container,
+        { backgroundColor: bgColor },
+        active && { borderWidth: 2, borderColor: color },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
       <View style={[badgeStyles.circle, { borderColor: color }]}>
         <Image source={icon} style={badgeStyles.iconImg} resizeMode="contain" />
         <Text style={[badgeStyles.value, { color }]}>{value}</Text>
+        {subValue ? (
+          <Text style={[badgeStyles.subValue, { color }]}>{subValue}</Text>
+        ) : null}
       </View>
       <Text style={badgeStyles.label}>{label}</Text>
-    </View>
+    </Wrapper>
   );
 }
 
@@ -570,6 +320,7 @@ const badgeStyles = StyleSheet.create({
   },
   iconImg: { width: 24, height: 24, marginBottom: 2, borderRadius: 6 },
   value: { fontSize: FONT_SIZE.md, fontWeight: '800' },
+  subValue: { fontSize: 9, fontWeight: '600', marginTop: 1 },
   label: {
     fontSize: FONT_SIZE.xs,
     fontWeight: '600',
@@ -734,189 +485,281 @@ const emptyStyles = StyleSheet.create({
   },
 });
 
-/* ---- Weekly Chart ---- */
-
-const CHART_HEIGHT = 100;
+/* ---- Weekly Summary Table (그래프 대신 표 요약 — 모든 타입 한번에) ---- */
 
 const PERIOD_LABELS: Record<number, string> = { 7: '7일', 14: '14일', 31: '1달' };
 
-function WeeklyChart({
+function WeeklySummaryTable({
   stats,
-  activeTab,
   periodDays = 7,
 }: {
   stats: DayStat[];
-  activeTab: RecordType;
+  activeTab?: RecordType;
   periodDays?: number;
 }) {
-  const values = stats.map((s) => {
-    if (activeTab === 'diaper') return s.diaper;
-    if (activeTab === 'feeding') return s.feeding;
-    return Math.round(s.sleepMin / 60 * 10) / 10; // hours
-  });
+  // 최근이 뒤(배열 끝) → 상단에 표시되도록 역순
+  const rows = [...stats].reverse();
 
-  const maxVal = Math.max(...values, 1);
-  const color = activeTab === 'diaper' ? TRACKER_COLORS.diaper
-    : activeTab === 'feeding' ? TRACKER_COLORS.feeding
-    : TRACKER_COLORS.sleep;
-  const darkColor = activeTab === 'diaper' ? TRACKER_COLORS.diaperDark
-    : activeTab === 'feeding' ? TRACKER_COLORS.feedingDark
-    : TRACKER_COLORS.sleepDark;
+  // 컬럼별 최대값 — 셀 배경 강도 계산용
+  const maxDiaper = Math.max(...stats.map((s) => s.diaper), 1);
+  const maxFeeding = Math.max(...stats.map((s) => s.feeding), 1);
+  const maxSleep = Math.max(...stats.map((s) => s.sleepMin), 1);
 
-  const unitLabel = activeTab === 'diaper' ? '회'
-    : activeTab === 'feeding' ? '회'
-    : '시간';
+  const intensity = (v: number, max: number): string => {
+    if (v <= 0) return 'transparent';
+    const ratio = Math.min(1, v / max);
+    // 연한 배경으로 강도만 표현 (막대 대신)
+    const alpha = 0.08 + ratio * 0.22; // 0.08 ~ 0.30
+    return `rgba(255, 140, 90, ${alpha})`;
+  };
 
-  const typeLabel = activeTab === 'diaper' ? '배변'
-    : activeTab === 'feeding' ? '수유/식사'
-    : '수면';
+  return (
+    <View style={summaryStyles.container}>
+      <Text style={summaryStyles.title}>
+        최근 {PERIOD_LABELS[periodDays] ?? `${periodDays}일`} 요약
+      </Text>
 
-  // 7일: flex, 14/31일: 고정 너비 + 스크롤
-  const needsScroll = periodDays > 7;
-  const barWidth = periodDays <= 7 ? 20 : periodDays <= 14 ? 16 : 10;
-  const colWidth = periodDays <= 7 ? undefined : periodDays <= 14 ? 36 : 28;
-  const chartContentWidth = colWidth ? colWidth * stats.length : undefined;
+      {/* 헤더 */}
+      <View style={summaryStyles.headerRow}>
+        <Text style={[summaryStyles.cellDate, summaryStyles.headerCell]}>날짜</Text>
+        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>💩 배변</Text>
+        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>🍼 수유</Text>
+        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>💤 수면</Text>
+      </View>
 
-  const renderBars = () => (
-    <View style={[
-      chartStyles.chartRow,
-      needsScroll && { width: chartContentWidth, justifyContent: 'flex-start' },
-    ]}>
-      {stats.map((s, i) => {
-        const val = values[i];
-        const barH = maxVal > 0 ? (val / maxVal) * CHART_HEIGHT : 0;
-        const isCurrent = i === stats.length - 1;
+      {rows.map((s, i) => {
+        const isToday = i === 0;
+        const sleepH = s.sleepMin / 60;
         return (
           <View
             key={s.dateStr}
             style={[
-              chartStyles.barCol,
-              needsScroll ? { width: colWidth } : { flex: 1 },
+              summaryStyles.dataRow,
+              isToday && summaryStyles.todayRow,
             ]}
           >
-            <Text style={[chartStyles.barValue, periodDays > 14 && { fontSize: 8 }]}>
-              {val > 0 ? (Number.isInteger(val) ? val : val.toFixed(1)) : ''}
+            <Text style={[summaryStyles.cellDate, isToday && summaryStyles.todayText]}>
+              {isToday ? '오늘' : s.dateLabel}
             </Text>
-            <View style={chartStyles.barTrack}>
-              <View
-                style={[
-                  chartStyles.bar,
-                  {
-                    height: Math.max(barH, val > 0 ? 4 : 0),
-                    backgroundColor: isCurrent ? darkColor : color,
-                    width: barWidth,
-                  },
-                ]}
-              />
+            <View style={[summaryStyles.cellValWrap, { backgroundColor: intensity(s.diaper, maxDiaper) }]}>
+              <Text style={[summaryStyles.cellVal, isToday && summaryStyles.todayText]}>
+                {s.diaper > 0 ? `${s.diaper}` : '-'}
+              </Text>
             </View>
-            <Text
-              style={[
-                chartStyles.barLabel,
-                isCurrent && { color: darkColor, fontWeight: '700' },
-                periodDays > 14 && { fontSize: 8 },
-              ]}
-            >
-              {s.dateLabel}
-            </Text>
+            <View style={[summaryStyles.cellValWrap, { backgroundColor: intensity(s.feeding, maxFeeding) }]}>
+              <Text style={[summaryStyles.cellVal, isToday && summaryStyles.todayText]}>
+                {s.feeding > 0 ? `${s.feeding}` : '-'}
+              </Text>
+            </View>
+            <View style={[summaryStyles.cellValWrap, { backgroundColor: intensity(s.sleepMin, maxSleep) }]}>
+              <Text style={[summaryStyles.cellVal, isToday && summaryStyles.todayText]}>
+                {sleepH > 0 ? `${sleepH >= 10 ? Math.round(sleepH) : sleepH.toFixed(1)}h` : '-'}
+              </Text>
+            </View>
           </View>
         );
       })}
     </View>
   );
-
-  return (
-    <View style={chartStyles.container}>
-      <Text style={chartStyles.title}>
-        {typeLabel} {PERIOD_LABELS[periodDays] ?? `${periodDays}일`} 추이
-      </Text>
-      {needsScroll ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {renderBars()}
-        </ScrollView>
-      ) : (
-        renderBars()
-      )}
-      <Text style={chartStyles.unit}>({unitLabel})</Text>
-    </View>
-  );
 }
 
-const chartStyles = StyleSheet.create({
+const summaryStyles = StyleSheet.create({
   container: {
     backgroundColor: TRACKER_COLORS.white,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.lg,
+    borderRadius: RADIUS.md,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginBottom: 8,
     ...SHADOWS.soft,
   },
   title: {
-    fontSize: FONT_SIZE.sm,
+    fontSize: FONT_SIZE.xs,
     fontWeight: '700',
     color: TRACKER_COLORS.text,
-    marginBottom: SPACING.md,
+    marginBottom: 6,
   },
-  chartRow: {
+  headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    height: CHART_HEIGHT + 40,
-  },
-  barCol: {
-    flex: 1,
     alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+    paddingVertical: 4,
   },
-  barValue: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: TRACKER_COLORS.textSub,
-    marginBottom: 4,
-    height: 14,
-  },
-  barTrack: {
-    height: CHART_HEIGHT,
-    justifyContent: 'flex-end',
-    width: '100%',
+  dataRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 3,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F2F2F4',
   },
-  bar: {
-    width: 20,
-    borderRadius: 4,
-    minWidth: 12,
+  todayRow: {
+    backgroundColor: '#FFF5EC',
   },
-  barLabel: {
+  cellDate: {
+    width: 50,
     fontSize: 11,
-    color: TRACKER_COLORS.textLight,
-    marginTop: 6,
-    fontWeight: '500',
+    color: TRACKER_COLORS.textSub,
+    textAlign: 'left',
+    paddingLeft: 4,
   },
-  unit: {
+  cellValWrap: {
+    flex: 1,
+    marginHorizontal: 2,
+    borderRadius: 4,
+    paddingVertical: 2,
+  },
+  cellVal: {
+    flex: 1,
+    fontSize: 11,
+    color: TRACKER_COLORS.text,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  headerCell: {
     fontSize: 10,
     color: TRACKER_COLORS.textLight,
-    textAlign: 'right',
-    marginTop: 4,
+    fontWeight: '700',
+  },
+  todayText: {
+    color: '#FF8C5A',
+    fontWeight: '800',
   },
   periodRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
-    marginBottom: SPACING.sm,
+    gap: 6,
+    marginBottom: 6,
   },
   periodBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+    borderRadius: 14,
     backgroundColor: TRACKER_COLORS.border,
   },
   periodBtnActive: {
     backgroundColor: TRACKER_COLORS.accent,
   },
   periodBtnText: {
-    fontSize: FONT_SIZE.xs,
+    fontSize: 11,
     fontWeight: '600',
     color: TRACKER_COLORS.textSub,
   },
   periodBtnTextActive: {
     color: TRACKER_COLORS.white,
+  },
+  voiceBtn: {
+    marginLeft: 'auto',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 14,
+    backgroundColor: '#EFEBFE',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#9C8FE3',
+  },
+  voiceBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6E5BC4',
+  },
+});
+
+// 이전 막대 차트는 제거됨 (대체: WeeklySummaryTable)
+const WeeklyChart = WeeklySummaryTable;
+
+/* ---- Day Summary Card ---- */
+function DaySummaryCard({ summary }: { summary: DaySummary }) {
+  const { peeCount, poopCount, formulaMl, breastMin, breastLeftMin, breastRightMin, breastCount, solidCount, totalSleepMinutes, diaperCount, feedingCount } = summary;
+
+  // 수유 요약 조합: "분유 540ml · 모유 20분(좌10/우10) · 이유식 1"
+  const feedingParts: string[] = [];
+  if (formulaMl > 0) feedingParts.push(`분유 ${formulaMl}ml`);
+  if (breastMin > 0) {
+    const sides: string[] = [];
+    if (breastLeftMin > 0) sides.push(`좌${breastLeftMin}`);
+    if (breastRightMin > 0) sides.push(`우${breastRightMin}`);
+    const sideLabel = sides.length > 0 ? ` (${sides.join('/')})` : '';
+    feedingParts.push(`모유 ${breastMin}분${sideLabel}`);
+  } else if (breastCount > 0) {
+    feedingParts.push(`모유 ${breastCount}회`);
+  }
+  if (solidCount > 0) feedingParts.push(`이유식 ${solidCount}회`);
+  const feedingSummary = feedingParts.length > 0 ? feedingParts.join(' · ') : '-';
+
+  // 배변 요약: "소변 3 · 대변 1"
+  const diaperParts: string[] = [];
+  if (peeCount > 0) diaperParts.push(`소변 ${peeCount}`);
+  if (poopCount > 0) diaperParts.push(`대변 ${poopCount}`);
+  const diaperSummary = diaperParts.length > 0 ? diaperParts.join(' · ') : '-';
+
+  // 수면: 시간 표기
+  const sleepH = Math.floor(totalSleepMinutes / 60);
+  const sleepM = totalSleepMinutes % 60;
+  const sleepSummary = totalSleepMinutes > 0
+    ? (sleepH > 0 ? `${sleepH}시간 ${sleepM}분` : `${sleepM}분`)
+    : '-';
+
+  return (
+    <View style={daySumStyles.card}>
+      <View style={[daySumStyles.row, { borderBottomWidth: 1, borderBottomColor: TRACKER_COLORS.bg }]}>
+        <View style={[daySumStyles.tag, { backgroundColor: TRACKER_COLORS.diaperLight }]}>
+          <Text style={[daySumStyles.tagText, { color: TRACKER_COLORS.diaperDark }]}>💩 배변</Text>
+          <Text style={[daySumStyles.tagCount, { color: TRACKER_COLORS.diaperDark }]}>{diaperCount}회</Text>
+        </View>
+        <Text style={daySumStyles.detail} numberOfLines={1}>{diaperSummary}</Text>
+      </View>
+      <View style={[daySumStyles.row, { borderBottomWidth: 1, borderBottomColor: TRACKER_COLORS.bg }]}>
+        <View style={[daySumStyles.tag, { backgroundColor: TRACKER_COLORS.feedingLight }]}>
+          <Text style={[daySumStyles.tagText, { color: TRACKER_COLORS.feedingDark }]}>🍼 수유</Text>
+          <Text style={[daySumStyles.tagCount, { color: TRACKER_COLORS.feedingDark }]}>{feedingCount}회</Text>
+        </View>
+        <Text style={daySumStyles.detail} numberOfLines={2}>{feedingSummary}</Text>
+      </View>
+      <View style={daySumStyles.row}>
+        <View style={[daySumStyles.tag, { backgroundColor: TRACKER_COLORS.sleepLight }]}>
+          <Text style={[daySumStyles.tagText, { color: TRACKER_COLORS.sleepDark }]}>💤 수면</Text>
+        </View>
+        <Text style={daySumStyles.detail} numberOfLines={1}>{sleepSummary}</Text>
+      </View>
+    </View>
+  );
+}
+
+const daySumStyles = StyleSheet.create({
+  card: {
+    backgroundColor: TRACKER_COLORS.white,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.sm,
+    ...SHADOWS.soft,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    gap: SPACING.sm,
+  },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.full,
+    minWidth: 78,
+  },
+  tagText: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '700',
+  },
+  tagCount: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '700',
+  },
+  detail: {
+    flex: 1,
+    fontSize: FONT_SIZE.sm,
+    color: TRACKER_COLORS.text,
+    fontWeight: '600',
   },
 });
 
@@ -932,9 +775,12 @@ interface AddModalProps {
   onSave: (record: TrackerRecord) => void;
   availableTabs: typeof TAB_CONFIG;
   feedingOptions: { key: string; label: string; icon: number }[];
+  // 단일 항목만 입력하도록 잠금 (예: 분유 전용 다이얼로그)
+  lockSubType?: boolean;
+  lockTitle?: string;
 }
 
-function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, availableTabs, feedingOptions }: AddModalProps) {
+function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, availableTabs, feedingOptions, lockSubType, lockTitle }: AddModalProps) {
   const [tab, setTab] = useState<RecordType>(initialTab);
   const [subType, setSubType] = useState<string>('');
   const [time, setTime] = useState(nowTime());
@@ -1052,7 +898,17 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
           {/* Handle bar */}
           <View style={modalStyles.handleBar} />
 
+          {/* 잠금 모드: 헤더 타이틀 표시 */}
+          {lockSubType && lockTitle ? (
+            <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#1C1C1E' }}>
+                {lockTitle}
+              </Text>
+            </View>
+          ) : null}
+
           {/* Tab switcher (연령별 필터) */}
+          {!lockSubType && (
           <View style={modalStyles.tabRow}>
             {availableTabs.map((t) => (
               <TouchableOpacity
@@ -1077,13 +933,16 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
               </TouchableOpacity>
             ))}
           </View>
+          )}
 
           <ScrollView
             style={modalStyles.scrollBody}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Sub-type selector */}
+            {/* Sub-type selector (잠금 모드에선 숨김) */}
+            {!lockSubType && (
+              <>
             <Text style={modalStyles.sectionTitle}>유형 선택</Text>
             <View style={modalStyles.optionGrid}>
               {options.map((opt) => (
@@ -1107,6 +966,8 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
                 </TouchableOpacity>
               ))}
             </View>
+              </>
+            )}
 
             {/* Time picker */}
             <TimePicker value={time} onChange={setTime} label="시간" />
@@ -1494,6 +1355,15 @@ function BabyTrackerInner() {
   }
 
   async function handleSleepStart() {
+    // 이미 진행 중인 수면 세션이 있으면 안내 (sleepSession은 크로스 데이 영구 저장)
+    if (sleepSession) {
+      const startDt = new Date(sleepSession.startTime);
+      Alert.alert(
+        '수면 기록 진행 중',
+        `${sleepSession.startDate} ${String(startDt.getHours()).padStart(2, '0')}:${String(startDt.getMinutes()).padStart(2, '0')}에 시작한 수면이 진행 중이에요. 기상 버튼을 눌러 종료해주세요.`,
+      );
+      return;
+    }
     const now = new Date();
     const session: SleepSession = {
       startTime: now.toISOString(),
@@ -1501,54 +1371,61 @@ function BabyTrackerInner() {
     };
     await saveSleepSession(childId, session);
     setSleepSession(session);
-    showToast('수면 시작');
+    showToast('수면 시작 기록');
   }
 
   async function handleSleepWake() {
-    if (!sleepSession) return;
+    if (!sleepSession) {
+      Alert.alert(
+        '수면 시작 기록 없음',
+        '수면 시작 기록이 없어요. "수면 시작"을 먼저 눌러주세요.',
+      );
+      return;
+    }
     const start = new Date(sleepSession.startTime);
     const end = new Date();
-    let diff = Math.round((end.getTime() - start.getTime()) / 60000);
-    if (diff < 1) diff = 1;
+    let duration = Math.round((end.getTime() - start.getTime()) / 60000);
+    if (duration < 1) duration = 1;
+    // 비정상적으로 긴 수면(기상 버튼을 누르지 않고 24h+ 경과)은 14시간으로 제한
+    const MAX_SLEEP_MIN = 14 * 60; // 14시간
+    if (duration > MAX_SLEEP_MIN) {
+      Alert.alert(
+        '수면 시간이 너무 길어요',
+        `${Math.round((duration / 60) * 10) / 10}시간으로 계산되어 14시간으로 제한했어요. 기상 시간을 잊으신 것 같으면 직접 수정해주세요.`,
+      );
+      duration = MAX_SLEEP_MIN;
+    }
 
     const startHHMM = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
     const endHHMM = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
 
-    // Persist record (use session start date so cross-midnight sleep is tied to night-of-start date)
+    // 자정을 넘긴 경우 endTime에 날짜 표기 추가
+    const crossedMidnight = sleepSession.startDate !== formatDate(end);
+    const endLabel = crossedMidnight
+      ? `${end.getMonth() + 1}/${end.getDate()} ${endHHMM}`
+      : endHHMM;
+
     const record: TrackerRecord = {
       id: generateId(),
       type: 'sleep',
-      subType: 'sleep',
+      subType: 'sleep_start',
       time: startHHMM,
-      endTime: endHHMM,
-      duration: diff,
+      endTime: endLabel,
+      duration,
     };
+
+    // 시작 날짜의 records에 저장 (BreastSession과 동일 패턴)
     const existing = await loadRecords(childId, sleepSession.startDate);
     const updated = [...existing, record];
     await saveRecords(childId, sleepSession.startDate, updated);
     if (sleepSession.startDate === dateStr) {
       setRecords(updated);
     } else {
-      // Reload current date view
       await loadData();
     }
-
-    // Sync to backend dailyTracking for sleep-predict
-    try {
-      const hours = Math.round((diff / 60) * 10) / 10;
-      await childApi.saveDailyTracking(childId, {
-        date: sleepSession.startDate,
-        sleepStart: sleepSession.startTime,
-        sleepEnd: end.toISOString(),
-        sleepHours: hours,
-      });
-    } catch {
-      // silent: local record is saved; backend sync is best-effort
-    }
-
     await saveSleepSession(childId, null);
     setSleepSession(null);
-    showToast(`수면 ${formatMinutes(diff)} 기록됨`);
+    showToast(`기상 기록 (${formatMinutes(duration)})`);
   }
 
   function handleDeleteRecord(id: string) {
@@ -1573,13 +1450,11 @@ function BabyTrackerInner() {
       setModalVisible(true);
     } else if (action.kind === 'quick') {
       handleQuickAdd(action.type, action.subType);
+    } else if (action.kind === 'breast') {
+      handleBreastPress();
     } else if (action.kind === 'sleepStart') {
       handleSleepStart();
     } else if (action.kind === 'sleepWake') {
-      if (!sleepSession) {
-        showToast('먼저 수면 시작을 눌러주세요');
-        return;
-      }
       handleSleepWake();
     }
   }
@@ -1614,6 +1489,16 @@ function BabyTrackerInner() {
       const data = res.data?.data as TrackerAnalysisResult | undefined;
       if (data?.trackerMetrics) {
         setAnalysisResult(data);
+        void saveAnalysisHistory({
+          type: 'pattern',
+          summary: data.overallSummary?.slice(0, 80) ?? '육아패턴 분석 완료',
+          details: data.trackerMetrics
+            .slice(0, 3)
+            .map((m) => `${m.title}: ${m.value}`)
+            .join(' · '),
+          childId: selectedChild?.id,
+          childName: selectedChild?.name,
+        });
       } else {
         setAnalysisError('분석 결과를 불러올 수 없습니다.');
       }
@@ -1715,32 +1600,30 @@ function BabyTrackerInner() {
           </TouchableOpacity>
         </View>
 
-        {/* ---- Summary Badges ---- */}
-        <View style={styles.summaryRow}>
-          <SummaryBadge
-            icon={IC_POOP}
-            value={`${summary.diaperCount}회`}
-            label="배변"
-            color={TRACKER_COLORS.diaperDark}
-            bgColor={TRACKER_COLORS.diaperLight}
-          />
-          <SummaryBadge
-            icon={IC_FEED}
-            value={summary.totalMl > 0 ? `${summary.feedingCount}회/${summary.totalMl}ml` : `${summary.feedingCount}회`}
-            label="수유/식사"
-            color={TRACKER_COLORS.feedingDark}
-            bgColor={TRACKER_COLORS.feedingLight}
-          />
-          <SummaryBadge
-            icon={IC_SLEEP}
-            value={sleepDisplay}
-            label="수면"
-            color={TRACKER_COLORS.sleepDark}
-            bgColor={TRACKER_COLORS.sleepLight}
-          />
-        </View>
+        {/* ---- Breast-feeding timer banner (only when active) ---- */}
+        {breastSession && (
+          <TouchableOpacity
+            style={[breastStyles.card, breastStyles.cardActive]}
+            onPress={handleBreastPress}
+            activeOpacity={0.85}
+          >
+            <View style={breastStyles.iconWrap}>
+              <Image source={IC_MASCOT_EAT} style={breastStyles.icon} resizeMode="contain" />
+            </View>
+            <View style={breastStyles.textCol}>
+              <Text style={breastStyles.title}>모유 수유 진행 중</Text>
+              <Text style={breastStyles.sub}>
+                {breastSession.side === 'left' ? '왼쪽' : '오른쪽'} · 탭하여 종료
+              </Text>
+            </View>
+            <View style={breastStyles.rightCol}>
+              <Text style={breastStyles.timer}>{breastElapsed}</Text>
+              <Text style={breastStyles.stopHint}>탭하여 중지</Text>
+            </View>
+          </TouchableOpacity>
+        )}
 
-        {/* ---- Sleep session banner (only when active) ---- */}
+        {/* ---- Active Sleep Banner (cross-day persist) ---- */}
         {sleepSession && (
           <SleepSessionCard
             session={sleepSession}
@@ -1750,182 +1633,40 @@ function BabyTrackerInner() {
           />
         )}
 
-        {/* ---- Breast-feeding dedicated button ---- */}
-        <TouchableOpacity
-          style={[
-            breastStyles.card,
-            breastSession && breastStyles.cardActive,
-          ]}
-          onPress={handleBreastPress}
-          activeOpacity={0.85}
-        >
-          <View style={breastStyles.iconWrap}>
-            <Image source={IC_MASCOT_EAT} style={breastStyles.icon} resizeMode="contain" />
-          </View>
-          <View style={breastStyles.textCol}>
-            <Text style={breastStyles.title}>모유 수유</Text>
-            {breastSession ? (
-              <Text style={breastStyles.sub}>
-                {breastSession.side === 'left' ? '왼쪽' : '오른쪽'} · 진행 중
-              </Text>
-            ) : (
-              <Text style={breastStyles.sub}>눌러서 시작 (왼쪽/오른쪽 선택)</Text>
-            )}
-          </View>
-          <View style={breastStyles.rightCol}>
-            {breastSession ? (
-              <>
-                <Text style={breastStyles.timer}>{breastElapsed}</Text>
-                <Text style={breastStyles.stopHint}>탭하여 중지</Text>
-              </>
-            ) : (
-              <Text style={breastStyles.startIcon}>{'\u25B6'}</Text>
-            )}
-          </View>
-        </TouchableOpacity>
+        {/* ---- Day Summary Card ---- */}
+        <DaySummaryCard summary={summary} />
 
-        {/* ---- AI 도구 섹션 ---- */}
-        <View style={toolsStyles.section}>
-          <Text style={toolsStyles.sectionTitle}>AI 도구</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={toolsStyles.row}
-          >
-            <ToolButton
-              icon={IC_MIC}
-              label="음성 설정"
-              sub="시리·빅스비"
-              onPress={() => router.push('/(main)/voice-settings')}
-              color="#FF8C5A"
-            />
-            <ToolButton
-              icon={IC_ANALYZING}
-              label="패턴 분석"
-              sub={analysisLoading ? '분석중…' : '수면·배변·수유'}
-              onPress={handlePatternAnalysis}
-              color={TRACKER_COLORS.accent}
-              loading={analysisLoading}
-            />
-            <ToolButton
-              icon={IC_BADGE_AI}
-              label="아기 분석"
-              sub="사진·소리"
-              onPress={() => setAnalyzerPickerVisible(true)}
-              color="#D88FB8"
-            />
-          </ScrollView>
-        </View>
-
-        {/* ---- Period Selector + Chart ---- */}
-        <View style={chartStyles.periodRow}>
+        {/* ---- Period Selector + Voice Settings ---- */}
+        <View style={summaryStyles.periodRow}>
           {([7, 14, 31] as const).map((p) => (
             <TouchableOpacity
               key={p}
               style={[
-                chartStyles.periodBtn,
-                chartPeriod === p && chartStyles.periodBtnActive,
+                summaryStyles.periodBtn,
+                chartPeriod === p && summaryStyles.periodBtnActive,
               ]}
               onPress={() => setChartPeriod(p)}
             >
               <Text
                 style={[
-                  chartStyles.periodBtnText,
-                  chartPeriod === p && chartStyles.periodBtnTextActive,
+                  summaryStyles.periodBtnText,
+                  chartPeriod === p && summaryStyles.periodBtnTextActive,
                 ]}
               >
                 {PERIOD_LABELS[p]}
               </Text>
             </TouchableOpacity>
           ))}
+          <TouchableOpacity
+            style={summaryStyles.voiceBtn}
+            onPress={() => router.push('/(main)/voice-settings' as never)}
+            activeOpacity={0.85}
+          >
+            <Text style={summaryStyles.voiceBtnText}>🎙 음성</Text>
+          </TouchableOpacity>
         </View>
         {weekStats.length > 0 && (
-          <WeeklyChart stats={weekStats} activeTab={activeTab} periodDays={chartPeriod} />
-        )}
-
-        {/* ---- Pattern Analysis Results (inline) ---- */}
-        {analysisLoading && (
-          <View style={analysisStyles.loadingContainer}>
-            <ActivityIndicator size="large" color={TRACKER_COLORS.accent} />
-            <Text style={analysisStyles.loadingText}>
-              배변, 수유, 수면 패턴을 분석하고 있어요...
-            </Text>
-          </View>
-        )}
-
-        {analysisError !== '' && !analysisLoading && (
-          <View style={analysisStyles.errorContainer}>
-            <Text style={analysisStyles.errorText}>{analysisError}</Text>
-          </View>
-        )}
-
-        {analysisResult && !analysisLoading && (
-          <View style={analysisStyles.resultContainer}>
-            <TouchableOpacity
-              style={analysisStyles.resultHeader}
-              onPress={() => setAnalysisExpanded((prev) => !prev)}
-              activeOpacity={0.7}
-            >
-              <View style={analysisStyles.resultTitleRow}>
-                <Image source={require('../../assets/quick-report.png')} style={analysisStyles.sectionIcon} resizeMode="contain" />
-                <Text style={analysisStyles.resultTitle}>패턴 분석 결과</Text>
-              </View>
-              <Text style={analysisStyles.collapseIcon}>
-                {analysisExpanded ? '\u{25B2}' : '\u{25BC}'}
-              </Text>
-            </TouchableOpacity>
-
-            {analysisExpanded && (
-              <View style={analysisStyles.resultBody}>
-                {analysisResult.trackerMetrics.map((m) => {
-                  const levelColor =
-                    m.level === 'very_low' || m.level === 'very_high'
-                      ? '#FF4444'
-                      : m.level === 'low' || m.level === 'high'
-                        ? '#FF9800'
-                        : '#4CAF50';
-                  const levelLabel =
-                    m.level === 'very_low' ? '매우 부족'
-                    : m.level === 'low' ? '부족'
-                    : m.level === 'normal' ? '정상'
-                    : m.level === 'high' ? '많음'
-                    : m.level === 'very_high' ? '매우 많음'
-                    : m.level;
-
-                  return (
-                    <View key={m.metric} style={analysisStyles.metricCard}>
-                      <View style={analysisStyles.metricHeader}>
-                        <Image source={require('../../assets/growth-physical.png')} style={analysisStyles.metricIcon} resizeMode="contain" />
-                        <Text style={analysisStyles.metricTitle}>{m.title}</Text>
-                        <View style={[analysisStyles.levelBadge, { backgroundColor: levelColor }]}>
-                          <Text style={analysisStyles.levelBadgeText}>{levelLabel}</Text>
-                        </View>
-                      </View>
-                      {m.standardRange ? (
-                        <Text style={analysisStyles.metricRange}>
-                          기준 범위: {m.standardRange}
-                        </Text>
-                      ) : null}
-                      <Text style={analysisStyles.metricComment}>{m.comment}</Text>
-                      <View style={analysisStyles.adviceBox}>
-                        <Text style={analysisStyles.adviceLabel}>조언</Text>
-                        <Text style={analysisStyles.adviceText}>{m.advice}</Text>
-                      </View>
-                    </View>
-                  );
-                })}
-
-                {analysisResult.overallSummary ? (
-                  <View style={analysisStyles.summaryBox}>
-                    <Text style={analysisStyles.summaryLabel}>종합 요약</Text>
-                    <Text style={analysisStyles.summaryText}>
-                      {analysisResult.overallSummary}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            )}
-          </View>
+          <WeeklySummaryTable stats={weekStats} periodDays={chartPeriod} />
         )}
 
         {/* ---- Full Timeline ---- */}
@@ -1962,13 +1703,18 @@ function BabyTrackerInner() {
           )}
         </View>
 
-        {/* Bottom spacer for bottom action bar */}
-        <View style={{ height: 140 }} />
+        {/* Bottom spacer for bottom action bar + fixed ad */}
+        <View style={{ height: 200 }} />
       </ScrollView>
+
+      {/* ---- Fixed Ad (above bottom action bar) ---- */}
+      <View style={styles.fixedAd} pointerEvents="box-none">
+        <AdSlot />
+      </View>
 
       {/* ---- Bottom Action Bar ---- */}
       <BottomActionBar
-        sleepActive={!!sleepSession}
+        breastActive={!!breastSession}
         onAction={handleBottomAction}
       />
 
@@ -1998,6 +1744,8 @@ function BabyTrackerInner() {
           label: f.label,
           icon: f.key === 'breast' ? IC_MASCOT_EAT : IC_FEED,
         }))}
+        lockSubType={modalSubType === 'formula'}
+        lockTitle={modalSubType === 'formula' ? '🍼 분유 기록' : undefined}
       />
 
       {/* ---- Breast Side Picker ---- */}
@@ -2103,10 +1851,17 @@ function BabyTrackerInner() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: TRACKER_COLORS.bg },
+  fixedAd: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 96,
+  },
   container: { flex: 1 },
   content: {
-    paddingTop: Platform.OS === 'ios' ? 100 : 80,
+    paddingTop: Platform.OS === 'ios' ? 90 : 72,
     paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
   },
 
   /* Header */
@@ -2132,8 +1887,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.lg,
-    paddingVertical: SPACING.sm,
+    marginBottom: SPACING.sm,
+    paddingVertical: 2,
   },
   dateArrow: {
     width: 40,
@@ -2173,18 +1928,18 @@ const styles = StyleSheet.create({
   /* Summary row */
   summaryRow: {
     flexDirection: 'row',
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.sm,
   },
 
   /* Tab buttons */
   tabRow: {
     flexDirection: 'row',
     gap: SPACING.sm,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.sm,
   },
   tabBtn: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 8,
     borderRadius: RADIUS.full,
     borderWidth: 1.5,
     borderColor: TRACKER_COLORS.border,
@@ -2208,15 +1963,15 @@ const styles = StyleSheet.create({
   timelineContainer: {
     backgroundColor: TRACKER_COLORS.white,
     borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
     ...SHADOWS.soft,
   },
   timelineTitleRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     gap: 6,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   timelineTitleIcon: { width: 20, height: 20, borderRadius: 4 },
   timelineTitle: {
@@ -2229,20 +1984,20 @@ const styles = StyleSheet.create({
   allSection: {
     backgroundColor: TRACKER_COLORS.white,
     borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
     ...SHADOWS.soft,
   },
   allSectionTitle: {
     fontSize: FONT_SIZE.md,
     fontWeight: '700',
     color: TRACKER_COLORS.text,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   miniRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: TRACKER_COLORS.bg,
     gap: SPACING.sm,
@@ -2421,13 +2176,15 @@ const toolsStyles = StyleSheet.create({
     marginLeft: 2,
   },
   row: {
-    gap: SPACING.md,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-start',
     paddingVertical: 4,
-    paddingHorizontal: 2,
+    paddingHorizontal: SPACING.md,
   },
   item: {
     alignItems: 'center',
-    width: 76,
+    width: 84,
   },
   circle: {
     width: 60,
@@ -2474,50 +2231,40 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete }: TimelineEntr
         ? TRACKER_COLORS.feedingDark
         : TRACKER_COLORS.sleepDark;
   const icon = SUBTYPE_ICONS[record.subType] ?? IC_POOP;
-  const label = SUBTYPE_LABELS[record.subType] ?? record.subType;
+  const baseLabel = SUBTYPE_LABELS[record.subType] ?? record.subType;
+  // 모유: 왼쪽/오른쪽을 라벨에 병합 → "모유 (왼쪽)"
+  const label = record.subType === 'breast' && record.note
+    ? `${baseLabel} (${record.note})`
+    : baseLabel;
   const relative = showRelative ? getRelativeTime(record.time, dateStr) : '';
+  // note를 라벨에 합쳤으면 하단 note는 숨김
+  const hideNote = record.subType === 'breast';
+
+  // Amount/duration을 한 줄 info로 통합
+  const infoParts: string[] = [];
+  if (record.amount != null && record.amount > 0) infoParts.push(`${record.amount}ml`);
+  if (record.duration != null && record.duration > 0) infoParts.push(formatMinutes(record.duration));
+  if (record.note && !hideNote) infoParts.push(record.note);
+  const info = infoParts.join(' · ');
 
   return (
     <TouchableOpacity
-      style={timelineStyles.row}
+      style={[timelineStyles.row, { borderLeftColor: typeColor }]}
       onLongPress={() => onDelete(record.id)}
       delayLongPress={500}
-      activeOpacity={0.85}
+      activeOpacity={0.7}
     >
-      {/* Left: time */}
-      <View style={timelineStyles.timeCol}>
-        <Text style={timelineStyles.timeText}>{record.time}</Text>
-        {relative !== '' && (
-          <Text style={timelineStyles.relativeText}>{relative}</Text>
-        )}
-      </View>
-
-      {/* Dot + line */}
-      <View style={timelineStyles.dotCol}>
-        <View style={[timelineStyles.dot, { backgroundColor: typeColor }]} />
-        <View style={timelineStyles.line} />
-      </View>
-
-      {/* Right: content */}
-      <View style={[timelineStyles.content, { borderLeftColor: typeColor }]}>
-        <View style={timelineStyles.contentHeader}>
-          <Image source={icon} style={timelineStyles.icon} resizeMode="contain" />
-          <Text style={[timelineStyles.label, { color: typeDark }]}>{label}</Text>
-          {record.amount != null && record.amount > 0 && (
-            <View style={[timelineStyles.chip, { backgroundColor: typeColor + '33' }]}>
-              <Text style={[timelineStyles.chipText, { color: typeDark }]}>{record.amount}ml</Text>
-            </View>
-          )}
-          {record.duration != null && record.duration > 0 && (
-            <View style={[timelineStyles.chip, { backgroundColor: typeColor + '33' }]}>
-              <Text style={[timelineStyles.chipText, { color: typeDark }]}>{formatMinutes(record.duration)}</Text>
-            </View>
-          )}
-        </View>
-        {record.note ? (
-          <Text style={timelineStyles.note}>{record.note}</Text>
-        ) : null}
-      </View>
+      <Text style={timelineStyles.timeCell}>{record.time}</Text>
+      <Image source={icon} style={timelineStyles.iconCell} resizeMode="contain" />
+      <Text style={[timelineStyles.labelCell, { color: typeDark }]} numberOfLines={1}>
+        {label}
+      </Text>
+      <Text style={timelineStyles.infoCell} numberOfLines={1}>
+        {info}
+      </Text>
+      {relative !== '' && (
+        <Text style={timelineStyles.relCell} numberOfLines={1}>{relative}</Text>
+      )}
     </TouchableOpacity>
   );
 }
@@ -2525,77 +2272,40 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete }: TimelineEntr
 const timelineStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 6,
-    alignItems: 'flex-start',
+    paddingHorizontal: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#ECECEE',
+    borderLeftWidth: 3,
+    backgroundColor: TRACKER_COLORS.white,
+    gap: 6,
   },
-  timeCol: {
-    width: 54,
-    alignItems: 'flex-end',
-    paddingRight: SPACING.sm,
-    paddingTop: 4,
-  },
-  timeText: {
-    fontSize: FONT_SIZE.xs,
+  timeCell: {
+    width: 46,
+    fontSize: 11,
     fontWeight: '700',
     color: TRACKER_COLORS.text,
   },
-  relativeText: {
+  iconCell: {
+    width: 16,
+    height: 16,
+    borderRadius: 3,
+  },
+  labelCell: {
+    width: 72,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  infoCell: {
+    flex: 1,
+    fontSize: 11,
+    color: TRACKER_COLORS.textSub,
+  },
+  relCell: {
     fontSize: 10,
     color: TRACKER_COLORS.textLight,
-    marginTop: 1,
-  },
-  dotCol: {
-    width: 20,
-    alignItems: 'center',
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginTop: 6,
-  },
-  line: {
-    width: 2,
-    flex: 1,
-    backgroundColor: TRACKER_COLORS.border,
-    marginTop: 2,
-    minHeight: 24,
-  },
-  content: {
-    flex: 1,
-    backgroundColor: TRACKER_COLORS.white,
-    borderRadius: RADIUS.md,
-    marginLeft: SPACING.sm,
-    padding: SPACING.sm,
-    marginBottom: 4,
-    borderLeftWidth: 3,
-    ...SHADOWS.soft,
-  },
-  contentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    flexWrap: 'wrap',
-  },
-  icon: { width: 20, height: 20, borderRadius: 4 },
-  label: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: '700',
-    flex: 1,
-  },
-  chip: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: RADIUS.full,
-  },
-  chipText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  note: {
-    fontSize: FONT_SIZE.xs,
-    color: TRACKER_COLORS.textSub,
-    marginTop: 4,
+    textAlign: 'right',
   },
 });
 
@@ -2604,6 +2314,7 @@ const timelineStyles = StyleSheet.create({
 type BottomAction =
   | { kind: 'modal'; subType: string }
   | { kind: 'quick'; type: RecordType; subType: string }
+  | { kind: 'breast' }
   | { kind: 'sleepStart' }
   | { kind: 'sleepWake' };
 
@@ -2612,25 +2323,24 @@ interface BottomBarItem {
   label: string;
   action: BottomAction;
   color: string;
-  sleepOnly?: boolean;
 }
 
 const BAR_ITEMS: BottomBarItem[] = [
   { icon: IC_FEED, label: '분유', action: { kind: 'modal', subType: 'formula' }, color: TRACKER_COLORS.feedingDark },
   { icon: IC_FEED, label: '이유식', action: { kind: 'quick', type: 'feeding', subType: 'baby_food' }, color: TRACKER_COLORS.feedingDark },
+  { icon: IC_MASCOT_EAT, label: '모유', action: { kind: 'breast' }, color: TRACKER_COLORS.feedingDark },
   { icon: IC_SLEEP, label: '수면', action: { kind: 'sleepStart' }, color: TRACKER_COLORS.sleepDark },
-  { icon: IC_SUNNY, label: '기상', action: { kind: 'sleepWake' }, color: TRACKER_COLORS.sleepDark, sleepOnly: true },
+  { icon: IC_SUNNY, label: '기상', action: { kind: 'sleepWake' }, color: TRACKER_COLORS.sleepDark },
   { icon: IC_POOP, label: '소변', action: { kind: 'quick', type: 'diaper', subType: 'pee' }, color: TRACKER_COLORS.diaperDark },
   { icon: IC_POOP, label: '대변', action: { kind: 'quick', type: 'diaper', subType: 'poop' }, color: TRACKER_COLORS.diaperDark },
 ];
 
 interface BottomActionBarProps {
-  sleepActive: boolean;
+  breastActive: boolean;
   onAction: (action: BottomAction) => void;
 }
 
-function BottomActionBar({ sleepActive, onAction }: BottomActionBarProps) {
-  const items = BAR_ITEMS.filter((item) => !item.sleepOnly || sleepActive);
+function BottomActionBar({ breastActive, onAction }: BottomActionBarProps) {
   return (
     <View style={barStyles.wrapper}>
       <ScrollView
@@ -2638,10 +2348,9 @@ function BottomActionBar({ sleepActive, onAction }: BottomActionBarProps) {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={barStyles.container}
       >
-        {items.map((item) => {
-          const isSleep = item.action.kind === 'sleepStart';
-          const isWake = item.action.kind === 'sleepWake';
-          const active = (isSleep && sleepActive) || (isWake);
+        {BAR_ITEMS.map((item) => {
+          const isBreast = item.action.kind === 'breast';
+          const active = isBreast && breastActive;
           return (
             <TouchableOpacity
               key={item.label}
@@ -2656,7 +2365,7 @@ function BottomActionBar({ sleepActive, onAction }: BottomActionBarProps) {
                 <Image source={item.icon} style={barStyles.icon} resizeMode="contain" />
               </View>
               <Text style={[barStyles.itemLabel, active && { color: item.color }]}>
-                {isSleep && sleepActive ? '수면중' : item.label}
+                {isBreast && breastActive ? '모유중' : item.label}
               </Text>
             </TouchableOpacity>
           );

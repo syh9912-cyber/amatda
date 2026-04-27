@@ -22,6 +22,7 @@ import { pickImageFromLibrary } from '../../utils/imagePicker';
 import { useChildStore } from '../../stores/childStore';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { momstagramApi, coachingApi, pregnancyApi, uploadApi, albumApi, API_URL } from '../../services/api';
+import { readCache, writeCache } from '../../utils/simpleCache';
 import { uploadGrowthPhoto } from '../../services/imageUpload';
 import { useMomstagramStore } from '../../stores/momstagramStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
@@ -635,10 +636,13 @@ function generateAlbumHTML(
     `<div class="page-corner bl">&#127800;</div>` + // 🌸
     `<div class="page-corner br">&#10024;</div>`;   // ✨
 
+  // 표지 이미지가 명시되지 않았으면 첫 사진을 자동 표지로 사용
+  const effectiveCoverUri = coverImageUri ?? (sorted[0]?.uri ?? null);
+
   // ─── 표지 (이미지 위에 아이 이름 + 날짜 오버레이) ─────
-  const coverHTML = coverImageUri
+  const coverHTML = effectiveCoverUri
     ? `<div class="cover cover-img">` +
-      `<img src="${coverImageUri}" alt="" class="cover-bg-img" />` +
+      `<img src="${effectiveCoverUri}" alt="" width="1123" height="794" class="cover-bg-img" />` +
       `<div class="cover-overlay">` +
       `<div class="cover-label">Our Precious</div>` +
       `<div class="cover-name">${escapeHtml(childName)}</div>` +
@@ -782,39 +786,53 @@ function generateAlbumHTML(
     /* 공통 화사한 파스텔 배경 (linear-gradient — expo-print Android WebView 호환) */
     html, body { background-color: #FFF6E8; }
     /* ── 표지 공통 (A4 가로: 297 x 210) ── */
-    .cover { width: 297mm; height: 210mm; page-break-after: always; overflow: hidden; position: relative; }
-    /* 이미지 표지: 이미지 전체 + 왼쪽 페이지 오버레이 */
-    .cover-img { display: block; }
+    .cover { width: 297mm; height: 210mm; page-break-after: always; overflow: hidden; position: relative; background-color: #FFF6E8; }
+    /* 이미지 표지: 단순 img + overlay 구조 (PDF 뷰어 호환성 최대화) */
+    .cover-img { display: block; background-color: #FFF6E8; }
     .cover-bg-img {
+      display: block;
+      width: 297mm;
+      height: 210mm;
+      object-fit: cover;
+      -o-object-fit: cover;
+    }
+    /* 사진 위에 부드러운 어두움을 더해 텍스트 가독성 향상 — 단일 linear-gradient (Android WebView 호환) */
+    .cover-vignette {
+      position: absolute;
+      top: 0; left: 0;
       width: 100%; height: 100%;
-      object-fit: cover; display: block;
-      position: absolute; top: 0; left: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.45) 100%);
+      z-index: 1;
+      pointer-events: none;
     }
     .cover-overlay {
       position: absolute;
-      bottom: 6%; left: 9%;
-      width: 32%;
+      bottom: 14mm; left: 50%;
+      transform: translateX(-50%);
+      width: 78%;
       text-align: center;
-      padding: 5mm 6mm;
+      padding: 10mm 12mm;
       z-index: 2;
-      background: rgba(255, 248, 235, 0.78);
-      border-radius: 4px;
-      box-shadow: 0 2px 8px rgba(139, 111, 85, 0.15);
+      background: rgba(255, 248, 235, 0.92);
+      border-radius: 8px;
+      border: 1.5px solid rgba(200, 155, 122, 0.45);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
     }
     .cover-label {
       font-family: 'Gaegu', 'Jua', cursive;
-      font-size: 16px;
+      font-size: 22px;
       color: #8B6F55;
-      letter-spacing: 3px;
-      margin-bottom: 4mm;
+      letter-spacing: 6px;
+      margin-bottom: 6mm;
+      text-transform: uppercase;
     }
     .cover-name {
       font-family: 'Single Day', 'Gaegu', cursive;
-      font-size: 54px;
+      font-size: 96px;
       color: #4A3526;
-      line-height: 1.1;
+      line-height: 1.05;
       text-shadow: 0.6px 0 0 currentColor, -0.6px 0 0 currentColor;
-      margin-bottom: 3mm;
+      margin-bottom: 5mm;
     }
     .cover-ornament {
       font-size: 20px;
@@ -1370,14 +1388,23 @@ function BabyAlbum() {
   const monthLabel = getMonthLabel(viewMonth);
   const presets = MILESTONE_PRESETS[monthKey] ?? MILESTONE_PRESETS['12개월'];
 
-  // 사진 + 앨범 목록 로드
+  // 사진 + 앨범 목록 로드 (cache-first SWR)
   const loadPhotos = useCallback(async () => {
     if (!selectedChild) return;
+    const cacheKey = `album_photos_${selectedChild.id}`;
+
+    // 1단계: 캐시 즉시 표시
+    const cached = await readCache<MilestonePhoto[]>(cacheKey);
+    if (cached && Array.isArray(cached)) {
+      setPhotos(cached);
+    }
+
+    // 2단계: 백그라운드 새로고침
     try {
       const res = await albumApi.list(selectedChild.id);
       const data = res.data?.data;
       if (Array.isArray(data)) {
-        setPhotos(data.map((p: Record<string, unknown>) => ({
+        const mapped: MilestonePhoto[] = data.map((p: Record<string, unknown>) => ({
           id: p.id as string,
           uri: p.uri as string,
           date: (p.date as string) ?? '',
@@ -1385,9 +1412,11 @@ function BabyAlbum() {
           milestoneEmoji: (p.milestoneEmoji as string) ?? undefined,
           milestoneColor: (p.milestoneColor as string) ?? undefined,
           memo: (p.memo as string) ?? undefined,
-        })));
+        }));
+        setPhotos(mapped);
+        void writeCache(cacheKey, mapped);
       }
-    } catch { /* 로드 실패 시 빈 상태 유지 */ }
+    } catch { /* 새로고침 실패 시 캐시 유지 */ }
   }, [selectedChild]);
 
   useEffect(() => {

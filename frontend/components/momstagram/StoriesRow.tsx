@@ -1,6 +1,6 @@
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
+import { pickImageFromLibrary } from '../../utils/imagePicker';
 import { SPACING } from '../../constants/theme';
 
 const STORY_COLORS = [
@@ -14,14 +14,10 @@ interface StoryUser {
   hasNew: boolean;
 }
 
+// 실제 스토리 데이터는 Firestore에서 로드 (추후 연동).
+// 현재는 "내 스토리" 버튼만 노출하여 가짜 사용자를 표시하지 않는다.
 const STORY_USERS: StoryUser[] = [
   { id: 'my', name: '내 스토리', hasNew: false },
-  { id: '1', name: '하늘맘', hasNew: true },
-  { id: '2', name: '도윤아빠', hasNew: true },
-  { id: '3', name: '서준맘', hasNew: true },
-  { id: '4', name: '지안맘', hasNew: false },
-  { id: '5', name: '유나맘', hasNew: true },
-  { id: '6', name: '민준아빠', hasNew: false },
 ];
 
 function getColor(name: string): string {
@@ -34,21 +30,11 @@ function getColor(name: string): string {
 
 export function StoriesRow() {
   const handleMyStory = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('권한 필요', '사진 접근 권한이 필요합니다.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [9, 16],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]) {
+    const picked = await pickImageFromLibrary({ quality: 0.8 });
+    if (picked) {
       router.push({
         pathname: '/(main)/momstagram-post',
-        params: { prefillImage: result.assets[0].uri },
+        params: { prefillImage: picked.uri },
       });
     }
   };

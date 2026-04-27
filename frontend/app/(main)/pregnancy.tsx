@@ -489,7 +489,7 @@ export default function PregnancyScreen() {
       {/* ════════════════════════════════════════════════ */}
       {/*  Unified New Record Modal                        */}
       {/* ════════════════════════════════════════════════ */}
-      <Modal visible={showModal} animationType="slide" transparent>
+      <Modal visible={showModal} animationType="slide" transparent onRequestClose={() => setShowModal(false)}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}

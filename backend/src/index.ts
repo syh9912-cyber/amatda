@@ -31,6 +31,7 @@ import vaccinationRoutes from './routes/vaccination';
 import uploadRoutes from './routes/upload';
 import albumRoutes from './routes/album';
 import trackerRoutes from './routes/tracker';
+import momGroupRoutes from './routes/mom-group';
 
 const app = express();
 
@@ -65,6 +66,7 @@ app.use('/api/vaccination', vaccinationRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/album', albumRoutes);
 app.use('/api/tracker', trackerRoutes);
+app.use('/api/mom-group', momGroupRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() } });

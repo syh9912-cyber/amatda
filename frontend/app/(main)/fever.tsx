@@ -353,6 +353,8 @@ export default function FeverScreen() {
               onPress={() => router.back()}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               style={styles.backButton}
+              accessibilityRole="button"
+              accessibilityLabel="뒤로"
             >
               <Text style={styles.backArrow}>{'<'}</Text>
             </TouchableOpacity>

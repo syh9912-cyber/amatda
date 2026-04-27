@@ -4,10 +4,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COACHING_COLORS } from './types';
 import { coachingApi } from '../../services/api';
 
-/* eslint-disable @typescript-eslint/no-require-imports */
+ 
 const IC_COACH = require('../../assets/coach-avatar.png') as number;
 const IC_SEND = require('../../assets/icon-send.png') as number;
-/* eslint-enable @typescript-eslint/no-require-imports */
+ 
 
 interface FirstTalkData {
   intro: string;

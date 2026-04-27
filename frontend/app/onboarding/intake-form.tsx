@@ -30,6 +30,7 @@ export default function IntakeFormScreen() {
 
   useEffect(() => {
     if (child) loadQuestions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [child?.id]);
 
   const loadQuestions = async () => {

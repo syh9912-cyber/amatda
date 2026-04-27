@@ -10,9 +10,9 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { FollowupItem, COACHING_COLORS } from './types';
 
-/* eslint-disable @typescript-eslint/no-require-imports */
+ 
 const IC_BELL = require('../../assets/icon-bell.png') as number;
-/* eslint-enable @typescript-eslint/no-require-imports */
+ 
 
 interface Props {
   followup: FollowupItem;

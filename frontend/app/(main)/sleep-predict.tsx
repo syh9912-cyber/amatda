@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useChildStore } from '../../stores/childStore';
 import { sleepApi } from '../../services/api';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -332,6 +333,7 @@ export default function SleepPredictScreen() {
 
         <View style={{ height: insets.bottom + 30 }} />
       </ScrollView>
+      <AdSlot />
     </View>
   );
 }

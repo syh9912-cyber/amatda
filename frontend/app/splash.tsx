@@ -67,27 +67,35 @@ export default function SplashScreen() {
     const ease = Easing.out(Easing.cubic);
     const spring = Easing.out(Easing.back(1.6));
 
+    // 총 애니메이션 ~2800ms + 정지 1000ms + fadeOut 200ms = 4000ms
     Animated.sequence([
-      Animated.timing(overlayOp, { toValue: 1, duration: 120, useNativeDriver: true }),
+      Animated.timing(overlayOp, { toValue: 1, duration: 400, useNativeDriver: true }),
       Animated.parallel([
-        Animated.timing(titleOp, { toValue: 1, duration: 200, easing: ease, useNativeDriver: true }),
-        Animated.timing(titleScale, { toValue: 1, duration: 280, easing: spring, useNativeDriver: true }),
+        Animated.timing(titleOp, { toValue: 1, duration: 700, easing: ease, useNativeDriver: true }),
+        Animated.timing(titleScale, { toValue: 1, duration: 800, easing: spring, useNativeDriver: true }),
       ]),
-      Animated.parallel([
-        Animated.timing(gap1W, { toValue: 1, duration: 180, easing: ease, useNativeDriver: false }),
-        Animated.timing(sub1Op, { toValue: 1, duration: 150, useNativeDriver: true }),
-        Animated.timing(sub1Sc, { toValue: 1, duration: 150, easing: spring, useNativeDriver: true }),
-        Animated.timing(gap2W, { toValue: 1, duration: 180, easing: ease, useNativeDriver: false }),
-        Animated.timing(sub2Op, { toValue: 1, duration: 150, useNativeDriver: true }),
-        Animated.timing(sub2Sc, { toValue: 1, duration: 150, easing: spring, useNativeDriver: true }),
-        Animated.timing(gap3W, { toValue: 1, duration: 220, easing: ease, useNativeDriver: false }),
-        Animated.timing(sub3Op, { toValue: 1, duration: 180, useNativeDriver: true }),
-        Animated.timing(sub3Sc, { toValue: 1, duration: 180, easing: spring, useNativeDriver: true }),
-        Animated.timing(engOp, { toValue: 1, duration: 180, easing: ease, useNativeDriver: true }),
-        Animated.timing(footOp, { toValue: 1, duration: 180, easing: ease, useNativeDriver: true }),
-        Animated.timing(footY, { toValue: 0, duration: 180, easing: ease, useNativeDriver: true }),
+      // 서브 글자들을 순차적으로 늘어나게 (2(이) → 맞춤(춤) → 다이어리(이어리))
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(gap1W, { toValue: 1, duration: 400, easing: ease, useNativeDriver: false }),
+          Animated.timing(sub1Op, { toValue: 1, duration: 350, useNativeDriver: true }),
+          Animated.timing(sub1Sc, { toValue: 1, duration: 400, easing: spring, useNativeDriver: true }),
+        ]),
+        Animated.parallel([
+          Animated.timing(gap2W, { toValue: 1, duration: 400, easing: ease, useNativeDriver: false }),
+          Animated.timing(sub2Op, { toValue: 1, duration: 350, useNativeDriver: true }),
+          Animated.timing(sub2Sc, { toValue: 1, duration: 400, easing: spring, useNativeDriver: true }),
+        ]),
+        Animated.parallel([
+          Animated.timing(gap3W, { toValue: 1, duration: 500, easing: ease, useNativeDriver: false }),
+          Animated.timing(sub3Op, { toValue: 1, duration: 450, useNativeDriver: true }),
+          Animated.timing(sub3Sc, { toValue: 1, duration: 500, easing: spring, useNativeDriver: true }),
+          Animated.timing(engOp, { toValue: 1, duration: 500, easing: ease, useNativeDriver: true }),
+          Animated.timing(footOp, { toValue: 1, duration: 500, easing: ease, useNativeDriver: true }),
+          Animated.timing(footY, { toValue: 0, duration: 500, easing: ease, useNativeDriver: true }),
+        ]),
       ]),
-      Animated.delay(3000),
+      Animated.delay(1000),
       Animated.timing(fadeOut, { toValue: 0, duration: 200, easing: ease, useNativeDriver: true }),
     ]).start(() => navigate());
   }, [overlayOp, titleOp, titleScale, gap1W, sub1Op, sub1Sc, gap2W, sub2Op, sub2Sc, gap3W, sub3Op, sub3Sc, engOp, footOp, footY, fadeOut, navigate]);

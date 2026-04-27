@@ -21,7 +21,10 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api-usglfifguq-uc.a.run.app/api"
+        "EXPO_PUBLIC_API_URL": "https://api-usglfifguq-uc.a.run.app/api",
+        "EXPO_PUBLIC_COACHING_API_URL": "https://coachingapi-usglfifguq-uc.a.run.app/api",
+        "EXPO_PUBLIC_KAKAO_REST_API_KEY": "0aa17590759470d930a9720d273b8a8f",
+        "EXPO_PUBLIC_ADS_MOCK": "false"
       }
     },
     "production": {
@@ -30,7 +33,10 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api-usglfifguq-uc.a.run.app/api"
+        "EXPO_PUBLIC_API_URL": "https://api-usglfifguq-uc.a.run.app/api",
+        "EXPO_PUBLIC_COACHING_API_URL": "https://coachingapi-usglfifguq-uc.a.run.app/api",
+        "EXPO_PUBLIC_KAKAO_REST_API_KEY": "0aa17590759470d930a9720d273b8a8f",
+        "EXPO_PUBLIC_ADS_MOCK": "false"
       }
     }
   }

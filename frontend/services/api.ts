@@ -254,6 +254,10 @@ export const momstagramApi = {
     api.post(`/momstagram/posts/${postId}/comments`, { content }),
   deletePost: (postId: string) =>
     api.delete(`/momstagram/posts/${postId}`),
+  updatePost: (
+    postId: string,
+    data: { content?: string; category?: string; imageUrl?: string | null },
+  ) => api.patch(`/momstagram/posts/${postId}`, data),
   getMyPosts: (page = 0, limit = 20) =>
     api.get('/momstagram/my-posts', { params: { page: String(page), limit: String(limit) } }),
 };
@@ -579,16 +583,45 @@ export type MomGroupCategory = 'question' | 'chat' | 'info' | 'worry' | 'celebra
 export type MomGroupSort = 'recent' | 'popular';
 
 export const momGroupApi = {
-  listPosts: (groupKey: string, opts?: { category?: MomGroupCategory; sort?: MomGroupSort }) =>
+  listPosts: (
+    groupKey: string,
+    opts?: {
+      category?: MomGroupCategory;
+      sort?: MomGroupSort;
+      page?: number;
+      pageSize?: number;
+      q?: string;
+      qField?: 'all' | 'title' | 'content' | 'nickname';
+      mine?: boolean;
+    },
+  ) =>
     api.get('/mom-group/posts', {
       params: {
-        groupKey,
+        ...(opts?.mine ? {} : { groupKey }),
         ...(opts?.category ? { category: opts.category } : {}),
         ...(opts?.sort ? { sort: opts.sort } : {}),
+        ...(opts?.page !== undefined ? { page: opts.page } : {}),
+        ...(opts?.pageSize !== undefined ? { pageSize: opts.pageSize } : {}),
+        ...(opts?.q ? { q: opts.q } : {}),
+        ...(opts?.qField && opts.qField !== 'all' ? { qField: opts.qField } : {}),
+        ...(opts?.mine ? { mine: 'true' } : {}),
       },
     }),
-  createPost: (groupKey: string, content: string, category: MomGroupCategory, anonymous: boolean, imageUrl?: string | null) =>
-    api.post('/mom-group/posts', { groupKey, content, category, anonymous, imageUrl: imageUrl ?? undefined }),
+  createPost: (
+    groupKey: string,
+    title: string,
+    content: string,
+    category: MomGroupCategory,
+    anonymous: boolean,
+    imageUrl?: string | null,
+  ) =>
+    api.post('/mom-group/posts', {
+      groupKey, title, content, category, anonymous, imageUrl: imageUrl ?? undefined,
+    }),
+  updatePost: (
+    id: string,
+    data: { title?: string; content?: string; category?: MomGroupCategory; imageUrl?: string | null },
+  ) => api.put(`/mom-group/posts/${id}`, data),
   deletePost: (id: string) =>
     api.delete(`/mom-group/posts/${id}`),
   toggleLike: (id: string) =>

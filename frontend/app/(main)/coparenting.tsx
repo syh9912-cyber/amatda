@@ -382,7 +382,7 @@ export default function CoparentingScreen() {
       <AdSlot />
 
       {/* ── Invite Modal ── */}
-      <Modal visible={inviteVisible} transparent animationType="slide">
+      <Modal visible={inviteVisible} transparent animationType="slide" onRequestClose={() => setInviteVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -470,7 +470,7 @@ export default function CoparentingScreen() {
       </Modal>
 
       {/* ── Permission Edit Modal ── */}
-      <Modal visible={editModalVisible} transparent animationType="slide">
+      <Modal visible={editModalVisible} transparent animationType="slide" onRequestClose={() => setEditModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <ScrollView showsVerticalScrollIndicator={false}>
@@ -522,7 +522,7 @@ export default function CoparentingScreen() {
       </Modal>
 
       {/* ── Accept Code Modal ── */}
-      <Modal visible={acceptVisible} transparent animationType="fade">
+      <Modal visible={acceptVisible} transparent animationType="fade" onRequestClose={() => setAcceptVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { maxHeight: '40%' }]}>
             <Text style={styles.modalTitle}>초대 코드 입력</Text>

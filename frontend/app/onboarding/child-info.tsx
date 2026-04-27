@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { childApi } from '../../services/api';
+import { childApi, uploadApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { BirthDatePicker } from '../../components/onboarding/BirthDatePicker';
@@ -62,7 +62,14 @@ export default function ChildInfoScreen() {
       if (weight.trim()) createPayload.weight = parseFloat(weight);
       if (bloodType.trim()) createPayload.bloodType = bloodType.trim();
       if (specialNotes.trim()) createPayload.specialNotes = specialNotes.trim();
-      if (photoUri) createPayload.photoUri = photoUri;
+      if (photoUri) {
+        try {
+          const uploaded = await uploadApi.upload(photoUri, 'profiles');
+          createPayload.photoUri = uploaded.url;
+        } catch {
+          createPayload.photoUri = photoUri; // 업로드 실패 시 로컬 URI 폴백
+        }
+      }
       const res = await childApi.create(createPayload);
       const childData = { ...res.data.data };
       addChild(childData);
@@ -96,7 +103,14 @@ export default function ChildInfoScreen() {
       if (momWeight.trim()) payload.momWeight = parseFloat(momWeight);
       if (momBloodType.trim()) payload.momBloodType = momBloodType.trim();
       if (momSpecialNotes.trim()) payload.momSpecialNotes = momSpecialNotes.trim();
-      if (photoUri) payload.photoUri = photoUri;
+      if (photoUri) {
+        try {
+          const uploaded = await uploadApi.upload(photoUri, 'profiles');
+          payload.photoUri = uploaded.url;
+        } catch {
+          payload.photoUri = photoUri;
+        }
+      }
 
       const res = await childApi.registerPregnant(payload);
       const childData = { ...res.data.data };

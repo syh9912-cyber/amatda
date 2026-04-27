@@ -1,0 +1,34 @@
+# EAS 빌드에 불필요한 파일 제외
+# 로컬 개발 산출물 / 캐시
+.expo/
+.expo-shared/
+node_modules/.cache/
+*.log
+
+# 에디터 / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 테스트·문서 (빌드에 불필요)
+__tests__/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+coverage/
+docs/
+
+# Git
+.git/
+
+# 환경파일 (EAS는 eas.json env를 씀)
+.env
+.env.local
+.env.*.local
+
+# 백업/임시
+*.bak
+*.tmp
+*.orig

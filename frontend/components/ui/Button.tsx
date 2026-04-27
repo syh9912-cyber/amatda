@@ -23,6 +23,7 @@ export function Button({
   icon,
   style,
   textStyle,
+  accessibilityLabel,
 }: ButtonProps) {
   const sizeConf = SIZE_CONFIG[size];
   const bg = VARIANT_BG[variant];
@@ -34,6 +35,10 @@ export function Button({
       onPress={onPress}
       disabled={isDisabled}
       activeOpacity={0.85}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
       style={[
         styles.base,
         {

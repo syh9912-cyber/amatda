@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useChildStore, AnalysisReport } from '../../stores/childStore';
+import { AdSlot } from '../../components/ads/AdSlot';
 import { TraitTabBar } from '../../components/trait/TraitTabBar';
 import { TraitTypeCard } from '../../components/trait/TraitTypeCard';
 import { TraitBars } from '../../components/trait/TraitBars';
@@ -121,6 +122,8 @@ export default function TraitDetailScreen() {
           <Text style={styles.reAnalyzeBtnText}>다시 분석하기</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <AdSlot />
     </View>
   );
 }

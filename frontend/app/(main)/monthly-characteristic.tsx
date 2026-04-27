@@ -78,7 +78,13 @@ export default function MonthlyCharacteristicScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={s.backBtn}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로"
+        >
           <Text style={s.backArrow}>{'<'}</Text>
         </TouchableOpacity>
         <Text style={s.headerTitle}>개월별 발달 특징</Text>

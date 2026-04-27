@@ -19,12 +19,12 @@ export default function TermsScreen() {
       <Text style={styles.heading}>이용약관</Text>
       <Text style={styles.meta}>
         시행일: 2026년 4월 5일{'\n'}
-        회사명: Bloomin Corp.{'\n'}
+        회사명: SY Labs{'\n'}
         서비스명: 아맞다 (아이맞춤다이어리)
       </Text>
 
       <Section title="제1조 (목적)">
-        {`본 약관은 Bloomin Corp.(이하 "회사")가 제공하는 "아맞다" 모바일 애플리케이션 서비스(이하 "서비스")의 이용 조건 및 절차, 회사와 이용자의 권리, 의무, 책임 사항 등을 규정함을 목적으로 합니다.`}
+        {`본 약관은 SY Labs(이하 "회사")가 제공하는 "아맞다" 모바일 애플리케이션 서비스(이하 "서비스")의 이용 조건 및 절차, 회사와 이용자의 권리, 의무, 책임 사항 등을 규정함을 목적으로 합니다.`}
       </Section>
 
       <Section title="제2조 (정의)">
@@ -127,7 +127,7 @@ export default function TermsScreen() {
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          Bloomin Corp. | privacy@bloomincorp.com
+          SY Labs | privacy@bloomincorp.com
         </Text>
       </View>
     </ScrollView>

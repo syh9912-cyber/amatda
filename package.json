@@ -1,5 +1,8 @@
 {
   "dependencies": {
     "@fal-ai/client": "^1.9.5"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
   }
 }

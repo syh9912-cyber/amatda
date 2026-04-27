@@ -15,6 +15,7 @@ import { Stack } from 'expo-router';
 import { clinicApi } from '../../services/api';
 import { useLocationStore } from '../../stores/locationStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 // ── Types ──
 
@@ -220,6 +221,7 @@ export default function ClinicScreen() {
           </Text>
         </View>
       )}
+      <AdSlot />
     </View>
   );
 }

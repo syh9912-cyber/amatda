@@ -67,7 +67,7 @@ export default function QuestionsScreen() {
     apiDoneRef.current = false;
 
     // Calculate temperament locally for UI display
-    const _result = calculateTemperament(finalAnswers);
+    calculateTemperament(finalAnswers);
 
     // Fire API call immediately (runs during loading animation)
     const apiCall = (async () => {

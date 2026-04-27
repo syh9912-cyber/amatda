@@ -107,7 +107,13 @@ function Header({
 }) {
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+      <TouchableOpacity
+        onPress={onBack}
+        style={styles.backBtn}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel="뒤로"
+      >
         <Text style={styles.backArrow}>{'<'}</Text>
       </TouchableOpacity>
       <Text style={styles.headerTitle} numberOfLines={1}>

@@ -24,6 +24,8 @@ interface PostCardProps {
   onLike: (postId: string) => void;
   onComment: (postId: string) => void;
   onShare: (postId: string) => void;
+  onMore?: (postId: string) => void;
+  isMine?: boolean;
 }
 
 function getAvatarColor(name: string): string {
@@ -46,7 +48,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(days / 7)}주 전`;
 }
 
-export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
+export function PostCard({ post, onLike, onComment, onShare, onMore, isMine }: PostCardProps) {
   const [expanded, setExpanded] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const isLong = post.content.length > CONTENT_COLLAPSE;
@@ -98,9 +100,15 @@ export function PostCard({ post, onLike, onComment, onShare }: PostCardProps) {
           </View>
         </View>
         <TouchableOpacity
-          onPress={() => onShare(post.id)}
+          onPress={() => {
+            if (isMine && onMore) onMore(post.id);
+            else onShare(post.id);
+          }}
           activeOpacity={0.7}
           style={styles.moreBtn}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityLabel={isMine ? '게시글 메뉴' : '공유하기'}
+          accessibilityRole="button"
         >
           <Text style={styles.moreIcon}>{'···'}</Text>
         </TouchableOpacity>

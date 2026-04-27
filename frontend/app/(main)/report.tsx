@@ -10,6 +10,7 @@ import { Stack } from 'expo-router';
 import { observationApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 interface ReportData {
   childName: string;
@@ -64,6 +65,7 @@ export default function ReportScreen() {
     report.alignment === '높음' ? COLORS.success : COLORS.secondary;
 
   return (
+    <View style={{ flex: 1 }}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: '교차검증 리포트', headerShown: true }} />
 
@@ -103,6 +105,8 @@ export default function ReportScreen() {
         ))}
       </View>
     </ScrollView>
+    <AdSlot />
+    </View>
   );
 }
 

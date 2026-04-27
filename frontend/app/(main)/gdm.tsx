@@ -11,12 +11,15 @@ import {
   RefreshControl,
   Image,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
 import { Stack } from 'expo-router';
 import * as FileSystem from 'expo-file-system/legacy';
 import { pregnancyApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { AdSlot } from '../../components/ads/AdSlot';
 import { pickImageFromLibrary, pickImageFromCamera } from '../../utils/imagePicker';
 
 type MealType = 'fasting' | 'before_meal' | 'after_meal_1h' | 'after_meal_2h' | 'bedtime';
@@ -482,6 +485,51 @@ export default function GdmScreen() {
               </View>
             )}
 
+            {/* 혈당 추이 그래프 — 최근 14회 */}
+            {(() => {
+              const sorted = [...records]
+                .filter((r) => typeof r.glucoseLevel === 'number' && !Number.isNaN(r.glucoseLevel))
+                .sort((a, b) => new Date(a.measuredAt).getTime() - new Date(b.measuredAt).getTime());
+              const last = sorted.slice(-14);
+              if (last.length < 2) return null;
+
+              const chartW = Dimensions.get('window').width - SPACING.lg * 2;
+              const labels = last.map((r, i) => {
+                if (i === 0 || i === last.length - 1 || i === Math.floor(last.length / 2)) {
+                  const d = new Date(r.measuredAt);
+                  return `${d.getMonth() + 1}/${d.getDate()}`;
+                }
+                return '';
+              });
+
+              return (
+                <View style={styles.statsCard}>
+                  <Text style={styles.statsTitle}>혈당 추이</Text>
+                  <LineChart
+                    data={{
+                      labels,
+                      datasets: [{ data: last.map((r) => r.glucoseLevel) }],
+                    }}
+                    width={chartW}
+                    height={200}
+                    yAxisSuffix=""
+                    chartConfig={{
+                      backgroundColor: '#FFFFFF',
+                      backgroundGradientFrom: '#FFFFFF',
+                      backgroundGradientTo: '#FFFFFF',
+                      decimalPlaces: 0,
+                      color: (opacity = 1) => `rgba(255, 140, 90, ${opacity})`,
+                      labelColor: (opacity = 1) => `rgba(60, 60, 60, ${opacity})`,
+                      propsForDots: { r: '4', strokeWidth: '2', stroke: '#FF8C5A' },
+                    }}
+                    bezier
+                    withInnerLines={false}
+                    style={{ marginTop: SPACING.xs, borderRadius: RADIUS.md, marginLeft: -SPACING.xs }}
+                  />
+                </View>
+              );
+            })()}
+
             {!loading && glucoseDateKeys.length === 0 && (
               <View style={styles.emptyWrap}>
                 <Text style={styles.emptyEmoji}>{'🩸'}</Text>
@@ -570,6 +618,7 @@ export default function GdmScreen() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+      <AdSlot />
 
       {/* FAB */}
       <TouchableOpacity
@@ -581,7 +630,7 @@ export default function GdmScreen() {
       </TouchableOpacity>
 
       {/* 혈당 모달 */}
-      <Modal visible={showGlucoseModal} transparent animationType="slide">
+      <Modal visible={showGlucoseModal} transparent animationType="slide" onRequestClose={() => setShowGlucoseModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
@@ -640,7 +689,7 @@ export default function GdmScreen() {
       </Modal>
 
       {/* 주간 AI 리포트 모달 */}
-      <Modal visible={showReportModal} transparent animationType="slide">
+      <Modal visible={showReportModal} transparent animationType="slide" onRequestClose={() => setShowReportModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { maxHeight: '88%' }]}>
             <View style={styles.modalHeader}>
@@ -725,7 +774,7 @@ export default function GdmScreen() {
       </Modal>
 
       {/* 식단 모달 */}
-      <Modal visible={showFoodModal} transparent animationType="slide">
+      <Modal visible={showFoodModal} transparent animationType="slide" onRequestClose={() => setShowFoodModal(false)}>
         <View style={styles.modalOverlay}>
           <ScrollView
             style={{ maxHeight: '90%' }}

@@ -63,7 +63,7 @@ const ALL_ICONS = [
   { name: 'quick-diary', bg1: '#FFF9C4', bg2: '#F57F17', emoji: '📖', label: '일기' },
   { name: 'quick-lullaby', bg1: '#E1BEE7', bg2: '#7B1FA2', emoji: '🎵', label: '자장가' },
   { name: 'quick-timeline', bg1: '#FFECB3', bg2: '#FF8F00', emoji: '📸', label: '타임라인' },
-  { name: 'quick-coparenting', bg1: '#B2EBF2', bg2: '#00838F', emoji: '👨‍👩‍👦', label: '공동육아' },
+  { name: 'quick-coparenting', bg1: '#B2EBF2', bg2: '#00838F', emoji: '👨‍👩‍👦', label: '가족육아' },
   { name: 'quick-parent-level', bg1: '#F8BBD0', bg2: '#C2185B', emoji: '🏅', label: '부모 레벨' },
 
   // Coaching category icons

@@ -17,6 +17,8 @@ import { useChildStore } from '../../stores/childStore';
 import { coachingApi } from '../../services/api';
 import { isScreenAvailable } from '../../constants/ageFeatures';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { UpsellModal } from '../../components/common/UpsellModal';
+import { saveAnalysisHistory } from '../../utils/analysisHistory';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -62,8 +64,14 @@ export default function PoopAnalyzerScreen() {
   const router = useRouter();
   const selectedChild = useChildStore((s) => s.selectedChild);
 
-  // 연령 제한: 영아+유아(0-72개월)만 접근 가능
+  // 연령 제한: 영아+유아(0-72개월)만 접근 가능 (임신부 모드는 조용히 뒤로)
   useEffect(() => {
+    if (selectedChild?.isPregnant) {
+      Alert.alert('안내', '출산 후 이용 가능합니다.', [
+        { text: '확인', onPress: () => router.back() },
+      ]);
+      return;
+    }
     const ageGroup = selectedChild?.ageInfo?.group ?? 'infant';
     if (!isScreenAvailable('poop-analyzer', ageGroup)) {
       Alert.alert('안내', '대변 분석은 영유아(0~72개월) 전용 기능이에요.', [
@@ -75,6 +83,7 @@ export default function PoopAnalyzerScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [showUpsell, setShowUpsell] = useState(false);
 
   const handlePickImage = useCallback(async () => {
     try {
@@ -126,18 +135,38 @@ export default function PoopAnalyzerScreen() {
         'image/jpeg',
       );
       const data = res.data?.data as AnalysisResult | undefined;
-      if (data) setResult(data);
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { status?: number; data?: { error?: string; usage?: UsageInfo } } };
-      if (axiosErr.response?.status === 429) {
-        const usage = axiosErr.response.data?.usage;
-        setResult({
-          analysis: axiosErr.response.data?.error ?? '이번 달 분석 횟수를 모두 사용했습니다.',
-          possibilities: [],
-          recommendations: [],
-          needsDoctor: false,
-          usage,
+      if (data) {
+        setResult(data);
+        void saveAnalysisHistory({
+          type: 'poop',
+          summary: data.analysis?.slice(0, 80) ?? '대변 분석 완료',
+          details: data.recommendations?.join(' · '),
+          childId: selectedChild.id,
+          childName: selectedChild.name,
+          thumbnailUri: photoUri ?? undefined,
+          fullText: data.analysis,
+          metrics: data.possibilities?.map((p) => ({
+            title: p.label,
+            value: p.likelihood,
+          })),
+          recommendations: data.recommendations,
         });
+      }
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { error?: string; upsell?: boolean; usage?: UsageInfo } } };
+      if (axiosErr.response?.status === 429) {
+        if (axiosErr.response.data?.upsell) {
+          setShowUpsell(true);
+        } else {
+          const usage = axiosErr.response.data?.usage;
+          setResult({
+            analysis: axiosErr.response.data?.error ?? '이번 달 분석 횟수를 모두 사용했습니다.',
+            possibilities: [],
+            recommendations: [],
+            needsDoctor: false,
+            usage,
+          });
+        }
       } else {
         setResult({
           analysis: '분석에 실패했습니다. 다시 시도해주세요.',
@@ -160,7 +189,13 @@ export default function PoopAnalyzerScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로"
+        >
           <Text style={styles.backBtn}>{'<'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{'대변 분석기'}</Text>
@@ -234,6 +269,7 @@ export default function PoopAnalyzerScreen() {
         )}
       </ScrollView>
       <AdSlot />
+      <UpsellModal visible={showUpsell} onClose={() => setShowUpsell(false)} />
     </View>
   );
 }

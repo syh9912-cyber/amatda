@@ -1,18 +1,18 @@
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Modal, Animated, LayoutChangeEvent } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Modal, Animated, LayoutChangeEvent, Dimensions } from 'react-native';
+import { LineChart } from 'react-native-chart-kit';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Stack, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useChildStore } from '../../stores/childStore';
 import { childApi, coachingApi, growthApi, pregnancyApi } from '../../services/api';
-import { getTodayQuestion } from '../../constants/dailyQuestions';
+import { getQuestionByProgress, getQuestionCount } from '../../constants/dailyQuestions';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
 
-type TabKey = 'physical' | 'trait';
+type TabKey = 'physical';
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: 'physical', label: '키/몸무게' },
-  { key: 'trait', label: '기질 변화' },
+  { key: 'physical', label: '키/몸무게/성장' },
 ];
 
 /* ---- Milestone Types ---- */
@@ -201,7 +201,7 @@ function getPercentileLabel(percentile: number): string {
 }
 
 export default function GrowthStatsScreen() {
-  const [activeTab, setActiveTab] = useState<TabKey>('physical');
+  // 기질 탭 제거됨: 키/몸무게/성장 단일 뷰
   const selectedChild = useChildStore((s) => s.selectedChild);
   const isPregnant = selectedChild?.isPregnant === true;
 
@@ -211,7 +211,12 @@ export default function GrowthStatsScreen() {
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
           <Stack.Screen options={{ headerShown: false }} />
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="뒤로"
+            >
               <Text style={styles.backArrow}>{'<'}</Text>
             </TouchableOpacity>
             <Text style={styles.headerTitle}>주수별 발달</Text>
@@ -236,12 +241,8 @@ export default function GrowthStatsScreen() {
         <Stack.Screen options={{ headerShown: false }} />
 
         <GrowthHeader />
-        <FilterTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-        {activeTab === 'physical' && (
-          <PhysicalTab childName={selectedChild?.name ?? '아이'} />
-        )}
-        {activeTab === 'trait' && <TraitTab />}
+        <PhysicalTab childName={selectedChild?.name ?? '아이'} />
       </ScrollView>
       <AdSlot />
     </KeyboardAvoidingView>
@@ -251,7 +252,12 @@ export default function GrowthStatsScreen() {
 function GrowthHeader() {
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={() => router.back()}>
+      <TouchableOpacity
+        onPress={() => router.back()}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel="뒤로"
+      >
         <Text style={styles.backArrow}>{'<'}</Text>
       </TouchableOpacity>
       <Text style={styles.headerTitle}>성장 기록 & 변화</Text>
@@ -651,7 +657,7 @@ function PregnancyWeeklyDevelopment() {
       </View>
 
       {/* 금기 검색 Modal */}
-      <Modal visible={showSafetyModal} animationType="slide" transparent>
+      <Modal visible={showSafetyModal} animationType="slide" transparent onRequestClose={() => setShowSafetyModal(false)}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -1195,6 +1201,9 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
                 if (!loading) setShowModal(false);
               }}
               disabled={loading}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="닫기"
             >
               <Text style={[gaStyles.modalClose, loading && { opacity: 0.3 }]}>{'<'}</Text>
             </TouchableOpacity>
@@ -1521,6 +1530,7 @@ const gaStyles = StyleSheet.create({
 
 function PhysicalTab({ childName }: { childName: string }) {
   const selectedChild = useChildStore((s) => s.selectedChild);
+  const updateChildInStore = useChildStore((s) => s.updateChild);
   const [height, setHeight] = useState('');
   const [weight, setWeight] = useState('');
   const [recordDate, setRecordDate] = useState(() => {
@@ -1577,10 +1587,12 @@ function PhysicalTab({ childName }: { childName: string }) {
     if (!selectedChild) return;
     setSaving(true);
     try {
+      const parsedHeight = height ? parseFloat(height) : undefined;
+      const parsedWeight = weight ? parseFloat(weight) : undefined;
       const newRecord = {
         date: recordDate,
-        height: height ? parseFloat(height) : undefined,
-        weight: weight ? parseFloat(weight) : undefined,
+        height: parsedHeight,
+        weight: parsedWeight,
       };
       const updated = [...records.filter((r) => r.date !== recordDate), newRecord].sort(
         (a, b) => a.date.localeCompare(b.date),
@@ -1591,9 +1603,18 @@ function PhysicalTab({ childName }: { childName: string }) {
       // 서버에도 싱크 (fire-and-forget)
       growthApi.update(selectedChild.id, {
         date: recordDate,
-        height: height ? parseFloat(height) : undefined,
-        weight: weight ? parseFloat(weight) : undefined,
+        height: parsedHeight,
+        weight: parsedWeight,
       }).catch(() => { /* 서버 싱크 실패해도 로컬은 유지 */ });
+      // 스토어 갱신 — 최신 기록이면 selectedChild.height/weight 도 업데이트
+      const latest = updated[updated.length - 1];
+      if (latest && latest.date === recordDate) {
+        updateChildInStore({
+          ...selectedChild,
+          height: parsedHeight ?? selectedChild.height ?? null,
+          weight: parsedWeight ?? selectedChild.weight ?? null,
+        });
+      }
       Alert.alert('저장 완료', `${recordDate} 성장 기록이 저장되었습니다`);
       setHeight('');
       setWeight('');
@@ -1671,32 +1692,113 @@ function PhysicalTab({ childName }: { childName: string }) {
         <GrowthAnalysisSection childId={selectedChild.id} />
       ) : null}
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>키 & 몸무게 변화</Text>
-        <View style={styles.chartPlaceholder}>
-          <Text style={styles.chartIcon}>{'📈'}</Text>
-          <Text style={styles.chartPlaceholderText}>
-            데이터가 쌓이면 성장 차트가 표시됩니다
-          </Text>
-        </View>
-      </View>
+      {(() => {
+        // 첫 기록(onboarding)을 records 앞에 합쳐 차트/최신값 기준으로 사용
+        const merged: { date: string; height?: number; weight?: number }[] = [...records];
+        if ((initialHeight || initialWeight) && !records.some((r) => r.height === initialHeight && r.weight === initialWeight)) {
+          const birth = selectedChild?.birthDate ? String(selectedChild.birthDate).slice(0, 10) : '';
+          if (birth && !merged.some((r) => r.date === birth)) {
+            merged.unshift({ date: birth, height: initialHeight ?? undefined, weight: initialWeight ?? undefined });
+          }
+        }
+        merged.sort((a, b) => a.date.localeCompare(b.date));
+        const latest = merged[merged.length - 1];
+        const latestHeight = latest?.height ?? initialHeight;
+        const latestWeight = latest?.weight ?? initialWeight;
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>이번 달 기록</Text>
-        <View style={styles.statsRow}>
-          <StatBox
-            label="키"
-            value={initialHeight ? `${initialHeight}cm` : '-- cm'}
-            color={COLORS.secondary}
-          />
-          <StatBox
-            label="몸무게"
-            value={initialWeight ? `${initialWeight}kg` : '-- kg'}
-            color={COLORS.primary}
-          />
-          <StatBox label="성장 점수" value="--" color={COLORS.info} />
-        </View>
-      </View>
+        const chartW = Dimensions.get('window').width - SPACING.md * 2 - SPACING.lg * 2;
+        const heightPoints = merged.filter((r) => typeof r.height === 'number').map((r) => r.height as number);
+        const weightPoints = merged.filter((r) => typeof r.weight === 'number').map((r) => r.weight as number);
+        const hasChart = heightPoints.length > 0 || weightPoints.length > 0;
+
+        return (
+          <>
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>키 & 몸무게 변화</Text>
+              {hasChart ? (
+                <View style={{ marginTop: SPACING.xs }}>
+                  {heightPoints.length > 0 && (
+                    <LineChart
+                      data={{
+                        labels: merged.filter((r) => typeof r.height === 'number').map((r) => {
+                          const d = new Date(r.date);
+                          return `${d.getMonth() + 1}/${d.getDate()}`;
+                        }),
+                        datasets: [{ data: heightPoints.length === 1 ? [heightPoints[0], heightPoints[0]] : heightPoints }],
+                      }}
+                      width={chartW}
+                      height={180}
+                      yAxisSuffix="cm"
+                      chartConfig={{
+                        backgroundColor: '#FFFFFF',
+                        backgroundGradientFrom: '#FFFFFF',
+                        backgroundGradientTo: '#FFFFFF',
+                        decimalPlaces: 1,
+                        color: (opacity = 1) => `rgba(76, 175, 174, ${opacity})`,
+                        labelColor: (opacity = 1) => `rgba(60, 60, 60, ${opacity})`,
+                        propsForDots: { r: '4', strokeWidth: '2', stroke: String(COLORS.secondary) },
+                      }}
+                      bezier
+                      withInnerLines={false}
+                      style={{ borderRadius: RADIUS.md, marginLeft: -SPACING.xs }}
+                    />
+                  )}
+                  {weightPoints.length > 0 && (
+                    <LineChart
+                      data={{
+                        labels: merged.filter((r) => typeof r.weight === 'number').map((r) => {
+                          const d = new Date(r.date);
+                          return `${d.getMonth() + 1}/${d.getDate()}`;
+                        }),
+                        datasets: [{ data: weightPoints.length === 1 ? [weightPoints[0], weightPoints[0]] : weightPoints }],
+                      }}
+                      width={chartW}
+                      height={180}
+                      yAxisSuffix="kg"
+                      chartConfig={{
+                        backgroundColor: '#FFFFFF',
+                        backgroundGradientFrom: '#FFFFFF',
+                        backgroundGradientTo: '#FFFFFF',
+                        decimalPlaces: 1,
+                        color: (opacity = 1) => `rgba(255, 140, 90, ${opacity})`,
+                        labelColor: (opacity = 1) => `rgba(60, 60, 60, ${opacity})`,
+                        propsForDots: { r: '4', strokeWidth: '2', stroke: String(COLORS.primary) },
+                      }}
+                      bezier
+                      withInnerLines={false}
+                      style={{ marginTop: SPACING.sm, borderRadius: RADIUS.md, marginLeft: -SPACING.xs }}
+                    />
+                  )}
+                </View>
+              ) : (
+                <View style={styles.chartPlaceholder}>
+                  <Text style={styles.chartIcon}>{'📈'}</Text>
+                  <Text style={styles.chartPlaceholderText}>
+                    키 또는 몸무게를 기록하면 차트가 표시됩니다
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>최신 기록{latest?.date ? ` (${latest.date})` : ''}</Text>
+              <View style={styles.statsRow}>
+                <StatBox
+                  label="키"
+                  value={latestHeight ? `${latestHeight}cm` : '-- cm'}
+                  color={COLORS.secondary}
+                />
+                <StatBox
+                  label="몸무게"
+                  value={latestWeight ? `${latestWeight}kg` : '-- kg'}
+                  color={COLORS.primary}
+                />
+                <StatBox label="기록 수" value={String(merged.length)} color={COLORS.info} />
+              </View>
+            </View>
+          </>
+        );
+      })()}
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>기록 입력</Text>
@@ -1839,9 +1941,14 @@ function TraitTab() {
 
   const dailyQuestion = useMemo(() => {
     if (!selectedChild) return null;
-    return getTodayQuestion(selectedChild.ageInfo.group);
+    return getQuestionByProgress(selectedChild.ageInfo.group, responseCount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChild?.ageInfo.group]);
+  }, [selectedChild?.ageInfo.group, responseCount]);
+
+  const totalQuestions = selectedChild
+    ? getQuestionCount(selectedChild.ageInfo.group)
+    : 7;
+  const progressToInsight = Math.min(responseCount, 7);
 
   useEffect(() => {
     if (!selectedChild) return;
@@ -1890,15 +1997,26 @@ function TraitTab() {
         </View>
         <View style={styles.traitNotice}>
           <Text style={styles.traitNoticeText}>
-            매일 질문에 답하면 기질 변화를 추적할 수 있어요 ({responseCount}개 응답 누적)
+            응답 누적 {responseCount}개 · 첫 인사이트까지 {progressToInsight}/7
           </Text>
+          <View style={{ height: 6, backgroundColor: '#EFEFF4', borderRadius: 3, marginTop: 8, overflow: 'hidden' }}>
+            <View
+              style={{
+                width: `${(progressToInsight / 7) * 100}%`,
+                height: '100%',
+                backgroundColor: COLORS.primary,
+              }}
+            />
+          </View>
         </View>
       </View>
 
       {/* Daily question input */}
       {dailyQuestion && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>오늘의 질문</Text>
+          <Text style={styles.cardTitle}>
+            오늘의 질문 ({((responseCount % totalQuestions) + 1)}/{totalQuestions})
+          </Text>
           <View style={styles.traitNotice}>
             <Text style={styles.traitNoticeText}>{dailyQuestion.question}</Text>
           </View>

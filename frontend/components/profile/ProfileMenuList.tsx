@@ -1,8 +1,8 @@
-import { View, Text, Image, TouchableOpacity, StyleSheet, ImageSourcePropType, Alert } from 'react-native';
+import { View, StyleSheet, ImageSourcePropType } from 'react-native';
 import { router } from 'expo-router';
-import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
 import { useChildStore } from '../../stores/childStore';
-import { exportChildDataAsPDF } from '../../services/dataExport';
+import { COLORS, SPACING, SHADOWS } from '../../constants/theme';
+import { NavCard } from '../ui/NavCard';
 
 interface MenuItem {
   icon: ImageSourcePropType;
@@ -12,24 +12,84 @@ interface MenuItem {
   action?: () => void;
 }
 
-const MENU_ITEMS: MenuItem[] = [
+const COMMON_TOP: MenuItem[] = [
   {
     icon: require('../../assets/icon-settings.png'),
     label: '내 정보 수정',
     description: '별명, 비밀번호 변경',
     route: '/(main)/edit-profile',
   },
+];
+
+const PREGNANCY_ITEMS: MenuItem[] = [
+  {
+    icon: require('../../assets/quick-learning.png'),
+    label: '임신 기록',
+    description: '주차별 기록 및 체크리스트',
+    route: '/(main)/pregnancy',
+  },
+  {
+    icon: require('../../assets/quick-report.png'),
+    label: '주수별 발달',
+    description: '태아 성장 정보 확인',
+    route: '/(main)/growth-stats',
+  },
+  {
+    icon: require('../../assets/quick-report.png'),
+    label: '임당 관리',
+    description: '임신성 당뇨 식사·혈당 기록',
+    route: '/(main)/gdm',
+  },
+  {
+    icon: require('../../assets/quick-sleep.png'),
+    label: '태동 체크',
+    description: '태동 카운트 기록',
+    route: '/(main)/labor-monitor?tab=kick',
+  },
+  {
+    icon: require('../../assets/quick-parent-level.png'),
+    label: '맘 체크인',
+    description: '오늘의 컨디션과 기분 기록',
+    route: '/(main)/mom-wellness',
+  },
+  {
+    icon: require('../../assets/icon-heart.png'),
+    label: '맘스톡',
+    description: '예비맘들과 이야기 나누기',
+    route: '/(main)/mom-group',
+  },
+  {
+    icon: require('../../assets/quick-lullaby.png'),
+    label: '태교음악',
+    description: '편안한 태교 사운드',
+    route: '/(main)/lullaby?mode=prenatal',
+  },
+  {
+    icon: require('../../assets/play-activity.png'),
+    label: '맞춤 추천',
+    description: '임신·출산 준비 가이드',
+    route: '/(main)/recommendations',
+  },
+  {
+    icon: require('../../assets/quick-coparenting.png'),
+    label: '가족육아',
+    description: '배우자와 함께 준비하기',
+    route: '/(main)/coparenting',
+  },
+  {
+    icon: require('../../assets/icon-heart.png'),
+    label: '가족피드',
+    description: '가족과 소중한 순간을 공유해보세요',
+    route: '/(main)/momstagram',
+  },
+];
+
+const PARENTING_ITEMS: MenuItem[] = [
   {
     icon: require('../../assets/feature-childcard.png'),
     label: '아이 디지털 카드',
     description: '아이 정보 카드 공유하기',
     route: '/(main)/child-card',
-  },
-  {
-    icon: require('../../assets/trait-analyst-small.png'),
-    label: '기질분석 기록',
-    description: '기질 검사 결과 보기',
-    route: '/(main)/trait-detail',
   },
   {
     icon: require('../../assets/quick-report.png'),
@@ -62,6 +122,21 @@ const MENU_ITEMS: MenuItem[] = [
     route: '/(main)/growth-stats',
   },
   {
+    icon: require('../../assets/quick-timeline.png'),
+    label: '성장앨범만들기',
+    description: '성장 사진으로 앨범 만들기',
+    route: '/(main)/album',
+  },
+];
+
+const COMMON_BOTTOM: MenuItem[] = [
+  {
+    icon: require('../../assets/badge-ai.png'),
+    label: 'AI 분석',
+    description: '육아패턴·대변·울음 분석 결과',
+    route: '/(main)/ai-analysis',
+  },
+  {
     icon: require('../../assets/premium-badge.png'),
     label: '프리미엄 플랜',
     description: '상담이모 무제한 이용',
@@ -80,11 +155,6 @@ const MENU_ITEMS: MenuItem[] = [
     route: '/(main)/notification-settings',
   },
   {
-    icon: require('../../assets/icon-share.png'),
-    label: '성장앨범만들기',
-    description: '아이 성장 기록 PDF로 저장',
-  },
-  {
     icon: require('../../assets/support-faq.png'),
     label: '고객센터',
     description: '문의 및 건의사항 보내기',
@@ -94,43 +164,29 @@ const MENU_ITEMS: MenuItem[] = [
 
 export function ProfileMenuList() {
   const selectedChild = useChildStore((s) => s.selectedChild);
+  const isPregnant = selectedChild?.isPregnant === true;
 
-  const handleExport = async () => {
-    if (!selectedChild) {
-      Alert.alert('알림', '등록된 자녀가 없습니다.');
-      return;
-    }
-    try {
-      await exportChildDataAsPDF(selectedChild);
-    } catch {
-      Alert.alert('오류', '성장앨범만들기에 실패했습니다.');
-    }
-  };
+  const modeItems = isPregnant ? PREGNANCY_ITEMS : PARENTING_ITEMS;
+  const items: MenuItem[] = [...COMMON_TOP, ...modeItems, ...COMMON_BOTTOM];
 
   const getOnPress = (item: MenuItem) => {
-    if (item.label === '성장앨범만들기') return handleExport;
     return () => router.push(item.route as never);
   };
 
   return (
     <View style={styles.card}>
-      {MENU_ITEMS.map((item, idx) => {
-        const isLast = idx === MENU_ITEMS.length - 1;
+      {items.map((item, idx) => {
+        const isLast = idx === items.length - 1;
         return (
-          <TouchableOpacity
+          <NavCard
             key={item.label}
-            style={[styles.row, !isLast && styles.rowBorder]}
+            icon={item.icon}
+            title={item.label}
+            description={item.description}
             onPress={getOnPress(item)}
-          >
-            <View style={styles.iconWrap}>
-              <Image source={item.icon} style={styles.icon} resizeMode="contain" />
-            </View>
-            <View style={styles.labelCol}>
-              <Text style={styles.label}>{item.label}</Text>
-              <Text style={styles.desc}>{item.description}</Text>
-            </View>
-            <Text style={styles.chevron}>{'>'}</Text>
-          </TouchableOpacity>
+            variant="row"
+            showBottomBorder={!isLast}
+          />
         );
       })}
     </View>
@@ -145,44 +201,5 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     marginBottom: SPACING.md,
     ...SHADOWS.soft,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-  },
-  rowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5EDE4',
-  },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  icon: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
-  },
-  labelCol: {
-    flex: 1,
-    marginLeft: SPACING.sm,
-  },
-  label: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  desc: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  chevron: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.textLight,
-    fontWeight: '300',
   },
 });

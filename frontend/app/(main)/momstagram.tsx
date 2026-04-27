@@ -9,6 +9,11 @@ import {
   RefreshControl,
   Alert,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { Stack, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,10 +21,17 @@ import { FONT_SIZE, SPACING } from '../../constants/theme';
 import {
   useMomstagramStore,
   MomstagramPost,
+  PostCategory,
 } from '../../stores/momstagramStore';
+import { useAuthStore } from '../../stores/authStore';
+import { AdSlot } from '../../components/ads/AdSlot';
 import { PostCard } from '../../components/momstagram/PostCard';
 import { CommentsModal } from '../../components/momstagram/CommentsModal';
 import { StoriesRow } from '../../components/momstagram/StoriesRow';
+import { pickImageFromLibrary } from '../../utils/imagePicker';
+import { uploadApi } from '../../services/api';
+
+const CATEGORIES: PostCategory[] = ['일상', '학습', '여행', '기념일', '기타'];
 
 const CORAL = '#FF6B6B';
 
@@ -27,10 +39,17 @@ export default function MomstagramScreen() {
   const {
     posts, privatePosts, hasMore, loading,
     toggleLike, addCommentViaApi, loadMore, refresh,
-    fetchFeed, loadPrivatePosts,
+    fetchFeed, loadPrivatePosts, deletePost, updatePost,
   } = useMomstagramStore();
+  const currentUserId = useAuthStore((s) => s.userId);
   const [refreshing, setRefreshing] = useState(false);
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
+  const [editingPost, setEditingPost] = useState<MomstagramPost | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editCategory, setEditCategory] = useState<PostCategory>('일상');
+  const [editImage, setEditImage] = useState<string | null>(null);
+  const [editImageChanged, setEditImageChanged] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
   const insets = useSafeAreaInsets();
 
   useFocusEffect(
@@ -63,6 +82,108 @@ export default function MomstagramScreen() {
     Alert.alert('공유', '이 게시물의 링크가 복사되었습니다.');
   }, []);
 
+  const handleMore = useCallback((postId: string) => {
+    const post = allPosts.find((p) => p.id === postId);
+    if (!post) return;
+    Alert.alert('게시글 메뉴', undefined, [
+      {
+        text: '수정',
+        onPress: () => {
+          setEditContent(post.content);
+          setEditCategory((post.category as PostCategory) ?? '일상');
+          setEditImage(post.imageUri);
+          setEditImageChanged(false);
+          setEditingPost(post);
+        },
+      },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert('게시글 삭제', '정말 삭제하시겠습니까?', [
+            { text: '취소', style: 'cancel' },
+            {
+              text: '삭제',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await deletePost(postId);
+                } catch {
+                  Alert.alert('오류', '삭제에 실패했습니다. 다시 시도해주세요.');
+                }
+              },
+            },
+          ]);
+        },
+      },
+      { text: '취소', style: 'cancel' },
+    ]);
+  }, [allPosts, deletePost]);
+
+  const handleEditPickImage = useCallback(async () => {
+    const picked = await pickImageFromLibrary({ quality: 0.8 });
+    if (picked?.uri) {
+      setEditImage(picked.uri);
+      setEditImageChanged(true);
+    }
+  }, []);
+
+  const handleEditRemoveImage = useCallback(() => {
+    setEditImage(null);
+    setEditImageChanged(true);
+  }, []);
+
+  const handleEditSave = useCallback(async () => {
+    if (!editingPost) return;
+    const trimmed = editContent.trim();
+    if (!trimmed) {
+      Alert.alert('알림', '내용을 입력해주세요.');
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const payload: {
+        content?: string;
+        category?: PostCategory;
+        imageUrl?: string | null;
+        imageUri?: string | null;
+      } = {
+        content: trimmed,
+        category: editCategory,
+      };
+
+      if (editImageChanged) {
+        if (editingPost.isPrivate) {
+          // Private posts store local URI directly
+          payload.imageUri = editImage;
+        } else if (editImage === null) {
+          payload.imageUrl = null;
+        } else if (editImage.startsWith('https://')) {
+          payload.imageUrl = editImage;
+        } else if (editImage.startsWith('file://') || editImage.startsWith('content://') || editImage.startsWith('ph://')) {
+          try {
+            const uploaded = await uploadApi.upload(editImage, 'momstagram');
+            payload.imageUrl = uploaded.url;
+          } catch {
+            Alert.alert('오류', '이미지 업로드에 실패했습니다.');
+            setEditSaving(false);
+            return;
+          }
+        }
+      }
+
+      await updatePost(editingPost.id, payload);
+      setEditingPost(null);
+      setEditContent('');
+      setEditImage(null);
+      setEditImageChanged(false);
+    } catch {
+      Alert.alert('오류', '수정에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setEditSaving(false);
+    }
+  }, [editingPost, editContent, editCategory, editImage, editImageChanged, updatePost]);
+
   const handleCommentSubmit = useCallback(
     (text: string) => {
       if (!commentPostId) return;
@@ -78,9 +199,11 @@ export default function MomstagramScreen() {
         onLike={toggleLike}
         onComment={setCommentPostId}
         onShare={handleShare}
+        onMore={handleMore}
+        isMine={!!item.isPrivate || (!!currentUserId && item.userId === currentUserId)}
       />
     ),
-    [toggleLike, handleShare],
+    [toggleLike, handleShare, handleMore, currentUserId],
   );
 
   const renderHeader = () => <StoriesRow />;
@@ -168,6 +291,116 @@ export default function MomstagramScreen() {
         onClose={() => setCommentPostId(null)}
         onSubmit={handleCommentSubmit}
       />
+
+      <Modal
+        visible={editingPost !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEditingPost(null)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.editOverlay}
+        >
+          <View style={styles.editCard}>
+            <Text style={styles.editTitle}>게시글 수정</Text>
+            <ScrollView
+              style={styles.editScroll}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.editLabel}>내용</Text>
+              <TextInput
+                style={styles.editInput}
+                value={editContent}
+                onChangeText={setEditContent}
+                multiline
+                placeholder="내용을 입력하세요"
+                placeholderTextColor="#A0A0A0"
+                maxLength={1000}
+              />
+
+              <Text style={styles.editLabel}>사진</Text>
+              {editImage ? (
+                <View style={styles.editImageWrap}>
+                  <Image source={{ uri: editImage }} style={styles.editImagePreview} resizeMode="cover" />
+                  <View style={styles.editImageActions}>
+                    <TouchableOpacity
+                      style={[styles.editImageBtn, styles.editImageBtnChange]}
+                      onPress={handleEditPickImage}
+                      disabled={editSaving}
+                    >
+                      <Text style={styles.editImageBtnText}>📷 사진 변경</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.editImageBtn, styles.editImageBtnRemove]}
+                      onPress={handleEditRemoveImage}
+                      disabled={editSaving}
+                    >
+                      <Text style={styles.editImageBtnRemoveText}>✕ 삭제</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.editImagePickBtn}
+                  onPress={handleEditPickImage}
+                  disabled={editSaving}
+                >
+                  <Text style={styles.editImagePickText}>📷 사진 추가</Text>
+                </TouchableOpacity>
+              )}
+
+              <Text style={styles.editLabel}>카테고리</Text>
+              <View style={styles.editCatRow}>
+                {CATEGORIES.map((cat) => {
+                  const active = editCategory === cat;
+                  return (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[styles.editCatChip, active && styles.editCatChipActive]}
+                      onPress={() => setEditCategory(cat)}
+                      disabled={editSaving}
+                    >
+                      <Text style={[styles.editCatChipText, active && styles.editCatChipTextActive]}>
+                        {cat}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            <View style={styles.editBtnRow}>
+              <TouchableOpacity
+                style={[styles.editBtn, styles.editBtnCancel]}
+                onPress={() => {
+                  setEditingPost(null);
+                  setEditContent('');
+                  setEditImage(null);
+                  setEditImageChanged(false);
+                }}
+                disabled={editSaving}
+                accessibilityRole="button"
+                accessibilityLabel="수정 취소"
+              >
+                <Text style={styles.editBtnCancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.editBtn, styles.editBtnSave, editSaving && { opacity: 0.6 }]}
+                onPress={handleEditSave}
+                disabled={editSaving}
+                accessibilityRole="button"
+                accessibilityLabel="수정 저장"
+              >
+                <Text style={styles.editBtnSaveText}>{editSaving ? '저장 중...' : '저장'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <AdSlot />
     </View>
   );
 }
@@ -248,16 +481,165 @@ const styles = StyleSheet.create({
     backgroundColor: CORAL,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: CORAL,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 2,
   },
   fabText: {
     fontSize: 28,
     fontWeight: '600',
     color: '#FFFFFF',
     lineHeight: 30,
+  },
+  /* Edit modal */
+  editOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.lg,
+  },
+  editCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: SPACING.lg,
+    maxHeight: '85%',
+  },
+  editTitle: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: '700',
+    color: '#262626',
+    marginBottom: SPACING.md,
+  },
+  editScroll: {
+    maxHeight: 520,
+  },
+  editLabel: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '600',
+    color: '#6B6B80',
+    marginBottom: SPACING.xs,
+    marginTop: SPACING.xs,
+  },
+  editInput: {
+    minHeight: 100,
+    maxHeight: 180,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    borderRadius: 12,
+    padding: SPACING.md,
+    fontSize: FONT_SIZE.md,
+    color: '#262626',
+    textAlignVertical: 'top',
+    marginBottom: SPACING.md,
+  },
+  editImageWrap: {
+    marginBottom: SPACING.md,
+  },
+  editImagePreview: {
+    width: '100%',
+    aspectRatio: 4 / 3,
+    borderRadius: 12,
+    backgroundColor: '#F2F2F7',
+  },
+  editImageActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
+  },
+  editImageBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  editImageBtnChange: {
+    backgroundColor: '#F2F2F7',
+    borderColor: '#E0E0E0',
+  },
+  editImageBtnRemove: {
+    backgroundColor: '#FFF0F0',
+    borderColor: '#FFCCCC',
+  },
+  editImageBtnText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '600',
+    color: '#262626',
+  },
+  editImageBtnRemoveText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '600',
+    color: '#D63030',
+  },
+  editImagePickBtn: {
+    padding: SPACING.lg,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#E0E0E0',
+    backgroundColor: '#FAFAFA',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  editImagePickText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '600',
+    color: '#8E8E93',
+  },
+  editCatRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  editCatChip: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs + 2,
+    borderRadius: 999,
+    backgroundColor: '#F2F2F7',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  editCatChipActive: {
+    backgroundColor: CORAL,
+    borderColor: CORAL,
+  },
+  editCatChipText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '600',
+    color: '#6B6B80',
+  },
+  editCatChipTextActive: {
+    color: '#FFFFFF',
+  },
+  editBtnRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: SPACING.sm,
+  },
+  editBtn: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: 10,
+    borderRadius: 10,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  editBtnCancel: {
+    backgroundColor: '#F2F2F7',
+  },
+  editBtnSave: {
+    backgroundColor: CORAL,
+  },
+  editBtnCancelText: {
+    color: '#262626',
+    fontWeight: '600',
+    fontSize: FONT_SIZE.md,
+  },
+  editBtnSaveText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: FONT_SIZE.md,
   },
 });

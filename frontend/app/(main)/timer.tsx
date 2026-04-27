@@ -10,6 +10,7 @@ import {
 import { Stack } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 const PRESETS = [
   { label: '5분', seconds: 5 * 60 },
@@ -150,6 +151,7 @@ export default function TimerScreen() {
           • 형제가 있다면 각각 1:1 시간을 만들어주세요
         </Text>
       </View>
+      <AdSlot />
     </View>
   );
 }

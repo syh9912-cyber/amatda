@@ -19,4 +19,5 @@ export interface ButtonProps {
   icon?: string;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  accessibilityLabel?: string;
 }

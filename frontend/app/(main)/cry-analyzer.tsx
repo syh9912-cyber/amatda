@@ -15,6 +15,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { useChildStore } from '../../stores/childStore';
 import { coachingApi } from '../../services/api';
 import { isScreenAvailable } from '../../constants/ageFeatures';
+import { UpsellModal } from '../../components/common/UpsellModal';
+import { saveAnalysisHistory } from '../../utils/analysisHistory';
 
 /* ── 색상 ── */
 const COLORS = {
@@ -59,8 +61,14 @@ export default function CryAnalyzerScreen() {
   const router = useRouter();
   const selectedChild = useChildStore((s) => s.selectedChild);
 
-  // 연령 제한: 영아(0-24개월)만 접근 가능
+  // 연령 제한: 영아(0-24개월)만 접근 가능 (임신부 모드는 조용히 뒤로)
   useEffect(() => {
+    if (selectedChild?.isPregnant) {
+      Alert.alert('안내', '출산 후 이용 가능합니다.', [
+        { text: '확인', onPress: () => router.back() },
+      ]);
+      return;
+    }
     const ageGroup = selectedChild?.ageInfo?.group ?? 'infant';
     if (!isScreenAvailable('cry-analyzer', ageGroup)) {
       Alert.alert('안내', '울음 분석은 영아(0~24개월) 전용 기능이에요.', [
@@ -74,6 +82,7 @@ export default function CryAnalyzerScreen() {
   const [fileMime, setFileMime] = useState<string>('audio/m4a');
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [showUpsell, setShowUpsell] = useState(false);
 
   /* ── 파일 선택 ── */
   const handlePickFile = useCallback(async () => {
@@ -125,18 +134,37 @@ export default function CryAnalyzerScreen() {
         fileMime,
       );
       const data = res.data?.data as AnalysisResult | undefined;
-      if (data) setResult(data);
-    } catch (err: unknown) {
-      const axiosErr = err as { response?: { status?: number; data?: { error?: string; usage?: UsageInfo } } };
-      if (axiosErr.response?.status === 429) {
-        const usage = axiosErr.response.data?.usage;
-        setResult({
-          analysis: axiosErr.response.data?.error ?? '이번 달 분석 횟수를 모두 사용했습니다.',
-          possibilities: [],
-          recommendations: [],
-          needsDoctor: false,
-          usage,
+      if (data) {
+        setResult(data);
+        void saveAnalysisHistory({
+          type: 'cry',
+          summary: data.analysis?.slice(0, 80) ?? '울음 분석 완료',
+          details: data.recommendations?.join(' · '),
+          childId: selectedChild.id,
+          childName: selectedChild.name,
+          fullText: data.analysis,
+          metrics: data.possibilities?.map((p) => ({
+            title: p.label,
+            value: p.likelihood,
+          })),
+          recommendations: data.recommendations,
         });
+      }
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { status?: number; data?: { error?: string; upsell?: boolean; usage?: UsageInfo } } };
+      if (axiosErr.response?.status === 429) {
+        if (axiosErr.response.data?.upsell) {
+          setShowUpsell(true);
+        } else {
+          const usage = axiosErr.response.data?.usage;
+          setResult({
+            analysis: axiosErr.response.data?.error ?? '이번 달 분석 횟수를 모두 사용했습니다.',
+            possibilities: [],
+            recommendations: [],
+            needsDoctor: false,
+            usage,
+          });
+        }
       } else {
         setResult({
           analysis: '분석에 실패했습니다. 다시 시도해주세요.',
@@ -160,7 +188,13 @@ export default function CryAnalyzerScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로"
+        >
           <Text style={styles.backBtn}>{'<'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{'울음소리 분석기'}</Text>
@@ -240,6 +274,7 @@ export default function CryAnalyzerScreen() {
           </>
         )}
       </ScrollView>
+      <UpsellModal visible={showUpsell} onClose={() => setShowUpsell(false)} />
     </View>
   );
 }

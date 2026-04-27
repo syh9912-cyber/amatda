@@ -4,9 +4,10 @@ import { calculateSaju } from '../services/saju.calculator';
 import { calculateAge } from '../services/age.calculator';
 import { generateChildReport, monthsToAgeGroup } from '../services/child.report';
 import { success, error } from '../utils/response';
-import { collections, genId, toISO } from '../services/firestore';
+import { collections, db, genId, toISO } from '../services/firestore';
 import { parseInnateData, parseInnateDataFull, safeParse } from '../utils/parse';
 import { getChildIfAccessible, getAccessibleChildIds } from '../utils/childAccess';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -69,11 +70,12 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     const childIds = await getAccessibleChildIds(req.userId!);
     if (childIds.length === 0) { success(res, []); return; }
 
-    const results: ReturnType<typeof formatChild>[] = [];
-    for (const cid of childIds) {
-      const doc = await collections.children.doc(cid).get();
-      if (doc.exists) results.push(formatChild(doc.id, doc.data()!));
-    }
+    // getAll() 배치 조회 — N+1 제거
+    const refs = childIds.map((cid) => collections.children.doc(cid));
+    const snaps = refs.length > 0 ? await db.getAll(...refs) : [];
+    const results = snaps
+      .filter((doc) => doc.exists)
+      .map((doc) => formatChild(doc.id, doc.data()!));
     success(res, results);
   } catch { error(res, '자녀 목록 조회 중 오류가 발생했습니다', 500); }
 });
@@ -494,7 +496,10 @@ router.post('/:id/daily-trait', authMiddleware, async (req: Request, res: Respon
       totalResponses,
       newInsight,
     });
-  } catch { error(res, '기질 기록 저장 중 오류가 발생했습니다', 500); }
+  } catch (err) {
+    logger.error('daily-trait save', err, { childId: req.params.id });
+    error(res, '기질 기록 저장 중 오류가 발생했습니다', 500);
+  }
 });
 
 router.get('/:id/daily-traits', authMiddleware, async (req: Request, res: Response) => {

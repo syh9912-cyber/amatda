@@ -160,3 +160,22 @@ export function getTodayQuestion(ageGroup: string): DailyQuestion {
   const group = DAILY_QUESTIONS[ageGroup] ?? DAILY_QUESTIONS.toddler;
   return group.find((q) => q.dayOfWeek === dayOfWeek) ?? group[0];
 }
+
+/**
+ * 응답 횟수(answeredCount)에 따라 다른 질문을 노출.
+ * 7개 질문을 answeredCount 기준으로 순환하여 매번 새 질문이 보이도록 한다.
+ */
+export function getQuestionByProgress(
+  ageGroup: string,
+  answeredCount: number,
+): DailyQuestion {
+  const group = DAILY_QUESTIONS[ageGroup] ?? DAILY_QUESTIONS.toddler;
+  if (group.length === 0) return { dayOfWeek: 0, question: '', hint: '' };
+  const idx = ((answeredCount % group.length) + group.length) % group.length;
+  return group[idx] ?? group[0];
+}
+
+export function getQuestionCount(ageGroup: string): number {
+  const group = DAILY_QUESTIONS[ageGroup] ?? DAILY_QUESTIONS.toddler;
+  return group.length;
+}

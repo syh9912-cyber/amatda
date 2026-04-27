@@ -39,7 +39,9 @@ const FALLBACK_PLANS: PremiumPlan[] = [
     period: 'monthly',
     features: [
       '상담이모 무제한',
-      '울음/대변 분석 무제한',
+      '음식 사진 분석 월 300회',
+      '대변 분석 월 300회',
+      '울음 분석 월 300회',
       'AI 수면 예측 무제한',
       '육아 패턴 분석 무제한',
       '임당 식단 사진분석 하루 10회',
@@ -64,7 +66,9 @@ const FALLBACK_PLANS: PremiumPlan[] = [
 
 const FREE_FEATURES = [
   { label: '상담이모', free: '하루 10회', premium: '무제한' },
-  { label: '울음/대변 분석', free: '하루 3회', premium: '무제한' },
+  { label: '음식 사진 분석', free: '하루 2회', premium: '월 300회' },
+  { label: '대변 분석', free: '하루 2회', premium: '월 300회' },
+  { label: '울음 분석', free: '하루 2회', premium: '월 300회' },
   { label: 'AI 수면 예측', free: '하루 3회', premium: '무제한' },
   { label: '육아 패턴 분석', free: '하루 3회', premium: '무제한' },
   { label: '임당 식단 사진분석', free: '하루 1회', premium: '하루 10회' },

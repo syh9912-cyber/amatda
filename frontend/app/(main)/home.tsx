@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,9 @@ import {
   RefreshControl,
   Image,
   Alert,
-  Modal,
   Platform,
+  Animated,
+  Easing,
 } from 'react-native';
 import { router } from 'expo-router';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
@@ -27,6 +28,7 @@ import {
 import { getCharacteristicForChild } from '../../constants/monthlyCharacteristics';
 import { OnboardingGuide } from '../../components/common/OnboardingGuide';
 import { AgeGroupKey } from '../../constants/ageGroups';
+import { CenterModal } from '../../components/ui/CenterModal';
 
 /* ------------------------------------------------------------------ */
 /* Pregnancy week-appropriate questions                                */
@@ -75,27 +77,28 @@ interface QuickAction {
 }
 
 const ALL_ACTIONS: QuickAction[] = [
-  // 임산부 전용
+  // 임산부 전용 (pregnant 필터링 시 먼저 노출)
   { icon: require('../../assets/quick-learning.png'), label: '임신 기록', route: '/(main)/pregnancy', bg: '#FCE4EC', ages: ['pregnant'] },
   { icon: require('../../assets/quick-report.png'), label: '주수별 발달', route: '/(main)/growth-stats', bg: '#F3E5F5', ages: ['pregnant'] },
   { icon: require('../../assets/quick-report.png'), label: '임당 관리', route: '/(main)/gdm', bg: '#FCE4EC', ages: ['pregnant'] },
   { icon: require('../../assets/quick-sleep.png'), label: '태동 체크', route: '/(main)/labor-monitor?tab=kick', bg: '#FCE4EC', ages: ['pregnant'] },
   { icon: require('../../assets/quick-parent-level.png'), label: '맘 체크인', route: '/(main)/mom-wellness', bg: '#F8BBD0', ages: ['pregnant'] },
-  { icon: require('../../assets/icon-heart.png'), label: '맘스톡', route: '/(main)/mom-group', bg: '#FCE4EC', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
-  { icon: require('../../assets/quick-timeline.png'), label: '성장앨범', route: '/(main)/album', bg: '#E0F2F1', ages: ['infant', 'toddler', 'elementary'] },
-  // 공통
+  { icon: require('../../assets/quick-lullaby.png'), label: '태교음악', route: '/(main)/lullaby?mode=prenatal', bg: '#EDE7F6', ages: ['pregnant'] },
+
+  // 영아·유아 순서 (사용자 요청 순서): 아기시간 → 성장앨범 → 열나 → 성장통계 → 접종달력 → 자장가 → 맘스톡 → 가족육아
   { icon: require('../../assets/quick-learning.png'), label: '아기시간', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['infant', 'toddler'] },
+  { icon: require('../../assets/quick-timeline.png'), label: '성장앨범', route: '/(main)/album', bg: '#E0F2F1', ages: ['infant', 'toddler', 'elementary'] },
   { icon: require('../../assets/quick-report.png'), label: '열나', route: '/(main)/fever', bg: '#FFF0F0', ages: ['infant', 'toddler'] },
-  { icon: require('../../assets/quick-learning.png'), label: '생활 기록', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['elementary'] },
-  { icon: require('../../assets/quick-report.png'), label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['infant', 'toddler'] },
   { icon: require('../../assets/quick-report.png'), label: '성장 통계', route: '/(main)/growth-stats', bg: COLOR.mintBg, ages: ['infant', 'toddler', 'elementary'] },
-  // 영유아
-  { icon: require('../../assets/quick-lullaby.png'), label: '태교음악', route: '/(main)/lullaby', bg: '#EDE7F6', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-report.png'), label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['infant', 'toddler'] },
   { icon: require('../../assets/quick-lullaby.png'), label: '자장가', route: '/(main)/lullaby', bg: '#EDE7F6', ages: ['infant', 'toddler'] },
-  // 유아 + 초등
-  { icon: require('../../assets/play-activity.png'), label: '놀이 학습', route: '/(main)/play-learning', bg: COLOR.yellowBg, ages: ['toddler', 'elementary'] },
-  // 공통
+  { icon: require('../../assets/icon-heart.png'), label: '맘스톡', route: '/(main)/mom-group', bg: '#FCE4EC', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
   { icon: require('../../assets/quick-coparenting.png'), label: '가족육아', route: '/(main)/coparenting', bg: '#FFF3E0', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
+
+  // 초등 전용
+  { icon: require('../../assets/quick-learning.png'), label: '생활 기록', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['elementary'] },
+  // 놀이 학습은 맞춤추천 카드에 이미 있으므로 퀵메뉴에서는 초등만 노출
+  { icon: require('../../assets/play-activity.png'), label: '놀이 학습', route: '/(main)/play-learning', bg: COLOR.yellowBg, ages: ['elementary'] },
   { icon: require('../../assets/quick-parent-level.png'), label: '새싹부모', route: '/(main)/parent-level', bg: '#E8F5E9', ages: ['infant', 'toddler', 'elementary'] },
 ];
 
@@ -560,10 +563,8 @@ export default function HomeScreen() {
           {/* === Compact Stats (D-day + Streak) === */}
           <CompactStats countdown={countdown} streak={streak} />
 
-          {/* === Proactive Insight (AI가 먼저 말 거는 카드) === */}
-          {proactiveInsights.filter(i => i.type !== 'milestone_tip').length > 0 && (
-            <InsightCards insights={proactiveInsights.filter(i => i.type !== 'milestone_tip')} />
-          )}
+          {/* === AI 분석 카드 (육아패턴 · 대변 · 울음) === */}
+          <AIAnalysisCard />
 
           {/* === Quick Actions (8 icons, 2 rows) === */}
           <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} child={child} />
@@ -594,53 +595,46 @@ export default function HomeScreen() {
       />
 
       {/* Trial Expiry Popup */}
-      <Modal
+      <CenterModal
         visible={trialPopupVisible}
-        transparent
-        animationType="fade"
         onRequestClose={() => setTrialPopupVisible(false)}
+        animationType="fade"
+        overlayStyle={{ padding: 32 }}
       >
-        <View style={styles.trialOverlay}>
-          <View style={styles.trialCard}>
-            <Text style={styles.trialEmoji}>{'👑'}</Text>
-            <Text style={styles.trialTitle}>무료 체험이 종료되었습니다</Text>
-            <Text style={styles.trialDesc}>
-              프리미엄으로 업그레이드하면 상담이모 무제한, 상세 리포트 등 모든 기능을 이용할 수 있어요.
-            </Text>
-            <TouchableOpacity
-              style={styles.trialPremiumBtn}
-              onPress={() => {
-                setTrialPopupVisible(false);
-                router.push('/(main)/subscription');
-              }}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.trialPremiumText}>프리미엄 구독하기</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.trialFreeBtn}
-              onPress={async () => {
-                setTrialPopupVisible(false);
-                await AsyncStorage.setItem(TRIAL_POPUP_KEY, '1');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.trialFreeText}>무료로 계속하기</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+        <Text style={styles.trialEmoji}>{'👑'}</Text>
+        <Text style={styles.trialTitle}>무료 체험이 종료되었습니다</Text>
+        <Text style={styles.trialDesc}>
+          프리미엄으로 업그레이드하면 상담이모 무제한, 상세 리포트 등 모든 기능을 이용할 수 있어요.
+        </Text>
+        <TouchableOpacity
+          style={styles.trialPremiumBtn}
+          onPress={() => {
+            setTrialPopupVisible(false);
+            router.push('/(main)/subscription');
+          }}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.trialPremiumText}>프리미엄 구독하기</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.trialFreeBtn}
+          onPress={async () => {
+            setTrialPopupVisible(false);
+            await AsyncStorage.setItem(TRIAL_POPUP_KEY, '1');
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.trialFreeText}>무료로 계속하기</Text>
+        </TouchableOpacity>
+      </CenterModal>
 
       {/* Birth Transition Modal */}
-      <Modal
+      <CenterModal
         visible={birthModalVisible}
-        transparent
-        animationType="slide"
         onRequestClose={() => setBirthModalVisible(false)}
+        animationType="slide"
       >
-        <View style={styles.birthOverlay}>
-          <View style={styles.birthModalCard}>
-            <Text style={styles.birthModalEmoji}>{'👶'}</Text>
+        <Text style={styles.birthModalEmoji}>{'👶'}</Text>
             <Text style={styles.birthModalTitle}>출산 정보 입력</Text>
             <Text style={styles.birthModalDesc}>축하합니다! 아이 정보를 입력해주세요</Text>
 
@@ -716,9 +710,7 @@ export default function HomeScreen() {
             >
               <Text style={styles.birthCancelText}>취소</Text>
             </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      </CenterModal>
     </ScrollView>
 
     {/* Floating SOS Button */}
@@ -789,6 +781,9 @@ function Header({
           style={styles.iconBtn}
           onPress={() => router.push('/(main)/notification-settings' as never)}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="알림 설정"
         >
           <Image source={require('../../assets/icon-bell.png')} style={styles.headerIcon} resizeMode="contain" />
         </TouchableOpacity>
@@ -796,6 +791,9 @@ function Header({
           style={styles.iconBtn}
           onPress={() => router.push('/(main)/profile' as never)}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="프로필 및 설정"
         >
           <Image source={require('../../assets/icon-settings.png')} style={styles.headerIcon} resizeMode="contain" />
         </TouchableOpacity>
@@ -950,6 +948,141 @@ function CompactStats({
     </TouchableOpacity>
   );
 }
+
+function AIAnalysisCard() {
+  const pulse = useRef(new Animated.Value(0)).current;
+  const shimmer = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const pulseLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 1400,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 1400,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    const shimmerLoop = Animated.loop(
+      Animated.timing(shimmer, {
+        toValue: 1,
+        duration: 2600,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+    pulseLoop.start();
+    shimmerLoop.start();
+    return () => {
+      pulseLoop.stop();
+      shimmerLoop.stop();
+    };
+  }, [pulse, shimmer]);
+
+  const glowOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.75] });
+  const glowScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] });
+  const shimmerTranslate = shimmer.interpolate({ inputRange: [0, 1], outputRange: [-220, 420] });
+
+  return (
+    <TouchableOpacity
+      style={aiCardStyles.card}
+      activeOpacity={0.85}
+      onPress={() => router.push('/(main)/ai-analysis')}
+    >
+      {/* 셔머 반짝이 오버레이 */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          aiCardStyles.shimmer,
+          { transform: [{ translateX: shimmerTranslate }, { rotate: '20deg' }] },
+        ]}
+      />
+      <View style={aiCardStyles.iconWrap}>
+        <Animated.View
+          style={[
+            aiCardStyles.iconGlow,
+            { opacity: glowOpacity, transform: [{ scale: glowScale }] },
+          ]}
+        />
+        <Text style={aiCardStyles.iconText}>AI</Text>
+      </View>
+      <View style={aiCardStyles.textCol}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
+          <Text style={aiCardStyles.title}>AI 분석</Text>
+          <View style={aiCardStyles.newBadge}>
+            <Text style={aiCardStyles.newBadgeText}>NEW</Text>
+          </View>
+        </View>
+        <Text style={aiCardStyles.sub}>육아패턴 · 대변 · 울음 분석</Text>
+      </View>
+      <Text style={aiCardStyles.arrow}>{'\u203A'}</Text>
+    </TouchableOpacity>
+  );
+}
+
+const aiCardStyles = StyleSheet.create({
+  card: {
+    backgroundColor: '#3A3D7C',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#5458B8',
+    overflow: 'hidden',
+    shadowColor: '#7C83EC',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  shimmer: {
+    position: 'absolute',
+    top: -40,
+    left: 0,
+    width: 80,
+    height: 160,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#7C83EC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  iconGlow: {
+    position: 'absolute',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#A9AEF5',
+  },
+  iconText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  textCol: { flex: 1 },
+  title: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
+  sub: { fontSize: 12, color: '#D4D6F2' },
+  newBadge: {
+    marginLeft: 8,
+    backgroundColor: '#FFD76E',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  newBadgeText: { fontSize: 10, fontWeight: '800', color: '#3A3D7C' },
+  arrow: { fontSize: 22, color: '#FFFFFF', marginLeft: 4 },
+});
 
 function InsightCards({ insights }: { insights: { type: string; title: string; message: string; actionLabel?: string; actionRoute?: string }[] }) {
   const TYPE_COLORS: Record<string, { bg: string; accent: string; icon: string }> = {

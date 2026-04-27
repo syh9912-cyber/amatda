@@ -15,6 +15,7 @@ import { Stack } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
 import { vaccinationApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 /* ================================================================== */
 /*  Types                                                              */
@@ -70,12 +71,49 @@ function dDayColor(dDay: number): string {
 /*  Main Screen                                                        */
 /* ================================================================== */
 
+/* ---- Registration baseline (AsyncStorage) ---- */
+let _vacStorage: {
+  getItem: (k: string) => Promise<string | null>;
+  setItem: (k: string, v: string) => Promise<void>;
+} | null = null;
+async function getVacStorage() {
+  if (_vacStorage) return _vacStorage;
+  try {
+    const mod = await import('@react-native-async-storage/async-storage');
+    _vacStorage = mod.default;
+  } catch {
+    const mem: Record<string, string> = {};
+    _vacStorage = {
+      getItem: async (k) => mem[k] ?? null,
+      setItem: async (k, v) => { mem[k] = v; },
+    };
+  }
+  return _vacStorage;
+}
+function regKey(childId: string) {
+  return `vaccination_registration_age_${childId}`;
+}
+async function loadRegistrationAge(childId: string): Promise<number | null> {
+  const s = await getVacStorage();
+  if (!s) return null;
+  const raw = await s.getItem(regKey(childId));
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+async function saveRegistrationAge(childId: string, months: number): Promise<void> {
+  const s = await getVacStorage();
+  if (!s) return;
+  await s.setItem(regKey(childId), String(months));
+}
+
 export default function VaccinationScreen() {
   const child = useChildStore((s) => s.selectedChild);
   const childId = child?.id ?? '';
 
   const [schedule, setSchedule] = useState<VaccineItem[]>([]);
   const [, setAgeMonths] = useState(0);
+  const [registrationAgeMonths, setRegistrationAgeMonths] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterKey>('upcoming');
@@ -83,6 +121,7 @@ export default function VaccinationScreen() {
   // Complete modal
   const [showComplete, setShowComplete] = useState<VaccineItem | null>(null);
   const [hospitalName, setHospitalName] = useState('');
+  const [completedDate, setCompletedDate] = useState(''); // YYYY-MM-DD
   const [completing, setCompleting] = useState(false);
 
   // Detail modal
@@ -90,28 +129,41 @@ export default function VaccinationScreen() {
 
   /* ── Load ── */
   const loadSchedule = useCallback(async () => {
-    if (!childId) return;
+    if (!childId || child?.isPregnant) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await vaccinationApi.schedule(childId);
       const data = res.data?.data;
       if (!data) throw new Error('응답 데이터 없음');
       setSchedule(data.schedule ?? []);
       setAgeMonths(data.ageMonths ?? 0);
+
+      // 아이 등록 시점의 개월 수를 최초 1회만 저장 (3개월 필터 기준)
+      const existing = await loadRegistrationAge(childId);
+      if (existing == null) {
+        const currentMonths = data.ageMonths ?? 0;
+        await saveRegistrationAge(childId, currentMonths);
+        setRegistrationAgeMonths(currentMonths);
+      } else {
+        setRegistrationAgeMonths(existing);
+      }
     } catch {
       Alert.alert('오류', '접종 일정을 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해주세요.');
     } finally {
       setLoading(false);
     }
-  }, [childId]);
+  }, [childId, child?.isPregnant]);
 
   useEffect(() => { loadSchedule(); }, [loadSchedule]);
 
-  // 앱 진입 시 알림 자동 스케줄링
+  // 앱 진입 시 알림 자동 스케줄링 (임신부 모드 제외)
   useEffect(() => {
-    if (childId) {
+    if (childId && !child?.isPregnant) {
       vaccinationApi.scheduleAlerts(childId).catch(() => {/* silent */});
     }
-  }, [childId]);
+  }, [childId, child?.isPregnant]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -124,9 +176,27 @@ export default function VaccinationScreen() {
     if (!showComplete || !childId) return;
     setCompleting(true);
     try {
-      await vaccinationApi.complete(childId, showComplete.id, undefined, hospitalName || undefined);
+      // completedDate 검증: YYYY-MM-DD → ISO
+      let completedAt: string | undefined;
+      if (completedDate.trim()) {
+        const m = completedDate.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+        if (!m) {
+          Alert.alert('날짜 형식 오류', 'YYYY-MM-DD 형식으로 입력해주세요 (예: 2026-04-22)');
+          setCompleting(false);
+          return;
+        }
+        const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+        if (isNaN(d.getTime())) {
+          Alert.alert('날짜 형식 오류', '올바른 날짜를 입력해주세요');
+          setCompleting(false);
+          return;
+        }
+        completedAt = d.toISOString();
+      }
+      await vaccinationApi.complete(childId, showComplete.id, completedAt, hospitalName || undefined);
       setShowComplete(null);
       setHospitalName('');
+      setCompletedDate('');
       loadSchedule();
       // 알림 재스케줄링
       vaccinationApi.scheduleAlerts(childId).catch(() => {});
@@ -136,8 +206,12 @@ export default function VaccinationScreen() {
     setCompleting(false);
   };
 
+  /* ── 등록 기준 3개월 이전 오래된 접종은 제외 ── */
+  const cutoffMonths = registrationAgeMonths != null ? registrationAgeMonths - 3 : -Infinity;
+  const scopedSchedule = schedule.filter((v) => v.ageMonths >= cutoffMonths);
+
   /* ── Filter ── */
-  const filtered = schedule.filter((v) => {
+  const filtered = scopedSchedule.filter((v) => {
     switch (filter) {
       case 'upcoming': return !v.completed && v.dDay >= -30;
       case 'overdue': return !v.completed && v.dDay < 0;
@@ -156,11 +230,11 @@ export default function VaccinationScreen() {
 
   const groupKeys = Object.keys(grouped);
 
-  /* ── Stats ── */
-  const totalCount = schedule.length;
-  const completedCount = schedule.filter((v) => v.completed).length;
-  const upcomingCount = schedule.filter((v) => !v.completed && v.dDay >= 0 && v.dDay <= 30).length;
-  const overdueCount = schedule.filter((v) => !v.completed && v.dDay < 0).length;
+  /* ── Stats (등록 기준 이후만) ── */
+  const totalCount = scopedSchedule.length;
+  const completedCount = scopedSchedule.filter((v) => v.completed).length;
+  const upcomingCount = scopedSchedule.filter((v) => !v.completed && v.dDay >= 0 && v.dDay <= 30).length;
+  const overdueCount = scopedSchedule.filter((v) => !v.completed && v.dDay < 0).length;
 
   if (!child || child.isPregnant) {
     return (
@@ -324,7 +398,12 @@ export default function VaccinationScreen() {
       {/* ════════════════════════════════════════════════ */}
       {/*  접종 완료 모달                                   */}
       {/* ════════════════════════════════════════════════ */}
-      <Modal visible={!!showComplete} animationType="slide" transparent>
+      <Modal
+        visible={!!showComplete}
+        animationType="slide"
+        transparent
+        onRequestClose={() => { setShowComplete(null); setHospitalName(''); setCompletedDate(''); }}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>접종 완료 기록</Text>
@@ -336,6 +415,17 @@ export default function VaccinationScreen() {
                   </Text>
                   <Text style={styles.modalVaccineDisease}>{showComplete.disease}</Text>
                 </View>
+
+                <Text style={styles.modalLabel}>접종 날짜</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')} (비우면 오늘)`}
+                  placeholderTextColor={COLORS.textLight}
+                  value={completedDate}
+                  onChangeText={setCompletedDate}
+                  keyboardType="numbers-and-punctuation"
+                  maxLength={10}
+                />
 
                 <Text style={styles.modalLabel}>접종 병원 (선택)</Text>
                 <TextInput
@@ -349,7 +439,7 @@ export default function VaccinationScreen() {
                 <View style={styles.modalBtns}>
                   <TouchableOpacity
                     style={styles.modalCancelBtn}
-                    onPress={() => { setShowComplete(null); setHospitalName(''); }}
+                    onPress={() => { setShowComplete(null); setHospitalName(''); setCompletedDate(''); }}
                   >
                     <Text style={styles.modalCancelText}>취소</Text>
                   </TouchableOpacity>
@@ -372,7 +462,7 @@ export default function VaccinationScreen() {
       {/* ════════════════════════════════════════════════ */}
       {/*  접종 상세 모달                                   */}
       {/* ════════════════════════════════════════════════ */}
-      <Modal visible={!!showDetail} animationType="slide" transparent>
+      <Modal visible={!!showDetail} animationType="slide" transparent onRequestClose={() => setShowDetail(null)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             {showDetail && (
@@ -430,6 +520,7 @@ export default function VaccinationScreen() {
           </View>
         </View>
       </Modal>
+      <AdSlot />
     </View>
   );
 }

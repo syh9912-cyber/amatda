@@ -1,3 +1,6 @@
+// 연령별 카테고리 필터 (key 기준)
+import type { AgeGroupKey } from '../../constants/ageGroups';
+
 export interface CoachingMessage {
   id: string;
   isCoach: boolean;
@@ -37,7 +40,7 @@ export const COACHING_COLORS = {
   white: '#FFFFFF',
 };
 
-/* eslint-disable @typescript-eslint/no-require-imports */
+ 
 export const CONCERN_CATEGORIES = [
   // Baby categories
   { icon: require('../../assets/cat-crying.png') as number, label: '울음', key: 'crying' },
@@ -57,9 +60,6 @@ export const CONCERN_CATEGORIES = [
   { icon: require('../../assets/cat-crying.png') as number, label: '출산 준비', key: 'birth_prep' },
 ];
 
-// 연령별 카테고리 필터 (key 기준)
-import type { AgeGroupKey } from '../../constants/ageGroups';
-
 const CATEGORY_KEYS_BY_AGE: Record<AgeGroupKey, string[]> = {
   pregnant: ['symptoms', 'nutrition', 'checkup', 'exercise', 'emotion', 'birth_prep', 'etc'],
   infant: ['crying', 'sleep', 'eating', 'poop', 'growth', 'behavior', 'etc'],
@@ -77,4 +77,4 @@ export const CHECKIN_OPTIONS = [
   { icon: require('../../assets/mood-normal.png') as number, label: '보통이에요', mood: 'normal' },
   { icon: require('../../assets/mood-bad.png') as number, label: '안 좋아요', mood: 'bad' },
 ];
-/* eslint-enable @typescript-eslint/no-require-imports */
+ 

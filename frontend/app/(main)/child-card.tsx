@@ -16,6 +16,7 @@ import { useChildStore } from '../../stores/childStore';
 import { memoriesApi, retentionApi } from '../../services/api';
 import { LEVELS } from './parent-level';
 import { captureRef } from 'react-native-view-shot';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const IC_BOY = require('../../assets/avatar-boy.png') as number;
@@ -121,12 +122,18 @@ export default function ChildCardScreen() {
     : '';
 
   return (
+    <View style={{ flex: 1 }}>
     <ScrollView style={s.bg} contentContainerStyle={s.scroll}>
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* ── Nav header ── */}
       <View style={s.navRow}>
-        <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.replace('/(main)/home')}>
+        <TouchableOpacity
+          onPress={() => router.canGoBack() ? router.back() : router.replace('/(main)/home')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로"
+        >
           <Text style={s.navBack}>{'<'}</Text>
         </TouchableOpacity>
         <Text style={s.navTitle}>PASSPORT</Text>
@@ -380,6 +387,8 @@ export default function ChildCardScreen() {
         </>
       )}
     </ScrollView>
+    <AdSlot />
+    </View>
   );
 }
 

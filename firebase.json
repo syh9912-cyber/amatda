@@ -1,4 +1,18 @@
 {
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      { "source": "/privacy", "destination": "/privacy.html" }
+    ]
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
   "firestore": {
     "database": "(default)",
     "location": "asia-northeast3",
@@ -13,6 +27,9 @@
       ".git",
       "prisma/dev.db"
     ],
-    "gen": 2
+    "gen": 2,
+    "predeploy": [
+      "npm --prefix backend run build"
+    ]
   }
 }

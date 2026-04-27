@@ -6,7 +6,20 @@
       "Bash(npx prisma:*)",
       "Bash(npx ts-node:*)",
       "Bash(npx create-expo-app@latest frontend --template blank-typescript)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(find /c/amatda/frontend -not -path '*/node_modules/*' -not -path '*/dist/*' \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) -exec grep -l \"StyleSheet\\\\|styles\\\\.\" {} \\\\;)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -r \"interface\\\\|type \" /c/amatda/frontend --include=\"*.ts\" --include=\"*.tsx\" ! -path \"*/node_modules/*\" ! -path \"*/dist/*\")",
+      "Bash(find /c/amatda/frontend -not -path '*/node_modules/*' -not -path '*/dist/*' \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) -exec grep -H \"^interface\\\\|^type \" {} \\\\;)",
+      "Bash(xargs wc:*)",
+      "Bash(find /c/amatda/frontend -not -path '*/node_modules/*' -not -path '*/dist/*' -type f \\\\\\( -name \"*.tsx\" -o -name \"*.ts\" \\\\\\) -exec grep -H \"TODO\\\\|FIXME\\\\|HACK\\\\|BUG\\\\|XXX\" {} \\\\;)",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(git merge:*)",
+      "Bash(git fetch:*)",
+      "Bash(npx expo:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(taskkill //F //IM \"node.exe\" //FI \"WINDOWTITLE eq *metro*\")"
     ]
   }
 }

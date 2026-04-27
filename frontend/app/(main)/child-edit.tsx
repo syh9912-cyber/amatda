@@ -57,6 +57,7 @@ export default function ChildEditScreen() {
     setMomWeight(selectedChild.momWeight ? String(selectedChild.momWeight) : '');
     setMomBloodType(selectedChild.momBloodType ?? '');
     setMomSpecialNotes(selectedChild.momSpecialNotes ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild?.id]);
 
   if (!selectedChild) {

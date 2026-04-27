@@ -1,5 +1,5 @@
 import { Modal, View, Image, TouchableOpacity, Text, StyleSheet, Dimensions } from 'react-native';
-import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
+import { FONT_SIZE, SPACING } from '../../constants/theme';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 

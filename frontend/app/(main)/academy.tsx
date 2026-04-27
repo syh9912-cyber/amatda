@@ -8,6 +8,7 @@ import { academyApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { useLocation } from '../../hooks/useLocation';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -180,6 +181,7 @@ export default function AcademyScreen() {
           </>
         )}
       </ScrollView>
+      <AdSlot />
     </View>
   );
 }
@@ -191,7 +193,13 @@ export default function AcademyScreen() {
 function Header({ title, onBack }: { title: string; onBack: () => void }) {
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+      <TouchableOpacity
+        onPress={onBack}
+        style={styles.backBtn}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel="뒤로"
+      >
         <Text style={styles.backArrow}>{'<'}</Text>
       </TouchableOpacity>
       <Text style={styles.headerTitle} numberOfLines={1}>

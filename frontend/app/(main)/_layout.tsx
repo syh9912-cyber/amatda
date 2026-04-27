@@ -163,6 +163,7 @@ export default function MainLayout() {
       <Tabs.Screen name="child-edit" options={{ href: null }} />
       <Tabs.Screen name="fever" options={{ href: null }} />
       <Tabs.Screen name="voice-settings" options={{ href: null }} />
+      <Tabs.Screen name="ai-analysis" options={{ href: null }} />
     </Tabs>
   );
 }

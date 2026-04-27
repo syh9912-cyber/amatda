@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useChildStore, AnalysisReport, ReportReasons } from '../../stores/childStore';
 import { childApi, coachingApi } from '../../services/api';
@@ -9,9 +9,10 @@ import { TextTipSection } from '../../components/report/TextTipSection';
 import { SimpleListSection } from '../../components/report/SimpleListSection';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+ 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const reportHeaderImg = require('../../assets/report-header.png');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+ 
 const IC_SEND = require('../../assets/icon-send.png') as number;
 
 /**
@@ -105,7 +106,7 @@ export default function AnalysisReportScreen() {
       setLoading(true);
       childApi.list()
         .then((res) => {
-          const list = res.data?.data as Array<Record<string, unknown>> | undefined;
+          const list = res.data?.data as Record<string, unknown>[] | undefined;
           const found = list?.find((c) => (c.id as string) === childId);
           if (found) {
             const parsed = found.analysisReport as AnalysisReport | null;
@@ -187,10 +188,16 @@ export default function AnalysisReportScreen() {
   }
 
   return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
+    >
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
       <Stack.Screen options={{ title: '분석 결과', headerShown: false }} />
 
@@ -394,6 +401,7 @@ export default function AnalysisReportScreen() {
 
       <View style={styles.bottomSpacer} />
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

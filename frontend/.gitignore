@@ -33,6 +33,15 @@ yarn-error.*
 # local env files
 .env*.local
 
+# Firebase
+google-services.json
+GoogleService-Info.plist
+
+# OAuth / signing secrets that must not be bundled or committed accidentally
+*Secret*.txt
+*secret*.txt
+*키스토어*.txt
+
 # typescript
 *.tsbuildinfo
 

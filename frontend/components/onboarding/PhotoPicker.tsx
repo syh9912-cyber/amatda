@@ -1,41 +1,16 @@
-import { View, Text, TouchableOpacity, Image, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
+import { pickImageFromLibrary } from '../../utils/imagePicker';
 
 interface PhotoPickerProps {
   photoUri: string | null;
   onChangePhoto: (uri: string | null) => void;
 }
 
-async function pickImage(): Promise<string | null> {
-  const ImagePicker = await import('expo-image-picker');
-
-  if (Platform.OS !== 'web') {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('권한 필요', '사진 라이브러리 접근 권한이 필요합니다');
-      return null;
-    }
-  }
-
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'],
-    allowsEditing: true,
-    aspect: [1, 1],
-    quality: 0.7,
-  });
-
-  if (!result.canceled && result.assets[0]) {
-    return result.assets[0].uri;
-  }
-  return null;
-}
-
 export function PhotoPicker({ photoUri, onChangePhoto }: PhotoPickerProps) {
   const handlePress = async () => {
-    const uri = await pickImage();
-    if (uri) {
-      onChangePhoto(uri);
-    }
+    const picked = await pickImageFromLibrary({ quality: 0.7 });
+    if (picked) onChangePhoto(picked.uri);
   };
 
   return (

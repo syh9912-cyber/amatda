@@ -1,6 +1,7 @@
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
+import { AdSlot } from '../../components/ads/AdSlot';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
 
 interface CategoryItem {
@@ -51,11 +52,17 @@ export default function RecommendationsScreen() {
   const selectedChild = useChildStore((s) => s.selectedChild);
 
   return (
+    <View style={{ flex: 1 }}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="뒤로"
+        >
           <Text style={styles.backArrow}>{'<'}</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{'맞춤 추천'}</Text>
@@ -99,6 +106,8 @@ export default function RecommendationsScreen() {
         </TouchableOpacity>
       ))}
     </ScrollView>
+    <AdSlot />
+    </View>
   );
 }
 

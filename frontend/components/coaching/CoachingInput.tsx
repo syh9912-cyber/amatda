@@ -3,16 +3,15 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
-  Alert,
   StyleSheet,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { COACHING_COLORS } from './types';
+import { pickImageFromLibrary } from '../../utils/imagePicker';
 
-/* eslint-disable @typescript-eslint/no-require-imports */
+ 
 const IC_CAMERA = require('../../assets/icon-camera.png') as number;
 const IC_SEND = require('../../assets/icon-send.png') as number;
-/* eslint-enable @typescript-eslint/no-require-imports */
+ 
 
 interface Props {
   value: string;
@@ -30,23 +29,8 @@ export function CoachingInput({
   disabled,
 }: Props) {
   const handlePhoto = async () => {
-    const { status } =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(
-        '권한 필요',
-        '사진 라이브러리 접근 권한이 필요합니다.'
-      );
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]) {
-      onPhoto(result.assets[0].uri);
-    }
+    const picked = await pickImageFromLibrary({ quality: 0.8 });
+    if (picked) onPhoto(picked.uri);
   };
 
   return (

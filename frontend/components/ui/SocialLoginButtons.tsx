@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SocialProvider } from '../../services/social-auth';
-import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
+import { FONT_SIZE, SPACING } from '../../constants/theme';
 import { SOCIAL_BUTTON_LIST } from './socialButtonConfig';
 
 interface SocialLoginButtonsProps {

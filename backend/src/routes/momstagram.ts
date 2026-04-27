@@ -195,12 +195,13 @@ router.post('/posts/:id/like', authMiddleware, async (req: Request, res: Respons
   }
 });
 
-// GET /posts/:id/comments - 댓글 조회
+// GET /posts/:id/comments - 댓글 조회 (cursor 기반)
 router.get('/posts/:id/comments', authMiddleware, async (req: Request, res: Response) => {
   try {
     const postId = req.params.id as string;
     const page = Math.max(0, parseInt(req.query.page as string, 10) || 0);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
+    const cursor = (req.query.cursor as string | undefined) || undefined;
 
     const postDoc = await collections.posts.doc(postId).get();
     if (!postDoc.exists) {
@@ -208,15 +209,24 @@ router.get('/posts/:id/comments', authMiddleware, async (req: Request, res: Resp
       return;
     }
 
-    const snap = await collections.postComments
+    let q = collections.postComments
       .where('postId', '==', postId)
       .orderBy('createdAt', 'asc')
-      .offset(page * limit)
-      .limit(limit)
-      .get();
+      .limit(limit);
 
+    // cursor = 마지막 문서의 createdAt 값. 있으면 startAfter, 없고 page=0이면 처음부터.
+    // legacy offset-page>0 호출은 1페이지로 fallback (offset은 Firestore에서 비효율).
+    if (cursor) {
+      q = q.startAfter(cursor);
+    }
+
+    const snap = await q.get();
     const comments = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    success(res, { comments, page, limit });
+    const lastDoc = snap.docs[snap.docs.length - 1];
+    const nextCursor = lastDoc
+      ? (lastDoc.data().createdAt as string | undefined) ?? null
+      : null;
+    success(res, { comments, page, limit, nextCursor });
   } catch {
     error(res, '댓글 조회 중 오류가 발생했습니다', 500);
   }
@@ -267,6 +277,55 @@ router.post('/posts/:id/comments', authMiddleware, async (req: Request, res: Res
 });
 
 // DELETE /posts/:id - 본인 게시글 삭제
+// PATCH /posts/:id - 본인 게시글 수정 (content/category만)
+router.patch('/posts/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const postId = req.params.id as string;
+    const { content, category, imageUrl } = req.body as {
+      content?: string;
+      category?: string;
+      imageUrl?: string | null;
+    };
+
+    const postDoc = await collections.posts.doc(postId).get();
+    if (!postDoc.exists) {
+      error(res, '게시글을 찾을 수 없습니다', 404);
+      return;
+    }
+    if (postDoc.data()!.userId !== userId) {
+      error(res, '본인의 게시글만 수정할 수 있습니다', 403);
+      return;
+    }
+
+    const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+    if (typeof content === 'string') updates.content = content;
+    if (typeof category === 'string') updates.category = category;
+    if (imageUrl !== undefined) {
+      if (imageUrl === null) {
+        updates.imageUrl = null;
+        updates.thumbnailUrl = null;
+        updates.mediaType = 'none';
+      } else if (typeof imageUrl === 'string' && imageUrl.startsWith('https://')) {
+        updates.imageUrl = imageUrl;
+        updates.thumbnailUrl = imageUrl;
+        updates.mediaType = 'image';
+      }
+    }
+
+    if (Object.keys(updates).length === 1) {
+      error(res, '수정할 내용이 없습니다');
+      return;
+    }
+
+    await collections.posts.doc(postId).update(updates);
+    const updated = await collections.posts.doc(postId).get();
+    success(res, { id: postId, ...updated.data() });
+  } catch {
+    error(res, '게시글 수정 중 오류가 발생했습니다', 500);
+  }
+});
+
 router.delete('/posts/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
@@ -307,22 +366,32 @@ router.delete('/posts/:id', authMiddleware, async (req: Request, res: Response) 
   }
 });
 
-// GET /my-posts - 내 게시글 조회
+// GET /my-posts - 내 게시글 조회 (cursor 기반)
 router.get('/my-posts', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const page = Math.max(0, parseInt(req.query.page as string, 10) || 0);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string, 10) || 20));
+    const cursor = (req.query.cursor as string | undefined) || undefined;
 
-    const snap = await collections.posts
+    let q = collections.posts
       .where('userId', '==', userId)
       .orderBy('createdAt', 'desc')
-      .offset(page * limit)
-      .limit(limit)
-      .get();
+      .limit(limit);
 
+    // cursor = 마지막 문서의 createdAt 값 (ISO string).
+    // legacy offset-page>0은 1페이지로 fallback (Firestore offset 비효율).
+    if (cursor) {
+      q = q.startAfter(cursor);
+    }
+
+    const snap = await q.get();
     const posts = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    success(res, { posts, page, limit });
+    const lastDoc = snap.docs[snap.docs.length - 1];
+    const nextCursor = lastDoc
+      ? (lastDoc.data().createdAt as string | undefined) ?? null
+      : null;
+    success(res, { posts, page, limit, nextCursor });
   } catch {
     error(res, '내 게시글 조회 중 오류가 발생했습니다', 500);
   }

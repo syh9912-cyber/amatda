@@ -1,7 +1,7 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
+import { pickImageFromLibrary } from '../../utils/imagePicker';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
 import { Child, useChildStore } from '../../stores/childStore';
 import { childApi } from '../../services/api';
@@ -61,24 +61,11 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
   );
 
   const handlePickPhoto = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(
-        '권한 필요',
-        '사진 접근 권한이 필요합니다.'
-      );
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-    if (result.canceled || !result.assets[0]) return;
+    const picked = await pickImageFromLibrary({ quality: 0.7 });
+    if (!picked) return;
     setUploading(true);
     try {
-      const photoUri = result.assets[0].uri;
+      const photoUri = picked.uri;
       await childApi.update(child.id, { photoUri });
       updateChild({ ...child, photoUri });
     } catch {

@@ -29,6 +29,7 @@ export function BirthTimePicker({ birthTime, onChangeBirthTime }: BirthTimePicke
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const DateTimePicker = require('@react-native-community/datetimepicker').default;
 
   const parseTime = (): Date => {

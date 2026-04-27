@@ -81,7 +81,7 @@ export default function PrivacyPolicyScreen() {
 - 법령의 규정에 의거하거나 수사 목적으로 법령에 정해진 절차와 방법에 따라 수사기관의 요구가 있는 경우
 
 [AI 분석 시 데이터 처리]
-- AI 기질 분석 및 맞춤 추천 시 아이의 실명을 마스킹 처리하여 외부 AI 서비스(OpenAI)에 전송합니다.
+- AI 기질 분석 및 맞춤 추천 시 아이의 실명을 마스킹 처리하여 외부 AI 서비스(Google Gemini)에 전송합니다.
 - 마스킹된 데이터에서는 개인을 식별할 수 없습니다.
 - AI 서비스 제공자는 전송된 데이터를 학습 목적으로 사용하지 않습니다.`}
       </Section>
@@ -130,7 +130,7 @@ export default function PrivacyPolicyScreen() {
 [위탁 업체 및 내용]
 - Google Cloud Platform / Firebase: 데이터 저장, 인증, 호스팅
   (데이터 처리 지역: 미국, Google Cloud 보안 정책 준수)
-- OpenAI: AI 기질 분석 (마스킹된 데이터만 전송)
+- Google (Gemini AI): AI 기질 분석 및 육아 코칭 (마스킹된 데이터만 전송, 데이터 학습 미사용)
 
 위탁 업체는 관련 법령에 따라 개인정보를 안전하게 처리하며, 위탁 목적 외 개인정보 이용을 금지하고 있습니다.`}
       </Section>

@@ -1,14 +1,15 @@
-import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
+import { Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
 import { useState } from 'react';
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
 import { useAuthStore } from '../../stores/authStore';
 import { authApi, childApi } from '../../services/api';
-import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
+import { COLORS, SPACING } from '../../constants/theme';
 import { ProfileCard } from '../../components/profile/ProfileCard';
 import { ProfileMenuList } from '../../components/profile/ProfileMenuList';
 import { ProfileFooter } from '../../components/profile/ProfileFooter';
 import { PasswordModal } from '../../components/profile/PasswordModal';
+import { ScreenHeader } from '../../components/ui/ScreenHeader';
 
 export default function ProfileScreen() {
   const selectedChild = useChildStore((s) => s.selectedChild);
@@ -113,7 +114,19 @@ export default function ProfileScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ProfileHeader onSettingsPress={() => router.push('/(main)/edit-profile')} />
+      <ScreenHeader
+        title="마이페이지"
+        rightAction={
+          <TouchableOpacity
+            onPress={() => router.push('/(main)/edit-profile')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="설정"
+          >
+            <Image source={require('../../assets/icon-settings.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />
+          </TouchableOpacity>
+        }
+      />
 
       <ProfileCard child={selectedChild} onDeleteChild={handleDeleteChild} />
 
@@ -131,48 +144,14 @@ export default function ProfileScreen() {
   );
 }
 
-function ProfileHeader({ onSettingsPress }: { onSettingsPress: () => void }) {
-  return (
-    <View style={styles.header}>
-      <TouchableOpacity onPress={() => router.back()}>
-        <Text style={styles.backArrow}>{'<'}</Text>
-      </TouchableOpacity>
-      <Text style={styles.headerTitle}>마이페이지</Text>
-      <TouchableOpacity onPress={onSettingsPress}>
-        <Image source={require('../../assets/icon-settings.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: COLORS.background,
   },
   content: {
     paddingHorizontal: SPACING.lg,
     paddingTop: 56,
     paddingBottom: 120,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.lg,
-  },
-  backArrow: {
-    fontSize: 24,
-    color: COLORS.text,
-    fontWeight: '300',
-    paddingRight: SPACING.sm,
-  },
-  headerGear: {
-    fontSize: 24,
-  },
-  headerTitle: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: '700',
-    color: COLORS.text,
   },
 });

@@ -10,6 +10,7 @@ import { Stack } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import api from '../../services/api';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 interface MateMatch {
   id: string;
@@ -52,6 +53,7 @@ export default function MatesScreen() {
   };
 
   return (
+    <View style={{ flex: 1 }}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ title: '동네 기질 메이트', headerShown: true }} />
 
@@ -117,6 +119,8 @@ export default function MatesScreen() {
         </>
       )}
     </ScrollView>
+    <AdSlot />
+    </View>
   );
 }
 

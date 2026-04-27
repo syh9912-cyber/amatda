@@ -1,11 +1,12 @@
 import * as admin from 'firebase-admin';
+import type { Bucket } from '@google-cloud/storage';
 
 if (!admin.apps.length) {
   admin.initializeApp();
 }
 
 export const db = admin.firestore();
-export const storage = admin.storage().bucket('amatda-parenting.firebasestorage.app');
+export const storage: Bucket = admin.storage().bucket('amatda-parenting.firebasestorage.app');
 
 // 컬렉션 레퍼런스
 export const collections = {
