@@ -32,18 +32,19 @@ const REPLY_PATTERNS = /^(네|응|예|아니|아뇨|맞아|그래|좋아|싫어|
 export function filterUselessQuestion(message: string): FilterResult {
   const trimmed = message.trim();
 
-  // 너무 짧은 입력 (2자 이하)
+  // 대화 응답 패턴은 항상 통과 (첫 질문 답변, 후속 질문 답변 등)
+  // ※ 길이 체크보다 반드시 먼저 — "네"(1자)도 정상 응답이므로 차단되면 안 됨
+  if (REPLY_PATTERNS.test(trimmed)) {
+    return { isUseless: false };
+  }
+
+  // 너무 짧은 입력 (2자 이하, 그리고 응답 패턴도 아닌 경우)
   if (trimmed.replace(/\s/g, '').length < 3) {
     return {
       isUseless: true,
       rejectionType: 'vague',
       rejectionMessage: '조금 더 자세히 알려주시면 도움드릴 수 있어요.\n예: "밤에 자주 깨요", "밥을 잘 안 먹어요" 처럼 적어주세요.',
     };
-  }
-
-  // 대화 응답 패턴은 항상 통과 (첫 질문 답변, 후속 질문 답변 등)
-  if (REPLY_PATTERNS.test(trimmed)) {
-    return { isUseless: false };
   }
 
   // 인사/감사만 (네/응은 위에서 이미 통과)

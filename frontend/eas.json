@@ -28,7 +28,9 @@
         "EXPO_PUBLIC_NAVER_CLIENT_SECRET": "I9k_bmrqYz",
         "EXPO_PUBLIC_NAVER_URL_SCHEME": "naverlogin",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "712169890278-s470hnnvpsrk6vhltt8tc0193ojiuufu.apps.googleusercontent.com",
-        "EXPO_PUBLIC_ADS_MOCK": "false"
+        "EXPO_PUBLIC_ADS_ENABLED": "true",
+        "EXPO_PUBLIC_ADS_FORCE_SHOW": "false",
+        "EXPO_PUBLIC_ADS_MOCK": "true"
       }
     },
     "production": {
@@ -44,6 +46,8 @@
         "EXPO_PUBLIC_NAVER_CLIENT_SECRET": "I9k_bmrqYz",
         "EXPO_PUBLIC_NAVER_URL_SCHEME": "naverlogin",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "712169890278-s470hnnvpsrk6vhltt8tc0193ojiuufu.apps.googleusercontent.com",
+        "EXPO_PUBLIC_ADS_ENABLED": "true",
+        "EXPO_PUBLIC_ADS_FORCE_SHOW": "false",
         "EXPO_PUBLIC_ADS_MOCK": "false"
       }
     }
