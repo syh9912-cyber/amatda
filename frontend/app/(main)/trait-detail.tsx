@@ -156,7 +156,11 @@ function SummaryContent({
   );
 }
 
-/** 상세분석 tab content */
+/** 상세분석 tab content
+ *
+ * 온보딩 analysis-report.tsx와 동일한 12개 섹션을 모두 표시한다.
+ * (이전엔 4개만 표시되어 회귀로 누락됨 — 사용자 보고로 복구)
+ */
 function DetailContent({
   analysisReport,
 }: {
@@ -172,17 +176,64 @@ function DetailContent({
 
   return (
     <View>
-      {analysisReport.parentingTip ? (
-        <InfoBlock title="양육 팁" emoji="💡" text={analysisReport.parentingTip} />
+      {/* 성격 특성 (list) */}
+      {analysisReport.personality && analysisReport.personality.length > 0 ? (
+        <InfoListBlock title="성격 특성" emoji="🎭" items={analysisReport.personality} />
       ) : null}
+
+      {/* 학습 스타일 (text) */}
       {analysisReport.studyStyle ? (
-        <InfoBlock title="학습 스타일" emoji="📖" text={analysisReport.studyStyle} />
+        <InfoBlock title="학습 스타일" emoji="📚" text={analysisReport.studyStyle} />
       ) : null}
+
+      {/* 잘하는 분야 (list) */}
+      {analysisReport.bestSubjects && analysisReport.bestSubjects.length > 0 ? (
+        <InfoListBlock title="잘하는 분야" emoji="⭐" items={analysisReport.bestSubjects} />
+      ) : null}
+
+      {/* 보완할 분야 (list) */}
+      {analysisReport.weakAreas && analysisReport.weakAreas.length > 0 ? (
+        <InfoListBlock title="보완할 분야" emoji="💡" items={analysisReport.weakAreas} />
+      ) : null}
+
+      {/* 미래 진로 — 어울리는 직장 (list) */}
+      {analysisReport.futureFields && analysisReport.futureFields.length > 0 ? (
+        <InfoListBlock title="미래 진로" emoji="🚀" items={analysisReport.futureFields} />
+      ) : null}
+
+      {/* 잘 맞는 운동 (list) */}
+      {analysisReport.sportsMatch && analysisReport.sportsMatch.length > 0 ? (
+        <InfoListBlock title="잘 맞는 운동" emoji="⚽" items={analysisReport.sportsMatch} />
+      ) : null}
+
+      {/* 학원 스타일 (text) */}
+      {analysisReport.academyStyle ? (
+        <InfoBlock title="학원 스타일" emoji="🏫" text={analysisReport.academyStyle} />
+      ) : null}
+
+      {/* 좋은 음식 (list) */}
+      {analysisReport.goodFoods && analysisReport.goodFoods.length > 0 ? (
+        <InfoListBlock title="좋은 음식" emoji="🍎" items={analysisReport.goodFoods} />
+      ) : null}
+
+      {/* 피할 음식 (list) */}
+      {analysisReport.badFoods && analysisReport.badFoods.length > 0 ? (
+        <InfoListBlock title="피할 음식" emoji="⚠️" items={analysisReport.badFoods} />
+      ) : null}
+
+      {/* 교육 방향 (text) */}
       {analysisReport.educationDirection ? (
-        <InfoBlock title="교육 방향" emoji="🎓" text={analysisReport.educationDirection} />
+        <InfoBlock title="교육 방향" emoji="🎯" text={analysisReport.educationDirection} />
       ) : null}
+
+      {/* 특별 재능 (text) */}
       {analysisReport.specialTalent ? (
-        <InfoBlock title="특별 재능" emoji="🌟" text={analysisReport.specialTalent} />
+        <InfoBlock title="특출난 재능" emoji="🏆" text={analysisReport.specialTalent} />
+      ) : null}
+
+      {/* 양육 팁 (text) */}
+      {analysisReport.parentingTip ? (
+        <InfoBlock title="양육 팁" emoji="💜" text={analysisReport.parentingTip} />
       ) : null}
     </View>
   );
@@ -201,6 +252,25 @@ function InfoBlock({
     <View style={styles.infoCard}>
       <Text style={styles.infoTitle}>{emoji} {title}</Text>
       <Text style={styles.infoText}>{text}</Text>
+    </View>
+  );
+}
+
+function InfoListBlock({
+  title,
+  emoji,
+  items,
+}: {
+  title: string;
+  emoji: string;
+  items: string[];
+}) {
+  return (
+    <View style={styles.infoCard}>
+      <Text style={styles.infoTitle}>{emoji} {title}</Text>
+      {items.map((item, idx) => (
+        <Text key={idx} style={styles.infoListItem}>{'• '}{item}</Text>
+      ))}
     </View>
   );
 }
@@ -259,6 +329,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: TRAIT_COLORS.textBrownLight,
     lineHeight: 22,
+  },
+  infoListItem: {
+    fontSize: 13,
+    color: TRAIT_COLORS.textBrownLight,
+    lineHeight: 22,
+    marginTop: 4,
+    paddingLeft: 4,
   },
   reAnalyzeBtn: {
     backgroundColor: TRAIT_COLORS.coral,
