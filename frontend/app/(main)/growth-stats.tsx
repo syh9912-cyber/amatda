@@ -1706,6 +1706,15 @@ function PhysicalTab({ childName }: { childName: string }) {
         const latestHeight = latest?.height ?? initialHeight;
         const latestWeight = latest?.weight ?? initialWeight;
 
+        // 최신 기록 시점의 또래 비교 (percentile)
+        // standard는 현재 개월수 기준이므로 동일 standard 사용 (첫 기록 카드와 동일 정책)
+        const latestHeightPercentile = latestHeight && standard
+          ? calculatePercentile(latestHeight, standard.height)
+          : null;
+        const latestWeightPercentile = latestWeight && standard
+          ? calculatePercentile(latestWeight, standard.weight)
+          : null;
+
         const chartW = Dimensions.get('window').width - SPACING.md * 2 - SPACING.lg * 2;
         const heightPoints = merged.filter((r) => typeof r.height === 'number').map((r) => r.height as number);
         const weightPoints = merged.filter((r) => typeof r.weight === 'number').map((r) => r.weight as number);
@@ -1795,6 +1804,47 @@ function PhysicalTab({ childName }: { childName: string }) {
                 />
                 <StatBox label="기록 수" value={String(merged.length)} color={COLORS.info} />
               </View>
+
+              {/* Percentile display — 최신 기록 시점의 또래 비교 */}
+              {(latestHeightPercentile !== null || latestWeightPercentile !== null) ? (
+                <View style={pStyles.percentileWrap}>
+                  <Text style={pStyles.percentileHeader}>
+                    동 개월 {genderLabel} 대비
+                  </Text>
+                  {latestHeightPercentile !== null && latestHeight ? (
+                    <View style={pStyles.percentileRow}>
+                      <Text style={pStyles.percentileLabel}>키</Text>
+                      <View style={pStyles.barBg}>
+                        <View
+                          style={[
+                            pStyles.barFill,
+                            { width: `${Math.max(5, 100 - latestHeightPercentile)}%` },
+                          ]}
+                        />
+                      </View>
+                      <Text style={pStyles.percentileValue}>
+                        {getPercentileLabel(latestHeightPercentile)}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {latestWeightPercentile !== null && latestWeight ? (
+                    <View style={pStyles.percentileRow}>
+                      <Text style={pStyles.percentileLabel}>몸무게</Text>
+                      <View style={pStyles.barBg}>
+                        <View
+                          style={[
+                            pStyles.barFill,
+                            { width: `${Math.max(5, 100 - latestWeightPercentile)}%`, backgroundColor: COLORS.primary },
+                          ]}
+                        />
+                      </View>
+                      <Text style={pStyles.percentileValue}>
+                        {getPercentileLabel(latestWeightPercentile)}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
             </View>
           </>
         );
