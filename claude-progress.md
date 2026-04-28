@@ -1,5 +1,97 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-04-21
+> 최종 업데이트: 2026-04-27
+
+---
+
+## 2026-04-27 — 코드 동결 시작 + 출시 P0 핫픽스 2건
+
+### 배경
+- 출시 직전 반복적 버그 발생 → 동결(`FREEZE.md`) 도입, 출시 목표 2026-05-15
+- 271개 미커밋 파일 누적 → release/v2.9.0 브랜치에 분리 백업
+
+### 수행 작업
+
+#### 1) 코드 동결 (STEP 0)
+- `FREEZE.md` 신규 — 허용/금지/회색지대 작업 명시
+- `CLAUDE.md` 상단에 동결 배너 추가 (다음 세션부터 자동 인식)
+- `LAUNCH-CHECKLIST.md` 신규 — STEP 0~8 절차
+- `release/v2.9.0` 브랜치 생성 → main과 분리
+
+#### 2) 저장소 정리 (STEP 1)
+- `.gitignore` 강화 — OAuth credential dump 패턴(`[0-9]*-*.txt`),
+  Claude 내부, Firebase 캐시, 일회성 로그/스크립트, assets.backup/ 제외
+- 271 미커밋 파일 → 3개 커밋으로 분리 후 origin push
+  - `c02544c chore: gitignore — 시크릿/캐시/임시파일 제외`
+  - `1a6d017 chore: pre-launch snapshot — 미커밋 작업 일괄 정리`
+  - `491dc53 docs: 코드 동결 + 출시 체크리스트`
+
+#### 3) 정적 검증 (STEP 2)
+- `cd backend && npx tsc --noEmit` → exit 0 ✅
+- `cd frontend && npx tsc --noEmit` → exit 0 ✅
+- `cd frontend && npx expo lint` → 0 errors / 59 warnings (모두 P2, 동결 유지)
+
+#### 4) Firestore 룰 P0 핫픽스
+- 문제: `firestore.rules`가 임시 룰(`request.time < 2026-05-05`).
+  출시일(5/15) 이후 모든 사용자 차단 + 그 전에는 인증 없이 누구든 read/write
+- 수정: 클라이언트 직접 접근 전면 차단(`allow read, write: if false`).
+  프론트엔드는 Firestore 직접 접근 0건(grep 검증) → 백엔드 Admin SDK만 통과
+- 배포: `firebase deploy --only firestore:rules` → released
+- 커밋: `88fb568 fix(security): Firestore 임시 룰 → 클라이언트 차단 룰로 교체 (P0)`
+
+#### 5) SOS 이미지 P0 핫픽스
+- 문제: `frontend/assets/sos-*.png` 4장이 Gemini 생성 시 가짜 한글
+  (`심페소송물`, `기모 털기`, `머리 피로 젓히기 + 탁 일미기` 등)으로
+  잘못된 응급정보 표시 → 부모가 따라하면 위험
+- 수정: ChatGPT(GPT Image 1)로 4장 재생성 + 사람이 글자 한 자씩 검수
+  - sos-cpr.png — 영아 CPR 4단계 (반응→기도→압박 30회→인공호흡 2회)
+  - sos-heimlich.png — 하임리히 4단계 (등 두드리기→가슴 압박→1세 이상→119)
+  - sos-burn-fall.png — 화상/낙상 4단계 (찬물 10분→금지 항목→일으키기 X→24시간 관찰)
+  - sos-foreign.png — 이물질 4단계 (손가락 X→기침 막지 X→하임리히→119+병원)
+- 재발 방지: `scripts/generate-sos-images.cjs` 비활성화(즉시 exit 1)
+- 의학 정확도: AHA 영아 CPR 가이드라인 부합 확인
+- 커밋: `f30e9cc fix(sos): SOS 응급가이드 이미지 4장 한글 깨짐 수정 (P0)`
+
+#### 6) 환경/시크릿 점검 (STEP 3)
+- ✅ Firestore 인덱스 22개 모두 "사용 설정됨" (Firebase Console 확인)
+- ✅ google-services.json 존재 (frontend/, 1312 bytes)
+- ✅ storage.rules 정상 (인증+uid+사이즈 제한)
+- ⏳ Sentry DSN 운영 env 누락 → 빌드 직전 사용자가 sentry.io DSN 제공
+
+#### 7) runtimeVersion 정책 (STEP 4)
+- 현재 `{"policy": "appVersion"}` 이미 적용 (이전 v2.8.5 미결 사항 해결됨)
+- 운영/preview 채널 모두 2.8.1 → 다음 빌드는 2.9.0으로 자동 매핑
+
+#### 8) 출시 베타 빌드 시작
+- `eas build --profile preview --platform android` 시작
+- Build ID: `ff118ed5-bb24-4cb9-828f-3df25cc64400`
+- 메시지: "v2.9.0-beta: SOS 이미지 정본 + Firestore 룰 핫픽스"
+- ⚠️ 4월 EAS 무료 크레딧 100% 소진 — 이번 빌드는 유료 과금
+- 5월 1일 무료 크레딧 리셋 후 production 빌드 만들 예정
+
+#### 9) 출시 보조 문서 신규
+- `STEP6-DEVICE-TEST.md` — 실기기 시나리오 11개 (A~K) + P0 발견 시 절차
+- `PLAY-CONSOLE-METADATA.md` — Play Console 제출용 텍스트/설문 답안/이미지 가이드
+
+### 검증 결과
+- 백엔드/프론트 tsc → 통과
+- 프론트 lint → 0 errors
+- Firestore 룰 배포 성공
+- SOS 이미지 사람 검수 통과
+- git push origin release/v2.9.0 완료 (백업)
+
+### 남은 작업 (출시까지)
+- [ ] 베타 빌드 완료 → APK 다운로드 (백그라운드 진행 중)
+- [ ] STEP 6 실기기 검증 (사용자 직접 — 시나리오 A~K)
+- [ ] 태교음악 화면 처리 결정 (P1, 옵션: 숨김/준비중 표시/그대로)
+- [ ] STEP 7 지인 5명 클로즈베타 → 피드백 수렴
+- [ ] 5월 1일 EAS 크레딧 리셋 후 production 빌드
+- [ ] Sentry DSN 발급 → eas.json production env 주입
+- [ ] Play Console 메타데이터 등록 + 스크린샷 업로드
+- [ ] 데이터 보안 양식 / 콘텐츠 등급 / 대상 연령층 설문
+- [ ] AAB 업로드 → Internal testing → Production 단계적 출시
+
+### 동결 위반 없음
+- 본 세션 모든 변경은 P0 핫픽스 또는 출시 보조 문서. FREEZE.md 정책 준수.
 
 ---
 

@@ -27,14 +27,11 @@
 
 ## 🟧 STEP 1 — 코드/저장소 정리
 
-- [ ] `git status` 확인 → 미커밋 파일 의도 분류
-  - 의도한 변경 → 커밋
-  - 의도하지 않은 변경 → `git restore`
-  - 빌드 산출물 → `.gitignore` 추가
-- [ ] `git push origin main` 으로 백업 (3 commits ahead 상태 해소)
-- [ ] `app.json` `version` / `versionCode` / iOS `buildNumber` 출시 버전으로 통일
-- [ ] `claude-progress.md` 최신 작업 반영
-- [ ] `LOCAL-CONFIG.md` 가 `.gitignore`에 있는지 재확인 (시크릿 누출 방지)
+- [x] `git status` 확인 → 미커밋 파일 의도 분류 → **3개 커밋(c02544c / 1a6d017 / 491dc53)으로 분리**
+- [ ] `git push origin release/v2.9.0` 으로 원격 백업 ← **다음 작업**
+- [ ] `app.json` `version` / `versionCode` / iOS `buildNumber` 출시 버전으로 통일 ← STEP 8 직전
+- [ ] `claude-progress.md` 최신 작업 반영 ← STEP 8 직전
+- [x] `LOCAL-CONFIG.md` 가 `.gitignore`에 있는지 재확인 → **확인됨, 추가로 OAuth dump 패턴 등 시크릿 가드 강화**
 
 ---
 
@@ -46,31 +43,31 @@ cd frontend && npx tsc --noEmit      # 통과해야 함
 cd frontend && npx expo lint         # 에러 0
 ```
 
-- [ ] 백엔드 타입체크 통과
-- [ ] 프론트 타입체크 통과
-- [ ] 프론트 lint 에러 0 (경고는 P2로 미룸)
-- [ ] `any` 타입 신규 추가 0건
-- [ ] `\uXXXX` 유니코드 이스케이프 신규 추가 0건
-- [ ] `onSnapshot` unsubscribe 누락 0건 (`grep -r "onSnapshot" frontend/`)
+- [x] 백엔드 타입체크 통과 → **2026-04-27, exit 0**
+- [x] 프론트 타입체크 통과 → **2026-04-27, exit 0**
+- [x] 프론트 lint 에러 0 → **2026-04-27, 0 errors / 59 warnings (모두 P2, 동결 유지)**
+- [ ] `any` 타입 신규 추가 0건 ← 다음 핫픽스마다 점검
+- [ ] `\uXXXX` 유니코드 이스케이프 신규 추가 0건 ← 다음 핫픽스마다 점검
+- [ ] `onSnapshot` unsubscribe 누락 0건 (`grep -r "onSnapshot" frontend/`) ← STEP 6 직전
 
 ---
 
 ## 🟩 STEP 3 — 환경/시크릿 점검
 
 ### eas.json production
-- [ ] `EXPO_PUBLIC_API_URL` 운영값
-- [ ] `EXPO_PUBLIC_COACHING_API_URL` 운영값
-- [ ] `EXPO_PUBLIC_KAKAO_REST_API_KEY` 운영값
-- [ ] `EXPO_PUBLIC_SENTRY_DSN` 주입 ← **현재 누락**
-- [ ] `EXPO_PUBLIC_ADS_MOCK=false`
+- [x] `EXPO_PUBLIC_API_URL` 운영값 ✅
+- [x] `EXPO_PUBLIC_COACHING_API_URL` 운영값 ✅
+- [x] `EXPO_PUBLIC_KAKAO_REST_API_KEY` 운영값 ✅
+- [ ] `EXPO_PUBLIC_SENTRY_DSN` 주입 ← **빌드 직전에 처리 (사용자가 sentry.io DSN 제공)**
+- [x] `EXPO_PUBLIC_ADS_MOCK=false` ✅
 
 ### Firebase / 외부
-- [ ] `google-services.json` 운영 패키지(`com.amatda.app`)와 일치
-- [ ] Firebase Functions 배포 최신 (`firebase deploy --only functions`)
-- [ ] Firestore 인덱스 빌드 100% 완료 (Console 확인)
-- [ ] `firestore.rules` 운영 규칙 배포
-- [ ] `storage.rules` 운영 규칙 배포
-- [ ] FCM 발송 테스트 (Firebase Console → 테스트 메시지)
+- [x] `google-services.json` 존재 확인 ✅ (frontend/google-services.json, 1312 bytes)
+- [ ] Firebase Functions 배포 최신 (`firebase deploy --only functions`) ← STEP 8 직전
+- [x] Firestore 인덱스 빌드 100% 완료 (Console 확인) ✅ **22/22 모두 사용 설정됨 (2026-04-27 확인)**
+- [x] `firestore.rules` 운영 규칙 배포 ✅ **2026-04-27 배포 완료** (commit 88fb568)
+- [x] `storage.rules` 정상 (인증+uid+사이즈 제한) ✅ — 재배포 불필요
+- [ ] FCM 발송 테스트 (Firebase Console → 테스트 메시지) ← STEP 6 실기기 검증 시
 
 ### 키스토어
 - [ ] `amatda-keystore-backup.jks` 외부(USB/Drive)에 백업 ← **분실 시 앱 영구 업데이트 불가**
@@ -82,11 +79,9 @@ cd frontend && npx expo lint         # 에러 0
 
 > 이 결정 없이 production 빌드하면 기존 OTA 사용자 끊길 수 있음.
 
-- [ ] 현재 운영에 배포된 빌드의 runtimeVersion 확인
-- [ ] 새 빌드 정책 결정:
-  - [ ] `"1.0.0"` 유지 (기존 사용자 OTA 호환)
-  - [ ] `{"policy": "appVersion"}` 전환 (네이티브 빌드 강제)
-- [ ] DEPLOY.md에 결정 사항 기록
+- [x] 현재 운영에 배포된 빌드의 runtimeVersion 확인 → **2.8.1 (production + preview 동일)**
+- [x] 새 빌드 정책 결정 → **`{"policy": "appVersion"}` 이미 적용됨** (claude-progress.md v2.8.5의 미결 사항이 해결된 상태)
+- [x] 추가 작업 불필요 — STEP 8 직전에 `app.json` version만 `2.8.1` → `2.9.0`으로 올리면 자동 매핑됨
 
 ---
 

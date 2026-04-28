@@ -1595,7 +1595,7 @@ function BabyTrackerInner() {
   }, [records, crossDayWakes]);
 
   /* ---- Summary ---- */
-  const summary = useMemo(() => computeSummary(records), [records]);
+  const summary = useMemo(() => computeSummary(records, crossDayWakes), [records, crossDayWakes]);
 
   /* ---- Actions ---- */
   function goDay(offset: number) {

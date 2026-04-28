@@ -1,6 +1,18 @@
 import type { DaySummary, TrackerRecord } from '../types';
 
-export function computeSummary(records: TrackerRecord[]): DaySummary {
+/**
+ * Cross-day 수면 분배 정책 (2026-04-29):
+ *   - 자정을 넘긴 수면은 시작 날 / 다음 날에 각각 자정 기준으로 분할 카운트
+ *   - records 안에 있는 sleep 중 endTime이 'M/D HH:MM' 형식이면
+ *     → 시작 날: time(HH:MM) ~ 24:00 만 카운트
+ *   - crossDayWakes(어제 시작 → 오늘 새벽 기상한 가상 엔트리)는
+ *     → 다음 날: 00:00 ~ wake(HH:MM) 만 카운트
+ *   - 일반 same-day sleep은 duration 그대로 카운트
+ */
+export function computeSummary(
+  records: TrackerRecord[],
+  crossDayWakes: TrackerRecord[] = [],
+): DaySummary {
   let diaperCount = 0;
   let feedingCount = 0;
   let totalMl = 0;
@@ -36,7 +48,27 @@ export function computeSummary(records: TrackerRecord[]): DaySummary {
       if (r.subType === 'baby_food' || r.subType === 'snack') solidCount += 1;
     }
     if (r.type === 'sleep' && r.duration) {
-      totalSleepMinutes += r.duration;
+      // endTime이 'M/D HH:MM' 형식이면 자정을 넘긴 수면 → 오늘분만 카운트
+      if (r.endTime && /^\d+\/\d+\s/.test(r.endTime)) {
+        const [hStr, mStr] = (r.time || '00:00').split(':');
+        const startMin = (parseInt(hStr, 10) || 0) * 60 + (parseInt(mStr, 10) || 0);
+        const todayPortion = Math.max(0, 24 * 60 - startMin);
+        totalSleepMinutes += Math.min(todayPortion, r.duration);
+      } else {
+        totalSleepMinutes += r.duration;
+      }
+    }
+  }
+
+  // 어제 시작 → 오늘 새벽 기상한 cross-day 수면: 00:00 ~ wakeHHMM 만 카운트
+  for (const r of crossDayWakes) {
+    if (r.type === 'sleep' && r.time) {
+      const [hStr, mStr] = r.time.split(':');
+      const wakeMin = (parseInt(hStr, 10) || 0) * 60 + (parseInt(mStr, 10) || 0);
+      const todayPortion = r.duration
+        ? Math.min(wakeMin, r.duration)
+        : wakeMin;
+      totalSleepMinutes += todayPortion;
     }
   }
 
