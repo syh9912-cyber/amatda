@@ -2259,8 +2259,38 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete }: H
     return map;
   }, [records]);
 
+  // Phase 2 (2026-04-28): 타임라인을 자체 스크롤 박스로 wrap
+  // (사용자 요청: '타임라인창을 탭안에 만들어서 창을 스크롤해서 위아래로 내릴수 있게')
+  // - maxHeight로 제한 → 24시간 전체 보이지 않으면 내부 스크롤
+  // - nestedScrollEnabled: Android에서 외부 ScrollView와 충돌 방지
+  // - 마운트 시 현재 시간(또는 활동 시간)으로 자동 스크롤
+  const innerScrollRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    // 한 번만, 현재 시간 또는 첫 활동 시간으로 스크롤
+    let targetHour = currentHour;
+    if (targetHour < 0) {
+      // 과거 날짜: 가장 이른 활동 시간
+      const firstActiveHour = Array.from(byHour.keys()).sort((a, b) => a - b)[0];
+      targetHour = firstActiveHour ?? 0;
+    }
+    const HOUR_HEIGHT = 36;
+    const BUFFER = 60;
+    const offset = Math.max(0, targetHour * HOUR_HEIGHT - BUFFER);
+    const id = setTimeout(() => {
+      innerScrollRef.current?.scrollTo({ y: offset, animated: false });
+    }, 100);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <View style={hourTlStyles.root}>
+    <ScrollView
+      ref={innerScrollRef}
+      style={hourTlStyles.scrollBox}
+      contentContainerStyle={hourTlStyles.scrollContent}
+      nestedScrollEnabled
+      showsVerticalScrollIndicator
+    >
       {Array.from({ length: 24 }, (_, h) => {
         const items = byHour.get(h) ?? [];
         const isCur = h === currentHour;
@@ -2306,11 +2336,23 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete }: H
           </View>
         );
       })}
-    </View>
+    </ScrollView>
   );
 }
 
 const hourTlStyles = StyleSheet.create({
+  // Phase 2: 자체 스크롤 박스
+  scrollBox: {
+    maxHeight: 480,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  scrollContent: {
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
   root: { paddingTop: 4 },
   hourBlock: {
     flexDirection: 'row',
