@@ -2987,12 +2987,13 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete }: TimelineEntr
   // note를 라벨에 합쳤으면 하단 note는 숨김
   const hideNote = record.subType === 'breast';
 
-  // Amount/duration을 한 줄 info로 통합
+  // Amount/duration은 첫 줄 info로
   const infoParts: string[] = [];
   if (record.amount != null && record.amount > 0) infoParts.push(`${record.amount}ml`);
   if (record.duration != null && record.duration > 0) infoParts.push(formatMinutes(record.duration));
-  if (record.note && !hideNote) infoParts.push(record.note);
   const info = infoParts.join(' · ');
+  // note는 별도 두 번째 줄로 (사용자 요청: '메모 적은 거 다 보이게')
+  const noteText = record.note && !hideNote ? record.note : '';
 
   return (
     <TouchableOpacity
@@ -3001,16 +3002,27 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete }: TimelineEntr
       delayLongPress={500}
       activeOpacity={0.7}
     >
-      <Text style={timelineStyles.timeCell}>{record.time}</Text>
-      <Image source={icon} style={timelineStyles.iconCell} resizeMode="contain" />
-      <Text style={[timelineStyles.labelCell, { color: typeDark }]} numberOfLines={1}>
-        {label}
-      </Text>
-      <Text style={timelineStyles.infoCell} numberOfLines={1}>
-        {info}
-      </Text>
-      {relative !== '' && (
-        <Text style={timelineStyles.relCell} numberOfLines={1}>{relative}</Text>
+      {/* 첫 줄: 시간 + 아이콘 + 라벨 + 양/시간 + 상대시간 */}
+      <View style={timelineStyles.headerRow}>
+        <Text style={timelineStyles.timeCell}>{record.time}</Text>
+        <Image source={icon} style={timelineStyles.iconCell} resizeMode="contain" />
+        <Text style={[timelineStyles.labelCell, { color: typeDark }]} numberOfLines={1}>
+          {label}
+        </Text>
+        {info !== '' && (
+          <Text style={timelineStyles.infoCell} numberOfLines={1}>
+            {info}
+          </Text>
+        )}
+        {relative !== '' && (
+          <Text style={timelineStyles.relCell} numberOfLines={1}>{relative}</Text>
+        )}
+      </View>
+      {/* 두 번째 줄: 메모 (있을 때만) */}
+      {noteText !== '' && (
+        <Text style={timelineStyles.noteRow} numberOfLines={3}>
+          {noteText}
+        </Text>
       )}
     </TouchableOpacity>
   );
@@ -3018,17 +3030,27 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete }: TimelineEntr
 
 const timelineStyles = StyleSheet.create({
   // Phase 1 (2026-04-28): 글씨 크게, 행 높이 증가, 메모 가독성 ↑
-  // (사용자 요청: '시간도 잘 안 보이고 어떤 행위를 했는지도 잘 안 보여')
+  // 2026-04-28 (추가): 메모를 두 번째 줄로 분리 — 한 줄에 다 안 들어가는 문제 해결
+  // (사용자 요청: '메모 적은 거 다 보이게 / 작은 글씨라도 분유에 있는 메모도 보이게')
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,        // 6 → 12 (높이 ↑)
-    paddingHorizontal: 12,      // 8 → 12
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#ECECEE',
-    borderLeftWidth: 4,         // 3 → 4 (좌측 컬러 막대 강조)
+    borderLeftWidth: 4,
     backgroundColor: TRACKER_COLORS.white,
-    gap: 10,                    // 6 → 10
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  noteRow: {
+    fontSize: 13,
+    color: TRACKER_COLORS.textSub,
+    lineHeight: 18,
+    marginTop: 4,
+    paddingLeft: 92, // timeCell(56) + iconCell(26) + gap(10) = 92 → 라벨 시작 위치 정렬
   },
   timeCell: {
     width: 56,                  // 46 → 56 (시간 16:30 안 잘리게)
