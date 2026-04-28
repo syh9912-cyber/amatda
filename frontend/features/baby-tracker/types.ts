@@ -4,7 +4,7 @@
  * auditing storage format / backend compatibility.
  */
 
-export type RecordType = 'diaper' | 'feeding' | 'sleep' | 'medication';
+export type RecordType = 'diaper' | 'feeding' | 'sleep' | 'medication' | 'custom';
 
 export type DiaperSubType = 'pee' | 'poop' | 'both';
 export type FeedingSubType = 'breast' | 'formula' | 'baby_food' | 'snack';

@@ -28,6 +28,7 @@ const IC_MIC = require('../../assets/icon-mic.png') as number;
 const IC_ANALYZING = require('../../assets/analyzing.png') as number;
 const IC_BADGE_AI = require('../../assets/badge-ai.png') as number;
 const IC_MEDICATION = require('../../assets/icon-hospital.png') as number;
+const IC_CUSTOM = require('../../assets/icon-mic.png') as number;  // 임시 — 커스텀 라벨용
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
@@ -96,6 +97,9 @@ const TRACKER_COLORS = {
   medication: '#7CB342',          // 투약: 초록 (보건/안전 톤)
   medicationLight: '#E8F5E1',
   medicationDark: '#558B2F',
+  custom: '#9575CD',              // 커스텀: 라일락 보라
+  customLight: '#EDE7F6',
+  customDark: '#5E35B1',
   text: '#1C1C1E',
   textSub: '#636366',
   textLight: '#ABABAB',
@@ -923,6 +927,91 @@ function DailyReferenceCard({
   );
 }
 
+// Phase 4-B (2026-04-28): 사용자 정의 라벨 입력 모달 스타일
+const customModalStyles = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'flex-end' },
+  backdrop: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 28,
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1C1C1E',
+    marginBottom: 4,
+  },
+  sub: {
+    fontSize: 12,
+    color: '#636366',
+    marginBottom: 14,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  input: {
+    fontSize: 16,
+    color: '#1C1C1E',
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  recentRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  recentLabel: {
+    fontSize: 11,
+    color: '#636366',
+    fontWeight: '600',
+    marginRight: 2,
+  },
+  recentChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    backgroundColor: TRACKER_COLORS.customLight,
+    borderWidth: 1,
+    borderColor: '#D1C4E9',
+  },
+  recentChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: TRACKER_COLORS.customDark,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 18,
+  },
+  btn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  btnCancel: { backgroundColor: '#F2F2F7' },
+  btnSave: { backgroundColor: TRACKER_COLORS.customDark },
+  btnCancelText: { fontSize: 14, fontWeight: '700', color: '#636366' },
+  btnSaveText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
+});
+
 // Phase 3 (2026-04-28): 기간 요약 접기/펴기 토글 스타일
 const periodToggleStyles = StyleSheet.create({
   header: {
@@ -1687,7 +1776,64 @@ function BabyTrackerInner() {
       handleSleepStart();
     } else if (action.kind === 'sleepWake') {
       handleSleepWake();
+    } else if (action.kind === 'custom') {
+      // Phase 4-B: 사용자 정의 라벨 입력 모달 열기
+      setCustomName('');
+      setCustomDetail('');
+      setCustomModalVisible(true);
     }
+  }
+
+  /* ---- Phase 4-B: 사용자 정의(커스텀) 기록 ---- */
+  const [customModalVisible, setCustomModalVisible] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [customDetail, setCustomDetail] = useState('');
+
+  // 자주 쓰는 이름 (최근 사용 5개) — 기존 records의 type='custom'에서 추출
+  const recentCustomNames = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const r of [...records].reverse()) {
+      if (r.type === 'custom' && r.subType && !seen.has(r.subType)) {
+        seen.add(r.subType);
+        out.push(r.subType);
+        if (out.length >= 5) break;
+      }
+    }
+    return out;
+  }, [records]);
+
+  async function handleSaveCustom() {
+    const name = customName.trim();
+    if (!name) {
+      Alert.alert('이름 필요', '기록할 이름을 입력해주세요. (예: 과일먹음)');
+      return;
+    }
+    if (name.length > 20) {
+      Alert.alert('이름 길이', '이름은 20자 이내로 입력해주세요.');
+      return;
+    }
+    const detail = customDetail.trim();
+    if (detail.length > 80) {
+      Alert.alert('특징 길이', '특징은 80자 이내로 입력해주세요.');
+      return;
+    }
+    const now = new Date();
+    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const newRecord: TrackerRecord = {
+      id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      type: 'custom',
+      subType: name,           // 라벨로 그대로 사용
+      time,
+      note: detail || undefined,
+    };
+    const updated = [...records, newRecord];
+    await saveRecords(childId, dateStr, updated);
+    setRecords(updated);
+    setCustomModalVisible(false);
+    setCustomName('');
+    setCustomDetail('');
+    showToast(`'${name}' 기록 완료`);
   }
 
   /* ---- Pattern Analysis ---- */
@@ -1995,6 +2141,82 @@ function BabyTrackerInner() {
           <Text style={toastStyles.text}>{toastMessage}</Text>
         </Animated.View>
       )}
+
+      {/* ---- Phase 4-B: 사용자 정의 기록 모달 ---- */}
+      <Modal
+        visible={customModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setCustomModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={customModalStyles.overlay}
+        >
+          <TouchableOpacity
+            style={customModalStyles.backdrop}
+            activeOpacity={1}
+            onPress={() => setCustomModalVisible(false)}
+          />
+          <View style={customModalStyles.card}>
+            <Text style={customModalStyles.title}>{'✏️ 직접 입력 기록'}</Text>
+            <Text style={customModalStyles.sub}>
+              지금 시간으로 기록됩니다. 이름과 특징을 입력해주세요.
+            </Text>
+
+            <Text style={customModalStyles.label}>이름 (필수)</Text>
+            <TextInput
+              style={customModalStyles.input}
+              placeholder="예: 과일먹음, 산책, 양치"
+              placeholderTextColor="#ABABAB"
+              value={customName}
+              onChangeText={setCustomName}
+              maxLength={20}
+              autoFocus
+            />
+
+            {recentCustomNames.length > 0 && (
+              <View style={customModalStyles.recentRow}>
+                <Text style={customModalStyles.recentLabel}>{'최근 사용:'}</Text>
+                {recentCustomNames.map((n) => (
+                  <TouchableOpacity
+                    key={n}
+                    style={customModalStyles.recentChip}
+                    onPress={() => setCustomName(n)}
+                  >
+                    <Text style={customModalStyles.recentChipText}>{n}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <Text style={customModalStyles.label}>특징 (선택)</Text>
+            <TextInput
+              style={customModalStyles.input}
+              placeholder="예: 딸기 2개, 공원 30분"
+              placeholderTextColor="#ABABAB"
+              value={customDetail}
+              onChangeText={setCustomDetail}
+              maxLength={80}
+            />
+
+            <View style={customModalStyles.btnRow}>
+              <TouchableOpacity
+                style={[customModalStyles.btn, customModalStyles.btnCancel]}
+                onPress={() => setCustomModalVisible(false)}
+              >
+                <Text style={customModalStyles.btnCancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[customModalStyles.btn, customModalStyles.btnSave]}
+                onPress={handleSaveCustom}
+              >
+                <Text style={customModalStyles.btnSaveText}>저장</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* ---- Modal ---- */}
       <AddRecordModal
@@ -2742,7 +2964,9 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete }: TimelineEntr
         ? TRACKER_COLORS.feeding
         : record.type === 'medication'
           ? TRACKER_COLORS.medication
-          : TRACKER_COLORS.sleep;
+          : record.type === 'custom'
+            ? TRACKER_COLORS.custom
+            : TRACKER_COLORS.sleep;
   const typeDark =
     record.type === 'diaper'
       ? TRACKER_COLORS.diaperDark
@@ -2750,7 +2974,9 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete }: TimelineEntr
         ? TRACKER_COLORS.feedingDark
         : record.type === 'medication'
           ? TRACKER_COLORS.medicationDark
-          : TRACKER_COLORS.sleepDark;
+          : record.type === 'custom'
+            ? TRACKER_COLORS.customDark
+            : TRACKER_COLORS.sleepDark;
   const icon = SUBTYPE_ICONS[record.subType] ?? IC_POOP;
   const baseLabel = SUBTYPE_LABELS[record.subType] ?? record.subType;
   // 모유: 왼쪽/오른쪽을 라벨에 병합 → "모유 (왼쪽)"
@@ -2841,7 +3067,8 @@ type BottomAction =
   | { kind: 'quick'; type: RecordType; subType: string }
   | { kind: 'breast' }
   | { kind: 'sleepStart' }
-  | { kind: 'sleepWake' };
+  | { kind: 'sleepWake' }
+  | { kind: 'custom' };  // Phase 4-B: 사용자 정의 라벨 + 특징 입력
 
 interface BottomBarItem {
   icon: number;
@@ -2862,6 +3089,8 @@ const BAR_ITEMS: BottomBarItem[] = [
   { icon: IC_MEDICATION, label: '해열제', action: { kind: 'quick', type: 'medication', subType: 'fever' }, color: TRACKER_COLORS.medicationDark },
   { icon: IC_MEDICATION, label: '항생제', action: { kind: 'quick', type: 'medication', subType: 'antibiotic' }, color: TRACKER_COLORS.medicationDark },
   { icon: IC_MEDICATION, label: '비타민', action: { kind: 'quick', type: 'medication', subType: 'vitamin' }, color: TRACKER_COLORS.medicationDark },
+  // Phase 4-B (2026-04-28): 사용자 정의 라벨 — '직접 입력'
+  { icon: IC_CUSTOM, label: '직접 입력', action: { kind: 'custom' }, color: TRACKER_COLORS.customDark },
 ];
 
 interface BottomActionBarProps {
