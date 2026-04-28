@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Platform,
   Linking,
+  Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -49,6 +51,48 @@ interface HistoryEntry {
   adjustedTemp: number;
   level: FeverLevel;
 }
+
+/* 해열제 복용 기록 (열나요 앱 스타일)
+ *
+ * 소아과 표준 간격:
+ *  - 아세트아미노펜 (타이레놀/챔프): 최소 4시간, 권장 4~6시간
+ *  - 이부프로펜 (부루펜/맥시부펜): 최소 6시간, 권장 6~8시간
+ *  - 교차 복용 (한쪽 → 다른 쪽): 최소 2~3시간
+ *
+ * 아기시간 탭과는 별개로 fever 화면에 기록 (사용자 지시: '아기시간이랑은 별도로')
+ */
+type MedicineType = 'acetaminophen' | 'ibuprofen' | 'other';
+
+interface MedLogEntry {
+  id: string;
+  timestamp: number;
+  type: MedicineType;
+  brandName: string;     // '타이레놀', '부루펜', '챔프', '기타' 등 표시용
+  doseMl: number;
+  note?: string;
+}
+
+interface MedicineBrand {
+  brandName: string;
+  type: MedicineType;
+  emoji: string;
+}
+
+const MEDICINE_BRANDS: MedicineBrand[] = [
+  { brandName: '타이레놀',   type: 'acetaminophen', emoji: '💊' },
+  { brandName: '챔프',       type: 'acetaminophen', emoji: '💊' },
+  { brandName: '부루펜',     type: 'ibuprofen',     emoji: '💉' },
+  { brandName: '맥시부펜',   type: 'ibuprofen',     emoji: '💉' },
+  { brandName: '기타',       type: 'other',         emoji: '🧴' },
+];
+
+const MED_INTERVAL_HR: Record<MedicineType, { min: number; recommended: number }> = {
+  acetaminophen: { min: 4, recommended: 4 },
+  ibuprofen:     { min: 6, recommended: 6 },
+  other:         { min: 4, recommended: 4 },
+};
+
+const ALTERNATING_INTERVAL_HR = 2; // 다른 종류 약을 먹을 때 최소 간격
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
@@ -147,6 +191,73 @@ function historyStorageKey(childId: string): string {
   return `fever_history_${childId}`;
 }
 
+function medLogStorageKey(childId: string): string {
+  return `fever_medlog_${childId}`;
+}
+
+function isMedLogEntry(v: unknown): v is MedLogEntry {
+  if (typeof v !== 'object' || v === null) return false;
+  const obj = v as Record<string, unknown>;
+  return (
+    typeof obj.id === 'string' &&
+    typeof obj.timestamp === 'number' &&
+    typeof obj.type === 'string' &&
+    typeof obj.brandName === 'string' &&
+    typeof obj.doseMl === 'number'
+  );
+}
+
+/** 마지막 복용으로부터 다음 복용 가능 시각 계산 (ms timestamp).
+ *
+ * 같은 종류 약 → MED_INTERVAL_HR[type].min 시간 후
+ * 다른 종류 약 (교차) → ALTERNATING_INTERVAL_HR 시간 후
+ *
+ * 가장 최근 복용 + 가장 최근 다른 종류 복용 둘 다 봐서 더 늦은 시각 반환.
+ */
+function calcNextDoseAt(
+  log: MedLogEntry[],
+  targetType: MedicineType,
+): { nextAt: number; reason: string } | null {
+  if (log.length === 0) return null;
+  const sorted = [...log].sort((a, b) => b.timestamp - a.timestamp);
+  // 같은 종류 마지막 복용
+  const sameLast = sorted.find((e) => e.type === targetType);
+  // 다른 종류 마지막 복용 (교차 검사용)
+  const diffLast = sorted.find((e) => e.type !== targetType && e.type !== 'other');
+
+  let nextAt = 0;
+  let reason = '';
+
+  if (sameLast) {
+    const sameNext = sameLast.timestamp + MED_INTERVAL_HR[targetType].min * 60 * 60 * 1000;
+    if (sameNext > nextAt) {
+      nextAt = sameNext;
+      reason = `${sameLast.brandName} 복용 ${MED_INTERVAL_HR[targetType].min}시간 후`;
+    }
+  }
+  if (diffLast) {
+    const altNext = diffLast.timestamp + ALTERNATING_INTERVAL_HR * 60 * 60 * 1000;
+    if (altNext > nextAt) {
+      nextAt = altNext;
+      reason = `${diffLast.brandName}(교차) 복용 ${ALTERNATING_INTERVAL_HR}시간 후`;
+    }
+  }
+
+  if (nextAt === 0) return null;
+  return { nextAt, reason };
+}
+
+function formatRelative(ms: number): string {
+  const abs = Math.abs(ms);
+  const totalMin = Math.floor(abs / (60 * 1000));
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  const future = ms > 0;
+  if (h <= 0 && m <= 0) return future ? '곧' : '방금';
+  const label = h > 0 ? (m > 0 ? `${h}시간 ${m}분` : `${h}시간`) : `${m}분`;
+  return future ? `${label} 후` : `${label} 전`;
+}
+
 function formatTime(timestamp: number): string {
   const d = new Date(timestamp);
   const month = d.getMonth() + 1;
@@ -191,6 +302,19 @@ export default function FeverScreen() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
 
+  /* ---- 해열제 복용 기록 (열나요 스타일) ---- */
+  const [medLog, setMedLog] = useState<MedLogEntry[]>([]);
+  const [medModalVisible, setMedModalVisible] = useState(false);
+  const [medModalBrand, setMedModalBrand] = useState<MedicineBrand | null>(null);
+  const [medModalDose, setMedModalDose] = useState<string>('');
+  const [medModalNote, setMedModalNote] = useState<string>('');
+  // 1분마다 갱신하는 'now' (다음 복용 카운트다운용)
+  const [medNow, setMedNow] = useState<number>(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setMedNow(Date.now()), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
   const tempInputRef = useRef<TextInput>(null);
 
   /* -- Load history on mount -- */
@@ -224,6 +348,67 @@ export default function FeverScreen() {
       // silently fail
     }
   }, []);
+
+  /* ---- 해열제 복용 기록 load/save ---- */
+  useEffect(() => {
+    if (!selectedChild) return;
+    AsyncStorage.getItem(medLogStorageKey(selectedChild.id))
+      .then((raw) => {
+        if (!raw) return;
+        try {
+          const parsed: unknown = JSON.parse(raw);
+          if (Array.isArray(parsed)) setMedLog(parsed.filter(isMedLogEntry));
+        } catch { /* silent */ }
+      })
+      .catch(() => { /* silent */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedChild?.id]);
+
+  const saveMedLog = useCallback(async (childId: string, entries: MedLogEntry[]) => {
+    try {
+      await AsyncStorage.setItem(medLogStorageKey(childId), JSON.stringify(entries));
+    } catch { /* silent */ }
+  }, []);
+
+  const handleAddMedLog = useCallback(() => {
+    if (!selectedChild) {
+      Alert.alert('아이 선택', '먼저 아이를 선택해주세요.');
+      return;
+    }
+    if (!medModalBrand) return;
+    const dose = parseFloat(medModalDose);
+    if (isNaN(dose) || dose <= 0 || dose > 50) {
+      Alert.alert('용량 입력', '올바른 ml 용량을 입력해주세요 (0~50).');
+      return;
+    }
+    const entry: MedLogEntry = {
+      id: `med_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: Date.now(),
+      type: medModalBrand.type,
+      brandName: medModalBrand.brandName,
+      doseMl: dose,
+      note: medModalNote.trim() || undefined,
+    };
+    const next = [entry, ...medLog].slice(0, 100); // 최대 100건
+    setMedLog(next);
+    saveMedLog(selectedChild.id, next);
+    setMedModalVisible(false);
+    setMedModalBrand(null);
+    setMedModalDose('');
+    setMedModalNote('');
+  }, [selectedChild, medModalBrand, medModalDose, medModalNote, medLog, saveMedLog]);
+
+  const handleDeleteMedEntry = useCallback((id: string) => {
+    if (!selectedChild) return;
+    Alert.alert('기록 삭제', '이 복용 기록을 삭제할까요?', [
+      { text: '취소', style: 'cancel' },
+      { text: '삭제', style: 'destructive', onPress: () => {
+        const next = medLog.filter((e) => e.id !== id);
+        setMedLog(next);
+        saveMedLog(selectedChild.id, next);
+      }},
+    ]);
+  }, [selectedChild, medLog, saveMedLog]);
 
   /* -- Check temperature -- */
   const handleCheck = useCallback(() => {
@@ -522,6 +707,122 @@ export default function FeverScreen() {
         )}
 
         {/* ============================================ */}
+        {/* Section 3.5: 해열제 복용 기록 (열나요 스타일)   */}
+        {/* ============================================ */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{'📝'} 해열제 복용 기록</Text>
+          <Text style={styles.sectionDesc}>
+            먹인 해열제와 용량을 기록하면 다음 복용 가능 시간을 자동으로 알려드려요
+          </Text>
+
+          {/* 빠른 기록 버튼 */}
+          <View style={medLogStyles.brandRow}>
+            {MEDICINE_BRANDS.map((b) => (
+              <TouchableOpacity
+                key={b.brandName}
+                style={medLogStyles.brandBtn}
+                onPress={() => {
+                  setMedModalBrand(b);
+                  setMedModalDose('');
+                  setMedModalNote('');
+                  setMedModalVisible(true);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={medLogStyles.brandEmoji}>{b.emoji}</Text>
+                <Text style={medLogStyles.brandLabel}>{b.brandName}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* 다음 복용 가능 시간 안내 */}
+          {medLog.length > 0 && (() => {
+            const last = medLog[0];
+            // 같은 종류 약을 다시 먹을 때 가능 시각
+            const nextSame = calcNextDoseAt(medLog, last.type);
+            // 교차 (다른 종류) 가능 시각
+            const otherType: MedicineType = last.type === 'acetaminophen' ? 'ibuprofen' : 'acetaminophen';
+            const nextOther = calcNextDoseAt(medLog, otherType);
+
+            const sameDeltaMs = nextSame ? nextSame.nextAt - medNow : 0;
+            const otherDeltaMs = nextOther ? nextOther.nextAt - medNow : 0;
+            const sameOk = sameDeltaMs <= 0;
+            const otherOk = otherDeltaMs <= 0;
+
+            return (
+              <View style={medLogStyles.statusCard}>
+                <View style={medLogStyles.statusRow}>
+                  <Text style={medLogStyles.statusLabel}>
+                    {'마지막 복용'}
+                  </Text>
+                  <Text style={medLogStyles.statusValue}>
+                    {last.brandName} {last.doseMl}ml · {formatRelative(medNow - last.timestamp)}
+                  </Text>
+                </View>
+
+                {/* 같은 종류 약 다음 복용 가능 */}
+                {nextSame && (
+                  <View style={medLogStyles.statusRow}>
+                    <Text style={medLogStyles.statusLabel}>
+                      {last.brandName} 다음 복용
+                    </Text>
+                    <Text style={[
+                      medLogStyles.statusValue,
+                      { color: sameOk ? '#2E7D32' : COLOR.accent, fontWeight: '800' },
+                    ]}>
+                      {sameOk ? '지금 복용 가능' : formatRelative(sameDeltaMs)}
+                    </Text>
+                  </View>
+                )}
+
+                {/* 교차 복용 가능 */}
+                {nextOther && last.type !== 'other' && (
+                  <View style={medLogStyles.statusRow}>
+                    <Text style={medLogStyles.statusLabel}>
+                      {`${otherType === 'acetaminophen' ? '타이레놀류' : '부루펜류'} 교차`}
+                    </Text>
+                    <Text style={[
+                      medLogStyles.statusValue,
+                      { color: otherOk ? '#2E7D32' : COLOR.accent, fontWeight: '800' },
+                    ]}>
+                      {otherOk ? '지금 교차 복용 가능' : formatRelative(otherDeltaMs)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            );
+          })()}
+
+          {/* 복용 이력 (최근 5건) */}
+          {medLog.length > 0 && (
+            <View style={medLogStyles.logList}>
+              <Text style={medLogStyles.logListTitle}>{'복용 이력 (최근 5건)'}</Text>
+              {medLog.slice(0, 5).map((entry) => (
+                <View key={entry.id} style={medLogStyles.logRow}>
+                  <Text style={medLogStyles.logTime}>
+                    {formatTime(entry.timestamp)}
+                  </Text>
+                  <Text style={medLogStyles.logBrand}>{entry.brandName}</Text>
+                  <Text style={medLogStyles.logDose}>{entry.doseMl}ml</Text>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteMedEntry(entry.id)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={medLogStyles.logDelete}>{'×'}</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {medLog.length === 0 && (
+            <Text style={medLogStyles.empty}>
+              아직 기록이 없어요. 위 버튼으로 복용을 기록하면 다음 복용 시간을 자동 계산해드려요.
+            </Text>
+          )}
+        </View>
+
+        {/* ============================================ */}
         {/* Section 4: Temperature History               */}
         {/* ============================================ */}
         {historyLoaded && history.length > 0 && (
@@ -574,6 +875,97 @@ export default function FeverScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* ============================================ */}
+      {/*  해열제 복용 기록 입력 모달                   */}
+      {/* ============================================ */}
+      <Modal
+        visible={medModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setMedModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={medLogStyles.modalOverlay}
+        >
+          <TouchableOpacity
+            style={medLogStyles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setMedModalVisible(false)}
+          />
+          <View style={medLogStyles.modalCard}>
+            <Text style={medLogStyles.modalTitle}>
+              {medModalBrand?.emoji} {medModalBrand?.brandName ?? '해열제'} 기록
+            </Text>
+            <Text style={medLogStyles.modalSub}>
+              지금 ({formatTime(medNow)}) 복용으로 기록됩니다
+            </Text>
+
+            {/* 약 종류 변경 (chip) */}
+            <Text style={medLogStyles.modalLabel}>약 선택</Text>
+            <View style={medLogStyles.modalChipRow}>
+              {MEDICINE_BRANDS.map((b) => (
+                <TouchableOpacity
+                  key={b.brandName}
+                  style={[
+                    medLogStyles.modalChip,
+                    medModalBrand?.brandName === b.brandName && medLogStyles.modalChipActive,
+                  ]}
+                  onPress={() => setMedModalBrand(b)}
+                >
+                  <Text style={[
+                    medLogStyles.modalChipText,
+                    medModalBrand?.brandName === b.brandName && medLogStyles.modalChipTextActive,
+                  ]}>
+                    {b.emoji} {b.brandName}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* 용량 입력 */}
+            <Text style={medLogStyles.modalLabel}>용량 (ml)</Text>
+            <TextInput
+              style={medLogStyles.modalInput}
+              keyboardType="numeric"
+              placeholder="예: 5"
+              placeholderTextColor="#ABABAB"
+              value={medModalDose}
+              onChangeText={setMedModalDose}
+              maxLength={5}
+              autoFocus
+            />
+
+            {/* 메모 (옵션) */}
+            <Text style={medLogStyles.modalLabel}>메모 (선택)</Text>
+            <TextInput
+              style={medLogStyles.modalInput}
+              placeholder="예: 38.5도 / 식후"
+              placeholderTextColor="#ABABAB"
+              value={medModalNote}
+              onChangeText={setMedModalNote}
+              maxLength={50}
+            />
+
+            <View style={medLogStyles.modalBtnRow}>
+              <TouchableOpacity
+                style={[medLogStyles.modalBtn, medLogStyles.modalBtnCancel]}
+                onPress={() => setMedModalVisible(false)}
+              >
+                <Text style={medLogStyles.modalBtnCancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[medLogStyles.modalBtn, medLogStyles.modalBtnSave]}
+                onPress={handleAddMedLog}
+              >
+                <Text style={medLogStyles.modalBtnSaveText}>기록 저장</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       <AdSlot />
     </View>
   );
@@ -702,6 +1094,166 @@ function MedicineSection({
 /* ------------------------------------------------------------------ */
 /* Styles                                                              */
 /* ------------------------------------------------------------------ */
+
+/* ---- 해열제 복용 기록 스타일 (열나요 스타일) ---- */
+const medLogStyles = StyleSheet.create({
+  brandRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  brandBtn: {
+    flexBasis: '30%',
+    flexGrow: 1,
+    minWidth: 90,
+    backgroundColor: '#F0FFF4',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#A8D5BA',
+  },
+  brandEmoji: { fontSize: 22, marginBottom: 2 },
+  brandLabel: { fontSize: 13, fontWeight: '700', color: '#1B5E20' },
+  statusCard: {
+    backgroundColor: '#FFF8EC',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: '#FFE5B5',
+    marginBottom: 12,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 5,
+  },
+  statusLabel: {
+    fontSize: 12,
+    color: '#636366',
+    fontWeight: '600',
+  },
+  statusValue: {
+    fontSize: 13,
+    color: '#1C1C1E',
+    fontWeight: '700',
+    flexShrink: 1,
+    textAlign: 'right',
+  },
+  logList: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  logListTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#636366',
+    marginBottom: 6,
+  },
+  logRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    gap: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#F0F0F2',
+  },
+  logTime: { fontSize: 12, color: '#636366', minWidth: 80 },
+  logBrand: { fontSize: 13, fontWeight: '700', color: '#1C1C1E', flex: 1 },
+  logDose: { fontSize: 13, color: '#1C1C1E', fontWeight: '600' },
+  logDelete: { fontSize: 18, color: '#FF6B6B', fontWeight: '700', paddingHorizontal: 4 },
+  empty: {
+    fontSize: 12,
+    color: '#ABABAB',
+    textAlign: 'center',
+    paddingVertical: 16,
+    fontStyle: 'italic',
+  },
+  /* 모달 */
+  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 28,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1C1C1E',
+    marginBottom: 4,
+  },
+  modalSub: {
+    fontSize: 12,
+    color: '#636366',
+    marginBottom: 14,
+  },
+  modalLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  modalChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  modalChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#F2F2F7',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  modalChipActive: {
+    backgroundColor: '#FFF0E6',
+    borderColor: '#FF8C5A',
+  },
+  modalChipText: { fontSize: 12, fontWeight: '600', color: '#636366' },
+  modalChipTextActive: { color: '#FF8C5A', fontWeight: '800' },
+  modalInput: {
+    fontSize: 16,
+    color: '#1C1C1E',
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 18,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalBtnCancel: { backgroundColor: '#F2F2F7' },
+  modalBtnSave: { backgroundColor: '#FF8C5A' },
+  modalBtnCancelText: { fontSize: 14, fontWeight: '700', color: '#636366' },
+  modalBtnSaveText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
+});
 
 const styles = StyleSheet.create({
   container: {
