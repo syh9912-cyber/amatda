@@ -134,7 +134,7 @@ const SUBTYPE_LABELS: Record<string, string> = {
   nap: '낮잠',
   night: '밤잠',
   sleep: '수면',
-  sleep_start: '수면 시작',
+  sleep_start: '수면',     // '수면 시작' → '수면' (사용자 요청, 화면 간결화)
   sleep_end: '기상',
 };
 
@@ -1628,22 +1628,20 @@ function BabyTrackerInner() {
           </TouchableOpacity>
         )}
 
-        {/* ---- Active Sleep Banner (cross-day persist) ---- */}
-        {sleepSession && (
-          <SleepSessionCard
-            session={sleepSession}
-            now={sleepNow}
-            onStart={handleSleepStart}
-            onWake={handleSleepWake}
-          />
-        )}
+        {/* SleepSessionCard 제거 (사용자 요청: '수면중 큰 배너 없애줘')
+            대신 타임라인의 수면 시작 시각에만 표시. 종료는 하단 액션바 '기상' 버튼 사용. */}
 
         {/* ─────────────────────────────────────────────
-            Phase 1 (2026-04-28): 타임라인 위로, 요약 아래로 + 글씨 크게
-            (사용자 요청: '아기시간 시간 전체 내용이 최대한 크고 눈에 잘 들어오게')
+            레이아웃 (사용자 요청 반영):
+              1) 하루 요약 (chip 1줄) — 위
+              2) 타임라인 (자체 스크롤 박스) — 가운데
+              3) 7/14/31일 요약 — 아래
         ───────────────────────────────────────────── */}
 
-        {/* ---- Full Timeline (먼저, 크게) ---- */}
+        {/* ---- Day Summary Card (위) ---- */}
+        <DaySummaryCard summary={summary} />
+
+        {/* ---- Full Timeline (자체 스크롤 박스) ---- */}
         <View style={styles.timelineContainer}>
           <View style={styles.timelineTitleRow}>
             <Image source={IC_SLEEP} style={styles.timelineTitleIcon} resizeMode="contain" />
@@ -1665,9 +1663,6 @@ function BabyTrackerInner() {
             />
           )}
         </View>
-
-        {/* ---- Day Summary Card (타임라인 아래로 이동) ---- */}
-        <DaySummaryCard summary={summary} />
 
         {/* ---- Period Selector + Voice Settings ---- */}
         <View style={summaryStyles.periodRow}>
@@ -2245,10 +2240,40 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete }: H
   const currentHour = isCurrentlyToday ? now.getHours() : -1;
   const currentMin = now.getMinutes();
 
+  // 사용자 요청: 수면 기록을 '수면(시작)' + '기상(종료)' 두 항목으로 분리 표시
+  // 기상 항목에는 총 수면 시간을 info로 표시
+  const expandedRecords = useMemo(() => {
+    const out: TrackerRecord[] = [];
+    for (const r of records) {
+      if (r.type === 'sleep' && r.endTime) {
+        // 수면 시작 (duration/endTime 숨김)
+        out.push({
+          ...r,
+          id: `${r.id}__start`,
+          subType: 'sleep_start',
+          endTime: undefined,
+          duration: undefined,
+        });
+        // 기상 (총 수면 시간 표시)
+        out.push({
+          ...r,
+          id: `${r.id}__wake`,
+          subType: 'sleep_end',
+          time: r.endTime,
+          endTime: undefined,
+          duration: r.duration,
+        });
+      } else {
+        out.push(r);
+      }
+    }
+    return out;
+  }, [records]);
+
   // 시간별 그룹핑
   const byHour = useMemo(() => {
     const map = new Map<number, TrackerRecord[]>();
-    for (const r of records) {
+    for (const r of expandedRecords) {
       const parts = r.time.split(':');
       const h = parseInt(parts[0] ?? '', 10);
       if (!isNaN(h) && h >= 0 && h <= 23) {
@@ -2256,8 +2281,12 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete }: H
         map.get(h)!.push(r);
       }
     }
+    // 시간 내에서 분 단위 정렬
+    for (const [, list] of map) {
+      list.sort((a, b) => a.time.localeCompare(b.time));
+    }
     return map;
-  }, [records]);
+  }, [expandedRecords]);
 
   // Phase 2 (2026-04-28): 타임라인을 자체 스크롤 박스로 wrap
   // (사용자 요청: '타임라인창을 탭안에 만들어서 창을 스크롤해서 위아래로 내릴수 있게')
