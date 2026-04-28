@@ -1525,12 +1525,43 @@ function BabyTrackerInner() {
   const childId = selectedChild?.id ?? 'default';
 
   /* ---- Load records ---- */
+  // Cross-day 수면 가상 기상 엔트리 (어제 시작 → 오늘 새벽 기상)
+  // (사용자 보고 2026-04-29: '어제 11시 수면 → 오늘 12시 기상이 오늘에 안 보임')
+  const [crossDayWakes, setCrossDayWakes] = useState<TrackerRecord[]>([]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     const data = await loadRecords(childId, dateStr);
     setRecords(data);
+
+    // 어제 records에서 endTime이 오늘 날짜로 기록된 수면 찾기 → 가상 '기상' 엔트리
+    try {
+      const yest = new Date(currentDate);
+      yest.setDate(yest.getDate() - 1);
+      const yDateStr = formatDate(yest);
+      const yData = await loadRecords(childId, yDateStr);
+      const todayPrefix = `${currentDate.getMonth() + 1}/${currentDate.getDate()} `;
+      const wakes: TrackerRecord[] = [];
+      for (const r of yData) {
+        if (r.type === 'sleep' && r.endTime && r.endTime.startsWith(todayPrefix)) {
+          const wakeHHMM = r.endTime.slice(todayPrefix.length);
+          wakes.push({
+            ...r,
+            id: `${r.id}__crosswake`,
+            subType: 'sleep_end',  // 라벨 '기상'
+            time: wakeHHMM,
+            endTime: undefined,    // expandSleepRecords가 다시 split하지 않도록
+            // duration은 유지 (info에 총 수면 시간 표시)
+          });
+        }
+      }
+      setCrossDayWakes(wakes);
+    } catch {
+      setCrossDayWakes([]);
+    }
+
     setLoading(false);
-  }, [childId, dateStr]);
+  }, [childId, dateStr, currentDate]);
 
   useEffect(() => {
     loadData();
@@ -1555,12 +1586,13 @@ function BabyTrackerInner() {
   }, [records, activeTab]);
 
   const allRecordsSorted = useMemo(() => {
-    return [...records].sort((a, b) => {
+    // 어제 시작 + 오늘 새벽 기상한 cross-day 수면의 가상 '기상' 엔트리도 포함
+    return [...records, ...crossDayWakes].sort((a, b) => {
       if (a.time < b.time) return 1;
       if (a.time > b.time) return -1;
       return 0;
     });
-  }, [records]);
+  }, [records, crossDayWakes]);
 
   /* ---- Summary ---- */
   const summary = useMemo(() => computeSummary(records), [records]);
