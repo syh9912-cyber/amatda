@@ -1656,24 +1656,13 @@ function BabyTrackerInner() {
             <View style={emptyStyles.container}>
               <Text style={emptyStyles.sub}>불러오는 중...</Text>
             </View>
-          ) : allRecordsSorted.length === 0 ? (
-            <View style={emptyStyles.container}>
-              <Image source={IC_EMPTY} style={emptyStyles.iconImg} resizeMode="contain" />
-              <Text style={emptyStyles.title}>아직 기록이 없어요</Text>
-              <Text style={emptyStyles.sub}>
-                하단 버튼으로 빠르게 기록해보세요
-              </Text>
-            </View>
           ) : (
-            allRecordsSorted.map((r) => (
-              <TimelineEntry
-                key={r.id}
-                record={r}
-                dateStr={dateStr}
-                showRelative={isToday(currentDate)}
-                onDelete={handleDeleteRecord}
-              />
-            ))
+            <HourGroupedTimeline
+              records={allRecordsSorted}
+              dateStr={dateStr}
+              isCurrentlyToday={isToday(currentDate)}
+              onDelete={handleDeleteRecord}
+            />
           )}
         </View>
 
@@ -2226,6 +2215,158 @@ interface TimelineEntryProps {
   showRelative: boolean;
   onDelete: (id: string) => void;
 }
+
+/**
+ * Phase 2 (2026-04-28): 24시간 좌측 사이드바 + 현재 시간 표시
+ * (사용자 요청: '왼쪽에 밤 12시부터 24시간을 표시해줘 현재시간도 표시')
+ *
+ * 구조:
+ *   - 0시~23시 24개 row (좌측: 시간 숫자, 우측: 해당 시간대 기록)
+ *   - 현재 시간(오늘인 경우): 하이라이트 + 'NOW' 표시
+ *   - 활동 있는 시간: 작은 점 마커
+ *   - 빈 시간: 숫자만 (작게, scroll 시 시간감 유지)
+ */
+interface HourGroupedTimelineProps {
+  records: TrackerRecord[];
+  dateStr: string;
+  isCurrentlyToday: boolean;
+  onDelete: (id: string) => void;
+}
+
+function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete }: HourGroupedTimelineProps) {
+  // 현재 시각 (분단위 갱신 — 실시간 'now' 표시용)
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    if (!isCurrentlyToday) return;
+    const id = setInterval(() => setNow(new Date()), 60 * 1000);
+    return () => clearInterval(id);
+  }, [isCurrentlyToday]);
+
+  const currentHour = isCurrentlyToday ? now.getHours() : -1;
+  const currentMin = now.getMinutes();
+
+  // 시간별 그룹핑
+  const byHour = useMemo(() => {
+    const map = new Map<number, TrackerRecord[]>();
+    for (const r of records) {
+      const parts = r.time.split(':');
+      const h = parseInt(parts[0] ?? '', 10);
+      if (!isNaN(h) && h >= 0 && h <= 23) {
+        if (!map.has(h)) map.set(h, []);
+        map.get(h)!.push(r);
+      }
+    }
+    return map;
+  }, [records]);
+
+  return (
+    <View style={hourTlStyles.root}>
+      {Array.from({ length: 24 }, (_, h) => {
+        const items = byHour.get(h) ?? [];
+        const isCur = h === currentHour;
+        const hasActivity = items.length > 0;
+        return (
+          <View
+            key={h}
+            style={[
+              hourTlStyles.hourBlock,
+              isCur && hourTlStyles.currentHourBlock,
+              hasActivity && !isCur && hourTlStyles.activeHourBlock,
+            ]}
+          >
+            <View style={hourTlStyles.hourLabelCol}>
+              <Text
+                style={[
+                  hourTlStyles.hourNum,
+                  isCur && hourTlStyles.hourNumCurrent,
+                  hasActivity && !isCur && hourTlStyles.hourNumActive,
+                ]}
+              >
+                {String(h).padStart(2, '0')}
+              </Text>
+              {isCur ? (
+                <View style={hourTlStyles.nowBadge}>
+                  <Text style={hourTlStyles.nowBadgeText}>{currentMin < 10 ? `:0${currentMin}` : `:${currentMin}`}</Text>
+                </View>
+              ) : hasActivity ? (
+                <View style={hourTlStyles.activityDot} />
+              ) : null}
+            </View>
+            <View style={hourTlStyles.hourContent}>
+              {items.map((r) => (
+                <TimelineEntry
+                  key={r.id}
+                  record={r}
+                  dateStr={dateStr}
+                  showRelative={isCurrentlyToday}
+                  onDelete={onDelete}
+                />
+              ))}
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+const hourTlStyles = StyleSheet.create({
+  root: { paddingTop: 4 },
+  hourBlock: {
+    flexDirection: 'row',
+    minHeight: 36,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F0F0F2',
+  },
+  currentHourBlock: {
+    backgroundColor: '#FFF6EE',
+  },
+  activeHourBlock: {
+    backgroundColor: '#FFFFFF',
+  },
+  hourLabelCol: {
+    width: 44,
+    alignItems: 'center',
+    paddingTop: 8,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: '#E5E5EA',
+  },
+  hourNum: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#ABABAB',
+  },
+  hourNumActive: {
+    color: '#1C1C1E',
+  },
+  hourNumCurrent: {
+    color: '#FF8C5A',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  nowBadge: {
+    marginTop: 4,
+    backgroundColor: '#FF8C5A',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  nowBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  activityDot: {
+    marginTop: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FF8C5A',
+  },
+  hourContent: {
+    flex: 1,
+  },
+});
 
 function TimelineEntry({ record, dateStr, showRelative, onDelete }: TimelineEntryProps) {
   const typeColor =
