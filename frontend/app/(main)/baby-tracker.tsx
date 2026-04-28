@@ -1633,7 +1633,46 @@ function BabyTrackerInner() {
           />
         )}
 
-        {/* ---- Day Summary Card ---- */}
+        {/* ─────────────────────────────────────────────
+            Phase 1 (2026-04-28): 타임라인 위로, 요약 아래로 + 글씨 크게
+            (사용자 요청: '아기시간 시간 전체 내용이 최대한 크고 눈에 잘 들어오게')
+        ───────────────────────────────────────────── */}
+
+        {/* ---- Full Timeline (먼저, 크게) ---- */}
+        <View style={styles.timelineContainer}>
+          <View style={styles.timelineTitleRow}>
+            <Image source={IC_SLEEP} style={styles.timelineTitleIcon} resizeMode="contain" />
+            <Text style={styles.timelineTitle}>
+              오늘의 타임라인 ({allRecordsSorted.length}건)
+            </Text>
+          </View>
+
+          {loading ? (
+            <View style={emptyStyles.container}>
+              <Text style={emptyStyles.sub}>불러오는 중...</Text>
+            </View>
+          ) : allRecordsSorted.length === 0 ? (
+            <View style={emptyStyles.container}>
+              <Image source={IC_EMPTY} style={emptyStyles.iconImg} resizeMode="contain" />
+              <Text style={emptyStyles.title}>아직 기록이 없어요</Text>
+              <Text style={emptyStyles.sub}>
+                하단 버튼으로 빠르게 기록해보세요
+              </Text>
+            </View>
+          ) : (
+            allRecordsSorted.map((r) => (
+              <TimelineEntry
+                key={r.id}
+                record={r}
+                dateStr={dateStr}
+                showRelative={isToday(currentDate)}
+                onDelete={handleDeleteRecord}
+              />
+            ))
+          )}
+        </View>
+
+        {/* ---- Day Summary Card (타임라인 아래로 이동) ---- */}
         <DaySummaryCard summary={summary} />
 
         {/* ---- Period Selector + Voice Settings ---- */}
@@ -1668,40 +1707,6 @@ function BabyTrackerInner() {
         {weekStats.length > 0 && (
           <WeeklySummaryTable stats={weekStats} periodDays={chartPeriod} />
         )}
-
-        {/* ---- Full Timeline ---- */}
-        <View style={styles.timelineContainer}>
-          <View style={styles.timelineTitleRow}>
-            <Image source={IC_SLEEP} style={styles.timelineTitleIcon} resizeMode="contain" />
-            <Text style={styles.timelineTitle}>
-              타임라인 ({allRecordsSorted.length}건)
-            </Text>
-          </View>
-
-          {loading ? (
-            <View style={emptyStyles.container}>
-              <Text style={emptyStyles.sub}>불러오는 중...</Text>
-            </View>
-          ) : allRecordsSorted.length === 0 ? (
-            <View style={emptyStyles.container}>
-              <Image source={IC_EMPTY} style={emptyStyles.iconImg} resizeMode="contain" />
-              <Text style={emptyStyles.title}>아직 기록이 없어요</Text>
-              <Text style={emptyStyles.sub}>
-                하단 버튼으로 빠르게 기록해보세요
-              </Text>
-            </View>
-          ) : (
-            allRecordsSorted.map((r) => (
-              <TimelineEntry
-                key={r.id}
-                record={r}
-                dateStr={dateStr}
-                showRelative={isToday(currentDate)}
-                onDelete={handleDeleteRecord}
-              />
-            ))
-          )}
-        </View>
 
         {/* Bottom spacer for bottom action bar + fixed ad */}
         <View style={{ height: 200 }} />
@@ -2270,42 +2275,46 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete }: TimelineEntr
 }
 
 const timelineStyles = StyleSheet.create({
+  // Phase 1 (2026-04-28): 글씨 크게, 행 높이 증가, 메모 가독성 ↑
+  // (사용자 요청: '시간도 잘 안 보이고 어떤 행위를 했는지도 잘 안 보여')
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    paddingVertical: 12,        // 6 → 12 (높이 ↑)
+    paddingHorizontal: 12,      // 8 → 12
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#ECECEE',
-    borderLeftWidth: 3,
+    borderLeftWidth: 4,         // 3 → 4 (좌측 컬러 막대 강조)
     backgroundColor: TRACKER_COLORS.white,
-    gap: 6,
+    gap: 10,                    // 6 → 10
   },
   timeCell: {
-    width: 46,
-    fontSize: 11,
-    fontWeight: '700',
+    width: 56,                  // 46 → 56 (시간 16:30 안 잘리게)
+    fontSize: 16,               // 11 → 16 (시간 ↑↑)
+    fontWeight: '800',          // 700 → 800
     color: TRACKER_COLORS.text,
   },
   iconCell: {
-    width: 16,
-    height: 16,
-    borderRadius: 3,
+    width: 26,                  // 16 → 26
+    height: 26,                 // 16 → 26
+    borderRadius: 6,
   },
   labelCell: {
-    width: 72,
-    fontSize: 12,
+    width: 86,                  // 72 → 86
+    fontSize: 15,               // 12 → 15 (행위 라벨 ↑)
     fontWeight: '700',
   },
   infoCell: {
     flex: 1,
-    fontSize: 11,
-    color: TRACKER_COLORS.textSub,
+    fontSize: 14,               // 11 → 14 (메모 + 양/시간 한 줄 표시)
+    color: TRACKER_COLORS.text, // textSub → text (선명한 색)
+    lineHeight: 19,
   },
   relCell: {
-    fontSize: 10,
+    fontSize: 12,               // 10 → 12
     color: TRACKER_COLORS.textLight,
     textAlign: 'right',
+    fontWeight: '600',
   },
 });
 
