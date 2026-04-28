@@ -27,6 +27,7 @@ const IC_MASCOT_EAT = require('../../assets/mascot-eating.png') as number;
 const IC_MIC = require('../../assets/icon-mic.png') as number;
 const IC_ANALYZING = require('../../assets/analyzing.png') as number;
 const IC_BADGE_AI = require('../../assets/badge-ai.png') as number;
+const IC_MEDICATION = require('../../assets/icon-hospital.png') as number;
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
@@ -92,6 +93,9 @@ const TRACKER_COLORS = {
   sleep: '#B8A0D2',
   sleepLight: '#F0EBF7',
   sleepDark: '#8F73B5',
+  medication: '#7CB342',          // 투약: 초록 (보건/안전 톤)
+  medicationLight: '#E8F5E1',
+  medicationDark: '#558B2F',
   text: '#1C1C1E',
   textSub: '#636366',
   textLight: '#ABABAB',
@@ -104,6 +108,7 @@ const TAB_CONFIG: { key: RecordType; icon: number; label: string; color: string 
   { key: 'diaper', icon: IC_POOP, label: '배변', color: TRACKER_COLORS.diaper },
   { key: 'feeding', icon: IC_FEED, label: '수유/식사', color: TRACKER_COLORS.feeding },
   { key: 'sleep', icon: IC_SLEEP, label: '수면', color: TRACKER_COLORS.sleep },
+  { key: 'medication', icon: IC_MEDICATION, label: '투약', color: TRACKER_COLORS.medication },
 ];
 
 const DIAPER_OPTIONS: { key: DiaperSubType; label: string; icon: number }[] = [
@@ -137,6 +142,11 @@ const SUBTYPE_LABELS: Record<string, string> = {
   sleep: '수면',
   sleep_start: '수면',     // '수면 시작' → '수면' (사용자 요청, 화면 간결화)
   sleep_end: '기상',
+  // 투약 (Phase 4-A)
+  fever: '해열제',
+  antibiotic: '항생제',
+  vitamin: '비타민',
+  other: '기타 약',
 };
 
 const SUBTYPE_ICONS: Record<string, number> = {
@@ -152,6 +162,11 @@ const SUBTYPE_ICONS: Record<string, number> = {
   sleep: IC_SLEEP,
   sleep_start: IC_SLEEP,
   sleep_end: IC_SUNNY,
+  // 투약 (Phase 4-A) — 임시로 IC_BADGE_DB 사용 (별도 약 아이콘 없음)
+  fever: IC_MEDICATION,
+  antibiotic: IC_MEDICATION,
+  vitamin: IC_MEDICATION,
+  other: IC_MEDICATION,
 };
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
@@ -2725,13 +2740,17 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete }: TimelineEntr
       ? TRACKER_COLORS.diaper
       : record.type === 'feeding'
         ? TRACKER_COLORS.feeding
-        : TRACKER_COLORS.sleep;
+        : record.type === 'medication'
+          ? TRACKER_COLORS.medication
+          : TRACKER_COLORS.sleep;
   const typeDark =
     record.type === 'diaper'
       ? TRACKER_COLORS.diaperDark
       : record.type === 'feeding'
         ? TRACKER_COLORS.feedingDark
-        : TRACKER_COLORS.sleepDark;
+        : record.type === 'medication'
+          ? TRACKER_COLORS.medicationDark
+          : TRACKER_COLORS.sleepDark;
   const icon = SUBTYPE_ICONS[record.subType] ?? IC_POOP;
   const baseLabel = SUBTYPE_LABELS[record.subType] ?? record.subType;
   // 모유: 왼쪽/오른쪽을 라벨에 병합 → "모유 (왼쪽)"
@@ -2839,6 +2858,10 @@ const BAR_ITEMS: BottomBarItem[] = [
   { icon: IC_SUNNY, label: '기상', action: { kind: 'sleepWake' }, color: TRACKER_COLORS.sleepDark },
   { icon: IC_POOP, label: '소변', action: { kind: 'quick', type: 'diaper', subType: 'pee' }, color: TRACKER_COLORS.diaperDark },
   { icon: IC_POOP, label: '대변', action: { kind: 'quick', type: 'diaper', subType: 'poop' }, color: TRACKER_COLORS.diaperDark },
+  // Phase 4-A (2026-04-28): 투약 — 빠른 기록 4종
+  { icon: IC_MEDICATION, label: '해열제', action: { kind: 'quick', type: 'medication', subType: 'fever' }, color: TRACKER_COLORS.medicationDark },
+  { icon: IC_MEDICATION, label: '항생제', action: { kind: 'quick', type: 'medication', subType: 'antibiotic' }, color: TRACKER_COLORS.medicationDark },
+  { icon: IC_MEDICATION, label: '비타민', action: { kind: 'quick', type: 'medication', subType: 'vitamin' }, color: TRACKER_COLORS.medicationDark },
 ];
 
 interface BottomActionBarProps {
