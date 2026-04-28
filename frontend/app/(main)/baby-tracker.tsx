@@ -908,6 +908,31 @@ function DailyReferenceCard({
   );
 }
 
+// Phase 3 (2026-04-28): 기간 요약 접기/펴기 토글 스타일
+const periodToggleStyles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 10,
+    backgroundColor: TRACKER_COLORS.white,
+    borderRadius: RADIUS.md,
+    marginVertical: SPACING.sm,
+    ...SHADOWS.soft,
+  },
+  headerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: TRACKER_COLORS.text,
+  },
+  headerArrow: {
+    fontSize: 12,
+    color: TRACKER_COLORS.textSub,
+    fontWeight: '700',
+  },
+});
+
 const dailyRefStyles = StyleSheet.create({
   card: {
     backgroundColor: TRACKER_COLORS.white,
@@ -1375,6 +1400,9 @@ function BabyTrackerInner() {
   const [loading, setLoading] = useState(true);
   const [weekStats, setWeekStats] = useState<DayStat[]>([]);
   const [chartPeriod, setChartPeriod] = useState<7 | 14 | 31>(7);
+  // Phase 3 (2026-04-28): 7/14/31일 요약 접기/펴기 (사용자 요청)
+  // 기본은 접힘 상태 — 타임라인을 더 잘 보이게
+  const [periodSectionOpen, setPeriodSectionOpen] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<TrackerAnalysisResult | null>(null);
   const [analysisExpanded, setAnalysisExpanded] = useState(true);
@@ -1882,37 +1910,53 @@ function BabyTrackerInner() {
           )}
         </View>
 
-        {/* ---- Period Selector + Voice Settings ---- */}
-        <View style={summaryStyles.periodRow}>
-          {([7, 14, 31] as const).map((p) => (
-            <TouchableOpacity
-              key={p}
-              style={[
-                summaryStyles.periodBtn,
-                chartPeriod === p && summaryStyles.periodBtnActive,
-              ]}
-              onPress={() => setChartPeriod(p)}
-            >
-              <Text
-                style={[
-                  summaryStyles.periodBtnText,
-                  chartPeriod === p && summaryStyles.periodBtnTextActive,
-                ]}
+        {/* ---- Period Selector + Weekly Summary (접기/펴기) ---- */}
+        <TouchableOpacity
+          style={periodToggleStyles.header}
+          onPress={() => setPeriodSectionOpen((v) => !v)}
+          activeOpacity={0.7}
+        >
+          <Text style={periodToggleStyles.headerTitle}>
+            {'📊 기간 요약 ('}{PERIOD_LABELS[chartPeriod]}{')'}
+          </Text>
+          <Text style={periodToggleStyles.headerArrow}>
+            {periodSectionOpen ? '▲' : '▼'}
+          </Text>
+        </TouchableOpacity>
+        {periodSectionOpen && (
+          <>
+            <View style={summaryStyles.periodRow}>
+              {([7, 14, 31] as const).map((p) => (
+                <TouchableOpacity
+                  key={p}
+                  style={[
+                    summaryStyles.periodBtn,
+                    chartPeriod === p && summaryStyles.periodBtnActive,
+                  ]}
+                  onPress={() => setChartPeriod(p)}
+                >
+                  <Text
+                    style={[
+                      summaryStyles.periodBtnText,
+                      chartPeriod === p && summaryStyles.periodBtnTextActive,
+                    ]}
+                  >
+                    {PERIOD_LABELS[p]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={summaryStyles.voiceBtn}
+                onPress={() => router.push('/(main)/voice-settings' as never)}
+                activeOpacity={0.85}
               >
-                {PERIOD_LABELS[p]}
-              </Text>
-            </TouchableOpacity>
-          ))}
-          <TouchableOpacity
-            style={summaryStyles.voiceBtn}
-            onPress={() => router.push('/(main)/voice-settings' as never)}
-            activeOpacity={0.85}
-          >
-            <Text style={summaryStyles.voiceBtnText}>🎙 음성</Text>
-          </TouchableOpacity>
-        </View>
-        {weekStats.length > 0 && (
-          <WeeklySummaryTable stats={weekStats} periodDays={chartPeriod} />
+                <Text style={summaryStyles.voiceBtnText}>🎙 음성</Text>
+              </TouchableOpacity>
+            </View>
+            {weekStats.length > 0 && (
+              <WeeklySummaryTable stats={weekStats} periodDays={chartPeriod} />
+            )}
+          </>
         )}
 
         {/* Bottom spacer for bottom action bar + fixed ad */}
