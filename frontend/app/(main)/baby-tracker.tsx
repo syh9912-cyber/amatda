@@ -698,68 +698,73 @@ function DaySummaryCard({ summary }: { summary: DaySummary }) {
     ? (sleepH > 0 ? `${sleepH}시간 ${sleepM}분` : `${sleepM}분`)
     : '-';
 
+  // Phase 1 (2026-04-28): 3줄 → 1줄 chip 가로 스크롤로 압축
+  // (사용자 요청: '요약은 최대한 작게, 시간 부분을 최대한 길게')
   return (
-    <View style={daySumStyles.card}>
-      <View style={[daySumStyles.row, { borderBottomWidth: 1, borderBottomColor: TRACKER_COLORS.bg }]}>
-        <View style={[daySumStyles.tag, { backgroundColor: TRACKER_COLORS.diaperLight }]}>
-          <Text style={[daySumStyles.tagText, { color: TRACKER_COLORS.diaperDark }]}>💩 배변</Text>
-          <Text style={[daySumStyles.tagCount, { color: TRACKER_COLORS.diaperDark }]}>{diaperCount}회</Text>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={daySumStyles.scrollWrap}
+    >
+      {diaperCount > 0 && (
+        <View style={[daySumStyles.chip, { backgroundColor: TRACKER_COLORS.diaperLight }]}>
+          <Text style={[daySumStyles.chipLabel, { color: TRACKER_COLORS.diaperDark }]}>{'💩'}</Text>
+          <Text style={[daySumStyles.chipValue, { color: TRACKER_COLORS.diaperDark }]}>
+            {diaperCount}회
+            {diaperSummary !== '-' ? ` · ${diaperSummary}` : ''}
+          </Text>
         </View>
-        <Text style={daySumStyles.detail} numberOfLines={1}>{diaperSummary}</Text>
-      </View>
-      <View style={[daySumStyles.row, { borderBottomWidth: 1, borderBottomColor: TRACKER_COLORS.bg }]}>
-        <View style={[daySumStyles.tag, { backgroundColor: TRACKER_COLORS.feedingLight }]}>
-          <Text style={[daySumStyles.tagText, { color: TRACKER_COLORS.feedingDark }]}>🍼 수유</Text>
-          <Text style={[daySumStyles.tagCount, { color: TRACKER_COLORS.feedingDark }]}>{feedingCount}회</Text>
+      )}
+      {feedingCount > 0 && (
+        <View style={[daySumStyles.chip, { backgroundColor: TRACKER_COLORS.feedingLight }]}>
+          <Text style={[daySumStyles.chipLabel, { color: TRACKER_COLORS.feedingDark }]}>{'🍼'}</Text>
+          <Text style={[daySumStyles.chipValue, { color: TRACKER_COLORS.feedingDark }]}>
+            {feedingCount}회
+            {feedingSummary !== '-' ? ` · ${feedingSummary}` : ''}
+          </Text>
         </View>
-        <Text style={daySumStyles.detail} numberOfLines={2}>{feedingSummary}</Text>
-      </View>
-      <View style={daySumStyles.row}>
-        <View style={[daySumStyles.tag, { backgroundColor: TRACKER_COLORS.sleepLight }]}>
-          <Text style={[daySumStyles.tagText, { color: TRACKER_COLORS.sleepDark }]}>💤 수면</Text>
+      )}
+      {totalSleepMinutes > 0 && (
+        <View style={[daySumStyles.chip, { backgroundColor: TRACKER_COLORS.sleepLight }]}>
+          <Text style={[daySumStyles.chipLabel, { color: TRACKER_COLORS.sleepDark }]}>{'💤'}</Text>
+          <Text style={[daySumStyles.chipValue, { color: TRACKER_COLORS.sleepDark }]}>
+            {sleepSummary}
+          </Text>
         </View>
-        <Text style={daySumStyles.detail} numberOfLines={1}>{sleepSummary}</Text>
-      </View>
-    </View>
+      )}
+      {/* 모두 0건일 때 placeholder */}
+      {diaperCount === 0 && feedingCount === 0 && totalSleepMinutes === 0 && (
+        <View style={[daySumStyles.chip, { backgroundColor: TRACKER_COLORS.bg }]}>
+          <Text style={[daySumStyles.chipValue, { color: TRACKER_COLORS.textLight }]}>
+            오늘은 아직 기록이 없어요
+          </Text>
+        </View>
+      )}
+    </ScrollView>
   );
 }
 
 const daySumStyles = StyleSheet.create({
-  card: {
-    backgroundColor: TRACKER_COLORS.white,
-    borderRadius: RADIUS.lg,
+  // Phase 1: 가로 스크롤 1줄 chip
+  scrollWrap: {
     paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.sm,
-    ...SHADOWS.soft,
+    paddingVertical: 6,
+    gap: 8,
   },
-  row: {
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    gap: SPACING.sm,
-  },
-  tag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: RADIUS.full,
-    minWidth: 78,
   },
-  tagText: {
-    fontSize: FONT_SIZE.xs,
+  chipLabel: {
+    fontSize: 14,
+  },
+  chipValue: {
+    fontSize: 13,
     fontWeight: '700',
-  },
-  tagCount: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: '700',
-  },
-  detail: {
-    flex: 1,
-    fontSize: FONT_SIZE.sm,
-    color: TRACKER_COLORS.text,
-    fontWeight: '600',
   },
 });
 
