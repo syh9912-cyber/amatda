@@ -1877,6 +1877,7 @@ function BabyTrackerInner() {
               dateStr={dateStr}
               isCurrentlyToday={isToday(currentDate)}
               onDelete={handleDeleteRecord}
+              activeSleepSession={sleepSession}
             />
           )}
         </View>
@@ -2443,9 +2444,11 @@ interface HourGroupedTimelineProps {
   dateStr: string;
   isCurrentlyToday: boolean;
   onDelete: (id: string) => void;
+  /** 진행 중인 수면 세션 (사용자가 '수면' 누른 후 '기상' 누르기 전 상태) */
+  activeSleepSession?: SleepSession | null;
 }
 
-function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete }: HourGroupedTimelineProps) {
+function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete, activeSleepSession }: HourGroupedTimelineProps) {
   // 현재 시각 (분단위 갱신 — 실시간 'now' 표시용)
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -2459,6 +2462,8 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete }: H
 
   // 사용자 요청: 수면 기록을 '수면(시작)' + '기상(종료)' 두 항목으로 분리 표시
   // 기상 항목에는 총 수면 시간을 info로 표시
+  // 추가 (사용자 요청 2026-04-28): 진행 중 수면 세션도 즉시 표시
+  //   '수면 누르면 바로 수면이 시간표에 나오게 해줘 기상 누르기 전에도'
   const expandedRecords = useMemo(() => {
     const out: TrackerRecord[] = [];
     for (const r of records) {
@@ -2484,8 +2489,22 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete }: H
         out.push(r);
       }
     }
+
+    // 진행 중 수면 세션이 이 날짜에 시작됐다면 가상 엔트리 1개 추가
+    if (activeSleepSession && activeSleepSession.startDate === dateStr) {
+      const startDt = new Date(activeSleepSession.startTime);
+      const time = `${String(startDt.getHours()).padStart(2, '0')}:${String(startDt.getMinutes()).padStart(2, '0')}`;
+      out.push({
+        id: '__active_sleep__',
+        type: 'sleep',
+        subType: 'sleep_start',
+        time,
+        note: '진행 중 (기상 버튼으로 종료)',
+      } as TrackerRecord);
+    }
+
     return out;
-  }, [records]);
+  }, [records, activeSleepSession, dateStr]);
 
   // 시간별 그룹핑
   const byHour = useMemo(() => {
