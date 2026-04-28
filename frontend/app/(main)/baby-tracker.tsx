@@ -31,6 +31,7 @@ const IC_BADGE_AI = require('../../assets/badge-ai.png') as number;
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { getDailyReference, calcFeedIntervalProgress } from '../../constants/dailyReference';
 import { growthApi, childApi } from '../../services/api';
 import { getTrackerTabs, getFeedingTypes } from '../../constants/ageFeatures';
 import type { AgeGroupKey } from '../../constants/ageGroups';
@@ -765,6 +766,188 @@ const daySumStyles = StyleSheet.create({
   chipValue: {
     fontSize: 13,
     fontWeight: '700',
+  },
+});
+
+/* ---- Daily Reference Card (권장량 진행 막대) ----
+ *
+ * 사용자 요청 (2026-04-28):
+ *   '개월수별 표준 수면 시간 및 수유량을 표시'
+ *   '식사량은 몸무게 기준'
+ *   '수유텀'도 표시
+ *
+ * 표시 항목 (모두 진행 막대):
+ *   1) 마지막 수유 후 경과 시간 / 권장 텀 → 다음 수유 카운트다운
+ *   2) 분유량 / 권장 분유량 (몸무게 × 계수) → 일일 누적
+ *   3) 수면 / 권장 수면 (개월수 기준) → 일일 누적
+ */
+interface DailyReferenceCardProps {
+  ageMonths: number;
+  weightKg: number | null | undefined;
+  formulaMlToday: number;
+  totalSleepMinutesToday: number;
+  /** 마지막 수유 시각으로부터 경과 분 (-1이면 오늘 수유 없음) */
+  minutesSinceLastFeed: number;
+}
+
+function DailyReferenceCard({
+  ageMonths,
+  weightKg,
+  formulaMlToday,
+  totalSleepMinutesToday,
+  minutesSinceLastFeed,
+}: DailyReferenceCardProps) {
+  const ref = useMemo(() => getDailyReference(ageMonths, weightKg), [ageMonths, weightKg]);
+
+  // 분유 진행률 (목표 = max 권장량)
+  const formulaPct = ref.formulaMlMax > 0
+    ? Math.min(1.5, formulaMlToday / ref.formulaMlMax)
+    : 0;
+
+  // 수면 진행률 (목표 = max 권장 시간 × 60분)
+  const sleepTargetMin = ref.sleepHrMax * 60;
+  const sleepPct = sleepTargetMin > 0
+    ? Math.min(1.5, totalSleepMinutesToday / sleepTargetMin)
+    : 0;
+
+  // 수유 텀 진행률
+  const feedPct = minutesSinceLastFeed >= 0
+    ? calcFeedIntervalProgress(minutesSinceLastFeed, ref.feedIntervalHrMax)
+    : 0;
+
+  const showFeedRow = ref.feedIntervalHrMax > 0;
+  const showFormulaRow = ref.formulaMlMax > 0;
+
+  // 모두 비활성이면(예: 36개월+ 일반식) 카드 자체 숨김
+  if (!showFeedRow && !showFormulaRow && sleepTargetMin === 0) {
+    return null;
+  }
+
+  return (
+    <View style={dailyRefStyles.card}>
+      {/* 수유 텀 (Row 1) */}
+      {showFeedRow && (
+        <View style={dailyRefStyles.row}>
+          <Text style={dailyRefStyles.rowLabel}>{'🍼 수유 텀'}</Text>
+          <Text style={dailyRefStyles.rowValue}>
+            {minutesSinceLastFeed < 0
+              ? '오늘 첫 수유'
+              : feedPct >= 1
+                ? `${formatMinutes(minutesSinceLastFeed)} 경과 · 권장 텀 도달`
+                : `${formatMinutes(minutesSinceLastFeed)} 경과`}
+          </Text>
+          <View style={dailyRefStyles.barTrack}>
+            <View
+              style={[
+                dailyRefStyles.barFill,
+                {
+                  width: `${Math.min(100, feedPct * 100)}%`,
+                  backgroundColor: feedPct >= 0.9 ? '#FF8C5A' : '#7CB342',
+                },
+              ]}
+            />
+          </View>
+          <Text style={dailyRefStyles.rowSub}>
+            권장 {ref.feedIntervalHrMin}~{ref.feedIntervalHrMax}시간
+          </Text>
+        </View>
+      )}
+
+      {/* 분유량 (Row 2) */}
+      {showFormulaRow && (
+        <View style={dailyRefStyles.row}>
+          <Text style={dailyRefStyles.rowLabel}>{'🍼 일일 분유량'}</Text>
+          <Text style={dailyRefStyles.rowValue}>
+            {formulaMlToday}ml / {ref.formulaMlMin}~{ref.formulaMlMax}ml
+          </Text>
+          <View style={dailyRefStyles.barTrack}>
+            <View
+              style={[
+                dailyRefStyles.barFill,
+                {
+                  width: `${Math.min(100, formulaPct * 100)}%`,
+                  backgroundColor: formulaPct >= 1
+                    ? '#7CB342'
+                    : formulaPct >= 0.6 ? '#FFB74D' : '#FF8C5A',
+                },
+              ]}
+            />
+          </View>
+          <Text style={dailyRefStyles.rowSub}>
+            기준 체중 {ref.weightKg.toFixed(1)}kg{ref.weightIsEstimated ? ' (추정)' : ''}
+          </Text>
+        </View>
+      )}
+
+      {/* 수면 (Row 3) */}
+      {sleepTargetMin > 0 && (
+        <View style={[dailyRefStyles.row, { borderBottomWidth: 0 }]}>
+          <Text style={dailyRefStyles.rowLabel}>{'💤 일일 수면'}</Text>
+          <Text style={dailyRefStyles.rowValue}>
+            {formatMinutes(totalSleepMinutesToday)} / {ref.sleepHrMin}~{ref.sleepHrMax}시간
+          </Text>
+          <View style={dailyRefStyles.barTrack}>
+            <View
+              style={[
+                dailyRefStyles.barFill,
+                {
+                  width: `${Math.min(100, sleepPct * 100)}%`,
+                  backgroundColor: sleepPct >= 1
+                    ? '#7CB342'
+                    : sleepPct >= 0.6 ? '#FFB74D' : '#FF8C5A',
+                },
+              ]}
+            />
+          </View>
+          <Text style={dailyRefStyles.rowSub}>
+            {ref.ageMonths}개월 권장
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const dailyRefStyles = StyleSheet.create({
+  card: {
+    backgroundColor: TRACKER_COLORS.white,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 10,
+    marginBottom: SPACING.sm,
+    ...SHADOWS.soft,
+  },
+  row: {
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F0F0F2',
+  },
+  rowLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: TRACKER_COLORS.textSub,
+  },
+  rowValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: TRACKER_COLORS.text,
+    marginTop: 2,
+  },
+  barTrack: {
+    height: 8,
+    backgroundColor: '#F0F0F2',
+    borderRadius: 4,
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  rowSub: {
+    fontSize: 11,
+    color: TRACKER_COLORS.textLight,
+    marginTop: 4,
   },
 });
 
@@ -1640,6 +1823,40 @@ function BabyTrackerInner() {
 
         {/* ---- Day Summary Card (위) ---- */}
         <DaySummaryCard summary={summary} />
+
+        {/* ---- Daily Reference (권장 진행 막대) ---- */}
+        {(() => {
+          // 개월수 계산
+          const birthDate = selectedChild?.birthDate;
+          const ageMonths = birthDate
+            ? Math.max(0, Math.floor(
+                (Date.now() - new Date(birthDate).getTime()) /
+                (1000 * 60 * 60 * 24 * 30.44),
+              ))
+            : 0;
+
+          // 마지막 수유 후 경과 시간 (분)
+          // feeding 타입의 가장 최근 record에서 계산 (오늘만)
+          const todayFeeds = allRecordsSorted.filter((r) => r.type === 'feeding');
+          let minutesSinceLastFeed = -1;
+          if (todayFeeds.length > 0 && isToday(currentDate)) {
+            const last = todayFeeds[todayFeeds.length - 1];
+            const [h, m] = last.time.split(':').map((v) => parseInt(v, 10));
+            const lastDt = new Date();
+            lastDt.setHours(h, m, 0, 0);
+            minutesSinceLastFeed = Math.max(0, Math.floor((Date.now() - lastDt.getTime()) / 60000));
+          }
+
+          return (
+            <DailyReferenceCard
+              ageMonths={ageMonths}
+              weightKg={selectedChild?.weight}
+              formulaMlToday={summary.formulaMl}
+              totalSleepMinutesToday={summary.totalSleepMinutes}
+              minutesSinceLastFeed={minutesSinceLastFeed}
+            />
+          );
+        })()}
 
         {/* ---- Full Timeline (자체 스크롤 박스) ---- */}
         <View style={styles.timelineContainer}>
