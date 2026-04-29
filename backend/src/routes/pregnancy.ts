@@ -360,6 +360,151 @@ router.get('/mom-health', authMiddleware, async (req: Request, res: Response) =>
   }
 });
 
+/** DELETE /api/pregnancy/mom-health/:id — 엄마 상태 기록 삭제 */
+router.delete('/mom-health/:id', authMiddleware, async (req: Request<{ id: string }>, res: Response) => {
+  try {
+    const id = req.params.id;
+    const doc = await collections.momHealthChecks.doc(id).get();
+    if (!doc.exists) {
+      error(res, '기록을 찾을 수 없습니다', 404);
+      return;
+    }
+    const data = doc.data() ?? {};
+    if (data.userId && data.userId !== req.userId) {
+      error(res, '본인의 기록만 삭제할 수 있습니다', 403);
+      return;
+    }
+    await collections.momHealthChecks.doc(id).delete();
+    success(res, { deleted: true });
+  } catch {
+    error(res, '엄마 상태 삭제 중 오류가 발생했습니다', 500);
+  }
+});
+
+/* ================================================================== */
+/*  2-B. 태동 카운터 (Kick Session)                                    */
+/* ================================================================== */
+
+/** POST /api/pregnancy/kick-session — 태동 측정 결과 저장 + 분석 */
+router.post('/kick-session', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { childId, count, durationSec, week } = req.body as {
+      childId?: string;
+      count?: number;
+      durationSec?: number;
+      week?: number;
+    };
+    if (!childId || typeof count !== 'number' || typeof durationSec !== 'number') {
+      error(res, 'childId, count, durationSec는 필수입니다');
+      return;
+    }
+    if (count < 1 || durationSec < 10) {
+      error(res, '측정 시간이 너무 짧거나 태동이 기록되지 않았습니다');
+      return;
+    }
+
+    // 본인 자녀인지 확인
+    const childDoc = await collections.children.doc(childId).get();
+    if (!childDoc.exists || childDoc.data()?.userId !== req.userId) {
+      error(res, '자녀를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    // 분석 — 시간당 환산 + 30분 환산
+    const perHour = Math.round((count / durationSec) * 3600);
+    const per30min = Math.round((count / durationSec) * 1800);
+
+    // 기준 (산부인과 일반 가이드):
+    //   30분 동안 3회 이상 → 정상 / 3회 미만 → 좀 더 지켜보세요
+    //   1시간 동안 10회 이상 → 안전 / 3회 미만 → 병원 문의
+    let status: 'good' | 'watch' | 'danger';
+    let message: string;
+    if (per30min >= 5) {
+      status = 'good';
+      message = '활발한 태동이에요. 건강한 신호입니다.';
+    } else if (per30min >= 3) {
+      status = 'good';
+      message = '정상 범위 태동이에요. 30분에 3회 이상이면 건강한 신호입니다.';
+    } else if (durationSec >= 60 * 60 && perHour < 3) {
+      status = 'danger';
+      message = '⚠️ 1시간 동안 태동이 3회 미만입니다. 평소보다 적다면 병원에 문의해 주세요.';
+    } else {
+      status = 'watch';
+      message = '아직 측정 시간이 짧거나 태동이 적어요. 왼쪽으로 누워서 30분 더 지켜봐 주세요.';
+    }
+
+    const id = collections.kickSessions.doc().id;
+    const now = new Date();
+    await collections.kickSessions.doc(id).set({
+      userId: req.userId!,
+      childId,
+      count,
+      durationSec,
+      perHour,
+      per30min,
+      week: typeof week === 'number' ? week : null,
+      status,
+      createdAt: now.toISOString(),
+    });
+
+    success(res, { id, count, durationSec, perHour, per30min, status, message }, 201);
+  } catch {
+    error(res, '태동 기록 저장 중 오류가 발생했습니다', 500);
+  }
+});
+
+/** GET /api/pregnancy/kick-session?childId=xxx — 최근 태동 기록 */
+router.get('/kick-session', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const childId = req.query.childId as string;
+    if (!childId) { error(res, 'childId는 필수입니다'); return; }
+
+    const snap = await collections.kickSessions
+      .where('childId', '==', childId)
+      .limit(30)
+      .get();
+
+    const records = snap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        count: data.count,
+        durationSec: data.durationSec,
+        perHour: data.perHour,
+        per30min: data.per30min,
+        week: data.week,
+        status: data.status,
+        createdAt: data.createdAt,
+      };
+    });
+    records.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
+    success(res, records);
+  } catch {
+    error(res, '태동 기록 조회 중 오류가 발생했습니다', 500);
+  }
+});
+
+/** DELETE /api/pregnancy/kick-session/:id — 태동 기록 삭제 */
+router.delete('/kick-session/:id', authMiddleware, async (req: Request<{ id: string }>, res: Response) => {
+  try {
+    const id = req.params.id;
+    const doc = await collections.kickSessions.doc(id).get();
+    if (!doc.exists) {
+      error(res, '기록을 찾을 수 없습니다', 404);
+      return;
+    }
+    const data = doc.data() ?? {};
+    if (data.userId && data.userId !== req.userId) {
+      error(res, '본인의 기록만 삭제할 수 있습니다', 403);
+      return;
+    }
+    await collections.kickSessions.doc(id).delete();
+    success(res, { deleted: true });
+  } catch {
+    error(res, '태동 기록 삭제 중 오류가 발생했습니다', 500);
+  }
+});
+
 /* ================================================================== */
 /*  3. 주수별 태아 발달 정보 (정적 데이터)                              */
 /* ================================================================== */

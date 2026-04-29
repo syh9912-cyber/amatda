@@ -23,7 +23,19 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { WebView, WebViewMessageEvent } from 'react-native-webview';
+
+// react-native-webview는 새 EAS 빌드에서만 사용 가능 (네이티브 모듈).
+// OTA로 배포된 기존 앱에서 이 파일이 로드돼도 크래시 안 나도록 동적 require.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let WebViewLib: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  WebViewLib = require('react-native-webview');
+} catch {
+  WebViewLib = null;
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type WebViewMessageEvent = any;
 
 const CHECKOUT_BASE = 'https://amatda-parenting.web.app/checkout.html';
 
@@ -72,7 +84,8 @@ function buildUrl(p: PortOneCheckoutParams): string {
 }
 
 export function PortOneWebView({ visible, params, onResult, onClose }: Props) {
-  const webRef = useRef<WebView>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const webRef = useRef<any>(null);
 
   function handleMessage(e: WebViewMessageEvent) {
     try {
@@ -82,6 +95,33 @@ export function PortOneWebView({ visible, params, onResult, onClose }: Props) {
       // ignore non-JSON
     }
   }
+
+  // react-native-webview 미탑재 빌드(OTA only) — 안내 화면만 표시
+  if (!WebViewLib) {
+    return (
+      <Modal
+        visible={visible && !!params}
+        animationType="slide"
+        onRequestClose={onClose}
+        presentationStyle={Platform.OS === 'ios' ? 'pageSheet' : 'overFullScreen'}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onClose} hitSlop={12}>
+            <Text style={styles.closeBtn}>✕</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>결제</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.fallbackWrap}>
+          <Text style={styles.fallbackText}>
+            외부 결제 기능은 다음 업데이트에서 사용 가능합니다.{'\n'}앱을 최신 버전으로 업데이트해 주세요.
+          </Text>
+        </View>
+      </Modal>
+    );
+  }
+
+  const WebView = WebViewLib.WebView;
 
   return (
     <Modal
@@ -111,7 +151,6 @@ export function PortOneWebView({ visible, params, onResult, onClose }: Props) {
           javaScriptEnabled
           domStorageEnabled
           thirdPartyCookiesEnabled
-          // 외부 결제창(카카오/네이버/토스 앱) 호출 시 새 창 안 열게
           setSupportMultipleWindows={false}
           originWhitelist={['*']}
         />
@@ -149,5 +188,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fafafa',
+  },
+  fallbackWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: '#fafafa',
+  },
+  fallbackText: {
+    fontSize: 15,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
   },
 });

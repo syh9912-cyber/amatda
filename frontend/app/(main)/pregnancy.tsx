@@ -332,8 +332,8 @@ export default function PregnancyScreen() {
   };
 
   /* ── Delete record ── */
-  const handleDeleteRecord = (id: string) => {
-    if (id.startsWith('dev-')) return;
+  const handleDeleteRecord = (id: string, source?: string) => {
+    if (id.startsWith('dev-')) return; // 발달 정보는 정적이라 삭제 불가
     Alert.alert('삭제', '이 기록을 삭제할까요?', [
       { text: '취소', style: 'cancel' },
       {
@@ -341,7 +341,12 @@ export default function PregnancyScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await pregnancyApi.deleteRecord(id);
+            // source 별로 다른 컬렉션 → 다른 엔드포인트 호출
+            if (source === 'health') {
+              await pregnancyApi.deleteMomHealth(id);
+            } else {
+              await pregnancyApi.deleteRecord(id);
+            }
             loadTimeline();
           } catch {
             Alert.alert('오류', '삭제에 실패했습니다');
@@ -428,7 +433,7 @@ export default function PregnancyScreen() {
                   item.source === 'development' && styles.timelineCardDev,
                   item.source === 'health' && styles.timelineCardHealth,
                 ]}
-                onLongPress={() => handleDeleteRecord(item.id)}
+                onLongPress={() => handleDeleteRecord(item.id, item.source)}
                 activeOpacity={0.7}
               >
                 <Text style={styles.timelineEmoji}>{item.emoji || '📌'}</Text>

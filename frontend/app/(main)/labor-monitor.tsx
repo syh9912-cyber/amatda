@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,6 +44,7 @@ export default function LaborMonitorScreen() {
   const kickStartRef = useRef<number | null>(null);
   const kickTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [kickSaving, setKickSaving] = useState(false);
+  const [kickGuideOpen, setKickGuideOpen] = useState(false);
 
   // 진통
   const [contractions, setContractions] = useState<{ start: number; end: number | null }[]>([]);
@@ -122,6 +124,62 @@ export default function LaborMonitorScreen() {
     setContractionTick(0);
   };
 
+  /* ── 진통 가이드 분석 (가진통 / 진진통 추정) ──
+   * 의료 진단 아님 — 정보 제공 목적. 면책 고지 화면에 항상 노출.
+   *
+   * 입력: 최근 5회 측정의 시작 시각 + 지속 시간
+   * 판정 기준 (산부인과 일반 가이드 기반):
+   *   - 간격이 점점 짧아지고 5분 ± 1분 이내로 일정 → 진진통 의심
+   *   - 간격이 불규칙하거나 10분 이상 → 가진통 가능성
+   *   - 데이터 부족(< 3회) → 판단 불가
+   */
+  const contractionGuide = useMemo(() => {
+    if (contractions.length < 3) {
+      return {
+        label: '데이터 수집 중',
+        message: '진통 3회 이상 기록되면 패턴 분석을 시작합니다.',
+        tone: 'info' as const,
+      };
+    }
+    const last5 = contractions.slice(-5);
+    const intervals: number[] = [];
+    for (let i = 1; i < last5.length; i++) {
+      intervals.push((last5[i].start - last5[i - 1].start) / 1000); // 초
+    }
+    const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    const max = Math.max(...intervals);
+    const min = Math.min(...intervals);
+    const variance = max - min;
+    const avgMin = avg / 60;
+
+    // 일정한 간격(분산 < 90초) + 5분 이내 → 진진통 의심
+    if (variance < 90 && avgMin <= 6 && avgMin >= 3) {
+      return {
+        label: '병원 방문 권장 패턴',
+        message:
+          `간격이 일정해지고 평균 ${avgMin.toFixed(1)}분이에요. ` +
+          '담당 의사나 분만실에 연락하셔서 정확한 판단을 받으세요.',
+        tone: 'danger' as const,
+      };
+    }
+    // 점점 짧아지는 추세 — 마지막 간격이 평균의 70% 이하
+    if (intervals[intervals.length - 1] < avg * 0.7 && avgMin < 10) {
+      return {
+        label: '간격이 짧아지고 있어요',
+        message: `평균 ${avgMin.toFixed(1)}분 → 마지막 ${(intervals[intervals.length - 1] / 60).toFixed(1)}분. ` +
+          '점점 가까워지고 있으니 다음 몇 회 더 지켜보세요.',
+        tone: 'watch' as const,
+      };
+    }
+    // 그 외 — 불규칙하거나 10분 이상
+    return {
+      label: '아직은 불규칙해요',
+      message: `간격이 ${Math.round(min / 60)}~${Math.round(max / 60)}분으로 들쭉날쭉해요. ` +
+        '쉬면서 좀 더 지켜보세요 (가진통 가능성).',
+      tone: 'info' as const,
+    };
+  }, [contractions]);
+
   if (!selectedChild?.isPregnant) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -152,8 +210,16 @@ export default function LaborMonitorScreen() {
         {tab === 'kick' ? (
           <>
             <Text style={styles.hint}>
-              태동이 느껴질 때마다 아래 버튼을 탭하세요{'\n'}보통 1시간에 10회 이상이면 건강한 신호예요
+              태동이 느껴질 때마다 아래 버튼을 탭하세요{'\n'}30분에 3~5회 이상이면 건강한 신호예요
             </Text>
+
+            <TouchableOpacity
+              style={styles.guideLink}
+              onPress={() => setKickGuideOpen(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.guideLinkText}>❓ 태동이 평소보다 안 느껴지나요?</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity style={styles.bigBtn} onPress={handleKickTap} activeOpacity={0.8}>
               <Text style={styles.bigCount}>{kickCount}</Text>
@@ -211,13 +277,42 @@ export default function LaborMonitorScreen() {
               onPress={handleContractionToggle}
               activeOpacity={0.8}
             >
-              <Text style={[styles.bigCount, currentContraction !== null && { color: '#fff' }]}>
-                {currentContraction !== null ? contractionTick : contractions.length}
-              </Text>
-              <Text style={[styles.bigLabel, currentContraction !== null && { color: '#fff' }]}>
-                {currentContraction !== null ? '초 진행 중' : '회'}
-              </Text>
+              {currentContraction !== null ? (
+                <>
+                  <Text style={[styles.bigLabel, { color: '#fff', marginBottom: 4 }]}>참는 중...</Text>
+                  <Text style={[styles.bigCount, { color: '#fff' }]}>{contractionTick}</Text>
+                  <Text style={[styles.bigLabel, { color: '#fff' }]}>초 진행 중</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.bigCount}>{contractions.length}</Text>
+                  <Text style={styles.bigLabel}>
+                    {contractions.length === 0 ? '진통 시작' : '회'}
+                  </Text>
+                </>
+              )}
             </TouchableOpacity>
+
+            {/* 분석 가이드 카드 (3회 이상 기록되면 활성화) */}
+            <View
+              style={[
+                styles.guideCard,
+                contractionGuide.tone === 'danger' && styles.guideCardDanger,
+                contractionGuide.tone === 'watch' && styles.guideCardWatch,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.guideCardLabel,
+                  contractionGuide.tone === 'danger' && { color: '#C62828' },
+                  contractionGuide.tone === 'watch' && { color: '#E65100' },
+                ]}
+              >
+                {contractionGuide.tone === 'danger' ? '🚨 ' : contractionGuide.tone === 'watch' ? '⏱️ ' : 'ℹ️ '}
+                {contractionGuide.label}
+              </Text>
+              <Text style={styles.guideCardText}>{contractionGuide.message}</Text>
+            </View>
 
             {contractions.length > 0 && (
               <View style={styles.historyCard}>
@@ -243,7 +338,79 @@ export default function LaborMonitorScreen() {
             </TouchableOpacity>
           </>
         )}
+
+        {/* 의료 면책 고지 — 모든 측정 화면 하단에 항상 노출 */}
+        <Text style={styles.disclaimer}>
+          ⚕️ 본 서비스는 의학적 진단을 제공하지 않으며, 분석 결과는 참고용입니다.
+          위급 상황 시에는 반드시 의료기관의 도움을 받아주세요.
+        </Text>
       </ScrollView>
+
+      {/* 태동 안심 가이드 모달 */}
+      <Modal
+        visible={kickGuideOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setKickGuideOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalTitle}>태동이 평소보다 안 느껴지나요?</Text>
+              <Text style={styles.modalSub}>아래 방법을 시도해 보세요 👇</Text>
+
+              <View style={styles.tipRow}>
+                <Text style={styles.tipEmoji}>🧃</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.tipTitle}>당분 섭취</Text>
+                  <Text style={styles.tipText}>초코우유나 주스를 마시고 아기를 깨워 보세요.</Text>
+                </View>
+              </View>
+              <View style={styles.tipRow}>
+                <Text style={styles.tipEmoji}>🛌</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.tipTitle}>왼쪽으로 눕기</Text>
+                  <Text style={styles.tipText}>왼쪽으로 누우면 아기에게 혈액 공급이 더 잘 돼요.</Text>
+                </View>
+              </View>
+              <View style={styles.tipRow}>
+                <Text style={styles.tipEmoji}>🧘</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.tipTitle}>집중 태동</Text>
+                  <Text style={styles.tipText}>조용한 곳에서 배에 손을 얹고 30분만 지켜보세요.</Text>
+                </View>
+              </View>
+              <View style={styles.tipRow}>
+                <Text style={styles.tipEmoji}>💤</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.tipTitle}>잠자는 중일 수 있음</Text>
+                  <Text style={styles.tipText}>아기는 20~40분 단위로 자고 일어날 수 있어요.</Text>
+                </View>
+              </View>
+
+              {/* 위험 박스 */}
+              <View style={styles.dangerBox}>
+                <Text style={styles.dangerTitle}>🚨 이럴 땐 병원에 문의하세요!</Text>
+                <Text style={styles.dangerItem}>• 1시간 동안 태동이 3회 미만일 때</Text>
+                <Text style={styles.dangerItem}>• 평소보다 횟수가 절반 이하로 줄었을 때</Text>
+                <Text style={styles.dangerItem}>• 반나절(12시간) 동안 태동이 10번 미만일 때</Text>
+              </View>
+
+              <Text style={styles.disclaimerSm}>
+                본 안내는 일반 정보이며 의료적 진단을 대신할 수 없습니다.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setKickGuideOpen(false)}
+              >
+                <Text style={styles.modalCloseBtnText}>닫기</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       <AdSlot />
     </View>
   );
@@ -367,4 +534,124 @@ const styles = StyleSheet.create({
   historyTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.sm },
   historyRow: { paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   historyText: { fontSize: FONT_SIZE.sm, color: COLORS.text },
+
+  /* 태동 안심 가이드 링크 */
+  guideLink: {
+    alignSelf: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
+    backgroundColor: '#FFF3EC',
+    marginBottom: SPACING.md,
+  },
+  guideLinkText: { fontSize: FONT_SIZE.sm, color: '#FF8C5A', fontWeight: '600' },
+
+  /* 진통 분석 가이드 카드 */
+  guideCard: {
+    backgroundColor: '#F0F4F8',
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    marginTop: SPACING.md,
+    borderLeftWidth: 4,
+    borderLeftColor: '#90A4AE',
+  },
+  guideCardWatch: {
+    backgroundColor: '#FFF3E0',
+    borderLeftColor: '#E65100',
+  },
+  guideCardDanger: {
+    backgroundColor: '#FFEBEE',
+    borderLeftColor: '#C62828',
+  },
+  guideCardLabel: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: '700',
+    color: '#37474F',
+    marginBottom: 4,
+  },
+  guideCardText: {
+    fontSize: FONT_SIZE.sm,
+    color: '#37474F',
+    lineHeight: 20,
+  },
+
+  /* 의료 면책 고지 */
+  disclaimer: {
+    fontSize: 11,
+    color: '#9E9E9E',
+    textAlign: 'center',
+    lineHeight: 16,
+    marginTop: SPACING.lg,
+    paddingHorizontal: SPACING.sm,
+  },
+  disclaimerSm: {
+    fontSize: 11,
+    color: '#9E9E9E',
+    textAlign: 'center',
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+
+  /* 안심 가이드 모달 */
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.md,
+  },
+  modalCard: {
+    backgroundColor: '#fff',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    maxHeight: '85%',
+  },
+  modalTitle: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  modalSub: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.md,
+  },
+  tipRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#EEE',
+  },
+  tipEmoji: { fontSize: 28 },
+  tipTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text, marginBottom: 2 },
+  tipText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, lineHeight: 20 },
+  dangerBox: {
+    backgroundColor: '#FFEBEE',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
+  },
+  dangerTitle: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: '800',
+    color: '#C62828',
+    marginBottom: SPACING.sm,
+  },
+  dangerItem: {
+    fontSize: FONT_SIZE.sm,
+    color: '#B71C1C',
+    lineHeight: 22,
+  },
+  modalCloseBtn: {
+    backgroundColor: '#FF8C5A',
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    marginTop: SPACING.md,
+  },
+  modalCloseBtnText: { fontSize: FONT_SIZE.md, color: '#fff', fontWeight: '700' },
 });

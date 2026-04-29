@@ -590,6 +590,10 @@ export const pregnancyApi = {
     api.post('/pregnancy/kick-session', data),
   getKickSessions: (childId: string) =>
     api.get('/pregnancy/kick-session', { params: { childId } }),
+  deleteKickSession: (id: string) =>
+    api.delete(`/pregnancy/kick-session/${id}`),
+  deleteMomHealth: (id: string) =>
+    api.delete(`/pregnancy/mom-health/${id}`),
   weeklySummary: (childId: string) =>
     api.post('/pregnancy/weekly-summary', { childId }),
   safetyCheck: (query: string, week?: number) =>

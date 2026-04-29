@@ -10,9 +10,20 @@
  */
 
 import { Platform } from 'react-native';
-import * as IAP from 'expo-iap';
 import { paymentApi } from './api';
 import type { PortOneCheckoutParams } from '../components/payment/PortOneWebView';
+
+// expo-iap 네이티브 모듈은 새 EAS 빌드에서만 사용 가능.
+// 기존 OTA로 배포된 앱이 이 파일을 import 해도 크래시 안 나도록 동적 로딩.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function loadIAP(): any | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('expo-iap');
+  } catch {
+    return null;
+  }
+}
 
 // ─── 상품 정의 (백엔드 PRODUCTS와 동일) ───
 export type ProductId = 'premium_monthly' | 'premium_yearly';
@@ -139,22 +150,31 @@ export function buildPortOneCheckoutParams(opts: BuildCheckoutOptions): PortOneC
 
 // ─── IAP — Google/Apple 인앱결제 ───
 
+/** IAP 사용 가능 여부 (현재 빌드에 expo-iap 네이티브 모듈이 있는지) */
+export function isIAPSupported(): boolean {
+  return loadIAP() !== null;
+}
+
 /** IAP 연결 초기화 (앱 진입 시 1회 호출 권장) */
 export async function initIAP(): Promise<void> {
+  const IAP = loadIAP();
+  if (!IAP) return;
   await IAP.initConnection();
 }
 
 /** IAP 연결 종료 */
 export async function endIAP(): Promise<void> {
+  const IAP = loadIAP();
+  if (!IAP) return;
   await IAP.endConnection();
 }
 
 /** 구독 상품 조회 (가격 표시용) */
 export async function fetchIAPSubscriptions(): Promise<unknown[]> {
+  const IAP = loadIAP();
+  if (!IAP) return [];
   const skus = ['premium_monthly', 'premium_yearly'];
-  // expo-iap v4 API
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (await (IAP as any).getSubscriptions(skus)) as unknown[];
+  return (await IAP.getSubscriptions(skus)) as unknown[];
 }
 
 /**
@@ -166,15 +186,17 @@ export async function purchaseIAP(productId: ProductId): Promise<{
   message?: string;
   expiresAt?: string;
 }> {
+  const IAP = loadIAP();
+  if (!IAP) {
+    return { ok: false, message: '인앱결제 기능은 다음 업데이트에서 사용 가능합니다.' };
+  }
   // 1) 결제 요청 (네이티브 결제창 띄움)
   let purchase: unknown;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const api = IAP as any;
-    if (typeof api.requestSubscription === 'function') {
-      purchase = await api.requestSubscription({ sku: productId });
-    } else if (typeof api.requestPurchase === 'function') {
-      purchase = await api.requestPurchase({ sku: productId });
+    if (typeof IAP.requestSubscription === 'function') {
+      purchase = await IAP.requestSubscription({ sku: productId });
+    } else if (typeof IAP.requestPurchase === 'function') {
+      purchase = await IAP.requestPurchase({ sku: productId });
     } else {
       return { ok: false, message: 'IAP 모듈이 초기화되지 않았습니다.' };
     }
@@ -208,8 +230,7 @@ export async function purchaseIAP(productId: ProductId): Promise<{
 
     // 4) 트랜잭션 finalize
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (IAP as any).finishTransaction({ purchase, isConsumable: false });
+      await IAP.finishTransaction({ purchase, isConsumable: false });
     } catch {
       // 무시 (서버는 이미 검증 완료)
     }
