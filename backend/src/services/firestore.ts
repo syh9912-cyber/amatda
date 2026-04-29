@@ -58,6 +58,33 @@ export const collections = {
   // 성장 앨범 — 생성된 PDF 앨범 목록
   // 문서: { userId, childId, title, dateFrom, dateTo, pdfUrl, status, pageCount, photoCount, createdAt, completedAt }
   growthAlbums: db.collection('growthAlbums'),
+
+  // 결제 영수증 — 모든 유료 결제 1건당 문서 1개 (회계/환불용 영구 보관)
+  // 문서: {
+  //   userId, platform: 'portone'|'google'|'apple',
+  //   productId: 'premium_monthly'|'premium_yearly',
+  //   amount: number, currency: 'KRW',
+  //   status: 'PAID'|'CANCELLED'|'REFUNDED'|'FAILED'|'PENDING',
+  //   paymentKey?: string,         // PortOne paymentId
+  //   purchaseToken?: string,      // Google purchase token
+  //   originalTransactionId?: string,  // Apple
+  //   billingKey?: string,         // PortOne 자동결제용 (정기결제)
+  //   paymentMethod?: string,      // 'card'|'kakaopay'|'naverpay'|...
+  //   paidAt: ISO, expiresAt: ISO,
+  //   webhookVerifiedAt?: ISO,
+  //   raw?: object,                // PortOne/Google/Apple raw 응답 (디버깅용)
+  //   createdAt, updatedAt
+  // }
+  payments: db.collection('payments'),
+
+  // 빌링키(자동결제 토큰) — 사용자당 1개
+  // 문서 ID: userId
+  // {
+  //   userId, billingKey, channelKey, customerId,
+  //   issuedAt: ISO, status: 'ACTIVE'|'REVOKED',
+  //   cardName?: string, cardNumberMasked?: string,
+  // }
+  billingKeys: db.collection('billingKeys'),
 };
 
 /** 문서 ID 생성 */

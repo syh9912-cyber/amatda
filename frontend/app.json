@@ -14,7 +14,7 @@
       "backgroundColor": "#FFF5EC"
     },
     "ios": {
-      "bundleIdentifier": "com.amatda.app",
+      "bundleIdentifier": "com.sylabs.amatda",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "아이 사진을 촬영하여 프로필과 성장앨범에 사용합니다",
@@ -27,7 +27,7 @@
       "buildNumber": "2"
     },
     "android": {
-      "package": "com.amatda.app",
+      "package": "com.sylabs.amatda",
       "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

@@ -42,4 +42,38 @@ export const env = {
   KAKAO_CLIENT_SECRET: process.env.KAKAO_CLIENT_SECRET || '',
   NAVER_CLIENT_ID: process.env.NAVER_CLIENT_ID || '',
   NAVER_CLIENT_SECRET: process.env.NAVER_CLIENT_SECRET || '',
+
+  // ─── 결제 (Phase 1, 키 발급 후 채움) ───
+  // PortOne v2 (https://portone.io)
+  PORTONE_STORE_ID: process.env.PORTONE_STORE_ID || '',           // store-XXXX
+  PORTONE_API_SECRET: process.env.PORTONE_API_SECRET || '',       // 서버용 시크릿
+  PORTONE_WEBHOOK_SECRET: process.env.PORTONE_WEBHOOK_SECRET || '',
+  // 채널 키 (PortOne 콘솔에서 PG/간편결제별 발급)
+  PORTONE_CHANNEL_KEY_TOSS: process.env.PORTONE_CHANNEL_KEY_TOSS || '',
+  PORTONE_CHANNEL_KEY_KAKAO: process.env.PORTONE_CHANNEL_KEY_KAKAO || '',
+  PORTONE_CHANNEL_KEY_NAVER: process.env.PORTONE_CHANNEL_KEY_NAVER || '',
+
+  // Google Play Billing — 영수증 검증용 서비스 계정 JSON (전체 JSON 한 줄로 인코딩)
+  GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON || '',
+  GOOGLE_PLAY_PACKAGE_NAME: process.env.GOOGLE_PLAY_PACKAGE_NAME || 'com.sylabs.amatda',
+
+  // Apple App Store — App Store Server API
+  APPLE_BUNDLE_ID: process.env.APPLE_BUNDLE_ID || 'com.sylabs.amatda',
+  APPLE_ISSUER_ID: process.env.APPLE_ISSUER_ID || '',
+  APPLE_KEY_ID: process.env.APPLE_KEY_ID || '',
+  APPLE_PRIVATE_KEY: process.env.APPLE_PRIVATE_KEY || '',           // .p8 파일 내용
+  APPLE_SHARED_SECRET: process.env.APPLE_SHARED_SECRET || '',       // (구) shared secret 방식 사용 시
 };
+
+/** 결제 시스템 사용 가능 여부 (실제 키가 등록되어 있는지) */
+export function isPortOneAvailable(): boolean {
+  return !!process.env.PORTONE_STORE_ID && !!process.env.PORTONE_API_SECRET;
+}
+
+export function isGooglePlayBillingAvailable(): boolean {
+  return !!process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON;
+}
+
+export function isAppleIAPAvailable(): boolean {
+  return !!process.env.APPLE_ISSUER_ID && !!process.env.APPLE_KEY_ID && !!process.env.APPLE_PRIVATE_KEY;
+}
