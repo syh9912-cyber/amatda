@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
-import { calculateSaju } from '../services/saju.calculator';
+import { calculateSajuWithAI } from '../services/saju.interpreter';
 import { calculateAge } from '../services/age.calculator';
 import { generateChildReport, monthsToAgeGroup } from '../services/child.report';
 import { success, error } from '../utils/response';
@@ -85,7 +85,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     const { name, gender, birthDate, birthTime } = req.body;
     if (!name || !gender || !birthDate || !birthTime) { error(res, '이름, 성별, 생년월일, 출생시각을 모두 입력해주세요'); return; }
 
-    const innateData = calculateSaju(new Date(birthDate), birthTime);
+    const innateData = await calculateSajuWithAI(new Date(birthDate), birthTime, name, gender);
     const id = genId();
     const heightVal = typeof req.body.height === 'number' ? req.body.height : null;
     const weightVal = typeof req.body.weight === 'number' ? req.body.weight : null;
@@ -187,8 +187,20 @@ router.post('/:id/birth', authMiddleware, async (req: Request, res: Response) =>
       return;
     }
 
-    // 사주/기질 분석
-    const innateData = calculateSaju(new Date(birthDate), birthTime);
+    // 사주/기질 분석 (Gemini 해석 포함, 실패 시 룰 fallback)
+    const bornChildDoc = await collections.children.doc(req.params.id as string).get();
+    const childName =
+      (name as string | undefined) ?? (bornChildDoc.data()?.name as string | undefined) ?? '';
+    const childGender =
+      gender && gender !== 'U'
+        ? (gender as string)
+        : ((bornChildDoc.data()?.gender as string | undefined) ?? 'U');
+    const innateData = await calculateSajuWithAI(
+      new Date(birthDate),
+      birthTime,
+      childName,
+      childGender,
+    );
 
     const updates: Record<string, unknown> = {
       isPregnant: false,
@@ -238,7 +250,12 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
       const bt = birthTime || access.data.birthTime;
       updates.birthDate = bd;
       updates.birthTime = bt;
-      updates.innateData = JSON.stringify(calculateSaju(new Date(bd), bt));
+      const updName = (name as string | undefined) ?? (access.data.name as string | undefined) ?? '';
+      const updGender =
+        (gender as string | undefined) ?? (access.data.gender as string | undefined) ?? 'U';
+      updates.innateData = JSON.stringify(
+        await calculateSajuWithAI(new Date(bd), bt, updName, updGender),
+      );
     }
     // 건강 정보 필드
     if (req.body.height !== undefined) updates.height = typeof req.body.height === 'number' ? req.body.height : null;

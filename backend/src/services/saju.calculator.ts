@@ -259,9 +259,28 @@ export function calculateSaju(
   birthDate: Date,
   birthTime: string
 ): SajuResult {
-  const solarYear = birthDate.getFullYear();
-  const solarMonth = birthDate.getMonth() + 1;
-  const solarDay = birthDate.getDate();
+  // ─── 1) 진태양시 보정 ───
+  // KST(UTC+9) 기준 동경 135도 — 한국 평균 경도(약 127.5도) 대비 약 -32분 늦음
+  // (정통 명리에서는 진태양시 기준으로 일주/시주 계산이 표준)
+  const [hStr, mStr] = birthTime.split(':');
+  const rawH = parseInt(hStr, 10) || 0;
+  const rawM = parseInt(mStr, 10) || 0;
+  const birthMoment = new Date(birthDate);
+  birthMoment.setHours(rawH, rawM, 0, 0);
+  const trueSolar = new Date(birthMoment.getTime() - 32 * 60 * 1000);
+
+  // ─── 2) 자시(子時) 분단 처리 ───
+  // 23:00 이후 출생 시 일주(日柱)는 다음날 기준 (조자시 학파 — 현대 한국 명리 표준)
+  // 시주는 자시 그대로 사용
+  const dayBase = new Date(trueSolar);
+  if (trueSolar.getHours() >= 23) {
+    dayBase.setDate(dayBase.getDate() + 1);
+  }
+
+  // ─── 3) 년/월주는 진태양시 기준 ───
+  const solarYear = trueSolar.getFullYear();
+  const solarMonth = trueSolar.getMonth() + 1;
+  const solarDay = trueSolar.getDate();
 
   // 양력 → 음력 변환
   const calendar = new KoreanLunarCalendar();
@@ -277,12 +296,15 @@ export function calculateSaju(
   const sajuMonth = getPreciseSajuMonth(solarYear, solarMonth, solarDay);
   const monthPillar = getMonthPillarByTerm(sajuMonth, yearStemIdx);
 
-  // 일주
-  const dayPillar = getDayPillar(solarYear, solarMonth, solarDay);
+  // 일주 — 자시 보정된 dayBase 기준
+  const dayPillar = getDayPillar(
+    dayBase.getFullYear(),
+    dayBase.getMonth() + 1,
+    dayBase.getDate(),
+  );
 
-  // 시주
-  const [hourStr] = birthTime.split(':');
-  const hour = parseInt(hourStr, 10) || 0;
+  // 시주 — 진태양시의 시간 기준
+  const hour = trueSolar.getHours();
   const hourPillar = getHourPillar(hour, dayPillar.stemIdx);
 
   // 기질 분석 배열
