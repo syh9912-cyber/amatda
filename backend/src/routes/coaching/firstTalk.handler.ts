@@ -6,32 +6,18 @@ import { isGeminiAvailable, callGeminiJSON } from '../../services/coaching/gemin
 
 // ─── 연령/기질별 대표 고민 ───
 
-const TOP_CONCERNS: Record<string, Record<string, { question: string; options: string[] }>> = {
-  infant: {
-    '활동형': { question: '밤에 자주 깨는 편인가요?', options: ['네, 자주 깨요', '가끔 깨요', '잘 자는 편이에요'] },
-    '탐구형': { question: '낯선 곳에 가면 예민해지나요?', options: ['네, 많이 예민해요', '조금 그래요', '괜찮은 편이에요'] },
-    '조화형': { question: '엄마와 떨어지면 많이 우나요?', options: ['네, 많이 울어요', '조금 보채요', '괜찮아요'] },
-    '분석형': { question: '새로운 음식을 잘 먹나요?', options: ['거부하는 편이에요', '조금 까다로워요', '잘 먹어요'] },
-    '감성형': { question: '쉽게 보채거나 칭얼거리나요?', options: ['네, 자주 그래요', '가끔 그래요', '잘 안 그래요'] },
-  },
-  toddler: {
-    '활동형': { question: '가만히 앉아있기 힘들어하나요?', options: ['네, 많이 그래요', '조금 그래요', '괜찮아요'] },
-    '탐구형': { question: '"왜?" 질문이 끝이 없나요?', options: ['네, 끊임없어요', '가끔 그래요', '아직 별로 안 해요'] },
-    '조화형': { question: '어린이집 갈 때 많이 우나요?', options: ['네, 매일 울어요', '가끔 울어요', '잘 다녀요'] },
-    '분석형': { question: '편식이 심한 편인가요?', options: ['네, 심해요', '조금 까다로워요', '잘 먹어요'] },
-    '감성형': { question: '사소한 일에도 잘 우나요?', options: ['네, 자주 울어요', '가끔 그래요', '잘 안 울어요'] },
-  },
-  preschool: {
-    '활동형': { question: '친구와 놀 때 거칠게 노나요?', options: ['네, 좀 거칠어요', '가끔 그래요', '순한 편이에요'] },
-    '탐구형': { question: '한 가지에 오래 집중하기 어려워하나요?', options: ['네, 많이 그래요', '조금 그래요', '집중 잘해요'] },
-    '조화형': { question: '혼자 놀기보다 항상 같이 놀자고 하나요?', options: ['네, 항상 그래요', '가끔 그래요', '혼자도 잘 놀아요'] },
-    '분석형': { question: '실수하면 크게 속상해하나요?', options: ['네, 많이 그래요', '조금 그래요', '괜찮아해요'] },
-    '감성형': { question: '기분이 자주 바뀌나요?', options: ['네, 자주 바뀌어요', '가끔 그래요', '안정적이에요'] },
-  },
+// 연령별 자주 묻는 고민 예시 (quickOptions로 노출 — 누르면 그 자체가 자연스러운 질문이 됨)
+const STARTER_TOPICS: Record<string, string[]> = {
+  infant: ['밤에 자주 깨요', '수유량이 걱정돼요', '낯가림이 심해요'],
+  toddler: ['떼를 많이 써요', '편식이 심해요', '잠 들기 힘들어해요'],
+  preschool: ['친구랑 잘 못 어울려요', '집중력이 짧아요', '감정 기복이 커요'],
 };
 
+// 모든 답변 가능하도록 열린 초대 문구
+const OPEN_INVITATION = '지금 육아에서 어려운 점이나 궁금한 게 있으면 무엇이든 편하게 물어봐 주세요!';
+
 function getDefaultGreeting(
-  name: string, _ageInfo: string, temperament: string, concern: { question: string; options: string[] }
+  name: string, _ageInfo: string, temperament: string, topics: string[]
 ): { intro: string; traitSummary: string; suggestedQuestion: string; quickOptions: string[] } {
   const traitDesc: Record<string, string> = {
     '활동형': `${name}이는 에너지가 넘치는 활동형이에요! 충분히 움직일 수 있는 시간을 주면 더 잘 먹고 잘 자요.`,
@@ -44,8 +30,8 @@ function getDefaultGreeting(
   return {
     intro: `${name}이를 만나서 반가워요!`,
     traitSummary: traitDesc[temperament] ?? `${name}이는 고유한 기질을 가진 아이에요. 아이 성향을 이해하면 육아가 수월해져요.`,
-    suggestedQuestion: concern.question,
-    quickOptions: concern.options,
+    suggestedQuestion: OPEN_INVITATION,
+    quickOptions: topics,
   };
 }
 
@@ -71,9 +57,8 @@ export function registerFirstTalkHandler(router: Router): void {
       if (child.ageMonths >= 25 && child.ageMonths <= 72) ageGroup = 'toddler';
       else if (child.ageMonths > 72) ageGroup = 'preschool';
 
-      // 기질별 대표 고민
-      const concerns = TOP_CONCERNS[ageGroup] ?? TOP_CONCERNS.toddler;
-      const concern = concerns[child.temperament] ?? concerns['조화형'];
+      // 연령별 시작 고민 토픽
+      const topics = STARTER_TOPICS[ageGroup] ?? STARTER_TOPICS.toddler;
 
       // AI에게 첫 인사 생성 요청
       let greeting: {
@@ -85,7 +70,7 @@ export function registerFirstTalkHandler(router: Router): void {
 
       if (isGeminiAvailable()) {
         try {
-          const prompt = `너는 영유아 육아 코치야. 아이가 방금 등록되었어. 부모에게 처음 인사하면서 아이 기질을 짧게 설명하고, 쉬운 첫 질문을 해줘.
+          const prompt = `너는 영유아 육아 코치야. 아이가 방금 등록되었어. 부모에게 처음 인사하면서 아이 기질을 짧게 설명하고, 부모가 자유롭게 무엇이든 물어볼 수 있도록 따뜻하게 초대해줘.
 
 아이 정보:
 - 이름: ${child.name}
@@ -95,8 +80,8 @@ export function registerFirstTalkHandler(router: Router): void {
 - 기질 특성: ${child.temperamentDetail}
 
 규칙:
-1. suggestedQuestion은 "~나요?" "~인가요?" 형태의 간단한 예/아니오 질문 (15자 내외)
-2. quickOptions는 3개, 부모가 바로 터치할 수 있는 짧은 답변 (8자 이내)
+1. suggestedQuestion은 부모가 무엇이든 자유롭게 질문할 수 있도록 초대하는 열린 문구 (예: "지금 육아에서 어려운 점이나 궁금한 게 있으면 무엇이든 편하게 물어봐 주세요!")
+2. quickOptions는 3개, 부모가 바로 터치하면 그 자체가 자연스러운 질문/고민이 되는 짧은 표현 (예: "밤에 자주 깨요", "편식이 심해요", "떼를 많이 써요"). 예/아니오 답변 형태 금지.
 3. traitSummary는 2문장 이내, 쉬운 말로
 4. '사주/오행/천간/지지' 용어 절대 금지
 
@@ -104,8 +89,8 @@ export function registerFirstTalkHandler(router: Router): void {
 {
   "intro": "반갑다는 인사 1문장",
   "traitSummary": "기질 설명 2문장 이내",
-  "suggestedQuestion": "쉬운 예/아니오 질문 1문장",
-  "quickOptions": ["짧은답변1", "짧은답변2", "짧은답변3"]
+  "suggestedQuestion": "자유 질문 초대 문구 1문장",
+  "quickOptions": ["고민예시1", "고민예시2", "고민예시3"]
 }`;
 
           greeting = await callGeminiJSON<typeof greeting>(prompt, {
@@ -113,10 +98,10 @@ export function registerFirstTalkHandler(router: Router): void {
             maxTokens: 300,
           });
         } catch {
-          greeting = getDefaultGreeting(child.name, child.ageInfo, child.temperament, concern);
+          greeting = getDefaultGreeting(child.name, child.ageInfo, child.temperament, topics);
         }
       } else {
-        greeting = getDefaultGreeting(child.name, child.ageInfo, child.temperament, concern);
+        greeting = getDefaultGreeting(child.name, child.ageInfo, child.temperament, topics);
       }
 
       // NOTE: 첫 질문을 conversationSummaries에 저장하던 로직은 제거.

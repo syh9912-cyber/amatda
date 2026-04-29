@@ -2007,6 +2007,14 @@ function BabyTrackerInner() {
               {'\u{203A}'}
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={summaryStyles.voiceBtn}
+            onPress={() => router.push('/(main)/voice-settings' as never)}
+            activeOpacity={0.85}
+          >
+            <Text style={summaryStyles.voiceBtnText}>🎙 음성설정</Text>
+          </TouchableOpacity>
         </View>
 
         {/* ---- Breast-feeding timer banner (only when active) ---- */}
@@ -2057,11 +2065,12 @@ function BabyTrackerInner() {
             : 0;
 
           // 마지막 수유 후 경과 시간 (분)
-          // feeding 타입의 가장 최근 record에서 계산 (오늘만)
+          // allRecordsSorted는 내림차순(최신 [0])이므로 [0] = 가장 최근 수유
+          // (이전 버그: [length-1] = 가장 오래된 수유를 잡아서 새로 먹여도 텀이 안 줄어듦)
           const todayFeeds = allRecordsSorted.filter((r) => r.type === 'feeding');
           let minutesSinceLastFeed = -1;
           if (todayFeeds.length > 0 && isToday(currentDate)) {
-            const last = todayFeeds[todayFeeds.length - 1];
+            const last = todayFeeds[0];
             const [h, m] = last.time.split(':').map((v) => parseInt(v, 10));
             const lastDt = new Date();
             lastDt.setHours(h, m, 0, 0);
@@ -2138,13 +2147,6 @@ function BabyTrackerInner() {
                   </Text>
                 </TouchableOpacity>
               ))}
-              <TouchableOpacity
-                style={summaryStyles.voiceBtn}
-                onPress={() => router.push('/(main)/voice-settings' as never)}
-                activeOpacity={0.85}
-              >
-                <Text style={summaryStyles.voiceBtnText}>🎙 음성</Text>
-              </TouchableOpacity>
             </View>
             {weekStats.length > 0 && (
               <WeeklySummaryTable stats={weekStats} periodDays={chartPeriod} />
@@ -3025,7 +3027,12 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete }: TimelineEntr
   if (record.duration != null && record.duration > 0) infoParts.push(formatMinutes(record.duration));
   const info = infoParts.join(' · ');
   // note는 별도 두 번째 줄로 (사용자 요청: '메모 적은 거 다 보이게')
-  const noteText = record.note && !hideNote ? record.note : '';
+  // 분유량(amount)도 두 번째 줄에 메모처럼 합쳐 표시 (좁은 화면에서 첫 줄이 잘리는 문제 해결)
+  const userNote = record.note && !hideNote ? record.note : '';
+  const detailLineParts: string[] = [];
+  if (info !== '') detailLineParts.push(info);
+  if (userNote !== '') detailLineParts.push(userNote);
+  const detailLine = detailLineParts.join(' · ');
 
   return (
     <TouchableOpacity
@@ -3041,19 +3048,15 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete }: TimelineEntr
         <Text style={[timelineStyles.labelCell, { color: typeDark }]} numberOfLines={1}>
           {label}
         </Text>
-        {info !== '' && (
-          <Text style={timelineStyles.infoCell} numberOfLines={1}>
-            {info}
-          </Text>
-        )}
+        <View style={{ flex: 1 }} />
         {relative !== '' && (
           <Text style={timelineStyles.relCell} numberOfLines={1}>{relative}</Text>
         )}
       </View>
-      {/* 두 번째 줄: 메모 (있을 때만) */}
-      {noteText !== '' && (
+      {/* 두 번째 줄: 분유량 / 시간 / 메모 (있을 때만) */}
+      {detailLine !== '' && (
         <Text style={timelineStyles.noteRow} numberOfLines={3}>
-          {noteText}
+          {detailLine}
         </Text>
       )}
     </TouchableOpacity>
