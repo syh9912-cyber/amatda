@@ -3,7 +3,12 @@ import { env } from '../../config/env';
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
 
 interface GeminiResponse {
-  candidates?: { content?: { parts?: { text?: string }[] } }[];
+  candidates?: {
+    content?: { parts?: { text?: string }[] };
+    finishReason?: string;
+    safetyRatings?: unknown;
+  }[];
+  promptFeedback?: { blockReason?: string; safetyRatings?: unknown };
   error?: { message?: string };
 }
 
@@ -12,6 +17,8 @@ export interface GeminiCallOptions {
   temperature?: number;
   maxTokens?: number;
   mediaData?: { mimeType: string; base64: string };
+  /** 'application/json' 지정 시 Gemini가 JSON 출력 보장 */
+  responseMimeType?: string;
 }
 
 /** Gemini API 사용 가능 여부 */
@@ -29,16 +36,24 @@ export async function callGeminiText(
     throw new Error('MOCK_MODE');
   }
 
-  const { systemPrompt, temperature = 0.4, maxTokens = 500, mediaData } = options;
+  const { systemPrompt, temperature = 0.4, maxTokens = 500, mediaData, responseMimeType } = options;
 
   const parts: Array<Record<string, unknown>> = [{ text: prompt }];
   if (mediaData) {
     parts.push({ inline_data: { mime_type: mediaData.mimeType, data: mediaData.base64 } });
   }
 
+  const generationConfig: Record<string, unknown> = {
+    temperature,
+    maxOutputTokens: maxTokens,
+  };
+  if (responseMimeType) {
+    generationConfig.responseMimeType = responseMimeType;
+  }
+
   const body: Record<string, unknown> = {
     contents: [{ parts }],
-    generationConfig: { temperature, maxOutputTokens: maxTokens },
+    generationConfig,
   };
   if (systemPrompt) {
     body.systemInstruction = { parts: [{ text: systemPrompt }] };
@@ -66,8 +81,12 @@ export async function callGeminiText(
 
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
   if (!text) {
-    console.error('Gemini empty response, full:', JSON.stringify(data).substring(0, 300));
-    throw new Error('Gemini empty response');
+    const finishReason = data.candidates?.[0]?.finishReason ?? 'UNKNOWN';
+    const blockReason = data.promptFeedback?.blockReason ?? 'NONE';
+    console.error(
+      `Gemini empty response. finishReason=${finishReason} blockReason=${blockReason} full=${JSON.stringify(data).substring(0, 500)}`,
+    );
+    throw new Error(`Gemini empty response (finishReason=${finishReason}, blockReason=${blockReason})`);
   }
 
   return text;

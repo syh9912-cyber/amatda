@@ -134,9 +134,9 @@ function buildPrompt(input: InterpreterInput, strict = false): string {
 ${elementsLine}
 
 [출력 규칙 — 매우 중요]
-1. 분석은 명리학 전문 지식으로 깊이 있게 (일간 강약, 통근, 투간, 용신/희신을 고려)
-2. 출력 시에는 사주/오행/천간/지지/일간/재성/관성/인성/식상/비겁/대운 등 명리 용어 절대 금지
-3. "에너지", "기질", "성향" 등 일상 표현으로 번역
+1. 머릿속에서는 명리학 전문 지식(일간 강약, 통근, 투간, 용신/희신)을 활용해 깊이 있게 분석해라
+2. 그러나 출력 텍스트에는 사주/오행/천간/지지/일간/재성/관성/인성/식상/비겁/용신/희신/대운 등 명리 용어 절대 금지
+3. "에너지", "기질", "성향" 등 일상 표현으로 번역해서 작성
 4. dominantType은 반드시 다음 5개 중 하나: 탐구형 / 활동형 / 조화형 / 분석형 / 감성형
 5. personality / strengths / cautions / parentingTips 각 5개 항목, 각 1~2문장
 6. bestActivities / bestFoods 각 3~5개
@@ -145,62 +145,62 @@ ${strictNote}
 
 ${FEW_SHOT_EXAMPLES}
 
-[출력 JSON 형식 — 반드시 아래 두 필드 모두 포함]
+[출력 — 반드시 JSON 객체 하나만, 다른 텍스트 금지]
 {
-  "internal_saju_analysis": "여기에 사주 용어를 자유롭게 사용해 일간 강약, 격국, 용신을 분석. (이 필드는 내부용으로 사용자에게 노출되지 않음)",
-  "parent_facing": {
-    "dominantType": "탐구형|활동형|조화형|분석형|감성형 중 하나",
-    "label": "${input.childName}의 기질을 한 문장으로 요약 (사주 용어 금지)",
-    "detail": {
-      "personality": ["...", "...", "...", "...", "..."],
-      "strengths": ["...", "...", "...", "...", "..."],
-      "cautions": ["...", "...", "...", "...", "..."],
-      "parentingTips": ["...", "...", "...", "...", "..."],
-      "learningStyle": "...",
-      "socialStyle": "...",
-      "stressResponse": "...",
-      "bestActivities": ["...", "...", "...", "..."],
-      "bestFoods": ["...", "...", "...", "..."]
-    }
-  }
+  "dominantType": "탐구형|활동형|조화형|분석형|감성형 중 정확히 하나",
+  "label": "기질 한 줄 요약 (사주 용어 금지, 일상 표현으로)",
+  "personality": ["문장1", "문장2", "문장3", "문장4", "문장5"],
+  "strengths": ["문장1", "문장2", "문장3", "문장4", "문장5"],
+  "cautions": ["문장1", "문장2", "문장3", "문장4", "문장5"],
+  "parentingTips": ["문장1", "문장2", "문장3", "문장4", "문장5"],
+  "learningStyle": "한 문장",
+  "socialStyle": "한 문장",
+  "stressResponse": "한 문장",
+  "bestActivities": ["활동1", "활동2", "활동3", "활동4"],
+  "bestFoods": ["음식1", "음식2", "음식3", "음식4"]
 }`;
 }
 
 interface RawResponse {
-  internal_saju_analysis?: string;
-  parent_facing?: {
-    dominantType?: string;
-    label?: string;
-    detail?: Partial<InterpretedDetail>;
-  };
+  dominantType?: string;
+  label?: string;
+  personality?: unknown;
+  strengths?: unknown;
+  cautions?: unknown;
+  parentingTips?: unknown;
+  learningStyle?: unknown;
+  socialStyle?: unknown;
+  stressResponse?: unknown;
+  bestActivities?: unknown;
+  bestFoods?: unknown;
 }
 
-function validate(parent: RawResponse['parent_facing']): InterpretedTrait | null {
-  if (!parent) return null;
-  if (!parent.dominantType || !VALID_TYPES.includes(parent.dominantType as typeof VALID_TYPES[number])) {
+function asStringArray(v: unknown): string[] {
+  return Array.isArray(v) ? v.filter((s) => typeof s === 'string') : [];
+}
+
+function validate(raw: RawResponse | null | undefined): InterpretedTrait | null {
+  if (!raw) return null;
+  if (!raw.dominantType || !VALID_TYPES.includes(raw.dominantType as typeof VALID_TYPES[number])) {
     return null;
   }
-  if (!parent.detail) return null;
-  const d = parent.detail;
-  if (!Array.isArray(d.personality) || d.personality.length < 3) return null;
-  if (!Array.isArray(d.strengths) || d.strengths.length < 3) return null;
+  const personality = asStringArray(raw.personality);
+  const strengths = asStringArray(raw.strengths);
+  if (personality.length < 3 || strengths.length < 3) return null;
+
   return {
-    dominantType: parent.dominantType,
-    label: parent.label ?? '',
+    dominantType: raw.dominantType,
+    label: typeof raw.label === 'string' ? raw.label : '',
     detail: {
-      personality: d.personality.filter((s) => typeof s === 'string'),
-      strengths: d.strengths.filter((s) => typeof s === 'string'),
-      cautions: Array.isArray(d.cautions) ? d.cautions.filter((s) => typeof s === 'string') : [],
-      parentingTips: Array.isArray(d.parentingTips)
-        ? d.parentingTips.filter((s) => typeof s === 'string')
-        : [],
-      learningStyle: typeof d.learningStyle === 'string' ? d.learningStyle : '',
-      socialStyle: typeof d.socialStyle === 'string' ? d.socialStyle : '',
-      stressResponse: typeof d.stressResponse === 'string' ? d.stressResponse : '',
-      bestActivities: Array.isArray(d.bestActivities)
-        ? d.bestActivities.filter((s) => typeof s === 'string')
-        : [],
-      bestFoods: Array.isArray(d.bestFoods) ? d.bestFoods.filter((s) => typeof s === 'string') : [],
+      personality,
+      strengths,
+      cautions: asStringArray(raw.cautions),
+      parentingTips: asStringArray(raw.parentingTips),
+      learningStyle: typeof raw.learningStyle === 'string' ? raw.learningStyle : '',
+      socialStyle: typeof raw.socialStyle === 'string' ? raw.socialStyle : '',
+      stressResponse: typeof raw.stressResponse === 'string' ? raw.stressResponse : '',
+      bestActivities: asStringArray(raw.bestActivities),
+      bestFoods: asStringArray(raw.bestFoods),
     },
   };
 }
@@ -223,14 +223,32 @@ export async function interpretSajuWithAI(
     return null;
   }
 
-  // 1차 시도
+  // 1차 시도 — flat JSON 출력 + Gemini JSON 모드
   let trait: InterpretedTrait | null = null;
+  let raw1: RawResponse | null = null;
   try {
-    const raw = await callGeminiJSON<RawResponse>(buildPrompt(input, false), {
+    raw1 = await callGeminiJSON<RawResponse>(buildPrompt(input, false), {
       temperature: 0.4,
-      maxTokens: 2500,
+      maxTokens: 4000,
+      responseMimeType: 'application/json',
     });
-    trait = validate(raw.parent_facing);
+    trait = validate(raw1);
+    if (!trait) {
+      logger.warn(
+        'saju.interpreter',
+        '1차 응답 validate 실패. keys=' +
+          Object.keys(raw1 ?? {}).join(',') +
+          ' / dominantType=' +
+          String(raw1?.dominantType) +
+          ' / personality.len=' +
+          String(Array.isArray(raw1?.personality) ? (raw1?.personality as unknown[]).length : 'N/A'),
+      );
+    } else {
+      logger.info(
+        'saju.interpreter',
+        '1차 호출 성공: ' + trait.dominantType + ' / personality=' + trait.detail.personality.length,
+      );
+    }
   } catch (e) {
     logger.warn('saju.interpreter', '1차 호출 실패: ' + String(e));
   }
@@ -241,9 +259,10 @@ export async function interpretSajuWithAI(
     try {
       const raw2 = await callGeminiJSON<RawResponse>(buildPrompt(input, true), {
         temperature: 0.3,
-        maxTokens: 2500,
+        maxTokens: 4000,
+        responseMimeType: 'application/json',
       });
-      const retry = validate(raw2.parent_facing);
+      const retry = validate(raw2);
       if (retry && !containsForbiddenTerms(retry)) {
         trait = retry;
       } else {
