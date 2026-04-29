@@ -9,8 +9,20 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Stack } from 'expo-router';
-import { premiumApi } from '../../services/api';
+import { premiumApi, paymentApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import {
+  PortOneWebView,
+  type PortOneCheckoutParams,
+  type PortOneResult,
+} from '../../components/payment/PortOneWebView';
+import {
+  buildPortOneCheckoutParams,
+  getPaymentMethodOptions,
+  purchaseIAP,
+  type PaymentMethod,
+  type ProductId,
+} from '../../services/payment';
 
 interface PremiumPlan {
   id: string;
@@ -90,15 +102,8 @@ const FEATURE_GUIDES: FeatureGuide[] = [
   { emoji: '🚫', title: '광고 제거', desc: '앱 내 모든 광고가 사라져서 쾌적하게 이용할 수 있어요.' },
 ];
 
-const PAYMENT_METHODS = [
-  { id: 'card', label: '카드' },
-  { id: 'kakao', label: '카카오' },
-  { id: 'naver', label: '네이버' },
-  { id: 'toss', label: '토스' },
-  { id: 'bank', label: '무통장' },
-] as const;
-
-type PaymentMethodId = (typeof PAYMENT_METHODS)[number]['id'];
+// 결제 수단은 services/payment.ts의 getPaymentMethodOptions()로 동적 결정
+// (PortOne 환경변수 등록 여부에 따라 자동 표시/숨김)
 
 export default function SubscriptionScreen() {
   const [plans, setPlans] = useState<PremiumPlan[]>(FALLBACK_PLANS);
@@ -106,7 +111,11 @@ export default function SubscriptionScreen() {
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>('yearly');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>('card');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('iap');
+  // PortOne WebView 상태
+  const [portOneParams, setPortOneParams] = useState<PortOneCheckoutParams | null>(null);
+  const [portOneVisible, setPortOneVisible] = useState(false);
+  const paymentMethodOptions = getPaymentMethodOptions();
 
   const loadData = useCallback(async () => {
     try {
@@ -131,17 +140,84 @@ export default function SubscriptionScreen() {
     loadData();
   }, [loadData]);
 
+  // selectedPlan('yearly'/'monthly') → ProductId('premium_yearly'/...)
+  function planToProductId(plan: string): ProductId {
+    return plan === 'yearly' ? 'premium_yearly' : 'premium_monthly';
+  }
+
   const handleSubscribe = async () => {
     if (!selectedPlan || !paymentMethod) return;
+    const productId = planToProductId(selectedPlan);
+
+    // 1) IAP 분기 — Google Play / Apple
+    if (paymentMethod === 'iap') {
+      setSubscribing(true);
+      try {
+        const res = await purchaseIAP(productId);
+        if (res.ok) {
+          Alert.alert('구독 완료', res.message ?? '프리미엄 기능을 이용해보세요!');
+          loadData();
+        } else {
+          Alert.alert('결제 실패', res.message ?? '다시 시도해주세요.');
+        }
+      } finally {
+        setSubscribing(false);
+      }
+      return;
+    }
+
+    // 2) PortOne 외부결제 — 빌링키(자동결제) 발급
+    const checkoutParams = buildPortOneCheckoutParams({
+      productId,
+      method: paymentMethod,
+      asBillingKey: true,
+    });
+    if (!checkoutParams) {
+      Alert.alert(
+        '결제 준비 중',
+        '선택한 결제 수단은 아직 활성화되지 않았습니다. 다른 수단을 선택해 주세요.',
+      );
+      return;
+    }
+    setPortOneParams(checkoutParams);
+    setPortOneVisible(true);
+  };
+
+  const handlePortOneResult = async (result: PortOneResult) => {
+    setPortOneVisible(false);
+    if (result.status !== 'OK') {
+      if (result.status === 'FAILED') {
+        Alert.alert('결제 실패', result.message ?? '결제가 취소되었습니다.');
+      } else {
+        Alert.alert('결제 오류', result.message ?? '결제 중 오류가 발생했습니다.');
+      }
+      setPortOneParams(null);
+      return;
+    }
+
     setSubscribing(true);
     try {
-      await premiumApi.subscribe(selectedPlan, paymentMethod);
+      const productId = planToProductId(selectedPlan);
+      if (result.type === 'billingKey' && result.billingKey) {
+        // 빌링키 등록 + 첫 결제
+        await paymentApi.registerBillingKey(result.billingKey, productId);
+      } else if (result.type === 'payment' && result.paymentId) {
+        // 1회성 결제 검증
+        await paymentApi.verifyPortOne(result.paymentId, productId);
+      } else {
+        Alert.alert('오류', '결제 정보를 확인할 수 없습니다.');
+        return;
+      }
       Alert.alert('구독 완료', '프리미엄 기능을 이용해보세요!');
       loadData();
     } catch {
-      Alert.alert('오류', '구독 처리에 실패했습니다. 다시 시도해주세요.');
+      Alert.alert(
+        '검증 실패',
+        '결제는 진행되었지만 서버 검증이 실패했습니다. 잠시 후 다시 확인해주세요.',
+      );
     } finally {
       setSubscribing(false);
+      setPortOneParams(null);
     }
   };
 
@@ -266,20 +342,22 @@ export default function SubscriptionScreen() {
           {/* Payment method */}
           <Text style={styles.sectionTitle}>결제 수단</Text>
           <View style={styles.paymentRow}>
-            {PAYMENT_METHODS.map((pm) => {
-              const isActive = paymentMethod === pm.id;
-              return (
-                <TouchableOpacity
-                  key={pm.id}
-                  style={[styles.paymentBtn, isActive && styles.paymentBtnActive]}
-                  onPress={() => setPaymentMethod(pm.id)}
-                >
-                  <Text style={[styles.paymentBtnText, isActive && styles.paymentBtnTextActive]}>
-                    {pm.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+            {paymentMethodOptions
+              .filter((pm) => pm.available)
+              .map((pm) => {
+                const isActive = paymentMethod === pm.id;
+                return (
+                  <TouchableOpacity
+                    key={pm.id}
+                    style={[styles.paymentBtn, isActive && styles.paymentBtnActive]}
+                    onPress={() => setPaymentMethod(pm.id)}
+                  >
+                    <Text style={[styles.paymentBtnText, isActive && styles.paymentBtnTextActive]}>
+                      {pm.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
           </View>
 
           {/* Subscribe button */}
@@ -334,6 +412,17 @@ export default function SubscriptionScreen() {
           </Text>
         </View>
       )}
+
+      {/* PortOne 결제 WebView (외부결제 진행 중에만 표시) */}
+      <PortOneWebView
+        visible={portOneVisible}
+        params={portOneParams}
+        onResult={handlePortOneResult}
+        onClose={() => {
+          setPortOneVisible(false);
+          setPortOneParams(null);
+        }}
+      />
     </ScrollView>
   );
 }

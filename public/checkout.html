@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>결제 진행 중 — 아맞다</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Noto Sans KR", sans-serif; margin: 0; padding: 0; background: #fafafa; color: #1a1a1a; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .wrap { max-width: 400px; padding: 24px; text-align: center; }
+  .spinner { width: 48px; height: 48px; border: 4px solid #FFE4D2; border-top-color: #FF8C5A; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  h1 { font-size: 18px; color: #FF8C5A; margin: 0 0 6px; }
+  p { font-size: 14px; color: #666; margin: 0; }
+  .err { color: #d32f2f; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="spinner" id="spinner"></div>
+  <h1 id="title">결제창을 여는 중...</h1>
+  <p id="msg">잠시만 기다려 주세요</p>
+</div>
+
+<!-- PortOne v2 Browser SDK -->
+<script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+
+<script>
+/**
+ * 아맞다 PortOne 결제 hosted checkout
+ *
+ * 호출 방식 (URL query):
+ *   ?storeId=...&channelKey=...&paymentId=...&orderName=...&amount=3900&payMethod=CARD&customerName=...&type=payment|billingKey
+ *
+ * 결과 통보:
+ *   1. RN WebView: window.ReactNativeWebView.postMessage({status, paymentId, ...})
+ *   2. 일반 브라우저: deep link 'amatda://payment/result?...'
+ *   3. Fallback: window.opener.postMessage(...)
+ */
+
+(function () {
+  const params = Object.fromEntries(new URLSearchParams(location.search).entries());
+  const titleEl = document.getElementById('title');
+  const msgEl = document.getElementById('msg');
+  const spinnerEl = document.getElementById('spinner');
+
+  function notify(payload) {
+    const json = JSON.stringify(payload);
+    // 1) React Native WebView
+    if (window.ReactNativeWebView && typeof window.ReactNativeWebView.postMessage === 'function') {
+      window.ReactNativeWebView.postMessage(json);
+    }
+    // 2) Deep link
+    try {
+      const qs = new URLSearchParams(payload).toString();
+      window.location.href = 'amatda://payment/result?' + qs;
+    } catch (e) {}
+    // 3) opener
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage(payload, '*');
+        setTimeout(() => window.close(), 500);
+      }
+    } catch (e) {}
+  }
+
+  function showError(msg) {
+    spinnerEl.style.display = 'none';
+    titleEl.textContent = '결제 오류';
+    titleEl.classList.add('err');
+    msgEl.textContent = msg;
+  }
+
+  function showSuccess() {
+    spinnerEl.style.display = 'none';
+    titleEl.textContent = '결제 완료';
+    msgEl.textContent = '앱으로 돌아가는 중...';
+  }
+
+  // 필수 파라미터 검증
+  const required = ['storeId', 'channelKey', 'paymentId', 'orderName', 'amount'];
+  const missing = required.filter((k) => !params[k]);
+  if (missing.length > 0) {
+    showError('파라미터 누락: ' + missing.join(', '));
+    notify({ status: 'ERROR', code: 'MISSING_PARAMS', message: missing.join(',') });
+    return;
+  }
+
+  if (typeof PortOne === 'undefined') {
+    showError('PortOne SDK 로드 실패');
+    notify({ status: 'ERROR', code: 'SDK_NOT_LOADED' });
+    return;
+  }
+
+  // 결제 vs 빌링키 발급 분기
+  const isBillingKey = params.type === 'billingKey';
+  titleEl.textContent = isBillingKey ? '카드 등록 중...' : '결제 진행 중...';
+
+  if (isBillingKey) {
+    // 빌링키 발급 (자동결제용 카드 등록)
+    PortOne.requestIssueBillingKey({
+      storeId: params.storeId,
+      channelKey: params.channelKey,
+      billingKeyMethod: 'CARD',
+      issueId: params.paymentId,
+      issueName: params.orderName,
+      customer: {
+        customerId: params.customerId || undefined,
+        fullName: params.customerName || undefined,
+      },
+    }).then((resp) => {
+      if (resp.code !== undefined) {
+        showError(resp.message || '빌링키 발급 실패');
+        notify({ status: 'FAILED', code: resp.code, message: resp.message });
+        return;
+      }
+      showSuccess();
+      notify({
+        status: 'OK',
+        type: 'billingKey',
+        billingKey: resp.billingKey,
+        issueId: resp.issueId,
+      });
+    }).catch((e) => {
+      showError('빌링키 발급 중 오류: ' + e.message);
+      notify({ status: 'ERROR', message: String(e) });
+    });
+  } else {
+    // 1회성 결제
+    PortOne.requestPayment({
+      storeId: params.storeId,
+      channelKey: params.channelKey,
+      paymentId: params.paymentId,
+      orderName: params.orderName,
+      totalAmount: parseInt(params.amount, 10),
+      currency: 'KRW',
+      payMethod: params.payMethod || 'CARD',
+      customer: {
+        customerId: params.customerId || undefined,
+        fullName: params.customerName || undefined,
+      },
+    }).then((resp) => {
+      if (resp.code !== undefined) {
+        showError(resp.message || '결제 실패');
+        notify({ status: 'FAILED', code: resp.code, message: resp.message });
+        return;
+      }
+      showSuccess();
+      notify({
+        status: 'OK',
+        type: 'payment',
+        paymentId: resp.paymentId,
+        txId: resp.txId,
+      });
+    }).catch((e) => {
+      showError('결제 중 오류: ' + e.message);
+      notify({ status: 'ERROR', message: String(e) });
+    });
+  }
+})();
+</script>
+</body>
+</html>

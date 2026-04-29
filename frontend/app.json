@@ -89,6 +89,7 @@
           ]
         }
       ],
+      "expo-iap",
       [
         "expo-speech-recognition",
         {

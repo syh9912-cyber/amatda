@@ -361,8 +361,38 @@ export const premiumApi = {
     api.get('/subscriptions/premium/status'),
   startTrial: () =>
     api.post('/subscriptions/premium/start-trial', {}),
+  /** @deprecated Use paymentApi.* instead. 보존: 기존 화면 fallback 용. */
   subscribe: (planId: string, paymentMethod: string) =>
     api.post('/subscriptions/premium/subscribe', { planId, paymentMethod }),
+};
+
+// ─── 결제 (Phase 1 백엔드) ───
+// IAP(Google/Apple) + PortOne 외부결제 모두 처리
+export const paymentApi = {
+  /** PortOne 1회성 결제 검증 — 사용자가 결제창에서 결제 완료 후 paymentId 전달 */
+  verifyPortOne: (paymentId: string, productId: string) =>
+    api.post('/payment/portone/verify', { paymentId, productId }),
+
+  /** PortOne 빌링키 등록 + 첫 결제 (자동결제 시작) */
+  registerBillingKey: (billingKey: string, productId: string, channelKey?: string) =>
+    api.post('/payment/portone/billing-key', { billingKey, productId, channelKey }),
+
+  /** Google/Apple 인앱결제 영수증 검증 */
+  verifyIAP: (params: {
+    platform: 'google' | 'apple';
+    productId: string;
+    purchaseToken?: string;          // Google
+    originalTransactionId?: string;  // Apple
+  }) => api.post('/payment/iap/verify', params),
+
+  /** 자동결제 해지 (PortOne 빌링키 삭제) */
+  cancel: () => api.post('/payment/cancel', {}),
+
+  /** 내 결제 내역 */
+  history: () => api.get('/payment/history'),
+
+  /** 결제 시스템 가용 상태 (디버그용) */
+  status: () => api.get('/payment/status'),
 };
 
 // Recommendations (DB캐시 + AI 폴백)
