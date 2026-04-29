@@ -124,10 +124,10 @@ const SOS_IMAGES: Record<string, ImageSourcePropType> = {
 };
 
 const EMERGENCY_GUIDES = [
-  { key: 'heimlich', emoji: '🫁', label: '하임리히', color: '#D32F2F', bg: '#FFEBEE' },
-  { key: 'cpr', emoji: '❤️', label: 'CPR', color: '#C62828', bg: '#FCE4EC' },
-  { key: 'burn_fall', emoji: '🔥', label: '화상/낙상', color: '#E65100', bg: '#FFF3E0' },
-  { key: 'foreign', emoji: '⚠️', label: '이물질', color: '#F57F17', bg: '#FFFDE7' },
+  { key: 'heimlich', emoji: '🫁', label: '하임리히', sublabel: '기도막힘 대처법', color: '#D32F2F', bg: '#FFEBEE' },
+  { key: 'cpr', emoji: '❤️', label: 'CPR', sublabel: '심폐소생술', color: '#C62828', bg: '#FCE4EC' },
+  { key: 'burn_fall', emoji: '🔥', label: '화상/낙상', sublabel: '', color: '#E65100', bg: '#FFF3E0' },
+  { key: 'foreign', emoji: '⚠️', label: '이물질', sublabel: '', color: '#F57F17', bg: '#FFFDE7' },
 ] as const;
 
 interface GuideData {
@@ -319,6 +319,8 @@ export default function SOSScreen() {
         {/* ============================================ */}
         {/* Section 2: Emergency Guides                  */}
         {/* ============================================ */}
+        {/* 임신부 모드에서는 영유아용 응급 대처(하임리히/CPR/화상/이물질) 숨김 */}
+        {!isPregnant && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>응급 대처법</Text>
           <Text style={styles.sectionDesc}>
@@ -334,10 +336,14 @@ export default function SOSScreen() {
               >
                 <Text style={styles.guideBtnEmoji}>{g.emoji}</Text>
                 <Text style={[styles.guideBtnLabel, { color: g.color }]}>{g.label}</Text>
+                {g.sublabel ? (
+                  <Text style={[styles.guideBtnSublabel, { color: g.color }]}>{g.sublabel}</Text>
+                ) : null}
               </TouchableOpacity>
             ))}
           </View>
         </View>
+        )}
 
         {/* Emergency Guide Modal */}
         <EmergencyGuideModal
@@ -813,6 +819,12 @@ const styles = StyleSheet.create({
   guideBtnLabel: {
     fontSize: 15,
     fontWeight: '700',
+  },
+  guideBtnSublabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
+    opacity: 0.85,
   },
 
   /* Symptom grid */
