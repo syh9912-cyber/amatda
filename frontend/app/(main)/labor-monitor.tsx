@@ -155,10 +155,10 @@ export default function LaborMonitorScreen() {
     // 일정한 간격(분산 < 90초) + 5분 이내 → 진진통 의심
     if (variance < 90 && avgMin <= 6 && avgMin >= 3) {
       return {
-        label: '병원 방문 권장 패턴',
+        label: '병원 방문 권장 수치',
         message:
-          `간격이 일정해지고 평균 ${avgMin.toFixed(1)}분이에요. ` +
-          '담당 의사나 분만실에 연락하셔서 정확한 판단을 받으세요.',
+          `현재 기록된 간격은 평균 ${avgMin.toFixed(1)}분으로 병원 방문 권장 수치에 해당합니다. ` +
+          '담당 의사나 분만실에 문의하여 정확한 진단을 받으시길 권장합니다.',
         tone: 'danger' as const,
       };
     }
@@ -166,16 +166,18 @@ export default function LaborMonitorScreen() {
     if (intervals[intervals.length - 1] < avg * 0.7 && avgMin < 10) {
       return {
         label: '간격이 짧아지고 있어요',
-        message: `평균 ${avgMin.toFixed(1)}분 → 마지막 ${(intervals[intervals.length - 1] / 60).toFixed(1)}분. ` +
-          '점점 가까워지고 있으니 다음 몇 회 더 지켜보세요.',
+        message:
+          `평균 ${avgMin.toFixed(1)}분에서 마지막 ${(intervals[intervals.length - 1] / 60).toFixed(1)}분으로 짧아지는 추세입니다. ` +
+          '점점 가까워지고 있을 가능성이 있으니 다음 몇 회 더 지켜봐 주세요.',
         tone: 'watch' as const,
       };
     }
     // 그 외 — 불규칙하거나 10분 이상
     return {
-      label: '아직은 불규칙해요',
-      message: `간격이 ${Math.round(min / 60)}~${Math.round(max / 60)}분으로 들쭉날쭉해요. ` +
-        '쉬면서 좀 더 지켜보세요 (가진통 가능성).',
+      label: '가진통일 가능성이 높습니다',
+      message:
+        `간격이 ${Math.round(min / 60)}~${Math.round(max / 60)}분으로 불규칙합니다. ` +
+        '현재 패턴은 가진통일 가능성이 높습니다. 편안한 자세로 휴식을 취하며 경과를 조금 더 지켜보세요.',
       tone: 'info' as const,
     };
   }, [contractions]);
@@ -209,16 +211,23 @@ export default function LaborMonitorScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {tab === 'kick' ? (
           <>
-            <Text style={styles.hint}>
-              태동이 느껴질 때마다 아래 버튼을 탭하세요{'\n'}30분에 3~5회 이상이면 건강한 신호예요
-            </Text>
+            <View style={styles.hintBox}>
+              <Text style={styles.hintBoxText}>
+                태동이 느껴질 때마다 <Text style={styles.hintBoxStrong}>아래 버튼을 탭</Text>하세요{'\n'}
+                <Text style={styles.hintBoxStrong}>30분에 3~5회 이상</Text>이면 건강한 신호예요
+              </Text>
+            </View>
 
             <TouchableOpacity
-              style={styles.guideLink}
+              style={styles.guideLinkLarge}
               onPress={() => setKickGuideOpen(true)}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
+              hitSlop={20}
             >
-              <Text style={styles.guideLinkText}>❓ 태동이 평소보다 안 느껴지나요?</Text>
+              <Text style={styles.guideLinkLargeIcon}>❓</Text>
+              <Text style={styles.guideLinkLargeText}>
+                태동이 평소보다{'\n'}안 느껴지나요?
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.bigBtn} onPress={handleKickTap} activeOpacity={0.8}>
@@ -268,9 +277,18 @@ export default function LaborMonitorScreen() {
                 </Text>
               </View>
             )}
-            <Text style={styles.hint}>
-              진통 시작 시 버튼 탭 → 끝날 때 다시 탭{'\n'}5분 간격이 1시간 이상 지속되면 병원에 연락하세요
-            </Text>
+            <View style={styles.hintBox}>
+              <Text style={styles.hintBoxText}>
+                <Text style={styles.hintBoxStrong}>진통 시작</Text> 시{' '}
+                <Text style={styles.hintBoxAccent}>버튼 탭</Text>{' '}
+                <Text style={styles.hintBoxArrow}>➔</Text>{' '}
+                <Text style={styles.hintBoxStrong}>진통 종료</Text> 시{' '}
+                <Text style={styles.hintBoxAccent}>다시 탭</Text>
+              </Text>
+              <Text style={styles.hintBoxAlert}>
+                🚨 5분 간격이 1시간 이상 지속되면 병원에 연락하세요
+              </Text>
+            </View>
 
             <TouchableOpacity
               style={[styles.bigBtn, currentContraction !== null && { backgroundColor: '#E91E63' }]}
@@ -340,10 +358,13 @@ export default function LaborMonitorScreen() {
         )}
 
         {/* 의료 면책 고지 — 모든 측정 화면 하단에 항상 노출 */}
-        <Text style={styles.disclaimer}>
-          ⚕️ 본 서비스는 의학적 진단을 제공하지 않으며, 분석 결과는 참고용입니다.
-          위급 상황 시에는 반드시 의료기관의 도움을 받아주세요.
-        </Text>
+        <View style={styles.disclaimerBox}>
+          <Text style={styles.disclaimerStrong}>⚕️ 의료 면책 고지</Text>
+          <Text style={styles.disclaimer}>
+            본 안내는 입력된 데이터를 바탕으로 한 일반 정보이며 의료적 진단을 대신할 수 없습니다.
+            위급 상황 시에는 반드시 의료기관의 도움을 받으세요.
+          </Text>
+        </View>
       </ScrollView>
 
       {/* 태동 안심 가이드 모달 */}
@@ -535,24 +556,69 @@ const styles = StyleSheet.create({
   historyRow: { paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: COLORS.border },
   historyText: { fontSize: FONT_SIZE.sm, color: COLORS.text },
 
-  /* 태동 안심 가이드 링크 */
-  guideLink: {
-    alignSelf: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 8,
-    borderRadius: RADIUS.md,
-    backgroundColor: '#FFF3EC',
+  /* 상단 안내 박스 (태동/진통 공통) */
+  hintBox: {
+    backgroundColor: '#F5F2FF',
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
     marginBottom: SPACING.md,
+    marginTop: SPACING.sm,
+    borderWidth: 1,
+    borderColor: '#E1D9FA',
   },
-  guideLinkText: { fontSize: FONT_SIZE.sm, color: '#FF8C5A', fontWeight: '600' },
+  hintBoxText: {
+    fontSize: 17,
+    color: '#3C3450',
+    textAlign: 'center',
+    lineHeight: 28,
+  },
+  hintBoxStrong: { fontWeight: '800', color: '#1A1A1A' },
+  hintBoxAccent: { fontWeight: '800', color: '#7C5CFF' },
+  hintBoxArrow: { fontSize: 18, color: '#7C5CFF' },
+  hintBoxAlert: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#C62828',
+    textAlign: 'center',
+    marginTop: SPACING.sm,
+    lineHeight: 22,
+  },
 
-  /* 진통 분석 가이드 카드 */
+  /* 태동 안심 가이드 — 거대 버튼 (당황한 산모를 위한 시인성) */
+  guideLinkLarge: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+    paddingVertical: 22,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    backgroundColor: '#FF8C2A',
+    marginBottom: SPACING.lg,
+    marginHorizontal: 0,
+    borderWidth: 2,
+    borderColor: '#E26A00',
+    ...SHADOWS.soft,
+  },
+  guideLinkLargeIcon: {
+    fontSize: 36,
+    color: '#FFFFFF',
+  },
+  guideLinkLargeText: {
+    fontSize: 19,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    lineHeight: 26,
+  },
+
+  /* 진통 분석 가이드 카드 — 폰트/패딩 1.4배 강화 */
   guideCard: {
     backgroundColor: '#F0F4F8',
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
     marginTop: SPACING.md,
-    borderLeftWidth: 4,
+    borderLeftWidth: 6,
     borderLeftColor: '#90A4AE',
   },
   guideCardWatch: {
@@ -564,25 +630,38 @@ const styles = StyleSheet.create({
     borderLeftColor: '#C62828',
   },
   guideCardLabel: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#37474F',
-    marginBottom: 4,
+    marginBottom: 8,
+    lineHeight: 30,
   },
   guideCardText: {
-    fontSize: FONT_SIZE.sm,
+    fontSize: 16,
     color: '#37474F',
-    lineHeight: 20,
+    lineHeight: 26,
+    fontWeight: '500',
   },
 
-  /* 의료 면책 고지 */
+  /* 의료 면책 고지 박스 (분석 박스 바로 아래) */
+  disclaimerBox: {
+    backgroundColor: '#FAFAFA',
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    marginTop: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
+  },
+  disclaimerStrong: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#616161',
+    marginBottom: 4,
+  },
   disclaimer: {
-    fontSize: 11,
-    color: '#9E9E9E',
-    textAlign: 'center',
-    lineHeight: 16,
-    marginTop: SPACING.lg,
-    paddingHorizontal: SPACING.sm,
+    fontSize: 12,
+    color: '#757575',
+    lineHeight: 18,
   },
   disclaimerSm: {
     fontSize: 11,
