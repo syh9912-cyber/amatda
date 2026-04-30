@@ -71,6 +71,8 @@ const COLOR = {
 
 interface QuickAction {
   icon: ReturnType<typeof require>;
+  /** emoji가 지정되면 icon 대신 큰 이모지로 렌더 (직관성 우선) */
+  emoji?: string;
   label: string;
   route: string;
   bg: string;
@@ -80,8 +82,8 @@ interface QuickAction {
 const ALL_ACTIONS: QuickAction[] = [
   // 임산부 전용 (pregnant 필터링 시 먼저 노출)
   { icon: require('../../assets/quick-learning.png'), label: '임신 기록', route: '/(main)/pregnancy', bg: '#FCE4EC', ages: ['pregnant'] },
-  { icon: require('../../assets/quick-report.png'), label: '주수별 발달', route: '/(main)/growth-stats', bg: '#F3E5F5', ages: ['pregnant'] },
-  { icon: require('../../assets/quick-report.png'), label: '임당 관리', route: '/(main)/gdm', bg: '#FCE4EC', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-report.png'), emoji: '👶', label: '주수별 발달', route: '/(main)/growth-stats', bg: '#F3E5F5', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-report.png'), emoji: '🩸', label: '임당 관리', route: '/(main)/gdm', bg: '#FCE4EC', ages: ['pregnant'] },
   { icon: require('../../assets/quick-sleep.png'), label: '태동 체크', route: '/(main)/labor-monitor?tab=kick', bg: '#FCE4EC', ages: ['pregnant'] },
   { icon: require('../../assets/quick-parent-level.png'), label: '맘 체크인', route: '/(main)/mom-wellness', bg: '#F8BBD0', ages: ['pregnant'] },
   { icon: require('../../assets/quick-lullaby.png'), label: '태교음악', route: '/(main)/lullaby?mode=prenatal', bg: '#EDE7F6', ages: ['pregnant'] },
@@ -89,9 +91,9 @@ const ALL_ACTIONS: QuickAction[] = [
   // 영아·유아 순서 (사용자 요청 순서): 아기시간 → 성장앨범 → 열나 → 성장통계 → 접종달력 → 자장가 → 맘스톡 → 가족육아
   { icon: require('../../assets/quick-learning.png'), label: '아기시간', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['infant', 'toddler'] },
   { icon: require('../../assets/quick-timeline.png'), label: '성장앨범', route: '/(main)/album', bg: '#E0F2F1', ages: ['infant', 'toddler', 'elementary'] },
-  { icon: require('../../assets/quick-report.png'), label: '열나', route: '/(main)/fever', bg: '#FFF0F0', ages: ['infant', 'toddler'] },
-  { icon: require('../../assets/quick-report.png'), label: '성장 통계', route: '/(main)/growth-stats', bg: COLOR.mintBg, ages: ['infant', 'toddler', 'elementary'] },
-  { icon: require('../../assets/quick-report.png'), label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['infant', 'toddler'] },
+  { icon: require('../../assets/quick-report.png'), emoji: '🌡️', label: '열나', route: '/(main)/fever', bg: '#FFF0F0', ages: ['infant', 'toddler'] },
+  { icon: require('../../assets/quick-report.png'), emoji: '🌱', label: '성장 통계', route: '/(main)/growth-stats', bg: COLOR.mintBg, ages: ['infant', 'toddler', 'elementary'] },
+  { icon: require('../../assets/quick-report.png'), emoji: '💉', label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['infant', 'toddler'] },
   { icon: require('../../assets/quick-lullaby.png'), label: '자장가', route: '/(main)/lullaby', bg: '#EDE7F6', ages: ['infant', 'toddler'] },
   { icon: require('../../assets/icon-heart.png'), label: '맘스톡', route: '/(main)/mom-group', bg: '#FCE4EC', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
   { icon: require('../../assets/quick-coparenting.png'), label: '가족육아', route: '/(main)/coparenting', bg: '#FFF3E0', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
@@ -104,7 +106,7 @@ const ALL_ACTIONS: QuickAction[] = [
 ];
 
 const VACCINE_ACTION: QuickAction = {
-  icon: require('../../assets/quick-report.png'), label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['pregnant'],
+  icon: require('../../assets/quick-report.png'), emoji: '💉', label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['pregnant'],
 };
 
 function getActionsForAge(ageGroup: AgeGroupKey, child?: Child | null): QuickAction[] {
@@ -584,12 +586,21 @@ export default function HomeScreen() {
         </>
       )}
 
-      {/* Add Child */}
+      {/* Add Child — 거대 배너 (둘째 등록 유도) */}
       <TouchableOpacity
-        style={styles.addMore}
+        style={styles.addChildBanner}
         onPress={() => router.push('/onboarding/child-info')}
+        activeOpacity={0.85}
+        hitSlop={12}
       >
-        <Text style={styles.addMoreText}>+ 자녀 추가</Text>
+        <Text style={styles.addChildBannerEmoji}>{'👶'}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.addChildBannerTitle}>내 아이 정보 추가하기</Text>
+          <Text style={styles.addChildBannerDesc}>
+            둘째 또는 다른 자녀의 맞춤 코칭을 받아보세요
+          </Text>
+        </View>
+        <Text style={styles.addChildBannerPlus}>{'+'}</Text>
       </TouchableOpacity>
 
       {/* Proactive Popup */}
@@ -1004,7 +1015,11 @@ function AllActionsGrid({ ageGroup, child }: { ageGroup: AgeGroupKey; child?: Ch
             activeOpacity={0.7}
           >
             <View style={[styles.quickCircle, { backgroundColor: action.bg }]}>
-              <Image source={action.icon} style={styles.quickIcon} resizeMode="contain" />
+              {action.emoji ? (
+                <Text style={styles.quickEmoji}>{action.emoji}</Text>
+              ) : (
+                <Image source={action.icon} style={styles.quickIcon} resizeMode="contain" />
+              )}
               {isSprout && <View style={styles.sproutBadge}><Text style={styles.sproutBadgeText}>GO</Text></View>}
             </View>
             <Text style={[styles.quickLabel, isSprout && styles.sproutLabel]}>{action.label}</Text>
@@ -1015,35 +1030,24 @@ function AllActionsGrid({ ageGroup, child }: { ageGroup: AgeGroupKey; child?: Ch
   );
 }
 
+/**
+ * 맞춤 추천 — 한 줄 배너로 간소화 (홈 공간 확보).
+ * 클릭 시 별도 카테고리 페이지로 이동.
+ */
 function RecommendationSection() {
   return (
-    <View style={styles.recoSection}>
-      <View style={styles.recoHeader}>
-        <Text style={styles.recoTitle}>{'맞춤 추천'}</Text>
+    <TouchableOpacity
+      style={styles.recoBanner}
+      onPress={() => router.push('/(main)/recommendations')}
+      activeOpacity={0.85}
+    >
+      <Text style={styles.recoBannerEmoji}>{'💡'}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.recoBannerTitle}>나를 위한 맞춤 추천 보기</Text>
+        <Text style={styles.recoBannerDesc}>음식 · 놀이 · 학원 · 책 등 카테고리별</Text>
       </View>
-      {RECO_CATEGORIES.map((cat) => (
-        <TouchableOpacity
-          key={cat.category}
-          style={styles.recoCard}
-          activeOpacity={0.7}
-          onPress={() =>
-            router.push({
-              pathname: '/(main)/recommendation-list',
-              params: { category: cat.category },
-            })
-          }
-        >
-          <View style={[styles.recoEmojiWrap, { backgroundColor: cat.bg }]}>
-            <Image source={cat.icon} style={styles.recoIcon} resizeMode="contain" />
-          </View>
-          <View style={styles.recoTextWrap}>
-            <Text style={styles.recoCardTitle}>{cat.label}</Text>
-            <Text style={styles.recoCardDesc}>{cat.desc}</Text>
-          </View>
-          <Text style={[styles.recoChevron, { color: cat.color }]}>{'>'}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
+      <Text style={styles.recoBannerArrow}>{'›'}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -1500,6 +1504,11 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 10,
   },
+  quickEmoji: {
+    fontSize: 32,
+    lineHeight: 38,
+    textAlign: 'center',
+  },
   quickLabel: {
     fontSize: 12,
     fontWeight: '600',
@@ -1540,6 +1549,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLOR.text,
   },
+
+  /* 간소화된 맞춤 추천 배너 */
+  recoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#F7F4FF',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: '#E1D9FA',
+  },
+  recoBannerEmoji: { fontSize: 26 },
+  recoBannerTitle: { fontSize: 15, fontWeight: '700', color: '#3C3450' },
+  recoBannerDesc: { fontSize: 12, color: '#6B5E8A', marginTop: 2 },
+  recoBannerArrow: { fontSize: 22, color: '#7C5CFF', fontWeight: '700' },
   recoMore: {
     fontSize: 13,
     fontWeight: '600',
@@ -1711,6 +1738,44 @@ const styles = StyleSheet.create({
     color: COLOR.textLight,
     fontSize: 15,
     fontWeight: '500',
+  },
+
+  /* === 자녀 추가 거대 배너 (둘째 등록 유도) === */
+  addChildBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#FF8C5A',
+    paddingVertical: 22,
+    paddingHorizontal: 20,
+    borderRadius: 18,
+    marginTop: 12,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#E26A00',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  addChildBannerEmoji: { fontSize: 40 },
+  addChildBannerTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    lineHeight: 24,
+  },
+  addChildBannerDesc: {
+    fontSize: 13,
+    color: '#FFE4D2',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  addChildBannerPlus: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#FFFFFF',
   },
 
   /* === Version === */
