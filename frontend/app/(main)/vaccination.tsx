@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
+import { VaccinationDonut } from '../../components/vaccination/VaccinationDonut';
 import { vaccinationApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
@@ -259,33 +260,18 @@ export default function VaccinationScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Summary Card ── */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>{child.name}의 접종 현황</Text>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryNum}>{completedCount}/{totalCount}</Text>
-              <Text style={styles.summaryLabel}>완료</Text>
-            </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryNum, upcomingCount > 0 && { color: COLORS.primary }]}>{upcomingCount}</Text>
-              <Text style={styles.summaryLabel}>다가오는</Text>
-            </View>
-            <View style={styles.summaryDivider} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryNum, overdueCount > 0 && { color: COLORS.error }]}>{overdueCount}</Text>
-              <Text style={styles.summaryLabel}>놓친 접종</Text>
-            </View>
-          </View>
-          {/* Progress bar */}
-          <View style={styles.progressBg}>
-            <View style={[styles.progressFill, { width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }]} />
-          </View>
-          <Text style={styles.progressText}>
-            {totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}% 완료
-          </Text>
-        </View>
+        {/* ── 도넛 차트 + 배지 (P-vaccination 리뉴얼) ── */}
+        <VaccinationDonut
+          completed={completedCount}
+          upcoming={upcomingCount}
+          overdue={overdueCount}
+          total={totalCount}
+          childName={child.name}
+          onPressDonut={() => {
+            // 미완료 우선 표시 — overdue 있으면 overdue, 없으면 upcoming
+            setFilter(overdueCount > 0 ? 'overdue' : 'upcoming');
+          }}
+        />
 
         {/* ── Filter Tabs ── */}
         <View style={styles.filterRow}>
