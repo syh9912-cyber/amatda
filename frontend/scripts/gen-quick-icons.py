@@ -1,8 +1,8 @@
 """
-Quick menu icon generator — 기존 quick-X.png 3D 일러스트와 맞춰 새 일러스트 생성
+Quick menu icon generator (3D feel) — 기존 quick-X.png 일러스트와 통일
 
-Generated icons (192x192, RGBA):
-  - quick-thermometer.png (열나)
+생성 (192x192 RGBA):
+  - quick-thermometer.png  (열나)
   - quick-sprout.png       (성장 통계)
   - quick-syringe.png      (접종달력)
   - quick-baby.png         (주수별 발달)
@@ -10,14 +10,17 @@ Generated icons (192x192, RGBA):
   - quick-water.png        (물 마시기)
   - quick-pill.png         (영양제)
 
-Style:
-  - 파스텔 베이스 컬러 + 라이트 그라디언트 하이라이트 (위쪽)
-  - 소프트 그림자 (아래쪽 옅은 회색)
-  - 둥근 형태, 단순한 도형
-  - 투명 배경 (앱에서 colored bg circle 위에 올림)
+3D 느낌 구현:
+  - 라이트 그라디언트 (위 밝게 ↑, 아래 어둡게 ↓)
+  - 좌상단 specular highlight (백색 부드러운 광택)
+  - 우하단 코어 섀도우 (살짝 어두운 톤)
+  - 베이스 외곽 라인 없음 (매끈한 형태)
+  - 아래쪽 ground shadow (블러)
 
-Run: python scripts/gen-quick-icons.py
+Run:
+  PYTHONIOENCODING=utf-8 python scripts/gen-quick-icons.py
 """
+
 from PIL import Image, ImageDraw, ImageFilter
 import os
 import math
@@ -26,250 +29,494 @@ OUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'assets')
 SIZE = 192
 
 
-def shadow(im: Image.Image) -> Image.Image:
-    """소프트 그림자 (아래쪽)"""
-    sh = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
+# ───────────── 공통 도우미 ─────────────
+
+def make_canvas(size: int = SIZE) -> Image.Image:
+    return Image.new('RGBA', (size, size), (0, 0, 0, 0))
+
+
+def vlerp(a: tuple, b: tuple, t: float) -> tuple:
+    """(R,G,B[,A]) 선형 보간"""
+    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(len(a)))
+
+
+def gradient_ellipse(
+    base: Image.Image,
+    bbox: tuple,
+    color_top: tuple,
+    color_bot: tuple,
+):
+    """
+    bbox 안에 세로 방향 그라디언트로 채워진 타원을 그림.
+    color_top: (R,G,B,A) — 위쪽 (밝음)
+    color_bot: (R,G,B,A) — 아래쪽 (어두움)
+    """
+    x0, y0, x1, y1 = [int(v) for v in bbox]
+    h = y1 - y0
+    if h <= 0:
+        return
+    # 마스크 (타원 내부)
+    mask = Image.new('L', (x1 - x0, h), 0)
+    md = ImageDraw.Draw(mask)
+    md.ellipse((0, 0, x1 - x0 - 1, h - 1), fill=255)
+    # 그라디언트 layer
+    grad = Image.new('RGBA', (x1 - x0, h), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(grad)
+    for y in range(h):
+        t = y / max(1, h - 1)
+        c = vlerp(color_top, color_bot, t)
+        gd.line((0, y, x1 - x0 - 1, y), fill=c)
+    # 합성
+    base.paste(grad, (x0, y0), mask)
+
+
+def gradient_round_rect(
+    base: Image.Image,
+    bbox: tuple,
+    radius: int,
+    color_top: tuple,
+    color_bot: tuple,
+):
+    x0, y0, x1, y1 = [int(v) for v in bbox]
+    w = x1 - x0
+    h = y1 - y0
+    if w <= 0 or h <= 0:
+        return
+    mask = Image.new('L', (w, h), 0)
+    md = ImageDraw.Draw(mask)
+    md.rounded_rectangle((0, 0, w - 1, h - 1), radius=radius, fill=255)
+    grad = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(grad)
+    for y in range(h):
+        t = y / max(1, h - 1)
+        c = vlerp(color_top, color_bot, t)
+        gd.line((0, y, w - 1, y), fill=c)
+    base.paste(grad, (x0, y0), mask)
+
+
+def soft_specular(base: Image.Image, x: float, y: float, rx: float, ry: float, alpha: int = 220):
+    """좌상단 광택 (큰 부드러운 흰색 타원, 블러)"""
+    layer = make_canvas()
+    d = ImageDraw.Draw(layer)
+    d.ellipse((x - rx, y - ry, x + rx, y + ry), fill=(255, 255, 255, alpha))
+    layer = layer.filter(ImageFilter.GaussianBlur(radius=8))
+    base.alpha_composite(layer)
+
+
+def small_specular(base: Image.Image, x: float, y: float, r: float, alpha: int = 255):
+    """선명한 작은 광점 (화룡점정)"""
+    layer = make_canvas()
+    d = ImageDraw.Draw(layer)
+    d.ellipse((x - r, y - r, x + r, y + r), fill=(255, 255, 255, alpha))
+    layer = layer.filter(ImageFilter.GaussianBlur(radius=2))
+    base.alpha_composite(layer)
+
+
+def core_shadow(base: Image.Image, x: float, y: float, rx: float, ry: float, color: tuple, alpha: int = 110):
+    """우하단 코어 섀도우 (베이스 색의 더 어두운 톤)"""
+    layer = make_canvas()
+    d = ImageDraw.Draw(layer)
+    d.ellipse((x - rx, y - ry, x + rx, y + ry), fill=(*color[:3], alpha))
+    layer = layer.filter(ImageFilter.GaussianBlur(radius=14))
+    base.alpha_composite(layer)
+
+
+def ground_shadow(base: Image.Image) -> Image.Image:
+    """아래쪽 그림자 (블러된 타원)"""
+    sh = make_canvas()
     sd = ImageDraw.Draw(sh)
-    sd.ellipse((SIZE * 0.18, SIZE * 0.78, SIZE * 0.82, SIZE * 0.93),
-               fill=(0, 0, 0, 50))
-    sh = sh.filter(ImageFilter.GaussianBlur(radius=8))
-    return Image.alpha_composite(sh, im)
+    sd.ellipse((SIZE * 0.18, SIZE * 0.82, SIZE * 0.82, SIZE * 0.93),
+               fill=(60, 50, 50, 90))
+    sh = sh.filter(ImageFilter.GaussianBlur(radius=10))
+    return Image.alpha_composite(sh, base)
 
 
-def highlight(draw: ImageDraw.Draw, x: float, y: float, r: float):
-    """좌상단 광택 하이라이트"""
-    for i, alpha in enumerate([60, 40, 20]):
-        scale = 1 - i * 0.25
-        rr = r * scale
-        draw.ellipse((x - rr, y - rr, x + rr, y + rr), fill=(255, 255, 255, alpha))
+# ───────────── 도형별 생성 함수 ─────────────
+
+def gen_water_drop(out_path: str, base_color: tuple):
+    """물방울/핏방울 — 위 뾰족 + 아래 둥근, 3D 그라디언트"""
+    im = make_canvas()
+    cx = SIZE / 2
+    # 메인 형태: 큰 원 + 위쪽 삼각형
+    bottom_cy = SIZE * 0.62
+    r = 56
+    # 그라디언트 색상 — 베이스보다 위는 연하게
+    light = tuple(min(255, c + 50) for c in base_color[:3]) + (255,)
+    deep = tuple(max(0, c - 50) for c in base_color[:3]) + (255,)
+    # 아래쪽 둥근 부분 (그라디언트)
+    gradient_ellipse(im, (cx - r, bottom_cy - r, cx + r, bottom_cy + r), light, deep)
+    # 위쪽 삼각형 (단색 base — 그라디언트 자연스러운 보간을 위해 위는 light에 가깝게)
+    tip_y = SIZE * 0.16
+    angle = math.radians(60)
+    left_x = cx - r * math.sin(angle)
+    right_x = cx + r * math.sin(angle)
+    edge_y = bottom_cy - r * math.cos(angle)
+    # 삼각형 그라디언트도 흉내내기 위해 segment-by-segment paste
+    seg_h = int(edge_y - tip_y)
+    if seg_h > 0:
+        tri_mask = Image.new('L', (SIZE, seg_h), 0)
+        tmd = ImageDraw.Draw(tri_mask)
+        tmd.polygon([
+            (cx, 0),
+            (left_x, seg_h),
+            (right_x, seg_h),
+        ], fill=255)
+        tri_grad = Image.new('RGBA', (SIZE, seg_h), (0, 0, 0, 0))
+        tgd = ImageDraw.Draw(tri_grad)
+        for y in range(seg_h):
+            t = y / max(1, seg_h - 1)
+            c = vlerp(light, base_color, t)
+            tgd.line((0, y, SIZE - 1, y), fill=c)
+        im.paste(tri_grad, (0, int(tip_y)), tri_mask)
+
+    # 코어 섀도우 (우하단)
+    core_shadow(im, cx + 22, bottom_cy + 22, 30, 22, deep, alpha=120)
+    # 부드러운 좌상단 광택
+    soft_specular(im, cx - 14, SIZE * 0.40, 22, 28, alpha=180)
+    # 작은 화이트 점 (3D rendered look)
+    small_specular(im, cx - 18, SIZE * 0.36, 5)
+    # 아래 그림자
+    im = ground_shadow(im)
+    im.save(out_path)
 
 
-def base_image() -> tuple[Image.Image, ImageDraw.Draw]:
-    im = Image.new('RGBA', (SIZE, SIZE), (0, 0, 0, 0))
-    return im, ImageDraw.Draw(im)
-
-
-# ─── 1. 체온계 (열나) ───
 def gen_thermometer():
-    im, d = base_image()
-    # 본체 (긴 막대)
-    body_w = 30
-    cx = SIZE * 0.45
-    body_top = SIZE * 0.18
-    body_bot = SIZE * 0.72
-    # 그림자 디테일
-    d.rounded_rectangle((cx - body_w / 2 + 4, body_top + 4, cx + body_w / 2 + 4, body_bot + 4),
-                        radius=body_w / 2, fill=(180, 100, 100, 80))
-    # 본체
-    d.rounded_rectangle((cx - body_w / 2, body_top, cx + body_w / 2, body_bot),
-                        radius=body_w / 2, fill=(255, 230, 230, 255))
-    # 빨강 액체
-    fluid_top = SIZE * 0.42
-    d.rounded_rectangle((cx - body_w / 2 + 7, fluid_top, cx + body_w / 2 - 7, body_bot - 5),
-                        radius=(body_w - 14) / 2, fill=(232, 76, 76, 255))
-    # 둥근 머리
-    bulb_r = 32
-    bulb_cy = body_bot + bulb_r * 0.3
-    d.ellipse((cx - bulb_r, bulb_cy - bulb_r, cx + bulb_r, bulb_cy + bulb_r),
-              fill=(232, 76, 76, 255))
-    # 눈금 3개
-    for i, y in enumerate([body_top + 16, body_top + 34, body_top + 52]):
-        d.line((cx + body_w / 2 - 3, y, cx + body_w / 2 + 8, y), fill=(150, 100, 100, 200), width=3)
+    im = make_canvas()
+    cx = SIZE * 0.46
+    body_w = 32
+    body_top = SIZE * 0.16
+    body_bot = SIZE * 0.70
+
+    # 본체 그라디언트 (흰빛 → 살짝 핑크)
+    light = (255, 245, 245, 255)
+    deep = (235, 215, 215, 255)
+    gradient_round_rect(im,
+                        (cx - body_w / 2, body_top, cx + body_w / 2, body_bot),
+                        radius=int(body_w / 2),
+                        color_top=light, color_bot=deep)
+    # 액체 (빨간 그라디언트 — 위 연한 빨강 → 아래 진한 빨강)
+    fluid_top = SIZE * 0.40
+    fluid_light = (255, 140, 140, 255)
+    fluid_deep = (200, 50, 60, 255)
+    gradient_round_rect(im,
+                        (cx - body_w / 2 + 6, fluid_top, cx + body_w / 2 - 6, body_bot - 4),
+                        radius=int((body_w - 12) / 2),
+                        color_top=fluid_light, color_bot=fluid_deep)
+
+    # 둥근 머리 (빨강 그라디언트)
+    bulb_r = 36
+    bulb_cy = body_bot + bulb_r * 0.35
+    gradient_ellipse(im,
+                     (cx - bulb_r, bulb_cy - bulb_r, cx + bulb_r, bulb_cy + bulb_r),
+                     fluid_light, fluid_deep)
+
+    # 코어 섀도우 (둥근 머리 우하단)
+    core_shadow(im, cx + bulb_r * 0.3, bulb_cy + bulb_r * 0.3, 26, 20, fluid_deep, alpha=140)
+
+    # 눈금 (살짝 짙은 회색)
+    d = ImageDraw.Draw(im)
+    for y_ratio in [0.21, 0.28, 0.35]:
+        y = SIZE * y_ratio
+        d.line((cx + body_w / 2 - 2, y, cx + body_w / 2 + 9, y),
+               fill=(150, 100, 100, 220), width=3)
+
     # 광택
-    highlight(d, cx - 6, body_top + 14, 7)
-    highlight(d, cx - bulb_r * 0.4, bulb_cy - bulb_r * 0.4, 9)
-    im = shadow(im)
+    soft_specular(im, cx - 7, body_top + 16, 6, 18, alpha=200)  # 본체 상단
+    soft_specular(im, cx - bulb_r * 0.4, bulb_cy - bulb_r * 0.4, 12, 12, alpha=200)  # 머리
+    small_specular(im, cx - bulb_r * 0.5, bulb_cy - bulb_r * 0.5, 5)
+    small_specular(im, cx - 4, body_top + 22, 3)
+
+    im = ground_shadow(im)
     im.save(os.path.join(OUT_DIR, 'quick-thermometer.png'))
-    print('✓ quick-thermometer.png')
+    print('OK quick-thermometer.png')
 
 
-# ─── 2. 새싹 (성장 통계) ───
 def gen_sprout():
-    im, d = base_image()
-    # 화분/언덕 (베이스)
-    base_y = SIZE * 0.78
-    d.rounded_rectangle((SIZE * 0.22, base_y - 4, SIZE * 0.78, base_y + 26),
-                        radius=14, fill=(218, 165, 110, 255))  # peach pot
-    d.rounded_rectangle((SIZE * 0.18, base_y - 14, SIZE * 0.82, base_y - 4),
-                        radius=8, fill=(232, 184, 130, 255))  # rim
-    # 줄기
+    """새싹 — 흙 + 줄기 + 두 잎(잎 모양 끝이 뾰족하게)"""
+    im = make_canvas()
     cx = SIZE * 0.5
-    d.rounded_rectangle((cx - 6, SIZE * 0.36, cx + 6, base_y - 4),
-                        radius=4, fill=(110, 180, 110, 255))
-    # 왼쪽 잎
-    d.ellipse((SIZE * 0.20, SIZE * 0.40, SIZE * 0.55, SIZE * 0.62),
-              fill=(150, 220, 130, 255))
-    # 오른쪽 잎 (위로)
-    d.ellipse((cx - 8, SIZE * 0.18, SIZE * 0.85, SIZE * 0.50),
-              fill=(170, 230, 140, 255))
+
+    # 흙 (둥근 무덤 형태)
+    soil_light = (165, 110, 75, 255)
+    soil_deep = (105, 70, 45, 255)
+    soil_y = SIZE * 0.78
+    gradient_ellipse(im,
+                     (SIZE * 0.20, soil_y - 6, SIZE * 0.80, soil_y + 30),
+                     soil_light, soil_deep)
+    # 흙 윗면 (살짝 어두운 라인 — 단면)
+    d = ImageDraw.Draw(im)
+    d.ellipse((SIZE * 0.20, soil_y - 6, SIZE * 0.80, soil_y + 8),
+              fill=(80, 55, 35, 255))
+
+    # 줄기
+    stem_light = (140, 200, 130, 255)
+    stem_deep = (95, 155, 90, 255)
+    gradient_round_rect(im,
+                        (cx - 5, SIZE * 0.42, cx + 5, soil_y + 4),
+                        radius=3,
+                        color_top=stem_light, color_bot=stem_deep)
+
+    # 잎 색상
+    leaf_light = (185, 235, 160, 255)
+    leaf_deep = (105, 175, 100, 255)
+
+    # 왼쪽 잎 — 폴리곤 잎 형태 (긴 타원 + 끝 뾰족)
+    def draw_leaf(canvas, base_x, base_y, length, width, angle_deg):
+        leaf_layer = make_canvas(SIZE * 2)
+        # 큰 캔버스에 수평으로 잎 그리기 (베이스 = 좌측, 끝 = 우측)
+        cx2 = SIZE
+        cy2 = SIZE
+        # 잎 모양: 두 베지어 같은 호 (위/아래) — 폴리곤 근사
+        points_top = []
+        points_bot = []
+        steps = 30
+        for i in range(steps + 1):
+            t = i / steps
+            x = cx2 + length * t
+            # 잎의 폭은 가운데가 가장 두껍고 양 끝은 뾰족
+            w = width * math.sin(math.pi * t) ** 1.0
+            points_top.append((x, cy2 - w))
+            points_bot.append((x, cy2 + w))
+        polygon_pts = points_top + list(reversed(points_bot))
+        ld = ImageDraw.Draw(leaf_layer)
+        ld.polygon(polygon_pts, fill=leaf_deep)
+        # 그라디언트 위치 마스킹 — 위는 light, 아래는 deep
+        # 단순 화이트 하이라이트 추가
+        hl = make_canvas(SIZE * 2)
+        hd = ImageDraw.Draw(hl)
+        for i in range(steps + 1):
+            t = i / steps
+            x = cx2 + length * t
+            w = width * math.sin(math.pi * t) ** 1.0 * 0.4
+            hd.line((x, cy2 - w * 1.2, x, cy2 - w * 0.2),
+                    fill=vlerp(leaf_light, leaf_deep, 0.2), width=2)
+        hl = hl.filter(ImageFilter.GaussianBlur(radius=4))
+        leaf_layer.alpha_composite(hl)
+        # 회전 + 중심 이동
+        leaf_layer = leaf_layer.rotate(angle_deg, resample=Image.BICUBIC, center=(cx2, cy2))
+        # 베이스 위치로 이동
+        offset_x = int(base_x - cx2)
+        offset_y = int(base_y - cy2)
+        canvas.alpha_composite(leaf_layer, (offset_x, offset_y))
+
+    # 줄기 베이스 (잎이 시작되는 지점)
+    stem_top = SIZE * 0.42
+    # 왼쪽 잎 (좌상향)
+    draw_leaf(im, cx - 2, stem_top + 12, length=58, width=18, angle_deg=160)
+    # 오른쪽 잎 (우상향, 더 큰 잎)
+    draw_leaf(im, cx + 2, stem_top + 4, length=68, width=22, angle_deg=-20)
+
     # 광택
-    highlight(d, SIZE * 0.62, SIZE * 0.26, 14)
-    highlight(d, SIZE * 0.36, SIZE * 0.46, 9)
-    im = shadow(im)
+    soft_specular(im, SIZE * 0.66, SIZE * 0.28, 14, 10, alpha=180)
+    soft_specular(im, SIZE * 0.36, SIZE * 0.48, 9, 8, alpha=160)
+    soft_specular(im, SIZE * 0.40, soil_y + 8, 28, 5, alpha=120)
+    small_specular(im, SIZE * 0.66, SIZE * 0.24, 4)
+    small_specular(im, SIZE * 0.38, SIZE * 0.46, 3)
+
+    im = ground_shadow(im)
     im.save(os.path.join(OUT_DIR, 'quick-sprout.png'))
-    print('✓ quick-sprout.png')
+    print('OK quick-sprout.png')
 
 
-# ─── 3. 주사기 (접종달력) — 약간만 기울인 깔끔한 형태 ───
 def gen_syringe():
-    # 큰 캔버스(2x)에 수직으로 그리고 살짝 기울임 → 다운스케일
     big = Image.new('RGBA', (SIZE * 2, SIZE * 2), (0, 0, 0, 0))
     bd = ImageDraw.Draw(big)
-    cx = SIZE  # 중앙
-    # 본체 (실린더, 세로 형태)
+    cx = SIZE
     body_top = SIZE * 0.55
     body_bot = SIZE * 1.40
-    bd.rounded_rectangle((cx - 30, body_top, cx + 30, body_bot),
-                         radius=4, fill=(230, 240, 250, 255))
-    # 액체 (절반 채움 - 파랑)
-    fluid_top = SIZE * 0.95
-    bd.rounded_rectangle((cx - 24, fluid_top, cx + 24, body_bot - 4),
-                         radius=3, fill=(120, 180, 235, 255))
+
+    # 본체 (실린더) — 흰색 → 매우 옅은 파랑
+    light = (250, 252, 255, 255)
+    deep = (215, 230, 245, 255)
+    gradient_round_rect(big,
+                        (cx - 30, body_top, cx + 30, body_bot),
+                        radius=4,
+                        color_top=light, color_bot=deep)
+
+    # 액체 (파랑)
+    fluid_light = (155, 205, 245, 255)
+    fluid_deep = (90, 160, 220, 255)
+    gradient_round_rect(big,
+                        (cx - 24, SIZE * 0.95, cx + 24, body_bot - 4),
+                        radius=3,
+                        color_top=fluid_light, color_bot=fluid_deep)
+
     # 핑거 그립 (양쪽 날개)
-    bd.rounded_rectangle((cx - 56, body_top - 6, cx + 56, body_top + 14),
-                         radius=10, fill=(190, 210, 235, 255))
+    grip_light = (210, 225, 245, 255)
+    grip_deep = (165, 185, 215, 255)
+    gradient_round_rect(big,
+                        (cx - 56, body_top - 6, cx + 56, body_top + 14),
+                        radius=10,
+                        color_top=grip_light, color_bot=grip_deep)
+
     # 플런저 막대
-    bd.rounded_rectangle((cx - 8, SIZE * 0.30, cx + 8, body_top - 6),
-                         radius=4, fill=(190, 210, 235, 255))
-    # 플런저 헤드 (둥근 손잡이)
-    bd.ellipse((cx - 22, SIZE * 0.20, cx + 22, SIZE * 0.36), fill=(160, 185, 220, 255))
-    # 바늘 허브 (얇은 회색)
+    gradient_round_rect(big,
+                        (cx - 8, SIZE * 0.30, cx + 8, body_top - 6),
+                        radius=4,
+                        color_top=grip_light, color_bot=grip_deep)
+    # 플런저 헤드
+    gradient_ellipse(big,
+                     (cx - 22, SIZE * 0.18, cx + 22, SIZE * 0.36),
+                     grip_light, grip_deep)
+
+    # 바늘 허브
     bd.rounded_rectangle((cx - 10, body_bot, cx + 10, body_bot + 14),
-                         radius=2, fill=(180, 195, 215, 255))
-    # 바늘 (얇은 선)
+                         radius=2, fill=(165, 180, 200, 255))
+    # 바늘
     bd.rectangle((cx - 2, body_bot + 14, cx + 2, body_bot + 60),
-                 fill=(140, 155, 175, 255))
+                 fill=(125, 140, 160, 255))
     bd.polygon([
         (cx - 2, body_bot + 60),
         (cx + 2, body_bot + 60),
         (cx, body_bot + 72),
-    ], fill=(140, 155, 175, 255))
-    # 눈금 (왼쪽)
+    ], fill=(125, 140, 160, 255))
+
+    # 눈금
     for y_ratio in [0.65, 0.78, 0.91, 1.04, 1.17, 1.30]:
         bd.line((cx - 24, SIZE * y_ratio, cx - 14, SIZE * y_ratio),
-                fill=(150, 170, 200, 220), width=3)
+                fill=(140, 165, 195, 230), width=3)
+
+    # 코어 섀도우
+    core_shadow(big, cx + 18, SIZE * 1.30, 32, 24, fluid_deep, alpha=110)
+
     # 광택
-    for i, alpha in enumerate([100, 60, 30]):
-        s = 1 - i * 0.3
-        bd.ellipse((cx - 22 * s, body_top + 12, cx - 22 * s + 12 * s, body_top + 50),
-                   fill=(255, 255, 255, alpha))
-    # 살짝(15도) 기울임 → 활기있게
+    soft_specular(big, cx - 18, body_top + 30, 12, 28, alpha=200)  # 실린더 상단
+    soft_specular(big, cx - 18, SIZE * 1.05, 8, 16, alpha=160)     # 액체
+    small_specular(big, cx - 16, body_top + 24, 4)
+    small_specular(big, cx - 18, SIZE * 0.24, 5)
+
+    # 회전(20도)
     big = big.rotate(20, resample=Image.BICUBIC, expand=False)
     cropped = big.crop((SIZE - SIZE // 2, SIZE - SIZE // 2,
                         SIZE + SIZE // 2, SIZE + SIZE // 2))
     cropped = cropped.resize((SIZE, SIZE), Image.LANCZOS)
-    cropped = shadow(cropped)
+    cropped = ground_shadow(cropped)
     cropped.save(os.path.join(OUT_DIR, 'quick-syringe.png'))
-    print('✓ quick-syringe.png')
+    print('OK quick-syringe.png')
 
 
-# ─── 4. 아기 (주수별 발달) — 동그란 얼굴 ───
 def gen_baby():
-    im, d = base_image()
-    # 얼굴 (피부 톤)
-    cx, cy, r = SIZE / 2, SIZE * 0.52, 60
-    d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(255, 220, 195, 255))
-    # 머리카락 (한 다발)
-    d.ellipse((cx - 14, cy - r - 6, cx + 14, cy - r + 18), fill=(120, 80, 60, 255))
-    # 볼 (분홍 동그라미)
-    d.ellipse((cx - r + 12, cy + 5, cx - r + 30, cy + 22), fill=(255, 180, 180, 200))
-    d.ellipse((cx + r - 30, cy + 5, cx + r - 12, cy + 22), fill=(255, 180, 180, 200))
-    # 눈 (감은 눈 — 호 모양)
-    d.arc((cx - 24, cy - 12, cx - 6, cy + 6), start=200, end=340, fill=(80, 50, 40, 255), width=3)
-    d.arc((cx + 6, cy - 12, cx + 24, cy + 6), start=200, end=340, fill=(80, 50, 40, 255), width=3)
-    # 입 (작은 미소)
-    d.arc((cx - 12, cy + 10, cx + 12, cy + 26), start=20, end=160, fill=(180, 100, 80, 255), width=3)
-    # 하이라이트
-    highlight(d, cx - r * 0.4, cy - r * 0.4, 14)
-    im = shadow(im)
+    im = make_canvas()
+    cx, cy, r = SIZE / 2, SIZE * 0.52, 62
+    # 얼굴 — 그라디언트
+    skin_light = (255, 230, 210, 255)
+    skin_deep = (235, 195, 165, 255)
+    gradient_ellipse(im, (cx - r, cy - r, cx + r, cy + r), skin_light, skin_deep)
+    # 코어 섀도우 (우하단)
+    core_shadow(im, cx + r * 0.35, cy + r * 0.35, 32, 26, skin_deep, alpha=130)
+    # 머리카락 (짧은 다발)
+    hair_light = (140, 95, 70, 255)
+    hair_deep = (95, 65, 50, 255)
+    gradient_ellipse(im,
+                     (cx - 16, cy - r - 8, cx + 16, cy - r + 18),
+                     hair_light, hair_deep)
+    # 볼 (분홍)
+    layer = make_canvas()
+    ld = ImageDraw.Draw(layer)
+    ld.ellipse((cx - r + 10, cy + 6, cx - r + 30, cy + 22), fill=(255, 175, 175, 220))
+    ld.ellipse((cx + r - 30, cy + 6, cx + r - 10, cy + 22), fill=(255, 175, 175, 220))
+    layer = layer.filter(ImageFilter.GaussianBlur(radius=2))
+    im.alpha_composite(layer)
+    # 눈 (감은 호)
+    d = ImageDraw.Draw(im)
+    d.arc((cx - 24, cy - 12, cx - 6, cy + 6), start=200, end=340,
+          fill=(75, 50, 35, 255), width=3)
+    d.arc((cx + 6, cy - 12, cx + 24, cy + 6), start=200, end=340,
+          fill=(75, 50, 35, 255), width=3)
+    # 입
+    d.arc((cx - 11, cy + 11, cx + 11, cy + 26), start=20, end=160,
+          fill=(170, 95, 75, 255), width=3)
+
+    # 광택
+    soft_specular(im, cx - r * 0.45, cy - r * 0.45, 16, 14, alpha=210)
+    small_specular(im, cx - r * 0.55, cy - r * 0.5, 6)
+    small_specular(im, cx + 5, cy - r * 0.6, 4, alpha=200)
+
+    im = ground_shadow(im)
     im.save(os.path.join(OUT_DIR, 'quick-baby.png'))
-    print('✓ quick-baby.png')
+    print('OK quick-baby.png')
 
 
-def teardrop(color: tuple) -> Image.Image:
-    """올바른 물방울 형태 (위 뾰족, 아래 둥근) — bottom circle + top triangle 합성"""
-    im, d = base_image()
-    cx = SIZE / 2
-    # 아래쪽 원
-    bottom_cy = SIZE * 0.65
-    r = 52
-    d.ellipse((cx - r, bottom_cy - r, cx + r, bottom_cy + r), fill=color)
-    # 위쪽 삼각형 (뾰족한 위)
-    tip_y = SIZE * 0.18
-    # 양쪽 접점 (원의 위쪽 ~30°)
-    angle = math.radians(60)  # 60도에서 만남
-    left_x = cx - r * math.sin(angle)
-    right_x = cx + r * math.sin(angle)
-    edge_y = bottom_cy - r * math.cos(angle)
-    d.polygon([
-        (cx, tip_y),
-        (left_x, edge_y),
-        (right_x, edge_y),
-    ], fill=color)
-    # 부드러운 연결을 위한 추가 채움 (사각형으로 갭 메움)
-    d.polygon([
-        (cx, tip_y),
-        (left_x - 2, edge_y + 2),
-        (cx, bottom_cy),
-        (right_x + 2, edge_y + 2),
-    ], fill=color)
-    # 광택 (좌상단)
-    highlight(d, cx - 16, SIZE * 0.42, 14)
-    highlight(d, cx - 22, SIZE * 0.36, 7)
-    return shadow(im)
-
-
-# ─── 5. 핏방울 (임당 관리) ───
 def gen_blood():
-    im = teardrop((220, 60, 70, 255))
-    im.save(os.path.join(OUT_DIR, 'quick-blood.png'))
-    print('✓ quick-blood.png')
+    out = os.path.join(OUT_DIR, 'quick-blood.png')
+    gen_water_drop(out, base_color=(220, 60, 70, 255))
+    print('OK quick-blood.png')
 
 
-# ─── 6. 물방울 (물 마시기) ───
 def gen_water():
-    im = teardrop((80, 165, 235, 255))
-    im.save(os.path.join(OUT_DIR, 'quick-water.png'))
-    print('✓ quick-water.png')
+    out = os.path.join(OUT_DIR, 'quick-water.png')
+    gen_water_drop(out, base_color=(85, 175, 235, 255))
+    print('OK quick-water.png')
 
 
-# ─── 7. 알약 (영양제) ───
 def gen_pill():
-    im, d = base_image()
+    """캡슐 알약 — 좌(보라) + 우(오렌지). 단일 rounded_rect 두 개로 깔끔하게."""
     big = Image.new('RGBA', (SIZE * 2, SIZE * 2), (0, 0, 0, 0))
     bd = ImageDraw.Draw(big)
-    # 캡슐 (가로)
     cx, cy = SIZE, SIZE
-    w, h = 220, 100
-    # 왼쪽 (보라)
-    bd.rounded_rectangle((cx - w / 2, cy - h / 2, cx, cy + h / 2),
-                         radius=h / 2, fill=(160, 100, 200, 255))
-    bd.rounded_rectangle((cx - h / 2, cy - h / 2, cx, cy + h / 2),
-                         fill=(160, 100, 200, 255))
-    # 오른쪽 (오렌지)
-    bd.rounded_rectangle((cx, cy - h / 2, cx + w / 2, cy + h / 2),
-                         radius=h / 2, fill=(255, 160, 90, 255))
-    bd.rounded_rectangle((cx, cy - h / 2, cx + h / 2, cy + h / 2),
-                         fill=(255, 160, 90, 255))
-    # 중앙 분리선
-    bd.line((cx, cy - h / 2 + 4, cx, cy + h / 2 - 4), fill=(255, 255, 255, 60), width=2)
-    # 광택
-    bd.ellipse((cx - w / 2 + 14, cy - h / 2 + 12, cx - w / 2 + 50, cy - h / 2 + 30),
-               fill=(255, 255, 255, 90))
-    bd.ellipse((cx + 24, cy - h / 2 + 12, cx + 60, cy - h / 2 + 30),
-               fill=(255, 255, 255, 100))
-    # 회전 (-25도)
-    big = big.rotate(-25, resample=Image.BICUBIC, expand=False)
+    half_w = 115
+    h = 110
+
+    # 왼쪽 절반 (보라) — rounded_rect가 좌측만 둥글게 되도록 폭은 half_w + h/2 (오른쪽 둥근 부분 살짝 가림)
+    pl_light = (195, 140, 235, 255)
+    pl_deep = (130, 75, 175, 255)
+    gradient_round_rect(big,
+                        (cx - half_w, cy - h / 2, cx, cy + h / 2),
+                        radius=int(h / 2),
+                        color_top=pl_light, color_bot=pl_deep)
+    # 왼쪽 캡슐의 오른쪽 끝 (사각형 채움 — 둥근 모서리 제거)
+    bd.rectangle((cx - h / 2, cy - h / 2, cx, cy + h / 2), fill=pl_deep)
+    # 그라디언트 다시 한 번 사각형 영역 위에 (수직)
+    rect_grad = Image.new('RGBA', (int(h / 2), h), (0, 0, 0, 0))
+    rgd = ImageDraw.Draw(rect_grad)
+    for y in range(h):
+        t = y / max(1, h - 1)
+        c = vlerp(pl_light, pl_deep, t)
+        rgd.line((0, y, int(h / 2) - 1, y), fill=c)
+    big.paste(rect_grad, (cx - int(h / 2), int(cy - h / 2)))
+
+    # 오른쪽 절반 (오렌지)
+    or_light = (255, 195, 130, 255)
+    or_deep = (240, 130, 60, 255)
+    gradient_round_rect(big,
+                        (cx, cy - h / 2, cx + half_w, cy + h / 2),
+                        radius=int(h / 2),
+                        color_top=or_light, color_bot=or_deep)
+    bd.rectangle((cx, cy - h / 2, cx + h / 2, cy + h / 2), fill=or_deep)
+    rect_grad2 = Image.new('RGBA', (int(h / 2), h), (0, 0, 0, 0))
+    rgd2 = ImageDraw.Draw(rect_grad2)
+    for y in range(h):
+        t = y / max(1, h - 1)
+        c = vlerp(or_light, or_deep, t)
+        rgd2.line((0, y, int(h / 2) - 1, y), fill=c)
+    big.paste(rect_grad2, (cx, int(cy - h / 2)))
+
+    # 중앙 미세 분리선 (살짝 짙은 톤으로 자연스럽게)
+    bd.line((cx, cy - h / 2 + 6, cx, cy + h / 2 - 6),
+            fill=(0, 0, 0, 50), width=2)
+
+    # 코어 섀도우
+    core_shadow(big, cx - 50, cy + 22, 60, 22, pl_deep, alpha=110)
+    core_shadow(big, cx + 60, cy + 22, 50, 22, or_deep, alpha=110)
+
+    # 광택 (각 캡슐마다 — 위쪽 길게)
+    soft_specular(big, cx - 55, cy - 28, 36, 10, alpha=210)
+    soft_specular(big, cx + 55, cy - 28, 36, 10, alpha=220)
+    small_specular(big, cx - 75, cy - 30, 6)
+    small_specular(big, cx + 35, cy - 30, 6)
+
+    # 회전 (-20도)
+    big = big.rotate(-20, resample=Image.BICUBIC, expand=False)
     cropped = big.crop((SIZE - SIZE // 2, SIZE - SIZE // 2,
                         SIZE + SIZE // 2, SIZE + SIZE // 2))
     cropped = cropped.resize((SIZE, SIZE), Image.LANCZOS)
-    cropped = shadow(cropped)
+    cropped = ground_shadow(cropped)
     cropped.save(os.path.join(OUT_DIR, 'quick-pill.png'))
-    print('✓ quick-pill.png')
+    print('OK quick-pill.png')
 
 
 if __name__ == '__main__':
-    print('Generating quick menu icons...')
+    print('Generating 3D-style quick menu icons...')
     gen_thermometer()
     gen_sprout()
     gen_syringe()
