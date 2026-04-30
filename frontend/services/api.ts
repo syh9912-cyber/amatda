@@ -594,6 +594,14 @@ export const pregnancyApi = {
     api.delete(`/pregnancy/kick-session/${id}`),
   deleteMomHealth: (id: string) =>
     api.delete(`/pregnancy/mom-health/${id}`),
+
+  // 데일리 미션 (물/영양제)
+  getDailyMission: (childId: string) =>
+    api.get('/pregnancy/daily-mission/today', { params: { childId } }),
+  addWater: (childId: string, delta = 1) =>
+    api.post('/pregnancy/daily-mission/water', { childId, delta }),
+  toggleSupplements: (childId: string, value?: boolean) =>
+    api.post('/pregnancy/daily-mission/supplements', { childId, value }),
   weeklySummary: (childId: string) =>
     api.post('/pregnancy/weekly-summary', { childId }),
   safetyCheck: (query: string, week?: number) =>

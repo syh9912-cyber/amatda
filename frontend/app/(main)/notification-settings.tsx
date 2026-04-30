@@ -9,6 +9,9 @@ import {
   saveNotificationPrefs,
   syncScheduledNotifications,
   type NotificationPreferences,
+  getDailyMissionReminderEnabled,
+  scheduleDailyMissionReminder,
+  cancelDailyMissionReminder,
 } from '../../services/pushNotifications';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
 
@@ -90,6 +93,8 @@ export default function NotificationSettingsScreen() {
   });
   const [loaded, setLoaded] = useState(false);
   const [pickerKey, setPickerKey] = useState<TimeKey | null>(null);
+  const [dailyMissionEnabled, setDailyMissionEnabled] = useState(true);
+  const isPregnant = selectedChild?.isPregnant === true;
 
   useEffect(() => {
     loadNotificationPrefs()
@@ -98,7 +103,21 @@ export default function NotificationSettingsScreen() {
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
+    getDailyMissionReminderEnabled()
+      .then(setDailyMissionEnabled)
+      .catch(() => {});
   }, []);
+
+  const toggleDailyMission = useCallback(async () => {
+    const next = !dailyMissionEnabled;
+    setDailyMissionEnabled(next);
+    try {
+      if (next) await scheduleDailyMissionReminder();
+      else await cancelDailyMissionReminder();
+    } catch {
+      setDailyMissionEnabled(!next); // 실패 시 롤백
+    }
+  }, [dailyMissionEnabled]);
 
   const persist = useCallback(
     async (updated: NotificationPreferences) => {
@@ -177,6 +196,29 @@ export default function NotificationSettingsScreen() {
           알림 시간을 탭하면 원하는 시간으로 바꿀 수 있어요
         </Text>
       </View>
+
+      {/* 임산부 데일리 미션 알림 (임신부 모드에서만) */}
+      {isPregnant && (
+        <>
+          <Text style={styles.sectionTitle}>임산부 데일리 미션</Text>
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <Text style={styles.emoji}>{'💧'}</Text>
+              <View style={styles.labelCol}>
+                <Text style={styles.label}>매일 9시 미션 알림</Text>
+                <Text style={styles.desc}>물 마시기 / 영양제 챙기기 리마인더</Text>
+                <Text style={styles.time}>매일 오전 9:00</Text>
+              </View>
+              <Switch
+                value={dailyMissionEnabled}
+                onValueChange={toggleDailyMission}
+                trackColor={{ false: COLORS.border, true: COLORS.primaryLight }}
+                thumbColor={dailyMissionEnabled ? COLORS.primary : '#f4f3f4'}
+              />
+            </View>
+          </View>
+        </>
+      )}
 
       <Text style={styles.sectionTitle}>일상 알림</Text>
       <View style={styles.card}>

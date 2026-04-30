@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import * as admin from 'firebase-admin';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
-import { collections, genId } from '../services/firestore';
+import { collections, db, genId } from '../services/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import { isGeminiAvailable, callGeminiJSON } from '../services/coaching/gemini.client';
 
@@ -502,6 +502,136 @@ router.delete('/kick-session/:id', authMiddleware, async (req: Request<{ id: str
     success(res, { deleted: true });
   } catch {
     error(res, '태동 기록 삭제 중 오류가 발생했습니다', 500);
+  }
+});
+
+/* ================================================================== */
+/*  2-C. 데일리 미션 (물 마시기 / 영양제)                              */
+/* ================================================================== */
+
+function todayKstDateStr(): string {
+  // KST(UTC+9) 기준 오늘 YYYY-MM-DD
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
+}
+
+function missionDocId(childId: string, dateStr: string): string {
+  return `${childId}_${dateStr}`;
+}
+
+/** GET /api/pregnancy/daily-mission/today?childId=xxx — 오늘 미션 상태 */
+router.get('/daily-mission/today', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const childId = req.query.childId as string;
+    if (!childId) { error(res, 'childId는 필수입니다'); return; }
+
+    const child = await collections.children.doc(childId).get();
+    if (!child.exists || child.data()?.userId !== req.userId) {
+      error(res, '자녀를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const dateStr = todayKstDateStr();
+    const id = missionDocId(childId, dateStr);
+    const doc = await collections.dailyMissions.doc(id).get();
+    if (!doc.exists) {
+      success(res, { date: dateStr, water: 0, supplements: false });
+      return;
+    }
+    const data = doc.data() ?? {};
+    success(res, {
+      date: dateStr,
+      water: typeof data.water === 'number' ? data.water : 0,
+      supplements: data.supplements === true,
+    });
+  } catch {
+    error(res, '데일리 미션 조회 중 오류', 500);
+  }
+});
+
+/** POST /api/pregnancy/daily-mission/water — 물 +1잔 (또는 delta 지정) */
+router.post('/daily-mission/water', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { childId, delta } = req.body as { childId?: string; delta?: number };
+    if (!childId) { error(res, 'childId는 필수입니다'); return; }
+
+    const child = await collections.children.doc(childId).get();
+    if (!child.exists || child.data()?.userId !== req.userId) {
+      error(res, '자녀를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const incBy = typeof delta === 'number' && Number.isFinite(delta) ? delta : 1;
+    const dateStr = todayKstDateStr();
+    const id = missionDocId(childId, dateStr);
+    const ref = collections.dailyMissions.doc(id);
+    const now = new Date().toISOString();
+
+    const newWater = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const cur = snap.exists ? (snap.data()?.water as number | undefined) ?? 0 : 0;
+      const next = Math.max(0, Math.min(20, cur + incBy)); // clamp 0~20
+      if (snap.exists) {
+        tx.update(ref, { water: next, updatedAt: now });
+      } else {
+        tx.set(ref, {
+          userId: req.userId!,
+          childId,
+          date: dateStr,
+          water: next,
+          supplements: false,
+          updatedAt: now,
+        });
+      }
+      return next;
+    });
+
+    success(res, { date: dateStr, water: newWater });
+  } catch {
+    error(res, '물 미션 업데이트 중 오류', 500);
+  }
+});
+
+/** POST /api/pregnancy/daily-mission/supplements — 영양제 토글 */
+router.post('/daily-mission/supplements', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { childId, value } = req.body as { childId?: string; value?: boolean };
+    if (!childId) { error(res, 'childId는 필수입니다'); return; }
+
+    const child = await collections.children.doc(childId).get();
+    if (!child.exists || child.data()?.userId !== req.userId) {
+      error(res, '자녀를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const dateStr = todayKstDateStr();
+    const id = missionDocId(childId, dateStr);
+    const ref = collections.dailyMissions.doc(id);
+    const now = new Date().toISOString();
+
+    const finalVal = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const cur = snap.exists ? snap.data()?.supplements === true : false;
+      const next = typeof value === 'boolean' ? value : !cur;
+      if (snap.exists) {
+        tx.update(ref, { supplements: next, updatedAt: now });
+      } else {
+        tx.set(ref, {
+          userId: req.userId!,
+          childId,
+          date: dateStr,
+          water: 0,
+          supplements: next,
+          updatedAt: now,
+        });
+      }
+      return next;
+    });
+
+    success(res, { date: dateStr, supplements: finalVal });
+  } catch {
+    error(res, '영양제 미션 업데이트 중 오류', 500);
   }
 });
 

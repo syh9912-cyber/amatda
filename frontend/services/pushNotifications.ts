@@ -701,3 +701,62 @@ export async function scheduleNextDayNudge(childName: string): Promise<void> {
 
   await AsyncStorage.setItem(nudgeKey, id);
 }
+
+/**
+ * 임산부 데일리 미션 알림 — 매일 09:00 KST 반복
+ *
+ * 문구: "똑똑! 👶 엄마, 오늘 영양제 챙기셨나요? 시원한 물 한 잔도 잊지 마세요! ✨"
+ * 클릭 시 홈 화면 진입 (홈 상단 미션 배지 노출).
+ *
+ * 설정 화면에서 ON/OFF 토글 가능.
+ *
+ * 구현:
+ *  - DAILY 트리거 (시스템 스케줄러가 앱 종료 상태에서도 발송)
+ *  - 한 번 등록하면 매일 자동 반복
+ *  - 중복 방지: 기존 ID 있으면 취소 후 재등록
+ */
+
+const DAILY_MISSION_NOTIF_KEY = 'amatda_daily_mission_notif_id';
+const DAILY_MISSION_PREF_KEY = 'amatda_daily_mission_pref'; // 'on' | 'off'
+
+export async function scheduleDailyMissionReminder(): Promise<void> {
+  // 기존 알림 취소 (재등록)
+  const existing = await AsyncStorage.getItem(DAILY_MISSION_NOTIF_KEY);
+  if (existing) {
+    await Notifications.cancelScheduledNotificationAsync(existing).catch(() => {});
+    await AsyncStorage.removeItem(DAILY_MISSION_NOTIF_KEY);
+  }
+
+  const id = await Notifications.scheduleNotificationAsync({
+    content: {
+      title: '똑똑! 👶 엄마',
+      body: '오늘 영양제 챙기셨나요? 시원한 물 한 잔도 잊지 마세요! ✨',
+      data: { screen: 'home', source: 'daily_mission' },
+      sound: 'amatda_chime.wav',
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
+      hour: 9,
+      minute: 0,
+      channelId: 'engagement',
+    },
+  });
+
+  await AsyncStorage.setItem(DAILY_MISSION_NOTIF_KEY, id);
+  await AsyncStorage.setItem(DAILY_MISSION_PREF_KEY, 'on');
+}
+
+export async function cancelDailyMissionReminder(): Promise<void> {
+  const existing = await AsyncStorage.getItem(DAILY_MISSION_NOTIF_KEY);
+  if (existing) {
+    await Notifications.cancelScheduledNotificationAsync(existing).catch(() => {});
+    await AsyncStorage.removeItem(DAILY_MISSION_NOTIF_KEY);
+  }
+  await AsyncStorage.setItem(DAILY_MISSION_PREF_KEY, 'off');
+}
+
+export async function getDailyMissionReminderEnabled(): Promise<boolean> {
+  const pref = await AsyncStorage.getItem(DAILY_MISSION_PREF_KEY);
+  // 미설정이면 기본 ON (임신부 모드 첫 진입 시 자동 등록)
+  return pref !== 'off';
+}

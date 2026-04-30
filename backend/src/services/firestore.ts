@@ -59,6 +59,16 @@ export const collections = {
   // 문서: { userId, childId, title, dateFrom, dateTo, pdfUrl, status, pageCount, photoCount, createdAt, completedAt }
   growthAlbums: db.collection('growthAlbums'),
 
+  // 임산부 데일리 미션 (물 마시기 / 영양제 / ...)
+  // 문서 ID: {childId}_{YYYY-MM-DD}  → 하루 1문서
+  // {
+  //   userId, childId, date,
+  //   water: number (잔 수, 0~20),
+  //   supplements: boolean,  // 영양제 챙겼는지
+  //   updatedAt: ISO,
+  // }
+  dailyMissions: db.collection('dailyMissions'),
+
   // 결제 영수증 — 모든 유료 결제 1건당 문서 1개 (회계/환불용 영구 보관)
   // 문서: {
   //   userId, platform: 'portone'|'google'|'apple',

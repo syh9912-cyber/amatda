@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { childApi, coachingApi, retentionApi, premiumApi, uploadApi } from '../../services/api';
 import { useChildStore, Child } from '../../stores/childStore';
 import { ChildSelector } from '../../components/home/ChildSelector';
+import { DailyMissionBadges } from '../../components/pregnancy/DailyMissionBadges';
 // AI Insights UI 제거됨 (WeeklyReportCard, DailyDiaryCard 미사용)
 import {
   ProactivePopup,
@@ -515,6 +516,9 @@ export default function HomeScreen() {
 
       {child && (
         <>
+          {/* === 임산부 데일리 미션 배지 (물 / 영양제) === */}
+          {child.isPregnant && <DailyMissionBadges childId={child.id} />}
+
           {/* === 임산부: 출산했어요 카드 === */}
           {child.isPregnant && (() => {
             const q = getWeeklyQuestion(child.name || '아가', child.pregnancyWeeks ?? 0);
