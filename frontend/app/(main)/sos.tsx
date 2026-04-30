@@ -640,61 +640,97 @@ function ResultCard({
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; onClose: () => void }) {
-  if (!guideKey) return null;
-  const guide = GUIDE_CONTENT[guideKey];
-  const img = SOS_IMAGES[guideKey];
-  if (!guide || !img) return null;
+  const [pageIdx, setPageIdx] = useState(0);
+
+  // hooks must be called unconditionally
+  const guide = guideKey ? GUIDE_CONTENT[guideKey] : null;
+  const img = guideKey ? SOS_IMAGES[guideKey] : null;
+
+  if (!guideKey || !guide || !img) return null;
+
+  // 카드 = 인트로 + steps + 경고
+  // 인트로 카드 (큰 이미지 + 제목)는 page 0
+  // step 카드는 page 1 ~ N
+  // 마지막 경고 카드는 page N+1
+  const totalPages = 1 + guide.quickSteps.length + 1;
+
+  const onScroll = (e: import('react-native').NativeSyntheticEvent<import('react-native').NativeScrollEvent>) => {
+    const x = e.nativeEvent.contentOffset.x;
+    const next = Math.round(x / SCREEN_WIDTH);
+    if (next !== pageIdx) setPageIdx(next);
+  };
+
+  const handleClose = () => {
+    setPageIdx(0);
+    onClose();
+  };
 
   return (
-    <Modal visible animationType="slide" transparent={false} onRequestClose={onClose}>
+    <Modal visible animationType="slide" transparent={false} onRequestClose={handleClose}>
       <View style={guideStyles.container}>
-        {/* 닫기 버튼 (항상 위에) */}
-        <TouchableOpacity style={guideStyles.closeBtn} onPress={onClose} hitSlop={16}>
+        {/* 닫기 버튼 */}
+        <TouchableOpacity style={guideStyles.closeBtn} onPress={handleClose} hitSlop={16}>
           <Text style={guideStyles.closeBtnText}>{'X'}</Text>
         </TouchableOpacity>
 
+        {/* 가로 스크롤 카드 페이저 */}
         <ScrollView
-          style={guideStyles.scroll}
-          contentContainerStyle={guideStyles.scrollContent}
-          showsVerticalScrollIndicator={false}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={onScroll}
+          scrollEventThrottle={32}
+          style={guideStyles.pager}
         >
-          {/* 제목 */}
-          <View style={[guideStyles.titleBar, { backgroundColor: guide.headerColor }]}>
-            <Text style={guideStyles.titleText}>{guide.title}</Text>
-            <Text style={guideStyles.subtitleText}>{guide.subtitle}</Text>
+          {/* Page 0 — 인트로 (제목 + 큰 이미지) */}
+          <View style={[guideStyles.cardPage, { width: SCREEN_WIDTH }]}>
+            <View style={[guideStyles.titleBar, { backgroundColor: guide.headerColor }]}>
+              <Text style={guideStyles.titleText}>{guide.title}</Text>
+              <Text style={guideStyles.subtitleText}>{guide.subtitle}</Text>
+            </View>
+            <View style={guideStyles.bigImageWrap}>
+              <Image source={img} style={guideStyles.bigImage} resizeMode="contain" />
+            </View>
+            <Text style={guideStyles.swipeHint}>👉 옆으로 넘기면 단계별로 볼 수 있어요</Text>
           </View>
 
-          {/* 이미지 (핵심!) */}
-          <View style={guideStyles.imageWrap}>
-            <Image
-              source={img}
-              style={guideStyles.guideImage}
-              resizeMode="contain"
-            />
-          </View>
-
-          {/* 빠른 요약 텍스트 */}
-          <View style={guideStyles.stepsCard}>
-            {guide.quickSteps.map((step, idx) => (
-              <View key={`qs-${idx}`} style={guideStyles.stepRow}>
-                <View style={[guideStyles.stepDot, { backgroundColor: guide.headerColor }]}>
-                  <Text style={guideStyles.stepDotText}>{idx + 1}</Text>
-                </View>
-                <Text style={guideStyles.stepText}>{step}</Text>
+          {/* Page 1..N — 단계 카드 */}
+          {guide.quickSteps.map((step, idx) => (
+            <View key={`step-${idx}`} style={[guideStyles.cardPage, { width: SCREEN_WIDTH }]}>
+              <View style={guideStyles.stepBigImageWrap}>
+                <Image source={img} style={guideStyles.stepBigImage} resizeMode="contain" />
               </View>
-            ))}
-          </View>
+              <View style={[guideStyles.stepNumberCircle, { backgroundColor: guide.headerColor }]}>
+                <Text style={guideStyles.stepNumberText}>{idx + 1}</Text>
+              </View>
+              <Text style={guideStyles.stepBigText}>{step}</Text>
+            </View>
+          ))}
 
-          {/* 경고 */}
-          <View style={guideStyles.warningCard}>
-            <Text style={guideStyles.warningIcon}>{'⚠️'}</Text>
-            <Text style={guideStyles.warningText}>{guide.warning}</Text>
+          {/* 경고 카드 (마지막) */}
+          <View style={[guideStyles.cardPage, { width: SCREEN_WIDTH }]}>
+            <View style={guideStyles.warningCardLarge}>
+              <Text style={guideStyles.warningIconLarge}>{'⚠️'}</Text>
+              <Text style={guideStyles.warningTitleLarge}>이럴 땐 즉시 119</Text>
+              <Text style={guideStyles.warningTextLarge}>{guide.warning}</Text>
+            </View>
           </View>
-
-          <View style={{ height: 100 }} />
         </ScrollView>
 
-        {/* 119 고정 버튼 (하단) */}
+        {/* 점 인디케이터 */}
+        <View style={guideStyles.dotRow}>
+          {Array.from({ length: totalPages }).map((_, i) => (
+            <View
+              key={`dot-${i}`}
+              style={[
+                guideStyles.dot,
+                i === pageIdx && [guideStyles.dotActive, { backgroundColor: guide.headerColor }],
+              ]}
+            />
+          ))}
+        </View>
+
+        {/* 119 고정 버튼 (하단, 스크롤 안 됨) */}
         <View style={guideStyles.bottomBar}>
           <TouchableOpacity
             style={guideStyles.call119Btn}
@@ -814,6 +850,109 @@ const guideStyles = StyleSheet.create({
     elevation: 2,
   },
   call119Text: { fontSize: 22, fontWeight: '900', color: '#FFFFFF' },
+
+  /* === 가로 스크롤 카드뷰 (P-SOS 리뉴얼) === */
+  pager: { flex: 1 },
+  cardPage: {
+    paddingTop: 60,
+    paddingBottom: 100,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  bigImageWrap: {
+    width: SCREEN_WIDTH - 40,
+    height: SCREEN_WIDTH - 40,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 16,
+    padding: 12,
+  },
+  bigImage: {
+    width: '100%',
+    height: '100%',
+  },
+  swipeHint: {
+    fontSize: 14,
+    color: '#888',
+    marginTop: 12,
+    fontWeight: '600',
+  },
+  stepBigImageWrap: {
+    width: SCREEN_WIDTH - 80,
+    height: SCREEN_WIDTH * 0.55,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    padding: 8,
+  },
+  stepBigImage: { width: '90%', height: '90%' },
+  stepNumberCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  stepNumberText: { fontSize: 28, fontWeight: '900', color: '#FFFFFF' },
+  stepBigText: {
+    fontSize: 22,
+    lineHeight: 32,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    textAlign: 'center',
+    paddingHorizontal: 12,
+  },
+  warningCardLarge: {
+    backgroundColor: '#FFEBEE',
+    borderRadius: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#EF9A9A',
+    width: '100%',
+    marginTop: 30,
+  },
+  warningIconLarge: { fontSize: 56, marginBottom: 12 },
+  warningTitleLarge: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#C62828',
+    marginBottom: 12,
+  },
+  warningTextLarge: {
+    fontSize: 17,
+    lineHeight: 26,
+    fontWeight: '700',
+    color: '#B71C1C',
+    textAlign: 'center',
+  },
+
+  /* 점 인디케이터 */
+  dotRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 110 : 92,
+    left: 0,
+    right: 0,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#D0D0D0',
+  },
+  dotActive: {
+    width: 24,
+  },
 });
 
 /* ------------------------------------------------------------------ */
