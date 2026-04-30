@@ -12,6 +12,7 @@ import {
   Linking,
   Modal,
   KeyboardAvoidingView,
+  Animated,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -298,6 +299,8 @@ export default function FeverScreen() {
 
   const [medicineLoading, setMedicineLoading] = useState(false);
   const [medicineDose, setMedicineDose] = useState<MedicineDose | null>(null);
+  // 안내 페이지에서만 사용하는 입력 몸무게 (DB 수정하지 않음)
+  const [inputWeight, setInputWeight] = useState('');
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
@@ -697,6 +700,8 @@ export default function FeverScreen() {
               <MedicineSection
                 dose={medicineDose}
                 onSchedule={scheduleNotification}
+                inputWeight={inputWeight}
+                onChangeWeight={setInputWeight}
               />
             ) : (
               <Text style={styles.noDataText}>
@@ -975,19 +980,82 @@ export default function FeverScreen() {
 /* Sub-components                                                      */
 /* ------------------------------------------------------------------ */
 
+/**
+ * 입력 몸무게 기준 시럽 용량 재계산 (실시간 표시 전용)
+ * - 표준 공식 (소아과 가이드):
+ *   · 타이레놀 시럽(32mg/ml): 10~15mg/kg → 평균 12.5mg/kg → ml = w * 12.5 / 32
+ *   · 부루펜 시럽(20mg/ml): 5~10mg/kg → 평균 7.5mg/kg → ml = w * 7.5 / 20
+ * - 기존 dose 객체의 interval / maxDaily / ageRestriction은 그대로 유지
+ */
+function recalcSyrup(weight: number) {
+  const acetaminophenMg = +(weight * 12.5).toFixed(0);
+  const acetaminophenMl = +(weight * 12.5 / 32).toFixed(1);
+  const ibuprofenMg = +(weight * 7.5).toFixed(0);
+  const ibuprofenMl = +(weight * 7.5 / 20).toFixed(1);
+  return {
+    acetaminophen: { doseMg: `${acetaminophenMg}mg`, syrupMl: `시럽 약 ${acetaminophenMl}ml` },
+    ibuprofen: { doseMg: `${ibuprofenMg}mg`, syrupMl: `시럽 약 ${ibuprofenMl}ml` },
+  };
+}
+
 function MedicineSection({
   dose,
   onSchedule,
+  inputWeight,
+  onChangeWeight,
 }: {
   dose: MedicineDose;
   onSchedule: (minutes: number, label: string) => void;
+  inputWeight: string;
+  onChangeWeight: (v: string) => void;
 }) {
+  const parsedWeight = parseFloat(inputWeight);
+  const useInput = !isNaN(parsedWeight) && parsedWeight > 0 && parsedWeight < 100;
+  const recalc = useInput ? recalcSyrup(parsedWeight) : null;
+
+  // 부드러운 fade 애니메이션 (수치 변화 시 깜빡임 → 인지)
+  const fade = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!useInput) return;
+    Animated.sequence([
+      Animated.timing(fade, { toValue: 0.4, duration: 80, useNativeDriver: true }),
+      Animated.timing(fade, { toValue: 1, duration: 220, useNativeDriver: true }),
+    ]).start();
+  }, [parsedWeight, useInput, fade]);
+
+  const acetaminophenDoseMg = recalc?.acetaminophen.doseMg ?? dose.acetaminophen.doseMg;
+  const acetaminophenSyrup = recalc?.acetaminophen.syrupMl ?? dose.acetaminophen.syrupMl;
+  const ibuprofenDoseMg = recalc?.ibuprofen.doseMg ?? dose.ibuprofen.doseMg;
+  const ibuprofenSyrup = recalc?.ibuprofen.syrupMl ?? dose.ibuprofen.syrupMl;
+
   return (
     <View style={styles.medicineContainer}>
-      {/* Weight basis */}
+      {/* 몸무게 입력 (실시간 계산용) */}
+      <View style={styles.weightInputCard}>
+        <Text style={styles.weightInputLabel}>현재 몸무게</Text>
+        <View style={styles.weightInputRow}>
+          <TextInput
+            style={styles.weightInputField}
+            value={inputWeight}
+            onChangeText={onChangeWeight}
+            placeholder={String(dose.childWeight)}
+            placeholderTextColor="#BBB"
+            keyboardType="decimal-pad"
+            maxLength={5}
+          />
+          <Text style={styles.weightInputUnit}>kg</Text>
+        </View>
+        <Text style={styles.weightInputHint}>
+          {useInput
+            ? `입력값 ${parsedWeight}kg 기준으로 실시간 계산`
+            : `프로필 등록 ${dose.childWeight}kg 기준 (입력 시 즉시 변경)`}
+        </Text>
+      </View>
+
+      {/* Weight basis (기존 표시는 유지) */}
       <View style={styles.weightRow}>
         <Text style={styles.weightLabel}>체중 기준</Text>
-        <Text style={styles.weightValue}>{dose.childWeight}kg</Text>
+        <Text style={styles.weightValue}>{useInput ? `${parsedWeight}kg (입력)` : `${dose.childWeight}kg`}</Text>
       </View>
 
       {/* Tylenol (acetaminophen) */}
@@ -997,17 +1065,17 @@ function MedicineSection({
             타이레놀
           </Text>
         </View>
-        <View style={styles.medicineDoseWrap}>
+        <Animated.View style={[styles.medicineDoseWrap, { opacity: fade }]}>
           <Text style={styles.medicineDoseText}>
-            {dose.acetaminophen.doseMg}
+            {acetaminophenDoseMg}
           </Text>
           <Text style={styles.medicineSyrup}>
-            {dose.acetaminophen.syrupMl}
+            {acetaminophenSyrup}
           </Text>
           <Text style={[styles.medicineInterval, { color: TYLENOL_COLOR }]}>
             {dose.acetaminophen.interval} / {dose.acetaminophen.maxDaily}
           </Text>
-        </View>
+        </Animated.View>
       </View>
 
       {/* Notification for Tylenol */}
@@ -1029,17 +1097,17 @@ function MedicineSection({
             부루펜
           </Text>
         </View>
-        <View style={styles.medicineDoseWrap}>
+        <Animated.View style={[styles.medicineDoseWrap, { opacity: fade }]}>
           <Text style={styles.medicineDoseText}>
-            {dose.ibuprofen.doseMg}
+            {ibuprofenDoseMg}
           </Text>
           <Text style={styles.medicineSyrup}>
-            {dose.ibuprofen.syrupMl}
+            {ibuprofenSyrup}
           </Text>
           <Text style={[styles.medicineInterval, { color: BRUFEN_COLOR }]}>
             {dose.ibuprofen.interval} / {dose.ibuprofen.maxDaily}
           </Text>
-        </View>
+        </Animated.View>
       </View>
 
       {/* Age restriction */}
@@ -1450,6 +1518,48 @@ const styles = StyleSheet.create({
   medicineContainer: {
     marginTop: 4,
   },
+  /* 입력 몸무게 카드 (안내 페이지 전용 — 실시간 계산 트리거) */
+  weightInputCard: {
+    backgroundColor: '#FFF8F3',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#FFE0CC',
+  },
+  weightInputLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FF6F00',
+    marginBottom: 8,
+  },
+  weightInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  weightInputField: {
+    flex: 1,
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#1A1A1A',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: '#FF8C5A',
+  },
+  weightInputUnit: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FF6F00',
+  },
+  weightInputHint: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 6,
+  },
+
   weightRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
