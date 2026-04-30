@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,8 @@ import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sosApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
+import { pickDeliveryPhone, getHospital, type HospitalInfo } from '../../services/deliveryHospital';
+import { HospitalRegisterModal } from '../../components/pregnancy/HospitalRegisterModal';
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -206,6 +208,49 @@ export default function SOSScreen() {
 
   const [notifyingFamily, setNotifyingFamily] = useState(false);
   const [guideKey, setGuideKey] = useState<string | null>(null);
+
+  // 분만실 전화 (임신부 모드 전용)
+  const [deliveryHospital, setDeliveryHospital] = useState<HospitalInfo | null>(null);
+  const [hospitalModalOpen, setHospitalModalOpen] = useState(false);
+
+  const reloadDeliveryHospital = useCallback(async () => {
+    if (!selectedChild?.id) {
+      setDeliveryHospital(null);
+      return;
+    }
+    // delivery 우선, 없으면 clinic
+    const delivery = await getHospital(selectedChild.id, 'delivery');
+    if (delivery) {
+      setDeliveryHospital(delivery);
+    } else {
+      const clinic = await getHospital(selectedChild.id, 'clinic');
+      setDeliveryHospital(clinic);
+    }
+  }, [selectedChild?.id]);
+
+  useEffect(() => {
+    if (isPregnant) reloadDeliveryHospital();
+  }, [isPregnant, reloadDeliveryHospital]);
+
+  const callDeliveryWard = useCallback(async () => {
+    if (!selectedChild?.id) return;
+    const picked = await pickDeliveryPhone(selectedChild.id);
+    if (!picked) {
+      // 등록된 번호 없음 → 등록 모달 열기
+      Alert.alert(
+        '병원 번호 등록 필요',
+        '먼저 분만 예정 병원의 전화번호를 등록해 주세요.',
+        [
+          { text: '취소', style: 'cancel' },
+          { text: '등록하기', onPress: () => setHospitalModalOpen(true) },
+        ],
+      );
+      return;
+    }
+    Linking.openURL(`tel:${picked.phone.replace(/[^0-9]/g, '')}`).catch(() => {
+      Alert.alert('전화 연결 실패', `직접 전화해 주세요: ${picked.phone}`);
+    });
+  }, [selectedChild?.id]);
 
   /* -- Symptom toggle -- */
   const toggleSymptom = useCallback((id: string) => {
@@ -428,35 +473,99 @@ export default function SOSScreen() {
         {/* ============================================ */}
         {/* Section 4: Quick Actions                     */}
         {/* ============================================ */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.quickActionBtn}
-            onPress={openHospitalMap}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.quickActionIcon}>{'🏥'}</Text>
-            <Text style={styles.quickActionText}>{isPregnant ? '가까운 산부인과 찾기' : '가까운 병원 찾기'}</Text>
-          </TouchableOpacity>
+        {isPregnant ? (
+          <>
+            {/* 임신부 전용 — 거대 버튼 2개 (분만실 전화 / 가족 알림) */}
+            <TouchableOpacity
+              style={styles.megaCallBtn}
+              onPress={callDeliveryWard}
+              activeOpacity={0.85}
+              hitSlop={8}
+            >
+              <Text style={styles.megaCallIcon}>{'🚨'}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.megaCallText}>분만실 전화하기</Text>
+                <Text style={styles.megaCallSub}>
+                  {deliveryHospital
+                    ? `${deliveryHospital.name} · ${deliveryHospital.deliveryWardPhone || deliveryHospital.mainPhone}`
+                    : '터치하여 병원 번호 등록'}
+                </Text>
+              </View>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.quickActionBtn}
-            onPress={notifyFamily}
-            activeOpacity={0.7}
-            disabled={notifyingFamily}
-          >
-            {notifyingFamily ? (
-              <ActivityIndicator color={COLOR.accent} size="small" />
-            ) : (
-              <>
-                <Text style={styles.quickActionIcon}>{'👨‍👩‍👧'}</Text>
-                <Text style={styles.quickActionText}>가족에게 알리기</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={styles.megaFamilyBtn}
+              onPress={notifyFamily}
+              activeOpacity={0.85}
+              hitSlop={8}
+              disabled={notifyingFamily}
+            >
+              {notifyingFamily ? (
+                <ActivityIndicator color="#FFFFFF" size="large" />
+              ) : (
+                <>
+                  <Text style={styles.megaFamilyIcon}>{'👨‍👩‍👦'}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.megaFamilyText}>가족에게 알리기</Text>
+                    <Text style={styles.megaFamilySub}>등록된 보호자에게 긴급 메시지</Text>
+                  </View>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* 병원 정보 수정 링크 */}
+            <TouchableOpacity
+              style={styles.editHospitalLink}
+              onPress={() => setHospitalModalOpen(true)}
+              hitSlop={10}
+            >
+              <Text style={styles.editHospitalText}>
+                ✏️ 분만/진료 병원 정보 {deliveryHospital ? '수정' : '등록'}
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={styles.quickActions}>
+            <TouchableOpacity
+              style={styles.quickActionBtn}
+              onPress={openHospitalMap}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.quickActionIcon}>{'🏥'}</Text>
+              <Text style={styles.quickActionText}>가까운 병원 찾기</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionBtn}
+              onPress={notifyFamily}
+              activeOpacity={0.7}
+              disabled={notifyingFamily}
+            >
+              {notifyingFamily ? (
+                <ActivityIndicator color={COLOR.accent} size="small" />
+              ) : (
+                <>
+                  <Text style={styles.quickActionIcon}>{'👨‍👩‍👧'}</Text>
+                  <Text style={styles.quickActionText}>가족에게 알리기</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* 병원 등록 모달 */}
+      {selectedChild?.id ? (
+        <HospitalRegisterModal
+          visible={hospitalModalOpen}
+          childId={selectedChild.id}
+          initialKind="delivery"
+          onClose={() => setHospitalModalOpen(false)}
+          onSaved={reloadDeliveryHospital}
+        />
+      ) : null}
     </View>
   );
 }
@@ -964,6 +1073,59 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
+
+  /* 임신부 전용 — 분만실 전화 거대 버튼 */
+  megaCallBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D32F2F',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    marginBottom: 12,
+    gap: 16,
+    borderWidth: 2,
+    borderColor: '#B71C1C',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  megaCallIcon: { fontSize: 44 },
+  megaCallText: { fontSize: 22, fontWeight: '900', color: '#FFFFFF', lineHeight: 28 },
+  megaCallSub: { fontSize: 13, color: '#FFE4D2', marginTop: 4, fontWeight: '600' },
+
+  /* 임신부 전용 — 가족 알림 거대 버튼 */
+  megaFamilyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#7C5CFF',
+    paddingVertical: 22,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    marginBottom: 12,
+    gap: 16,
+    borderWidth: 2,
+    borderColor: '#5E40D9',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  megaFamilyIcon: { fontSize: 40 },
+  megaFamilyText: { fontSize: 20, fontWeight: '900', color: '#FFFFFF', lineHeight: 26 },
+  megaFamilySub: { fontSize: 12, color: '#E1D9FA', marginTop: 4, fontWeight: '600' },
+
+  /* 병원 정보 수정 링크 */
+  editHospitalLink: {
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  editHospitalText: { fontSize: 13, color: '#666', textDecorationLine: 'underline' },
 
   /* Quick Actions */
   quickActions: {

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  Linking,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +16,7 @@ import { useChildStore } from '../../stores/childStore';
 import { pregnancyApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { pickDeliveryPhone } from '../../services/deliveryHospital';
 
 type Tab = 'kick' | 'contraction';
 
@@ -50,6 +52,34 @@ export default function LaborMonitorScreen() {
   const [contractions, setContractions] = useState<{ start: number; end: number | null }[]>([]);
   const [currentContraction, setCurrentContraction] = useState<number | null>(null);
   const [contractionTick, setContractionTick] = useState(0);
+
+  // 인터랙티브 진단 (조산사 말풍선 형태로 한 번에 하나씩)
+  // 단계: posture(자세변화) → painSite(통증부위) → ruptured(양수파수)
+  type DiagStep = 'posture' | 'painSite' | 'ruptured' | 'done';
+  const [diagStep, setDiagStep] = useState<DiagStep>('posture');
+  const [diagAnswers, setDiagAnswers] = useState<{
+    postureFails?: boolean;       // true=자세 바꿔도 아픔(진진통 가능성)
+    painCentral?: boolean;         // true=허리+배 전체(진진통 가능성), false=하복부(가진통 가능성)
+    ruptured?: boolean;            // true=이슬/양수 파수
+  }>({});
+
+  // 호흡법 가이드 — 측정 중 회전 노출 (5~7초마다)
+  const BREATHING_TIPS = [
+    '🌬 깊게 숨을 들이마시고, 천천히 내뱉으세요',
+    '💆‍♀️ 어깨 힘을 빼고 편안한 자세를 유지하세요',
+    '👐 남편이 허리를 지그시 눌러주면 도움이 돼요',
+    '😌 통증 사이에는 편하게 쉬어 두세요',
+    '💧 물을 한 모금씩 천천히 마셔도 좋아요',
+    '🌬 코로 들이쉬고 입으로 후~ 길게 내쉬세요',
+  ];
+  const [breathingIdx, setBreathingIdx] = useState(0);
+  useEffect(() => {
+    if (currentContraction === null) return;
+    const id = setInterval(() => {
+      setBreathingIdx((i) => (i + 1) % BREATHING_TIPS.length);
+    }, 6000);
+    return () => clearInterval(id);
+  }, [currentContraction, BREATHING_TIPS.length]);
 
   useEffect(() => {
     if (kickRunning) {
@@ -127,24 +157,37 @@ export default function LaborMonitorScreen() {
   /* ── 진통 가이드 분석 (가진통 / 진진통 추정) ──
    * 의료 진단 아님 — 정보 제공 목적. 면책 고지 화면에 항상 노출.
    *
-   * 입력: 최근 5회 측정의 시작 시각 + 지속 시간
-   * 판정 기준 (산부인과 일반 가이드 기반):
-   *   - 간격이 점점 짧아지고 5분 ± 1분 이내로 일정 → 진진통 의심
-   *   - 간격이 불규칙하거나 10분 이상 → 가진통 가능성
-   *   - 데이터 부족(< 3회) → 판단 불가
+   * 입력: 최근 5회 측정의 시작 시각 + 지속 시간 + 인터랙티브 답변
+   * 가중치 (단순 if-else로 빠르게):
+   *   - 간격 패턴: 일정+5분이내 +3 / 점점 짧아짐 +2 / 불규칙 0
+   *   - postureFails(자세 바꿔도 아픔): +2
+   *   - painCentral(허리+배 전체): +2 / 하복부 위주: -1
+   *   - ruptured(양수): 즉시 EMERGENCY
+   * 합계 ≥ 4 → 병원 권장, ≥ 2 → 지켜보기, 그 외 → 가진통 가능성
    */
   const contractionGuide = useMemo(() => {
+    // 양수 파수는 즉시 EMERGENCY
+    if (diagAnswers.ruptured) {
+      return {
+        label: '🚨 즉시 분만실 연락',
+        message:
+          '양수가 터졌거나 이슬이 비치면 즉시 분만실에 전화하시고 병원으로 이동하세요. 출산이 가까울 수 있습니다.',
+        tone: 'emergency' as const,
+        score: 99,
+      };
+    }
     if (contractions.length < 3) {
       return {
         label: '데이터 수집 중',
-        message: '진통 3회 이상 기록되면 패턴 분석을 시작합니다.',
+        message: '진통 3회 이상 기록되면 패턴 분석을 시작합니다. 측정 중에는 깊은 호흡으로 편하게 쉬세요.',
         tone: 'info' as const,
+        score: 0,
       };
     }
     const last5 = contractions.slice(-5);
     const intervals: number[] = [];
     for (let i = 1; i < last5.length; i++) {
-      intervals.push((last5[i].start - last5[i - 1].start) / 1000); // 초
+      intervals.push((last5[i].start - last5[i - 1].start) / 1000);
     }
     const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
     const max = Math.max(...intervals);
@@ -152,35 +195,72 @@ export default function LaborMonitorScreen() {
     const variance = max - min;
     const avgMin = avg / 60;
 
-    // 일정한 간격(분산 < 90초) + 5분 이내 → 진진통 의심
+    // 가중치 계산 (간단한 if-else, 빠른 응답)
+    let score = 0;
+    let pattern: 'regular' | 'shortening' | 'irregular';
     if (variance < 90 && avgMin <= 6 && avgMin >= 3) {
+      score += 3;
+      pattern = 'regular';
+    } else if (intervals[intervals.length - 1] < avg * 0.7 && avgMin < 10) {
+      score += 2;
+      pattern = 'shortening';
+    } else {
+      pattern = 'irregular';
+    }
+    if (diagAnswers.postureFails === true) score += 2;
+    if (diagAnswers.postureFails === false) score -= 1;
+    if (diagAnswers.painCentral === true) score += 2;
+    if (diagAnswers.painCentral === false) score -= 1;
+
+    // 결론 분기
+    if (score >= 4) {
       return {
         label: '병원 방문 권장 수치',
         message:
-          `현재 기록된 간격은 평균 ${avgMin.toFixed(1)}분으로 병원 방문 권장 수치에 해당합니다. ` +
+          `현재 기록된 간격은 평균 ${avgMin.toFixed(1)}분이며, 종합 분석상 진진통일 가능성이 높습니다. ` +
           '담당 의사나 분만실에 문의하여 정확한 진단을 받으시길 권장합니다.',
         tone: 'danger' as const,
+        score,
       };
     }
-    // 점점 짧아지는 추세 — 마지막 간격이 평균의 70% 이하
-    if (intervals[intervals.length - 1] < avg * 0.7 && avgMin < 10) {
+    if (score >= 2 || pattern === 'shortening') {
       return {
         label: '간격이 짧아지고 있어요',
         message:
-          `평균 ${avgMin.toFixed(1)}분에서 마지막 ${(intervals[intervals.length - 1] / 60).toFixed(1)}분으로 짧아지는 추세입니다. ` +
+          `평균 ${avgMin.toFixed(1)}분에서 마지막 ${(intervals[intervals.length - 1] / 60).toFixed(1)}분으로 변화가 보여요. ` +
           '점점 가까워지고 있을 가능성이 있으니 다음 몇 회 더 지켜봐 주세요.',
         tone: 'watch' as const,
+        score,
       };
     }
-    // 그 외 — 불규칙하거나 10분 이상
     return {
       label: '가진통일 가능성이 높습니다',
       message:
         `간격이 ${Math.round(min / 60)}~${Math.round(max / 60)}분으로 불규칙합니다. ` +
         '현재 패턴은 가진통일 가능성이 높습니다. 편안한 자세로 휴식을 취하며 경과를 조금 더 지켜보세요.',
       tone: 'info' as const,
+      score,
     };
-  }, [contractions]);
+  }, [contractions, diagAnswers]);
+
+  /** 진진통 판정 (배경 빨강 + 분만실 전화 노출) */
+  const isLaborImminent = contractionGuide.tone === 'danger' || contractionGuide.tone === 'emergency';
+
+  /** 분만실 전화하기 (등록된 번호 우선) */
+  const callDeliveryWard = useCallback(async () => {
+    if (!childId) return;
+    const picked = await pickDeliveryPhone(childId);
+    if (!picked) {
+      Alert.alert(
+        '병원 번호 등록 필요',
+        '먼저 SOS 화면에서 분만 예정 병원 전화번호를 등록해 주세요.',
+      );
+      return;
+    }
+    Linking.openURL(`tel:${picked.phone.replace(/[^0-9]/g, '')}`).catch(() => {
+      Alert.alert('전화 연결 실패', `직접 전화해 주세요: ${picked.phone}`);
+    });
+  }, [childId]);
 
   if (!selectedChild?.isPregnant) {
     return (
@@ -198,8 +278,11 @@ export default function LaborMonitorScreen() {
     );
   }
 
+  // 진진통 판정 시 화면 배경색 빨강 톤 (탭이 contraction일 때만 적용)
+  const screenBg = tab === 'contraction' && isLaborImminent ? '#FFEAEA' : COLORS.background;
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: screenBg }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.header}>
@@ -311,26 +394,167 @@ export default function LaborMonitorScreen() {
               )}
             </TouchableOpacity>
 
-            {/* 분석 가이드 카드 (3회 이상 기록되면 활성화) */}
+            {/* 호흡법 가이드 — 측정 중에만 노출 */}
+            {currentContraction !== null && (
+              <View style={styles.breathingBox}>
+                <Text style={styles.breathingText}>{BREATHING_TIPS[breathingIdx]}</Text>
+              </View>
+            )}
+
+            {/* 분석 가이드 카드 — 진진통 시 강조 (큰 결론) */}
             <View
               style={[
                 styles.guideCard,
                 contractionGuide.tone === 'danger' && styles.guideCardDanger,
                 contractionGuide.tone === 'watch' && styles.guideCardWatch,
+                contractionGuide.tone === 'emergency' && styles.guideCardEmergency,
+                isLaborImminent && styles.guideCardImminent,
               ]}
             >
               <Text
                 style={[
                   styles.guideCardLabel,
+                  isLaborImminent && styles.guideCardLabelImminent,
                   contractionGuide.tone === 'danger' && { color: '#C62828' },
                   contractionGuide.tone === 'watch' && { color: '#E65100' },
+                  contractionGuide.tone === 'emergency' && { color: '#B71C1C' },
                 ]}
               >
-                {contractionGuide.tone === 'danger' ? '🚨 ' : contractionGuide.tone === 'watch' ? '⏱️ ' : 'ℹ️ '}
+                {contractionGuide.tone === 'emergency'
+                  ? ''
+                  : contractionGuide.tone === 'danger' ? '🚨 '
+                  : contractionGuide.tone === 'watch' ? '⏱️ '
+                  : 'ℹ️ '}
                 {contractionGuide.label}
               </Text>
-              <Text style={styles.guideCardText}>{contractionGuide.message}</Text>
+              <Text style={[styles.guideCardText, isLaborImminent && styles.guideCardTextImminent]}>
+                {contractionGuide.message}
+              </Text>
+
+              {/* 다이렉트 액션 — 진진통 판정 시 큰 분만실 전화 버튼 */}
+              {isLaborImminent && (
+                <TouchableOpacity
+                  style={styles.directCallBtn}
+                  onPress={callDeliveryWard}
+                  activeOpacity={0.85}
+                  hitSlop={8}
+                >
+                  <Text style={styles.directCallIcon}>📞</Text>
+                  <Text style={styles.directCallText}>분만실 바로 전화하기</Text>
+                </TouchableOpacity>
+              )}
             </View>
+
+            {/* 의료 면책 고지 — 분석 박스 바로 아래 */}
+            {contractions.length >= 3 && (
+              <View style={styles.disclaimerBoxInline}>
+                <Text style={styles.disclaimer}>
+                  본 안내는 입력된 데이터를 바탕으로 한 일반 정보이며 의료적 진단을 대신할 수 없습니다.
+                  위급 상황 시 반드시 의료기관의 도움을 받으세요.
+                </Text>
+              </View>
+            )}
+
+            {/* 인터랙티브 진단 — 조산사 말풍선 (3회 이상 기록 시 시작) */}
+            {contractions.length >= 3 && diagStep !== 'done' && !diagAnswers.ruptured && (
+              <View style={styles.midwifeBubble}>
+                <Text style={styles.midwifeAvatar}>👩‍⚕️</Text>
+                <View style={styles.midwifeContent}>
+                  <Text style={styles.midwifeName}>조산사 선생님</Text>
+
+                  {diagStep === 'posture' && (
+                    <>
+                      <Text style={styles.midwifeQuestion}>
+                        잠시 일어나 걷거나 자세를 바꿔보세요.{'\n'}
+                        그래도 계속 아픈가요?
+                      </Text>
+                      <View style={styles.midwifeChoices}>
+                        <TouchableOpacity
+                          style={[styles.midwifeChoice, styles.midwifeChoiceSoft]}
+                          onPress={() => {
+                            setDiagAnswers((p) => ({ ...p, postureFails: false }));
+                            setDiagStep('painSite');
+                          }}
+                        >
+                          <Text style={styles.midwifeChoiceText}>통증이 줄거나 사라졌어요</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.midwifeChoice, styles.midwifeChoiceFirm]}
+                          onPress={() => {
+                            setDiagAnswers((p) => ({ ...p, postureFails: true }));
+                            setDiagStep('painSite');
+                          }}
+                        >
+                          <Text style={[styles.midwifeChoiceText, styles.midwifeChoiceTextFirm]}>
+                            자세 바꿔도 똑같이 아파요
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  )}
+
+                  {diagStep === 'painSite' && (
+                    <>
+                      <Text style={styles.midwifeQuestion}>
+                        지금 통증은 어디가 가장 심하세요?
+                      </Text>
+                      <View style={styles.midwifeChoices}>
+                        <TouchableOpacity
+                          style={[styles.midwifeChoice, styles.midwifeChoiceSoft]}
+                          onPress={() => {
+                            setDiagAnswers((p) => ({ ...p, painCentral: false }));
+                            setDiagStep('ruptured');
+                          }}
+                        >
+                          <Text style={styles.midwifeChoiceText}>아랫배 위주로 아파요</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.midwifeChoice, styles.midwifeChoiceFirm]}
+                          onPress={() => {
+                            setDiagAnswers((p) => ({ ...p, painCentral: true }));
+                            setDiagStep('ruptured');
+                          }}
+                        >
+                          <Text style={[styles.midwifeChoiceText, styles.midwifeChoiceTextFirm]}>
+                            허리·배 전체가 쥐어짜요
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  )}
+
+                  {diagStep === 'ruptured' && (
+                    <>
+                      <Text style={styles.midwifeQuestion}>
+                        혹시 이슬이 비쳤거나{'\n'}양수가 터졌나요?
+                      </Text>
+                      <View style={styles.midwifeChoices}>
+                        <TouchableOpacity
+                          style={[styles.midwifeChoice, styles.midwifeChoiceSoft]}
+                          onPress={() => {
+                            setDiagAnswers((p) => ({ ...p, ruptured: false }));
+                            setDiagStep('done');
+                          }}
+                        >
+                          <Text style={styles.midwifeChoiceText}>아니요</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.midwifeChoice, styles.midwifeChoiceEmergency]}
+                          onPress={() => {
+                            setDiagAnswers((p) => ({ ...p, ruptured: true }));
+                            setDiagStep('done');
+                          }}
+                        >
+                          <Text style={[styles.midwifeChoiceText, styles.midwifeChoiceTextFirm]}>
+                            네, 보였어요/터졌어요
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  )}
+                </View>
+              </View>
+            )}
 
             {contractions.length > 0 && (
               <View style={styles.historyCard}>
@@ -642,6 +866,111 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     fontWeight: '500',
   },
+
+  /* 호흡법 가이드 박스 — 측정 중 회전 메시지 */
+  breathingBox: {
+    backgroundColor: '#E8F5E9',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    marginVertical: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
+    alignItems: 'center',
+  },
+  breathingText: {
+    fontSize: 17,
+    color: '#2E7D32',
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 26,
+  },
+
+  /* 진진통 판정 시 결론 강조 (배경 빨강 톤일 때 결론 박스 강조) */
+  guideCardEmergency: {
+    backgroundColor: '#FFCDD2',
+    borderLeftColor: '#B71C1C',
+    borderLeftWidth: 8,
+  },
+  guideCardImminent: {
+    paddingVertical: SPACING.lg + 4,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.lg,
+    marginTop: SPACING.lg,
+  },
+  guideCardLabelImminent: {
+    fontSize: 32,
+    lineHeight: 40,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: SPACING.sm,
+  },
+  guideCardTextImminent: {
+    fontSize: 17,
+    lineHeight: 26,
+    textAlign: 'center',
+  },
+
+  /* 다이렉트 분만실 전화 버튼 (진진통 시 결론 박스 안) */
+  directCallBtn: {
+    marginTop: SPACING.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 18,
+    backgroundColor: '#D32F2F',
+    borderRadius: RADIUS.lg,
+    borderWidth: 2,
+    borderColor: '#B71C1C',
+    ...SHADOWS.soft,
+  },
+  directCallIcon: { fontSize: 30, color: '#FFFFFF' },
+  directCallText: { fontSize: 20, fontWeight: '900', color: '#FFFFFF' },
+
+  /* 인라인 면책 고지 (분석 박스 바로 아래) */
+  disclaimerBoxInline: {
+    backgroundColor: '#FAFAFA',
+    padding: SPACING.sm,
+    borderRadius: RADIUS.sm,
+    marginTop: SPACING.sm,
+  },
+
+  /* 조산사 말풍선 — 인터랙티브 진단 */
+  midwifeBubble: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: '#FFFFFF',
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
+    marginTop: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    ...SHADOWS.soft,
+  },
+  midwifeAvatar: { fontSize: 36 },
+  midwifeContent: { flex: 1 },
+  midwifeName: { fontSize: 13, fontWeight: '700', color: '#7C5CFF', marginBottom: 6 },
+  midwifeQuestion: {
+    fontSize: 16,
+    color: '#1A1A1A',
+    lineHeight: 24,
+    fontWeight: '600',
+    marginBottom: SPACING.md,
+  },
+  midwifeChoices: { gap: 8 },
+  midwifeChoice: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1.5,
+  },
+  midwifeChoiceSoft: { backgroundColor: '#F5F5F5', borderColor: '#E0E0E0' },
+  midwifeChoiceFirm: { backgroundColor: '#FFEBEE', borderColor: '#EF9A9A' },
+  midwifeChoiceEmergency: { backgroundColor: '#FFCDD2', borderColor: '#C62828' },
+  midwifeChoiceText: { fontSize: 15, fontWeight: '600', color: '#333' },
+  midwifeChoiceTextFirm: { color: '#C62828', fontWeight: '700' },
 
   /* 의료 면책 고지 박스 (분석 박스 바로 아래) */
   disclaimerBox: {
