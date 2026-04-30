@@ -17,6 +17,7 @@ import {
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { sosApi } from '../../services/api';
 import {
   scheduleFeverRecheckReminder,
@@ -192,6 +193,192 @@ function classifyFever(adjustedTemp: number): FeverLevel {
   return 'emergency';
 }
 
+/**
+ * 행동 가이드 빌더 — 결과 + 이력(체온 변화) + 마지막 해열제 복용으로 종합 판단
+ * "지금 엄마가 해야 할 행동"을 큰 헤드라인으로 제시
+ */
+interface ActionGuide {
+  label: string;          // 상단 작은 라벨 (정상/미열/고열 등)
+  headline: string;       // 큰 행동 멘트
+  emotion: string;        // 감성 멘트
+  bgColor: string;
+  borderColor: string;
+  accentColor: string;
+  nextCheckMin: number;   // 0이면 다음 측정 안내 X
+  nextCheckLabel: string;
+  dangerLevel: boolean;   // 119 버튼 노출 여부
+}
+
+interface ActionGuideInput {
+  raw: number;
+  adjusted: number;
+  level: FeverLevel;
+}
+
+function buildActionGuide(
+  current: ActionGuideInput,
+  history: HistoryEntry[],
+  medLog: MedLogEntry[],
+): ActionGuide {
+  const adj = current.adjusted;
+  // 1) 회복 추세 감지 (직전 기록 vs 현재)
+  const prev = history.find((h) => h.timestamp < Date.now() - 1); // 가장 최근 (오늘 측정 외)
+  const recovering = prev && prev.adjustedTemp - adj >= 0.4 && adj < 38.0;
+
+  // 2) 마지막 해열제 복용 시간
+  const lastMed = medLog[0]; // medLog는 최신순
+  const minutesSinceMed = lastMed ? Math.round((Date.now() - lastMed.timestamp) / 60000) : -1;
+
+  // 3) 분류별 행동 가이드
+  if (current.level === 'emergency') {
+    return {
+      label: '응급',
+      headline: '지금 바로 119로 전화하세요!',
+      emotion: '엄마, 침착하세요. 옷을 얇게 하고 미지근한 물수건으로 닦으며 응급실로 이동해 주세요.',
+      bgColor: '#FFEBEE',
+      borderColor: '#C62828',
+      accentColor: '#C62828',
+      nextCheckMin: 0,
+      nextCheckLabel: '',
+      dangerLevel: true,
+    };
+  }
+
+  if (current.level === 'danger') {
+    return {
+      label: '위험 고열',
+      headline: '지금 바로 응급실로 가세요!',
+      emotion: '엄마, 당황하지 마세요. 해열제 효과를 기다리지 말고 병원으로 이동하는 게 가장 안전해요.',
+      bgColor: '#FFEBEE',
+      borderColor: '#D84315',
+      accentColor: '#D84315',
+      nextCheckMin: 0,
+      nextCheckLabel: '',
+      dangerLevel: true,
+    };
+  }
+
+  // 회복 중 (열이 내리고 있음)
+  if (recovering) {
+    return {
+      label: '회복 중',
+      headline: '다행이에요! 열이 내리고 있어요',
+      emotion: '고생 많으셨어요, 엄마! 1시간 뒤에 한 번 더 재서 안정세인지 확인해 주세요.',
+      bgColor: '#E8F5E9',
+      borderColor: '#43A047',
+      accentColor: '#2E7D32',
+      nextCheckMin: 60,
+      nextCheckLabel: formatRelativeFuture(60),
+      dangerLevel: false,
+    };
+  }
+
+  if (current.level === 'high') {
+    // 고열 — 해열제 가능 여부 체크
+    if (lastMed && minutesSinceMed < 240) {
+      const remain = 240 - minutesSinceMed;
+      return {
+        label: '고열',
+        headline: `해열제는 ${remain}분 후 가능해요`,
+        emotion: '지금은 미지근한 물수건으로 몸을 닦고 시원한 환경을 만들어 주세요. 수분 보충도 잊지 마세요.',
+        bgColor: '#FFEBEE',
+        borderColor: '#E53935',
+        accentColor: '#C62828',
+        nextCheckMin: 30,
+        nextCheckLabel: formatRelativeFuture(30),
+        dangerLevel: false,
+      };
+    }
+    return {
+      label: '고열',
+      headline: '지금 바로 해열제를 먹이세요!',
+      emotion: '엄마, 당황하지 마세요. 지금은 해열제가 필요한 시점입니다. 30분 뒤 다시 재볼게요.',
+      bgColor: '#FFEBEE',
+      borderColor: '#E53935',
+      accentColor: '#C62828',
+      nextCheckMin: 30,
+      nextCheckLabel: formatRelativeFuture(30),
+      dangerLevel: false,
+    };
+  }
+
+  if (current.level === 'moderate') {
+    if (lastMed && minutesSinceMed < 240) {
+      return {
+        label: '발열',
+        headline: '잠시 더 지켜봐 주세요',
+        emotion: '해열제가 작용하는 중이에요. 30분 뒤 다시 재면 효과를 확인할 수 있어요.',
+        bgColor: '#FFF3E0',
+        borderColor: '#FB8C00',
+        accentColor: '#E65100',
+        nextCheckMin: 30,
+        nextCheckLabel: formatRelativeFuture(30),
+        dangerLevel: false,
+      };
+    }
+    return {
+      label: '발열',
+      headline: '해열제 복용을 고려해 주세요',
+      emotion: '체온이 올라가고 있어요. 옷을 가볍게 하고 수분을 충분히 주세요.',
+      bgColor: '#FFF3E0',
+      borderColor: '#FB8C00',
+      accentColor: '#E65100',
+      nextCheckMin: 30,
+      nextCheckLabel: formatRelativeFuture(30),
+      dangerLevel: false,
+    };
+  }
+
+  if (current.level === 'mild') {
+    return {
+      label: '미열',
+      headline: '조금 더 지켜봐도 괜찮아요',
+      emotion: '엄마, 너무 걱정 마세요. 수분 섭취에 신경 써주시고 1시간 뒤 다시 재봐요.',
+      bgColor: '#FFF8E1',
+      borderColor: '#FFA000',
+      accentColor: '#F57C00',
+      nextCheckMin: 60,
+      nextCheckLabel: formatRelativeFuture(60),
+      dangerLevel: false,
+    };
+  }
+
+  // normal
+  return {
+    label: '정상',
+    headline: '지금은 괜찮아요',
+    emotion: '체온이 정상 범위예요. 편안하게 지켜봐 주세요.',
+    bgColor: '#E8F5E9',
+    borderColor: '#66BB6A',
+    accentColor: '#2E7D32',
+    nextCheckMin: 0,
+    nextCheckLabel: '',
+    dangerLevel: false,
+  };
+}
+
+function formatMeasureTime(d: Date): string {
+  const now = new Date();
+  const sameDay = d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  if (sameDay) {
+    const diffMin = Math.round((now.getTime() - d.getTime()) / 60000);
+    if (diffMin < 2) return `방금 (${hh}:${mm})`;
+    if (diffMin < 60) return `${diffMin}분 전 (${hh}:${mm})`;
+    return `오늘 ${hh}:${mm}`;
+  }
+  return `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`;
+}
+
+function formatRelativeFuture(minutes: number): string {
+  const target = new Date(Date.now() + minutes * 60 * 1000);
+  const hh = String(target.getHours()).padStart(2, '0');
+  const mm = String(target.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm} (약 ${minutes >= 60 ? `${Math.round(minutes / 60)}시간` : `${minutes}분`} 후)`;
+}
+
 function historyStorageKey(childId: string): string {
   return `fever_history_${childId}`;
 }
@@ -305,6 +492,9 @@ export default function FeverScreen() {
   const [medicineDose, setMedicineDose] = useState<MedicineDose | null>(null);
   // 안내 페이지에서만 사용하는 입력 몸무게 (DB 수정하지 않음)
   const [inputWeight, setInputWeight] = useState('');
+  // 측정 시각 (기본 = 현재, 과거 시점도 기록 가능)
+  const [measureTime, setMeasureTime] = useState<Date>(new Date());
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
@@ -434,9 +624,9 @@ export default function FeverScreen() {
 
     setCheckedResult({ raw, adjusted, level });
 
-    // Save to history
+    // Save to history (사용자가 측정 시각 변경한 경우 그 시각으로 저장)
     const entry: HistoryEntry = {
-      timestamp: Date.now(),
+      timestamp: measureTime.getTime(),
       temperature: raw,
       method,
       adjustedTemp: adjusted,
@@ -466,8 +656,11 @@ export default function FeverScreen() {
       // 정상 체온이면 기존 재측정 예약 취소
       cancelFeverRecheckReminder(selectedChild.id).catch(() => {});
     }
+
+    // 측정 시각을 다시 현재로 리셋 (다음 측정 대비)
+    setMeasureTime(new Date());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [temperature, method, selectedChild, history, saveHistory]);
+  }, [temperature, method, measureTime, selectedChild, history, saveHistory]);
 
   /* -- Load medicine dosage -- */
   const loadMedicine = useCallback(async (temp?: number) => {
@@ -576,11 +769,43 @@ export default function FeverScreen() {
       >
         {/* == Title Bar == */}
         <View style={styles.titleBar}>
-          <Text style={styles.screenTitle}>{'🌡️'} 열나요</Text>
+          <Text style={styles.screenTitle}>{'🌡️'} 열나열나</Text>
           {selectedChild && (
-            <Text style={styles.screenSubtitle}>{selectedChild.name}</Text>
+            <Text style={styles.screenSubtitle}>{selectedChild.name}의 체온 케어</Text>
           )}
         </View>
+
+        {/* ============================================ */}
+        {/* 행동 가이드 카드 (체온 입력 후 노출 — 결과보다 위) */}
+        {/* ============================================ */}
+        {checkedResult && (() => {
+          const guide = buildActionGuide(checkedResult, history, medLog);
+          return (
+            <View style={[styles.actionCard, { backgroundColor: guide.bgColor, borderColor: guide.borderColor }]}>
+              <Text style={[styles.actionLabel, { color: guide.accentColor }]}>{guide.label}</Text>
+              <Text style={styles.actionHeadline}>{guide.headline}</Text>
+              <Text style={styles.actionEmotion}>{guide.emotion}</Text>
+              {guide.nextCheckMin > 0 && (
+                <View style={styles.actionMetaRow}>
+                  <Text style={styles.actionMeta}>⏰ 다음 측정: {guide.nextCheckLabel}</Text>
+                </View>
+              )}
+              {guide.dangerLevel && (
+                <TouchableOpacity
+                  style={styles.actionEmergency}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    Linking.openURL('tel:119').catch(() => {
+                      Alert.alert('전화 연결 실패', '직접 119로 전화해주세요.');
+                    });
+                  }}
+                >
+                  <Text style={styles.actionEmergencyText}>🚨 119 응급 전화</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        })()}
 
         {/* ============================================ */}
         {/* Section 1: Temperature Input                 */}
@@ -590,6 +815,33 @@ export default function FeverScreen() {
           <Text style={styles.sectionDesc}>
             체온을 입력하고 측정 부위를 선택해주세요
           </Text>
+
+          {/* 측정 시각 selector */}
+          <TouchableOpacity
+            style={styles.measureTimeRow}
+            onPress={() => setShowTimePicker(true)}
+            activeOpacity={0.8}
+            hitSlop={6}
+          >
+            <Text style={styles.measureTimeLabel}>📅 측정 시각</Text>
+            <Text style={styles.measureTimeValue}>
+              {formatMeasureTime(measureTime)}
+            </Text>
+            <Text style={styles.measureTimeArrow}>{'>'}</Text>
+          </TouchableOpacity>
+          {showTimePicker && (
+            <DateTimePicker
+              value={measureTime}
+              mode={Platform.OS === 'ios' ? 'datetime' : 'time'}
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              maximumDate={new Date()}
+              onChange={(event: DateTimePickerEvent, date?: Date) => {
+                if (Platform.OS !== 'ios') setShowTimePicker(false);
+                if (event.type === 'dismissed' || !date) return;
+                setMeasureTime(date);
+              }}
+            />
+          )}
 
           {/* Big temperature input */}
           <TouchableOpacity
@@ -1485,6 +1737,74 @@ const styles = StyleSheet.create({
   checkButtonText: {
     fontSize: 18,
     fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  /* 측정 시각 selector */
+  measureTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F7',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    gap: 10,
+  },
+  measureTimeLabel: { fontSize: 14, fontWeight: '700', color: '#444' },
+  measureTimeValue: { flex: 1, fontSize: 14, fontWeight: '700', color: '#1A1A1A', textAlign: 'right' },
+  measureTimeArrow: { fontSize: 16, color: '#9E9E9E', fontWeight: '700' },
+
+  /* === Action Guide Card (행동 중심 — 결과 박스보다 위) === */
+  actionCard: {
+    borderRadius: 22,
+    paddingVertical: 22,
+    paddingHorizontal: 22,
+    marginBottom: 14,
+    borderWidth: 2,
+  },
+  actionLabel: {
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  actionHeadline: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#1A1A1A',
+    lineHeight: 32,
+    marginBottom: 10,
+  },
+  actionEmotion: {
+    fontSize: 14.5,
+    fontWeight: '600',
+    color: '#444',
+    lineHeight: 22,
+  },
+  actionMetaRow: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.08)',
+  },
+  actionMeta: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#555',
+  },
+  actionEmergency: {
+    marginTop: 14,
+    backgroundColor: '#D32F2F',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  actionEmergencyText: {
+    fontSize: 17,
+    fontWeight: '900',
     color: '#FFFFFF',
   },
 

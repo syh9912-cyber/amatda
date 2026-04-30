@@ -77,6 +77,8 @@ interface QuickAction {
   route: string;
   bg: string;
   ages: AgeGroupKey[]; // 표시할 연령 그룹
+  /** 열나열나 등 — 38°C+ 최근 기록이 있으면 깜빡 애니메이션 트리거 */
+  feverAlert?: boolean;
 }
 
 const ALL_ACTIONS: QuickAction[] = [
@@ -91,7 +93,7 @@ const ALL_ACTIONS: QuickAction[] = [
   // 영아·유아 순서 (사용자 요청 순서): 아기시간 → 성장앨범 → 열나 → 성장통계 → 접종달력 → 자장가 → 맘스톡 → 가족육아
   { icon: require('../../assets/quick-learning.png'), label: '아기시간', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['infant', 'toddler'] },
   { icon: require('../../assets/quick-timeline.png'), label: '성장앨범', route: '/(main)/album', bg: '#E0F2F1', ages: ['infant', 'toddler', 'elementary'] },
-  { icon: require('../../assets/quick-thermometer.png'), label: '열나', route: '/(main)/fever', bg: '#FFF0F0', ages: ['infant', 'toddler'] },
+  { icon: require('../../assets/quick-thermometer.png'), label: '열나열나', route: '/(main)/fever', bg: '#FFF0F0', ages: ['infant', 'toddler'], feverAlert: true },
   { icon: require('../../assets/quick-sprout.png'), label: '성장 통계', route: '/(main)/growth-stats', bg: COLOR.mintBg, ages: ['infant', 'toddler', 'elementary'] },
   { icon: require('../../assets/quick-syringe.png'), label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['infant', 'toddler'] },
   { icon: require('../../assets/quick-lullaby.png'), label: '자장가', route: '/(main)/lullaby', bg: '#EDE7F6', ages: ['infant', 'toddler'] },
@@ -1001,12 +1003,96 @@ function MonthlyCharCard({ child }: { child: Child }) {
   );
 }
 
+/**
+ * 최근 4시간 내 38°C+ 발열 기록이 있으면 true
+ * — AsyncStorage `fever_history_${childId}` 읽어서 판정
+ */
+function useFeverAlert(childId: string | undefined): boolean {
+  const [isAlert, setIsAlert] = useState(false);
+  useEffect(() => {
+    if (!childId) {
+      setIsAlert(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(`fever_history_${childId}`);
+        if (!raw || cancelled) return;
+        const list = JSON.parse(raw) as Array<{ timestamp?: number; adjustedTemp?: number; temperature?: number }>;
+        const now = Date.now();
+        const recent = list.find((e) => {
+          const ts = e.timestamp ?? 0;
+          const t = e.adjustedTemp ?? e.temperature ?? 0;
+          return now - ts < 4 * 60 * 60 * 1000 && t >= 38.0;
+        });
+        if (!cancelled) setIsAlert(!!recent);
+      } catch {
+        if (!cancelled) setIsAlert(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [childId]);
+  return isAlert;
+}
+
+function FeverPulseCircle({ children, bg }: { children: React.ReactNode; bg: string }) {
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  const ringOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.85] });
+  const ringScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.18] });
+
+  return (
+    <View style={[styles.quickCircle, { backgroundColor: bg }]}>
+      {/* 빨강 펄스 링 */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          borderWidth: 3,
+          borderColor: '#FF3B30',
+          opacity: ringOpacity,
+          transform: [{ scale: ringScale }],
+        }}
+      />
+      {children}
+    </View>
+  );
+}
+
 function AllActionsGrid({ ageGroup, child }: { ageGroup: AgeGroupKey; child?: Child | null }) {
   const actions = getActionsForAge(ageGroup, child);
+  const feverAlert = useFeverAlert(child?.id);
   return (
     <View style={styles.quickSection}>
       {actions.map((action) => {
         const isSprout = action.route === '/(main)/parent-level';
+        const showPulse = action.feverAlert && feverAlert;
+
+        const inner = (
+          <>
+            {action.emoji ? (
+              <Text style={styles.quickEmoji}>{action.emoji}</Text>
+            ) : (
+              <Image source={action.icon} style={styles.quickIcon} resizeMode="contain" />
+            )}
+            {isSprout && <View style={styles.sproutBadge}><Text style={styles.sproutBadgeText}>GO</Text></View>}
+          </>
+        );
+
         return (
           <TouchableOpacity
             key={action.label}
@@ -1014,15 +1100,14 @@ function AllActionsGrid({ ageGroup, child }: { ageGroup: AgeGroupKey; child?: Ch
             onPress={() => router.push(action.route as never)}
             activeOpacity={0.7}
           >
-            <View style={[styles.quickCircle, { backgroundColor: action.bg }]}>
-              {action.emoji ? (
-                <Text style={styles.quickEmoji}>{action.emoji}</Text>
-              ) : (
-                <Image source={action.icon} style={styles.quickIcon} resizeMode="contain" />
-              )}
-              {isSprout && <View style={styles.sproutBadge}><Text style={styles.sproutBadgeText}>GO</Text></View>}
-            </View>
-            <Text style={[styles.quickLabel, isSprout && styles.sproutLabel]}>{action.label}</Text>
+            {showPulse ? (
+              <FeverPulseCircle bg={action.bg}>{inner}</FeverPulseCircle>
+            ) : (
+              <View style={[styles.quickCircle, { backgroundColor: action.bg }]}>{inner}</View>
+            )}
+            <Text style={[styles.quickLabel, isSprout && styles.sproutLabel, showPulse && styles.feverAlertLabel]}>
+              {action.label}
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -1531,6 +1616,10 @@ const styles = StyleSheet.create({
   sproutLabel: {
     color: COLOR.accent,
     fontWeight: '700',
+  },
+  feverAlertLabel: {
+    color: '#FF3B30',
+    fontWeight: '800',
   },
 
 
