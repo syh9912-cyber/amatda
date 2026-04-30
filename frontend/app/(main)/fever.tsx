@@ -18,6 +18,10 @@ import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sosApi } from '../../services/api';
+import {
+  scheduleFeverRecheckReminder,
+  cancelFeverRecheckReminder,
+} from '../../services/pushNotifications';
 import { useChildStore } from '../../stores/childStore';
 import { AdSlot } from '../../components/ads/AdSlot';
 
@@ -447,6 +451,20 @@ export default function FeverScreen() {
       loadMedicine(raw);
     } else {
       setMedicineDose(null);
+    }
+
+    // 고열(38°C 이상) 시 1시간 뒤 재측정 알림 예약 (이전 예약은 자동 취소)
+    // 해열제 교차 복용 타이머와는 완전 별개의 독립 알림.
+    if (adjusted >= 38.0) {
+      scheduleFeverRecheckReminder(selectedChild.id, selectedChild.name).then(() => {
+        Alert.alert(
+          '🌡 1시간 뒤 재측정 알림 설정',
+          '고열이 감지되었습니다. 1시간 뒤에 다시 재실 수 있도록 알림을 맞춰드렸어요. 걱정 마세요!',
+        );
+      }).catch(() => {});
+    } else {
+      // 정상 체온이면 기존 재측정 예약 취소
+      cancelFeverRecheckReminder(selectedChild.id).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [temperature, method, selectedChild, history, saveHistory]);

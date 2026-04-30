@@ -760,3 +760,50 @@ export async function getDailyMissionReminderEnabled(): Promise<boolean> {
   // 미설정이면 기본 ON (임신부 모드 첫 진입 시 자동 등록)
   return pref !== 'off';
 }
+
+/* ─────────────────────────────────────────────────────────
+ * 고열(38°C 이상) 1시간 후 재측정 리마인드
+ *
+ * - 사용자 입력 체온 ≥ 38°C 일 때만 호출
+ * - 정확히 1시간 뒤 로컬 알림 1회
+ * - 기존 예약된 재측정 알림이 있으면 취소 후 재등록
+ *   (해열제 교차 복용 타이머와는 완전 별개)
+ * ───────────────────────────────────────────────────────── */
+
+const FEVER_RECHECK_KEY = (childId: string) => `amatda_fever_recheck_${childId}`;
+
+/** 고열 감지 시 1시간 뒤 재측정 알림 예약. 이전 예약은 자동 취소. */
+export async function scheduleFeverRecheckReminder(
+  childId: string,
+  childName: string,
+): Promise<void> {
+  if (!childId) return;
+  // 기존 예약 취소
+  await cancelFeverRecheckReminder(childId);
+
+  const trigger = new Date(Date.now() + 60 * 60 * 1000); // 1시간 뒤
+  const id = await Notifications.scheduleNotificationAsync({
+    content: {
+      title: '🌡 체온 재측정 알림',
+      body: `${childName ? `${childName}의 ` : ''}체온을 측정한 지 1시간이 지났어요! 지금 상태를 다시 한번 체크해 주세요.`,
+      data: { screen: 'fever', source: 'fever_recheck' },
+      sound: 'amatda_chime.wav',
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: trigger,
+      channelId: 'engagement',
+    },
+  });
+  await AsyncStorage.setItem(FEVER_RECHECK_KEY(childId), id);
+}
+
+/** 새 체온 기록 시 또는 사용자가 명시적으로 취소할 때 호출 */
+export async function cancelFeverRecheckReminder(childId: string): Promise<void> {
+  const key = FEVER_RECHECK_KEY(childId);
+  const existing = await AsyncStorage.getItem(key);
+  if (existing) {
+    await Notifications.cancelScheduledNotificationAsync(existing).catch(() => {});
+    await AsyncStorage.removeItem(key);
+  }
+}
