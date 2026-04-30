@@ -82,8 +82,8 @@ interface QuickAction {
 const ALL_ACTIONS: QuickAction[] = [
   // 임산부 전용 (pregnant 필터링 시 먼저 노출)
   { icon: require('../../assets/quick-learning.png'), label: '임신 기록', route: '/(main)/pregnancy', bg: '#FCE4EC', ages: ['pregnant'] },
-  { icon: require('../../assets/quick-report.png'), emoji: '👶', label: '주수별 발달', route: '/(main)/growth-stats', bg: '#F3E5F5', ages: ['pregnant'] },
-  { icon: require('../../assets/quick-report.png'), emoji: '🩸', label: '임당 관리', route: '/(main)/gdm', bg: '#FCE4EC', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-baby.png'), label: '주수별 발달', route: '/(main)/growth-stats', bg: '#F3E5F5', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-blood.png'), label: '임당 관리', route: '/(main)/gdm', bg: '#FCE4EC', ages: ['pregnant'] },
   { icon: require('../../assets/quick-sleep.png'), label: '태동 체크', route: '/(main)/labor-monitor?tab=kick', bg: '#FCE4EC', ages: ['pregnant'] },
   { icon: require('../../assets/quick-parent-level.png'), label: '맘 체크인', route: '/(main)/mom-wellness', bg: '#F8BBD0', ages: ['pregnant'] },
   { icon: require('../../assets/quick-lullaby.png'), label: '태교음악', route: '/(main)/lullaby?mode=prenatal', bg: '#EDE7F6', ages: ['pregnant'] },
@@ -91,9 +91,9 @@ const ALL_ACTIONS: QuickAction[] = [
   // 영아·유아 순서 (사용자 요청 순서): 아기시간 → 성장앨범 → 열나 → 성장통계 → 접종달력 → 자장가 → 맘스톡 → 가족육아
   { icon: require('../../assets/quick-learning.png'), label: '아기시간', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['infant', 'toddler'] },
   { icon: require('../../assets/quick-timeline.png'), label: '성장앨범', route: '/(main)/album', bg: '#E0F2F1', ages: ['infant', 'toddler', 'elementary'] },
-  { icon: require('../../assets/quick-report.png'), emoji: '🌡️', label: '열나', route: '/(main)/fever', bg: '#FFF0F0', ages: ['infant', 'toddler'] },
-  { icon: require('../../assets/quick-report.png'), emoji: '🌱', label: '성장 통계', route: '/(main)/growth-stats', bg: COLOR.mintBg, ages: ['infant', 'toddler', 'elementary'] },
-  { icon: require('../../assets/quick-report.png'), emoji: '💉', label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['infant', 'toddler'] },
+  { icon: require('../../assets/quick-thermometer.png'), label: '열나', route: '/(main)/fever', bg: '#FFF0F0', ages: ['infant', 'toddler'] },
+  { icon: require('../../assets/quick-sprout.png'), label: '성장 통계', route: '/(main)/growth-stats', bg: COLOR.mintBg, ages: ['infant', 'toddler', 'elementary'] },
+  { icon: require('../../assets/quick-syringe.png'), label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['infant', 'toddler'] },
   { icon: require('../../assets/quick-lullaby.png'), label: '자장가', route: '/(main)/lullaby', bg: '#EDE7F6', ages: ['infant', 'toddler'] },
   { icon: require('../../assets/icon-heart.png'), label: '맘스톡', route: '/(main)/mom-group', bg: '#FCE4EC', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
   { icon: require('../../assets/quick-coparenting.png'), label: '가족육아', route: '/(main)/coparenting', bg: '#FFF3E0', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
@@ -106,7 +106,7 @@ const ALL_ACTIONS: QuickAction[] = [
 ];
 
 const VACCINE_ACTION: QuickAction = {
-  icon: require('../../assets/quick-report.png'), emoji: '💉', label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['pregnant'],
+  icon: require('../../assets/quick-syringe.png'), label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['pregnant'],
 };
 
 function getActionsForAge(ageGroup: AgeGroupKey, child?: Child | null): QuickAction[] {

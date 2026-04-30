@@ -807,3 +807,46 @@ export async function cancelFeverRecheckReminder(childId: string): Promise<void>
     await AsyncStorage.removeItem(key);
   }
 }
+
+/* ─────────────────────────────────────────────────────────
+ * 아이 삭제 시 — 해당 아이와 관련된 모든 로컬 알림 일괄 취소
+ *
+ * 처리:
+ *  1. 체온 재측정 알림 (per-child)
+ *  2. 임신 일정 알림 (PREGNANCY_NOTIF_IDS_KEY — 전역이지만 임신 아이 1명 기준)
+ *  3. 첫 코칭 유도 (FIRST_COACHING_KEY — 전역, 첫 등록 시 1회만 사용)
+ *  4. 다음날 넛지 (amatda_nextday_nudge — 전역)
+ *  5. 시스템에 예약된 모든 알림 중 data.childId가 일치하는 것 정리 (안전망)
+ *
+ * 주의: 데일리 미션(매일 9시 알림)은 임신부 모드 기준이라
+ *       다른 임신 자녀가 있으면 유지, 임신 자녀 0명이면 별도 정리 권장.
+ * ───────────────────────────────────────────────────────── */
+export async function cancelAllChildLocalNotifications(childId: string): Promise<void> {
+  if (!childId) return;
+
+  // 1. 체온 재측정 (per-child key)
+  await cancelFeverRecheckReminder(childId).catch(() => {});
+
+  // 2. 시스템 예약 목록에서 data.childId 일치하는 것 모두 취소 (안전망)
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    for (const n of scheduled) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = (n.content as any)?.data as Record<string, unknown> | undefined;
+      if (data && data.childId === childId) {
+        try {
+          await Notifications.cancelScheduledNotificationAsync(n.identifier);
+        } catch { /* ignore */ }
+      }
+    }
+  } catch {
+    // getAllScheduled 실패 — 무시
+  }
+}
+
+/** 임신 자녀(예정일 기반) 삭제 시 — 임신 일정 알림 일괄 취소 */
+export async function cancelAllPregnancyLocalNotifications(): Promise<void> {
+  try {
+    await cancelPregnancyNotifs();
+  } catch { /* ignore */ }
+}

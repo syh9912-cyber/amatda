@@ -4,6 +4,10 @@ import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
 import { useAuthStore } from '../../stores/authStore';
 import { authApi, childApi } from '../../services/api';
+import {
+  cancelAllChildLocalNotifications,
+  cancelAllPregnancyLocalNotifications,
+} from '../../services/pushNotifications';
 import { COLORS, SPACING } from '../../constants/theme';
 import { ProfileCard } from '../../components/profile/ProfileCard';
 import { ProfileMenuList } from '../../components/profile/ProfileMenuList';
@@ -30,6 +34,12 @@ export default function ProfileScreen() {
           onPress: async () => {
             try {
               await childApi.delete(selectedChild.id);
+              // 삭제된 아이 관련 로컬 알림 모두 취소
+              // (서버 cascade는 push schedules 컬렉션 삭제, 로컬은 별도 처리)
+              await cancelAllChildLocalNotifications(selectedChild.id);
+              if (selectedChild.isPregnant) {
+                await cancelAllPregnancyLocalNotifications();
+              }
               removeChild(selectedChild.id);
               Alert.alert('완료', '아이 정보가 삭제되었습니다.');
             } catch {

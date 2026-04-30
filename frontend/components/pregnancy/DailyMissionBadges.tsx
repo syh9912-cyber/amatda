@@ -16,8 +16,12 @@ import {
   Animated,
   Modal,
   ScrollView,
+  Image,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+
+const WATER_ICON = require('../../assets/quick-water.png');
+const PILL_ICON = require('../../assets/quick-pill.png');
 import { pregnancyApi } from '../../services/api';
 import {
   getDailyMissionReminderEnabled,
@@ -217,7 +221,7 @@ export function DailyMissionBadges({ childId }: Props) {
                 transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
               />
             </Svg>
-            <Text style={styles.ringEmoji}>💧</Text>
+            <Image source={WATER_ICON} style={styles.ringIcon} resizeMode="contain" />
           </View>
 
           {/* 라벨 + 카운트 */}
@@ -273,7 +277,7 @@ export function DailyMissionBadges({ childId }: Props) {
                 transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
               />
             </Svg>
-            <Text style={styles.ringEmoji}>💊</Text>
+            <Image source={PILL_ICON} style={styles.ringIcon} resizeMode="contain" />
           </View>
 
           <Text style={styles.cardLabel}>영양제</Text>
@@ -328,7 +332,11 @@ function InfoModal({
         <View style={infoStyles.card}>
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={[infoStyles.iconCircle, { backgroundColor: isWater ? '#E3F2FD' : '#F3E5F5' }]}>
-              <Text style={infoStyles.iconEmoji}>{isWater ? '💧' : '💊'}</Text>
+              <Image
+                source={isWater ? WATER_ICON : PILL_ICON}
+                style={infoStyles.iconImage}
+                resizeMode="contain"
+              />
             </View>
 
             <Text style={infoStyles.title}>
@@ -460,6 +468,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontSize: 26,
   },
+  ringIcon: {
+    position: 'absolute',
+    width: 34,
+    height: 34,
+  },
 
   cardLabel: {
     fontSize: 12,
@@ -500,6 +513,7 @@ const infoStyles = StyleSheet.create({
     marginBottom: 12,
   },
   iconEmoji: { fontSize: 36 },
+  iconImage: { width: 56, height: 56 },
   title: {
     fontSize: 19,
     fontWeight: '900',

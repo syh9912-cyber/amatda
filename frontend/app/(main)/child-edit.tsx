@@ -12,6 +12,10 @@ import {
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { childApi } from '../../services/api';
+import {
+  cancelAllChildLocalNotifications,
+  cancelAllPregnancyLocalNotifications,
+} from '../../services/pushNotifications';
 import { useChildStore, Child } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
@@ -117,6 +121,11 @@ export default function ChildEditScreen() {
           onPress: async () => {
             try {
               await childApi.delete(selectedChild.id);
+              // 삭제된 아이 관련 로컬 알림 모두 취소
+              await cancelAllChildLocalNotifications(selectedChild.id);
+              if (selectedChild.isPregnant) {
+                await cancelAllPregnancyLocalNotifications();
+              }
               removeChild(selectedChild.id);
               Alert.alert('완료', `${label}가 삭제되었습니다.`);
               router.back();
