@@ -18,6 +18,23 @@ import {
   getDailyMissionReminderEnabled,
   scheduleDailyMissionReminder,
 } from '../../services/pushNotifications';
+import { CelebrationOverlay } from '../common/CelebrationOverlay';
+import { premiumApi } from '../../services/api';
+
+const WATER_MESSAGES = [
+  '벌써 8잔? 물 마시기 미션 클리어! 엄마의 정성에 아기도 기뻐할 거예요. 💧',
+  '오늘 물 8잔 완성! 우리 엄마 정말 부지런하시네요. 👏',
+  '물 8잔 미션 끝! 아기에게 깨끗한 영양이 잘 전달되고 있어요. ✨',
+];
+const SUPPLEMENT_MESSAGES = [
+  '오늘의 영양제 완료! 엄마가 건강해야 아기도 건강해요. 최고! 💊',
+  '우리 엄마, 오늘도 정말 고생 많았어요. (토닥토닥)',
+  '세상에서 가장 성실한 엄마, 오늘도 완벽하게 해냈네요!',
+];
+
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
 const WATER_GOAL = 8; // 하루 8잔 (2L 권장)
 
@@ -33,8 +50,27 @@ interface MissionState {
 export function DailyMissionBadges({ childId }: Props) {
   const [state, setState] = useState<MissionState>({ water: 0, supplements: false });
   const [loading, setLoading] = useState(false);
+  const [celebration, setCelebration] = useState<{ message: string; vip: boolean } | null>(null);
   const waterPulse = useRef(new Animated.Value(1)).current;
   const supPulse = useRef(new Animated.Value(1)).current;
+  const [isVip, setIsVip] = useState(false);
+
+  // VIP 여부 (premium status) — 1회 조회 후 캐싱
+  useEffect(() => {
+    let cancelled = false;
+    premiumApi
+      .status()
+      .then((res) => {
+        const data = res.data?.data as { tier?: string; premiumActive?: boolean; trialActive?: boolean } | undefined;
+        if (cancelled) return;
+        const vip = data?.tier === 'PAID' || data?.premiumActive === true || data?.trialActive === true;
+        setIsVip(Boolean(vip));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const load = useCallback(async () => {
     if (!childId) return;
@@ -79,19 +115,30 @@ export function DailyMissionBadges({ childId }: Props) {
     if (loading) return;
     setLoading(true);
     pulse(waterPulse);
+    const wasNotDone = state.water < WATER_GOAL;
     try {
       const res = await pregnancyApi.addWater(childId, 1);
       const data = res.data?.data as { water?: number } | undefined;
       if (typeof data?.water === 'number') {
-        setState((s) => ({ ...s, water: data.water as number }));
+        const next = data.water;
+        setState((s) => ({ ...s, water: next }));
+        // 8잔 첫 달성 시 폭죽
+        if (wasNotDone && next >= WATER_GOAL) {
+          setCelebration({ message: pickRandom(WATER_MESSAGES), vip: isVip });
+        }
       }
     } catch {
-      // 실패 시 낙관적 업데이트만 (이미 pulse는 됨)
-      setState((s) => ({ ...s, water: Math.min(WATER_GOAL + 5, s.water + 1) }));
+      setState((s) => {
+        const next = Math.min(WATER_GOAL + 5, s.water + 1);
+        if (wasNotDone && next >= WATER_GOAL) {
+          setCelebration({ message: pickRandom(WATER_MESSAGES), vip: isVip });
+        }
+        return { ...s, water: next };
+      });
     } finally {
       setLoading(false);
     }
-  }, [loading, childId, waterPulse]);
+  }, [loading, childId, waterPulse, state.water, isVip]);
 
   const onSupplements = useCallback(async () => {
     if (loading) return;
@@ -101,13 +148,16 @@ export function DailyMissionBadges({ childId }: Props) {
     setLoading(true);
     try {
       await pregnancyApi.toggleSupplements(childId, next);
+      // OFF → ON 전환 시 폭죽
+      if (next === true) {
+        setCelebration({ message: pickRandom(SUPPLEMENT_MESSAGES), vip: isVip });
+      }
     } catch {
-      // 실패 시 롤백
       setState((s) => ({ ...s, supplements: !next }));
     } finally {
       setLoading(false);
     }
-  }, [loading, childId, state.supplements, supPulse]);
+  }, [loading, childId, state.supplements, supPulse, isVip]);
 
   const waterDone = state.water >= WATER_GOAL;
   const waterRatio = Math.min(1, state.water / WATER_GOAL);
@@ -158,6 +208,14 @@ export function DailyMissionBadges({ childId }: Props) {
           </View>
         </TouchableOpacity>
       </Animated.View>
+
+      {/* 축하 폭죽 + 응원 메시지 */}
+      <CelebrationOverlay
+        visible={celebration !== null}
+        message={celebration?.message ?? ''}
+        vip={celebration?.vip ?? false}
+        onClose={() => setCelebration(null)}
+      />
     </View>
   );
 }
