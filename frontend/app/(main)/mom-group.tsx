@@ -217,6 +217,7 @@ export default function MomGroupScreen() {
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchField, setSearchField] = useState<'all' | 'title' | 'content' | 'nickname'>('all');
+  const [searchExpanded, setSearchExpanded] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -738,36 +739,68 @@ export default function MomGroupScreen() {
     );
   }
 
-  const renderBoardRow = (p: Post, idx: number) => {
+  /**
+   * 모던 리스트 행 — 표 형식 폐기, 카테고리 색 dot + 제목 한 줄 + 작성자/시간 + 좋아요/댓글
+   * 핀 글은 살짝 다른 배경 + 좌측 두꺼운 액센트 바
+   */
+  const renderBoardRow = (p: Post, _idx: number) => {
     const isBookmarked = bookmarkedIds.has(p.id);
-    const rowNo = isFeed ? (totalCount - (page - 1) * PAGE_SIZE - idx) : (list.length - idx);
+    const cat = CATEGORY_META[p.category] ?? CATEGORY_META.chat;
+    const isPinTop = p.isPinned && p.isOfficial;
+
     return (
       <TouchableOpacity
         key={p.id}
-        style={styles.boardRow}
+        style={[
+          styles.modernRow,
+          isPinTop && styles.modernRowPinned,
+          p.isFallback && styles.modernRowFallback,
+        ]}
         activeOpacity={0.6}
         onPress={() => openComments(p)}
       >
-        <Text style={styles.colNo}>{p.isOfficial ? '📌' : (rowNo > 0 ? rowNo : '')}</Text>
-        <View style={styles.colTitleWrap}>
-          <Text style={styles.colTitle} numberOfLines={1}>
-            {p.isOfficial ? <Text style={styles.officialBadgeInline}>공식 </Text> : null}
-            {p.isFallback ? <Text style={styles.fallbackBadgeInline}>전국 </Text> : null}
-            {displayTitle(p)}
-            {p.commentCount > 0 ? <Text style={styles.commentCountInline}> [{p.commentCount}]</Text> : null}
-            {p.imageUrl ? <Text style={styles.inlineMark}> 📷</Text> : null}
-            {isBookmarked ? <Text style={styles.inlineMark}> 🔖</Text> : null}
+        {/* 좌측 액센트 바 — 핀 글은 코랄, 공식 글은 블루, 일반은 카테고리 색 */}
+        <View
+          style={[
+            styles.modernLeftBar,
+            { backgroundColor: isPinTop ? '#FF8C5A' : p.isOfficial ? '#1976D2' : cat.color },
+          ]}
+        />
+
+        {/* 메인 콘텐츠 */}
+        <View style={styles.modernContent}>
+          {/* 1줄: 카테고리 + 제목 */}
+          <View style={styles.modernTitleRow}>
+            {isPinTop ? <Text style={styles.modernPinIcon}>📌 </Text> : null}
+            <Text style={[styles.modernCatText, { color: cat.color }]}>{cat.label}</Text>
+            {p.isOfficial ? <Text style={styles.modernOfficialChip}>공식</Text> : null}
+            {p.isFallback ? <Text style={styles.modernFallbackChip}>전국</Text> : null}
+            <Text style={styles.modernTitle} numberOfLines={1}>
+              {' '}{displayTitle(p)}
+            </Text>
+          </View>
+
+          {/* 2줄: 작성자 · 시간 · 메타 */}
+          <View style={styles.modernMetaRow}>
+            <Text style={styles.modernAuthor} numberOfLines={1}>
+              {p.anonymous ? '익명' : p.nickname}
+            </Text>
+            <Text style={styles.modernDot}>·</Text>
+            <Text style={styles.modernTime}>{compactDate(p.createdAt)}</Text>
+            {p.imageUrl ? <Text style={styles.modernIcon}>· 📷</Text> : null}
+            {isBookmarked ? <Text style={styles.modernIcon}>· 🔖</Text> : null}
+          </View>
+        </View>
+
+        {/* 우측 인터랙션 카운트 */}
+        <View style={styles.modernActions}>
+          <Text style={[styles.modernCount, p.likeCount > 0 && { color: '#E91E63' }]}>
+            ♥ {p.likeCount}
           </Text>
-          {p.isOfficial ? (
-            <Text style={styles.officialSubLabel}>운영팀 안내</Text>
+          {p.commentCount > 0 ? (
+            <Text style={styles.modernCount}>💬 {p.commentCount}</Text>
           ) : null}
         </View>
-        <Text style={styles.colAuthor} numberOfLines={1}>
-          {p.anonymous ? '익명' : (p.isOfficial ? `${p.nickname} ✓` : p.nickname)}
-        </Text>
-        <Text style={styles.colDate}>{compactDate(p.createdAt)}</Text>
-        <Text style={styles.colViews}>{p.viewCount ?? 0}</Text>
-        <Text style={styles.colLikes}>{p.likeCount}</Text>
       </TouchableOpacity>
     );
   };
@@ -786,8 +819,74 @@ export default function MomGroupScreen() {
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}><Text style={styles.backBtn}>{'< 뒤로'}</Text></TouchableOpacity>
         <Text style={styles.headerTitle}>맘스톡</Text>
-        <View style={{ width: 60 }} />
+        <TouchableOpacity
+          style={styles.headerSearchBtn}
+          onPress={() => setSearchExpanded((v) => !v)}
+          hitSlop={8}
+        >
+          <Text style={styles.headerSearchIcon}>{searchExpanded ? '✕' : '🔍'}</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* 검색 영역 — 헤더 우측 🔍 탭 시 펼침 */}
+      {searchExpanded && isFeed && (
+        <View style={styles.searchExpandedWrap}>
+          <View style={styles.searchFieldRow}>
+            {(
+              [
+                { key: 'all', label: '전체' },
+                { key: 'title', label: '제목' },
+                { key: 'content', label: '내용' },
+                { key: 'nickname', label: '작성자' },
+              ] as { key: 'all' | 'title' | 'content' | 'nickname'; label: string }[]
+            ).map((opt) => {
+              const active = searchField === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.searchFieldChip, active && styles.searchFieldChipActive]}
+                  onPress={() => setSearchField(opt.key)}
+                >
+                  <Text style={[styles.searchFieldChipText, active && styles.searchFieldChipTextActive]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <View style={styles.searchRowBottom}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder={
+                searchField === 'title' ? '제목에서 검색'
+                : searchField === 'content' ? '내용에서 검색'
+                : searchField === 'nickname' ? '작성자에서 검색'
+                : '전체에서 검색'
+              }
+              placeholderTextColor={COLORS.textSecondary}
+              value={searchInput}
+              onChangeText={setSearchInput}
+              returnKeyType="search"
+              onSubmitEditing={() => setSearchQuery(searchInput.trim())}
+              autoFocus
+            />
+            {searchInput ? (
+              <TouchableOpacity
+                style={styles.searchClearBtn}
+                onPress={() => { setSearchInput(''); setSearchQuery(''); }}
+              >
+                <Text style={styles.searchClearText}>✕</Text>
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity
+              style={styles.searchBtn}
+              onPress={() => setSearchQuery(searchInput.trim())}
+            >
+              <Text style={styles.searchBtnText}>🔍</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* 방 타입 탭 (지역방 deprecated — 내 동네 radius 모드로 대체) */}
       <View style={styles.roomTabRow}>
@@ -1071,72 +1170,6 @@ export default function MomGroupScreen() {
                   <Text style={[styles.pageBtnText, page >= totalPages && styles.pageBtnTextDisabled]}>다음 ›</Text>
                 </TouchableOpacity>
               </View>
-            )}
-            {/* 검색 바 (하단) — 사용자 요청 */}
-            {isFeed && (
-              <>
-                <View style={styles.searchFieldRow}>
-                  {(
-                    [
-                      { key: 'all', label: '전체' },
-                      { key: 'title', label: '제목' },
-                      { key: 'content', label: '내용' },
-                      { key: 'nickname', label: '작성자' },
-                    ] as { key: 'all' | 'title' | 'content' | 'nickname'; label: string }[]
-                  ).map((opt) => {
-                    const active = searchField === opt.key;
-                    return (
-                      <TouchableOpacity
-                        key={opt.key}
-                        style={[styles.searchFieldChip, active && styles.searchFieldChipActive]}
-                        onPress={() => setSearchField(opt.key)}
-                      >
-                        <Text
-                          style={[
-                            styles.searchFieldChipText,
-                            active && styles.searchFieldChipTextActive,
-                          ]}
-                        >
-                          {opt.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                <View style={styles.searchRowBottom}>
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder={
-                      searchField === 'title'
-                        ? '제목에서 검색'
-                        : searchField === 'content'
-                          ? '내용에서 검색'
-                          : searchField === 'nickname'
-                            ? '작성자에서 검색'
-                            : '검색'
-                    }
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={searchInput}
-                    onChangeText={setSearchInput}
-                    returnKeyType="search"
-                    onSubmitEditing={() => setSearchQuery(searchInput.trim())}
-                  />
-                  {searchInput ? (
-                    <TouchableOpacity
-                      style={styles.searchClearBtn}
-                      onPress={() => { setSearchInput(''); setSearchQuery(''); }}
-                    >
-                      <Text style={styles.searchClearText}>✕</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                  <TouchableOpacity
-                    style={styles.searchBtn}
-                    onPress={() => setSearchQuery(searchInput.trim())}
-                  >
-                    <Text style={styles.searchBtnText}>🔍</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
             )}
           </>
         )}
@@ -1440,7 +1473,112 @@ export default function MomGroupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#FAF7F2' },
+  // ── 모던 리스트 행 ──────────────────────────────────────
+  modernRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    marginHorizontal: 12,
+    marginBottom: 6,
+    paddingVertical: 11,
+    paddingRight: 12,
+    overflow: 'hidden',
+  },
+  modernRowPinned: {
+    backgroundColor: '#FFF5EC', // 핀 글 — 살짝 피치
+  },
+  modernRowFallback: {
+    backgroundColor: '#F5F2FA', // 폴백(전국 인기) — 살짝 라벤더
+  },
+  modernLeftBar: {
+    width: 3,
+    alignSelf: 'stretch',
+    marginRight: 10,
+  },
+  modernContent: { flex: 1, justifyContent: 'center' },
+  modernTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+  },
+  modernPinIcon: { fontSize: 12 },
+  modernCatText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  modernOfficialChip: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    backgroundColor: '#1976D2',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 3,
+    marginLeft: 5,
+    overflow: 'hidden',
+  },
+  modernFallbackChip: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    backgroundColor: '#7C4DFF',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 3,
+    marginLeft: 5,
+    overflow: 'hidden',
+  },
+  modernTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  modernMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 3,
+  },
+  modernAuthor: {
+    fontSize: 11.5,
+    color: '#888',
+    fontWeight: '500',
+    maxWidth: 90,
+  },
+  modernDot: { fontSize: 11.5, color: '#CCC', marginHorizontal: 4 },
+  modernTime: { fontSize: 11.5, color: '#888' },
+  modernIcon: { fontSize: 11, color: '#AAA', marginLeft: 3 },
+  modernActions: {
+    alignItems: 'flex-end',
+    marginLeft: 6,
+    minWidth: 50,
+  },
+  modernCount: {
+    fontSize: 11,
+    color: '#888',
+    fontWeight: '600',
+    marginVertical: 1,
+  },
+  // ── /모던 리스트 행 ─────────────────────────────────────
+  // ── 헤더 검색 아이콘 + 펼침 영역 ───────────────────────
+  headerSearchBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerSearchIcon: { fontSize: 18 },
+  searchExpandedWrap: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E0E0E0',
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 10,
+  },
+  // ── /헤더 검색 ─────────────────────────────────────────
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
