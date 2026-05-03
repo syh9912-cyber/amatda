@@ -124,18 +124,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  /* ── 캐릭터 hero (텍스트 없이 크게) ── */
+  /* ── 캐릭터 hero (적당한 여백 + 화면 전체 짤림 X, contain 모드) ── */
   heroWrap: {
     width: SW,
-    height: SW * 0.72,
+    // 약간의 여백 두고 적당히 크게 (이미지 비율 1.05)
+    height: SW * 0.78,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 24,
-    marginBottom: 8,
+    marginTop: 60, // 로그인 화면 아래로 내림 (status bar 아래 여유)
+    marginBottom: 16,
   },
   heroImage: {
-    width: SW * 0.95,
-    height: SW * 0.72,
+    width: SW * 0.8,
+    height: SW * 0.78,
   },
 
   /* ── Card — 은은한 그림자, 깨끗한 배경 ── */
