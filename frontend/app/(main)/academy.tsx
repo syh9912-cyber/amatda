@@ -326,7 +326,7 @@ function StaticAcademyCard({ academy }: { academy: StaticAcademy }) {
   return (
     <TouchableOpacity style={styles.card} onPress={openNaverMap} activeOpacity={0.7}>
       <View style={styles.cardLeft}>
-        <Text style={styles.cardEmoji}>{'🏫'}</Text>
+        <Image source={require('../../assets/quick-learning.png')} style={styles.cardEmojiImg} resizeMode="contain" />
       </View>
       <View style={styles.cardCenter}>
         <Text style={styles.cardTitle}>{academy.name}</Text>
@@ -360,7 +360,7 @@ function StudyTipsSection({ report }: { report: { studyStyle?: string; parenting
       <SectionHeader title="공부 방법" />
       {tips.map((tip, i) => (
         <View key={i} style={styles.checkItem}>
-          <Text style={styles.checkIcon}>{'✅'}</Text>
+          <Text style={styles.checkIcon}>{'✓'}</Text>
           <Text style={styles.checkText}>{tip}</Text>
         </View>
       ))}
@@ -387,7 +387,7 @@ function SectionHeader({ title }: { title: string }) {
 function FallbackCard() {
   return (
     <View style={styles.fallbackCard}>
-      <Text style={styles.fallbackEmoji}>{'📦'}</Text>
+      <Image source={require('../../assets/empty-album.png')} style={styles.fallbackEmojiImg} resizeMode="contain" />
       <Text style={styles.fallbackTitle}>
         우리 동네엔 아직 추천 장소가 부족해요
       </Text>
@@ -504,6 +504,7 @@ const styles = StyleSheet.create({
     marginRight: SPACING.md,
   },
   cardEmoji: { fontSize: 22 },
+  cardEmojiImg: { width: 28, height: 28 },
   cardIcon: { width: 32, height: 32 },
   cardCenter: { flex: 1, marginRight: SPACING.sm },
   cardTitle: {
@@ -558,6 +559,7 @@ const styles = StyleSheet.create({
     borderColor: '#FFE082',
   },
   fallbackEmoji: { fontSize: 40, marginBottom: SPACING.md },
+  fallbackEmojiImg: { width: 56, height: 56, marginBottom: SPACING.md },
   fallbackTitle: {
     fontSize: FONT_SIZE.md,
     fontWeight: '600',

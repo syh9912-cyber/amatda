@@ -17,6 +17,11 @@ import { coachingApi } from '../../services/api';
 import { isScreenAvailable } from '../../constants/ageFeatures';
 import { UpsellModal } from '../../components/common/UpsellModal';
 import { saveAnalysisHistory } from '../../utils/analysisHistory';
+import type { ImageSourcePropType } from 'react-native';
+
+const IC_LULLABY = require('../../assets/quick-lullaby.png') as ImageSourcePropType;
+const IC_DIARY = require('../../assets/child-diary.png') as ImageSourcePropType;
+const IC_HOSPITAL = require('../../assets/icon-hospital.png') as ImageSourcePropType;
 
 /* ── 색상 ── */
 const COLORS = {
@@ -219,7 +224,7 @@ export default function CryAnalyzerScreen() {
             <View style={styles.fileSection}>
               {fileUri ? (
                 <>
-                  <Text style={styles.fileDoneEmoji}>{'🎵'}</Text>
+                  <Image source={IC_LULLABY} style={styles.fileDoneIconImg} resizeMode="contain" />
                   <Text style={styles.fileDoneText}>{fileName ?? '녹음 파일 선택됨'}</Text>
                   <View style={styles.fileBtnRow}>
                     <TouchableOpacity
@@ -238,7 +243,7 @@ export default function CryAnalyzerScreen() {
                     onPress={handlePickFile}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.selectBtnEmoji}>{'📁'}</Text>
+                    <Image source={IC_DIARY} style={styles.selectBtnIconImg} resizeMode="contain" />
                     <Text style={styles.selectBtnText}>{'녹음 파일 선택하기'}</Text>
                   </TouchableOpacity>
                   <Text style={styles.selectHint}>{'mp3, m4a, wav 등 오디오 파일'}</Text>
@@ -285,7 +290,7 @@ function ResultView({ result, onReset }: { result: AnalysisResult; onReset: () =
     <View style={resultStyles.container}>
       {result.needsDoctor && (
         <View style={resultStyles.warningBanner}>
-          <Text style={resultStyles.warningIcon}>{'🏥'}</Text>
+          <Image source={IC_HOSPITAL} style={resultStyles.warningIconImg} resizeMode="contain" />
           <View style={resultStyles.warningTextWrap}>
             <Text style={resultStyles.warningTitle}>{'병원 확인이 필요해요'}</Text>
             <Text style={resultStyles.warningDesc}>
@@ -388,10 +393,12 @@ const styles = StyleSheet.create({
     borderRadius: 16, backgroundColor: COLORS.purpleBg,
   },
   selectBtnEmoji: { fontSize: 36, marginBottom: 10 },
+  selectBtnIconImg: { width: 44, height: 44, marginBottom: 10 },
   selectBtnText: { fontSize: 15, fontWeight: '700', color: COLORS.purple },
   selectHint: { fontSize: 12, color: COLORS.textLight, marginTop: 10 },
 
   fileDoneEmoji: { fontSize: 48, marginBottom: 12 },
+  fileDoneIconImg: { width: 56, height: 56, marginBottom: 12 },
   fileDoneText: {
     fontSize: 14, fontWeight: '600', color: COLORS.text, marginBottom: 16,
     textAlign: 'center',
@@ -427,6 +434,7 @@ const resultStyles = StyleSheet.create({
     padding: 16, borderWidth: 1.5, borderColor: COLORS.warning,
   },
   warningIcon: { fontSize: 28 },
+  warningIconImg: { width: 32, height: 32 },
   warningTextWrap: { flex: 1 },
   warningTitle: { fontSize: 15, fontWeight: '700', color: COLORS.warning, marginBottom: 4 },
   warningDesc: { fontSize: 13, color: COLORS.textSub, lineHeight: 18 },

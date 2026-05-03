@@ -22,6 +22,25 @@ import { useChildStore } from '../../stores/childStore';
 import { pickDeliveryPhone, getHospital, type HospitalInfo } from '../../services/deliveryHospital';
 import { HospitalRegisterModal } from '../../components/pregnancy/HospitalRegisterModal';
 
+/* PNG 아이콘 (기본 이모지 대신 — 앱 일러스트 톤 통일) */
+const IC_THERMOMETER = require('../../assets/quick-thermometer.png') as ImageSourcePropType;
+const IC_NAUSEA = require('../../assets/preg-mood-nausea.png') as ImageSourcePropType;
+const IC_REDFLAG = require('../../assets/icon-redflag.png') as ImageSourcePropType;
+const IC_BLOOD = require('../../assets/quick-blood.png') as ImageSourcePropType;
+const IC_PAIN = require('../../assets/preg-mood-pain.png') as ImageSourcePropType;
+const IC_TIRED = require('../../assets/preg-mood-tired.png') as ImageSourcePropType;
+const IC_FOOT = require('../../assets/preg-foot.png') as ImageSourcePropType;
+const IC_WATER = require('../../assets/quick-water.png') as ImageSourcePropType;
+const IC_PREG = require('../../assets/preg-test.png') as ImageSourcePropType;
+const IC_CONTRACTION = require('../../assets/contraction-clock.png') as ImageSourcePropType;
+const IC_HOSPITAL = require('../../assets/icon-hospital.png') as ImageSourcePropType;
+const IC_FAMILY = require('../../assets/mascot-happy.png') as ImageSourcePropType;
+const IC_HEART = require('../../assets/icon-heart.png') as ImageSourcePropType;
+const IC_HEIMLICH = require('../../assets/sos/heimlich-infant-1.png') as ImageSourcePropType;
+const IC_CPR = require('../../assets/sos/cpr-infant-1.png') as ImageSourcePropType;
+const IC_BURN = require('../../assets/sos/burn_fall-1.png') as ImageSourcePropType;
+const IC_FOREIGN = require('../../assets/sos/foreign-1.png') as ImageSourcePropType;
+
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
 /* ------------------------------------------------------------------ */
@@ -56,30 +75,30 @@ const COLOR = {
 
 interface SymptomItem {
   id: string;
-  emoji: string;
+  icon: ImageSourcePropType;
   label: string;
 }
 
 const SYMPTOMS: SymptomItem[] = [
-  { id: 'fever', emoji: '🌡️', label: '발열 38+' },
-  { id: 'vomiting', emoji: '🤢', label: '구토/설사' },
-  { id: 'seizure', emoji: '⚡', label: '경련' },
-  { id: 'breathing', emoji: '💨', label: '호흡곤란' },
-  { id: 'bleeding', emoji: '🩸', label: '출혈/상처' },
-  { id: 'rash', emoji: '🔴', label: '발진/두드러기' },
+  { id: 'fever', icon: IC_THERMOMETER, label: '38도+ 발열' },
+  { id: 'vomiting', icon: IC_NAUSEA, label: '구토/설사' },
+  { id: 'seizure', icon: IC_REDFLAG, label: '경련' },
+  { id: 'breathing', icon: IC_TIRED, label: '호흡곤란' },
+  { id: 'bleeding', icon: IC_BLOOD, label: '출혈/상처' },
+  { id: 'rash', icon: IC_REDFLAG, label: '발진/두드러기' },
 ];
 
 const PREGNANCY_SYMPTOMS: SymptomItem[] = [
-  { id: 'bleeding', emoji: '🩸', label: '출혈' },
-  { id: 'severe_pain', emoji: '😣', label: '심한 복통' },
-  { id: 'headache', emoji: '🤕', label: '심한 두통' },
-  { id: 'swelling', emoji: '🦶', label: '심한 부종' },
-  { id: 'vision', emoji: '👁️', label: '시야 흐림' },
-  { id: 'leaking', emoji: '💧', label: '양수 파수' },
-  { id: 'no_movement', emoji: '🤰', label: '태동 감소' },
-  { id: 'fever', emoji: '🌡️', label: '발열 38+' },
-  { id: 'breathing', emoji: '💨', label: '호흡곤란' },
-  { id: 'contractions', emoji: '⏱️', label: '규칙적 수축' },
+  { id: 'bleeding', icon: IC_BLOOD, label: '출혈' },
+  { id: 'severe_pain', icon: IC_PAIN, label: '심한 복통' },
+  { id: 'headache', icon: IC_PAIN, label: '심한 두통' },
+  { id: 'swelling', icon: IC_FOOT, label: '심한 부종' },
+  { id: 'vision', icon: IC_REDFLAG, label: '시야 흐림' },
+  { id: 'leaking', icon: IC_WATER, label: '양수 파수' },
+  { id: 'no_movement', icon: IC_PREG, label: '태동 감소' },
+  { id: 'fever', icon: IC_THERMOMETER, label: '발열 38+' },
+  { id: 'breathing', icon: IC_TIRED, label: '호흡곤란' },
+  { id: 'contractions', icon: IC_CONTRACTION, label: '규칙적 수축' },
 ];
 
 const SEVERITY_CONFIG: Record<SeverityLevel, {
@@ -125,12 +144,48 @@ const SOS_IMAGES: Record<string, ImageSourcePropType> = {
   foreign: require('../../assets/sos-foreign.png'),
 };
 
+/** 4-패널 분할 이미지 (영유아 기준 — 각 패널이 한 step. 텍스트가 이미지에 포함됨) */
+const SOS_STEP_IMAGES: Record<string, ImageSourcePropType[]> = {
+  heimlich: [
+    require('../../assets/sos/heimlich-infant-1.png'),
+    require('../../assets/sos/heimlich-infant-2.png'),
+    require('../../assets/sos/heimlich-infant-3.png'),
+    require('../../assets/sos/heimlich-infant-4.png'),
+  ],
+  cpr: [
+    require('../../assets/sos/cpr-infant-1.png'),
+    require('../../assets/sos/cpr-infant-2.png'),
+    require('../../assets/sos/cpr-infant-3.png'),
+    require('../../assets/sos/cpr-infant-4.png'),
+  ],
+  burn_fall: [
+    require('../../assets/sos/burn_fall-1.png'),
+    require('../../assets/sos/burn_fall-2.png'),
+    require('../../assets/sos/burn_fall-3.png'),
+    require('../../assets/sos/burn_fall-4.png'),
+  ],
+  foreign: [
+    require('../../assets/sos/foreign-1.png'),
+    require('../../assets/sos/foreign-2.png'),
+    require('../../assets/sos/foreign-3.png'),
+    require('../../assets/sos/foreign-4.png'),
+  ],
+};
+
 const EMERGENCY_GUIDES = [
-  { key: 'heimlich', emoji: '🫁', label: '하임리히', sublabel: '기도막힘 대처법', color: '#D32F2F', bg: '#FFEBEE' },
-  { key: 'cpr', emoji: '❤️', label: 'CPR', sublabel: '심폐소생술', color: '#C62828', bg: '#FCE4EC' },
-  { key: 'burn_fall', emoji: '🔥', label: '화상/낙상', sublabel: '', color: '#E65100', bg: '#FFF3E0' },
-  { key: 'foreign', emoji: '⚠️', label: '이물질', sublabel: '', color: '#F57F17', bg: '#FFFDE7' },
+  { key: 'heimlich', icon: IC_HEIMLICH, label: '기도막힘', sublabel: '4단계 대처', color: '#D32F2F', bg: '#FFEBEE' },
+  { key: 'cpr', icon: IC_CPR, label: 'CPR', sublabel: '심폐소생술', color: '#C62828', bg: '#FCE4EC' },
+  { key: 'burn_fall', icon: IC_BURN, label: '화상/낙상', sublabel: '응급 처치', color: '#E65100', bg: '#FFF3E0' },
+  { key: 'foreign', icon: IC_FOREIGN, label: '이물질 삼킴', sublabel: '코/귀/입', color: '#F57F17', bg: '#FFFDE7' },
 ] as const;
+
+type AgeKey = 'infant' | 'child' | 'adult';
+const AGE_LABELS: Record<AgeKey, { title: string; sub: string }> = {
+  infant: { title: '12개월 미만',         sub: '영아 (1세 미만)' },
+  child:  { title: '만 1세 ~ 사춘기 전',  sub: '소아' },
+  adult:  { title: '성인 · 보호자',       sub: '청소년/성인' },
+};
+const AGE_KEYS: AgeKey[] = ['infant', 'child', 'adult'];
 
 interface GuideData {
   title: string;
@@ -140,31 +195,95 @@ interface GuideData {
   warning: string;
 }
 
-const GUIDE_CONTENT: Record<string, GuideData> = {
-  heimlich: {
-    title: '하임리히법 (기도 폐쇄)',
-    subtitle: '아이가 이물질로 숨을 못 쉴 때',
+/** heimlich/cpr 은 연령별로 분기 */
+const HEIMLICH_BY_AGE: Record<AgeKey, GuideData> = {
+  infant: {
+    title: '기도막힘 (12개월 미만)',
+    subtitle: '영아 - 등 두드리기 + 가슴 압박',
     headerColor: '#D32F2F',
     quickSteps: [
-      '1세 미만: 얼굴 아래로 → 등 5회 두드리기',
-      '뒤집어서 가슴 중앙 손가락 2개로 5회 압박',
-      '1세 이상: 뒤에서 배꼽 위 주먹으로 밀어올리기',
-      '나올 때까지 반복! 의식 잃으면 CPR + 119',
+      '아이를 한 팔에 엎드리게 두고 머리를 가슴보다 낮게',
+      '등 가운데를 손바닥 아래쪽으로 5번 강하게 두드리기',
+      '뒤집어서 머리 낮추고, 가슴 중앙(젖꼭지 사이)을 손가락 2개로 5번 압박',
+      '나올 때까지 등 두드리기 ↔ 가슴 압박 반복',
+      '의식을 잃으면 즉시 CPR 시작 + 119 신고',
     ],
-    warning: '손가락으로 억지로 빼지 마세요! 의식 잃으면 즉시 CPR',
+    warning: '입속을 손가락으로 후비지 마세요. 더 깊이 들어갈 수 있어요.',
   },
-  cpr: {
-    title: '심폐소생술 (CPR)',
-    subtitle: '아이가 반응 없거나 숨을 안 쉴 때',
+  child: {
+    title: '기도막힘 (만 1세 ~ 사춘기 전)',
+    subtitle: '소아 - 하임리히 (복부 밀어올리기)',
+    headerColor: '#D32F2F',
+    quickSteps: [
+      '아이 뒤에 무릎 꿇거나 서기 (눈높이 맞춰)',
+      '한 손은 주먹, 엄지 안쪽을 배꼽 위·명치 아래에 위치',
+      '다른 손으로 주먹을 감싸 안쪽·위쪽으로 5번 빠르게 당기듯 밀기',
+      '나올 때까지 반복',
+      '의식 잃으면 눕히고 CPR + 119 신고',
+    ],
+    warning: '명치 위(가슴뼈)는 누르지 마세요. 갈비뼈 손상 위험.',
+  },
+  adult: {
+    title: '기도막힘 (성인 / 보호자)',
+    subtitle: '청소년·성인 하임리히',
+    headerColor: '#D32F2F',
+    quickSteps: [
+      '뒤에서 양팔로 명치 아래·배꼽 위 부위를 감싸안기',
+      '한 손은 주먹, 다른 손은 그 위에 포개기',
+      '안쪽·위쪽 방향으로 빠르게 5번 당기듯 밀기',
+      '나올 때까지 반복',
+      '혼자라면 의자 등받이에 명치 부위 대고 압박',
+    ],
+    warning: '임산부·비만인은 명치 아래 대신 가슴 중앙을 압박하세요.',
+  },
+};
+
+const CPR_BY_AGE: Record<AgeKey, GuideData> = {
+  infant: {
+    title: 'CPR (12개월 미만)',
+    subtitle: '영아 - 손가락 2개로 가슴 압박',
     headerColor: '#C62828',
     quickSteps: [
-      '반응 확인 → 즉시 119 신고 (스피커폰)',
-      '머리 뒤로 젖혀 기도 열기',
-      '가슴 중앙 압박 30회 (깊이 4~5cm, 분당 100~120)',
-      '인공호흡 2회 → 30:2 반복, 멈추지 않기!',
+      '반응·호흡 확인 (10초 이내)',
+      '먼저 119 신고 (스피커폰으로 지시 받으며 진행)',
+      '평평한 곳에 눕히고 머리 살짝 뒤로 젖히기',
+      '가슴 중앙(젖꼭지 사이)을 손가락 2개로 깊이 4cm 압박',
+      '분당 100~120회로 30회 압박 → 입·코 동시에 가볍게 인공호흡 2회',
+      '구급대 올 때까지 30:2 반복, 절대 멈추지 말기',
     ],
-    warning: '구급대 올 때까지 절대 멈추면 안 됩니다!',
+    warning: '인공호흡이 어렵다면 가슴 압박만이라도 계속하세요.',
   },
+  child: {
+    title: 'CPR (만 1세 ~ 사춘기 전)',
+    subtitle: '소아 - 한 손 또는 양손 압박',
+    headerColor: '#C62828',
+    quickSteps: [
+      '어깨 두드리며 반응 확인, 호흡 확인 (10초 이내)',
+      '먼저 119 신고 (스피커폰)',
+      '평평한 곳에 눕히고 머리 젖혀 기도 열기',
+      '가슴 중앙을 한 손바닥(작은 아이) 또는 양손으로 깊이 5cm 압박',
+      '분당 100~120회로 30회 압박 → 입 대 입 인공호흡 2회',
+      '30:2 반복, AED 도착하면 즉시 사용',
+    ],
+    warning: '구급대가 올 때까지 멈추지 마세요. 갈비뼈가 부러져도 계속.',
+  },
+  adult: {
+    title: 'CPR (성인 / 보호자)',
+    subtitle: '청소년·성인 - 양손 가슴 압박',
+    headerColor: '#C62828',
+    quickSteps: [
+      '의식·호흡 확인 후 119 신고 (스피커폰)',
+      '가슴 중앙(흉골 아래쪽)에 양손 포개고 팔꿈치 펴기',
+      '체중 실어 깊이 5~6cm로 압박',
+      '분당 100~120회로 30회 압박',
+      '인공호흡 2회 (가능할 때) → 30:2 반복',
+      'AED 도착하면 즉시 사용, 구급대 올 때까지 멈추지 말기',
+    ],
+    warning: '갈비뼈가 부러져도 멈추지 마세요. 생명이 우선입니다.',
+  },
+};
+
+const GUIDE_CONTENT: Record<string, GuideData> = {
   burn_fall: {
     title: '화상/낙상 대처',
     subtitle: '데이거나 떨어졌을 때',
@@ -345,31 +464,59 @@ export default function SOSScreen() {
         </View>
 
         {/* ============================================ */}
-        {/* Section 1: Emergency Call                    */}
+        {/* Section 1: 위급하면 먼저 119 — 안전 상징 영역 */}
         {/* ============================================ */}
-        <View style={styles.emergencySection}>
-          <TouchableOpacity
-            style={styles.emergencyButton}
-            onPress={call119}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.emergencyButtonIcon}>{'🚨'}</Text>
-            <Text style={styles.emergencyButtonText}>119 응급전화</Text>
-          </TouchableOpacity>
-          <Text style={styles.emergencySubtitle}>
-            응급 상황이면 먼저 전화하세요
-          </Text>
+        <View style={styles.priorityCard}>
+          <Text style={styles.priorityTitle}>위급하면 먼저 119</Text>
+          <View style={styles.priorityBtnRow}>
+            <TouchableOpacity
+              style={[styles.priorityBtn, styles.priorityBtnRed]}
+              onPress={call119}
+              activeOpacity={0.85}
+            >
+              <Image source={IC_REDFLAG} style={styles.priorityBtnIconImg} resizeMode="contain" />
+              <Text style={styles.priorityBtnText}>119 전화하기</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.priorityBtn, styles.priorityBtnBlue]}
+              onPress={openHospitalMap}
+              activeOpacity={0.85}
+            >
+              <Image source={IC_HOSPITAL} style={styles.priorityBtnIconImg} resizeMode="contain" />
+              <Text style={styles.priorityBtnText}>응급실 찾기</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.priorityBtn, styles.priorityBtnPurple]}
+              onPress={notifyFamily}
+              activeOpacity={0.85}
+              disabled={notifyingFamily}
+            >
+              {notifyingFamily ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <>
+                  <Image source={IC_FAMILY} style={styles.priorityBtnIconImg} resizeMode="contain" />
+                  <Text style={styles.priorityBtnText}>가족에게 알리기</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+          <View style={styles.priorityNote}>
+            <Image source={IC_REDFLAG} style={styles.priorityNoteIconImg} resizeMode="contain" />
+            <Text style={styles.priorityNoteText}>
+              호흡곤란, 의식저하, 경련, 심한 출혈, 입술이 파래짐 등 위급상황은 앱 확인보다 119에 먼저 전화하세요.
+            </Text>
+          </View>
         </View>
 
         {/* ============================================ */}
-        {/* Section 2: Emergency Guides                  */}
+        {/* Section 2: 응급 상황 빠른 대처 (연령별 분기 포함) */}
         {/* ============================================ */}
-        {/* 임신부 모드에서는 영유아용 응급 대처(하임리히/CPR/화상/이물질) 숨김 */}
         {!isPregnant && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>응급 대처법</Text>
+          <Text style={styles.sectionTitle}>응급 상황 빠른 대처</Text>
           <Text style={styles.sectionDesc}>
-            버튼을 누르면 대처 방법을 바로 확인할 수 있어요
+            위급하면 119, 애매하면 증상부터 빠르게 확인하세요
           </Text>
           <View style={styles.guideGrid}>
             {EMERGENCY_GUIDES.map((g) => (
@@ -379,7 +526,7 @@ export default function SOSScreen() {
                 onPress={() => setGuideKey(g.key)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.guideBtnEmoji}>{g.emoji}</Text>
+                <Image source={g.icon} style={styles.guideBtnIconImg} resizeMode="contain" />
                 <Text style={[styles.guideBtnLabel, { color: g.color }]}>{g.label}</Text>
                 {g.sublabel ? (
                   <Text style={[styles.guideBtnSublabel, { color: g.color }]}>{g.sublabel}</Text>
@@ -402,7 +549,9 @@ export default function SOSScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>증상 빠른 확인</Text>
           <Text style={styles.sectionDesc}>
-            {isPregnant ? '엄마/태아 관련 증상을 선택해주세요' : '해당하는 증상을 모두 선택해주세요'}
+            {isPregnant
+              ? '바로 119급인지 애매할 때 — 엄마·태아 증상을 선택해주세요'
+              : '바로 119급인지 애매할 때 — 증상부터 빠르게 확인하세요'}
           </Text>
 
           <View style={styles.symptomGrid}>
@@ -418,7 +567,7 @@ export default function SOSScreen() {
                   onPress={() => toggleSymptom(symptom.id)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.symptomEmoji}>{symptom.emoji}</Text>
+                  <Image source={symptom.icon} style={styles.symptomIconImg} resizeMode="contain" />
                   <Text
                     style={[
                       styles.symptomLabel,
@@ -471,18 +620,17 @@ export default function SOSScreen() {
         </View>
 
         {/* ============================================ */}
-        {/* Section 4: Quick Actions                     */}
+        {/* Section 4: 임신부 전용 - 분만실 직통 (119/가족은 상단에 통합됨) */}
         {/* ============================================ */}
-        {isPregnant ? (
+        {isPregnant && (
           <>
-            {/* 임신부 전용 — 거대 버튼 2개 (분만실 전화 / 가족 알림) */}
             <TouchableOpacity
               style={styles.megaCallBtn}
               onPress={callDeliveryWard}
               activeOpacity={0.85}
               hitSlop={8}
             >
-              <Text style={styles.megaCallIcon}>{'🚨'}</Text>
+              <Image source={IC_REDFLAG} style={styles.megaCallIconImg} resizeMode="contain" />
               <View style={{ flex: 1 }}>
                 <Text style={styles.megaCallText}>분만실 전화하기</Text>
                 <Text style={styles.megaCallSub}>
@@ -494,63 +642,15 @@ export default function SOSScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.megaFamilyBtn}
-              onPress={notifyFamily}
-              activeOpacity={0.85}
-              hitSlop={8}
-              disabled={notifyingFamily}
-            >
-              {notifyingFamily ? (
-                <ActivityIndicator color="#FFFFFF" size="large" />
-              ) : (
-                <>
-                  <Text style={styles.megaFamilyIcon}>{'👨‍👩‍👦'}</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.megaFamilyText}>가족에게 알리기</Text>
-                    <Text style={styles.megaFamilySub}>등록된 보호자에게 긴급 메시지</Text>
-                  </View>
-                </>
-              )}
-            </TouchableOpacity>
-
-            {/* 병원 정보 수정 링크 */}
-            <TouchableOpacity
               style={styles.editHospitalLink}
               onPress={() => setHospitalModalOpen(true)}
               hitSlop={10}
             >
               <Text style={styles.editHospitalText}>
-                ✏️ 분만/진료 병원 정보 {deliveryHospital ? '수정' : '등록'}
+                분만/진료 병원 정보 {deliveryHospital ? '수정' : '등록'}
               </Text>
             </TouchableOpacity>
           </>
-        ) : (
-          <View style={styles.quickActions}>
-            <TouchableOpacity
-              style={styles.quickActionBtn}
-              onPress={openHospitalMap}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.quickActionIcon}>{'🏥'}</Text>
-              <Text style={styles.quickActionText}>가까운 병원 찾기</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickActionBtn}
-              onPress={notifyFamily}
-              activeOpacity={0.7}
-              disabled={notifyingFamily}
-            >
-              {notifyingFamily ? (
-                <ActivityIndicator color={COLOR.accent} size="small" />
-              ) : (
-                <>
-                  <Text style={styles.quickActionIcon}>{'👨‍👩‍👧'}</Text>
-                  <Text style={styles.quickActionText}>가족에게 알리기</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
         )}
 
         <View style={{ height: 40 }} />
@@ -642,27 +742,32 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; onClose: () => void }) {
   const [pageIdx, setPageIdx] = useState(0);
 
-  // hooks must be called unconditionally
-  const guide = guideKey ? GUIDE_CONTENT[guideKey] : null;
-  const img = guideKey ? SOS_IMAGES[guideKey] : null;
+  if (!guideKey) return null;
 
-  if (!guideKey || !guide || !img) return null;
+  const stepImages = SOS_STEP_IMAGES[guideKey];
+  const guideMeta = EMERGENCY_GUIDES.find((g) => g.key === guideKey);
+  const headerColor = guideMeta?.color ?? '#D32F2F';
+  const guideTitle = guideMeta?.label ?? '';
+  // warning text — heimlich/cpr 은 연령별 데이터에서, 나머지는 GUIDE_CONTENT에서
+  const warningText =
+    guideKey === 'heimlich' ? HEIMLICH_BY_AGE.infant.warning
+    : guideKey === 'cpr'    ? CPR_BY_AGE.infant.warning
+    : GUIDE_CONTENT[guideKey]?.warning ?? '';
 
-  // 카드 = 인트로 + steps + 경고
-  // 인트로 카드 (큰 이미지 + 제목)는 page 0
-  // step 카드는 page 1 ~ N
-  // 마지막 경고 카드는 page N+1
-  const totalPages = 1 + guide.quickSteps.length + 1;
+  if (!stepImages) return null;
+
+  const handleClose = () => {
+    setPageIdx(0);
+    onClose();
+  };
+
+  // 4 panel + 1 warning = 5 pages
+  const totalPages = stepImages.length + 1;
 
   const onScroll = (e: import('react-native').NativeSyntheticEvent<import('react-native').NativeScrollEvent>) => {
     const x = e.nativeEvent.contentOffset.x;
     const next = Math.round(x / SCREEN_WIDTH);
     if (next !== pageIdx) setPageIdx(next);
-  };
-
-  const handleClose = () => {
-    setPageIdx(0);
-    onClose();
   };
 
   return (
@@ -673,6 +778,14 @@ function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; o
           <Text style={guideStyles.closeBtnText}>{'X'}</Text>
         </TouchableOpacity>
 
+        {/* 상단 타이틀 (간단) */}
+        <View style={[guideStyles.simpleTopBar, { backgroundColor: headerColor }]}>
+          <Text style={guideStyles.simpleTopText}>{guideTitle}</Text>
+          <Text style={guideStyles.simplePageText}>
+            {pageIdx < stepImages.length ? `${pageIdx + 1} / ${stepImages.length}` : '경고'}
+          </Text>
+        </View>
+
         {/* 가로 스크롤 카드 페이저 */}
         <ScrollView
           horizontal
@@ -682,37 +795,24 @@ function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; o
           scrollEventThrottle={32}
           style={guideStyles.pager}
         >
-          {/* Page 0 — 인트로 (제목 + 큰 이미지) */}
-          <View style={[guideStyles.cardPage, { width: SCREEN_WIDTH }]}>
-            <View style={[guideStyles.titleBar, { backgroundColor: guide.headerColor }]}>
-              <Text style={guideStyles.titleText}>{guide.title}</Text>
-              <Text style={guideStyles.subtitleText}>{guide.subtitle}</Text>
-            </View>
-            <View style={guideStyles.bigImageWrap}>
-              <Image source={img} style={guideStyles.bigImage} resizeMode="contain" />
-            </View>
-            <Text style={guideStyles.swipeHint}>👉 옆으로 넘기면 단계별로 볼 수 있어요</Text>
-          </View>
-
-          {/* Page 1..N — 단계 카드 */}
-          {guide.quickSteps.map((step, idx) => (
-            <View key={`step-${idx}`} style={[guideStyles.cardPage, { width: SCREEN_WIDTH }]}>
-              <View style={guideStyles.stepBigImageWrap}>
-                <Image source={img} style={guideStyles.stepBigImage} resizeMode="contain" />
+          {/* Page 0..3 — 4 패널 이미지 (텍스트가 이미지에 포함됨) */}
+          {stepImages.map((src, idx) => (
+            <View key={`panel-${idx}`} style={[guideStyles.panelPage, { width: SCREEN_WIDTH }]}>
+              <View style={guideStyles.panelImageWrap}>
+                <Image source={src} style={guideStyles.panelImage} resizeMode="contain" />
               </View>
-              <View style={[guideStyles.stepNumberCircle, { backgroundColor: guide.headerColor }]}>
-                <Text style={guideStyles.stepNumberText}>{idx + 1}</Text>
-              </View>
-              <Text style={guideStyles.stepBigText}>{step}</Text>
+              {idx === 0 ? (
+                <Text style={guideStyles.swipeHint}>옆으로 넘기면 다음 단계</Text>
+              ) : null}
             </View>
           ))}
 
-          {/* 경고 카드 (마지막) */}
+          {/* 마지막 — 경고 카드 */}
           <View style={[guideStyles.cardPage, { width: SCREEN_WIDTH }]}>
             <View style={guideStyles.warningCardLarge}>
-              <Text style={guideStyles.warningIconLarge}>{'⚠️'}</Text>
+              <Image source={IC_REDFLAG} style={guideStyles.warningIconImg} resizeMode="contain" />
               <Text style={guideStyles.warningTitleLarge}>이럴 땐 즉시 119</Text>
-              <Text style={guideStyles.warningTextLarge}>{guide.warning}</Text>
+              <Text style={guideStyles.warningTextLarge}>{warningText}</Text>
             </View>
           </View>
         </ScrollView>
@@ -724,13 +824,13 @@ function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; o
               key={`dot-${i}`}
               style={[
                 guideStyles.dot,
-                i === pageIdx && [guideStyles.dotActive, { backgroundColor: guide.headerColor }],
+                i === pageIdx && [guideStyles.dotActive, { backgroundColor: headerColor }],
               ]}
             />
           ))}
         </View>
 
-        {/* 119 고정 버튼 (하단, 스크롤 안 됨) */}
+        {/* 119 고정 버튼 (하단) */}
         <View style={guideStyles.bottomBar}>
           <TouchableOpacity
             style={guideStyles.call119Btn}
@@ -742,7 +842,7 @@ function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; o
             }
             activeOpacity={0.8}
           >
-            <Text style={guideStyles.call119Text}>{'🚨  119 응급전화'}</Text>
+            <Text style={guideStyles.call119Text}>{'119 응급전화'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -859,6 +959,43 @@ const guideStyles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: 'center',
   },
+  /* === 4-패널 이미지 (텍스트 포함) 풀스크린 표시 === */
+  simpleTopBar: {
+    paddingTop: 50,
+    paddingBottom: 14,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 22,
+  },
+  simpleTopText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  simplePageText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.85)',
+  },
+  panelPage: {
+    paddingTop: 12,
+    paddingBottom: 110,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  panelImageWrap: {
+    width: SCREEN_WIDTH - 24,
+    aspectRatio: 941 / 440,
+    overflow: 'hidden',
+  },
+  panelImage: {
+    width: '100%',
+    height: '100%',
+  },
   bigImageWrap: {
     width: SCREEN_WIDTH - 40,
     height: SCREEN_WIDTH - 40,
@@ -919,6 +1056,7 @@ const guideStyles = StyleSheet.create({
     marginTop: 30,
   },
   warningIconLarge: { fontSize: 56, marginBottom: 12 },
+  warningIconImg: { width: 64, height: 64, marginBottom: 12 },
   warningTitleLarge: {
     fontSize: 24,
     fontWeight: '900',
@@ -933,6 +1071,8 @@ const guideStyles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  /* 연령 선택 카드 */
+  agePicker: {},
   /* 점 인디케이터 */
   dotRow: {
     flexDirection: 'row',
@@ -952,6 +1092,56 @@ const guideStyles = StyleSheet.create({
   },
   dotActive: {
     width: 24,
+  },
+});
+
+const agePickerStyles = StyleSheet.create({
+  scroll: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 100,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingVertical: 22,
+    paddingHorizontal: 22,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#F0E0DC',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  cardLeft: { flex: 1 },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#1C1C1E',
+    marginBottom: 4,
+  },
+  cardSub: {
+    fontSize: 13,
+    color: '#636366',
+    fontWeight: '600',
+  },
+  cardArrow: {
+    fontSize: 32,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+  hint: {
+    marginTop: 8,
+    paddingHorizontal: 4,
+    fontSize: 12,
+    color: '#888',
+    fontWeight: '500',
+    lineHeight: 18,
+    textAlign: 'center',
   },
 });
 
@@ -990,38 +1180,91 @@ const styles = StyleSheet.create({
     color: COLOR.textSub,
   },
 
-  /* Section 1: Emergency */
-  emergencySection: {
-    alignItems: 'center',
-    marginBottom: 28,
-  },
-  emergencyButton: {
-    backgroundColor: EMERGENCY_RED,
-    width: '100%',
-    paddingVertical: 22,
+  /* Section 1: 위급하면 먼저 119 */
+  priorityCard: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
+    padding: 18,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: EMERGENCY_RED,
+    shadowColor: EMERGENCY_RED,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.10,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  priorityTitle: {
+    fontSize: 19,
+    fontWeight: '900',
+    color: EMERGENCY_RED,
+    textAlign: 'center',
+    marginBottom: 14,
+  },
+  priorityBtnRow: {
     flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  priorityBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
-    elevation: 2,
+    minHeight: 84,
+    gap: 6,
   },
-  emergencyButtonIcon: {
-    fontSize: 28,
+  priorityBtnRed: {
+    backgroundColor: EMERGENCY_RED,
   },
-  emergencyButtonText: {
+  priorityBtnBlue: {
+    backgroundColor: '#1976D2',
+  },
+  priorityBtnPurple: {
+    backgroundColor: '#7C5CFF',
+  },
+  priorityBtnIcon: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#FFFFFF',
   },
-  emergencySubtitle: {
+  priorityBtnIconImg: {
+    width: 28,
+    height: 28,
+    marginBottom: 4,
+  },
+  priorityBtnText: {
     fontSize: 13,
-    color: COLOR.textSub,
-    marginTop: 10,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  priorityNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FFE082',
+  },
+  priorityNoteIcon: {
+    fontSize: 16,
+    marginTop: 1,
+  },
+  priorityNoteIconImg: {
+    width: 18,
+    height: 18,
+    marginTop: 1,
+  },
+  priorityNoteText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#7E5400',
+    lineHeight: 18,
   },
 
   /* Section common */
@@ -1064,6 +1307,11 @@ const styles = StyleSheet.create({
     fontSize: 36,
     marginBottom: 8,
   },
+  guideBtnIconImg: {
+    width: 64,
+    height: 64,
+    marginBottom: 6,
+  },
   guideBtnLabel: {
     fontSize: 15,
     fontWeight: '700',
@@ -1099,6 +1347,11 @@ const styles = StyleSheet.create({
   },
   symptomEmoji: {
     fontSize: 28,
+    marginBottom: 6,
+  },
+  symptomIconImg: {
+    width: 36,
+    height: 36,
     marginBottom: 6,
   },
   symptomLabel: {
@@ -1232,6 +1485,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   megaCallIcon: { fontSize: 44 },
+  megaCallIconImg: { width: 44, height: 44 },
   megaCallText: { fontSize: 22, fontWeight: '900', color: '#FFFFFF', lineHeight: 28 },
   megaCallSub: { fontSize: 13, color: '#FFE4D2', marginTop: 4, fontWeight: '600' },
 

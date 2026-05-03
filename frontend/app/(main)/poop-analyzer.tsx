@@ -19,6 +19,10 @@ import { isScreenAvailable } from '../../constants/ageFeatures';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { UpsellModal } from '../../components/common/UpsellModal';
 import { saveAnalysisHistory } from '../../utils/analysisHistory';
+import type { ImageSourcePropType } from 'react-native';
+
+const IC_CAMERA = require('../../assets/icon-camera.png') as ImageSourcePropType;
+const IC_REDFLAG = require('../../assets/icon-redflag.png') as ImageSourcePropType;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -231,11 +235,11 @@ export default function PoopAnalyzerScreen() {
             ) : (
               <View style={styles.photoButtonRow}>
                 <TouchableOpacity style={styles.photoBtn} onPress={handleTakePhoto} activeOpacity={0.7}>
-                  <Text style={styles.photoBtnEmoji}>{'📷'}</Text>
+                  <Image source={IC_CAMERA} style={styles.photoBtnIconImg} resizeMode="contain" />
                   <Text style={styles.photoBtnText}>{'카메라 촬영'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.photoBtn} onPress={handlePickImage} activeOpacity={0.7}>
-                  <Text style={styles.photoBtnEmoji}>{'🖼'}</Text>
+                  <Image source={IC_CAMERA} style={styles.photoBtnIconImg} resizeMode="contain" />
                   <Text style={styles.photoBtnText}>{'갤러리 선택'}</Text>
                 </TouchableOpacity>
               </View>
@@ -280,7 +284,7 @@ function ResultView({ result, onReset }: { result: AnalysisResult; onReset: () =
     <View style={resultStyles.container}>
       {result.needsDoctor && (
         <View style={resultStyles.urgentBanner}>
-          <Text style={resultStyles.urgentIcon}>{'🚨'}</Text>
+          <Image source={IC_REDFLAG} style={resultStyles.urgentIconImg} resizeMode="contain" />
           <View style={resultStyles.urgentTextWrap}>
             <Text style={resultStyles.urgentTitle}>{'병원 방문을 권장합니다'}</Text>
             <Text style={resultStyles.urgentDesc}>
@@ -381,6 +385,7 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: COLORS.border, borderStyle: 'dashed',
   },
   photoBtnEmoji: { fontSize: 36, marginBottom: 10 },
+  photoBtnIconImg: { width: 40, height: 40, marginBottom: 10 },
   photoBtnText: { fontSize: 14, fontWeight: '600', color: COLORS.textSub },
 
   photoPreviewWrap: {
@@ -418,6 +423,7 @@ const resultStyles = StyleSheet.create({
     padding: 16, borderWidth: 2, borderColor: COLORS.urgentBorder, gap: 12,
   },
   urgentIcon: { fontSize: 28 },
+  urgentIconImg: { width: 32, height: 32 },
   urgentTextWrap: { flex: 1 },
   urgentTitle: { fontSize: 16, fontWeight: '800', color: '#D32F2F', marginBottom: 6 },
   urgentDesc: { fontSize: 13, color: '#C62828', lineHeight: 20 },

@@ -1,0 +1,346 @@
+/**
+ * NextCheckupModal — 다음 검진 일정 입력 / 상세 표시 모달
+ *
+ * 사용처:
+ *  - home의 "다음 검진 D-day" 카드 탭 → 상세 표시 + 수정 가능
+ *  - 임신앨범 화면의 입력 섹션
+ */
+
+import React, { useState, useEffect } from 'react';
+import { Modal, View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import {
+  setNextCheckup,
+  clearNextCheckup,
+  daysUntil,
+  formatDday,
+  formatKoreanDate,
+} from '../../services/checkup';
+
+interface Props {
+  visible: boolean;
+  onClose: () => void;
+  childId: string;
+  /** 현재 저장된 다음 검진 ISO date (없으면 null) */
+  current: string | null;
+}
+
+const COLOR = {
+  bg: 'rgba(0,0,0,0.4)',
+  card: '#FFFFFF',
+  text: '#1C1C1E',
+  textSub: '#636366',
+  border: '#E5E5EA',
+  accent: '#FF8C5A',
+  pink: '#E91E63',
+  danger: '#D32F2F',
+};
+
+export function NextCheckupModal({ visible, onClose, childId, current }: Props) {
+  const [yearText, setYearText] = useState('');
+  const [monthText, setMonthText] = useState('');
+  const [dayText, setDayText] = useState('');
+
+  // 모달 열릴 때 현재 값 채움 (없으면 오늘 + 7일 디폴트)
+  useEffect(() => {
+    if (!visible) return;
+    const seed = current ? new Date(current + 'T00:00:00') : (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      return d;
+    })();
+    setYearText(String(seed.getFullYear()));
+    setMonthText(String(seed.getMonth() + 1).padStart(2, '0'));
+    setDayText(String(seed.getDate()).padStart(2, '0'));
+  }, [visible, current]);
+
+  const handleSave = async () => {
+    const y = parseInt(yearText, 10);
+    const m = parseInt(monthText, 10);
+    const d = parseInt(dayText, 10);
+    if (
+      !Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d) ||
+      y < 2024 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31
+    ) {
+      Alert.alert('날짜 형식 오류', '연/월/일을 정확히 입력해 주세요.');
+      return;
+    }
+    // 실제 유효한 날짜인지 검증 (예: 2/30 거부)
+    const test = new Date(y, m - 1, d);
+    if (test.getFullYear() !== y || test.getMonth() !== m - 1 || test.getDate() !== d) {
+      Alert.alert('날짜 형식 오류', '존재하지 않는 날짜입니다.');
+      return;
+    }
+    const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    await setNextCheckup(childId, iso);
+    onClose();
+  };
+
+  const handleClear = async () => {
+    Alert.alert(
+      '다음 검진 일정 삭제',
+      '저장된 검진 일정을 삭제할까요?',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            await clearNextCheckup(childId);
+            onClose();
+          },
+        },
+      ],
+    );
+  };
+
+  // 미리보기 (현재 입력값 기준)
+  const preview = (() => {
+    const y = parseInt(yearText, 10);
+    const m = parseInt(monthText, 10);
+    const d = parseInt(dayText, 10);
+    if (
+      !Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d) ||
+      y < 2024 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31
+    ) return null;
+    const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const days = daysUntil(iso);
+    return { iso, days, label: formatKoreanDate(iso) };
+  })();
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.backdrop}>
+        <View style={styles.card}>
+          <Text style={styles.title}>다음 검진 일정</Text>
+          <Text style={styles.subtitle}>
+            언제 병원 가시나요? 홈에서 D-day로 알려드릴게요.
+          </Text>
+
+          {/* 현재 저장된 값 표시 */}
+          {current && (
+            <View style={styles.currentBox}>
+              <Text style={styles.currentLabel}>현재 저장됨</Text>
+              <Text style={styles.currentDate}>{formatKoreanDate(current)}</Text>
+              <Text style={styles.currentDday}>{formatDday(daysUntil(current))}</Text>
+            </View>
+          )}
+
+          {/* 입력 필드 */}
+          <View style={styles.inputRow}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>년</Text>
+              <TextInput
+                style={styles.inputField}
+                value={yearText}
+                onChangeText={(t) => setYearText(t.replace(/[^0-9]/g, '').slice(0, 4))}
+                keyboardType="number-pad"
+                maxLength={4}
+                returnKeyType="next"
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>월</Text>
+              <TextInput
+                style={styles.inputField}
+                value={monthText}
+                onChangeText={(t) => setMonthText(t.replace(/[^0-9]/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                maxLength={2}
+                returnKeyType="next"
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>일</Text>
+              <TextInput
+                style={styles.inputField}
+                value={dayText}
+                onChangeText={(t) => setDayText(t.replace(/[^0-9]/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                maxLength={2}
+                returnKeyType="done"
+              />
+            </View>
+          </View>
+
+          {/* 미리보기 */}
+          {preview && (
+            <View style={styles.previewBox}>
+              <Text style={styles.previewDate}>{preview.label}</Text>
+              <Text
+                style={[
+                  styles.previewDday,
+                  preview.days < 0 && styles.previewDdayPast,
+                ]}
+              >
+                {preview.days < 0
+                  ? '⚠️ 지난 날짜입니다'
+                  : preview.days === 0
+                  ? '오늘이 검진일입니다'
+                  : `${preview.days}일 남음`}
+              </Text>
+            </View>
+          )}
+
+          {/* 버튼 */}
+          <View style={styles.btnRow}>
+            <TouchableOpacity style={styles.btnSecondary} onPress={onClose} activeOpacity={0.7}>
+              <Text style={styles.btnSecondaryText}>취소</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.btnPrimary, !preview && styles.btnDisabled]}
+              onPress={handleSave}
+              disabled={!preview}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.btnPrimaryText}>저장</Text>
+            </TouchableOpacity>
+          </View>
+
+          {current && (
+            <TouchableOpacity onPress={handleClear} activeOpacity={0.7} style={{ marginTop: 8 }}>
+              <Text style={styles.deleteLink}>일정 삭제</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: COLOR.bg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  card: {
+    width: '100%',
+    backgroundColor: COLOR.card,
+    borderRadius: 18,
+    padding: 22,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: COLOR.text,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: COLOR.textSub,
+    marginBottom: 16,
+  },
+  currentBox: {
+    backgroundColor: '#FFF4ED',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FFE5D6',
+  },
+  currentLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLOR.accent,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  currentDate: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLOR.text,
+    marginBottom: 2,
+  },
+  currentDday: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: COLOR.accent,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  inputGroup: {
+    flex: 1,
+  },
+  inputLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLOR.textSub,
+    marginBottom: 4,
+  },
+  inputField: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: COLOR.border,
+    backgroundColor: '#FAFAFA',
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLOR.text,
+    textAlign: 'center',
+  },
+  previewBox: {
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  previewDate: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLOR.text,
+    marginBottom: 4,
+  },
+  previewDday: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: COLOR.accent,
+  },
+  previewDdayPast: {
+    color: COLOR.danger,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  btnSecondary: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#F2F2F7',
+    alignItems: 'center',
+  },
+  btnSecondaryText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLOR.text,
+  },
+  btnPrimary: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: COLOR.accent,
+    alignItems: 'center',
+  },
+  btnDisabled: {
+    backgroundColor: '#FFC9A8',
+  },
+  btnPrimaryText: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  deleteLink: {
+    textAlign: 'center',
+    fontSize: 13,
+    color: COLOR.danger,
+    fontWeight: '700',
+    paddingVertical: 6,
+  },
+});

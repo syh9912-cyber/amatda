@@ -116,6 +116,30 @@ export async function saveBreastSession(childId: string, session: BreastSession 
   }
 }
 
+/* ---- 하단 안내문 노출 카운터 (10회 후 자동 숨김) ---- */
+
+const HINT_COUNTER_KEY = 'amatda_baby_tracker_hint_count';
+const HINT_MAX = 10;
+
+export async function loadHintRemaining(): Promise<number> {
+  const storage = await getStorage();
+  if (!storage) return HINT_MAX;
+  const raw = await storage.getItem(HINT_COUNTER_KEY);
+  if (raw == null || raw === '') return HINT_MAX;
+  const n = parseInt(raw, 10);
+  if (Number.isNaN(n)) return HINT_MAX;
+  return Math.max(0, Math.min(HINT_MAX, n));
+}
+
+export async function decrementHint(): Promise<number> {
+  const remaining = await loadHintRemaining();
+  if (remaining <= 0) return 0;
+  const next = remaining - 1;
+  const storage = await getStorage();
+  if (storage) await storage.setItem(HINT_COUNTER_KEY, String(next));
+  return next;
+}
+
 /* ---- daily records ---- */
 
 export async function loadRecords(childId: string, dateStr: string): Promise<TrackerRecord[]> {
@@ -136,6 +160,13 @@ export async function saveRecords(childId: string, dateStr: string, records: Tra
   const storage = await getStorage();
   if (!storage) return;
   await storage.setItem(getStorageKey(childId, dateStr), JSON.stringify(records));
+  // home 화면의 DenseStatsRow가 즉시 재fetch (stack keep으로 useEffect 자동 재실행 안 되는 문제 해결)
+  try {
+    // dynamic import to avoid hard dep cycle if not loaded
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useTrackerStore } = require('../../stores/trackerStore') as typeof import('../../stores/trackerStore');
+    useTrackerStore.getState().bump();
+  } catch { /* ignore */ }
 }
 
 /* ---- multi-day stats (chart data) ---- */

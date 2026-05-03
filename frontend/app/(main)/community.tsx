@@ -7,7 +7,13 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
+  Image,
 } from 'react-native';
+import type { ImageSourcePropType } from 'react-native';
+
+const IC_HEART = require('../../assets/icon-heart.png') as ImageSourcePropType;
+const IC_COMMENT = require('../../assets/icon-comment.png') as ImageSourcePropType;
+const IC_DIARY = require('../../assets/child-diary.png') as ImageSourcePropType;
 import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
@@ -140,12 +146,14 @@ function CommunityPostItem({
 
       {/* Bottom stats */}
       <View style={itemStyles.statsRow}>
-        <Text style={itemStyles.stat}>
-          {'❤️ '}{post.likes}
-        </Text>
-        <Text style={itemStyles.stat}>
-          {'💬 '}{post.comments.length}
-        </Text>
+        <View style={itemStyles.statRow}>
+          <Image source={IC_HEART} style={itemStyles.statIconImg} resizeMode="contain" />
+          <Text style={itemStyles.stat}>{` ${post.likes}`}</Text>
+        </View>
+        <View style={itemStyles.statRow}>
+          <Image source={IC_COMMENT} style={itemStyles.statIconImg} resizeMode="contain" />
+          <Text style={itemStyles.stat}>{` ${post.comments.length}`}</Text>
+        </View>
       </View>
 
       <View style={itemStyles.separator} />
@@ -222,6 +230,8 @@ const itemStyles = StyleSheet.create({
     fontSize: FONT_SIZE.xs,
     color: WARM_GRAY,
   },
+  statRow: { flexDirection: 'row', alignItems: 'center' },
+  statIconImg: { width: 14, height: 14 },
   separator: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: '#F0E8E0',
@@ -295,7 +305,7 @@ export default function CommunityScreen() {
 
   const renderEmpty = () => (
     <View style={styles.emptyWrap}>
-      <Text style={styles.emptyEmoji}>{'💬'}</Text>
+      <Image source={IC_COMMENT} style={styles.emptyEmojiImg} resizeMode="contain" />
       <Text style={styles.emptyText}>아직 게시물이 없습니다</Text>
       <Text style={styles.emptyHint}>첫 번째 글을 작성해보세요</Text>
     </View>
@@ -340,7 +350,7 @@ export default function CommunityScreen() {
         style={[styles.fab, { bottom: 24 + insets.bottom }]}
         activeOpacity={0.85}
       >
-        <Text style={styles.fabIcon}>{'✏'}</Text>
+        <Image source={IC_DIARY} style={styles.fabIconImg} resizeMode="contain" />
         <Text style={styles.fabLabel}>글쓰기</Text>
       </TouchableOpacity>
     </View>
@@ -421,6 +431,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xl * 2,
   },
   emptyEmoji: { fontSize: 48, marginBottom: SPACING.md },
+  emptyEmojiImg: { width: 64, height: 64, marginBottom: SPACING.md },
   emptyText: {
     fontSize: FONT_SIZE.lg,
     fontWeight: '600',
@@ -452,6 +463,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FFFFFF',
   },
+  fabIconImg: { width: 18, height: 18, tintColor: '#FFFFFF' },
   fabLabel: {
     fontSize: FONT_SIZE.sm + 1,
     fontWeight: '700',

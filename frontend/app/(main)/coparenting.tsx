@@ -285,7 +285,7 @@ export default function CoparentingScreen() {
               <Text style={styles.sectionTitle}>나</Text>
               <View style={styles.memberCard}>
                 <View style={styles.memberAvatar}>
-                  <Text style={styles.memberIcon}>{'⭐'}</Text>
+                  <Text style={styles.memberIcon}>{'★'}</Text>
                 </View>
                 <View style={styles.memberInfo}>
                   <Text style={styles.memberName}>나 (소유자)</Text>
@@ -362,13 +362,13 @@ export default function CoparentingScreen() {
                 style={styles.acceptBtn}
                 onPress={() => setAcceptVisible(true)}
               >
-                <Text style={styles.acceptBtnText}>{'🎫'} 초대 코드 입력</Text>
+                <Text style={styles.acceptBtnText}>{'초대 코드 입력'}</Text>
               </TouchableOpacity>
             </View>
 
             {/* Benefits */}
             <View style={styles.benefitCard}>
-              <Text style={styles.benefitTitle}>{'✨'} 공동육아의 장점</Text>
+              <Text style={styles.benefitTitle}>{'공동육아의 장점'}</Text>
               <Text style={styles.benefitItem}>{'•'} 아빠가 수유 기록하면 엄마에게 즉시 반영</Text>
               <Text style={styles.benefitItem}>{'•'} 조부모는 열람만 가능해서 기록 실수 방지</Text>
               <Text style={styles.benefitItem}>{'•'} 도우미에게 필요한 권한만 부여 가능</Text>

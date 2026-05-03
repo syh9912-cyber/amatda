@@ -27,6 +27,13 @@ import { uploadGrowthPhoto } from '../../services/imageUpload';
 import { useMomstagramStore } from '../../stores/momstagramStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { PhotoViewer } from '../../components/album/PhotoViewer';
+import type { ImageSourcePropType } from 'react-native';
+
+const IC_PREG_TEST = require('../../assets/preg-test.png') as ImageSourcePropType;
+const IC_DIARY = require('../../assets/child-diary.png') as ImageSourcePropType;
+const IC_CAMERA = require('../../assets/icon-camera.png') as ImageSourcePropType;
+const IC_BOOK = require('../../assets/quick-learning.png') as ImageSourcePropType;
+const IC_THINKING = require('../../assets/mascot-thinking.png') as ImageSourcePropType;
 // milestoneImages kept for future PDF/export use — not used in UI rendering
 
 /* ------------------------------------------------------------------ */
@@ -1221,7 +1228,8 @@ function PregnancyTimeline() {
         {/* Current week badge */}
         {currentWeek > 0 && (
           <View style={pStyles.currentBadge}>
-            <Text style={pStyles.currentBadgeText}>{'🤰'} 현재 임신 {currentWeek}주차</Text>
+            <Image source={IC_PREG_TEST} style={pStyles.currentBadgeIconImg} contentFit="contain" />
+            <Text style={pStyles.currentBadgeText}>{` 현재 임신 ${currentWeek}주차`}</Text>
           </View>
         )}
 
@@ -1236,7 +1244,7 @@ function PregnancyTimeline() {
             <ActivityIndicator color={COLORS.primary} size="small" />
           ) : (
             <>
-              <Text style={styles.aiDiaryBtnEmoji}>{'📝'}</Text>
+              <Image source={IC_DIARY} style={styles.aiDiaryBtnIconImg} contentFit="contain" />
               <Text style={styles.aiDiaryBtnText}>AI 오늘 일기</Text>
             </>
           )}
@@ -1246,7 +1254,10 @@ function PregnancyTimeline() {
         {diaryText && (
           <View style={styles.diaryCard}>
             <View style={styles.diaryHeader}>
-              <Text style={styles.diaryHeaderText}>{'📝'} AI 일기 - {diaryDate}</Text>
+              <View style={styles.diaryHeaderRow}>
+                <Image source={IC_DIARY} style={styles.diaryHeaderIconImg} contentFit="contain" />
+                <Text style={styles.diaryHeaderText}>{` AI 일기 - ${diaryDate}`}</Text>
+              </View>
               <TouchableOpacity onPress={() => setDiaryText(null)}>
                 <Text style={styles.diaryClose}>{'✕'}</Text>
               </TouchableOpacity>
@@ -1296,10 +1307,10 @@ function PregnancyTimeline() {
 
         {!loading && timeline.length === 0 && (
           <View style={{ alignItems: 'center', paddingVertical: 60 }}>
-            <Text style={{ fontSize: 48, marginBottom: 12 }}>{'📝'}</Text>
+            <Image source={IC_DIARY} style={{ width: 64, height: 64, marginBottom: 12 }} contentFit="contain" />
             <Text style={{ fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.text }}>아직 기록이 없어요</Text>
             <Text style={{ fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 4, textAlign: 'center' }}>
-              임신 기록에서 초음파, 마일스톤, 엄마 상태를 기록하면{'\n'}성장앨범에 자동으로 나타나요
+              임신앨범에서 초음파, 마일스톤, 엄마 상태를 기록하면{'\n'}성장앨범에 자동으로 나타나요
             </Text>
           </View>
         )}
@@ -1314,8 +1325,10 @@ const pStyles = StyleSheet.create({
   currentBadge: {
     backgroundColor: '#FCE4EC', borderRadius: RADIUS.full,
     paddingHorizontal: 16, paddingVertical: 8, alignSelf: 'center', marginBottom: SPACING.md,
+    flexDirection: 'row', alignItems: 'center',
   },
   currentBadgeText: { fontSize: FONT_SIZE.md, fontWeight: '700', color: '#C2185B' },
+  currentBadgeIconImg: { width: 18, height: 18 },
   weekGroup: { marginBottom: SPACING.lg },
   weekHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
   weekBadge: {
@@ -1337,6 +1350,116 @@ const pStyles = StyleSheet.create({
   cardContent: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 4, lineHeight: 20, fontWeight: '600' },
   cardDate: { fontSize: FONT_SIZE.xs, color: COLORS.textLight, marginTop: 4, fontWeight: '600' },
   cardImage: { width: '100%', height: 160, borderRadius: RADIUS.sm, marginTop: SPACING.sm, backgroundColor: COLORS.surfaceLight },
+});
+
+/* ------------------------------------------------------------------ */
+/* Pregnancy memories section (출산 후 BabyAlbum 안에 임신 기록 표시)  */
+/* ------------------------------------------------------------------ */
+
+function PregnancyMemoriesSection({ childId }: { childId: string }) {
+  const [timeline, setTimeline] = useState<PregnancyTimelineWeek[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await pregnancyApi.getTimeline(childId);
+        if (cancelled) return;
+        const data: PregnancyTimelineWeek[] = res.data?.data ?? [];
+        // dev(자동 생성된 발달 정보)는 출산 후 시점에는 의미 없음 → 사용자 기록만
+        const filtered = data
+          .map((wg) => ({ ...wg, items: wg.items.filter((it) => it.source !== 'development') }))
+          .filter((wg) => wg.items.length > 0);
+        setTimeline(filtered);
+      } catch { /* silent */ } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [childId]);
+
+  if (!loaded || timeline.length === 0) return null;
+
+  const totalCount = timeline.reduce((sum, wg) => sum + wg.items.length, 0);
+
+  return (
+    <View style={pmStyles.section}>
+      <TouchableOpacity
+        style={pmStyles.header}
+        onPress={() => setExpanded((v) => !v)}
+        activeOpacity={0.85}
+      >
+        <Image source={IC_PREG_TEST} style={pmStyles.headerIconImg} contentFit="contain" />
+        <View style={{ flex: 1 }}>
+          <Text style={pmStyles.headerTitle}>임신앨범 기록</Text>
+          <Text style={pmStyles.headerSub}>출산 전 {totalCount}건 · 탭해서 {expanded ? '접기' : '보기'}</Text>
+        </View>
+        <Text style={pmStyles.headerArrow}>{expanded ? '▲' : '▼'}</Text>
+      </TouchableOpacity>
+
+      {expanded && (
+        <View style={pmStyles.body}>
+          {timeline.map((weekGroup) => (
+            <View key={weekGroup.week} style={pStyles.weekGroup}>
+              <View style={pStyles.weekHeaderRow}>
+                <View style={pStyles.weekBadge}>
+                  <Text style={pStyles.weekBadgeText}>임신 {weekGroup.week}주차</Text>
+                </View>
+                <View style={pStyles.weekLine} />
+              </View>
+              {weekGroup.items.map((item) => (
+                <View
+                  key={item.id}
+                  style={[
+                    pStyles.card,
+                    item.source === 'health' && pStyles.cardHealth,
+                  ]}
+                >
+                  <Text style={pStyles.cardEmoji}>{item.emoji || '📌'}</Text>
+                  <View style={pStyles.cardBody}>
+                    <Text style={pStyles.cardTitle}>{item.title}</Text>
+                    {item.content ? <Text style={pStyles.cardContent} numberOfLines={3}>{item.content}</Text> : null}
+                    {item.mediaUri ? (
+                      <Image source={{ uri: item.mediaUri }} style={pStyles.cardImage} contentFit="cover" />
+                    ) : null}
+                    {item.createdAt ? (
+                      <Text style={pStyles.cardDate}>{new Date(item.createdAt).toLocaleDateString('ko-KR')}</Text>
+                    ) : null}
+                  </View>
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const pmStyles = StyleSheet.create({
+  section: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#FCE4EC',
+    overflow: 'hidden',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    gap: 10,
+  },
+  headerEmoji: { fontSize: 22 },
+  headerIconImg: { width: 28, height: 28 },
+  headerTitle: { fontSize: FONT_SIZE.md, fontWeight: '800', color: '#C2185B' },
+  headerSub: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginTop: 2 },
+  headerArrow: { fontSize: 14, color: '#C2185B', fontWeight: '700' },
+  body: { paddingHorizontal: 12, paddingBottom: 8, paddingTop: 4 },
 });
 
 /* ------------------------------------------------------------------ */
@@ -1711,6 +1834,9 @@ function BabyAlbum() {
           </Text>
         )}
 
+        {/* === 출산 후에도 임신앨범 기록을 함께 표시 (collapsible) === */}
+        {selectedChild && <PregnancyMemoriesSection childId={selectedChild.id} />}
+
         {/* ============================================ */}
         {/* Inline compose section                       */}
         {/* ============================================ */}
@@ -1725,7 +1851,7 @@ function BabyAlbum() {
             </View>
           ) : (
             <TouchableOpacity style={styles.composePhotoPlaceholder} onPress={pickImage} activeOpacity={0.7}>
-              <Text style={styles.composePlaceholderEmoji}>{'📷'}</Text>
+              <Image source={IC_CAMERA} style={styles.composePlaceholderIconImg} contentFit="contain" />
               <Text style={styles.composePlaceholderText}>사진을 추가하세요</Text>
             </TouchableOpacity>
           )}
@@ -1837,7 +1963,7 @@ function BabyAlbum() {
             <ActivityIndicator color={COLORS.primary} size="small" />
           ) : (
             <>
-              <Text style={styles.aiDiaryBtnEmoji}>{'📝'}</Text>
+              <Image source={IC_DIARY} style={styles.aiDiaryBtnIconImg} contentFit="contain" />
               <Text style={styles.aiDiaryBtnText}>AI 오늘 일기</Text>
             </>
           )}
@@ -1847,7 +1973,10 @@ function BabyAlbum() {
         {diaryText && (
           <View style={styles.diaryCard}>
             <View style={styles.diaryHeader}>
-              <Text style={styles.diaryHeaderText}>{'📝'} AI 일기 - {diaryDate}</Text>
+              <View style={styles.diaryHeaderRow}>
+                <Image source={IC_DIARY} style={styles.diaryHeaderIconImg} contentFit="contain" />
+                <Text style={styles.diaryHeaderText}>{` AI 일기 - ${diaryDate}`}</Text>
+              </View>
               <TouchableOpacity onPress={() => setDiaryText(null)}>
                 <Text style={styles.diaryClose}>{'✕'}</Text>
               </TouchableOpacity>
@@ -1916,7 +2045,10 @@ function BabyAlbum() {
         {/* ====================================================== */}
         <View style={styles.albumSection}>
           <View style={styles.albumSectionHeader}>
-            <Text style={styles.albumSectionTitle}>{'📚 성장 앨범 만들기'}</Text>
+            <View style={styles.albumSectionTitleRow}>
+              <Image source={IC_BOOK} style={styles.albumSectionTitleIconImg} contentFit="contain" />
+              <Text style={styles.albumSectionTitle}>{'성장 앨범 만들기'}</Text>
+            </View>
             <TouchableOpacity
               onPress={() => setShowAlbumForm((v) => !v)}
               style={styles.albumNewBtn}
@@ -1933,7 +2065,7 @@ function BabyAlbum() {
           <View style={styles.pregMergeHint}>
             <Text style={styles.pregMergeEmoji}>🤰</Text>
             <View style={{ flex: 1 }}>
-              <Text style={styles.pregMergeTitle}>임신기록이 자동으로 포함돼요</Text>
+              <Text style={styles.pregMergeTitle}>임신앨범이 자동으로 포함돼요</Text>
               <Text style={styles.pregMergeDesc}>임신 중 저장한 사진·초음파가 날짜순으로 앨범 앞부분에 이어져요</Text>
             </View>
           </View>
@@ -1975,7 +2107,7 @@ function BabyAlbum() {
                 </View>
               </View>
               <Text style={styles.albumFormHint}>
-                {'💡 YYYY-MM 형식 · 최대 84개월(7년) · 페이지당 사진 4장'}
+                {'YYYY-MM 형식 · 최대 84개월(7년) · 페이지당 사진 4장'}
               </Text>
 
               {/* 표지 이미지 선택 */}
@@ -2022,7 +2154,7 @@ function BabyAlbum() {
               >
                 {albumGenerating
                   ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={styles.albumGenerateBtnText}>{'📄 앨범 생성 시작'}</Text>
+                  : <Text style={styles.albumGenerateBtnText}>{'앨범 생성 시작'}</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -2073,6 +2205,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   composePlaceholderEmoji: { fontSize: 32, marginBottom: 4 },
+  composePlaceholderIconImg: { width: 40, height: 40, marginBottom: 4 },
   composePlaceholderText: { fontSize: FONT_SIZE.sm, color: COLORS.textLight, fontWeight: '700' },
   composePhotoChange: {
     position: 'absolute', top: 8, right: 8,
@@ -2132,6 +2265,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.soft,
   },
   aiDiaryBtnEmoji: { fontSize: 16, marginRight: 6 },
+  aiDiaryBtnIconImg: { width: 20, height: 20, marginRight: 6 },
   aiDiaryBtnText: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: COLORS.text },
 
   /* AI Diary card */
@@ -2144,6 +2278,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', marginBottom: 10,
   },
   diaryHeaderText: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: COLORS.text },
+  diaryHeaderRow: { flexDirection: 'row', alignItems: 'center' },
+  diaryHeaderIconImg: { width: 16, height: 16 },
   diaryClose: { fontSize: 18, color: COLORS.textSecondary, padding: 4 },
   diaryBody: { fontSize: FONT_SIZE.sm, color: COLORS.text, lineHeight: 22, fontWeight: '600' },
 
@@ -2199,6 +2335,8 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   albumSectionTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text },
+  albumSectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  albumSectionTitleIconImg: { width: 22, height: 22 },
   albumSectionDesc: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, lineHeight: 20, marginBottom: SPACING.sm, fontWeight: '600' },
   pregMergeHint: {
     flexDirection: 'row', alignItems: 'center', gap: 10,

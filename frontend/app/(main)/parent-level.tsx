@@ -261,7 +261,7 @@ export default function ParentLevelScreen() {
                   {lvl.premiumDays > 0 && (
                     <View style={styles.rewardTag}>
                       <Text style={styles.rewardTagText}>
-                        {'🎁'} 프리미엄 {lvl.premiumDays}일 + 여권 스킨
+                        {`프리미엄 ${lvl.premiumDays}일 + 여권 스킨`}
                       </Text>
                     </View>
                   )}

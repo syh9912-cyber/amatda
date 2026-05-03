@@ -122,7 +122,7 @@ export default function ChildEditScreen() {
             try {
               await childApi.delete(selectedChild.id);
               // 삭제된 아이 관련 로컬 알림 모두 취소
-              await cancelAllChildLocalNotifications(selectedChild.id);
+              await cancelAllChildLocalNotifications(selectedChild.id, selectedChild.name);
               if (selectedChild.isPregnant) {
                 await cancelAllPregnancyLocalNotifications();
               }

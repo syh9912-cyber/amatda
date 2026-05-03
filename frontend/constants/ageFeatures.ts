@@ -132,7 +132,7 @@ export interface QuickMenu {
 
 const HOME_MENUS_BY_AGE: Record<AgeGroupKey, QuickMenu[]> = {
   pregnant: [
-    { key: 'tracker', label: '임신기록', route: '/(main)/pregnancy', emoji: '📝' },
+    { key: 'tracker', label: '임신앨범', route: '/(main)/pregnancy', emoji: '📝' },
     { key: 'growth', label: '주수별 발달', route: '/(main)/pregnancy', emoji: '📊' },
     { key: 'clinic', label: '산부인과', route: '/(main)/clinic', emoji: '🏥' },
   ],

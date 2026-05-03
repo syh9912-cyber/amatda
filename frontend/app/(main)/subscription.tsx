@@ -7,7 +7,13 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
+import type { ImageSourcePropType } from 'react-native';
+
+const IC_PREMIUM = require('../../assets/premium-badge.png') as ImageSourcePropType;
+const IC_CLOCK = require('../../assets/contraction-clock.png') as ImageSourcePropType;
+const IC_RIBBON = require('../../assets/preg-ribbon.png') as ImageSourcePropType;
 import { Stack } from 'expo-router';
 import { premiumApi, paymentApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
@@ -251,7 +257,7 @@ export default function SubscriptionScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.crownEmoji}>{'👑'}</Text>
+        <Image source={IC_PREMIUM} style={styles.crownEmojiImg} resizeMode="contain" />
         <Text style={styles.headerTitle}>프리미엄 플랜</Text>
         <Text style={styles.headerSub}>
           아이 맞춤 육아, 더 깊이있게
@@ -270,7 +276,7 @@ export default function SubscriptionScreen() {
         </View>
         {status?.trialDaysLeft !== undefined && status.trialDaysLeft > 0 && (
           <View style={styles.trialRow}>
-            <Text style={styles.trialIcon}>{'⏳'}</Text>
+            <Image source={IC_CLOCK} style={styles.trialIconImg} resizeMode="contain" />
             <Text style={styles.trialText}>
               체험 기간 {status.trialDaysLeft}일 남음
             </Text>
@@ -405,7 +411,7 @@ export default function SubscriptionScreen() {
 
       {isPaid && (
         <View style={styles.paidMessage}>
-          <Text style={styles.paidEmoji}>{'🎉'}</Text>
+          <Image source={IC_RIBBON} style={styles.paidEmojiImg} resizeMode="contain" />
           <Text style={styles.paidTitle}>프리미엄 이용 중</Text>
           <Text style={styles.paidSub}>
             모든 프리미엄 기능을 이용하고 계세요!
@@ -442,6 +448,7 @@ const styles = StyleSheet.create({
   // Header
   header: { alignItems: 'center', marginBottom: SPACING.lg },
   crownEmoji: { fontSize: 40, marginBottom: SPACING.sm },
+  crownEmojiImg: { width: 48, height: 48, marginBottom: SPACING.sm },
   headerTitle: {
     fontSize: FONT_SIZE.xxl,
     fontWeight: '700',
@@ -489,6 +496,7 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
   },
   trialIcon: { fontSize: 16, marginRight: SPACING.xs },
+  trialIconImg: { width: 18, height: 18, marginRight: SPACING.xs },
   trialText: {
     fontSize: FONT_SIZE.sm,
     color: COLORS.primary,
@@ -724,6 +732,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xl,
   },
   paidEmoji: { fontSize: 48, marginBottom: SPACING.md },
+  paidEmojiImg: { width: 56, height: 56, marginBottom: SPACING.md },
   paidTitle: {
     fontSize: FONT_SIZE.xl,
     fontWeight: '700',

@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { authApi } from '../../services/api';
@@ -40,7 +41,8 @@ export default function RegisterScreen() {
       const res = await authApi.register(email, password, parentRole);
       const { user, accessToken, refreshToken } = res.data.data;
       setAuth({ accessToken, refreshToken, userId: user.id, email: user.email });
-      router.replace('/onboarding/child-info');
+      // 가입 직후 별명 설정 화면을 거쳐 child-info로 이동 (set-nickname에서 child-info로 redirect)
+      router.replace('/onboarding/set-nickname');
     } catch {
       Alert.alert('가입 실패', '이미 사용 중인 이메일이거나 서버 오류입니다');
     } finally {
@@ -60,7 +62,7 @@ export default function RegisterScreen() {
         bounces={false}
       >
         <View style={styles.header}>
-          <Text style={styles.emoji}>{'🌿'}</Text>
+          <Image source={require('../../assets/preg-leaf.png')} style={styles.emojiImg} resizeMode="contain" />
           <Text style={styles.title}>회원가입</Text>
           <Text style={styles.subtitle}>
             아맞다에 오신 것을 환영합니다
@@ -150,6 +152,7 @@ const styles = StyleSheet.create({
   emoji: {
     fontSize: 32,
   },
+  emojiImg: { width: 40, height: 40 },
   title: {
     fontSize: 32,
     fontWeight: '700',

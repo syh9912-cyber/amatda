@@ -213,7 +213,7 @@ export default function CoachingScreen() {
         setMessages((prev) => [...prev, coachMsg]);
 
         // Schedule coaching follow-up notification for next day
-        scheduleCoachingFollowup(child.name).catch(() => { /* silent */ });
+        scheduleCoachingFollowup(child.id, child.name).catch(() => { /* silent */ });
       } catch (err: unknown) {
         // axios 에러에서 서버 메시지 추출
         let errDetail = '';
@@ -371,6 +371,19 @@ export default function CoachingScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
       >
+        {/* 상담이모 첫 인사 — 대화 시작 시 항상 노출 */}
+        {child ? (
+          <CoachMessage
+            message={{
+              id: 'greeting',
+              isCoach: true,
+              text: `안녕하세요, ${childName}맘 :) 무엇이 궁금하세요?`,
+              createdAt: new Date().toISOString(),
+              source: 'ai',
+            }}
+          />
+        ) : null}
+
         {/* Year Ago Memory Banner */}
         {yearAgoMemory ? (
           <YearAgoBanner memory={yearAgoMemory} />

@@ -1,4 +1,8 @@
-import { View, Text, TouchableOpacity, StyleSheet, Switch, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Switch, ScrollView, Platform, Image } from 'react-native';
+import type { ImageSourcePropType } from 'react-native';
+
+const IC_BELL = require('../../assets/icon-bell.png') as ImageSourcePropType;
+const IC_WATER = require('../../assets/quick-water.png') as ImageSourcePropType;
 import { useState, useEffect, useCallback } from 'react';
 import { Stack, router } from 'expo-router';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -21,37 +25,42 @@ type TimeKey = 'morningTime' | 'afternoonTime' | 'eveningTime';
 interface ToggleItem {
   key: BoolKey;
   timeKey?: TimeKey;
-  emoji: string;
+  icon: ImageSourcePropType;
   label: string;
   description: string;
   fixedTimeLabel?: string;
 }
 
+const IC_SUNNY = require('../../assets/weather-sunny.png') as ImageSourcePropType;
+const IC_PLAY = require('../../assets/play-activity.png') as ImageSourcePropType;
+const IC_DIARY = require('../../assets/child-diary.png') as ImageSourcePropType;
+const IC_REPORT = require('../../assets/quick-report.png') as ImageSourcePropType;
+
 const DAILY_ITEMS: ToggleItem[] = [
   {
     key: 'morning',
     timeKey: 'morningTime',
-    emoji: '🌅',
+    icon: IC_SUNNY,
     label: '아침 인사 알림',
     description: '어젯밤 아이 수면 체크',
   },
   {
     key: 'afternoon',
     timeKey: 'afternoonTime',
-    emoji: '🎨',
+    icon: IC_PLAY,
     label: '오후 활동 추천',
     description: '아이와 함께하는 15분 놀이',
   },
   {
     key: 'evening',
     timeKey: 'eveningTime',
-    emoji: '📝',
+    icon: IC_DIARY,
     label: '저녁 일기 알림',
     description: '오늘의 육아일기 작성 알림',
   },
   {
     key: 'weekly',
-    emoji: '📊',
+    icon: IC_REPORT,
     label: '주간 리포트',
     description: '이번 주 육아 리포트 도착',
     fixedTimeLabel: '매주 월요일 오전 9:00',
@@ -124,7 +133,7 @@ export default function NotificationSettingsScreen() {
       setPrefs(updated);
       await saveNotificationPrefs(updated);
       if (selectedChild) {
-        await syncScheduledNotifications(updated, selectedChild.name);
+        await syncScheduledNotifications(updated, selectedChild.id, selectedChild.name);
         retentionApi.pushSchedule({
           childId: selectedChild.id,
           morning: updated.morning,
@@ -186,7 +195,7 @@ export default function NotificationSettingsScreen() {
       </View>
 
       <View style={styles.descCard}>
-        <Text style={styles.descEmoji}>{'🔔'}</Text>
+        <Image source={IC_BELL} style={styles.descEmojiImg} resizeMode="contain" />
         <Text style={styles.descTitle}>
           {selectedChild
             ? `${selectedChild.name} 맞춤 알림을 설정해보세요`
@@ -203,7 +212,7 @@ export default function NotificationSettingsScreen() {
           <Text style={styles.sectionTitle}>임산부 데일리 미션</Text>
           <View style={styles.card}>
             <View style={styles.row}>
-              <Text style={styles.emoji}>{'💧'}</Text>
+              <Image source={IC_WATER} style={styles.emojiImg} resizeMode="contain" />
               <View style={styles.labelCol}>
                 <Text style={styles.label}>매일 9시 미션 알림</Text>
                 <Text style={styles.desc}>물 마시기 / 영양제 챙기기 리마인더</Text>
@@ -228,7 +237,7 @@ export default function NotificationSettingsScreen() {
           const timeLabel = item.fixedTimeLabel ?? (timeValue ? formatTimeLabel(timeValue) : '');
           return (
             <View key={item.key} style={[styles.row, !isLast && styles.rowBorder]}>
-              <Text style={styles.emoji}>{item.emoji}</Text>
+              <Image source={item.icon} style={styles.emojiImg} resizeMode="contain" />
               <View style={styles.labelCol}>
                 <Text style={styles.label}>{item.label}</Text>
                 <Text style={styles.desc}>{item.description}</Text>
@@ -313,6 +322,7 @@ const styles = StyleSheet.create({
     fontSize: 36,
     marginBottom: SPACING.sm,
   },
+  descEmojiImg: { width: 44, height: 44, marginBottom: SPACING.sm },
   descTitle: {
     fontSize: FONT_SIZE.lg,
     fontWeight: '700',
@@ -355,6 +365,7 @@ const styles = StyleSheet.create({
     width: 36,
     textAlign: 'center',
   },
+  emojiImg: { width: 28, height: 28 },
   labelCol: {
     flex: 1,
     marginLeft: SPACING.sm,

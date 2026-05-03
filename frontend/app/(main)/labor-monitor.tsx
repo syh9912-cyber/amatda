@@ -17,6 +17,7 @@ import { pregnancyApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { pickDeliveryPhone } from '../../services/deliveryHospital';
+import { MissionToast } from '../../components/common/MissionToast';
 
 type Tab = 'kick' | 'contraction';
 
@@ -47,6 +48,9 @@ export default function LaborMonitorScreen() {
   const kickTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [kickSaving, setKickSaving] = useState(false);
   const [kickGuideOpen, setKickGuideOpen] = useState(false);
+
+  // 작은 토스트 (기록 완료 알림 — 큰 Alert 대신)
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // 진통
   const [contractions, setContractions] = useState<{ start: number; end: number | null }[]>([]);
@@ -121,14 +125,11 @@ export default function LaborMonitorScreen() {
     }
     setKickSaving(true);
     try {
-      const res = await pregnancyApi.saveKickSession({
+      await pregnancyApi.saveKickSession({
         childId, count: kickCount, durationSec: kickElapsed, week: currentWeek,
       });
-      const d = res.data.data as { perHour: number; status: string; message: string };
-      Alert.alert(
-        `태동 ${kickCount}회 기록 완료`,
-        `${Math.round(kickElapsed / 60)}분간 측정 (시간당 약 ${d.perHour}회)\n\n${d.message}`,
-      );
+      // 작은 토스트만 — 큰 Alert 제거 (반복 기록 시 피로도 ↓)
+      setToastMsg(`태동 ${kickCount}회 기록 완료했어요 👣`);
       setKickCount(0);
       setKickElapsed(0);
     } catch {
@@ -145,6 +146,8 @@ export default function LaborMonitorScreen() {
       setContractions((prev) => [...prev, { start: currentContraction, end: Date.now() }]);
       setCurrentContraction(null);
       setContractionTick(0);
+      // 작은 토스트 — 진통 1회 기록 완료
+      setToastMsg('진통 간격 기록했어요 ⏱️');
     }
   };
 
@@ -657,6 +660,9 @@ export default function LaborMonitorScreen() {
       </Modal>
 
       <AdSlot />
+
+      {/* 작은 토스트 — 태동/진통 기록 완료 시 (사용 흐름 방해 X) */}
+      <MissionToast message={toastMsg} onDismiss={() => setToastMsg(null)} />
     </View>
   );
 }

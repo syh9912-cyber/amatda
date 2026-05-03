@@ -52,7 +52,7 @@ export function useLoginHandlers() {
         setAuth({ accessToken: dl.accessToken, refreshToken: dl.refreshToken, userId: dl.userId, email: displayName });
 
         if (dl.isNewUser || !dl.nickname) {
-          router.replace('/(auth)/set-nickname');
+          router.replace('/onboarding/set-nickname');
         } else {
           router.replace('/(main)/home');
         }
@@ -70,9 +70,26 @@ export function useLoginHandlers() {
             result.accessToken ?? '',
           );
 
-      const { user, accessToken, refreshToken, isNewUser } = res.data.data;
+      const { user, accessToken, refreshToken, isNewUser } = res.data.data as {
+        user: { id: string; email?: string; nickname?: string | null };
+        accessToken: string;
+        refreshToken: string;
+        isNewUser?: boolean;
+        needsOnboarding?: boolean;
+      };
+      // PII 보호 — email 로그 제외 (Sentry breadcrumb 수집 가능성)
+      console.log('[SocialLogin] backend response:', JSON.stringify({
+        isNewUser, hasNickname: !!user.nickname, userId: user.id,
+      }));
       setAuth({ accessToken, refreshToken, userId: user.id, email: user.email ?? `${provider} 유저` });
-      router.replace(isNewUser ? '/onboarding/child-info' : '/(main)/home');
+      // 신규 가입자 OR 닉네임 미설정 → 별명 화면. 그 외 → 홈
+      if (isNewUser || !user.nickname) {
+        console.log('[SocialLogin] → set-nickname');
+        router.replace('/onboarding/set-nickname');
+      } else {
+        console.log('[SocialLogin] → home');
+        router.replace('/(main)/home');
+      }
     } catch (e: unknown) {
       const rawMsg = e instanceof Error ? e.message : '알 수 없는 오류가 발생했습니다';
       console.error(`[SocialLogin] ${provider} error:`, rawMsg);

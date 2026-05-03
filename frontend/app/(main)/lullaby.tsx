@@ -15,7 +15,11 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Audio, AVPlaybackSource } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image } from 'react-native';
+import type { ImageSourcePropType } from 'react-native';
 import { AdSlot } from '../../components/ads/AdSlot';
+
+const IC_LULLABY = require('../../assets/quick-lullaby.png') as ImageSourcePropType;
 
 /* ------------------------------------------------------------------ */
 /* Sound definitions                                                   */
@@ -446,7 +450,7 @@ export default function LullabyScreen() {
       ) : (
         <View style={styles.nowPlaying}>
           <View style={styles.nowPlayingCircleIdle}>
-            <Text style={styles.nowPlayingIcon}>{'🎵'}</Text>
+            <Image source={IC_LULLABY} style={styles.nowPlayingIconImg} resizeMode="contain" />
           </View>
           <Text style={styles.nowPlayingLabel}>{idleLabel}</Text>
           <Text style={styles.nowPlayingDesc}>아래에서 원하는 소리를 탭하세요</Text>
@@ -481,7 +485,10 @@ export default function LullabyScreen() {
       {/* Recording name input modal */}
       {showNameInput && (
         <View style={styles.nameInputWrap}>
-          <Text style={styles.nameInputTitle}>{'🎤'} 녹음 저장</Text>
+          <View style={styles.nameInputTitleRow}>
+            <Image source={IC_LULLABY} style={styles.nameInputTitleIconImg} resizeMode="contain" />
+            <Text style={styles.nameInputTitle}>{' 녹음 저장'}</Text>
+          </View>
           <TextInput
             style={styles.nameInput}
             placeholder="녹음 이름 (예: 엄마 자장가)"
@@ -535,7 +542,7 @@ export default function LullabyScreen() {
                         onLongPress={() => deleteRecording(rec.id)}
                         activeOpacity={0.7}
                       >
-                        <Text style={styles.soundIcon}>{'🎤'}</Text>
+                        <Image source={IC_LULLABY} style={styles.soundIconImg} resizeMode="contain" />
                         <Text style={[styles.soundLabel, isActive && styles.soundLabelActive]} numberOfLines={1}>
                           {rec.label}
                         </Text>
@@ -644,6 +651,7 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: COLOR.accentSoft,
   },
   nowPlayingIcon: { fontSize: 38 },
+  nowPlayingIconImg: { width: 48, height: 48 },
   nowPlayingLabel: { fontSize: 17, fontWeight: '700', color: COLOR.text, marginTop: 10 },
   nowPlayingDesc: { fontSize: 13, color: COLOR.textSub, marginTop: 2 },
   timerDisplay: { fontSize: 22, fontWeight: '700', color: COLOR.timer, marginTop: 6, fontVariant: ['tabular-nums'] },
@@ -676,6 +684,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLOR.accent,
   },
   nameInputTitle: { fontSize: 15, fontWeight: '700', color: COLOR.text, marginBottom: 10 },
+  nameInputTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  nameInputTitleIconImg: { width: 18, height: 18 },
   nameInput: {
     height: 42, borderRadius: 10, backgroundColor: COLOR.cardActive,
     paddingHorizontal: 14, fontSize: 14, color: COLOR.text, marginBottom: 10,
@@ -699,6 +709,7 @@ const styles = StyleSheet.create({
   },
   soundCardActive: { backgroundColor: COLOR.cardActive, borderColor: COLOR.accent },
   soundIcon: { fontSize: 26, marginBottom: 2 },
+  soundIconImg: { width: 30, height: 30, marginBottom: 2 },
   soundLabel: { fontSize: 10, fontWeight: '600', color: COLOR.textSub },
   soundLabelActive: { color: COLOR.accent },
   soundCardPending: { opacity: 0.55, borderStyle: 'dashed', borderColor: COLOR.textSub },

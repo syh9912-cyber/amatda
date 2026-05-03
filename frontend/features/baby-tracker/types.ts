@@ -57,6 +57,8 @@ export interface TrackerAnalysisResult {
 export interface SleepSession {
   startTime: string; // ISO
   startDate: string; // YYYY-MM-DD (local)
+  /** 시작 시점에 사용자가 메모를 남긴 경우 (시간 지정 입력에서 메모와 함께 시작) */
+  note?: string;
 }
 
 export type BreastSide = 'left' | 'right';
@@ -65,6 +67,8 @@ export interface BreastSession {
   side: BreastSide;
   startTime: string; // ISO
   startDate: string; // YYYY-MM-DD
+  /** 시작 시점 메모 (선택) */
+  note?: string;
 }
 
 export interface DayStat {

@@ -24,7 +24,7 @@ const COMMON_TOP: MenuItem[] = [
 const PREGNANCY_ITEMS: MenuItem[] = [
   {
     icon: require('../../assets/quick-learning.png'),
-    label: '임신 기록',
+    label: '임신앨범',
     description: '주차별 기록 및 체크리스트',
     route: '/(main)/pregnancy',
   },

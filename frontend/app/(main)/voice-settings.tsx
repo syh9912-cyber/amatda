@@ -113,7 +113,7 @@ const GOOGLE_GUIDE: AssistantGuide = {
   name: 'Google Assistant',
   subtitle: '모든 안드로이드',
   color: '#4285F4',
-  trigger: '"OK Google, 육아" → 자동 마이크 🎙️',
+  trigger: '"OK Google, 육아" → 자동 마이크',
   urlNote: `${DEEP_LINK}{음성 텍스트}`,
   openLabel: 'Google Assistant 열기',
   open: () => {
@@ -160,7 +160,7 @@ const BIXBY_GUIDE: AssistantGuide = {
   name: '빅스비',
   subtitle: '삼성 갤럭시',
   color: '#7B68EE',
-  trigger: '"하이 빅스비, 육아" → 자동 마이크 🎙️',
+  trigger: '"하이 빅스비, 육아" → 자동 마이크',
   urlNote: '',
   openLabel: '모드 및 루틴 열기',
   open: () => {

@@ -9,6 +9,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { childApi, uploadApi } from '../../services/api';
@@ -145,14 +146,14 @@ export default function ChildInfoScreen() {
             style={[styles.typeBtn, childType === 'pregnant' && styles.typeBtnActive]}
             onPress={() => setChildType('pregnant')}
           >
-            <Text style={styles.typeEmoji}>🤰</Text>
+            <Image source={require('../../assets/preg-test.png')} style={styles.typeIcon} resizeMode="contain" />
             <Text style={[styles.typeText, childType === 'pregnant' && styles.typeTextActive]}>임신 중</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.typeBtn, childType === 'born' && styles.typeBtnActive]}
             onPress={() => setChildType('born')}
           >
-            <Text style={styles.typeEmoji}>👶</Text>
+            <Image source={require('../../assets/quick-baby.png')} style={styles.typeIcon} resizeMode="contain" />
             <Text style={[styles.typeText, childType === 'born' && styles.typeTextActive]}>태어난 아이</Text>
           </TouchableOpacity>
         </View>
@@ -378,6 +379,7 @@ const styles = StyleSheet.create({
   },
   typeBtnActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryLight },
   typeEmoji: { fontSize: 32 },
+  typeIcon: { width: 44, height: 44 },
   typeText: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, fontWeight: '600' },
   typeTextActive: { color: COLORS.primary },
   form: { gap: SPACING.md },

@@ -1,10 +1,14 @@
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { router } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
 import apiInstance from '../../services/api';
 
-export default function SetNicknameScreen() {
+export default function OnboardingSetNicknameScreen() {
+  useEffect(() => {
+    console.log('[OnboardingSetNickname] mounted');
+    return () => console.log('[OnboardingSetNickname] unmounted');
+  }, []);
   const [nickname, setNickname] = useState('');
   const [parentRole, setParentRole] = useState<string>('엄마');
   const [loading, setLoading] = useState(false);
@@ -40,7 +44,7 @@ export default function SetNicknameScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.content}>
-        <Text style={styles.emoji}>{'👋'}</Text>
+        <Image source={require('../../assets/mascot-waving.png')} style={styles.emojiImg} resizeMode="contain" />
         <Text style={styles.title}>환영합니다!</Text>
         <Text style={styles.subtitle}>앱에서 사용할 별명을 정해주세요</Text>
 
@@ -86,92 +90,28 @@ export default function SetNicknameScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F2F2F7',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  emoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1C1C1E',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#8B7B6B',
-    marginBottom: 32,
-  },
+  container: { flex: 1, backgroundColor: '#F2F2F7' },
+  content: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
+  emoji: { fontSize: 48, marginBottom: 16 },
+  emojiImg: { width: 56, height: 56, marginBottom: 16 },
+  title: { fontSize: 24, fontWeight: '700', color: '#1C1C1E', marginBottom: 8 },
+  subtitle: { fontSize: 15, color: '#8B7B6B', marginBottom: 32 },
   input: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 16,
-    fontSize: 16,
-    color: '#1C1C1E',
-    borderWidth: 1,
-    borderColor: '#E8D8C8',
-    marginBottom: 24,
-    textAlign: 'center',
+    width: '100%', backgroundColor: '#FFFFFF', borderRadius: 14, padding: 16, fontSize: 16,
+    color: '#1C1C1E', borderWidth: 1, borderColor: '#E8D8C8', marginBottom: 24, textAlign: 'center',
   },
-  button: {
-    width: '100%',
-    backgroundColor: '#FF8C5A',
-    borderRadius: 14,
-    padding: 16,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  roleLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#8B7B6B',
-    marginBottom: 10,
-  },
+  button: { width: '100%', backgroundColor: '#FF8C5A', borderRadius: 14, padding: 16, alignItems: 'center' },
+  buttonDisabled: { opacity: 0.5 },
+  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
+  roleLabel: { fontSize: 14, fontWeight: '600', color: '#8B7B6B', marginBottom: 10 },
   roleWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    width: '100%',
-    marginBottom: 24,
-    justifyContent: 'center',
+    flexDirection: 'row', flexWrap: 'wrap', gap: 10, width: '100%', marginBottom: 24, justifyContent: 'center',
   },
   roleBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#E8D8C8',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    minWidth: '28%',
+    paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1.5,
+    borderColor: '#E8D8C8', backgroundColor: '#FFFFFF', alignItems: 'center', minWidth: '28%',
   },
-  roleBtnActive: {
-    borderColor: '#FF8C5A',
-    backgroundColor: '#FFF5F0',
-  },
-  roleBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#B0A090',
-  },
-  roleBtnTextActive: {
-    color: '#FF8C5A',
-  },
+  roleBtnActive: { borderColor: '#FF8C5A', backgroundColor: '#FFF5F0' },
+  roleBtnText: { fontSize: 14, fontWeight: '600', color: '#B0A090' },
+  roleBtnTextActive: { color: '#FF8C5A' },
 });

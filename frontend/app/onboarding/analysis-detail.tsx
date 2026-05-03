@@ -1,0 +1,560 @@
+import { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { useChildStore, AnalysisReport, ReportReasons } from '../../stores/childStore';
+import { childApi, coachingApi } from '../../services/api';
+import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import { DetailSection } from '../../components/report/DetailSection';
+import { TextTipSection } from '../../components/report/TextTipSection';
+import { SimpleListSection } from '../../components/report/SimpleListSection';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const IC_SEND = require('../../assets/icon-send.png') as number;
+
+function safeString(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    if ('label' in obj && typeof obj.label === 'string') return obj.label;
+    if ('text' in obj && typeof obj.text === 'string') return obj.text;
+    if ('item' in obj && typeof obj.item === 'string') return obj.item;
+    try { return JSON.stringify(value); } catch { return '[object]'; }
+  }
+  return String(value);
+}
+
+function safeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => safeString(item));
+}
+
+/** "(0~36개월) 탐구형 활동가" → "탐구형 활동가" */
+function stripAgePrefix(s: string): string {
+  return s.replace(/^\(\d+~?\d*개월\)\s*/, '').replace(/^\(초등\s*\d+~?\d*학년\)\s*/, '');
+}
+
+/** dominantType → 표지/상세 공통 아키타입 라벨 (짧고 알아보기 쉬움) */
+const TYPE_ARCHETYPE: Record<string, string> = {
+  탐구형: '탐구형 활동가',
+  활동형: '활동형 도전자',
+  조화형: '안정형 협력가',
+  분석형: '지혜형 연구가',
+  감성형: '감성형 공감가',
+};
+
+interface FirstTalkData {
+  intro: string;
+  traitSummary: string;
+  suggestedQuestion: string;
+  quickOptions: string[];
+}
+
+const REASON_KEY_MAP: Partial<Record<keyof AnalysisReport, keyof ReportReasons>> = {
+  personality: 'personality',
+  studyStyle: 'studyStyle',
+  bestSubjects: 'bestSubjects',
+  futureFields: 'futureFields',
+  sportsMatch: 'sportsMatch',
+  academyStyle: 'academyStyle',
+  goodFoods: 'foods',
+};
+
+interface SectionConfig {
+  icon: ReturnType<typeof require>;
+  title: string;
+  key: keyof AnalysisReport;
+  type: 'text' | 'list';
+}
+
+const SECTIONS: SectionConfig[] = [
+  { icon: require('../../assets/cat-behavior.png'),    title: '성격 특성', key: 'personality', type: 'list' },
+  { icon: require('../../assets/quick-learning.png'),  title: '학습 스타일', key: 'studyStyle', type: 'text' },
+  { icon: require('../../assets/mascot-happy.png'),    title: '잘하는 분야', key: 'bestSubjects', type: 'list' },
+  { icon: require('../../assets/quick-report.png'),    title: '보완할 분야', key: 'weakAreas', type: 'list' },
+  { icon: require('../../assets/quick-baby.png'),      title: '미래 진로', key: 'futureFields', type: 'list' },
+  { icon: require('../../assets/academy-sports.png'),  title: '잘 맞는 운동', key: 'sportsMatch', type: 'list' },
+  { icon: require('../../assets/cat-social.png'),      title: '학원 스타일', key: 'academyStyle', type: 'text' },
+  { icon: require('../../assets/cat-eating.png'),      title: '좋은 음식', key: 'goodFoods', type: 'list' },
+  { icon: require('../../assets/mascot-worried.png'),  title: '피할 음식', key: 'badFoods', type: 'list' },
+  { icon: require('../../assets/academy-math.png'),    title: '교육 방향', key: 'educationDirection', type: 'text' },
+  { icon: require('../../assets/mascot-happy.png'),    title: '특출난 재능', key: 'specialTalent', type: 'text' },
+  { icon: require('../../assets/mascot-thinking.png'), title: '양육 팁', key: 'parentingTip', type: 'text' },
+];
+
+export default function AnalysisDetailScreen() {
+  const { childId } = useLocalSearchParams<{ childId: string }>();
+  const children = useChildStore((s) => s.children);
+  const selectChild = useChildStore((s) => s.selectChild);
+  const updateChild = useChildStore((s) => s.updateChild);
+  const child = children.find((c) => c.id === childId);
+  const storeReport = child?.analysisReport;
+
+  const [localReport, setLocalReport] = useState<AnalysisReport | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [firstTalk, setFirstTalk] = useState<FirstTalkData | null>(null);
+  const [firstTalkLoading, setFirstTalkLoading] = useState(false);
+  const [answer, setAnswer] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const report = storeReport ?? localReport;
+
+  useEffect(() => {
+    if (childId && !storeReport && !localReport && !loading) {
+      setLoading(true);
+      childApi.list()
+        .then((res) => {
+          const list = res.data?.data as Record<string, unknown>[] | undefined;
+          const found = list?.find((c) => (c.id as string) === childId);
+          if (found) {
+            const parsed = found.analysisReport as AnalysisReport | null;
+            if (parsed) {
+              setLocalReport(parsed);
+              updateChild(found as unknown as ReturnType<typeof useChildStore.getState>['children'][0]);
+            }
+          }
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
+  }, [childId, storeReport, localReport, loading, updateChild]);
+
+  useEffect(() => {
+    if (!childId || !report || firstTalk || firstTalkLoading) return;
+    setFirstTalkLoading(true);
+    coachingApi
+      .firstTalk(childId)
+      .then((res) => {
+        const raw = res.data?.data;
+        if (raw && typeof raw === 'object') {
+          const rawObj = raw as Record<string, unknown>;
+          setFirstTalk({
+            intro: typeof rawObj.intro === 'string' ? rawObj.intro : '',
+            traitSummary: typeof rawObj.traitSummary === 'string' ? rawObj.traitSummary : '',
+            suggestedQuestion: typeof rawObj.suggestedQuestion === 'string' ? rawObj.suggestedQuestion : '',
+            quickOptions: Array.isArray(rawObj.quickOptions)
+              ? (rawObj.quickOptions as unknown[]).map((o) => safeString(o))
+              : [],
+          });
+        }
+      })
+      .catch(() => {
+        setFirstTalk({
+          intro: '상담이모가 준비되었어요!',
+          traitSummary: '',
+          suggestedQuestion: '아이에 대해 궁금한 점을 물어보세요',
+          quickOptions: [],
+        });
+      })
+      .finally(() => setFirstTalkLoading(false));
+  }, [childId, report, firstTalk, firstTalkLoading]);
+
+  const handleFirstTalkOption = (option: string) => {
+    if (!childId) return;
+    if (child) selectChild(child.id);
+    router.push({
+      pathname: '/(main)/chatbot',
+      params: { firstMessage: option },
+    });
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Stack.Screen options={{ title: '리포트 상세', headerShown: false }} />
+        <ActivityIndicator size="large" color="#FF8C5A" />
+        <Text style={[styles.emptyText, { marginTop: 16 }]}>리포트를 불러오는 중...</Text>
+      </View>
+    );
+  }
+
+  if (!child || !report) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Stack.Screen options={{ title: '리포트 상세', headerShown: false }} />
+        <Text style={styles.emptyText}>리포트를 불러올 수 없습니다</Text>
+        <TouchableOpacity
+          style={styles.homeBtn}
+          onPress={() => router.replace('/(main)/home')}
+        >
+          <Text style={styles.homeBtnText}>홈으로 이동</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const dominantType = safeString(child.innateData?.dominantType ?? '');
+  // 표지와 통일된 아키타입 라벨 ("탐구형 활동가" 등). 백엔드 라벨이 길면 그것도 fallback으로 사용.
+  const headerTitle =
+    TYPE_ARCHETYPE[dominantType] ||
+    stripAgePrefix(safeString(child.innateData?.label ?? '')) ||
+    dominantType;
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
+    >
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      <Stack.Screen options={{ title: '리포트 상세', headerShown: false }} />
+
+      {/* 상단 네비 바 (뒤로 + 타이틀) */}
+      <View style={styles.topBar}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.back()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+        >
+          <Text style={styles.backArrow}>{'‹'}</Text>
+        </TouchableOpacity>
+        <Text style={styles.topTitle} numberOfLines={1}>{headerTitle}</Text>
+        <View style={styles.backBtn} />
+      </View>
+
+      {/* 아이 이름·기질 헤더 (개월수 표기 X — 상세에선 라벨만) */}
+      <View style={styles.header}>
+        <Text style={styles.headerSubtitle}>{`${safeString(child.name)}의 종합 리포트`}</Text>
+        <Text style={styles.headerTitle}>{headerTitle}</Text>
+      </View>
+
+      {/* Summary card */}
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryText}>{stripAgePrefix(safeString(report.summary))}</Text>
+      </View>
+
+      {/* Sections */}
+      {SECTIONS.map((section) => {
+        const rawValue = report[section.key];
+        if (!rawValue) return null;
+
+        const reasonKey = REASON_KEY_MAP[section.key];
+        const rawReason = reasonKey && report.reasons
+          ? report.reasons[reasonKey]
+          : undefined;
+        const reason = rawReason ? safeString(rawReason) : undefined;
+
+        return (
+          <View key={section.key} style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <Image source={section.icon} style={styles.sectionIcon} resizeMode="contain" />
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+            </View>
+            {section.type === 'list' && Array.isArray(rawValue) ? (
+              <View style={styles.listWrap}>
+                {safeStringArray(rawValue).map((item, idx) => (
+                  <View key={idx} style={styles.listItem}>
+                    <View style={styles.bulletDot} />
+                    <Text style={styles.listText}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.sectionText}>{safeString(rawValue)}</Text>
+            )}
+            {reason ? (
+              <Text style={styles.reasonText}>{reason}</Text>
+            ) : null}
+          </View>
+        );
+      })}
+
+      {report.strengthsDetail && report.strengthsDetail.length > 0 && (
+        <DetailSection
+          emoji="✨"
+          title="이런 점이 뛰어나요"
+          items={report.strengthsDetail.map((d) => ({
+            item: safeString(d.item),
+            reason: safeString(d.reason),
+          }))}
+          accentColor={COLORS.primary}
+        />
+      )}
+
+      {report.weaknessesDetail && report.weaknessesDetail.length > 0 && (
+        <DetailSection
+          emoji="⚠️"
+          title="이런 점은 주의하세요"
+          items={report.weaknessesDetail.map((d) => ({
+            item: safeString(d.item),
+            reason: safeString(d.reason),
+          }))}
+          accentColor="#F5A623"
+        />
+      )}
+
+      {report.doList && report.doList.length > 0 && (
+        <SimpleListSection
+          emoji="✅"
+          title="이렇게 해주세요"
+          items={safeStringArray(report.doList)}
+          bulletColor="#4CAF50"
+        />
+      )}
+
+      {report.dontList && report.dontList.length > 0 && (
+        <SimpleListSection
+          emoji="❌"
+          title="이건 피해주세요"
+          items={safeStringArray(report.dontList)}
+          bulletColor="#F44336"
+        />
+      )}
+
+      {report.dailyRoutineTip ? (
+        <TextTipSection emoji="🕐" title="하루 루틴 제안" text={safeString(report.dailyRoutineTip)} />
+      ) : null}
+
+      {report.socialTip ? (
+        <TextTipSection emoji="👫" title="친구 관계 팁" text={safeString(report.socialTip)} />
+      ) : null}
+
+      {report.emotionalTip ? (
+        <TextTipSection emoji="💕" title="감정 관리 팁" text={safeString(report.emotionalTip)} />
+      ) : null}
+
+      <View style={styles.disclaimerCard}>
+        <Text style={styles.disclaimerText}>
+          이 분석은 아이의 생년월일시 기질 분석과 부모님의 응답을 종합한 결과입니다
+        </Text>
+      </View>
+
+      {firstTalkLoading ? (
+        <LinearGradient
+          colors={['#FFB088', '#FF8C5A']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.firstTalkCard}
+        >
+          <View style={styles.ftLoadingWrap}>
+            <ActivityIndicator size="small" color="#FFFFFF" />
+            <Text style={styles.ftLoadingText}>상담이모가 준비 중이에요...</Text>
+          </View>
+        </LinearGradient>
+      ) : firstTalk ? (
+        <LinearGradient
+          colors={['#FFB088', '#FF8C5A']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.firstTalkCard}
+        >
+          <View style={styles.ftAvatarRow}>
+            <View style={styles.ftAvatar}>
+              <Text style={styles.ftAvatarEmoji}>{'🤖'}</Text>
+            </View>
+            <Text style={styles.ftCoachLabel}>상담이모</Text>
+          </View>
+          {firstTalk.intro ? <Text style={styles.ftIntro}>{firstTalk.intro}</Text> : null}
+          {firstTalk.traitSummary ? (
+            <View style={styles.ftTraitBox}>
+              <Text style={styles.ftTraitText}>{stripAgePrefix(firstTalk.traitSummary)}</Text>
+            </View>
+          ) : null}
+          {firstTalk.suggestedQuestion ? (
+            <Text style={styles.ftQuestion}>{firstTalk.suggestedQuestion}</Text>
+          ) : null}
+          <View style={styles.ftInputRow}>
+            <TextInput
+              style={styles.ftTextInput}
+              placeholder="고민이나 궁금한 점을 적어주세요..."
+              placeholderTextColor="rgba(255,255,255,0.5)"
+              value={answer}
+              onChangeText={setAnswer}
+              multiline
+              maxLength={500}
+            />
+            <TouchableOpacity
+              style={[styles.ftSendBtn, !answer.trim() && styles.ftSendBtnDisabled]}
+              onPress={() => {
+                const trimmed = answer.trim();
+                if (!trimmed || submitting) return;
+                setSubmitting(true);
+                handleFirstTalkOption(trimmed);
+              }}
+              disabled={!answer.trim() || submitting}
+              activeOpacity={0.7}
+            >
+              {submitting ? (
+                <ActivityIndicator size="small" color="#FF8C5A" />
+              ) : (
+                <Image source={IC_SEND} style={styles.ftSendIcon} resizeMode="contain" />
+              )}
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.ftHint}>첫 질문에 답변하시면 맞춤 코칭이 시작됩니다</Text>
+        </LinearGradient>
+      ) : null}
+
+      <View style={styles.bottomSpacer} />
+    </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: COLORS.background },
+  content: { padding: SPACING.lg, paddingTop: 56 },
+  emptyContainer: {
+    flex: 1, backgroundColor: COLORS.background,
+    justifyContent: 'center', alignItems: 'center', padding: SPACING.xl,
+  },
+  emptyText: {
+    fontSize: FONT_SIZE.md, color: COLORS.textSecondary,
+    marginBottom: SPACING.lg,
+  },
+  homeBtn: {
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md,
+  },
+  homeBtnText: { color: '#FFF', fontWeight: '600', fontSize: FONT_SIZE.md },
+
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.md,
+  },
+  backBtn: {
+    width: 36, height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  backArrow: { fontSize: 20, color: COLORS.text, fontWeight: '700' },
+  topTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: FONT_SIZE.md,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+
+  header: {
+    alignItems: 'center', marginBottom: SPACING.lg,
+    paddingVertical: SPACING.md + 2,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05, shadowRadius: 10, elevation: 3,
+  },
+  headerSubtitle: {
+    fontSize: FONT_SIZE.sm, color: COLORS.textSecondary,
+    marginBottom: 4,
+  },
+  headerTitle: {
+    fontSize: FONT_SIZE.lg, fontWeight: '800', color: COLORS.primary,
+    textAlign: 'center',
+  },
+
+  summaryCard: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: RADIUS.lg, padding: SPACING.lg,
+    marginBottom: SPACING.lg, borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
+  },
+  summaryText: {
+    fontSize: FONT_SIZE.md, color: COLORS.text,
+    lineHeight: 24, fontWeight: '500',
+  },
+
+  sectionCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg, padding: SPACING.lg,
+    marginBottom: SPACING.md,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03, shadowRadius: 6, elevation: 1,
+  },
+  sectionHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    marginBottom: SPACING.md, gap: SPACING.sm,
+  },
+  sectionIcon: { width: 28, height: 28 },
+  sectionTitle: {
+    fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text,
+  },
+  sectionText: {
+    fontSize: FONT_SIZE.sm, color: COLORS.textSecondary,
+    lineHeight: 22,
+  },
+  listWrap: { gap: SPACING.sm },
+  listItem: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm,
+  },
+  bulletDot: {
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: COLORS.primary, marginTop: 7,
+  },
+  listText: {
+    flex: 1, fontSize: FONT_SIZE.sm, color: COLORS.textSecondary,
+    lineHeight: 22,
+  },
+  reasonText: {
+    fontSize: FONT_SIZE.xs, color: COLORS.textLight,
+    fontStyle: 'italic', lineHeight: 18,
+    marginTop: SPACING.sm, paddingTop: SPACING.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#F0F0F0',
+  },
+
+  disclaimerCard: {
+    backgroundColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.lg,
+  },
+  disclaimerText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  bottomSpacer: { height: 40 },
+
+  firstTalkCard: { borderRadius: 20, padding: 20, marginTop: SPACING.lg },
+  ftLoadingWrap: { alignItems: 'center', paddingVertical: 20, gap: 10 },
+  ftLoadingText: { fontSize: 14, fontWeight: '600', color: 'rgba(255,255,255,0.9)' },
+  ftAvatarRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  ftAvatar: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  ftAvatarEmoji: { fontSize: 16 },
+  ftCoachLabel: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.9)' },
+  ftIntro: { fontSize: 15, fontWeight: '600', color: '#FFFFFF', lineHeight: 24, marginBottom: 10 },
+  ftTraitBox: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12, padding: 12, marginBottom: 12,
+  },
+  ftTraitText: { fontSize: 13, color: '#FFFFFF', lineHeight: 20 },
+  ftQuestion: { fontSize: 17, fontWeight: '700', color: '#FFFFFF', lineHeight: 26, marginBottom: 16 },
+  ftInputRow: {
+    flexDirection: 'row', alignItems: 'flex-end',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)',
+    paddingLeft: 14, paddingRight: 6, paddingVertical: 4,
+  },
+  ftTextInput: {
+    flex: 1, fontSize: 14, color: '#FFFFFF',
+    fontWeight: '500', minHeight: 40, maxHeight: 100, paddingVertical: 8,
+  },
+  ftSendBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 2,
+  },
+  ftSendBtnDisabled: { opacity: 0.4 },
+  ftSendIcon: { width: 18, height: 18, tintColor: '#FF8C5A' },
+  ftHint: { fontSize: 11, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: 10, fontWeight: '500' },
+});

@@ -14,9 +14,12 @@ interface ProfileCardProps {
 function calcAge(birthDate: string): string {
   const birth = new Date(birthDate);
   const now = new Date();
-  const years = now.getFullYear() - birth.getFullYear();
-  const months = now.getMonth() - birth.getMonth();
-  const totalMonths = years * 12 + months;
+  let totalMonths =
+    (now.getFullYear() - birth.getFullYear()) * 12 +
+    (now.getMonth() - birth.getMonth());
+  // 생일이 이번 달 안에 아직 안 지났다면 한 달 빼기 (홈 탭의 ageInfo.months 와 동일 계산)
+  if (now.getDate() < birth.getDate()) totalMonths -= 1;
+  if (totalMonths < 0) totalMonths = 0;
   if (totalMonths < 12) return `${totalMonths}개월`;
   const y = Math.floor(totalMonths / 12);
   const m = totalMonths % 12;

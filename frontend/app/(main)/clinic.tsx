@@ -10,8 +10,12 @@ import {
   ActivityIndicator,
   Linking,
   Modal,
+  Image,
 } from 'react-native';
+import type { ImageSourcePropType } from 'react-native';
 import { Stack } from 'expo-router';
+
+const IC_HOSPITAL = require('../../assets/icon-hospital.png') as ImageSourcePropType;
 import { clinicApi } from '../../services/api';
 import { useLocationStore } from '../../stores/locationStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
@@ -185,7 +189,6 @@ export default function ClinicScreen() {
                   onPress={() => callPhone(clinic.phone)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.actionIcon}>{'📞'}</Text>
                   <Text style={styles.actionText}>전화</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -193,7 +196,6 @@ export default function ClinicScreen() {
                   onPress={() => openMap(clinic)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.actionIcon}>{'🗺️'}</Text>
                   <Text style={styles.actionText}>지도</Text>
                 </TouchableOpacity>
                 {clinic.placeUrl ? (
@@ -202,7 +204,6 @@ export default function ClinicScreen() {
                     onPress={() => Linking.openURL(clinic.placeUrl).catch(() => {})}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.actionIcon}>{'ℹ️'}</Text>
                     <Text style={styles.actionText}>상세</Text>
                   </TouchableOpacity>
                 ) : null}
@@ -212,7 +213,7 @@ export default function ClinicScreen() {
         </ScrollView>
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>{'🏥'}</Text>
+          <Image source={IC_HOSPITAL} style={styles.emptyEmojiImg} resizeMode="contain" />
           <Text style={styles.emptyText}>
             주변에 소아과/아동병원을 찾을 수 없습니다.
           </Text>
@@ -387,6 +388,7 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
   },
   emptyEmoji: { fontSize: 48, marginBottom: SPACING.md },
+  emptyEmojiImg: { width: 64, height: 64, marginBottom: SPACING.md },
   emptyText: {
     fontSize: FONT_SIZE.md,
     color: COLORS.textSecondary,

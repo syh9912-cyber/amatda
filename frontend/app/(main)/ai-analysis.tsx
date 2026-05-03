@@ -20,6 +20,14 @@ import {
 } from '../../utils/analysisHistory';
 import { useChildStore } from '../../stores/childStore';
 import { growthApi } from '../../services/api';
+import type { ImageSourcePropType } from 'react-native';
+
+const IC_REPORT = require('../../assets/quick-report.png') as ImageSourcePropType;
+const IC_POOP = require('../../assets/cat-poop.png') as ImageSourcePropType;
+const IC_LULLABY = require('../../assets/quick-lullaby.png') as ImageSourcePropType;
+// 로컬 AsyncStorage 헬퍼 — baby-tracker가 자체 저장한 일일 기록을 같은 형식으로
+// 읽어 AI 분석 페이로드에 포함. 서버 통신이 아닌 디바이스-로컬 데이터이므로
+// CLAUDE.md "UI→Repository 직접 호출 금지" 규칙은 Service-tier 헬퍼로 간주해 적용.
 import { loadRecords } from '../../features/baby-tracker/storage';
 import { formatDate } from '../../features/baby-tracker/utils/time';
 import type { TrackerAnalysisResult } from '../../features/baby-tracker/types';
@@ -30,7 +38,7 @@ type TabKey = AnalysisType;
 interface TabConfig {
   key: TabKey;
   label: string;
-  emoji: string;
+  icon: ImageSourcePropType;
   accent: string;
   bg: string;
   description: string;
@@ -44,7 +52,7 @@ const TABS: TabConfig[] = [
   {
     key: 'pattern',
     label: '육아패턴',
-    emoji: '📊',
+    icon: IC_REPORT,
     accent: '#7C83EC',
     bg: '#EEEDFC',
     description: '오늘 기록된 배변·수유·수면을 종합 분석합니다',
@@ -54,7 +62,7 @@ const TABS: TabConfig[] = [
   {
     key: 'poop',
     label: '대변',
-    emoji: '💩',
+    icon: IC_POOP,
     accent: '#D4A373',
     bg: '#FBF3E6',
     description: '사진으로 건강 상태를 확인합니다',
@@ -65,7 +73,7 @@ const TABS: TabConfig[] = [
   {
     key: 'cry',
     label: '울음',
-    emoji: '🔊',
+    icon: IC_LULLABY,
     accent: '#D88FB8',
     bg: '#FCEAF3',
     description: '울음 소리로 원인을 추정합니다',
@@ -243,7 +251,7 @@ export default function AIAnalysisScreen() {
               onPress={() => setActiveTab(t.key)}
               activeOpacity={0.8}
             >
-              <Text style={styles.tabEmoji}>{t.emoji}</Text>
+              <Image source={t.icon} style={styles.tabIconImg} resizeMode="contain" />
               <Text
                 style={[
                   styles.tabLabel,
@@ -264,7 +272,7 @@ export default function AIAnalysisScreen() {
       >
         {/* Start Card */}
         <View style={[styles.startCard, { backgroundColor: current.bg }]}>
-          <Text style={styles.startEmoji}>{current.emoji}</Text>
+          <Image source={current.icon} style={styles.startIconImg} resizeMode="contain" />
           <Text style={styles.startTitle}>{current.label} 분석</Text>
           <Text style={styles.startDesc}>{current.description}</Text>
           <TouchableOpacity
@@ -344,7 +352,7 @@ export default function AIAnalysisScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 activeOpacity={0.7}
               >
-                <Text style={styles.deleteBtnText}>🗑 삭제</Text>
+                <Text style={styles.deleteBtnText}>삭제</Text>
               </TouchableOpacity>
             </View>
           ))
@@ -365,7 +373,7 @@ export default function AIAnalysisScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {selectedItem
-                  ? `${TABS.find((t) => t.key === selectedItem.type)?.emoji ?? ''} ${TABS.find((t) => t.key === selectedItem.type)?.label ?? ''} 분석 상세`
+                  ? `${TABS.find((t) => t.key === selectedItem.type)?.label ?? ''} 분석 상세`
                   : ''}
               </Text>
               <TouchableOpacity
@@ -423,7 +431,7 @@ export default function AIAnalysisScreen() {
                           ) : null}
                           {m.advice ? (
                             <View style={styles.adviceBox}>
-                              <Text style={styles.adviceLabel}>✅ 이렇게 해보세요</Text>
+                              <Text style={styles.adviceLabel}>이렇게 해보세요</Text>
                               <Text style={styles.adviceText}>{m.advice}</Text>
                             </View>
                           ) : null}
@@ -458,7 +466,7 @@ export default function AIAnalysisScreen() {
                   onPress={() => handleDeleteItem(selectedItem)}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.modalDeleteBtnText}>🗑 삭제</Text>
+                  <Text style={styles.modalDeleteBtnText}>삭제</Text>
                 </TouchableOpacity>
               ) : null}
               <TouchableOpacity
@@ -495,6 +503,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4F4F7',
   },
   tabEmoji: { fontSize: 18, marginBottom: 2 },
+  tabIconImg: { width: 22, height: 22, marginBottom: 2 },
   tabLabel: { fontSize: 13, color: '#636366', fontWeight: '600' },
   scroll: { flex: 1 },
   scrollContent: { padding: 16 },
@@ -505,6 +514,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   startEmoji: { fontSize: 40, marginBottom: 8 },
+  startIconImg: { width: 48, height: 48, marginBottom: 8 },
   startTitle: { fontSize: 18, fontWeight: '800', color: '#1C1C1E', marginBottom: 4 },
   startDesc: { fontSize: 13, color: '#636366', marginBottom: 16, textAlign: 'center' },
   startBtn: {

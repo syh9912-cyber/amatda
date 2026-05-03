@@ -97,34 +97,40 @@ export default function VoiceScreen() {
   const micPulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    Animated.loop(
+    const bounceLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(bounce, { toValue: -8, duration: 600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
         Animated.timing(bounce, { toValue: 8, duration: 600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
-    ).start();
+    );
+    bounceLoop.start();
 
-    Animated.loop(
+    const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1.05, duration: 800, useNativeDriver: true }),
         Animated.timing(pulse, { toValue: 1, duration: 800, useNativeDriver: true }),
       ]),
-    ).start();
+    );
+    pulseLoop.start();
+    // unmount 시 loop 정리 (background 누수 방지)
+    return () => { bounceLoop.stop(); pulseLoop.stop(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Mic pulse animation (listening phase)
   useEffect(() => {
-    if (phase === 'listening') {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(micPulse, { toValue: 1.3, duration: 500, useNativeDriver: true }),
-          Animated.timing(micPulse, { toValue: 1, duration: 500, useNativeDriver: true }),
-        ]),
-      ).start();
-    } else {
+    if (phase !== 'listening') {
       micPulse.setValue(1);
+      return;
     }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(micPulse, { toValue: 1.3, duration: 500, useNativeDriver: true }),
+        Animated.timing(micPulse, { toValue: 1, duration: 500, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 

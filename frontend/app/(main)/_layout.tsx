@@ -96,7 +96,7 @@ export default function MainLayout() {
         name="baby-tracker"
         options={{
           tabBarIcon: ({ focused }) => <TabIcon iconKey="diary" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TabLabel label={isPregnant ? '임신기록' : isElementary ? '생활기록' : '아기시간'} focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={isPregnant ? '임신앨범' : isElementary ? '생활기록' : '아기시간'} focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -164,6 +164,9 @@ export default function MainLayout() {
       <Tabs.Screen name="fever" options={{ href: null }} />
       <Tabs.Screen name="voice-settings" options={{ href: null }} />
       <Tabs.Screen name="ai-analysis" options={{ href: null }} />
+      <Tabs.Screen name="pregnancy-journey-detail" options={{ href: null }} />
+      <Tabs.Screen name="birth-bag" options={{ href: null }} />
+      <Tabs.Screen name="mom-location-setup" options={{ href: null }} />
     </Tabs>
   );
 }

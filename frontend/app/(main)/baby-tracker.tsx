@@ -32,6 +32,7 @@ const IC_CUSTOM = require('../../assets/icon-mic.png') as number;  // 임시 —
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
+// useTrackerStore는 storage.ts의 saveRecords에서 자동 호출 — 여기 import 불필요
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { getDailyReference, calcFeedIntervalProgress } from '../../constants/dailyReference';
 import { growthApi, childApi } from '../../services/api';
@@ -72,6 +73,8 @@ import {
   loadBreastSession,
   saveBreastSession,
   loadRangeStats,
+  loadHintRemaining,
+  decrementHint,
 } from '../../features/baby-tracker/storage';
 
 /* ================================================================== */
@@ -542,9 +545,9 @@ function WeeklySummaryTable({
       {/* 헤더 */}
       <View style={summaryStyles.headerRow}>
         <Text style={[summaryStyles.cellDate, summaryStyles.headerCell]}>날짜</Text>
-        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>💩 배변</Text>
-        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>🍼 수유</Text>
-        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>💤 수면</Text>
+        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>배변</Text>
+        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>수유</Text>
+        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>수면</Text>
       </View>
 
       {rows.map((s, i) => {
@@ -668,17 +671,19 @@ const summaryStyles = StyleSheet.create({
     color: TRACKER_COLORS.white,
   },
   voiceBtn: {
-    marginLeft: 'auto',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 18,
     backgroundColor: '#EFEBFE',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#9C8FE3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 36,
   },
   voiceBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
     color: '#6E5BC4',
   },
 });
@@ -688,104 +693,69 @@ const WeeklyChart = WeeklySummaryTable;
 
 /* ---- Day Summary Card ---- */
 function DaySummaryCard({ summary }: { summary: DaySummary }) {
-  const { peeCount, poopCount, formulaMl, breastMin, breastLeftMin, breastRightMin, breastCount, solidCount, totalSleepMinutes, diaperCount, feedingCount } = summary;
-
-  // 수유 요약 조합: "분유 540ml · 모유 20분(좌10/우10) · 이유식 1"
-  const feedingParts: string[] = [];
-  if (formulaMl > 0) feedingParts.push(`분유 ${formulaMl}ml`);
-  if (breastMin > 0) {
-    const sides: string[] = [];
-    if (breastLeftMin > 0) sides.push(`좌${breastLeftMin}`);
-    if (breastRightMin > 0) sides.push(`우${breastRightMin}`);
-    const sideLabel = sides.length > 0 ? ` (${sides.join('/')})` : '';
-    feedingParts.push(`모유 ${breastMin}분${sideLabel}`);
-  } else if (breastCount > 0) {
-    feedingParts.push(`모유 ${breastCount}회`);
-  }
-  if (solidCount > 0) feedingParts.push(`이유식 ${solidCount}회`);
-  const feedingSummary = feedingParts.length > 0 ? feedingParts.join(' · ') : '-';
-
-  // 배변 요약: "소변 3 · 대변 1"
-  const diaperParts: string[] = [];
-  if (peeCount > 0) diaperParts.push(`소변 ${peeCount}`);
-  if (poopCount > 0) diaperParts.push(`대변 ${poopCount}`);
-  const diaperSummary = diaperParts.length > 0 ? diaperParts.join(' · ') : '-';
-
-  // 수면: 시간 표기
+  const { totalSleepMinutes, feedingCount, peeCount, poopCount } = summary;
   const sleepH = Math.floor(totalSleepMinutes / 60);
   const sleepM = totalSleepMinutes % 60;
-  const sleepSummary = totalSleepMinutes > 0
-    ? (sleepH > 0 ? `${sleepH}시간 ${sleepM}분` : `${sleepM}분`)
-    : '-';
+  const sleepText = totalSleepMinutes > 0
+    ? (sleepH > 0 && sleepM > 0 ? `${sleepH}h${sleepM}분`
+        : sleepH > 0 ? `${sleepH}h`
+        : `${sleepM}분`)
+    : '0';
+  const diaperTotal = peeCount + poopCount;
+  // 변 부가 설명 (소/대 분리)
+  const diaperSub = diaperTotal > 0
+    ? (poopCount > 0 && peeCount > 0 ? `소${peeCount}·대${poopCount}`
+        : poopCount > 0 ? `대${poopCount}`
+        : `소${peeCount}`)
+    : '';
 
-  // Phase 1 (2026-04-28): 3줄 → 1줄 chip 가로 스크롤로 압축
-  // (사용자 요청: '요약은 최대한 작게, 시간 부분을 최대한 길게')
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={daySumStyles.scrollWrap}
-    >
-      {diaperCount > 0 && (
-        <View style={[daySumStyles.chip, { backgroundColor: TRACKER_COLORS.diaperLight }]}>
-          <Text style={[daySumStyles.chipLabel, { color: TRACKER_COLORS.diaperDark }]}>{'💩'}</Text>
-          <Text style={[daySumStyles.chipValue, { color: TRACKER_COLORS.diaperDark }]}>
-            {diaperCount}회
-            {diaperSummary !== '-' ? ` · ${diaperSummary}` : ''}
-          </Text>
-        </View>
-      )}
-      {feedingCount > 0 && (
-        <View style={[daySumStyles.chip, { backgroundColor: TRACKER_COLORS.feedingLight }]}>
-          <Text style={[daySumStyles.chipLabel, { color: TRACKER_COLORS.feedingDark }]}>{'🍼'}</Text>
-          <Text style={[daySumStyles.chipValue, { color: TRACKER_COLORS.feedingDark }]}>
-            {feedingCount}회
-            {feedingSummary !== '-' ? ` · ${feedingSummary}` : ''}
-          </Text>
-        </View>
-      )}
-      {totalSleepMinutes > 0 && (
-        <View style={[daySumStyles.chip, { backgroundColor: TRACKER_COLORS.sleepLight }]}>
-          <Text style={[daySumStyles.chipLabel, { color: TRACKER_COLORS.sleepDark }]}>{'💤'}</Text>
-          <Text style={[daySumStyles.chipValue, { color: TRACKER_COLORS.sleepDark }]}>
-            {sleepSummary}
-          </Text>
-        </View>
-      )}
-      {/* 모두 0건일 때 placeholder */}
-      {diaperCount === 0 && feedingCount === 0 && totalSleepMinutes === 0 && (
-        <View style={[daySumStyles.chip, { backgroundColor: TRACKER_COLORS.bg }]}>
-          <Text style={[daySumStyles.chipValue, { color: TRACKER_COLORS.textLight }]}>
-            오늘은 아직 기록이 없어요
-          </Text>
-        </View>
-      )}
-    </ScrollView>
+    <View style={daySumStyles.row}>
+      <View style={[daySumStyles.cell, { backgroundColor: TRACKER_COLORS.feedingLight }]}>
+        <Text style={[daySumStyles.cellLabel, { color: TRACKER_COLORS.feedingDark }]}>수유</Text>
+        <Text style={[daySumStyles.cellValue, { color: TRACKER_COLORS.feedingDark }]}>
+          {feedingCount}회
+        </Text>
+      </View>
+      <View style={[daySumStyles.cell, { backgroundColor: TRACKER_COLORS.sleepLight }]}>
+        <Text style={[daySumStyles.cellLabel, { color: TRACKER_COLORS.sleepDark }]}>수면</Text>
+        <Text style={[daySumStyles.cellValue, { color: TRACKER_COLORS.sleepDark }]}>
+          {sleepText}
+        </Text>
+      </View>
+      <View style={[daySumStyles.cell, { backgroundColor: TRACKER_COLORS.diaperLight }]}>
+        <Text style={[daySumStyles.cellLabel, { color: TRACKER_COLORS.diaperDark }]}>변</Text>
+        <Text style={[daySumStyles.cellValue, { color: TRACKER_COLORS.diaperDark }]}>
+          {diaperTotal}회
+        </Text>
+        {diaperSub ? (
+          <Text style={[daySumStyles.cellSub, { color: TRACKER_COLORS.diaperDark }]}>{diaperSub}</Text>
+        ) : null}
+      </View>
+    </View>
   );
 }
 
 const daySumStyles = StyleSheet.create({
-  // Phase 1: 가로 스크롤 1줄 chip
-  scrollWrap: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 6,
-    gap: 8,
-  },
-  chip: {
+  row: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  cell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    gap: 4,
     paddingVertical: 6,
-    borderRadius: RADIUS.full,
+    paddingHorizontal: 8,
+    borderRadius: 10,
   },
-  chipLabel: {
-    fontSize: 14,
-  },
-  chipValue: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  cellValue: { fontSize: 13, fontWeight: '900' },
+  cellLabel: { fontSize: 11, fontWeight: '700', opacity: 0.85 },
+  cellSub: { fontSize: 10, fontWeight: '600', opacity: 0.7 },
 });
 
 /* ---- Daily Reference Card (권장량 진행 막대) ----
@@ -842,18 +812,35 @@ function DailyReferenceCard({
     return null;
   }
 
+  // 컴팩트 시간 포맷 (좁은 컬럼에 한 줄로 들어가도록)
+  const compactMin = (m: number): string => {
+    const h = Math.floor(m / 60);
+    const mm = m % 60;
+    if (h === 0) return `${mm}m`;
+    if (mm === 0) return `${h}h`;
+    return `${h}h ${mm}m`;
+  };
+
+  // 텀 텍스트 — 짧게
+  const feedText = minutesSinceLastFeed < 0
+    ? '첫 수유'
+    : compactMin(minutesSinceLastFeed);
+
   return (
     <View style={dailyRefStyles.card}>
-      {/* 수유 텀 (Row 1) */}
       {showFeedRow && (
-        <View style={dailyRefStyles.row}>
-          <Text style={dailyRefStyles.rowLabel}>{'🍼 수유 텀'}</Text>
-          <Text style={dailyRefStyles.rowValue}>
-            {minutesSinceLastFeed < 0
-              ? '오늘 첫 수유'
-              : feedPct >= 1
-                ? `${formatMinutes(minutesSinceLastFeed)} 경과 · 권장 텀 도달`
-                : `${formatMinutes(minutesSinceLastFeed)} 경과`}
+        <View style={dailyRefStyles.col}>
+          <Text style={dailyRefStyles.colLabel}>수유 텀</Text>
+          <Text
+            style={dailyRefStyles.colValue}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {feedText}
+          </Text>
+          <Text style={dailyRefStyles.colHint} numberOfLines={1}>
+            마지막 수유 후 / 권장 {ref.feedIntervalHrMax}h
           </Text>
           <View style={dailyRefStyles.barTrack}>
             <View
@@ -866,18 +853,22 @@ function DailyReferenceCard({
               ]}
             />
           </View>
-          <Text style={dailyRefStyles.rowSub}>
-            권장 {ref.feedIntervalHrMin}~{ref.feedIntervalHrMax}시간
-          </Text>
         </View>
       )}
 
-      {/* 분유량 (Row 2) */}
       {showFormulaRow && (
-        <View style={dailyRefStyles.row}>
-          <Text style={dailyRefStyles.rowLabel}>{'🍼 일일 분유량'}</Text>
-          <Text style={dailyRefStyles.rowValue}>
-            {formulaMlToday}ml / {ref.formulaMlMin}~{ref.formulaMlMax}ml
+        <View style={dailyRefStyles.col}>
+          <Text style={dailyRefStyles.colLabel}>일일 분유</Text>
+          <Text
+            style={dailyRefStyles.colValue}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {formulaMlToday}/{ref.formulaMlMax}ml
+          </Text>
+          <Text style={dailyRefStyles.colHint} numberOfLines={1}>
+            오늘 누적 / 몸무게 기준
           </Text>
           <View style={dailyRefStyles.barTrack}>
             <View
@@ -892,18 +883,22 @@ function DailyReferenceCard({
               ]}
             />
           </View>
-          <Text style={dailyRefStyles.rowSub}>
-            기준 체중 {ref.weightKg.toFixed(1)}kg{ref.weightIsEstimated ? ' (추정)' : ''}
-          </Text>
         </View>
       )}
 
-      {/* 수면 (Row 3) */}
       {sleepTargetMin > 0 && (
-        <View style={[dailyRefStyles.row, { borderBottomWidth: 0 }]}>
-          <Text style={dailyRefStyles.rowLabel}>{'💤 일일 수면'}</Text>
-          <Text style={dailyRefStyles.rowValue}>
-            {formatMinutes(totalSleepMinutesToday)} / {ref.sleepHrMin}~{ref.sleepHrMax}시간
+        <View style={dailyRefStyles.col}>
+          <Text style={dailyRefStyles.colLabel}>일일 수면</Text>
+          <Text
+            style={dailyRefStyles.colValue}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {compactMin(totalSleepMinutesToday)}/{ref.sleepHrMax}h
+          </Text>
+          <Text style={dailyRefStyles.colHint} numberOfLines={1}>
+            오늘 누적 / 개월수 기준
           </Text>
           <View style={dailyRefStyles.barTrack}>
             <View
@@ -918,9 +913,6 @@ function DailyReferenceCard({
               ]}
             />
           </View>
-          <Text style={dailyRefStyles.rowSub}>
-            {ref.ageMonths}개월 권장
-          </Text>
         </View>
       )}
     </View>
@@ -1038,45 +1030,48 @@ const periodToggleStyles = StyleSheet.create({
 });
 
 const dailyRefStyles = StyleSheet.create({
+  // 한 줄 3열 컴팩트 카드 (수유텀 / 일일분유 / 일일수면)
   card: {
+    flexDirection: 'row',
     backgroundColor: TRACKER_COLORS.white,
     borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
     marginBottom: SPACING.sm,
+    gap: 6,
     ...SHADOWS.soft,
   },
-  row: {
-    paddingVertical: 6,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#F0F0F2',
+  col: {
+    flex: 1,
+    paddingHorizontal: 6,
   },
-  rowLabel: {
-    fontSize: 12,
+  colLabel: {
+    fontSize: 10,
     fontWeight: '700',
     color: TRACKER_COLORS.textSub,
+    marginBottom: 2,
   },
-  rowValue: {
-    fontSize: 14,
-    fontWeight: '700',
+  colValue: {
+    fontSize: 13,
+    fontWeight: '900',
     color: TRACKER_COLORS.text,
-    marginTop: 2,
+  },
+  colHint: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: TRACKER_COLORS.textLight,
+    marginTop: 1,
   },
   barTrack: {
-    height: 8,
+    height: 4,
     backgroundColor: '#F0F0F2',
-    borderRadius: 4,
-    marginTop: 6,
+    borderRadius: 2,
+    marginTop: 4,
     overflow: 'hidden',
   },
   barFill: {
     height: '100%',
-    borderRadius: 4,
-  },
-  rowSub: {
-    fontSize: 11,
-    color: TRACKER_COLORS.textLight,
-    marginTop: 4,
+    borderRadius: 2,
   },
 });
 
@@ -1521,6 +1516,32 @@ function BabyTrackerInner() {
   const [modalSubType, setModalSubType] = useState<string>('formula');
   const toastOpacity = useRef(new Animated.Value(0)).current;
 
+  // 하단 안내문 카운터 (10회 표시 후 자동 숨김)
+  const [hintRemaining, setHintRemaining] = useState<number>(10);
+  // 액션 버튼 길게 누르기 → 시간 지정 입력
+  // kind: 'quick'(원터치) / 'sleepStart'(수면시작) / 'sleepWake'(기상) / 'breast'(모유)
+  type TimedActionPayload =
+    | { kind: 'quick'; type: RecordType; subType: string; label: string }
+    | { kind: 'sleepStart'; label: string }
+    | { kind: 'sleepWake'; label: string }
+    | { kind: 'breast'; label: string };
+  const [timedActionVisible, setTimedActionVisible] = useState(false);
+  const [timedActionPayload, setTimedActionPayload] = useState<TimedActionPayload | null>(null);
+  const [timedActionTime, setTimedActionTime] = useState<string>(nowTime());
+  const [timedActionBreastSide, setTimedActionBreastSide] = useState<BreastSide | null>(null);
+  const [timedActionNote, setTimedActionNote] = useState<string>('');
+  // 타임라인 entry 길게 누르기 → 액션 시트 + 편집 모달
+  const [entryActionId, setEntryActionId] = useState<string | null>(null);
+  const [editRecord, setEditRecord] = useState<TrackerRecord | null>(null);
+  const [editTime, setEditTime] = useState('');
+  const [editEndTime, setEditEndTime] = useState('');
+  const [editNote, setEditNote] = useState('');
+  const [editAmount, setEditAmount] = useState('');
+
+  useEffect(() => {
+    loadHintRemaining().then(setHintRemaining).catch(() => {});
+  }, []);
+
   const dateStr = useMemo(() => formatDate(currentDate), [currentDate]);
   const childId = selectedChild?.id ?? 'default';
 
@@ -1629,6 +1650,205 @@ function BabyTrackerInner() {
     };
     handleAddRecord(record);
     showToast(`${SUBTYPE_LABELS[subType] ?? subType} 기록 완료`);
+    if (hintRemaining > 0) {
+      decrementHint().then(setHintRemaining).catch(() => {});
+    }
+  }
+
+  // 액션 버튼 길게 누르기 → 시간 피커로 과거 시각 입력 (모든 액션 유형 지원)
+  function handleTimedActionRequest(action: BottomAction) {
+    if (hintRemaining > 0) {
+      decrementHint().then(setHintRemaining).catch(() => {});
+    }
+    if (action.kind === 'quick') {
+      const label = SUBTYPE_LABELS[action.subType] ?? action.subType;
+      setTimedActionPayload({ kind: 'quick', type: action.type, subType: action.subType, label });
+    } else if (action.kind === 'sleepStart') {
+      // 이미 진행 중이면 거부
+      if (sleepSession) {
+        const startDt = new Date(sleepSession.startTime);
+        Alert.alert(
+          '수면 기록 진행 중',
+          `${sleepSession.startDate} ${String(startDt.getHours()).padStart(2, '0')}:${String(startDt.getMinutes()).padStart(2, '0')}에 시작한 수면이 진행 중이에요. 기상 버튼을 먼저 눌러주세요.`,
+        );
+        return;
+      }
+      setTimedActionPayload({ kind: 'sleepStart', label: '수면 시작' });
+    } else if (action.kind === 'sleepWake') {
+      // 활성 세션 없으면 거부
+      if (!sleepSession) {
+        Alert.alert('수면 시작 기록 없음', '"수면 시작"을 먼저 눌러주세요.');
+        return;
+      }
+      setTimedActionPayload({ kind: 'sleepWake', label: '기상' });
+    } else if (action.kind === 'breast') {
+      // 활성 모유 세션 있으면 거부 (정상 탭으로 종료 후 다시)
+      if (breastSession) {
+        Alert.alert('모유 수유 진행 중', '진행 중인 수유를 먼저 종료한 뒤 시간 지정 입력을 사용하세요.');
+        return;
+      }
+      setTimedActionPayload({ kind: 'breast', label: '모유' });
+      setTimedActionBreastSide(null);
+    } else {
+      return; // modal/custom 등은 미지원
+    }
+    setTimedActionTime(nowTime());
+    setTimedActionNote('');
+    setTimedActionVisible(true);
+  }
+
+  async function handleTimedActionConfirm() {
+    const payload = timedActionPayload;
+    if (!payload) return;
+
+    const note = timedActionNote.trim();
+
+    if (payload.kind === 'quick') {
+      const record: TrackerRecord = {
+        id: generateId(),
+        type: payload.type,
+        subType: payload.subType,
+        time: timedActionTime,
+        ...(note ? { note } : {}),
+      };
+      handleAddRecord(record);
+      showToast(`${payload.label} ${timedActionTime} 기록`);
+    } else if (payload.kind === 'sleepStart') {
+      // 지정 시각으로 sleepSession 시작
+      const now = new Date();
+      const [hh, mm] = timedActionTime.split(':').map((s) => parseInt(s, 10));
+      const startDt = new Date(now);
+      startDt.setHours(hh || 0, mm || 0, 0, 0);
+      // 현재 시각보다 미래면 어제로 보정 (예: 23:50 입력 시각이 현재 00:30보다 미래)
+      if (startDt.getTime() > now.getTime()) {
+        startDt.setDate(startDt.getDate() - 1);
+      }
+      const session: SleepSession = {
+        startTime: startDt.toISOString(),
+        startDate: formatDate(startDt),
+        ...(note ? { note } : {}),
+      };
+      await saveSleepSession(childId, session);
+      setSleepSession(session);
+      showToast(`수면 시작 ${timedActionTime} 기록`);
+    } else if (payload.kind === 'sleepWake') {
+      if (!sleepSession) { setTimedActionVisible(false); return; }
+      const start = new Date(sleepSession.startTime);
+      const now = new Date();
+      const [hh, mm] = timedActionTime.split(':').map((s) => parseInt(s, 10));
+      const endDt = new Date(now);
+      endDt.setHours(hh || 0, mm || 0, 0, 0);
+      // 종료가 시작보다 이전이면 다음날로 이동 (자정 넘은 경우)
+      if (endDt.getTime() < start.getTime()) {
+        endDt.setDate(endDt.getDate() + 1);
+      }
+      let duration = Math.round((endDt.getTime() - start.getTime()) / 60000);
+      if (duration < 1) duration = 1;
+      const MAX_SLEEP_MIN = 14 * 60;
+      if (duration > MAX_SLEEP_MIN) duration = MAX_SLEEP_MIN;
+      const startHHMM = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+      const crossedMidnight = sleepSession.startDate !== formatDate(endDt);
+      const endLabel = crossedMidnight
+        ? `${endDt.getMonth() + 1}/${endDt.getDate()} ${timedActionTime}`
+        : timedActionTime;
+      // 수면 시작 시 메모 + 기상 시 메모 합치기
+      const combinedNote = [sleepSession.note, note].filter(Boolean).join(' / ');
+      const record: TrackerRecord = {
+        id: generateId(),
+        type: 'sleep',
+        subType: 'sleep_start',
+        time: startHHMM,
+        endTime: endLabel,
+        duration,
+        ...(combinedNote ? { note: combinedNote } : {}),
+      };
+      const existing = await loadRecords(childId, sleepSession.startDate);
+      const updated = [...existing, record];
+      await saveRecords(childId, sleepSession.startDate, updated);
+      if (sleepSession.startDate === dateStr) {
+        setRecords(updated);
+      } else {
+        await loadData();
+      }
+      await saveSleepSession(childId, null);
+      setSleepSession(null);
+      showToast(`기상 ${timedActionTime} 기록`);
+    } else if (payload.kind === 'breast') {
+      if (!timedActionBreastSide) {
+        Alert.alert('수유 방향 선택', '왼쪽 또는 오른쪽을 먼저 선택해주세요.');
+        return;
+      }
+      // 지정 시각으로 모유 세션 시작 (정상 탭으로 종료 시 종료 시간 = now)
+      const now = new Date();
+      const [hh, mm] = timedActionTime.split(':').map((s) => parseInt(s, 10));
+      const startDt = new Date(now);
+      startDt.setHours(hh || 0, mm || 0, 0, 0);
+      if (startDt.getTime() > now.getTime()) {
+        startDt.setDate(startDt.getDate() - 1);
+      }
+      const session: BreastSession = {
+        side: timedActionBreastSide,
+        startTime: startDt.toISOString(),
+        startDate: formatDate(startDt),
+        ...(note ? { note } : {}),
+      };
+      await saveBreastSession(childId, session);
+      setBreastSession(session);
+      showToast(`${timedActionBreastSide === 'left' ? '왼쪽' : '오른쪽'} 수유 시작 ${timedActionTime} 기록`);
+    }
+
+    setTimedActionVisible(false);
+    setTimedActionPayload(null);
+    setTimedActionBreastSide(null);
+    setTimedActionNote('');
+  }
+
+  // 타임라인 entry 편집 시작
+  function openEditModalById(id: string) {
+    const realId = id.replace(/__start$|__wake$/, '');
+    const record = records.find((r) => r.id === realId);
+    if (!record) return;
+    setEditRecord(record);
+    setEditTime(record.time);
+    setEditEndTime(record.endTime ?? '');
+    setEditNote(record.note ?? '');
+    setEditAmount(record.amount != null ? String(record.amount) : '');
+  }
+
+  function handleEditSave() {
+    if (!editRecord) return;
+    // 검증: HH:MM 형식
+    const timeOk = /^\d{1,2}:\d{2}$/.test(editTime);
+    if (!timeOk) {
+      Alert.alert('시간 형식', '시간을 다시 확인해주세요 (예: 08:30)');
+      return;
+    }
+    let updated: TrackerRecord = { ...editRecord, time: editTime };
+    // 메모
+    const trimmedNote = editNote.trim();
+    if (trimmedNote) updated.note = trimmedNote;
+    else delete updated.note;
+    // 양 (수유)
+    if (editRecord.type === 'feeding') {
+      const num = parseInt(editAmount, 10);
+      if (!Number.isNaN(num) && num > 0) updated.amount = num;
+      else delete updated.amount;
+    }
+    // 수면: endTime 함께 수정 → duration 재계산
+    if (editRecord.type === 'sleep' && editRecord.endTime) {
+      const endTimeOk = /^\d{1,2}:\d{2}$/.test(editEndTime);
+      if (!endTimeOk) {
+        Alert.alert('기상 시간 형식', '기상 시간을 다시 확인해주세요 (예: 08:30)');
+        return;
+      }
+      updated.endTime = editEndTime;
+      updated.duration = calcDurationMinutes(editTime, editEndTime);
+    }
+    const newRecords = records.map((r) => (r.id === editRecord.id ? updated : r));
+    setRecords(newRecords);
+    saveRecords(childId, dateStr, newRecords);
+    setEditRecord(null);
+    showToast('수정 완료');
   }
 
   /* ---- Sleep session load & tick ---- */
@@ -1676,6 +1896,8 @@ function BabyTrackerInner() {
     const startHHMM = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
     const endHHMM = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
 
+    const sideLabel = breastSession.side === 'left' ? '왼쪽' : '오른쪽';
+    const combinedNote = breastSession.note ? `${sideLabel} · ${breastSession.note}` : sideLabel;
     const record: TrackerRecord = {
       id: generateId(),
       type: 'feeding',
@@ -1683,7 +1905,7 @@ function BabyTrackerInner() {
       time: startHHMM,
       endTime: endHHMM,
       duration: diff,
-      note: breastSession.side === 'left' ? '왼쪽' : '오른쪽',
+      note: combinedNote,
     };
     const existing = await loadRecords(childId, breastSession.startDate);
     const updated = [...existing, record];
@@ -1764,6 +1986,7 @@ function BabyTrackerInner() {
       time: startHHMM,
       endTime: endLabel,
       duration,
+      ...(sleepSession.note ? { note: sleepSession.note } : {}),
     };
 
     // 시작 날짜의 records에 저장 (BreastSession과 동일 패턴)
@@ -1781,13 +2004,30 @@ function BabyTrackerInner() {
   }
 
   function handleDeleteRecord(id: string) {
+    // 진행중 수면 — record가 아니라 sleepSession 취소
+    if (id === '__active_sleep__') {
+      Alert.alert('진행중 수면 취소', '시작한 수면 기록을 취소할까요?', [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '취소',
+          style: 'destructive',
+          onPress: async () => {
+            await saveSleepSession(childId, null);
+            setSleepSession(null);
+          },
+        },
+      ]);
+      return;
+    }
+    // 수면 record는 __start / __wake 가짜 suffix가 붙어 있음 → 원본 id 복원
+    const realId = id.replace(/__start$|__wake$/, '');
     Alert.alert('기록 삭제', '이 기록을 삭제할까요?', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
         style: 'destructive',
         onPress: () => {
-          const updated = records.filter((r) => r.id !== id);
+          const updated = records.filter((r) => r.id !== realId);
           setRecords(updated);
           saveRecords(childId, dateStr, updated);
         },
@@ -2107,6 +2347,7 @@ function BabyTrackerInner() {
               dateStr={dateStr}
               isCurrentlyToday={isToday(currentDate)}
               onDelete={handleDeleteRecord}
+              onLongAction={(id) => setEntryActionId(id)}
               activeSleepSession={sleepSession}
             />
           )}
@@ -2119,7 +2360,7 @@ function BabyTrackerInner() {
           activeOpacity={0.7}
         >
           <Text style={periodToggleStyles.headerTitle}>
-            {'📊 기간 요약 ('}{PERIOD_LABELS[chartPeriod]}{')'}
+            {'기간 요약 ('}{PERIOD_LABELS[chartPeriod]}{')'}
           </Text>
           <Text style={periodToggleStyles.headerArrow}>
             {periodSectionOpen ? '▲' : '▼'}
@@ -2167,6 +2408,8 @@ function BabyTrackerInner() {
       <BottomActionBar
         breastActive={!!breastSession}
         onAction={handleBottomAction}
+        onLongAction={handleTimedActionRequest}
+        hintVisible={hintRemaining > 0}
       />
 
       {/* ---- Toast ---- */}
@@ -2193,7 +2436,7 @@ function BabyTrackerInner() {
             onPress={() => setCustomModalVisible(false)}
           />
           <View style={customModalStyles.card}>
-            <Text style={customModalStyles.title}>{'✏️ 직접 입력 기록'}</Text>
+            <Text style={customModalStyles.title}>{'직접 입력 기록'}</Text>
             <Text style={customModalStyles.sub}>
               지금 시간으로 기록됩니다. 이름과 특징을 입력해주세요.
             </Text>
@@ -2272,7 +2515,7 @@ function BabyTrackerInner() {
           icon: f.key === 'breast' ? IC_MASCOT_EAT : IC_FEED,
         }))}
         lockSubType={modalSubType === 'formula'}
-        lockTitle={modalSubType === 'formula' ? '🍼 분유 기록' : undefined}
+        lockTitle={modalSubType === 'formula' ? '분유 기록' : undefined}
       />
 
       {/* ---- Breast Side Picker ---- */}
@@ -2368,6 +2611,207 @@ function BabyTrackerInner() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      {/* ---- Bottom action 길게 누르기 → 시간 지정 입력 ---- */}
+      <Modal
+        visible={timedActionVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTimedActionVisible(false)}
+      >
+        <TouchableOpacity
+          style={pickerStyles.backdrop}
+          activeOpacity={1}
+          onPress={() => setTimedActionVisible(false)}
+        >
+          <TouchableOpacity activeOpacity={1} style={pickerStyles.sheet}>
+            <Text style={pickerStyles.title}>{timedActionPayload?.label ?? '기록'} — 시간 지정</Text>
+            <Text style={pickerStyles.subtitle}>
+              {timedActionPayload?.kind === 'sleepStart' ? '몇 시에 잠들었나요?'
+                : timedActionPayload?.kind === 'sleepWake' ? '몇 시에 깼나요?'
+                : timedActionPayload?.kind === 'breast' ? '방향 선택 후 시작 시각을 골라주세요'
+                : '몇 시에 있었나요?'}
+            </Text>
+
+            {/* 모유: 좌/우 선택 */}
+            {timedActionPayload?.kind === 'breast' ? (
+              <View style={breastSidePickStyles.row}>
+                <TouchableOpacity
+                  style={[
+                    breastSidePickStyles.sideBtn,
+                    { backgroundColor: TRACKER_COLORS.feedingLight },
+                    timedActionBreastSide === 'left' && breastSidePickStyles.sideBtnActive,
+                  ]}
+                  onPress={() => setTimedActionBreastSide('left')}
+                  activeOpacity={0.85}
+                >
+                  <Text style={breastSidePickStyles.sideLabel}>왼쪽</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    breastSidePickStyles.sideBtn,
+                    { backgroundColor: TRACKER_COLORS.feedingLight },
+                    timedActionBreastSide === 'right' && breastSidePickStyles.sideBtnActive,
+                  ]}
+                  onPress={() => setTimedActionBreastSide('right')}
+                  activeOpacity={0.85}
+                >
+                  <Text style={breastSidePickStyles.sideLabel}>오른쪽</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            <TimePicker value={timedActionTime} onChange={setTimedActionTime} label="시간" />
+
+            {/* 메모 (선택) — 모든 액션 공통 */}
+            <View style={editModalStyles.field}>
+              <Text style={editModalStyles.fieldLabel}>메모 (선택)</Text>
+              <TextInput
+                style={editModalStyles.input}
+                value={timedActionNote}
+                onChangeText={setTimedActionNote}
+                placeholder={
+                  timedActionPayload?.kind === 'sleepStart' ? '예) 낮잠, 잘 자는 중'
+                    : timedActionPayload?.kind === 'sleepWake' ? '예) 깨자마자 보챔'
+                    : timedActionPayload?.kind === 'breast' ? '예) 트림함, 잘 빨음'
+                    : '예) 평소보다 많이 먹음'
+                }
+                placeholderTextColor={TRACKER_COLORS.textLight}
+                maxLength={120}
+              />
+            </View>
+
+            <View style={editModalStyles.btnRow}>
+              <TouchableOpacity
+                style={editModalStyles.cancelBtn}
+                onPress={() => setTimedActionVisible(false)}
+              >
+                <Text style={editModalStyles.cancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  editModalStyles.saveBtn,
+                  timedActionPayload?.kind === 'breast' && !timedActionBreastSide && { opacity: 0.5 },
+                ]}
+                onPress={handleTimedActionConfirm}
+                disabled={timedActionPayload?.kind === 'breast' && !timedActionBreastSide}
+              >
+                <Text style={editModalStyles.saveText}>{timedActionTime}에 기록</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ---- 타임라인 entry 길게 누르기 → 액션 시트 ---- */}
+      <Modal
+        visible={entryActionId !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEntryActionId(null)}
+      >
+        <TouchableOpacity
+          style={pickerStyles.backdrop}
+          activeOpacity={1}
+          onPress={() => setEntryActionId(null)}
+        >
+          <TouchableOpacity activeOpacity={1} style={pickerStyles.sheet}>
+            <Text style={pickerStyles.title}>기록 옵션</Text>
+            <TouchableOpacity
+              style={editModalStyles.actionRow}
+              onPress={() => {
+                if (entryActionId) openEditModalById(entryActionId);
+                setEntryActionId(null);
+              }}
+            >
+              <Text style={editModalStyles.actionRowText}>편집 (시간·메모)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[editModalStyles.actionRow, editModalStyles.actionRowDanger]}
+              onPress={() => {
+                const id = entryActionId;
+                setEntryActionId(null);
+                if (id) handleDeleteRecord(id);
+              }}
+            >
+              <Text style={[editModalStyles.actionRowText, editModalStyles.actionRowTextDanger]}>삭제</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={editModalStyles.cancelRow}
+              onPress={() => setEntryActionId(null)}
+            >
+              <Text style={editModalStyles.cancelRowText}>취소</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ---- 편집 모달 (시간·메모·양·기상시간) ---- */}
+      <Modal
+        visible={editRecord !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditRecord(null)}
+      >
+        <TouchableOpacity
+          style={pickerStyles.backdrop}
+          activeOpacity={1}
+          onPress={() => setEditRecord(null)}
+        >
+          <TouchableOpacity activeOpacity={1} style={pickerStyles.sheet}>
+            <Text style={pickerStyles.title}>
+              {editRecord ? (SUBTYPE_LABELS[editRecord.subType] ?? editRecord.subType) : ''} 편집
+            </Text>
+            {editRecord ? (
+              <>
+                <TimePicker value={editTime} onChange={setEditTime} label={editRecord.type === 'sleep' && editRecord.endTime ? '시작 시간' : '시간'} />
+                {editRecord.type === 'sleep' && editRecord.endTime ? (
+                  <TimePicker value={editEndTime} onChange={setEditEndTime} label="기상 시간" />
+                ) : null}
+                {editRecord.type === 'feeding' ? (
+                  <View style={editModalStyles.field}>
+                    <Text style={editModalStyles.fieldLabel}>양 (ml)</Text>
+                    <TextInput
+                      style={editModalStyles.input}
+                      value={editAmount}
+                      onChangeText={setEditAmount}
+                      placeholder="예) 120"
+                      placeholderTextColor={TRACKER_COLORS.textLight}
+                      keyboardType="number-pad"
+                      maxLength={4}
+                    />
+                  </View>
+                ) : null}
+                <View style={editModalStyles.field}>
+                  <Text style={editModalStyles.fieldLabel}>메모</Text>
+                  <TextInput
+                    style={editModalStyles.input}
+                    value={editNote}
+                    onChangeText={setEditNote}
+                    placeholder="메모 (선택)"
+                    placeholderTextColor={TRACKER_COLORS.textLight}
+                    maxLength={120}
+                  />
+                </View>
+                <View style={editModalStyles.btnRow}>
+                  <TouchableOpacity
+                    style={editModalStyles.cancelBtn}
+                    onPress={() => setEditRecord(null)}
+                  >
+                    <Text style={editModalStyles.cancelText}>취소</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={editModalStyles.saveBtn}
+                    onPress={handleEditSave}
+                  >
+                    <Text style={editModalStyles.saveText}>저장</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : null}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -2413,27 +2857,30 @@ const styles = StyleSheet.create({
   dateNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     marginBottom: SPACING.sm,
+    paddingHorizontal: 4,
     paddingVertical: 2,
   },
   dateArrow: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: TRACKER_COLORS.white,
     alignItems: 'center',
     justifyContent: 'center',
     ...SHADOWS.soft,
   },
   dateArrowDisabled: { opacity: 0.3 },
-  dateArrowText: { fontSize: 28, fontWeight: '300', color: TRACKER_COLORS.text, marginTop: -2 },
+  dateArrowText: { fontSize: 22, fontWeight: '300', color: TRACKER_COLORS.text, marginTop: -2 },
   dateArrowTextDisabled: { color: TRACKER_COLORS.textLight },
   dateCenter: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: SPACING.lg,
-    gap: SPACING.sm,
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 8,
   },
   dateText: {
     fontSize: FONT_SIZE.lg,
@@ -2497,14 +2944,15 @@ const styles = StyleSheet.create({
   timelineTitleRow: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
-    gap: 6,
-    marginBottom: SPACING.sm,
+    gap: 5,
+    marginBottom: 4,
+    paddingHorizontal: 4,
   },
-  timelineTitleIcon: { width: 20, height: 20, borderRadius: 4 },
+  timelineTitleIcon: { width: 14, height: 14, borderRadius: 3 },
   timelineTitle: {
-    fontSize: FONT_SIZE.md,
+    fontSize: 12,
     fontWeight: '700',
-    color: TRACKER_COLORS.text,
+    color: TRACKER_COLORS.textSub,
   },
 
   /* All records mini section */
@@ -2742,6 +3190,7 @@ interface TimelineEntryProps {
   dateStr: string;
   showRelative: boolean;
   onDelete: (id: string) => void;
+  onLongAction?: (id: string) => void;
 }
 
 /**
@@ -2759,53 +3208,32 @@ interface HourGroupedTimelineProps {
   dateStr: string;
   isCurrentlyToday: boolean;
   onDelete: (id: string) => void;
+  onLongAction?: (id: string) => void;
   /** 진행 중인 수면 세션 (사용자가 '수면' 누른 후 '기상' 누르기 전 상태) */
   activeSleepSession?: SleepSession | null;
 }
 
-function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete, activeSleepSession }: HourGroupedTimelineProps) {
-  // 현재 시각 (분단위 갱신 — 실시간 'now' 표시용)
-  const [now, setNow] = useState(() => new Date());
+function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete, onLongAction, activeSleepSession }: HourGroupedTimelineProps) {
+  // 분 단위 'now' 갱신 — LIVE 배지·진행중 표시용
+  const [, setNow] = useState(() => new Date());
   useEffect(() => {
     if (!isCurrentlyToday) return;
     const id = setInterval(() => setNow(new Date()), 60 * 1000);
     return () => clearInterval(id);
   }, [isCurrentlyToday]);
 
-  const currentHour = isCurrentlyToday ? now.getHours() : -1;
-  const currentMin = now.getMinutes();
-
-  // 사용자 요청: 수면 기록을 '수면(시작)' + '기상(종료)' 두 항목으로 분리 표시
-  // 기상 항목에는 총 수면 시간을 info로 표시
-  // 추가 (사용자 요청 2026-04-28): 진행 중 수면 세션도 즉시 표시
-  //   '수면 누르면 바로 수면이 시간표에 나오게 해줘 기상 누르기 전에도'
-  const expandedRecords = useMemo(() => {
+  // 수면 기록 → 시작/종료 분리 + 진행중 수면 가상 엔트리 추가
+  const expanded = useMemo(() => {
     const out: TrackerRecord[] = [];
     for (const r of records) {
       if (r.type === 'sleep' && r.endTime) {
-        // 수면 시작 (duration/endTime 숨김)
-        out.push({
-          ...r,
-          id: `${r.id}__start`,
-          subType: 'sleep_start',
-          endTime: undefined,
-          duration: undefined,
-        });
-        // 기상 (총 수면 시간 표시)
-        out.push({
-          ...r,
-          id: `${r.id}__wake`,
-          subType: 'sleep_end',
-          time: r.endTime,
-          endTime: undefined,
-          duration: r.duration,
-        });
+        out.push({ ...r, id: `${r.id}__start`, subType: 'sleep_start', endTime: undefined, duration: undefined });
+        out.push({ ...r, id: `${r.id}__wake`, subType: 'sleep_end', time: r.endTime, endTime: undefined, duration: r.duration });
       } else {
         out.push(r);
       }
     }
-
-    // 진행 중 수면 세션이 이 날짜에 시작됐다면 가상 엔트리 1개 추가
+    // 진행중 수면
     if (activeSleepSession && activeSleepSession.startDate === dateStr) {
       const startDt = new Date(activeSleepSession.startTime);
       const time = `${String(startDt.getHours()).padStart(2, '0')}:${String(startDt.getMinutes()).padStart(2, '0')}`;
@@ -2814,111 +3242,50 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete, act
         type: 'sleep',
         subType: 'sleep_start',
         time,
-        note: '진행 중 (기상 버튼으로 종료)',
+        note: '진행중',
       } as TrackerRecord);
     }
-
+    // 시간순 정렬 (오래된 → 최신, 위에서 아래로 누적)
+    out.sort((a, b) => a.time.localeCompare(b.time));
     return out;
   }, [records, activeSleepSession, dateStr]);
 
-  // 시간별 그룹핑
-  const byHour = useMemo(() => {
-    const map = new Map<number, TrackerRecord[]>();
-    for (const r of expandedRecords) {
-      const parts = r.time.split(':');
-      const h = parseInt(parts[0] ?? '', 10);
-      if (!isNaN(h) && h >= 0 && h <= 23) {
-        if (!map.has(h)) map.set(h, []);
-        map.get(h)!.push(r);
-      }
-    }
-    // 시간 내에서 분 단위 정렬
-    for (const [, list] of map) {
-      list.sort((a, b) => a.time.localeCompare(b.time));
-    }
-    return map;
-  }, [expandedRecords]);
-
-  // Phase 2 (2026-04-28): 타임라인을 자체 스크롤 박스로 wrap
-  // (사용자 요청: '타임라인창을 탭안에 만들어서 창을 스크롤해서 위아래로 내릴수 있게')
-  // - maxHeight로 제한 → 24시간 전체 보이지 않으면 내부 스크롤
-  // - nestedScrollEnabled: Android에서 외부 ScrollView와 충돌 방지
-  // - 마운트 시 현재 시간(또는 활동 시간)으로 자동 스크롤
-  const innerScrollRef = useRef<ScrollView>(null);
-  useEffect(() => {
-    // 한 번만, 현재 시간 또는 첫 활동 시간으로 스크롤
-    let targetHour = currentHour;
-    if (targetHour < 0) {
-      // 과거 날짜: 가장 이른 활동 시간
-      const firstActiveHour = Array.from(byHour.keys()).sort((a, b) => a - b)[0];
-      targetHour = firstActiveHour ?? 0;
-    }
-    const HOUR_HEIGHT = 36;
-    const BUFFER = 60;
-    const offset = Math.max(0, targetHour * HOUR_HEIGHT - BUFFER);
-    const id = setTimeout(() => {
-      innerScrollRef.current?.scrollTo({ y: offset, animated: false });
-    }, 100);
-    return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  if (expanded.length === 0) {
+    return (
+      <View style={simpleTlStyles.empty}>
+        <Text style={simpleTlStyles.emptyText}>아직 기록이 없어요</Text>
+        <Text style={simpleTlStyles.emptySub}>아래 버튼으로 수유·수면·기저귀를 기록해보세요</Text>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView
-      ref={innerScrollRef}
-      style={hourTlStyles.scrollBox}
-      contentContainerStyle={hourTlStyles.scrollContent}
-      nestedScrollEnabled
-      showsVerticalScrollIndicator
-    >
-      {Array.from({ length: 24 }, (_, h) => {
-        const items = byHour.get(h) ?? [];
-        const isCur = h === currentHour;
-        const hasActivity = items.length > 0;
-        return (
-          <View
-            key={h}
-            style={[
-              hourTlStyles.hourBlock,
-              isCur && hourTlStyles.currentHourBlock,
-              hasActivity && !isCur && hourTlStyles.activeHourBlock,
-            ]}
-          >
-            <View style={hourTlStyles.hourLabelCol}>
-              <Text
-                style={[
-                  hourTlStyles.hourNum,
-                  isCur && hourTlStyles.hourNumCurrent,
-                  hasActivity && !isCur && hourTlStyles.hourNumActive,
-                ]}
-              >
-                {String(h).padStart(2, '0')}
-              </Text>
-              {isCur ? (
-                <View style={hourTlStyles.nowBadge}>
-                  <Text style={hourTlStyles.nowBadgeText}>{currentMin < 10 ? `:0${currentMin}` : `:${currentMin}`}</Text>
-                </View>
-              ) : hasActivity ? (
-                <View style={hourTlStyles.activityDot} />
-              ) : null}
-            </View>
-            <View style={hourTlStyles.hourContent}>
-              {items.map((r) => (
-                <TimelineEntry
-                  key={r.id}
-                  record={r}
-                  dateStr={dateStr}
-                  showRelative={isCurrentlyToday}
-                  onDelete={onDelete}
-                />
-              ))}
-            </View>
-          </View>
-        );
-      })}
-    </ScrollView>
+    <View style={simpleTlStyles.list}>
+      {expanded.map((r) => (
+        <TimelineEntry
+          key={r.id}
+          record={r}
+          dateStr={dateStr}
+          showRelative={isCurrentlyToday}
+          onDelete={onDelete}
+          onLongAction={onLongAction}
+        />
+      ))}
+    </View>
   );
 }
+
+const simpleTlStyles = StyleSheet.create({
+  list: {
+    paddingVertical: 4,
+  },
+  empty: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyText: { fontSize: 15, fontWeight: '700', color: TRACKER_COLORS.textSub },
+  emptySub: { fontSize: 12, color: TRACKER_COLORS.textLight, marginTop: 6 },
+});
 
 const hourTlStyles = StyleSheet.create({
   // Phase 2: 자체 스크롤 박스
@@ -2990,7 +3357,7 @@ const hourTlStyles = StyleSheet.create({
   },
 });
 
-function TimelineEntry({ record, dateStr, showRelative, onDelete }: TimelineEntryProps) {
+function TimelineEntry({ record, dateStr, showRelative, onDelete, onLongAction }: TimelineEntryProps) {
   const typeColor =
     record.type === 'diaper'
       ? TRACKER_COLORS.diaper
@@ -3034,34 +3401,148 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete }: TimelineEntr
   if (userNote !== '') detailLineParts.push(userNote);
   const detailLine = detailLineParts.join(' · ');
 
+  // 진행중 수면 → LIVE 배지
+  const isLive = record.id === '__active_sleep__';
+  // 부가 설명 (라벨 아래 표시)
+  const subInfo = info || (userNote && isLive ? userNote : '');
+  const memoLine = !isLive && userNote ? userNote : '';
+
   return (
     <TouchableOpacity
-      style={[timelineStyles.row, { borderLeftColor: typeColor }]}
-      onLongPress={() => onDelete(record.id)}
+      style={timelineRowStyles.outer}
+      onLongPress={() => (onLongAction ? onLongAction(record.id) : onDelete(record.id))}
       delayLongPress={500}
-      activeOpacity={0.7}
+      activeOpacity={0.85}
     >
-      {/* 첫 줄: 시간 + 아이콘 + 라벨 + 양/시간 + 상대시간 */}
-      <View style={timelineStyles.headerRow}>
-        <Text style={timelineStyles.timeCell}>{record.time}</Text>
-        <Image source={icon} style={timelineStyles.iconCell} resizeMode="contain" />
-        <Text style={[timelineStyles.labelCell, { color: typeDark }]} numberOfLines={1}>
-          {label}
-        </Text>
-        <View style={{ flex: 1 }} />
-        {relative !== '' && (
-          <Text style={timelineStyles.relCell} numberOfLines={1}>{relative}</Text>
-        )}
+      {/* 시간 컬럼 */}
+      <Text style={timelineRowStyles.time}>{record.time}</Text>
+
+      {/* 컬러 vertical bar + dot */}
+      <View style={timelineRowStyles.timelineCol}>
+        <View style={[timelineRowStyles.dot, { backgroundColor: typeColor }]} />
+        <View style={[timelineRowStyles.line, { backgroundColor: typeColor + '33' }]} />
       </View>
-      {/* 두 번째 줄: 분유량 / 시간 / 메모 (있을 때만) */}
-      {detailLine !== '' && (
-        <Text style={timelineStyles.noteRow} numberOfLines={3}>
-          {detailLine}
-        </Text>
-      )}
+
+      {/* 카드 */}
+      <View style={timelineRowStyles.card}>
+        <Image source={icon} style={timelineRowStyles.icon} resizeMode="contain" />
+        <View style={timelineRowStyles.textCol}>
+          <Text style={[timelineRowStyles.label, { color: typeDark }]} numberOfLines={1}>
+            {label}
+          </Text>
+          {subInfo ? (
+            <Text style={timelineRowStyles.detail} numberOfLines={1}>
+              {subInfo}
+            </Text>
+          ) : null}
+          {memoLine ? (
+            <Text style={timelineRowStyles.memo} numberOfLines={3}>
+              {memoLine}
+            </Text>
+          ) : null}
+        </View>
+        {isLive ? (
+          <View style={timelineRowStyles.liveBadge}>
+            <Text style={timelineRowStyles.liveText}>LIVE</Text>
+          </View>
+        ) : relative !== '' ? (
+          <Text style={timelineRowStyles.rel} numberOfLines={1}>{relative}</Text>
+        ) : null}
+      </View>
     </TouchableOpacity>
   );
 }
+
+const timelineRowStyles = StyleSheet.create({
+  outer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 1,
+    paddingHorizontal: 8,
+  },
+  time: {
+    width: 40,
+    fontSize: 11,
+    fontWeight: '700',
+    color: TRACKER_COLORS.textSub,
+    paddingTop: 8,
+    textAlign: 'center',
+  },
+  timelineCol: {
+    width: 12,
+    alignItems: 'center',
+    paddingTop: 10,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  line: {
+    width: 2,
+    flex: 1,
+    marginTop: 2,
+    minHeight: 12,
+    borderRadius: 1,
+  },
+  card: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: TRACKER_COLORS.white,
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    gap: 6,
+    marginLeft: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  icon: {
+    width: 22,
+    height: 22,
+    borderRadius: 5,
+  },
+  textCol: { flex: 1 },
+  label: {
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 0,
+  },
+  detail: {
+    fontSize: 10,
+    color: TRACKER_COLORS.textSub,
+    fontWeight: '600',
+  },
+  memo: {
+    fontSize: 10,
+    color: TRACKER_COLORS.text,
+    fontWeight: '500',
+    marginTop: 1,
+    lineHeight: 13,
+  },
+  rel: {
+    fontSize: 11,
+    color: TRACKER_COLORS.textLight,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  liveBadge: {
+    backgroundColor: '#9C5CFF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  liveText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+});
 
 const timelineStyles = StyleSheet.create({
   // Phase 1 (2026-04-28): 글씨 크게, 행 높이 증가, 메모 가독성 ↑
@@ -3153,11 +3634,16 @@ const BAR_ITEMS: BottomBarItem[] = [
 interface BottomActionBarProps {
   breastActive: boolean;
   onAction: (action: BottomAction) => void;
+  onLongAction?: (action: BottomAction) => void;
+  hintVisible?: boolean;
 }
 
-function BottomActionBar({ breastActive, onAction }: BottomActionBarProps) {
+function BottomActionBar({ breastActive, onAction, onLongAction, hintVisible }: BottomActionBarProps) {
   return (
     <View style={barStyles.wrapper}>
+      {hintVisible ? (
+        <Text style={barStyles.hint}>탭: 지금 입력 · 길게: 시간 지정</Text>
+      ) : null}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -3166,6 +3652,13 @@ function BottomActionBar({ breastActive, onAction }: BottomActionBarProps) {
         {BAR_ITEMS.map((item) => {
           const isBreast = item.action.kind === 'breast';
           const active = isBreast && breastActive;
+          // 시간 지정 입력 지원: quick / sleepStart / sleepWake / breast
+          // 미지원: modal(분유 — 자체 모달) / custom(자유 입력)
+          const supportsTimed =
+            item.action.kind === 'quick' ||
+            item.action.kind === 'sleepStart' ||
+            item.action.kind === 'sleepWake' ||
+            item.action.kind === 'breast';
           return (
             <TouchableOpacity
               key={item.label}
@@ -3174,6 +3667,8 @@ function BottomActionBar({ breastActive, onAction }: BottomActionBarProps) {
                 active && { backgroundColor: item.color + '22' },
               ]}
               onPress={() => onAction(item.action)}
+              onLongPress={supportsTimed && onLongAction ? () => onLongAction(item.action) : undefined}
+              delayLongPress={400}
               activeOpacity={0.7}
             >
               <View style={[barStyles.iconWrap, { backgroundColor: item.color + '1A' }]}>
@@ -3202,6 +3697,13 @@ const barStyles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 24 : 8,
     paddingTop: 8,
     ...SHADOWS.elevated,
+  },
+  hint: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: TRACKER_COLORS.textLight,
+    textAlign: 'center',
+    paddingBottom: 4,
   },
   container: {
     paddingHorizontal: SPACING.md,
@@ -3496,6 +3998,104 @@ const breastStyles = StyleSheet.create({
   startIcon: {
     fontSize: 22,
     color: TRACKER_COLORS.feedingDark,
+  },
+});
+
+/* ---- 모유 좌/우 피커 (시간 지정 모달 내부) ---- */
+const breastSidePickStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  sideBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: RADIUS.sm,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  sideBtnActive: {
+    borderColor: TRACKER_COLORS.feeding,
+    backgroundColor: '#FFF0E6',
+  },
+  sideLabel: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    color: TRACKER_COLORS.text,
+  },
+});
+
+/* ---- Edit / Action-sheet modal styles ---- */
+const editModalStyles = StyleSheet.create({
+  field: { marginTop: SPACING.sm, marginBottom: 4 },
+  fieldLabel: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '600',
+    color: TRACKER_COLORS.textSub,
+    marginBottom: 4,
+  },
+  input: {
+    backgroundColor: TRACKER_COLORS.bg,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 10,
+    fontSize: FONT_SIZE.sm,
+    color: TRACKER_COLORS.text,
+    borderWidth: 1,
+    borderColor: TRACKER_COLORS.border,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: RADIUS.sm,
+    backgroundColor: TRACKER_COLORS.bg,
+    alignItems: 'center',
+  },
+  cancelText: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: TRACKER_COLORS.textSub },
+  saveBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: RADIUS.sm,
+    backgroundColor: TRACKER_COLORS.feeding,
+    alignItems: 'center',
+  },
+  saveText: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: '#FFFFFF' },
+  actionRow: {
+    paddingVertical: 14,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.sm,
+    backgroundColor: TRACKER_COLORS.bg,
+    marginTop: 6,
+    alignItems: 'center',
+  },
+  actionRowDanger: {
+    backgroundColor: '#FFF0F0',
+  },
+  actionRowText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    color: TRACKER_COLORS.text,
+  },
+  actionRowTextDanger: {
+    color: TRACKER_COLORS.danger,
+  },
+  cancelRow: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  cancelRowText: {
+    fontSize: FONT_SIZE.sm,
+    color: TRACKER_COLORS.textLight,
+    fontWeight: '600',
   },
 });
 

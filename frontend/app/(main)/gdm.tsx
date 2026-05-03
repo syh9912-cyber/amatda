@@ -21,6 +21,10 @@ import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { pickImageFromLibrary, pickImageFromCamera } from '../../utils/imagePicker';
+import type { ImageSourcePropType } from 'react-native';
+
+const IC_BLOOD = require('../../assets/quick-blood.png') as ImageSourcePropType;
+const IC_EATING = require('../../assets/mascot-eating.png') as ImageSourcePropType;
 
 type MealType = 'fasting' | 'before_meal' | 'after_meal_1h' | 'after_meal_2h' | 'bedtime';
 type FoodMealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -532,7 +536,7 @@ export default function GdmScreen() {
 
             {!loading && glucoseDateKeys.length === 0 && (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyEmoji}>{'🩸'}</Text>
+                <Image source={IC_BLOOD} style={styles.emptyEmojiImg} resizeMode="contain" />
                 <Text style={styles.emptyTitle}>아직 기록이 없어요</Text>
                 <Text style={styles.emptySub}>+ 버튼으로 혈당을 기록해보세요</Text>
               </View>
@@ -574,7 +578,7 @@ export default function GdmScreen() {
           <>
             {!loading && foodDateKeys.length === 0 && (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyEmoji}>{'🍚'}</Text>
+                <Image source={IC_EATING} style={styles.emptyEmojiImg} resizeMode="contain" />
                 <Text style={styles.emptyTitle}>아직 식단 기록이 없어요</Text>
                 <Text style={styles.emptySub}>+ 버튼으로 먹은 음식과 시간을 남겨보세요</Text>
               </View>
@@ -1060,6 +1064,7 @@ const styles = StyleSheet.create({
   /* Empty */
   emptyWrap: { alignItems: 'center', paddingVertical: 60 },
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
+  emptyEmojiImg: { width: 64, height: 64, marginBottom: 12 },
   emptyTitle: { fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.text },
   emptySub: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 4 },
 

@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image,
 } from 'react-native';
+import type { ImageSourcePropType } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
 import { AdSlot } from '../../components/ads/AdSlot';
+
+const IC_CALENDAR = require('../../assets/contraction-clock.png') as ImageSourcePropType;
+const IC_THINKING = require('../../assets/mascot-thinking.png') as ImageSourcePropType;
+const IC_WAVING = require('../../assets/mascot-waving.png') as ImageSourcePropType;
+const IC_HAPPY = require('../../assets/mascot-happy.png') as ImageSourcePropType;
+const IC_COMMENT = require('../../assets/icon-comment.png') as ImageSourcePropType;
+const IC_PLAY = require('../../assets/play-activity.png') as ImageSourcePropType;
 
 const COLOR = {
   bg: '#F2F2F7',
@@ -34,10 +42,10 @@ interface CharacteristicData {
 }
 
 const DOMAIN_CONFIG = [
-  { key: 'physical' as const, emoji: '🏃', label: '신체 발달', color: COLOR.physical },
-  { key: 'cognitive' as const, emoji: '🧠', label: '인지 발달', color: COLOR.cognitive },
-  { key: 'language' as const, emoji: '💬', label: '언어 발달', color: COLOR.language },
-  { key: 'social' as const, emoji: '🤝', label: '사회/정서', color: COLOR.social },
+  { key: 'physical' as const, icon: IC_PLAY, label: '신체 발달', color: COLOR.physical },
+  { key: 'cognitive' as const, icon: IC_THINKING, label: '인지 발달', color: COLOR.cognitive },
+  { key: 'language' as const, icon: IC_COMMENT, label: '언어 발달', color: COLOR.language },
+  { key: 'social' as const, icon: IC_WAVING, label: '사회/정서', color: COLOR.social },
 ];
 
 export default function MonthlyCharacteristicScreen() {
@@ -98,7 +106,7 @@ export default function MonthlyCharacteristicScreen() {
         </View>
       ) : !data ? (
         <View style={s.loadingWrap}>
-          <Text style={s.emptyEmoji}>{'📅'}</Text>
+          <Image source={IC_CALENDAR} style={s.emptyEmojiImg} resizeMode="contain" />
           <Text style={s.loadingText}>발달 특징 데이터가 아직 준비되지 않았습니다</Text>
           <TouchableOpacity style={s.retryBtn} onPress={loadCharacteristic}>
             <Text style={s.retryText}>다시 시도</Text>
@@ -120,7 +128,7 @@ export default function MonthlyCharacteristicScreen() {
             return (
               <View key={domain.key} style={s.domainCard}>
                 <View style={s.domainHeader}>
-                  <Text style={s.domainEmoji}>{domain.emoji}</Text>
+                  <Image source={domain.icon} style={s.domainIconImg} resizeMode="contain" />
                   <Text style={[s.domainTitle, { color: domain.color }]}>{domain.label}</Text>
                 </View>
                 {items.map((item, idx) => (
@@ -136,7 +144,10 @@ export default function MonthlyCharacteristicScreen() {
           {/* Tips */}
           {data.tips && data.tips.length > 0 && (
             <View style={s.tipsCard}>
-              <Text style={s.tipsTitle}>{'💡 양육 팁'}</Text>
+              <View style={s.tipsTitleRow}>
+                <Image source={IC_THINKING} style={s.tipsTitleIconImg} resizeMode="contain" />
+                <Text style={s.tipsTitle}>{' 양육 팁'}</Text>
+              </View>
               {data.tips.map((tip, idx) => (
                 <View key={idx} style={s.bulletRow}>
                   <Text style={s.tipBullet}>{'•'}</Text>
@@ -149,9 +160,10 @@ export default function MonthlyCharacteristicScreen() {
           {/* Temperament-specific tip */}
           {temperamentTip ? (
             <View style={s.tempCard}>
-              <Text style={s.tempTitle}>
-                {'🎯 '}{childName}의 기질 맞춤 조언
-              </Text>
+              <View style={s.tempTitleRow}>
+                <Image source={IC_HAPPY} style={s.tempTitleIconImg} resizeMode="contain" />
+                <Text style={s.tempTitle}>{` ${childName}의 기질 맞춤 조언`}</Text>
+              </View>
               <Text style={s.tempBody}>{temperamentTip}</Text>
             </View>
           ) : null}
@@ -176,6 +188,7 @@ const s = StyleSheet.create({
   loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
   loadingText: { fontSize: 14, color: COLOR.textSub, marginTop: 12, textAlign: 'center' },
   emptyEmoji: { fontSize: 48, marginBottom: 8 },
+  emptyEmojiImg: { width: 64, height: 64, marginBottom: 8 },
   retryBtn: { backgroundColor: COLOR.accent, borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12, marginTop: 16 },
   retryText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
 
@@ -195,6 +208,7 @@ const s = StyleSheet.create({
   },
   domainHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   domainEmoji: { fontSize: 20 },
+  domainIconImg: { width: 26, height: 26 },
   domainTitle: { fontSize: 15, fontWeight: '700' },
 
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8, paddingLeft: 4 },
@@ -207,11 +221,15 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: '#FFE082',
   },
   tipsTitle: { fontSize: 15, fontWeight: '700', color: COLOR.text, marginBottom: 12 },
+  tipsTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  tipsTitleIconImg: { width: 18, height: 18 },
 
   tempCard: {
     backgroundColor: '#F3EEFF', borderRadius: 16, padding: 16, marginBottom: 12,
     borderWidth: 1, borderColor: '#D1C4E9',
   },
   tempTitle: { fontSize: 15, fontWeight: '700', color: '#5E35B1', marginBottom: 8 },
+  tempTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  tempTitleIconImg: { width: 18, height: 18 },
   tempBody: { fontSize: 14, color: COLOR.text, lineHeight: 21 },
 });

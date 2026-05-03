@@ -8,6 +8,14 @@ import { childApi, coachingApi, growthApi, pregnancyApi } from '../../services/a
 import { getQuestionByProgress, getQuestionCount } from '../../constants/dailyQuestions';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
+import type { ImageSourcePropType } from 'react-native';
+
+const IC_THINKING = require('../../assets/mascot-thinking.png') as ImageSourcePropType;
+const IC_CAMERA = require('../../assets/icon-camera.png') as ImageSourcePropType;
+const IC_REPORT = require('../../assets/quick-report.png') as ImageSourcePropType;
+const IC_DIARY = require('../../assets/child-diary.png') as ImageSourcePropType;
+const IC_REDFLAG = require('../../assets/icon-redflag.png') as ImageSourcePropType;
+const IC_HAPPY = require('../../assets/mascot-happy.png') as ImageSourcePropType;
 
 type TabKey = 'physical';
 
@@ -622,14 +630,17 @@ function PregnancyWeeklyDevelopment() {
 
                   {/* Mom tip */}
                   <View style={pwStyles.momTipBox}>
-                    <Text style={pwStyles.momTipIcon}>{'💡'}</Text>
+                    <Image source={IC_THINKING} style={pwStyles.momTipIconImg} resizeMode="contain" />
                     <Text style={pwStyles.momTipText}>{dev.momTip}</Text>
                   </View>
 
                   {/* User images for this week */}
                   {imgs.length > 0 && (
                     <View style={pwStyles.imgSection}>
-                      <Text style={pwStyles.imgTitle}>{'📷'} 이 주의 기록 사진</Text>
+                      <View style={pwStyles.imgTitleRow}>
+                        <Image source={IC_CAMERA} style={pwStyles.imgTitleIconImg} resizeMode="contain" />
+                        <Text style={pwStyles.imgTitle}>{' 이 주의 기록 사진'}</Text>
+                      </View>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={pwStyles.imgScroll}>
                         {imgs.map((img) => (
                           <Image
@@ -652,7 +663,7 @@ function PregnancyWeeklyDevelopment() {
       {/* Bottom hint */}
       <View style={pwStyles.bottomHint}>
         <Text style={pwStyles.bottomHintText}>
-          임신 기록에서 사진을 올리면 해당 주수에 자동으로 표시돼요
+          임신앨범에서 사진을 올리면 해당 주수에 자동으로 표시돼요
         </Text>
       </View>
 
@@ -709,7 +720,7 @@ function PregnancyWeeklyDevelopment() {
                     safetyResult.level === 'avoid' && { backgroundColor: '#FFEBEE', borderColor: '#E53935' },
                   ]}>
                     <Text style={pwStyles.safetyLevelBadge}>
-                      {safetyResult.level === 'safe' ? '✅ 안전' : safetyResult.level === 'caution' ? '⚠️ 주의' : '🚫 피하세요'}
+                      {safetyResult.level === 'safe' ? '안전' : safetyResult.level === 'caution' ? '주의' : '피하세요'}
                     </Text>
                     <Text style={pwStyles.safetyResultTitle}>{safetyResult.title}</Text>
                     <Text style={pwStyles.safetyResultSummary}>{safetyResult.summary}</Text>
@@ -902,6 +913,7 @@ const pwStyles = StyleSheet.create({
   momTipIcon: {
     fontSize: 16,
   },
+  momTipIconImg: { width: 18, height: 18 },
   momTipText: {
     flex: 1,
     fontSize: FONT_SIZE.sm,
@@ -917,6 +929,8 @@ const pwStyles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: SPACING.sm,
   },
+  imgTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
+  imgTitleIconImg: { width: 16, height: 16 },
   imgScroll: {
     marginBottom: 4,
   },
@@ -1219,7 +1233,7 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
             {loading && (
               <View style={gaStyles.loadingWrap}>
                 <Animated.View style={{ transform: [{ rotate: spinInterpolation }] }}>
-                  <Text style={gaStyles.loadingSpinner}>{'🔍'}</Text>
+                  <Image source={IC_REPORT} style={gaStyles.loadingSpinnerImg} resizeMode="contain" />
                 </Animated.View>
                 <Text style={gaStyles.loadingTitle}>
                   아이의 성장 데이터를 분석하고 있어요...
@@ -1242,7 +1256,7 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
             {/* Error State */}
             {!loading && error && (
               <View style={gaStyles.errorWrap}>
-                <Text style={gaStyles.errorIcon}>{'⚠️'}</Text>
+                <Image source={IC_REDFLAG} style={gaStyles.errorIconImg} resizeMode="contain" />
                 <Text style={gaStyles.errorText}>{error}</Text>
                 <TouchableOpacity
                   style={gaStyles.retryBtn}
@@ -1299,7 +1313,7 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
                           <Text style={gaStyles.metricComment}>{item.comment}</Text>
                           {/* Advice */}
                           <View style={gaStyles.adviceBox}>
-                            <Text style={gaStyles.adviceIcon}>{'💡'}</Text>
+                            <Image source={IC_THINKING} style={gaStyles.adviceIconImg} resizeMode="contain" />
                             <Text style={gaStyles.adviceText}>{item.advice}</Text>
                           </View>
                         </View>
@@ -1378,6 +1392,7 @@ const gaStyles = StyleSheet.create({
     fontSize: 48,
     marginBottom: SPACING.lg,
   },
+  loadingSpinnerImg: { width: 56, height: 56, marginBottom: SPACING.lg },
   loadingTitle: {
     fontSize: FONT_SIZE.md,
     fontWeight: '700',
@@ -1418,6 +1433,7 @@ const gaStyles = StyleSheet.create({
     fontSize: 48,
     marginBottom: SPACING.md,
   },
+  errorIconImg: { width: 56, height: 56, marginBottom: SPACING.md },
   errorText: {
     fontSize: FONT_SIZE.md,
     color: COLORS.textSecondary,
@@ -1520,6 +1536,7 @@ const gaStyles = StyleSheet.create({
   adviceIcon: {
     fontSize: 16,
   },
+  adviceIconImg: { width: 18, height: 18 },
   adviceText: {
     flex: 1,
     fontSize: FONT_SIZE.sm,
@@ -1781,7 +1798,7 @@ function PhysicalTab({ childName }: { childName: string }) {
                 </View>
               ) : (
                 <View style={styles.chartPlaceholder}>
-                  <Text style={styles.chartIcon}>{'📈'}</Text>
+                  <Image source={IC_REPORT} style={styles.chartIconImg} resizeMode="contain" />
                   <Text style={styles.chartPlaceholderText}>
                     키 또는 몸무게를 기록하면 차트가 표시됩니다
                   </Text>
@@ -2100,7 +2117,7 @@ function TraitTab() {
           </View>
         ) : insights.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>{'📋'}</Text>
+            <Image source={IC_DIARY} style={styles.emptyIconImg} resizeMode="contain" />
             <Text style={styles.emptyText}>
               7개 응답이 쌓이면 첫 기질 변화 인사이트가 생성됩니다
             </Text>
@@ -2466,7 +2483,7 @@ function MilestonesTab() {
               >
                 <TouchableOpacity onPress={() => handleToggle(item.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Text style={msStyles.checkIcon}>
-                    {done ? '✅' : '⬜'}
+                    {done ? '✓' : '○'}
                   </Text>
                 </TouchableOpacity>
                 <View style={msStyles.checkContent}>
@@ -2488,7 +2505,7 @@ function MilestonesTab() {
               </TouchableOpacity>
               {isExpanded && (
                 <View style={msStyles.descBox}>
-                  <Text style={msStyles.descIcon}>{'💡'}</Text>
+                  <Image source={IC_THINKING} style={msStyles.descIconImg} resizeMode="contain" />
                   <Text style={msStyles.descText}>{item.description}</Text>
                 </View>
               )}
@@ -2499,7 +2516,7 @@ function MilestonesTab() {
 
       {/* 발달 팁 카드 */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>{'💡 발달 촉진 팁'}</Text>
+        <Text style={styles.cardTitle}>{'발달 촉진 팁'}</Text>
         <View style={msStyles.tipCard}>
           <Text style={msStyles.tipTitle}>{'이 시기에 중요한 것'}</Text>
           <Text style={msStyles.tipBody}>
@@ -2673,6 +2690,7 @@ const msStyles = StyleSheet.create({
   descIcon: {
     fontSize: 16,
   },
+  descIconImg: { width: 18, height: 18 },
   descText: {
     flex: 1,
     fontSize: FONT_SIZE.sm,
@@ -2857,6 +2875,7 @@ const styles = StyleSheet.create({
     fontSize: 40,
     marginBottom: SPACING.sm,
   },
+  chartIconImg: { width: 48, height: 48, marginBottom: SPACING.sm },
   chartPlaceholderText: {
     fontSize: FONT_SIZE.sm,
     color: COLORS.textSecondary,
@@ -2998,6 +3017,7 @@ const styles = StyleSheet.create({
     fontSize: 40,
     marginBottom: SPACING.sm,
   },
+  emptyIconImg: { width: 48, height: 48, marginBottom: SPACING.sm },
   emptyText: {
     fontSize: FONT_SIZE.sm,
     color: COLORS.textSecondary,

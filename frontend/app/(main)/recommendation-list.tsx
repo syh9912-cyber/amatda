@@ -18,6 +18,10 @@ const CATEGORY_STYLE: Record<string, { emoji: string; color: string; bg: string 
   '생활습관': { emoji: '🌿', color: '#4ECDC4', bg: '#E8FAF8' },
   '학원':     { emoji: '🏫', color: '#7C83EC', bg: '#EEEDFC' },
   '놀이학습': { emoji: '🎨', color: '#FFB344', bg: '#FFF8E1' },
+  '임산부음식': { emoji: '🥗', color: '#FF8C5A', bg: '#FFF0E6' },
+  '임산부운동': { emoji: '🧘‍♀️', color: '#4ECDC4', bg: '#E8FAF8' },
+  '태교':       { emoji: '📖', color: '#7C83EC', bg: '#EEEDFC' },
+  '출산용품':   { emoji: '🧳', color: '#E91E63', bg: '#FCE4EC' },
 };
 
 /* ------------------------------------------------------------------ */
@@ -57,11 +61,19 @@ export default function RecommendationListScreen() {
     if (!selectedChild) return;
     setLoading(true);
     try {
-      const months = selectedChild.ageInfo?.months ?? 0;
-      const ageGroup = months <= 36 ? 'infant'
-        : months <= 83 ? 'toddler'
-        : months <= 119 ? 'elementary_low'
-        : 'elementary_high';
+      let ageGroup: string;
+      if (selectedChild.isPregnant) {
+        const week = selectedChild.pregnancyWeeks ?? 0;
+        ageGroup = week <= 13 ? 'pregnant_early'
+          : week <= 27 ? 'pregnant_mid'
+          : 'pregnant_late';
+      } else {
+        const months = selectedChild.ageInfo?.months ?? 0;
+        ageGroup = months <= 36 ? 'infant'
+          : months <= 83 ? 'toddler'
+          : months <= 119 ? 'elementary_low'
+          : 'elementary_high';
+      }
       const temperament = selectedChild.innateData?.dominantType ?? '안정형';
       const res = await recommendationApi.list(category, ageGroup, temperament);
       const data = res.data?.data as { items?: RecoItem[] } | undefined;
@@ -148,7 +160,7 @@ export default function RecommendationListScreen() {
                     {item.reasons.length > 0 && (
                       <View style={styles.section}>
                         <Text style={[styles.sectionLabel, { color: catStyle.color }]}>
-                          {'💡 알아두세요'}
+                          {'알아두세요'}
                         </Text>
                         {item.reasons.map((r, rIdx) => (
                           <View key={rIdx} style={styles.bulletRow}>
@@ -163,7 +175,7 @@ export default function RecommendationListScreen() {
                     {item.actions.length > 0 && (
                       <View style={styles.section}>
                         <Text style={[styles.sectionLabel, { color: catStyle.color }]}>
-                          {'📋 실천 방법'}
+                          {'실천 방법'}
                         </Text>
                         {item.actions.map((a, aIdx) => (
                           <View key={aIdx} style={styles.stepRow}>
@@ -180,7 +192,7 @@ export default function RecommendationListScreen() {
                     {item.personalNote ? (
                       <View style={[styles.noteBox, { backgroundColor: catStyle.bg }]}>
                         <Text style={[styles.noteLabel, { color: catStyle.color }]}>
-                          {'🎯 우리 아이 맞춤 조언'}
+                          {'우리 아이 맞춤 조언'}
                         </Text>
                         <Text style={styles.noteText}>{item.personalNote}</Text>
                       </View>

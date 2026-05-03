@@ -158,11 +158,11 @@ function ActivityCard({
           <Text style={styles.actName}>{activity.name}</Text>
           <View style={styles.actMeta}>
             <Text style={styles.actMetaText}>
-              {'⏱ '}{activity.duration}
+              {activity.duration}
             </Text>
             {activity.materials.length > 0 && (
               <Text style={styles.actMetaText}>
-                {'📦 '}{activity.materials.join(', ')}
+                {activity.materials.join(', ')}
               </Text>
             )}
           </View>
@@ -175,7 +175,7 @@ function ActivityCard({
       {/* Reason */}
       <View style={styles.reasonBox}>
         <Text style={styles.reasonLabel}>
-          {'💡 왜 좋을까요?'}
+          {'왜 좋을까요?'}
         </Text>
         <Text style={styles.reasonText}>
           {`${dominantLabel} 기질의 ${childName}에게 - ${activity.reason}`}
@@ -186,7 +186,7 @@ function ActivityCard({
       {expanded && (
         <View style={styles.stepsSection}>
           <Text style={styles.stepsTitle}>
-            {'📋 이렇게 해보세요'}
+            {'이렇게 해보세요'}
           </Text>
           {activity.steps.map((step, sIdx) => (
             <View key={sIdx} style={styles.stepRow}>
@@ -200,7 +200,7 @@ function ActivityCard({
           {activity.materials.length > 0 && (
             <View style={styles.materialsBox}>
               <Text style={styles.materialsLabel}>
-                {'📦 준비물'}
+                {'준비물'}
               </Text>
               {activity.materials.map((m, mIdx) => (
                 <Text key={mIdx} style={styles.materialItem}>

@@ -75,7 +75,7 @@ export default function TraitDetailScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{child.name}의 기질 분석</Text>
         <TouchableOpacity hitSlop={12} onPress={handleShare}>
-          <Text style={styles.shareIcon}>{'🔗'}</Text>
+          <Text style={styles.shareIcon}>{'공유'}</Text>
         </TouchableOpacity>
       </View>
       <Text style={styles.dateLabel}>분석일: {analysisDate}</Text>

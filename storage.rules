@@ -1,46 +1,64 @@
 rules_version = '2';
+
+// ─── 보안 정책 (closed, 2026-05-03~) ─────────────────────────────────────
+//
+// 모든 업로드(backend/src/routes/upload.ts, services/album.pdf.service.ts)는
+// firebaseStorageDownloadTokens 메타데이터를 추가하고 ?alt=media&token=<uuid>
+// 형식의 URL을 반환한다. 토큰 URL은 storage.rules와 무관하게 동작하므로
+// 모든 read 를 false 로 닫아도 정상 사용자 사진/PDF 노출은 영향 없음.
+//
+// 마이그레이션 검증:
+//   - backend/scripts/backfill-storage-tokens.cjs --apply  (Storage 메타 100%)
+//   - backend/scripts/rewrite-firestore-urls.cjs --apply   (Firestore URL 100%)
+//   - backend/scripts/audit-storage-urls.cjs               (양쪽 PASS 확인)
+//
+// 업로드(write)는 본인(userId 일치)만 가능, 사이즈 제한 적용. 클라가 직접
+// 업로드하지 않는 경로(예: growth_albums)는 write: if false (백엔드 Admin SDK 전용).
 service firebase.storage {
   match /b/{bucket}/o {
-    // 인증된 사용자만 업로드 가능, 50MB 제한
     match /pregnancy/{userId}/{allPaths=**} {
-      allow read: if true;
+      allow read: if false;  // 토큰 URL 만 허용
       allow write: if request.auth != null
                    && request.auth.uid == userId
                    && request.resource.size < 50 * 1024 * 1024;
     }
     match /profiles/{userId}/{allPaths=**} {
-      allow read: if true;
+      allow read: if false;
       allow write: if request.auth != null
                    && request.auth.uid == userId
                    && request.resource.size < 10 * 1024 * 1024;
     }
     match /momstagram/{userId}/{allPaths=**} {
-      allow read: if true;
+      allow read: if false;
       allow write: if request.auth != null
                    && request.auth.uid == userId
                    && request.resource.size < 50 * 1024 * 1024;
     }
     match /diary/{userId}/{allPaths=**} {
-      allow read: if true;
+      allow read: if false;
       allow write: if request.auth != null
                    && request.auth.uid == userId
                    && request.resource.size < 50 * 1024 * 1024;
     }
     match /album/{userId}/{allPaths=**} {
-      allow read: if true;
+      allow read: if false;
       allow write: if request.auth != null
                    && request.auth.uid == userId
                    && request.resource.size < 50 * 1024 * 1024;
     }
     match /lullaby/{userId}/{allPaths=**} {
-      allow read: if true;
+      allow read: if false;
       allow write: if request.auth != null
                    && request.auth.uid == userId
                    && request.resource.size < 10 * 1024 * 1024;
     }
-    // 기본: 서버(Admin SDK)만 접근
+    match /growth_albums/{userId}/{allPaths=**} {
+      allow read: if false;
+      allow write: if false; // 백엔드(Admin SDK)에서만 생성
+    }
+    // 기본 catch-all: 명시되지 않은 경로는 차단
     match /{allPaths=**} {
-      allow read: if true;
+      allow read: if false;
       allow write: if false;
     }
   }

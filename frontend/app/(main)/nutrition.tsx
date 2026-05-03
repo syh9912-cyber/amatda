@@ -227,7 +227,7 @@ function GoodFoodCard({
       {/* Reason */}
       <View style={styles.reasonBox}>
         <Text style={styles.reasonLabel}>
-          {'💡 추천 이유'}
+          {'추천 이유'}
         </Text>
         <Text style={styles.reasonText}>
           {`${dominantLabel} 기질의 ${childName}에게 - ${food.reason}`}
@@ -238,7 +238,7 @@ function GoodFoodCard({
       {food.caution && (
         <View style={styles.cautionBox}>
           <Text style={styles.cautionLabel}>
-            {'⚠️ 주의사항'}
+            {'주의사항'}
           </Text>
           <Text style={styles.cautionText}>{food.caution}</Text>
         </View>
@@ -252,8 +252,8 @@ function GoodFoodCard({
         >
           <Text style={[styles.recipeToggleText, { color: MINT }]}>
             {expanded
-              ? '📖 간단 레시피 접기'
-              : '📖 간단 레시피 보기'}
+              ? '간단 레시피 접기'
+              : '간단 레시피 보기'}
           </Text>
         </TouchableOpacity>
 
@@ -277,7 +277,7 @@ function GoodFoodCard({
         onPress={() => onYoutube(food.youtubeQuery)}
       >
         <Text style={styles.youtubeBtnText}>
-          {'▶️ 유튜브 검색'}
+          {'유튜브 검색'}
         </Text>
       </TouchableOpacity>
     </View>

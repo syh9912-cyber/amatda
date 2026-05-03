@@ -8,7 +8,13 @@ interface Props {
   label: string;
 }
 
+/** "(0~36개월) 탐구형 활동가" → "탐구형 활동가" */
+function stripAgePrefix(s: string): string {
+  return s.replace(/^\(\d+~?\d*개월\)\s*/, '').replace(/^\(초등\s*\d+~?\d*학년\)\s*/, '');
+}
+
 export function TraitTypeCard({ name, dominantType, label }: Props) {
+  const cleanLabel = stripAgePrefix(label || '');
   return (
     <LinearGradient
       colors={[TRAIT_COLORS.gradientStart, TRAIT_COLORS.gradientEnd]}
@@ -16,7 +22,7 @@ export function TraitTypeCard({ name, dominantType, label }: Props) {
     >
       <Text style={styles.subtitle}>{name}의 기질 유형</Text>
       <Text style={styles.title}>
-        {label || `${dominantType} 기질`}
+        {cleanLabel || `${dominantType} 기질`}
       </Text>
     </LinearGradient>
   );

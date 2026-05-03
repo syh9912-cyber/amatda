@@ -1,8 +1,9 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useRef } from 'react';
 import {
   View, Text, TouchableOpacity,
-  ActivityIndicator, Animated, ScrollView,
+  ActivityIndicator, ScrollView, Image,
 } from 'react-native';
+import type { ImageSourcePropType } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { childApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
@@ -17,6 +18,27 @@ import {
 import { calculateTemperament } from '../../constants/onboardingQuestions';
 import { AnalyzingScreen } from '../../components/onboarding/AnalyzingScreen';
 
+/**
+ * 5 기질 옵션 — 사용자가 질문에 가장 가까운 기질 1개를 선택.
+ * 선택한 기질이 question.temperamentTarget 과 일치하면 Likert 5,
+ * 다르면 Likert 1로 변환되어 기존 백엔드 점수 계산과 호환된다.
+ */
+type TraitKey = 'explorer' | 'active' | 'harmony' | 'analyst' | 'sensitive';
+
+const TRAIT_META: Record<TraitKey, { main: string; sub: string; icon: ImageSourcePropType }> = {
+  analyst:   { main: '관찰형', sub: '신중함', icon: require('../../assets/quick-report.png') },
+  explorer:  { main: '탐구형', sub: '적극적', icon: require('../../assets/quick-sprout.png') },
+  harmony:   { main: '안정형', sub: '의존적', icon: require('../../assets/icon-heart.png') },
+  active:    { main: '결단형', sub: '호기심', icon: require('../../assets/academy-sports.png') },
+  sensitive: { main: '감성형', sub: '공감적', icon: require('../../assets/preg-leaf.png') },
+};
+
+/** 기본 옵션 순서 — question.options 가 없을 때 fallback */
+const DEFAULT_TRAIT_ORDER: TraitKey[] = ['analyst', 'explorer', 'harmony', 'active', 'sensitive'];
+
+// LIKERT_OPTIONS는 기존 백엔드/계산 로직과의 호환을 위해 import만 유지
+void LIKERT_OPTIONS;
+
 export default function QuestionsScreen() {
   const { childId } = useLocalSearchParams<{ childId: string }>();
   const children = useChildStore((s) => s.children);
@@ -28,35 +50,35 @@ export default function QuestionsScreen() {
 
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
+  // 사용자가 각 질문에서 선택한 기질 (UI 복원용)
+  const [pickedTraits, setPickedTraits] = useState<Record<string, TraitKey>>({});
   const [analyzing, setAnalyzing] = useState(false);
-  const [fadeAnim] = useState(() => new Animated.Value(1));
 
   const total = questions.length;
   const current = questions[currentIdx];
   const progress = total > 0 ? (currentIdx + 1) / total : 0;
-
-  const animateTransition = useCallback((cb: () => void) => {
-    Animated.sequence([
-      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
-      Animated.timing(fadeAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
-    ]).start();
-    setTimeout(cb, 150);
-  }, [fadeAnim]);
+  const currentPicked = current ? pickedTraits[current.id] : undefined;
 
   const handleBack = () => {
     if (currentIdx > 0) {
-      animateTransition(() => setCurrentIdx((prev) => prev - 1));
+      setCurrentIdx((prev) => prev - 1);
     }
   };
 
-  const handleSelect = async (likertValue: number) => {
+  const handleSelect = (pickedTrait: TraitKey) => {
+    if (!current) return;
+    // 선택한 기질이 question.temperamentTarget과 일치하면 5 (강한 동의), 아니면 1
+    const likertValue = pickedTrait === current.temperamentTarget ? 5 : 1;
     const newAnswers = { ...answers, [current.id]: likertValue };
+    const newPicked = { ...pickedTraits, [current.id]: pickedTrait };
     setAnswers(newAnswers);
+    setPickedTraits(newPicked);
 
+    // 짧은 딜레이로 선택 피드백 보여주고 다음 문항으로 이동 (마지막이면 제출)
     if (currentIdx < total - 1) {
-      animateTransition(() => setCurrentIdx((prev) => prev + 1));
+      setTimeout(() => setCurrentIdx((prev) => prev + 1), 220);
     } else {
-      await submitAnswers(newAnswers);
+      setTimeout(() => submitAnswers(newAnswers), 220);
     }
   };
 
@@ -120,16 +142,26 @@ export default function QuestionsScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ title: '성향 질문', headerShown: false }} />
 
-      {/* Progress bar */}
-      <View style={styles.progressWrap}>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+      {/* Top row: back arrow + progress */}
+      <View style={styles.topRow}>
+        <TouchableOpacity
+          style={[styles.topBackBtn, currentIdx === 0 && styles.topBackBtnHidden]}
+          onPress={handleBack}
+          disabled={currentIdx === 0}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.topBackArrow}>{'‹'}</Text>
+        </TouchableOpacity>
+        <View style={styles.progressWrap}>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+          </View>
+          <Text style={styles.progressText}>{currentIdx + 1} / {total}</Text>
         </View>
-        <Text style={styles.progressText}>{currentIdx + 1} / {total}</Text>
       </View>
 
       {/* Question */}
-      <Animated.View style={[styles.questionArea, { opacity: fadeAnim }]}>
+      <View style={styles.questionArea}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.questionScroll}
@@ -137,47 +169,48 @@ export default function QuestionsScreen() {
           {current.category ? (
             <Text style={styles.categoryLabel}>{current.category}</Text>
           ) : null}
-          <Text style={styles.qNumber}>Q{currentIdx + 1}</Text>
           <Text style={styles.qText}>{current.question}</Text>
 
           <View style={styles.optionsWrap}>
-            {LIKERT_OPTIONS.map((opt) => {
-              const selected = answers[current.id] === opt.value;
+            {(current.options
+              ? current.options.map((o) => ({ trait: o.trait as TraitKey, behavior: o.text }))
+              : DEFAULT_TRAIT_ORDER.map((t) => ({ trait: t, behavior: '' }))
+            ).map((opt) => {
+              const meta = TRAIT_META[opt.trait];
+              const selected = currentPicked === opt.trait;
+              // 메인: 시나리오 행동 / 서브: 기질 태그 (예: 관찰형 · 신중함)
+              const mainText = opt.behavior || meta.main;
+              const subText = opt.behavior ? `${meta.main} · ${meta.sub}` : meta.sub;
               return (
                 <TouchableOpacity
-                  key={opt.value}
-                  style={[styles.optionBtn, selected && styles.optionSelected]}
-                  onPress={() => handleSelect(opt.value)}
-                  activeOpacity={0.7}
+                  key={opt.trait}
+                  style={[styles.optionCard, selected && styles.optionCardSelected]}
+                  onPress={() => handleSelect(opt.trait)}
+                  activeOpacity={0.85}
                 >
-                  <View style={[styles.optionCircle, selected && styles.circleSelected]}>
-                    <Text style={[styles.optionCircleText, selected && styles.circleTextSelected]}>
-                      {opt.value}
-                    </Text>
+                  <View style={[styles.optionEmojiWrap, selected && styles.optionEmojiWrapSelected]}>
+                    <Image source={meta.icon} style={styles.optionIcon} resizeMode="contain" />
                   </View>
-                  <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
-                    {opt.label}
-                  </Text>
+                  <View style={styles.optionTextCol}>
+                    <Text style={styles.optionMain} numberOfLines={2}>{mainText}</Text>
+                    <Text style={styles.optionSub}>{subText}</Text>
+                  </View>
+                  <View style={[styles.optionCheck, selected && styles.optionCheckSelected]}>
+                    {selected ? <Text style={styles.optionCheckMark}>{'✓'}</Text> : null}
+                  </View>
                 </TouchableOpacity>
               );
             })}
           </View>
         </ScrollView>
-      </Animated.View>
+      </View>
 
-      {/* Bottom row: back + skip */}
-      <View style={styles.bottomRow}>
-        <TouchableOpacity
-          style={[styles.backBtn, currentIdx === 0 && styles.backBtnHidden]}
-          onPress={handleBack}
-          disabled={currentIdx === 0}
-        >
-          <Text style={styles.backBtnText}>이전</Text>
-        </TouchableOpacity>
-
+      {/* 건너뛰기 (단, 다음으로 버튼 없음 — 선택 시 자동 이동) */}
+      <View style={styles.ctaWrap}>
         <TouchableOpacity
           style={styles.skipLink}
           onPress={() => router.replace('/(main)/home')}
+          activeOpacity={0.7}
         >
           <Text style={styles.skipText}>건너뛰고 홈으로</Text>
         </TouchableOpacity>

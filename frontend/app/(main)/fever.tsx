@@ -13,18 +13,31 @@ import {
   Modal,
   KeyboardAvoidingView,
   Animated,
+  Image,
 } from 'react-native';
+import type { ImageSourcePropType } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+// DateTimePicker는 FastTimeInput 도입(숫자 키패드)으로 미사용 — import 제거
 import { sosApi } from '../../services/api';
 import {
   scheduleFeverRecheckReminder,
   cancelFeverRecheckReminder,
 } from '../../services/pushNotifications';
 import { useChildStore } from '../../stores/childStore';
+import { useFeverStore } from '../../stores/feverStore';
 import { AdSlot } from '../../components/ads/AdSlot';
+
+const IC_THERMOMETER = require('../../assets/quick-thermometer.png') as ImageSourcePropType;
+const IC_PILL = require('../../assets/quick-pill.png') as ImageSourcePropType;
+const IC_SYRINGE = require('../../assets/quick-syringe.png') as ImageSourcePropType;
+const IC_DIARY = require('../../assets/child-diary.png') as ImageSourcePropType;
+const IC_BELL = require('../../assets/icon-bell.png') as ImageSourcePropType;
+const IC_HOSPITAL = require('../../assets/icon-hospital.png') as ImageSourcePropType;
+const IC_REDFLAG = require('../../assets/icon-redflag.png') as ImageSourcePropType;
+const IC_HAPPY = require('../../assets/mascot-happy.png') as ImageSourcePropType;
+const IC_WORRIED = require('../../assets/mascot-worried.png') as ImageSourcePropType;
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -81,15 +94,15 @@ interface MedLogEntry {
 interface MedicineBrand {
   brandName: string;
   type: MedicineType;
-  emoji: string;
+  icon: ImageSourcePropType;
 }
 
 const MEDICINE_BRANDS: MedicineBrand[] = [
-  { brandName: '타이레놀',   type: 'acetaminophen', emoji: '💊' },
-  { brandName: '챔프',       type: 'acetaminophen', emoji: '💊' },
-  { brandName: '부루펜',     type: 'ibuprofen',     emoji: '💉' },
-  { brandName: '맥시부펜',   type: 'ibuprofen',     emoji: '💉' },
-  { brandName: '기타',       type: 'other',         emoji: '🧴' },
+  { brandName: '타이레놀',   type: 'acetaminophen', icon: IC_PILL },
+  { brandName: '챔프',       type: 'acetaminophen', icon: IC_PILL },
+  { brandName: '부루펜',     type: 'ibuprofen',     icon: IC_SYRINGE },
+  { brandName: '맥시부펜',   type: 'ibuprofen',     icon: IC_SYRINGE },
+  { brandName: '기타',       type: 'other',         icon: IC_PILL },
 ];
 
 const MED_INTERVAL_HR: Record<MedicineType, { min: number; recommended: number }> = {
@@ -118,49 +131,49 @@ const FEVER_LEVEL: Record<FeverLevel, {
   color: string;
   bgColor: string;
   label: string;
-  emoji: string;
+  icon: ImageSourcePropType;
   advice: string;
 }> = {
   normal: {
     color: '#34C759',
     bgColor: '#F0FFF4',
     label: '정상',
-    emoji: '😊',
+    icon: IC_HAPPY,
     advice: '아이의 체온이 정상 범위입니다. 편안하게 지켜봐주세요.',
   },
   mild: {
     color: '#FFD76E',
     bgColor: '#FFFDF0',
     label: '미열',
-    emoji: '🤒',
+    icon: IC_WORRIED,
     advice: '미열이 있어요. 옷을 가볍게 입히고 수분 섭취를 해주세요. 미지근한 물수건으로 닦아주세요.',
   },
   moderate: {
     color: '#FF9500',
     bgColor: '#FFF8F0',
     label: '중등도 발열',
-    emoji: '😰',
+    icon: IC_WORRIED,
     advice: '체온이 높아요. 해열제 복용을 고려하세요. 30분 후 다시 체온을 확인해주세요.',
   },
   high: {
     color: '#FF3B30',
     bgColor: '#FFF0F0',
     label: '고열',
-    emoji: '🥵',
+    icon: IC_THERMOMETER,
     advice: '고열입니다. 해열제를 복용시키고, 30분 후에도 열이 내리지 않으면 소아과를 방문하세요.',
   },
   danger: {
     color: '#D32F2F',
     bgColor: '#FFEBEE',
     label: '즉시 병원 진료',
-    emoji: '🏥',
+    icon: IC_HOSPITAL,
     advice: '위험한 고열 수준입니다. 해열제 효과를 기다리지 말고 지금 바로 소아과·응급실로 가세요. 경련·의식 저하가 있으면 즉시 119에 전화하세요.',
   },
   emergency: {
     color: '#B71C1C',
     bgColor: '#FFCDD2',
     label: '응급 — 119 전화',
-    emoji: '🚨',
+    icon: IC_REDFLAG,
     advice: '생명을 위협할 수 있는 초고열입니다. 지금 바로 119에 전화하거나 응급실로 가세요. 이동 중에도 옷을 얇게 하고 미지근한 물로 몸을 닦아 체온을 낮춰주세요.',
   },
 };
@@ -472,6 +485,122 @@ function isHistoryEntry(v: unknown): v is HistoryEntry {
 }
 
 /* ------------------------------------------------------------------ */
+/* FastTimeInput — 숫자 키패드 기반 측정 시각 입력                      */
+/* 오전/오후 토글 + 시(1-12) + 분(00-59) + '지금' 버튼                  */
+/* DateTimePicker(다이얼) 대비 새벽 입력시 압도적으로 빠름               */
+/* ------------------------------------------------------------------ */
+
+function FastTimeInput({
+  value,
+  onChange,
+}: {
+  value: Date;
+  onChange: (d: Date) => void;
+}) {
+  const h24 = value.getHours();
+  const min = value.getMinutes();
+  const isPM = h24 >= 12;
+  const h12 = h24 === 0 ? 12 : h24 > 12 ? h24 - 12 : h24;
+
+  const [hourText, setHourText] = useState(String(h12));
+  const [minText, setMinText] = useState(String(min).padStart(2, '0'));
+  const [pm, setPm] = useState(isPM);
+
+  // 외부 value가 바뀌면 입력 동기화 ('지금' 버튼 등)
+  useEffect(() => {
+    const _h24 = value.getHours();
+    const _min = value.getMinutes();
+    const _isPM = _h24 >= 12;
+    const _h12 = _h24 === 0 ? 12 : _h24 > 12 ? _h24 - 12 : _h24;
+    setHourText(String(_h12));
+    setMinText(String(_min).padStart(2, '0'));
+    setPm(_isPM);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value.getTime()]);
+
+  const commit = (newHourText: string, newMinText: string, newPm: boolean) => {
+    const hh = Math.max(1, Math.min(12, parseInt(newHourText, 10) || 12));
+    const mm = Math.max(0, Math.min(59, parseInt(newMinText, 10) || 0));
+    const h24New = newPm ? (hh === 12 ? 12 : hh + 12) : (hh === 12 ? 0 : hh);
+    const d = new Date(value);
+    d.setHours(h24New, mm, 0, 0);
+    // 미래 시각은 거부 (현재 이후 측정은 의미 없음)
+    if (d.getTime() > Date.now()) {
+      const now = new Date();
+      onChange(now);
+      return;
+    }
+    onChange(d);
+  };
+
+  return (
+    <View style={styles.fastTimeRow}>
+      <Text style={styles.fastTimeLabel}>📅 측정 시각</Text>
+      <View style={styles.fastTimeInputs}>
+        {/* 오전/오후 토글 */}
+        <View style={styles.ampmGroup}>
+          <TouchableOpacity
+            style={[styles.ampmBtn, !pm && styles.ampmBtnActive]}
+            onPress={() => { setPm(false); commit(hourText, minText, false); }}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.ampmText, !pm && styles.ampmTextActive]}>오전</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.ampmBtn, pm && styles.ampmBtnActive]}
+            onPress={() => { setPm(true); commit(hourText, minText, true); }}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.ampmText, pm && styles.ampmTextActive]}>오후</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 시 입력 */}
+        <TextInput
+          style={styles.timeField}
+          value={hourText}
+          onChangeText={(t) => {
+            const cleaned = t.replace(/[^0-9]/g, '').slice(0, 2);
+            setHourText(cleaned);
+          }}
+          onEndEditing={() => commit(hourText, minText, pm)}
+          keyboardType="number-pad"
+          maxLength={2}
+          placeholder="시"
+          placeholderTextColor={COLOR.textLight}
+          returnKeyType="done"
+        />
+        <Text style={styles.timeColon}>:</Text>
+        {/* 분 입력 */}
+        <TextInput
+          style={styles.timeField}
+          value={minText}
+          onChangeText={(t) => {
+            const cleaned = t.replace(/[^0-9]/g, '').slice(0, 2);
+            setMinText(cleaned);
+          }}
+          onEndEditing={() => commit(hourText, minText, pm)}
+          keyboardType="number-pad"
+          maxLength={2}
+          placeholder="분"
+          placeholderTextColor={COLOR.textLight}
+          returnKeyType="done"
+        />
+
+        {/* '지금' 버튼 */}
+        <TouchableOpacity
+          style={styles.nowBtn}
+          onPress={() => onChange(new Date())}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.nowBtnText}>지금</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Main Screen                                                         */
 /* ------------------------------------------------------------------ */
 
@@ -494,10 +623,12 @@ export default function FeverScreen() {
   const [inputWeight, setInputWeight] = useState('');
   // 측정 시각 (기본 = 현재, 과거 시점도 기록 가능)
   const [measureTime, setMeasureTime] = useState<Date>(new Date());
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  // showTimePicker: FastTimeInput 도입으로 더 이상 모달 픽커 미사용 — 상태 제거
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [showAllHistory, setShowAllHistory] = useState(false);
+  const [showAllMedLog, setShowAllMedLog] = useState(false);
 
   /* ---- 해열제 복용 기록 (열나요 스타일) ---- */
   const [medLog, setMedLog] = useState<MedLogEntry[]>([]);
@@ -636,6 +767,9 @@ export default function FeverScreen() {
     setHistory(updated);
     saveHistory(selectedChild.id, updated);
 
+    // home의 useFeverAlert 재실행 유도 (스택 keep으로 useEffect 자동 재실행 안 됨)
+    useFeverStore.getState().bump();
+
     // Auto-load medicine info if fever detected
     if (level !== 'normal') {
       loadMedicine(raw);
@@ -648,7 +782,7 @@ export default function FeverScreen() {
     if (adjusted >= 38.0) {
       scheduleFeverRecheckReminder(selectedChild.id, selectedChild.name).then(() => {
         Alert.alert(
-          '🌡 1시간 뒤 재측정 알림 설정',
+          '1시간 뒤 재측정 알림 설정',
           '고열이 감지되었습니다. 1시간 뒤에 다시 재실 수 있도록 알림을 맞춰드렸어요. 걱정 마세요!',
         );
       }).catch(() => {});
@@ -729,6 +863,10 @@ export default function FeverScreen() {
             } catch {
               // silently fail
             }
+            // home의 펄스 알림 즉시 해제 (저장된 fever_history 0 → useFeverAlert false)
+            useFeverStore.getState().bump();
+            // 재측정 알림도 함께 취소
+            cancelFeverRecheckReminder(selectedChild.id).catch(() => {});
           },
         },
       ],
@@ -769,7 +907,10 @@ export default function FeverScreen() {
       >
         {/* == Title Bar == */}
         <View style={styles.titleBar}>
-          <Text style={styles.screenTitle}>{'🌡️'} 열나열나</Text>
+          <View style={styles.titleRow}>
+            <Image source={IC_THERMOMETER} style={styles.titleIconImg} resizeMode="contain" />
+            <Text style={styles.screenTitle}>열나열나</Text>
+          </View>
           {selectedChild && (
             <Text style={styles.screenSubtitle}>{selectedChild.name}의 체온 케어</Text>
           )}
@@ -800,7 +941,7 @@ export default function FeverScreen() {
                     });
                   }}
                 >
-                  <Text style={styles.actionEmergencyText}>🚨 119 응급 전화</Text>
+                  <Text style={styles.actionEmergencyText}>119 응급 전화</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -816,32 +957,8 @@ export default function FeverScreen() {
             체온을 입력하고 측정 부위를 선택해주세요
           </Text>
 
-          {/* 측정 시각 selector */}
-          <TouchableOpacity
-            style={styles.measureTimeRow}
-            onPress={() => setShowTimePicker(true)}
-            activeOpacity={0.8}
-            hitSlop={6}
-          >
-            <Text style={styles.measureTimeLabel}>📅 측정 시각</Text>
-            <Text style={styles.measureTimeValue}>
-              {formatMeasureTime(measureTime)}
-            </Text>
-            <Text style={styles.measureTimeArrow}>{'>'}</Text>
-          </TouchableOpacity>
-          {showTimePicker && (
-            <DateTimePicker
-              value={measureTime}
-              mode={Platform.OS === 'ios' ? 'datetime' : 'time'}
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              maximumDate={new Date()}
-              onChange={(event: DateTimePickerEvent, date?: Date) => {
-                if (Platform.OS !== 'ios') setShowTimePicker(false);
-                if (event.type === 'dismissed' || !date) return;
-                setMeasureTime(date);
-              }}
-            />
-          )}
+          {/* 측정 시각 — 숫자 키패드 + 오전/오후 토글 + '지금' 버튼 */}
+          <FastTimeInput value={measureTime} onChange={setMeasureTime} />
 
           {/* Big temperature input */}
           <TouchableOpacity
@@ -923,7 +1040,7 @@ export default function FeverScreen() {
               },
             ]}
           >
-            <Text style={styles.levelEmoji}>{levelConfig.emoji}</Text>
+            <Image source={levelConfig.icon} style={styles.levelIconImg} resizeMode="contain" />
             <Text style={[styles.levelLabel, { color: levelConfig.color }]}>
               {levelConfig.label}
             </Text>
@@ -944,7 +1061,7 @@ export default function FeverScreen() {
                   });
                 }}
               >
-                <Text style={styles.emergencyCallButtonText}>🚨 119에 전화하기</Text>
+                <Text style={styles.emergencyCallButtonText}>119에 전화하기</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -955,7 +1072,10 @@ export default function FeverScreen() {
         {/* ============================================ */}
         {showMedicine && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{'💊'} 해열제 복용량</Text>
+            <View style={styles.sectionTitleRow}>
+              <Image source={IC_PILL} style={styles.sectionTitleIconImg} resizeMode="contain" />
+              <Text style={styles.sectionTitle}>해열제 복용량</Text>
+            </View>
             <Text style={styles.sectionDesc}>
               아이 체중 기준 계산된 복용량입니다
             </Text>
@@ -972,6 +1092,8 @@ export default function FeverScreen() {
                 onSchedule={scheduleNotification}
                 inputWeight={inputWeight}
                 onChangeWeight={setInputWeight}
+                medLog={medLog}
+                medNow={medNow}
               />
             ) : (
               <Text style={styles.noDataText}>
@@ -985,7 +1107,10 @@ export default function FeverScreen() {
         {/* Section 3.5: 해열제 복용 기록 (열나요 스타일)   */}
         {/* ============================================ */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{'📝'} 해열제 복용 기록</Text>
+          <View style={styles.sectionTitleRow}>
+            <Image source={IC_DIARY} style={styles.sectionTitleIconImg} resizeMode="contain" />
+            <Text style={styles.sectionTitle}>해열제 복용 기록</Text>
+          </View>
           <Text style={styles.sectionDesc}>
             먹인 해열제와 용량을 기록하면 다음 복용 가능 시간을 자동으로 알려드려요
           </Text>
@@ -1004,75 +1129,60 @@ export default function FeverScreen() {
                 }}
                 activeOpacity={0.7}
               >
-                <Text style={medLogStyles.brandEmoji}>{b.emoji}</Text>
+                <Image source={b.icon} style={medLogStyles.brandIconImg} resizeMode="contain" />
                 <Text style={medLogStyles.brandLabel}>{b.brandName}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* 다음 복용 가능 시간 안내 */}
+          {/* 다음 행동 카드 — 가장 빠른 다음 복용 1건만 큰 글씨로 */}
           {medLog.length > 0 && (() => {
             const last = medLog[0];
-            // 같은 종류 약을 다시 먹을 때 가능 시각
             const nextSame = calcNextDoseAt(medLog, last.type);
-            // 교차 (다른 종류) 가능 시각
             const otherType: MedicineType = last.type === 'acetaminophen' ? 'ibuprofen' : 'acetaminophen';
-            const nextOther = calcNextDoseAt(medLog, otherType);
+            const nextOther = last.type !== 'other' ? calcNextDoseAt(medLog, otherType) : null;
 
-            const sameDeltaMs = nextSame ? nextSame.nextAt - medNow : 0;
-            const otherDeltaMs = nextOther ? nextOther.nextAt - medNow : 0;
-            const sameOk = sameDeltaMs <= 0;
-            const otherOk = otherDeltaMs <= 0;
+            // 가장 빠른 (= 가장 작은 nextAt) 다음 복용을 1건만 선택
+            const candidates: Array<{ at: number; type: MedicineType; isAlt: boolean }> = [];
+            if (nextSame) candidates.push({ at: nextSame.nextAt, type: last.type, isAlt: false });
+            if (nextOther) candidates.push({ at: nextOther.nextAt, type: otherType, isAlt: true });
+            if (candidates.length === 0) return null;
+            candidates.sort((a, b) => a.at - b.at);
+            const next = candidates[0];
+
+            const deltaMs = next.at - medNow;
+            const ok = deltaMs <= 0;
+            const target = new Date(next.at);
+            const hh = String(target.getHours()).padStart(2, '0');
+            const mm = String(target.getMinutes()).padStart(2, '0');
+            const typeLabel =
+              next.type === 'acetaminophen' ? '타이레놀류' :
+              next.type === 'ibuprofen' ? '부루펜류' : '해열제';
 
             return (
-              <View style={medLogStyles.statusCard}>
-                <View style={medLogStyles.statusRow}>
-                  <Text style={medLogStyles.statusLabel}>
-                    {'마지막 복용'}
-                  </Text>
-                  <Text style={medLogStyles.statusValue}>
-                    {last.brandName} {last.doseMl}ml · {formatRelative(medNow - last.timestamp)}
-                  </Text>
-                </View>
-
-                {/* 같은 종류 약 다음 복용 가능 */}
-                {nextSame && (
-                  <View style={medLogStyles.statusRow}>
-                    <Text style={medLogStyles.statusLabel}>
-                      {last.brandName} 다음 복용
-                    </Text>
-                    <Text style={[
-                      medLogStyles.statusValue,
-                      { color: sameOk ? '#2E7D32' : COLOR.accent, fontWeight: '800' },
-                    ]}>
-                      {sameOk ? '지금 복용 가능' : formatRelative(sameDeltaMs)}
-                    </Text>
-                  </View>
-                )}
-
-                {/* 교차 복용 가능 */}
-                {nextOther && last.type !== 'other' && (
-                  <View style={medLogStyles.statusRow}>
-                    <Text style={medLogStyles.statusLabel}>
-                      {`${otherType === 'acetaminophen' ? '타이레놀류' : '부루펜류'} 교차`}
-                    </Text>
-                    <Text style={[
-                      medLogStyles.statusValue,
-                      { color: otherOk ? '#2E7D32' : COLOR.accent, fontWeight: '800' },
-                    ]}>
-                      {otherOk ? '지금 교차 복용 가능' : formatRelative(otherDeltaMs)}
-                    </Text>
-                  </View>
-                )}
+              <View style={medLogStyles.nextDoseCard}>
+                <Text style={medLogStyles.nextDoseLabel}>
+                  {ok ? '지금 복용 가능' : '다음 해열제'}
+                </Text>
+                <Text style={medLogStyles.nextDoseHeadline}>
+                  {ok
+                    ? `${typeLabel}${next.isAlt ? ' (교차)' : ''} 지금 OK`
+                    : `${hh}:${mm}에 ${typeLabel}${next.isAlt ? ' (교차)' : ''}`}
+                </Text>
+                <Text style={medLogStyles.nextDoseSub}>
+                  {ok
+                    ? `마지막: ${last.brandName} ${last.doseMl}ml · ${formatRelative(medNow - last.timestamp)}`
+                    : `약 ${formatRelative(deltaMs)} 후`}
+                </Text>
               </View>
             );
           })()}
 
-          {/* 복용 이력 (최근 5건) */}
+          {/* 복용 이력 — 최근 1건 + 전체 보기 토글 */}
           {medLog.length > 0 && (
             <View style={medLogStyles.logList}>
-              <Text style={medLogStyles.logListTitle}>{'복용 이력 (최근 5건)'}</Text>
-              {medLog.slice(0, 5).map((entry) => (
+              <Text style={medLogStyles.logListTitle}>{'복용 이력'}</Text>
+              {(showAllMedLog ? medLog.slice(0, 5) : medLog.slice(0, 1)).map((entry) => (
                 <View key={entry.id} style={medLogStyles.logRow}>
                   <Text style={medLogStyles.logTime}>
                     {formatTime(entry.timestamp)}
@@ -1087,6 +1197,19 @@ export default function FeverScreen() {
                   </TouchableOpacity>
                 </View>
               ))}
+              {medLog.length > 1 && (
+                <TouchableOpacity
+                  onPress={() => setShowAllMedLog((v) => !v)}
+                  style={medLogStyles.toggleBtn}
+                  hitSlop={6}
+                >
+                  <Text style={medLogStyles.toggleBtnText}>
+                    {showAllMedLog
+                      ? '접기'
+                      : `전체 보기 (${Math.min(medLog.length, 5)}건)`}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
@@ -1103,7 +1226,10 @@ export default function FeverScreen() {
         {historyLoaded && history.length > 0 && (
           <View style={styles.section}>
             <View style={styles.historyHeader}>
-              <Text style={styles.sectionTitle}>{'📋'} 체온 기록</Text>
+              <View style={styles.sectionTitleRow}>
+                <Image source={IC_DIARY} style={styles.sectionTitleIconImg} resizeMode="contain" />
+                <Text style={styles.sectionTitle}>체온 기록</Text>
+              </View>
               <TouchableOpacity
                 onPress={clearHistory}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -1112,14 +1238,14 @@ export default function FeverScreen() {
               </TouchableOpacity>
             </View>
 
-            {history.map((entry, idx) => {
+            {(showAllHistory ? history : history.slice(0, 1)).map((entry, idx, arr) => {
               const cfg = FEVER_LEVEL[entry.level];
               return (
                 <View
                   key={`hist-${entry.timestamp}-${idx}`}
                   style={[
                     styles.historyRow,
-                    idx < history.length - 1 && styles.historyRowBorder,
+                    idx < arr.length - 1 && styles.historyRowBorder,
                   ]}
                 >
                   <View
@@ -1145,6 +1271,17 @@ export default function FeverScreen() {
                 </View>
               );
             })}
+            {history.length > 1 && (
+              <TouchableOpacity
+                onPress={() => setShowAllHistory((v) => !v)}
+                style={styles.historyToggleBtn}
+                hitSlop={6}
+              >
+                <Text style={styles.historyToggleBtnText}>
+                  {showAllHistory ? '접기' : `전체 보기 (${history.length}건)`}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -1170,9 +1307,14 @@ export default function FeverScreen() {
             onPress={() => setMedModalVisible(false)}
           />
           <View style={medLogStyles.modalCard}>
-            <Text style={medLogStyles.modalTitle}>
-              {medModalBrand?.emoji} {medModalBrand?.brandName ?? '해열제'} 기록
-            </Text>
+            <View style={medLogStyles.modalTitleRow}>
+              {medModalBrand?.icon ? (
+                <Image source={medModalBrand.icon} style={medLogStyles.modalTitleIconImg} resizeMode="contain" />
+              ) : null}
+              <Text style={medLogStyles.modalTitle}>
+                {medModalBrand?.brandName ?? '해열제'} 기록
+              </Text>
+            </View>
             <Text style={medLogStyles.modalSub}>
               지금 ({formatTime(medNow)}) 복용으로 기록됩니다
             </Text>
@@ -1189,12 +1331,15 @@ export default function FeverScreen() {
                   ]}
                   onPress={() => setMedModalBrand(b)}
                 >
-                  <Text style={[
-                    medLogStyles.modalChipText,
-                    medModalBrand?.brandName === b.brandName && medLogStyles.modalChipTextActive,
-                  ]}>
-                    {b.emoji} {b.brandName}
-                  </Text>
+                  <View style={medLogStyles.modalChipInner}>
+                    <Image source={b.icon} style={medLogStyles.modalChipIconImg} resizeMode="contain" />
+                    <Text style={[
+                      medLogStyles.modalChipText,
+                      medModalBrand?.brandName === b.brandName && medLogStyles.modalChipTextActive,
+                    ]}>
+                      {b.brandName}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>
@@ -1273,11 +1418,15 @@ function MedicineSection({
   onSchedule,
   inputWeight,
   onChangeWeight,
+  medLog,
+  medNow,
 }: {
   dose: MedicineDose;
   onSchedule: (minutes: number, label: string) => void;
   inputWeight: string;
   onChangeWeight: (v: string) => void;
+  medLog: MedLogEntry[];
+  medNow: number;
 }) {
   const parsedWeight = parseFloat(inputWeight);
   const useInput = !isNaN(parsedWeight) && parsedWeight > 0 && parsedWeight < 100;
@@ -1298,6 +1447,79 @@ function MedicineSection({
   const ibuprofenDoseMg = recalc?.ibuprofen.doseMg ?? dose.ibuprofen.doseMg;
   const ibuprofenSyrup = recalc?.ibuprofen.syrupMl ?? dose.ibuprofen.syrupMl;
 
+  // 추천 약 결정: 가장 빠르게 복용 가능한 종류 (없으면 아세트아미노펜 디폴트)
+  const recommendation = (() => {
+    if (medLog.length === 0) {
+      return { type: 'acetaminophen' as MedicineType, available: true, deltaMs: 0 };
+    }
+    const last = medLog[0];
+    const sameNext = calcNextDoseAt(medLog, last.type);
+    const otherType: MedicineType = last.type === 'acetaminophen' ? 'ibuprofen' : 'acetaminophen';
+    const otherNext = last.type !== 'other' ? calcNextDoseAt(medLog, otherType) : null;
+    const sameAt = sameNext ? sameNext.nextAt : Infinity;
+    const otherAt = otherNext ? otherNext.nextAt : Infinity;
+    if (sameAt === Infinity && otherAt === Infinity) {
+      return { type: 'acetaminophen' as MedicineType, available: true, deltaMs: 0 };
+    }
+    const pickType = sameAt <= otherAt ? last.type : otherType;
+    const pickAt = Math.min(sameAt, otherAt);
+    const delta = pickAt - medNow;
+    return { type: pickType, available: delta <= 0, deltaMs: Math.max(0, delta) };
+  })();
+
+  // 4-약 그리드 — 사용자가 직접 브랜드 선택
+  // - 타이레놀, 챔프(빨강) → acetaminophen
+  // - 부루펜, 맥시부펜, 챔프(파랑) → ibuprofen
+  type BrandKey = 'tylenol' | 'champ' | 'brufen' | 'maxibupen';
+  type ChampType = 'red' | 'blue'; // 빨강=아세트, 파랑=이부
+
+  // 추천 약(아세트/이부)에 따라 디폴트 브랜드 결정
+  const defaultBrand: BrandKey = recommendation.type === 'ibuprofen' ? 'brufen' : 'tylenol';
+  const [selectedBrand, setSelectedBrand] = useState<BrandKey>(defaultBrand);
+  const [champType, setChampType] = useState<ChampType>('red');
+  const recommendationTypeRef = useRef(recommendation.type);
+  useEffect(() => {
+    if (recommendation.type !== recommendationTypeRef.current) {
+      recommendationTypeRef.current = recommendation.type;
+      setSelectedBrand(recommendation.type === 'ibuprofen' ? 'brufen' : 'tylenol');
+    }
+  }, [recommendation.type]);
+
+  // 선택된 브랜드 → 약 종류(acetaminophen/ibuprofen) 매핑
+  const selectedType: MedicineType =
+    selectedBrand === 'tylenol' ? 'acetaminophen'
+    : selectedBrand === 'brufen' ? 'ibuprofen'
+    : selectedBrand === 'maxibupen' ? 'ibuprofen'
+    : champType === 'red' ? 'acetaminophen' : 'ibuprofen';
+
+  const isAcet = selectedType === 'acetaminophen';
+  const selectedDoseMg = isAcet ? acetaminophenDoseMg : ibuprofenDoseMg;
+  const selectedSyrupText = isAcet ? acetaminophenSyrup : ibuprofenSyrup;
+  const mlMatch = selectedSyrupText.match(/(\d+(?:\.\d+)?)\s*ml/);
+  const mlNumber = mlMatch ? mlMatch[1] : selectedSyrupText;
+  const brandLabel = (() => {
+    if (selectedBrand === 'tylenol') return '타이레놀';
+    if (selectedBrand === 'brufen') return '부루펜';
+    if (selectedBrand === 'maxibupen') return '맥시부펜';
+    return champType === 'red' ? '챔프(빨강)' : '챔프(파랑)';
+  })();
+  const drugColor = isAcet ? TYLENOL_COLOR : BRUFEN_COLOR;
+  const interval = isAcet ? dose.acetaminophen.interval : dose.ibuprofen.interval;
+  const maxDaily = isAcet ? dose.acetaminophen.maxDaily : dose.ibuprofen.maxDaily;
+
+  // 동적 감성 헤드라인 — 선택한 약·용량 실시간 연동 (단일 행동 강조)
+  const headline = recommendation.available
+    ? `지금은 ${brandLabel} ${mlNumber}ml를 먹여야 합니다`
+    : `${formatRelative(recommendation.deltaMs)} 후에 ${brandLabel} ${mlNumber}ml`;
+
+  // 4-브랜드 그리드 항목
+  const grid: { key: BrandKey; label: string; icon: ImageSourcePropType; color: string }[] = [
+    { key: 'tylenol', label: '타이레놀', icon: IC_PILL, color: TYLENOL_COLOR },
+    { key: 'champ', label: '챔프', icon: IC_PILL, color: champType === 'red' ? TYLENOL_COLOR : BRUFEN_COLOR },
+    { key: 'brufen', label: '부루펜', icon: IC_SYRINGE, color: BRUFEN_COLOR },
+    { key: 'maxibupen', label: '맥시부펜', icon: IC_SYRINGE, color: BRUFEN_COLOR },
+  ];
+
   return (
     <View style={styles.medicineContainer}>
       {/* 몸무게 입력 (실시간 계산용) */}
@@ -1317,114 +1539,114 @@ function MedicineSection({
         </View>
         <Text style={styles.weightInputHint}>
           {useInput
-            ? `입력값 ${parsedWeight}kg 기준으로 실시간 계산`
-            : `프로필 등록 ${dose.childWeight}kg 기준 (입력 시 즉시 변경)`}
+            ? `입력값 ${parsedWeight}kg 기준 실시간 계산`
+            : `${dose.childWeight}kg 기준 (입력 시 즉시 변경)`}
         </Text>
       </View>
 
-      {/* Weight basis (기존 표시는 유지) */}
-      <View style={styles.weightRow}>
-        <Text style={styles.weightLabel}>체중 기준</Text>
-        <Text style={styles.weightValue}>{useInput ? `${parsedWeight}kg (입력)` : `${dose.childWeight}kg`}</Text>
+      {/* === 단일 행동 카드 — 가장 강하게 인지되는 화면 === */}
+      <View style={[styles.medGuideCard, { borderColor: drugColor }]}>
+        <Text style={[styles.medGuideStatus, { color: drugColor }]}>
+          {recommendation.available ? '지금 해야 할 행동' : `다음 복용까지 ${formatRelative(recommendation.deltaMs)}`}
+        </Text>
+        <Text style={styles.medGuideHeadline}>{headline}</Text>
       </View>
 
-      {/* Tylenol (acetaminophen) */}
-      <View style={styles.medicineRow}>
-        <View style={[styles.medicineBadge, { backgroundColor: '#E3F2FD' }]}>
-          <Text style={[styles.medicineBadgeText, { color: TYLENOL_COLOR }]}>
-            타이레놀
-          </Text>
+      {/* === 거대 용량 디스플레이 (새벽 인지 가능 — 폰트 압도적 크게) === */}
+      <Animated.View style={[styles.bigDoseCard, { opacity: fade }]}>
+        <Text style={[styles.bigDoseDrug, { color: drugColor }]}>{brandLabel}</Text>
+        <View style={styles.bigDoseRow}>
+          <Text style={[styles.bigDoseNumber, { color: drugColor }]}>{mlNumber}</Text>
+          <Text style={styles.bigDoseUnit}>ml</Text>
         </View>
-        <Animated.View style={[styles.medicineDoseWrap, { opacity: fade }]}>
-          <Text style={styles.medicineDoseText}>
-            {acetaminophenDoseMg}
-          </Text>
-          <Text style={styles.medicineSyrup}>
-            {acetaminophenSyrup}
-          </Text>
-          <Text style={[styles.medicineInterval, { color: TYLENOL_COLOR }]}>
-            {dose.acetaminophen.interval} / {dose.acetaminophen.maxDaily}
-          </Text>
-        </Animated.View>
+        <Text style={styles.bigDoseSub}>{selectedDoseMg} · {interval} · {maxDaily}</Text>
+      </Animated.View>
+
+      {/* === 추천 카드 슬롯 (Native Ad placeholder — 향후 확장용. 현재는 미노출) === */}
+      {/*
+        디자인 컨셉: '엄마를 위한 팁' / '맞춤 추천 아이템'처럼 보이는 인포메이션 카드.
+        조건이 정해지면 isPremium && adsEnabled && hasMatchingTip 로 게이트링.
+        주석 해제 시 styles.tipSlot 사용.
+      */}
+      {/* <View style={styles.tipSlot}>...</View> */}
+
+      {/* === 4-약 그리드 (2x2) === */}
+      <View style={styles.medGrid}>
+        {grid.map((b) => {
+          const isSelected = selectedBrand === b.key;
+          return (
+            <TouchableOpacity
+              key={b.key}
+              style={[
+                styles.medGridBtn,
+                isSelected && { backgroundColor: b.color + '20', borderColor: b.color },
+              ]}
+              onPress={() => setSelectedBrand(b.key)}
+              activeOpacity={0.7}
+            >
+              <Image source={b.icon} style={styles.medGridIconImg} resizeMode="contain" />
+              <Text style={[styles.medGridLabel, isSelected && { color: b.color, fontWeight: '900' }]}>
+                {b.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
-      {/* Notification for Tylenol */}
+      {/* === 챔프 빨강/파랑 토글 (오복용 방지) === */}
+      {selectedBrand === 'champ' && (
+        <View style={styles.champRow}>
+          <Text style={styles.champLabel}>챔프 종류 선택</Text>
+          <View style={styles.champToggle}>
+            <TouchableOpacity
+              style={[
+                styles.champBtn,
+                champType === 'red' && { backgroundColor: TYLENOL_COLOR + '20', borderColor: TYLENOL_COLOR },
+              ]}
+              onPress={() => setChampType('red')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.champDot, { backgroundColor: '#E53935' }]} />
+              <Text style={[styles.champBtnText, champType === 'red' && { color: TYLENOL_COLOR, fontWeight: '900' }]}>
+                빨강 (아세트)
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.champBtn,
+                champType === 'blue' && { backgroundColor: BRUFEN_COLOR + '20', borderColor: BRUFEN_COLOR },
+              ]}
+              onPress={() => setChampType('blue')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.champDot, { backgroundColor: '#1E88E5' }]} />
+              <Text style={[styles.champBtnText, champType === 'blue' && { color: BRUFEN_COLOR, fontWeight: '900' }]}>
+                파랑 (이부)
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* === 알림 버튼 (선택 약 기준) === */}
       <TouchableOpacity
-        style={[styles.notifyBtn, { borderColor: TYLENOL_COLOR }]}
-        onPress={() => onSchedule(240, '타이레놀')}
-        activeOpacity={0.7}
+        style={[styles.recPrimaryNotify, { backgroundColor: drugColor }]}
+        onPress={() => onSchedule(isAcet ? 240 : 360, brandLabel)}
+        activeOpacity={0.85}
       >
-        <Text style={styles.notifyBtnIcon}>{'🔔'}</Text>
-        <Text style={[styles.notifyBtnText, { color: TYLENOL_COLOR }]}>
-          4시간 후 타이레놀 알림
+        <Image source={IC_BELL} style={styles.recPrimaryNotifyIconImg} resizeMode="contain" />
+        <Text style={styles.recPrimaryNotifyText}>
+          {isAcet ? '4시간 후 알림' : '6시간 후 알림'}
         </Text>
       </TouchableOpacity>
 
-      {/* Ibuprofen */}
-      <View style={[styles.medicineRow, { marginTop: 16 }]}>
-        <View style={[styles.medicineBadge, { backgroundColor: '#FFF3E0' }]}>
-          <Text style={[styles.medicineBadgeText, { color: BRUFEN_COLOR }]}>
-            부루펜
-          </Text>
-        </View>
-        <Animated.View style={[styles.medicineDoseWrap, { opacity: fade }]}>
-          <Text style={styles.medicineDoseText}>
-            {ibuprofenDoseMg}
-          </Text>
-          <Text style={styles.medicineSyrup}>
-            {ibuprofenSyrup}
-          </Text>
-          <Text style={[styles.medicineInterval, { color: BRUFEN_COLOR }]}>
-            {dose.ibuprofen.interval} / {dose.ibuprofen.maxDaily}
-          </Text>
-        </Animated.View>
-      </View>
-
-      {/* Age restriction */}
-      {dose.ibuprofen.ageRestriction && (
+      {/* Age restriction (이부프로펜계) */}
+      {!isAcet && dose.ibuprofen.ageRestriction && (
         <View style={styles.warningBox}>
-          <Text style={styles.warningIcon}>{'⚠️'}</Text>
-          <Text style={styles.warningText}>
-            {dose.ibuprofen.ageRestriction}
-          </Text>
+          <Image source={IC_REDFLAG} style={styles.warningIconImg} resizeMode="contain" />
+          <Text style={styles.warningText}>{dose.ibuprofen.ageRestriction}</Text>
         </View>
       )}
-
-      {/* Notification for Ibuprofen */}
-      <TouchableOpacity
-        style={[styles.notifyBtn, { borderColor: BRUFEN_COLOR }]}
-        onPress={() => onSchedule(360, '부루펜')}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.notifyBtnIcon}>{'🔔'}</Text>
-        <Text style={[styles.notifyBtnText, { color: BRUFEN_COLOR }]}>
-          6시간 후 부루펜 알림
-        </Text>
-      </TouchableOpacity>
-
-      {/* Alternating schedule */}
-      {dose.alternatingSchedule.length > 0 && (
-        <View style={styles.scheduleSection}>
-          <Text style={styles.scheduleTitle}>교대 복용 스케줄</Text>
-          {dose.alternatingSchedule.map((item, idx) => (
-            <View key={`sched-${idx}`} style={styles.scheduleRow}>
-              <View
-                style={[
-                  styles.scheduleIndicator,
-                  { backgroundColor: idx % 2 === 0 ? TYLENOL_COLOR : BRUFEN_COLOR },
-                ]}
-              />
-              <Text style={styles.scheduleText}>{item}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* Warning */}
-      <View style={styles.warningBox}>
-        <Text style={styles.warningIcon}>{'💡'}</Text>
-        <Text style={styles.warningText}>{dose.warning}</Text>
-      </View>
     </View>
   );
 }
@@ -1438,24 +1660,29 @@ const medLogStyles = StyleSheet.create({
   brandRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-    marginBottom: 12,
+    gap: 6,
+    marginTop: 4,
+    marginBottom: 8,
   },
   brandBtn: {
     flexBasis: '30%',
     flexGrow: 1,
-    minWidth: 90,
-    backgroundColor: '#F0FFF4',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    minWidth: 70,
+    backgroundColor: '#F8F8FA',
+    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 6,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#A8D5BA',
+    borderColor: '#E5E5EA',
   },
-  brandEmoji: { fontSize: 22, marginBottom: 2 },
-  brandLabel: { fontSize: 13, fontWeight: '700', color: '#1B5E20' },
+  brandEmoji: { fontSize: 16, marginBottom: 1 },
+  brandIconImg: { width: 22, height: 22, marginBottom: 1 },
+  brandLabel: { fontSize: 11, fontWeight: '700', color: '#1C1C1E' },
+  modalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  modalTitleIconImg: { width: 22, height: 22 },
+  modalChipInner: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  modalChipIconImg: { width: 16, height: 16 },
   statusCard: {
     backgroundColor: '#FFF8EC',
     borderRadius: 12,
@@ -1483,6 +1710,33 @@ const medLogStyles = StyleSheet.create({
     flexShrink: 1,
     textAlign: 'right',
   },
+  nextDoseCard: {
+    backgroundColor: '#FFF8EC',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1.5,
+    borderColor: '#FFD8A8',
+    marginBottom: 10,
+  },
+  nextDoseLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    color: '#FF8C5A',
+    marginBottom: 4,
+  },
+  nextDoseHeadline: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#1C1C1E',
+    marginBottom: 4,
+  },
+  nextDoseSub: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#636366',
+  },
   logList: {
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
@@ -1509,6 +1763,17 @@ const medLogStyles = StyleSheet.create({
   logBrand: { fontSize: 13, fontWeight: '700', color: '#1C1C1E', flex: 1 },
   logDose: { fontSize: 13, color: '#1C1C1E', fontWeight: '600' },
   logDelete: { fontSize: 18, color: '#FF6B6B', fontWeight: '700', paddingHorizontal: 4 },
+  toggleBtn: {
+    alignSelf: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    marginTop: 4,
+  },
+  toggleBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FF8C5A',
+  },
   empty: {
     fontSize: 12,
     color: '#ABABAB',
@@ -1602,8 +1867,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 16,
+    paddingBottom: 32,
   },
 
   /* Back button */
@@ -1621,17 +1886,26 @@ const styles = StyleSheet.create({
   titleBar: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 10,
-    paddingVertical: 8,
-    marginBottom: 8,
+    gap: 8,
+    paddingVertical: 4,
+    marginBottom: 4,
   },
   screenTitle: {
-    fontSize: 26,
+    fontSize: 20,
     fontWeight: '800',
     color: COLOR.text,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  titleIconImg: {
+    width: 24,
+    height: 24,
+  },
   screenSubtitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
     color: COLOR.textSub,
   },
@@ -1639,22 +1913,32 @@ const styles = StyleSheet.create({
   /* Section common */
   section: {
     backgroundColor: COLOR.card,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: COLOR.border,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
     color: COLOR.text,
-    marginBottom: 6,
+    marginBottom: 4,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  sectionTitleIconImg: {
+    width: 20,
+    height: 20,
   },
   sectionDesc: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLOR.textSub,
-    marginBottom: 16,
+    marginBottom: 10,
   },
 
   /* Big temperature input */
@@ -1663,23 +1947,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFF9F4',
-    borderRadius: 20,
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    marginBottom: 16,
-    borderWidth: 2,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+    borderWidth: 1.5,
     borderColor: COLOR.border,
   },
   bigTempInput: {
-    fontSize: 48,
+    fontSize: 34,
     fontWeight: '700',
     color: COLOR.text,
     textAlign: 'center',
-    minWidth: 160,
-    paddingVertical: Platform.OS === 'ios' ? 0 : 4,
+    minWidth: 120,
+    paddingVertical: Platform.OS === 'ios' ? 0 : 2,
   },
   bigTempUnit: {
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: '600',
     color: COLOR.textSub,
     marginLeft: 4,
@@ -1688,26 +1972,26 @@ const styles = StyleSheet.create({
   /* Measurement method */
   methodRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 12,
+    gap: 8,
+    marginBottom: 8,
   },
   methodButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
     backgroundColor: '#F8F5F2',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: 'transparent',
-    minHeight: 48,
+    minHeight: 36,
   },
   methodButtonSelected: {
     backgroundColor: '#FFF0E6',
     borderColor: COLOR.accent,
   },
   methodLabel: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
     color: COLOR.textSub,
   },
@@ -1716,26 +2000,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   adjustNote: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLOR.textSub,
-    marginBottom: 14,
+    marginBottom: 10,
     fontStyle: 'italic',
   },
 
   /* Check button */
   checkButton: {
     backgroundColor: COLOR.accent,
-    borderRadius: 14,
-    paddingVertical: 16,
+    borderRadius: 10,
+    paddingVertical: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 56,
+    minHeight: 42,
   },
   checkButtonDisabled: {
     backgroundColor: '#D4C8BC',
   },
   checkButtonText: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
   },
@@ -1745,210 +2029,215 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F5F5F7',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 12,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E5E5EA',
-    gap: 10,
+    gap: 8,
   },
-  measureTimeLabel: { fontSize: 14, fontWeight: '700', color: '#444' },
-  measureTimeValue: { flex: 1, fontSize: 14, fontWeight: '700', color: '#1A1A1A', textAlign: 'right' },
-  measureTimeArrow: { fontSize: 16, color: '#9E9E9E', fontWeight: '700' },
+  measureTimeLabel: { fontSize: 12, fontWeight: '700', color: '#444' },
+  measureTimeValue: { flex: 1, fontSize: 12, fontWeight: '700', color: '#1A1A1A', textAlign: 'right' },
+  measureTimeArrow: { fontSize: 14, color: '#9E9E9E', fontWeight: '700' },
 
   /* === Action Guide Card (행동 중심 — 결과 박스보다 위) === */
   actionCard: {
-    borderRadius: 22,
-    paddingVertical: 22,
-    paddingHorizontal: 22,
-    marginBottom: 14,
-    borderWidth: 2,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+    borderWidth: 1.5,
   },
   actionLabel: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '900',
     letterSpacing: 0.5,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   actionHeadline: {
-    fontSize: 24,
+    fontSize: 17,
     fontWeight: '900',
     color: '#1A1A1A',
-    lineHeight: 32,
-    marginBottom: 10,
+    lineHeight: 24,
+    marginBottom: 6,
   },
   actionEmotion: {
-    fontSize: 14.5,
+    fontSize: 12.5,
     fontWeight: '600',
     color: '#444',
-    lineHeight: 22,
+    lineHeight: 18,
   },
   actionMetaRow: {
-    marginTop: 12,
-    paddingTop: 12,
+    marginTop: 8,
+    paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.08)',
   },
   actionMeta: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#555',
   },
   actionEmergency: {
-    marginTop: 14,
+    marginTop: 10,
     backgroundColor: '#D32F2F',
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
     alignItems: 'center',
   },
   actionEmergencyText: {
-    fontSize: 17,
+    fontSize: 14,
     fontWeight: '900',
     color: '#FFFFFF',
   },
 
   /* Fever level card */
   levelCard: {
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 16,
-    borderWidth: 2,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1.5,
     alignItems: 'center',
   },
   levelEmoji: {
-    fontSize: 56,
-    marginBottom: 12,
+    fontSize: 36,
+    marginBottom: 6,
+  },
+  levelIconImg: {
+    width: 48,
+    height: 48,
+    marginBottom: 6,
   },
   levelLabel: {
-    fontSize: 24,
+    fontSize: 17,
     fontWeight: '800',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   levelTemp: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '600',
     color: COLOR.text,
-    marginBottom: 14,
+    marginBottom: 8,
   },
   levelAdvice: {
-    fontSize: 15,
+    fontSize: 12.5,
     color: COLOR.text,
-    lineHeight: 24,
+    lineHeight: 18,
     textAlign: 'center',
   },
   emergencyCallButton: {
-    marginTop: 16,
+    marginTop: 10,
     backgroundColor: '#D32F2F',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 10,
     alignSelf: 'stretch',
   },
   emergencyCallButtonText: {
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 14,
     fontWeight: '700',
     textAlign: 'center',
   },
 
   /* Medicine */
   medicineContainer: {
-    marginTop: 4,
+    marginTop: 2,
   },
   /* 입력 몸무게 카드 (안내 페이지 전용 — 실시간 계산 트리거) */
   weightInputCard: {
     backgroundColor: '#FFF8F3',
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 14,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: '#FFE0CC',
   },
   weightInputLabel: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '700',
     color: '#FF6F00',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   weightInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   weightInputField: {
     flex: 1,
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '800',
     color: '#1A1A1A',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
     borderBottomWidth: 2,
     borderBottomColor: '#FF8C5A',
   },
   weightInputUnit: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '800',
     color: '#FF6F00',
   },
   weightInputHint: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#999',
-    marginTop: 6,
+    marginTop: 4,
   },
 
   weightRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
-    paddingBottom: 10,
+    marginBottom: 10,
+    paddingBottom: 6,
     borderBottomWidth: 1,
     borderBottomColor: COLOR.border,
   },
   weightLabel: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLOR.textSub,
   },
   weightValue: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '700',
     color: COLOR.text,
   },
   medicineRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
   },
   medicineBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    minWidth: 72,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    minWidth: 60,
     alignItems: 'center',
   },
   medicineBadgeText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
   },
   medicineDoseWrap: {
     flex: 1,
-    paddingTop: 2,
+    paddingTop: 1,
   },
   medicineDoseText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
     color: COLOR.text,
   },
   medicineSyrup: {
-    fontSize: 14,
+    fontSize: 12,
     color: COLOR.textSub,
-    marginTop: 2,
+    marginTop: 1,
   },
   medicineInterval: {
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 11,
+    marginTop: 1,
     fontWeight: '500',
   },
 
@@ -1957,51 +2246,396 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    borderRadius: 12,
-    paddingVertical: 12,
-    marginTop: 10,
+    gap: 6,
+    borderRadius: 10,
+    paddingVertical: 8,
+    marginTop: 8,
     borderWidth: 1.5,
     backgroundColor: COLOR.card,
-    minHeight: 48,
+    minHeight: 36,
   },
   notifyBtnIcon: {
-    fontSize: 16,
+    fontSize: 13,
   },
   notifyBtnText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
+  },
+
+  /* === 동적 가이드 헤드라인 (감성 멘트) === */
+  medGuideCard: {
+    backgroundColor: '#FFFBF0',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 8,
+    marginBottom: 10,
+    borderWidth: 1.5,
+  },
+  medGuideStatus: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  medGuideHeadline: {
+    fontSize: 19,
+    fontWeight: '900',
+    color: '#1A1A1A',
+    lineHeight: 27,
+  },
+
+  /* === 거대 용량 디스플레이 (새벽에도 즉시 인지 가능) === */
+  bigDoseCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    marginBottom: 10,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#EEE',
+  },
+  bigDoseDrug: {
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  bigDoseRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  bigDoseNumber: {
+    // 새벽에도 즉시 인지: 56pt → 110pt 약 2배
+    fontSize: 110,
+    fontWeight: '900',
+    lineHeight: 116,
+    letterSpacing: -3,
+  },
+  bigDoseUnit: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#636366',
+  },
+  bigDoseSub: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#9E9E9E',
+    marginTop: 8,
+  },
+
+  /* === Native Ad / 정보성 추천 카드 슬롯 (현재 미노출, 향후 확장용) === */
+  tipSlot: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#EEE',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    // 디자인 톤: 광고 느낌보단 '엄마를 위한 팁' 인포메이션 카드.
+    // 노출 시 컨텐츠: 아이콘 + 제목 + 짧은 설명 + (선택) CTA 텍스트 링크.
+    display: 'none', // 현재 미노출
+  },
+  tipSlotIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#FFF4ED',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tipSlotIconText: {
+    fontSize: 20,
+  },
+  tipSlotBody: {
+    flex: 1,
+  },
+  tipSlotTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#1C1C1E',
+    marginBottom: 2,
+  },
+  tipSlotDesc: {
+    fontSize: 11,
+    color: '#636366',
+    lineHeight: 15,
+  },
+
+  /* === 4-약 그리드 (2x2) === */
+  medGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  medGridBtn: {
+    width: '48%',
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E5E5EA',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  medGridEmoji: {
+    fontSize: 22,
+    marginBottom: 4,
+  },
+  medGridIconImg: {
+    width: 32,
+    height: 32,
+    marginBottom: 4,
+  },
+  medGridLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#636366',
+  },
+
+  /* === 챔프 빨강/파랑 토글 === */
+  champRow: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#FFE5D6',
+  },
+  champLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#636366',
+    marginBottom: 8,
+  },
+  champToggle: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  champBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#E5E5EA',
+    backgroundColor: '#FFFFFF',
+  },
+  champDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  champBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#636366',
+  },
+
+  /* === 시간 입력 (숫자 키패드 기반) === */
+  fastTimeRow: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  fastTimeLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#636366',
+    marginBottom: 8,
+  },
+  fastTimeInputs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  ampmGroup: {
+    flexDirection: 'row',
+    gap: 4,
+    marginRight: 4,
+  },
+  ampmBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    backgroundColor: '#FFFFFF',
+  },
+  ampmBtnActive: {
+    backgroundColor: '#FF8C5A20',
+    borderColor: '#FF8C5A',
+  },
+  ampmText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#636366',
+  },
+  ampmTextActive: {
+    color: '#FF8C5A',
+    fontWeight: '900',
+  },
+  timeField: {
+    width: 50,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    backgroundColor: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1C1C1E',
+    textAlign: 'center',
+  },
+  timeColon: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#636366',
+  },
+  nowBtn: {
+    marginLeft: 'auto',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    backgroundColor: '#FF8C5A',
+  },
+  nowBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  /* Recommended primary medicine card */
+  recPrimaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 2,
+    marginTop: 8,
+  },
+  recPrimaryHeader: {
+    marginBottom: 4,
+  },
+  recPrimaryBadge: {
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  recPrimaryName: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#1C1C1E',
+    marginBottom: 6,
+  },
+  recPrimaryDose: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1C1C1E',
+  },
+  recPrimarySyrup: {
+    fontSize: 13,
+    color: '#636366',
+    marginTop: 2,
+  },
+  recPrimaryInterval: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  recPrimaryNotify: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: 10,
+    paddingVertical: 9,
+    marginTop: 10,
+  },
+  recPrimaryNotifyIcon: { fontSize: 13 },
+  recPrimaryNotifyIconImg: { width: 18, height: 18, marginRight: 4 },
+  recPrimaryNotifyText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+
+  /* Other-option (작은) */
+  recSecondaryCard: {
+    backgroundColor: '#F8F8FA',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  recSecondaryLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#9E9E9E',
+    marginBottom: 2,
+  },
+  recSecondaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  recSecondaryName: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  recSecondaryDose: {
+    fontSize: 11,
+    color: '#636366',
+  },
+  recSecondaryInterval: {
+    fontSize: 11,
+    color: '#9E9E9E',
+    marginLeft: 'auto',
   },
 
   /* Schedule */
   scheduleSection: {
-    marginTop: 18,
-    paddingTop: 14,
+    marginTop: 12,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: COLOR.border,
   },
   scheduleTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: COLOR.text,
-    marginBottom: 10,
+    marginBottom: 6,
   },
   scheduleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    gap: 10,
+    marginBottom: 4,
+    gap: 8,
   },
   scheduleIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   scheduleText: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLOR.text,
     flex: 1,
-    lineHeight: 20,
+    lineHeight: 16,
   },
 
   /* Warning box */
@@ -2009,20 +2643,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     backgroundColor: '#FFFBF0',
-    borderRadius: 12,
-    padding: 14,
-    marginTop: 14,
-    gap: 8,
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 10,
+    gap: 6,
   },
   warningIcon: {
-    fontSize: 16,
+    fontSize: 13,
     marginTop: 1,
   },
+  warningIconImg: { width: 16, height: 16, marginTop: 1 },
   warningText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 12,
     color: COLOR.text,
-    lineHeight: 20,
+    lineHeight: 17,
   },
 
   /* History */
@@ -2030,49 +2665,60 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   clearButton: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#FF3B30',
     fontWeight: '600',
   },
   historyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    gap: 10,
+    paddingVertical: 7,
+    gap: 8,
   },
   historyRowBorder: {
     borderBottomWidth: 1,
     borderBottomColor: COLOR.border,
   },
   historyDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   historyTime: {
-    fontSize: 13,
-    color: COLOR.textSub,
-    width: 80,
-  },
-  historyTemp: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLOR.text,
-    width: 56,
-  },
-  historyMethod: {
     fontSize: 12,
     color: COLOR.textSub,
-    width: 48,
+    width: 70,
+  },
+  historyTemp: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLOR.text,
+    width: 50,
+  },
+  historyMethod: {
+    fontSize: 11,
+    color: COLOR.textSub,
+    width: 40,
   },
   historyLevel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     flex: 1,
     textAlign: 'right',
+  },
+  historyToggleBtn: {
+    alignSelf: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    marginTop: 4,
+  },
+  historyToggleBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FF8C5A',
   },
 
   /* Misc */

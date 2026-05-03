@@ -14,6 +14,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useChildStore } from '../../stores/childStore';
 import { sleepApi } from '../../services/api';
 import { AdSlot } from '../../components/ads/AdSlot';
+import type { ImageSourcePropType } from 'react-native';
+
+const IC_SLEEP = require('../../assets/quick-sleep.png') as ImageSourcePropType;
+const IC_REPORT = require('../../assets/quick-report.png') as ImageSourcePropType;
+const IC_DIARY = require('../../assets/child-diary.png') as ImageSourcePropType;
+const IC_NIGHT = require('../../assets/weather-night.png') as ImageSourcePropType;
+const IC_REDFLAG = require('../../assets/icon-redflag.png') as ImageSourcePropType;
+const IC_CLOCK = require('../../assets/contraction-clock.png') as ImageSourcePropType;
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -153,7 +161,10 @@ export default function SleepPredictScreen() {
         {/* Header */}
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>{'💤'} AI 수면 예측</Text>
+            <View style={styles.titleRow}>
+              <Image source={IC_SLEEP} style={styles.titleIconImg} resizeMode="contain" />
+              <Text style={styles.title}>{' AI 수면 예측'}</Text>
+            </View>
             <Text style={styles.subtitle}>
               {selectedChild?.name ?? '아이'}의 수면 패턴을 분석합니다
             </Text>
@@ -179,7 +190,7 @@ export default function SleepPredictScreen() {
               resizeMode="contain"
             />
             <Text style={styles.insufficientTitle}>
-              {'📊'} 데이터가 부족해요
+              데이터가 부족해요
             </Text>
             <Text style={styles.insufficientMsg}>{result.message}</Text>
 
@@ -200,7 +211,7 @@ export default function SleepPredictScreen() {
             {rec && (
               <View style={styles.recCard}>
                 <Text style={styles.recTitle}>
-                  {'📋'} {rec.ageLabel as string} 수면 가이드
+                  {`${rec.ageLabel as string} 수면 가이드`}
                 </Text>
                 <View style={styles.recRow}>
                   <Text style={styles.recLabel}>총 수면</Text>
@@ -242,7 +253,7 @@ export default function SleepPredictScreen() {
             {/* 데이터 수 표시 */}
             {result.message && (
               <View style={styles.dataNotice}>
-                <Text style={styles.dataNoticeText}>{'📈'} {result.message}</Text>
+                <Text style={styles.dataNoticeText}>{result.message}</Text>
               </View>
             )}
 
@@ -250,19 +261,19 @@ export default function SleepPredictScreen() {
             <LinearGradient colors={['#2A3F7A', '#1E2D5A']} style={styles.summaryCard}>
               <View style={styles.summaryRow}>
                 <View style={styles.summaryItem}>
-                  <Text style={styles.summaryIcon}>{'💤'}</Text>
+                  <Image source={IC_SLEEP} style={styles.summaryIconImg} resizeMode="contain" />
                   <Text style={styles.summaryLabel}>평균 수면</Text>
                   <Text style={styles.summaryValue}>{pred.avgSleepHours}</Text>
                 </View>
                 <View style={styles.summaryDivider} />
                 <View style={styles.summaryItem}>
-                  <Text style={styles.summaryIcon}>{'📊'}</Text>
+                  <Image source={IC_REPORT} style={styles.summaryIconImg} resizeMode="contain" />
                   <Text style={styles.summaryLabel}>낮잠</Text>
                   <Text style={styles.summaryValue}>{pred.sleepPattern?.napCount ?? '-'}</Text>
                 </View>
                 <View style={styles.summaryDivider} />
                 <View style={styles.summaryItem}>
-                  <Text style={styles.summaryIcon}>{'⏰'}</Text>
+                  <Image source={IC_CLOCK} style={styles.summaryIconImg} resizeMode="contain" />
                   <Text style={styles.summaryLabel}>깨어있기</Text>
                   <Text style={styles.summaryValue}>{pred.sleepPattern?.wakeWindow ?? '-'}</Text>
                 </View>
@@ -275,7 +286,10 @@ export default function SleepPredictScreen() {
 
             {/* 수면 팁 */}
             <View style={styles.tipsCard}>
-              <Text style={styles.tipsTitle}>{'🌙'} 수면 팁</Text>
+              <View style={styles.tipsTitleRow}>
+                <Image source={IC_NIGHT} style={styles.tipsTitleIconImg} resizeMode="contain" />
+                <Text style={styles.tipsTitle}>{' 수면 팁'}</Text>
+              </View>
               {pred.tips.map((tip, i) => (
                 <View key={i} style={styles.tipRow}>
                   <Text style={styles.tipNum}>{i + 1}</Text>
@@ -287,7 +301,10 @@ export default function SleepPredictScreen() {
             {/* 흔한 수면 문제 */}
             {pred.sleepPattern?.commonIssues && pred.sleepPattern.commonIssues.length > 0 && (
               <View style={styles.tipsCard}>
-                <Text style={styles.tipsTitle}>{'⚠️'} 이 시기 흔한 수면 문제</Text>
+                <View style={styles.tipsTitleRow}>
+                  <Image source={IC_REDFLAG} style={styles.tipsTitleIconImg} resizeMode="contain" />
+                  <Text style={styles.tipsTitle}>{' 이 시기 흔한 수면 문제'}</Text>
+                </View>
                 {pred.sleepPattern.commonIssues.map((issue, i) => (
                   <Text key={i} style={styles.issueText}>{'•'} {issue}</Text>
                 ))}
@@ -296,7 +313,7 @@ export default function SleepPredictScreen() {
 
             {/* 새로고침 */}
             <TouchableOpacity style={styles.refreshBtn} onPress={fetchPrediction}>
-              <Text style={styles.refreshText}>{'🔄'} 다시 분석하기</Text>
+              <Text style={styles.refreshText}>{'다시 분석하기'}</Text>
             </TouchableOpacity>
           </>
         ) : null}
@@ -308,7 +325,10 @@ export default function SleepPredictScreen() {
               style={styles.historyHeader}
               onPress={() => setShowHistory(!showHistory)}
             >
-              <Text style={styles.historyTitle}>{'📁'} 이전 예측 기록 ({history.length})</Text>
+              <View style={styles.historyTitleRow}>
+                <Image source={IC_DIARY} style={styles.historyTitleIconImg} resizeMode="contain" />
+                <Text style={styles.historyTitle}>{` 이전 예측 기록 (${history.length})`}</Text>
+              </View>
               <Text style={styles.historyToggle}>{showHistory ? '접기' : '펼치기'}</Text>
             </TouchableOpacity>
 
@@ -347,6 +367,8 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 20, paddingTop: 16 },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 20 },
   title: { fontSize: 26, fontWeight: '800', color: COLOR.text },
+  titleRow: { flexDirection: 'row', alignItems: 'center' },
+  titleIconImg: { width: 30, height: 30 },
   subtitle: { fontSize: 14, color: COLOR.textSub, marginTop: 4 },
   sourceBadge: {
     backgroundColor: COLOR.accent + '25', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4,
@@ -391,6 +413,7 @@ const styles = StyleSheet.create({
   summaryItem: { flex: 1, alignItems: 'center' },
   summaryDivider: { width: 1, height: 50, backgroundColor: 'rgba(255,255,255,0.15)' },
   summaryIcon: { fontSize: 24 },
+  summaryIconImg: { width: 28, height: 28 },
   summaryLabel: { fontSize: 11, color: COLOR.textSub, marginTop: 4 },
   summaryValue: { fontSize: 14, fontWeight: '800', color: COLOR.text, marginTop: 2 },
 
@@ -410,6 +433,8 @@ const styles = StyleSheet.create({
   /* Tips */
   tipsCard: { backgroundColor: COLOR.card, borderRadius: 16, padding: 20, marginBottom: 16 },
   tipsTitle: { fontSize: 16, fontWeight: '700', color: COLOR.text, marginBottom: 14 },
+  tipsTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  tipsTitleIconImg: { width: 18, height: 18 },
   tipRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
   tipNum: {
     width: 22, height: 22, borderRadius: 11,
@@ -435,6 +460,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   historyTitle: { fontSize: 15, fontWeight: '700', color: COLOR.text },
+  historyTitleRow: { flexDirection: 'row', alignItems: 'center' },
+  historyTitleIconImg: { width: 18, height: 18 },
   historyToggle: { fontSize: 13, color: COLOR.accent },
   historyCard: {
     backgroundColor: COLOR.card, borderRadius: 12, padding: 14, marginBottom: 8,

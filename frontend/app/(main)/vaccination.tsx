@@ -10,6 +10,7 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
@@ -242,7 +243,7 @@ export default function VaccinationScreen() {
       <View style={styles.container}>
         <Stack.Screen options={{ title: '접종달력' }} />
         <View style={styles.emptyCenter}>
-          <Text style={styles.emptyIcon}>💉</Text>
+          <Image source={require('../../assets/quick-syringe.png')} style={styles.emptyIconImg} resizeMode="contain" />
           <Text style={styles.emptyText}>
             {child?.isPregnant ? '출산 후 이용 가능합니다' : '아이를 선택해주세요'}
           </Text>
@@ -341,15 +342,14 @@ export default function VaccinationScreen() {
                     </Text>
                     {v.required && <View style={styles.requiredBadge}><Text style={styles.requiredText}>필수</Text></View>}
                   </View>
-                  <Text style={styles.vaccineDisease}>{v.disease}</Text>
                   {v.completed ? (
                     <Text style={styles.vaccineCompleted}>
                       {v.completedAt ? new Date(v.completedAt).toLocaleDateString('ko-KR') : ''} 접종 완료
-                      {v.hospitalName ? ` · ${v.hospitalName}` : ''}
+                      {v.hospitalName ? ` · ${v.hospitalName}` : ` · ${v.disease}`}
                     </Text>
                   ) : (
-                    <Text style={styles.vaccineSchedule}>
-                      {v.scheduledDate} 예정
+                    <Text style={styles.vaccineSchedule} numberOfLines={1}>
+                      {v.scheduledDate} 예정 · {v.disease}
                     </Text>
                   )}
                 </View>
@@ -369,9 +369,17 @@ export default function VaccinationScreen() {
 
         {!loading && filtered.length === 0 && (
           <View style={styles.emptyCenter}>
-            <Text style={styles.emptyIcon}>
-              {filter === 'completed' ? '🎉' : filter === 'overdue' ? '✅' : '💉'}
-            </Text>
+            <Image
+              source={
+                filter === 'completed'
+                  ? require('../../assets/preg-ribbon.png')
+                  : filter === 'overdue'
+                  ? require('../../assets/mascot-happy.png')
+                  : require('../../assets/quick-syringe.png')
+              }
+              style={styles.emptyIconImg}
+              resizeMode="contain"
+            />
             <Text style={styles.emptyText}>
               {filter === 'completed' ? '아직 완료한 접종이 없어요' :
                filter === 'overdue' ? '놓친 접종이 없어요!' :
@@ -561,26 +569,27 @@ const styles = StyleSheet.create({
   filterText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, fontWeight: '500' },
   filterTextActive: { color: '#FFF', fontWeight: '700' },
 
-  /* Age group */
-  ageGroup: { marginBottom: SPACING.lg },
-  ageHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
+  /* Age group — 컴팩트 */
+  ageGroup: { marginBottom: 10 },
+  ageHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   ageBadge: {
     backgroundColor: COLORS.primary,
     borderRadius: RADIUS.full,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
   },
-  ageBadgeText: { color: '#FFF', fontSize: FONT_SIZE.sm, fontWeight: '700' },
-  ageLine: { flex: 1, height: 1, backgroundColor: COLORS.border, marginLeft: SPACING.sm },
+  ageBadgeText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
+  ageLine: { flex: 1, height: 1, backgroundColor: COLORS.border, marginLeft: 6 },
 
-  /* Vaccine card */
+  /* Vaccine card — 컴팩트 (위아래 폭 축소) */
   vaccineCard: {
     flexDirection: 'row',
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm,
-    marginLeft: 12,
+    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    marginBottom: 4,
+    marginLeft: 8,
     alignItems: 'center',
     ...SHADOWS.soft,
   },
@@ -588,28 +597,29 @@ const styles = StyleSheet.create({
   vaccineCardOverdue: { backgroundColor: '#FFF0F0', borderLeftWidth: 3, borderLeftColor: COLORS.error },
   vaccineCardUrgent: { backgroundColor: '#FFF3E0', borderLeftWidth: 3, borderLeftColor: '#E91E63' },
 
-  vaccineLeft: { marginRight: SPACING.sm },
-  checkCircle: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: COLORS.border, justifyContent: 'center', alignItems: 'center' },
-  checkEmpty: { color: COLORS.textLight, fontSize: 18 },
-  checkCircleDone: { width: 28, height: 28, borderRadius: 14, backgroundColor: COLORS.success, justifyContent: 'center', alignItems: 'center' },
-  checkMark: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  vaccineLeft: { marginRight: 8 },
+  checkCircle: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: COLORS.border, justifyContent: 'center', alignItems: 'center' },
+  checkEmpty: { color: COLORS.textLight, fontSize: 14 },
+  checkCircleDone: { width: 22, height: 22, borderRadius: 11, backgroundColor: COLORS.success, justifyContent: 'center', alignItems: 'center' },
+  checkMark: { color: '#FFF', fontSize: 13, fontWeight: '900' },
 
   vaccineCenter: { flex: 1 },
-  vaccineNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  vaccineName: { fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.text },
+  vaccineNameRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  vaccineName: { fontSize: 13, fontWeight: '700', color: COLORS.text },
   vaccineNameDone: { color: COLORS.textSecondary, textDecorationLine: 'line-through' },
-  requiredBadge: { backgroundColor: '#E91E63', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 1 },
-  requiredText: { color: '#FFF', fontSize: 10, fontWeight: '700' },
-  vaccineDisease: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 2 },
-  vaccineCompleted: { fontSize: FONT_SIZE.xs, color: COLORS.success, marginTop: 2 },
-  vaccineSchedule: { fontSize: FONT_SIZE.xs, color: COLORS.textLight, marginTop: 2 },
+  requiredBadge: { backgroundColor: '#E91E63', borderRadius: 3, paddingHorizontal: 5, paddingVertical: 0 },
+  requiredText: { color: '#FFF', fontSize: 9, fontWeight: '900' },
+  vaccineDisease: { fontSize: 11, color: COLORS.textSecondary, marginTop: 1 },
+  vaccineCompleted: { fontSize: 10, color: COLORS.success, marginTop: 1 },
+  vaccineSchedule: { fontSize: 10, color: COLORS.textLight, marginTop: 1 },
 
-  vaccineRight: { marginLeft: SPACING.sm },
-  dDayText: { fontSize: FONT_SIZE.md, fontWeight: '700' },
+  vaccineRight: { marginLeft: 6 },
+  dDayText: { fontSize: 12, fontWeight: '800' },
 
   /* Empty */
   emptyCenter: { alignItems: 'center', paddingTop: 60 },
   emptyIcon: { fontSize: 48, marginBottom: SPACING.md },
+  emptyIconImg: { width: 64, height: 64, marginBottom: 12 },
   emptyText: { fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.text, textAlign: 'center' },
 
   /* Modal base */

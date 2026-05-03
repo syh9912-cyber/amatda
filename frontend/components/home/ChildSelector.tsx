@@ -37,7 +37,7 @@ export function ChildSelector({ items, selectedId, onSelect }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { marginBottom: SPACING.lg },
+  container: { marginBottom: SPACING.xs },
   content: { gap: SPACING.lg, paddingHorizontal: 2 },
   pill: {
     alignItems: 'center',
