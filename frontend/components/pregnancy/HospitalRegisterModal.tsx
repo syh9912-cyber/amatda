@@ -85,9 +85,22 @@ export function HospitalRegisterModal({
         address: address.trim() || undefined,
         memo: memo.trim() || undefined,
       });
-      Alert.alert('저장 완료', `${tab === 'delivery' ? '분만 예정' : '현재 진료'} 병원 정보가 저장되었습니다.`);
-      onSaved?.();
-      onClose();
+      // 분만 병원이고 직통번호가 비어있으면 부드러운 추가 권유 (사용자 의도: "스마트 제안")
+      if (tab === 'delivery' && !deliveryWardPhone.trim()) {
+        Alert.alert(
+          '저장 완료',
+          '밤이나 주말에 전화할 분만실 직통 번호가 따로 있나요?\n없으면 그냥 넘어가도 괜찮아요.',
+          [
+            { text: '없어요 / 다음에', style: 'cancel', onPress: () => { onSaved?.(); onClose(); } },
+            { text: '직통번호 추가하기', onPress: () => {/* 모달 유지 — 사용자가 직통번호 필드에 입력 후 다시 저장 */} },
+          ],
+        );
+        // 모달 닫지 않음 — 사용자가 추가 입력 가능. "없어요" 선택 시 cancel onPress 가 닫음.
+      } else {
+        Alert.alert('저장 완료', `${tab === 'delivery' ? '분만 예정' : '현재 진료'} 병원 정보가 저장되었습니다.`);
+        onSaved?.();
+        onClose();
+      }
     } catch {
       Alert.alert('저장 실패', '다시 시도해 주세요.');
     } finally {

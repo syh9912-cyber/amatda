@@ -25,6 +25,7 @@ import { AIAnalysisRow } from '../../components/home/AIAnalysisRow';
 import { TraitBarsCard } from '../../components/home/TraitBarsCard';
 import { PregnancyJourneyCard } from '../../components/home/PregnancyJourneyCard';
 import { HospitalRegisterBanner } from '../../components/pregnancy/HospitalRegisterBanner';
+import { HospitalRegisterPrompt } from '../../components/pregnancy/HospitalRegisterPrompt';
 import { NextCheckupModal } from '../../components/home/NextCheckupModal';
 import { getNextCheckup, useCheckupStore } from '../../services/checkup';
 import { ChildSelector } from '../../components/home/ChildSelector';
@@ -584,6 +585,15 @@ export default function HomeScreen() {
           출산이 임박한 시점에 응급 상황 대비 — 등록되면 자동 사라짐 */}
       {child?.isPregnant && (
         <HospitalRegisterBanner
+          childId={child.id}
+          weeks={child.pregnancyWeeks ?? 0}
+        />
+      )}
+
+      {/* === 30주+ 임신부: 분만 병원 미등록 시 1회성 팝업 (3일 보지 않기 옵션) ===
+          앱 마운트 시 1회만 체크, snooze 만료 후 재노출 */}
+      {child?.isPregnant && (
+        <HospitalRegisterPrompt
           childId={child.id}
           weeks={child.pregnancyWeeks ?? 0}
         />

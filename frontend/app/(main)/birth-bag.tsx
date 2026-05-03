@@ -24,6 +24,7 @@ import { Stack, router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChildStore } from '../../stores/childStore';
+import { getHospital } from '../../services/deliveryHospital';
 
 /* PNG 아이콘 (기본 이모지 대신 — 우리 앱 일러스트 톤 유지) */
 const IC_FOOT = require('../../assets/preg-foot.png') as ImageSourcePropType;
@@ -111,6 +112,8 @@ const ALL_ITEMS: BagItem[] = [
   { id: 'd3', label: '의료보험증', category: 'docs' },
   { id: 'd4', label: '입원·출산준비물 영수증', category: 'docs' },
   { id: 'd5', label: '출생신고용 도장 (선택)', category: 'docs' },
+  // 분만 병원 번호 등록 — 등록 완료 시 자동 체크 (useEffect 가 동기화)
+  { id: 'd6', label: '분만 병원 번호 등록', category: 'docs', hint: 'SOS / 진통 체크에서 즉시 전화 연결됨' },
 ];
 
 interface SavedV3 {
@@ -226,6 +229,22 @@ export default function BirthBagScreen() {
   // 공유
   const [shareModalVisible, setShareModalVisible] = useState(false);
   const [sharing, setSharing] = useState(false);
+
+  // d6 (분만 병원 번호 등록) 자동 체크 — clinic/delivery 둘 중 하나라도 등록되면 체크
+  useEffect(() => {
+    if (!child?.id) return;
+    let cancelled = false;
+    (async () => {
+      const delivery = await getHospital(child.id, 'delivery');
+      const clinic = await getHospital(child.id, 'clinic');
+      const has =
+        !!(delivery?.mainPhone || delivery?.deliveryWardPhone) ||
+        !!(clinic?.mainPhone || clinic?.deliveryWardPhone);
+      if (cancelled) return;
+      setChecked((prev) => (prev.d6 === has ? prev : { ...prev, d6: has }));
+    })();
+    return () => { cancelled = true; };
+  }, [child?.id, loaded]);
 
   // Load (v3 → v2 → v1 마이그레이션)
   useEffect(() => {
