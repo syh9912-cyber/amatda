@@ -349,7 +349,10 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
           tappable
         />
       </View>
-      <Text style={styles.tapHint}>{'탭해서 기록할 수 있어요'}</Text>
+      <Text style={styles.tapHint}>
+        {'탭해서 기록 · '}
+        <Text style={styles.tapHintAccent}>길게 누르면 가이드</Text>
+      </Text>
 
       {/* 물/영양제 long-press 시 의학적 의미 + 가이드 */}
       <MissionInfoModal
@@ -519,6 +522,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '900',
     lineHeight: 11,
+  },
+  tapHintAccent: {
+    color: '#7B1FA2',
+    fontWeight: '700',
   },
   tapHint: {
     fontSize: 11,
