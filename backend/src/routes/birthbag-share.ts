@@ -161,9 +161,15 @@ router.get('/:token', async (req: Request, res: Response): Promise<void> => {
       postpartumPlan: data.postpartumPlan ?? null,
       items: data.items ?? [],
     });
+    // 공유 페이지는 인라인 script(데이터 임베드 + 필터 로직) 필요 → CSP 완화
+    // 출력은 jsonForScriptTag + escapeHtml로 XSS 방어 완료된 상태
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self'",
+    );
     res.status(200).type('html').send(html);
   } catch (e) {
-    logger.error('birthbag-share GET html failed', { error: e instanceof Error ? e.message : String(e) });
+    logger.error('birthbag-share GET html failed', e);
     res.status(500).type('html').send(notFoundHtml());
   }
 });
