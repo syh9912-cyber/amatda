@@ -1,0 +1,113 @@
+/**
+ * 35주+ 임신부 홈 배너 — 분만 병원 번호 미등록 시 경고 노출.
+ *
+ * 35주차부터 출산 가능성이 급격히 높아지므로 응급 상황에서 즉시 전화할
+ * 병원 번호가 등록돼 있어야 함. 미등록이면 홈 상단에 빨간 배너로 안내.
+ *
+ * 클릭 시 HospitalRegisterModal 열어 즉시 등록 가능.
+ * 등록 완료되면 자동으로 배너 사라짐.
+ */
+import { useEffect, useState, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { HospitalRegisterModal } from './HospitalRegisterModal';
+import { getHospital } from '../../services/deliveryHospital';
+
+interface Props {
+  childId: string;
+  weeks: number;
+  /** 다른 화면에서 등록 후 돌아왔을 때 강제 재조회용 */
+  refreshKey?: number;
+}
+
+export function HospitalRegisterBanner({ childId, weeks, refreshKey }: Props) {
+  const [registered, setRegistered] = useState<boolean | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const checkRegistered = useCallback(async () => {
+    if (!childId) {
+      setRegistered(true);  // childId 없으면 배너 숨김
+      return;
+    }
+    const delivery = await getHospital(childId, 'delivery');
+    const clinic = await getHospital(childId, 'clinic');
+    // 분만 병원 또는 진료 병원 중 하나라도 번호 등록 → 배너 숨김
+    const has =
+      !!(delivery?.mainPhone || delivery?.deliveryWardPhone) ||
+      !!(clinic?.mainPhone || clinic?.deliveryWardPhone);
+    setRegistered(has);
+  }, [childId]);
+
+  useEffect(() => {
+    checkRegistered();
+  }, [checkRegistered, refreshKey]);
+
+  // 35주 미만 또는 등록 완료 시 표시 안 함
+  if (weeks < 35 || registered !== false) return null;
+
+  return (
+    <>
+      <TouchableOpacity
+        style={styles.banner}
+        activeOpacity={0.85}
+        onPress={() => setModalOpen(true)}
+      >
+        <Text style={styles.icon}>⚠️</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>병원 번호를 미리 등록해 주세요</Text>
+          <Text style={styles.sub}>
+            출산이 가까워지고 있어요. 급한 순간 바로 전화할 수 있도록 준비해 두세요.
+          </Text>
+        </View>
+        <Text style={styles.arrow}>{'>'}</Text>
+      </TouchableOpacity>
+
+      <HospitalRegisterModal
+        visible={modalOpen}
+        childId={childId}
+        initialKind="delivery"
+        onClose={() => setModalOpen(false)}
+        onSaved={() => {
+          setModalOpen(false);
+          checkRegistered();
+        }}
+      />
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFEBEE',
+    borderWidth: 1.5,
+    borderColor: '#E53935',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  icon: {
+    fontSize: 22,
+    marginRight: 10,
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#B71C1C',
+    marginBottom: 3,
+  },
+  sub: {
+    fontSize: 12,
+    color: '#7A1F1F',
+    lineHeight: 16,
+  },
+  arrow: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#C62828',
+    marginLeft: 8,
+  },
+});

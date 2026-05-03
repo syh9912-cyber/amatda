@@ -24,6 +24,7 @@ import { DenseStatsRow } from '../../components/home/DenseStatsRow';
 import { AIAnalysisRow } from '../../components/home/AIAnalysisRow';
 import { TraitBarsCard } from '../../components/home/TraitBarsCard';
 import { PregnancyJourneyCard } from '../../components/home/PregnancyJourneyCard';
+import { HospitalRegisterBanner } from '../../components/pregnancy/HospitalRegisterBanner';
 import { NextCheckupModal } from '../../components/home/NextCheckupModal';
 import { getNextCheckup, useCheckupStore } from '../../services/checkup';
 import { ChildSelector } from '../../components/home/ChildSelector';
@@ -577,6 +578,15 @@ export default function HomeScreen() {
             />
           )}
         </View>
+      )}
+
+      {/* === 35주+ 임신부: 분만 병원 미등록 시 경고 배너 ===
+          출산이 임박한 시점에 응급 상황 대비 — 등록되면 자동 사라짐 */}
+      {child?.isPregnant && (
+        <HospitalRegisterBanner
+          childId={child.id}
+          weeks={child.pregnancyWeeks ?? 0}
+        />
       )}
 
       {child && (

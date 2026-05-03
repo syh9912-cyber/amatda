@@ -356,6 +356,38 @@ export default function LaborMonitorScreen() {
           </>
         ) : (
           <>
+            {/* === 위급 증상 119 즉시 안내 — 진통 화면 진입 시 항상 노출 ===
+                양수 파수 / 다량 출혈 / 태동 12h+ 멈춤 / 극심한 복통 → 진통 수치 무관 */}
+            <View style={styles.emergencyBanner}>
+              <Text style={styles.emergencyBannerTitle}>🚨 이런 증상은 119 먼저!</Text>
+              <Text style={styles.emergencyBannerText}>
+                양수 파수 · 다량 출혈 · 태동 12시간 이상 멈춤 · 극심한 복통
+              </Text>
+              <Text style={styles.emergencyBannerSub}>
+                앱 확인보다 119가 먼저입니다. 애매하거나 불안하면 지금 바로 병원에 전화하세요.
+              </Text>
+              <View style={styles.emergencyBtnRow}>
+                <TouchableOpacity
+                  style={styles.emergency119Btn}
+                  onPress={() => {
+                    Linking.openURL('tel:119').catch(() => {
+                      Alert.alert('전화 연결 실패', '직접 119에 전화해 주세요.');
+                    });
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.emergency119Text}>📞 119</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.emergencyHospitalBtn}
+                  onPress={callDeliveryWard}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.emergencyHospitalText}>🏥 병원</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
             {currentWeek < 36 && (
               <View style={styles.noticeBox}>
                 <Text style={styles.noticeText}>
@@ -1068,4 +1100,63 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
   },
   modalCloseBtnText: { fontSize: FONT_SIZE.md, color: '#fff', fontWeight: '700' },
+
+  // === 위급 증상 119 배너 (진통 화면 상단 항상 노출) ===
+  emergencyBanner: {
+    backgroundColor: '#FFEBEE',
+    borderWidth: 1.5,
+    borderColor: '#E53935',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+  },
+  emergencyBannerTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#B71C1C',
+    marginBottom: 6,
+  },
+  emergencyBannerText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#C62828',
+    lineHeight: 18,
+  },
+  emergencyBannerSub: {
+    fontSize: 12,
+    color: '#7A1F1F',
+    marginTop: 6,
+    lineHeight: 17,
+  },
+  emergencyBtnRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  emergency119Btn: {
+    flex: 1,
+    backgroundColor: '#E53935',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  emergency119Text: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  emergencyHospitalBtn: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E53935',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  emergencyHospitalText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#C62828',
+  },
 });
