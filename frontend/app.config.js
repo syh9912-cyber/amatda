@@ -25,11 +25,26 @@ module.exports = ({ config }) => {
       ],
     },
   ];
-  // 중복 방지 (이미 expo-font 들어있으면 스킵)
   const hasFont = existingPlugins.some(
     (p) => p === 'expo-font' || (Array.isArray(p) && p[0] === 'expo-font'),
   );
   if (!hasFont) existingPlugins.push(fontsPlugin);
+
+  // Sentry React Native 플러그인 — APK 빌드 시 source map 자동 업로드
+  // SENTRY_AUTH_TOKEN은 EAS Secret으로 주입됨
+  const sentryPlugin = [
+    '@sentry/react-native/expo',
+    {
+      organization: 'sy-labs',
+      project: 'react-native', // Sentry 프로젝트 slug (대시보드에서 확인)
+      url: 'https://sentry.io/',
+    },
+  ];
+  const hasSentry = existingPlugins.some(
+    (p) => p === '@sentry/react-native/expo' ||
+           (Array.isArray(p) && p[0] === '@sentry/react-native/expo'),
+  );
+  if (!hasSentry) existingPlugins.push(sentryPlugin);
 
   return {
     ...config,
