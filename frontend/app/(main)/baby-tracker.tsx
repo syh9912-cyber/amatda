@@ -1629,9 +1629,13 @@ function BabyTrackerInner() {
   }
 
   function handleAddRecord(record: TrackerRecord) {
-    const updated = [...records, record];
-    setRecords(updated);
-    saveRecords(childId, dateStr, updated);
+    // functional setState — 빠르게 연속 누를 때 stale closure 의 records 를 사용하지 않도록.
+    // (사용자 보고: 같은 분에 기상+소변 빠르게 누르면 정렬 순서가 뒤바뀜 — race condition fix)
+    setRecords((prev) => {
+      const updated = [...prev, record];
+      saveRecords(childId, dateStr, updated);
+      return updated;
+    });
   }
 
   function showToast(msg: string) {
@@ -2062,13 +2066,21 @@ function BabyTrackerInner() {
       ...(sleepSession.note ? { note: sleepSession.note } : {}),
     };
 
-    // 시작 날짜의 records에 저장 (BreastSession과 동일 패턴)
-    const existing = await loadRecords(childId, sleepSession.startDate);
-    const updated = [...existing, record];
-    await saveRecords(childId, sleepSession.startDate, updated);
+    // 시작 날짜의 records에 저장.
+    // 같은 날 종료: storage(loadRecords)가 아닌 functional setState 의 prev 를 진실의 출처로
+    //   사용 — handleSleepWake 진행 중 다른 record (소변 등) 가 추가됐어도 누락 없음.
+    //   사용자 보고: 같은 분에 기상+다른 기록 빠르게 누르면 race condition 으로 정렬 깨짐 → fix.
+    // cross-day 종료: 어제 storage 에 저장 + 오늘 reload (안전하게 fresh state).
     if (sleepSession.startDate === dateStr) {
-      setRecords(updated);
+      setRecords((prev) => {
+        const updated = [...prev, record];
+        saveRecords(childId, dateStr, updated);
+        return updated;
+      });
     } else {
+      const existing = await loadRecords(childId, sleepSession.startDate);
+      const updated = [...existing, record];
+      await saveRecords(childId, sleepSession.startDate, updated);
       await loadData();
     }
     await saveSleepSession(childId, null);
@@ -3317,8 +3329,8 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete, onL
         note: '진행중',
       } as TrackerRecord);
     }
-    // 시간순 정렬 — 분 단위 숫자 비교로 변경 (이전 string localeCompare 는 "9:30" vs "09:35"
-    // 같은 zero-pad 누락 데이터에서 잘못 정렬됨. 사용자 보고: 소변/대변이 기상 위로 표시).
+    // 시간순 정렬 — 분 단위 숫자 비교 (string localeCompare 는 "9:30" vs "09:35" 같은
+    // zero-pad 누락 데이터에서 잘못 정렬되므로).
     const toMin = (t: string): number => {
       // cross-day prefix ("M/D ") 가 있으면 strip
       const hhmm = t.includes(' ') ? t.split(' ').pop() ?? t : t;
@@ -3328,6 +3340,8 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete, onL
       if (Number.isNaN(hi) || Number.isNaN(mi)) return 0;
       return hi * 60 + mi;
     };
+    // 같은 분이면 stable sort 로 입력 순서 유지 — records 배열 순서가 누른 순서이므로
+    // 자동으로 누른 순서대로 표시됨 (race condition 은 setRecords functional 로 해결됨).
     out.sort((a, b) => toMin(a.time) - toMin(b.time));
     return out;
   }, [records, activeSleepSession, dateStr]);
