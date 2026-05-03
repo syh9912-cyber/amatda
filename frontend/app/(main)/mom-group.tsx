@@ -191,7 +191,13 @@ function displayTitle(p: Post): string {
 export default function MomGroupScreen() {
   const insets = useSafeAreaInsets();
   const { selectedChild } = useChildStore();
-  const myGroupKey = deriveGroupKey(selectedChild?.dueDate ?? selectedChild?.birthDate);
+  // 자녀 birthDate/dueDate 기반 월방. 자녀 없는 사용자(공식 계정 등)는 현재 월 fallback.
+  const childGroupKey = deriveGroupKey(selectedChild?.dueDate ?? selectedChild?.birthDate);
+  const currentMonthKey = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }, []);
+  const myGroupKey = childGroupKey ?? currentMonthKey;
 
   const [roomType, setRoomType] = useState<RoomType>('month');
   const [groupKey, setGroupKey] = useState<string | null>(myGroupKey);
