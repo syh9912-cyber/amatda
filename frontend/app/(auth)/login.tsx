@@ -124,19 +124,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  /* ── 캐릭터 hero (크게 + 화면에 꽉) ── */
+  /* ── 캐릭터 hero (중간 사이즈 — 짤리지 않고 적당히) ── */
   heroWrap: {
     width: SW,
-    // 새 이미지 비율 514:550 ≈ 0.93 (살짝 세로) → 풀 너비일 때 높이 ≈ SW * 1.07
-    height: SW * 0.98,
+    // 이미지 비율 692:658 ≈ 1.05 → 85% 너비일 때 높이 = SW * 0.85 * (658/692) = SW * 0.81
+    height: SW * 0.81,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 80,
-    marginBottom: 8,
+    marginTop: 60,
+    marginBottom: 12,
   },
   heroImage: {
-    width: SW * 0.92,
-    height: SW * 0.98,
+    width: SW * 0.85,
+    height: SW * 0.81,
   },
 
   /* ── Card — 은은한 그림자, 깨끗한 배경 ── */
