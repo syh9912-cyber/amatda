@@ -14,13 +14,26 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { childApi, coachingApi, retentionApi, premiumApi, uploadApi } from '../../services/api';
 import { useChildStore, Child } from '../../stores/childStore';
+import { useFeverStore } from '../../stores/feverStore';
+import { DenseStatsRow } from '../../components/home/DenseStatsRow';
+import { AIAnalysisRow } from '../../components/home/AIAnalysisRow';
+import { TraitBarsCard } from '../../components/home/TraitBarsCard';
+import { PregnancyJourneyCard } from '../../components/home/PregnancyJourneyCard';
+import { NextCheckupModal } from '../../components/home/NextCheckupModal';
+import { getNextCheckup, useCheckupStore } from '../../services/checkup';
 import { ChildSelector } from '../../components/home/ChildSelector';
 import { DailyMissionBadges } from '../../components/pregnancy/DailyMissionBadges';
+import {
+  cancelAllPregnancyLocalNotifications,
+  loadNotificationPrefs,
+  syncScheduledNotifications,
+  scheduleFirstCoachingNudge,
+} from '../../services/pushNotifications';
 // AI Insights UI 제거됨 (WeeklyReportCard, DailyDiaryCard 미사용)
 import {
   ProactivePopup,
@@ -83,7 +96,7 @@ interface QuickAction {
 
 const ALL_ACTIONS: QuickAction[] = [
   // 임산부 전용 (pregnant 필터링 시 먼저 노출)
-  { icon: require('../../assets/quick-learning.png'), label: '임신 기록', route: '/(main)/pregnancy', bg: '#FCE4EC', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-learning.png'), label: '임신앨범', route: '/(main)/pregnancy', bg: '#FCE4EC', ages: ['pregnant'] },
   { icon: require('../../assets/quick-baby.png'), label: '주수별 발달', route: '/(main)/growth-stats', bg: '#F3E5F5', ages: ['pregnant'] },
   { icon: require('../../assets/quick-blood.png'), label: '임당 관리', route: '/(main)/gdm', bg: '#FCE4EC', ages: ['pregnant'] },
   { icon: require('../../assets/quick-sleep.png'), label: '태동 체크', route: '/(main)/labor-monitor?tab=kick', bg: '#FCE4EC', ages: ['pregnant'] },
@@ -196,6 +209,12 @@ export default function HomeScreen() {
     string | undefined
   >(undefined);
 
+  // 다음 검진 모달 상태 + 현재 저장된 ISO date
+  const [checkupModalOpen, setCheckupModalOpen] = useState(false);
+  const [currentCheckup, setCurrentCheckup] = useState<string | null>(null);
+  const checkupVer = useCheckupStore((s) => s.version);
+  // babyTip은 selectedChild 선언 이후에 호출 (TDZ 방지)
+
   const [countdown, setCountdown] = useState<CountdownData | null>(null);
   const [, setDailyCard] = useState<DailyCardData | null>(null);
   const [streak, setStreak] = useState<StreakData | null>(null);
@@ -258,8 +277,8 @@ export default function HomeScreen() {
           }
         }
       }
-    } catch {
-      // ignore trial check errors
+    } catch (err) {
+      console.warn('[home] trial check failed:', err instanceof Error ? err.message : String(err));
     }
   }, []);
 
@@ -294,6 +313,20 @@ export default function HomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild?.id, loadRetentionData, loadProactiveInsights]);
 
+  // 다음 검진 ISO 로드 (자녀 변경 + checkupVer 트리거)
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedChild) {
+      setCurrentCheckup(null);
+      return;
+    }
+    (async () => {
+      const v = await getNextCheckup(selectedChild.id);
+      if (!cancelled) setCurrentCheckup(v);
+    })();
+    return () => { cancelled = true; };
+  }, [selectedChild?.id, checkupVer]);
+
   const handleBirthSubmit = useCallback(async () => {
     if (!selectedChild || !birthDateVal || !birthTimeVal) {
       Alert.alert('알림', '생년월일과 출생시각을 입력해주세요');
@@ -321,6 +354,18 @@ export default function HomeScreen() {
       const updatedChild = res.data?.data;
       if (updatedChild) {
         updateChild(updatedChild);
+      }
+      // 임신부 모드 → 출생 전환 시 임신 전용 알림(검진/D-Day/데일리 미션 9시) 일괄 취소
+      await cancelAllPregnancyLocalNotifications();
+      // 출생 직후 육아 모드 알림 자동 등록 (사용자가 알림 설정 안 들어가도 첫 알림이 오도록)
+      if (updatedChild) {
+        try {
+          const prefs = await loadNotificationPrefs();
+          await syncScheduledNotifications(prefs, updatedChild.id, updatedChild.name);
+          await scheduleFirstCoachingNudge(updatedChild.id, updatedChild.name);
+        } catch {
+          /* best-effort */
+        }
       }
       setBirthModalVisible(false);
       Alert.alert('축하합니다!', '아이가 태어났어요! 이제부터 육아 코칭이 시작됩니다.');
@@ -379,8 +424,8 @@ export default function HomeScreen() {
             setPopupVisible(true);
             return;
           }
-        } catch {
-          // ignore
+        } catch (err) {
+          console.warn('[home] followup check failed:', err instanceof Error ? err.message : String(err));
         }
       }
 
@@ -405,8 +450,8 @@ export default function HomeScreen() {
           setPopupVisible(true);
         }
       }
-    } catch {
-      // ignore popup errors
+    } catch (err) {
+      console.warn('[home] proactive popup check failed:', err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -467,7 +512,7 @@ export default function HomeScreen() {
   if (loadError) {
     return (
       <View style={styles.center}>
-        <Text style={{ fontSize: 40, marginBottom: 16 }}>{'😥'}</Text>
+        <Image source={require('../../assets/mascot-worried.png')} style={{ width: 56, height: 56, marginBottom: 16 }} resizeMode="contain" />
         <Text style={{ fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 8 }}>
           {'서버 연결에 실패했어요'}
         </Text>
@@ -520,71 +565,93 @@ export default function HomeScreen() {
 
       {child && (
         <>
-          {/* === 임산부 데일리 미션 배지 (물 / 영양제) === */}
-          {child.isPregnant && <DailyMissionBadges childId={child.id} />}
+          {/* === Dashboard 상단 섹션 (모드별 분기) === */}
 
-          {/* === 임산부: 출산했어요 카드 === */}
+          {/* 1) 4-stat 그리드 (모드 자동 분기 — 영아: 수유/수면/대변/percentile, 임신부: 물/영양제/검진/컨디션) */}
+          <DenseStatsRow
+            child={child as unknown as { id: string; isPregnant?: boolean; ageInfo?: { months: number; group: string }; birthDate?: string; height?: number; weight?: number }}
+            onTapCheckup={() => setCheckupModalOpen(true)}
+          />
+
+          {/* 2) 퀵메뉴 8개 (4-stat 바로 아래로 이동) */}
+          <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} child={child} />
+
+          {/* 3) 임신부 — 주차별 핵심 강조 카드 (34주차+ → 출산가방 체크리스트, 진행률·아빠담당 표시) */}
           {child.isPregnant && (() => {
-            const q = getWeeklyQuestion(child.name || '아가', child.pregnancyWeeks ?? 0);
-            const isNearDue = (child.pregnancyWeeks ?? 0) >= 37;
+            const weeks = child.pregnancyWeeks ?? 0;
+            const isNearDue = weeks >= 37;
+            const isBagReady = weeks >= 34 && weeks < 37;
+            if (isBagReady) {
+              return (
+                <BirthBagBigCard
+                  childId={child.id}
+                  onPress={() => router.push('/(main)/birth-bag' as never)}
+                />
+              );
+            }
+            const msg = isNearDue
+              ? `${child.name} 출산하셨나요?`
+              : weeks >= 24
+              ? `${child.name} 정밀 초음파 받으셨나요?`
+              : weeks >= 16
+              ? `${child.name} 첫 태동 느끼셨나요?`
+              : weeks >= 12
+              ? `${child.name} 안정기 진입! 검진 예약하세요`
+              : `${child.name} 엽산 챙기고 계신가요?`;
+            const subMsg = isNearDue
+              ? '탭하면 육아 모드로 전환됩니다'
+              : '탭해서 기록하기';
+            const heroIcon = isNearDue
+              ? require('../../assets/preg-ribbon.png')
+              : require('../../assets/preg-test.png');
             return (
-              <>
-                {/* 주수별 질문 → 임신 기록으로 이동 */}
-                <TouchableOpacity
-                  style={styles.birthCard}
-                  activeOpacity={0.8}
-                  onPress={() => router.push('/(main)/pregnancy' as never)}
-                >
-                  <Text style={styles.birthCardEmoji}>{q.emoji}</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.birthCardTitle}>{q.text}</Text>
-                    <Text style={styles.birthCardDesc}>탭해서 기록하기</Text>
-                  </View>
-                  <Text style={styles.birthCardArrow}>{'>'}</Text>
-                </TouchableOpacity>
-
-                {/* 만삭(37주+)이면 출산 등록 버튼 별도 표시 */}
-                {isNearDue && (
-                  <TouchableOpacity
-                    style={[styles.birthCard, { backgroundColor: '#FFF0F5', borderColor: '#FFB6C1', borderWidth: 1, marginTop: 8 }]}
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      setBirthName(child.name || '');
-                      setBirthGender(null);
-                      setBirthDateVal('');
-                      setBirthTimeVal('');
-                      setBirthModalVisible(true);
-                    }}
-                  >
-                    <Text style={styles.birthCardEmoji}>{'🎉'}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.birthCardTitle}>출산하셨나요?</Text>
-                      <Text style={styles.birthCardDesc}>탭하면 육아 모드로 전환됩니다</Text>
-                    </View>
-                    <Text style={styles.birthCardArrow}>{'>'}</Text>
-                  </TouchableOpacity>
-                )}
-              </>
+              <TouchableOpacity
+                style={styles.preghomeBigCard}
+                activeOpacity={0.85}
+                onPress={() => {
+                  if (isNearDue) {
+                    setBirthName(child.name || '');
+                    setBirthGender(null);
+                    setBirthDateVal('');
+                    setBirthTimeVal('');
+                    setBirthModalVisible(true);
+                  } else {
+                    router.push('/(main)/pregnancy' as never);
+                  }
+                }}
+              >
+                <View style={styles.preghomeBigEmojiWrap}>
+                  <Image source={heroIcon} style={styles.preghomeBigIcon} resizeMode="contain" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.preghomeBigTitle}>{msg}</Text>
+                  <Text style={styles.preghomeBigSub}>{subMsg}</Text>
+                </View>
+                <Text style={styles.preghomeBigArrow}>{'>'}</Text>
+              </TouchableOpacity>
             );
           })()}
 
-          {/* === Compact Stats (D-day + Streak) === */}
-          <CompactStats countdown={countdown} streak={streak} />
+          {/* 4) 임신부 — 임신 여정 5단계 (강조 카드 아래) */}
+          {child.isPregnant && (
+            <PregnancyJourneyCard
+              child={child as unknown as { id: string; isPregnant?: boolean; pregnancyWeeks?: number; dueDate?: string }}
+            />
+          )}
 
-          {/* === AI 분석 카드 (육아패턴 · 대변 · 울음) === */}
-          <AIAnalysisCard />
-
-          {/* === 기질 분석 (요약 + 전체보기/다시분석) === */}
-          <TraitAnalysisCard child={child} />
-
-          {/* === Quick Actions (8 icons, 2 rows) === */}
-          <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} child={child} />
+          {/* 영아 — AI 분석 + 기질 분석 (파스텔 단일 배너) */}
+          {!child.isPregnant && (
+            <>
+              <AIAnalysisCard />
+              <TraitAnalysisCard child={child} />
+            </>
+          )}
 
           {/* === Monthly Characteristic === */}
           <MonthlyCharCard child={child} />
 
           {/* === Recommendations === */}
-          <RecommendationSection />
+          <RecommendationSection child={child} />
         </>
       )}
 
@@ -595,7 +662,14 @@ export default function HomeScreen() {
         activeOpacity={0.85}
         hitSlop={12}
       >
-        <Text style={styles.addChildBannerEmoji}>{'👶'}</Text>
+        <View style={styles.addChildBannerImageWrap}>
+          <Image
+            source={require('../../assets/quick-baby.png')}
+            style={styles.addChildBannerImage}
+            resizeMode="contain"
+          />
+        </View>
+
         <View style={{ flex: 1 }}>
           <Text style={styles.addChildBannerTitle}>내 아이 정보 추가하기</Text>
           <Text style={styles.addChildBannerDesc}>
@@ -614,6 +688,16 @@ export default function HomeScreen() {
         onDismiss={handlePopupDismiss}
       />
 
+      {/* 다음 검진 일정 모달 (임신부 stat 카드 탭 시) */}
+      {selectedChild && (
+        <NextCheckupModal
+          visible={checkupModalOpen}
+          onClose={() => setCheckupModalOpen(false)}
+          childId={selectedChild.id}
+          current={currentCheckup}
+        />
+      )}
+
       {/* Trial Expiry Popup */}
       <CenterModal
         visible={trialPopupVisible}
@@ -621,7 +705,7 @@ export default function HomeScreen() {
         animationType="fade"
         overlayStyle={{ padding: 32 }}
       >
-        <Text style={styles.trialEmoji}>{'👑'}</Text>
+        <Image source={require('../../assets/premium-badge.png')} style={styles.trialEmojiImg} resizeMode="contain" />
         <Text style={styles.trialTitle}>무료 체험이 종료되었습니다</Text>
         <Text style={styles.trialDesc}>
           프리미엄으로 업그레이드하면 상담이모 무제한, 상세 리포트 등 모든 기능을 이용할 수 있어요.
@@ -654,7 +738,7 @@ export default function HomeScreen() {
         onRequestClose={() => setBirthModalVisible(false)}
         animationType="slide"
       >
-        <Text style={styles.birthModalEmoji}>{'👶'}</Text>
+        <Image source={require('../../assets/quick-baby.png')} style={styles.birthModalEmojiImg} resizeMode="contain" />
             <Text style={styles.birthModalTitle}>출산 정보 입력</Text>
             <Text style={styles.birthModalDesc}>축하합니다! 아이 정보를 입력해주세요</Text>
 
@@ -756,6 +840,17 @@ function Header({
   child: Child | null;
   onPickPhoto: () => void;
 }) {
+  // mockup 형식: "지수 8개월 12일 · 여" / "콩 1주차 · 태명"
+  const subInfo = (() => {
+    if (!child) return '';
+    if (child.isPregnant) {
+      return `${child.pregnancyWeeks ?? 0}주차 · 태명`;
+    }
+    const age = getAgeText(child.ageInfo.months);
+    const gender = child.gender === 'F' ? '여' : child.gender === 'M' ? '남' : '';
+    return gender ? `${age} · ${gender}` : age;
+  })();
+
   return (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
@@ -775,27 +870,19 @@ function Header({
           )}
         </TouchableOpacity>
         <View style={styles.headerInfo}>
-          <Text style={styles.headerLabel}>우리 아이</Text>
-          <Text style={styles.headerName}>
-            {child?.name ?? '아이'}{' '}
-            <Text style={styles.headerAge}>
-              ({child?.isPregnant
-                ? `${child.pregnancyWeeks ?? 0}주차`
-                : child ? getAgeText(child.ageInfo.months) : ''})
-            </Text>
+          <Text style={styles.headerNameSimple} numberOfLines={1}>
+            <Text style={styles.headerNameStrong}>{child?.name ?? '아이'}</Text>
+            {subInfo ? <Text style={styles.headerNameSub}>{`  ${subInfo}`}</Text> : null}
           </Text>
         </View>
       </View>
       <View style={styles.headerRight}>
+        {/* 임신부 — 헤더 우측 진통 체크 pill (35주+는 강조/pulse, 37주+는 임박 도트) */}
         {child?.isPregnant && (
-          <TouchableOpacity
-            style={styles.contractionBox}
+          <ContractionHeaderPill
+            weeks={child.pregnancyWeeks ?? 0}
             onPress={() => router.push('/(main)/labor-monitor?tab=contraction' as never)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.contractionBoxEmoji}>{'⏱️'}</Text>
-            <Text style={styles.contractionBoxText}>진통{'\n'}체크</Text>
-          </TouchableOpacity>
+          />
         )}
         <TouchableOpacity
           style={styles.iconBtn}
@@ -910,22 +997,18 @@ function TraitAnalysisCard({ child }: { child: Child }) {
 }
 
 const traitCardStyles = StyleSheet.create({
+  // 파스텔 피치 (앱 톤과 매칭)
   card: {
-    backgroundColor: '#5C1F3A',
-    borderRadius: 16,
+    backgroundColor: '#FFF4ED',
+    borderRadius: 14,
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#8A3556',
+    borderColor: '#FFE0CC',
     overflow: 'hidden',
-    shadowColor: '#D45D8A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
   },
   shimmer: {
     position: 'absolute',
@@ -933,41 +1016,41 @@ const traitCardStyles = StyleSheet.create({
     left: 0,
     width: 80,
     height: 160,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,140,90,0.10)',
   },
   iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#D45D8A',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FF8C5A',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   iconGlow: {
     position: 'absolute',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#F2A2C1',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFB48E',
   },
-  iconText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  iconText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
   textCol: { flex: 1 },
-  title: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
-  sub: { fontSize: 12, color: '#F2C5D6' },
+  title: { fontSize: 15, fontWeight: '900', color: '#1C1C1E' },
+  sub: { fontSize: 11, color: '#636366', marginTop: 1 },
   typeBadge: {
-    marginLeft: 8,
-    backgroundColor: '#FFD76E',
+    marginLeft: 6,
+    backgroundColor: '#FF8C5A',
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 5,
   },
   typeBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#5C1F3A',
+    color: '#FFFFFF',
   },
-  arrow: { color: '#FFFFFF', fontSize: 22, fontWeight: '300', marginLeft: 8 },
+  arrow: { color: '#FF8C5A', fontSize: 18, fontWeight: '600', marginLeft: 6 },
 });
 
 function MonthlyCharCard({ child }: { child: Child }) {
@@ -1007,54 +1090,238 @@ function MonthlyCharCard({ child }: { child: Child }) {
  * 최근 4시간 내 38°C+ 발열 기록이 있으면 true
  * — AsyncStorage `fever_history_${childId}` 읽어서 판정
  */
+/**
+ * BirthBagBigCard — 임신 34~36주차 강조카드.
+ * AsyncStorage에서 출산가방 진행률·아빠 담당 카운트 읽어 표시.
+ */
+function BirthBagBigCard({ childId, onPress }: { childId: string; onPress: () => void }) {
+  const [progress, setProgress] = useState<{ done: number; total: number; dadRemaining: number } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        // v3 우선, 없으면 v2 fallback
+        let raw = await AsyncStorage.getItem(`amatda_birthbag_v3_${childId}`);
+        if (!raw) raw = await AsyncStorage.getItem(`amatda_birthbag_v2_${childId}`);
+        if (!raw || cancelled) return;
+        const data = JSON.parse(raw) as {
+          checked?: Record<string, boolean>;
+          owner?: Record<string, string | null>;
+          status?: Record<string, string | null>;
+          customItems?: { id: string }[];
+          hiddenIds?: string[];
+        };
+        const checked = data.checked ?? {};
+        const owner = data.owner ?? {};
+        const statusMap = data.status ?? {};
+        const customItems = data.customItems ?? [];
+        const hiddenIds = new Set(data.hiddenIds ?? []);
+        // 출산가방 기본 항목 수 (birth-bag.tsx ALL_ITEMS 기준 — 분만/산후 필터 후 평균 ~32)
+        // 정확한 수치 대신 안정적 baseline 사용 + 커스텀 추가
+        const BASELINE_TOTAL = 32;
+        const customCount = customItems.filter((c) => !hiddenIds.has(c.id)).length;
+        // 'na' (해당없음) 항목은 통계 제외
+        const allKnownIds = new Set([
+          ...Object.keys(checked),
+          ...Object.keys(owner),
+          ...Object.keys(statusMap),
+        ]);
+        const naCount = Array.from(allKnownIds).filter((id) => statusMap[id] === 'na').length;
+        const total = Math.max(1, BASELINE_TOTAL + customCount - naCount);
+        const done = Array.from(allKnownIds).filter((id) => checked[id] && statusMap[id] !== 'na').length;
+        const dadRemaining = Array.from(allKnownIds).filter((id) => owner[id] === 'dad' && !checked[id] && statusMap[id] !== 'na').length;
+        if (!cancelled) setProgress({ done, total, dadRemaining });
+      } catch {
+        if (!cancelled) setProgress(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [childId]);
+
+  const pct = progress ? Math.min(100, Math.round((progress.done / progress.total) * 100)) : 0;
+  const subText = (() => {
+    if (!progress || progress.done === 0) {
+      return '엄마·아빠가 함께 챙기는 체크리스트';
+    }
+    const parts: string[] = [`${progress.done}/${progress.total} 완료 (${pct}%)`];
+    if (progress.dadRemaining > 0) parts.push(`아빠 담당 ${progress.dadRemaining}개 남음`);
+    return parts.join(' · ');
+  })();
+
+  return (
+    <TouchableOpacity style={styles.preghomeBigCard} activeOpacity={0.85} onPress={onPress}>
+      <View style={styles.preghomeBigEmojiWrap}>
+        <Image source={require('../../assets/preg-bag.png')} style={styles.preghomeBigIcon} resizeMode="contain" />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.preghomeBigTitle}>출산가방 같이 끝내요</Text>
+        <Text style={styles.preghomeBigSub}>{subText}</Text>
+        {progress && progress.done > 0 ? (
+          <View style={styles.bagProgressTrack}>
+            <View style={[styles.bagProgressFill, { width: `${pct}%` }]} />
+          </View>
+        ) : null}
+      </View>
+      <Text style={styles.preghomeBigArrow}>{'>'}</Text>
+    </TouchableOpacity>
+  );
+}
+
+/**
+ * ContractionHeaderPill — 임신부 헤더 우측 진통 체크 CTA.
+ * - 35주 미만: 기본 코랄 pill (정적)
+ * - 35-36주: 진한 코랄 + 은은한 pulse + glow
+ * - 37주+: 진한 핑크 + 더 강한 pulse + 작은 임박 도트
+ *
+ * 사이즈: 헤더 라인 안에 들어가는 작은 pill (height 36) — 메인 영역 카드 차지 X.
+ */
+function ContractionHeaderPill({ weeks, onPress }: { weeks: number; onPress: () => void }) {
+  const emphasized = weeks >= 35;
+  const urgent = weeks >= 37;
+
+  // pulse (35주+만)
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!emphasized) return;
+    const duration = urgent ? 1500 : 2400;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [emphasized, urgent, pulse]);
+
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, urgent ? 1.04 : 1.02] });
+  const glowOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.18, urgent ? 0.6 : 0.4] });
+
+  return (
+    <View style={styles.contractionPillWrap}>
+      {emphasized ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.contractionPillGlow,
+            urgent ? styles.contractionPillGlowUrgent : styles.contractionPillGlowEmph,
+            { opacity: glowOpacity },
+          ]}
+        />
+      ) : null}
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <TouchableOpacity
+          style={[
+            styles.contractionPill,
+            emphasized && styles.contractionPillEmph,
+            urgent && styles.contractionPillUrgent,
+          ]}
+          activeOpacity={0.85}
+          onPress={onPress}
+        >
+          <Image
+            source={require('../../assets/contraction-clock.png')}
+            style={[
+              styles.contractionPillIcon,
+              emphasized && styles.contractionPillIconEmph,
+              urgent && styles.contractionPillIconUrgent,
+            ]}
+            resizeMode="contain"
+          />
+          <Text
+            style={[
+              styles.contractionPillText,
+              emphasized && styles.contractionPillTextEmph,
+              urgent && styles.contractionPillTextUrgent,
+            ]}
+          >
+            진통 체크
+          </Text>
+          {urgent ? <View style={styles.contractionPillDot} /> : null}
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
+}
+
 function useFeverAlert(childId: string | undefined): boolean {
   const [isAlert, setIsAlert] = useState(false);
+  // fever.tsx에서 측정 시 bump() → 이 hook 재실행
+  // (스택 keep으로 useEffect가 자동 재실행 안 되는 문제 해결)
+  const alertVersion = useFeverStore((s) => s.alertVersion);
+
   useEffect(() => {
-    if (!childId) {
-      setIsAlert(false);
-      return;
-    }
+    setIsAlert(false);
+    if (!childId) return;
     let cancelled = false;
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(`fever_history_${childId}`);
         if (!raw || cancelled) return;
-        const list = JSON.parse(raw) as Array<{ timestamp?: number; adjustedTemp?: number; temperature?: number }>;
+        const parsed: unknown = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return;
         const now = Date.now();
-        const recent = list.find((e) => {
-          const ts = e.timestamp ?? 0;
-          const t = e.adjustedTemp ?? e.temperature ?? 0;
-          return now - ts < 4 * 60 * 60 * 1000 && t >= 38.0;
-        });
-        if (!cancelled) setIsAlert(!!recent);
+        const FOUR_HOURS = 4 * 60 * 60 * 1000;
+        type Entry = { ts: number; t: number };
+        const valid: Entry[] = [];
+        for (const e of parsed) {
+          if (typeof e !== 'object' || e === null) continue;
+          const obj = e as Record<string, unknown>;
+          const ts = typeof obj.timestamp === 'number' ? obj.timestamp : NaN;
+          const adj = typeof obj.adjustedTemp === 'number' ? obj.adjustedTemp : NaN;
+          const temp = typeof obj.temperature === 'number' ? obj.temperature : NaN;
+          const t = Number.isFinite(adj) ? adj : Number.isFinite(temp) ? temp : NaN;
+          if (!Number.isFinite(ts) || !Number.isFinite(t)) continue;
+          if (ts <= 0 || ts > now) continue;
+          valid.push({ ts, t });
+        }
+        if (valid.length === 0) {
+          if (!cancelled) setIsAlert(false);
+          return;
+        }
+        valid.sort((a, b) => b.ts - a.ts);
+        const latest = valid[0];
+        const isHighAndFresh = now - latest.ts < FOUR_HOURS && latest.t >= 38.0;
+        if (!cancelled) setIsAlert(isHighAndFresh);
       } catch {
         if (!cancelled) setIsAlert(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [childId]);
+  }, [childId, alertVersion]);
   return isAlert;
 }
 
-function FeverPulseCircle({ children, bg }: { children: React.ReactNode; bg: string }) {
+/**
+ * 고열 알람 — AI 분석 카드와 동일한 스타일(글로우 + 셔머).
+ * 빨간 링 대신 부드러운 펄스 글로우 + 흰 셔머 배너로 표현.
+ */
+function FeverPulseCircle({ children }: { children: React.ReactNode; bg: string }) {
   const pulse = useRef(new Animated.Value(0)).current;
+  const shimmer = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    const loop = Animated.loop(
+    const pulseLoop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 1400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
       ]),
     );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
+    const shimmerLoop = Animated.loop(
+      Animated.timing(shimmer, { toValue: 1, duration: 2600, easing: Easing.linear, useNativeDriver: true }),
+    );
+    pulseLoop.start();
+    shimmerLoop.start();
+    return () => { pulseLoop.stop(); shimmerLoop.stop(); };
+  }, [pulse, shimmer]);
 
-  const ringOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.85] });
-  const ringScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.18] });
+  const glowOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.85] });
+  const glowScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.18] });
+  const shimmerTranslate = shimmer.interpolate({ inputRange: [0, 1], outputRange: [-60, 90] });
 
   return (
-    <View style={[styles.quickCircle, { backgroundColor: bg }]}>
-      {/* 빨강 펄스 링 */}
+    <View style={[styles.quickCircle, { backgroundColor: '#FF6B6B', overflow: 'hidden' }]}>
+      {/* 외곽 글로우 (AI 카드 iconGlow 스타일) */}
       <Animated.View
         pointerEvents="none"
         style={{
@@ -1062,10 +1329,22 @@ function FeverPulseCircle({ children, bg }: { children: React.ReactNode; bg: str
           width: 56,
           height: 56,
           borderRadius: 28,
-          borderWidth: 3,
-          borderColor: '#FF3B30',
-          opacity: ringOpacity,
-          transform: [{ scale: ringScale }],
+          backgroundColor: '#FFB4B4',
+          opacity: glowOpacity,
+          transform: [{ scale: glowScale }],
+        }}
+      />
+      {/* 흰 셔머 라인 */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: -10,
+          left: 0,
+          width: 28,
+          height: 70,
+          backgroundColor: 'rgba(255,255,255,0.30)',
+          transform: [{ translateX: shimmerTranslate }, { rotate: '20deg' }],
         }}
       />
       {children}
@@ -1118,18 +1397,37 @@ function AllActionsGrid({ ageGroup, child }: { ageGroup: AgeGroupKey; child?: Ch
 /**
  * 맞춤 추천 — 한 줄 배너로 간소화 (홈 공간 확보).
  * 클릭 시 별도 카테고리 페이지로 이동.
+ * 임신부일 경우 임산부용 카테고리/문구로 자동 전환.
  */
-function RecommendationSection() {
+function RecommendationSection({ child }: { child: Child }) {
+  const isPregnant = !!child.isPregnant;
+  const week = child.pregnancyWeeks ?? 0;
+
+  // 임신부 — 트라이메스터별 강조 카테고리 변경
+  let title = '나를 위한 맞춤 추천 보기';
+  let desc = '음식 · 놀이 · 학원 · 책 등 카테고리별';
+
+  if (isPregnant) {
+    title = '임산부 맞춤 추천 보기';
+    if (week <= 13) {
+      desc = '입덧 식단 · 가벼운 운동 · 태교 시작 · 초기 관리';
+    } else if (week <= 27) {
+      desc = '영양 식단 · 임산부 요가 · 태교 책 · 출산용품 준비';
+    } else {
+      desc = '체중 관리 식단 · 분만 준비 운동 · 태교 마무리 · 출산가방';
+    }
+  }
+
   return (
     <TouchableOpacity
       style={styles.recoBanner}
       onPress={() => router.push('/(main)/recommendations')}
       activeOpacity={0.85}
     >
-      <Text style={styles.recoBannerEmoji}>{'💡'}</Text>
+      <Image source={require('../../assets/mascot-thinking.png')} style={styles.recoBannerEmojiImg} resizeMode="contain" />
       <View style={{ flex: 1 }}>
-        <Text style={styles.recoBannerTitle}>나를 위한 맞춤 추천 보기</Text>
-        <Text style={styles.recoBannerDesc}>음식 · 놀이 · 학원 · 책 등 카테고리별</Text>
+        <Text style={styles.recoBannerTitle}>{title}</Text>
+        <Text style={styles.recoBannerDesc}>{desc}</Text>
       </View>
       <Text style={styles.recoBannerArrow}>{'›'}</Text>
     </TouchableOpacity>
@@ -1168,9 +1466,10 @@ function CompactStats({
           {countdown && streak && <View style={styles.compactDivider} />}
           {streak && (
             <View style={styles.compactStatItem}>
-              <Text style={styles.compactStatValue}>
-                {LEVEL_ICONS[streak.level] ?? '🌱'} {streak.currentStreak}{'일째'}
-              </Text>
+              <View style={styles.compactStatValueRow}>
+                <Image source={require('../../assets/quick-sprout.png')} style={styles.compactStatIconImg} resizeMode="contain" />
+                <Text style={styles.compactStatValue}>{` ${streak.currentStreak}일째`}</Text>
+              </View>
               <Text style={styles.compactStatLabel}>{streak.levelName}</Text>
             </View>
           )}
@@ -1270,22 +1569,18 @@ function AIAnalysisCard() {
 }
 
 const aiCardStyles = StyleSheet.create({
+  // 파스텔 라벤더 (앱 전체 톤과 매칭)
   card: {
-    backgroundColor: '#3A3D7C',
-    borderRadius: 16,
+    backgroundColor: '#EEEDFC',
+    borderRadius: 14,
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#5458B8',
+    borderColor: '#D8D4F7',
     overflow: 'hidden',
-    shadowColor: '#7C83EC',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
   },
   shimmer: {
     position: 'absolute',
@@ -1293,37 +1588,37 @@ const aiCardStyles = StyleSheet.create({
     left: 0,
     width: 80,
     height: 160,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(124,131,236,0.10)',
   },
   iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#7C83EC',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   iconGlow: {
     position: 'absolute',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#A9AEF5',
   },
-  iconText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  iconText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
   textCol: { flex: 1 },
-  title: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
-  sub: { fontSize: 12, color: '#D4D6F2' },
+  title: { fontSize: 15, fontWeight: '900', color: '#1C1C1E' },
+  sub: { fontSize: 11, color: '#636366', marginTop: 1 },
   newBadge: {
-    marginLeft: 8,
+    marginLeft: 6,
     backgroundColor: '#FFD76E',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 5,
   },
-  newBadgeText: { fontSize: 10, fontWeight: '800', color: '#3A3D7C' },
-  arrow: { fontSize: 22, color: '#FFFFFF', marginLeft: 4 },
+  newBadgeText: { fontSize: 9, fontWeight: '800', color: '#7C5A00' },
+  arrow: { fontSize: 18, color: '#7C83EC', marginLeft: 4 },
 });
 
 function InsightCards({ insights }: { insights: { type: string; title: string; message: string; actionLabel?: string; actionRoute?: string }[] }) {
@@ -1485,32 +1780,26 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: COLOR.textSub,
   },
+  // mockup 단순 헤더 — name 1줄로 통합
+  headerNameSimple: {
+    fontSize: 15,
+    color: COLOR.text,
+    flexShrink: 1,
+  },
+  headerNameStrong: {
+    fontWeight: '900',
+    color: COLOR.text,
+    fontSize: 15,
+  },
+  headerNameSub: {
+    fontWeight: '600',
+    color: COLOR.textSub,
+    fontSize: 13,
+  },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  contractionBox: {
-    width: 76,
-    height: 76,
-    borderRadius: 14,
-    backgroundColor: '#FFE0E6',
-    borderWidth: 2,
-    borderColor: '#FF3B30',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 4,
-  },
-  contractionBoxEmoji: {
-    fontSize: 26,
-  },
-  contractionBoxText: {
-    color: '#C0392B',
-    fontSize: 14,
-    fontWeight: '800' as const,
-    textAlign: 'center',
-    marginTop: 3,
-    lineHeight: 15,
   },
   iconBtn: {
     width: 36,
@@ -1519,6 +1808,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F2F7',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
   iconEmoji: {
     fontSize: 18,
@@ -1529,7 +1823,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLOR.card,
     borderRadius: 14,
     padding: 16,
-    marginBottom: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#F0F0F0',
     borderLeftWidth: 3,
@@ -1568,7 +1862,8 @@ const styles = StyleSheet.create({
   quickSection: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 28,
+    marginTop: 14,
+    marginBottom: 16,
     paddingHorizontal: 4,
     rowGap: 16,
   },
@@ -1583,6 +1878,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.7)',
   },
   quickIcon: {
     width: 40,
@@ -1648,11 +1950,13 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 14,
-    marginVertical: 8,
+    marginTop: 0,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E1D9FA',
   },
   recoBannerEmoji: { fontSize: 26 },
+  recoBannerEmojiImg: { width: 32, height: 32 },
   recoBannerTitle: { fontSize: 15, fontWeight: '700', color: '#3C3450' },
   recoBannerDesc: { fontSize: 12, color: '#6B5E8A', marginTop: 2 },
   recoBannerArrow: { fontSize: 22, color: '#7C5CFF', fontWeight: '700' },
@@ -1733,6 +2037,8 @@ const styles = StyleSheet.create({
     fontWeight: '700' as const,
     color: COLOR.accent,
   },
+  compactStatValueRow: { flexDirection: 'row', alignItems: 'center' },
+  compactStatIconImg: { width: 18, height: 18 },
   compactStatLabel: {
     fontSize: 11,
     color: COLOR.textSub,
@@ -1829,42 +2135,58 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  /* === 자녀 추가 거대 배너 (둘째 등록 유도) === */
+  /* === 자녀 추가 배너 (앱 톤 맞춤 파스텔) === */
   addChildBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    backgroundColor: '#FF8C5A',
-    paddingVertical: 22,
-    paddingHorizontal: 20,
-    borderRadius: 18,
-    marginTop: 12,
+    backgroundColor: COLOR.accentLight,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    marginTop: 0,
     marginBottom: 20,
-    borderWidth: 2,
-    borderColor: '#E26A00',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#FFD4BB',
+    shadowColor: '#FF8C5A',
+    shadowOpacity: 0.10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
   },
   addChildBannerEmoji: { fontSize: 40 },
+  addChildBannerImageWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF8C5A',
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 5,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.7)',
+  },
+  addChildBannerImage: { width: 40, height: 40 },
   addChildBannerTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    lineHeight: 24,
+    fontSize: 15,
+    fontWeight: '800',
+    color: COLOR.text,
+    lineHeight: 22,
   },
   addChildBannerDesc: {
-    fontSize: 13,
-    color: '#FFE4D2',
+    fontSize: 12,
+    color: COLOR.textSub,
     fontWeight: '600',
     marginTop: 2,
   },
   addChildBannerPlus: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#FFFFFF',
+    fontSize: 26,
+    fontWeight: '800',
+    color: COLOR.accent,
   },
 
   /* === Version === */
@@ -1891,6 +2213,7 @@ const styles = StyleSheet.create({
     width: '100%' as const,
   },
   trialEmoji: { fontSize: 44, marginBottom: 16 },
+  trialEmojiImg: { width: 56, height: 56, marginBottom: 16 },
   trialTitle: {
     fontSize: 20,
     fontWeight: '700' as const,
@@ -1957,6 +2280,158 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
+  /* === 임신부 home 큰 강조 카드 (출산가방/검진/태동 등 주차별) === */
+  preghomeBigCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    marginTop: 0,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFD7E5',
+    gap: 14,
+  },
+  /* 진통 체크 헤더 pill — 우측 알림/프로필 옆에 배치 */
+  contractionPillWrap: {
+    position: 'relative',
+  },
+  contractionPillGlow: {
+    position: 'absolute',
+    top: -3,
+    left: -3,
+    right: -3,
+    bottom: -3,
+    borderRadius: 22,
+    borderWidth: 2,
+  },
+  contractionPillGlowEmph: {
+    borderColor: '#FF6F61', // 코랄
+  },
+  contractionPillGlowUrgent: {
+    borderColor: '#E91E63', // 진한 핑크
+  },
+  contractionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 36,
+    paddingHorizontal: 11,
+    borderRadius: 18,
+    backgroundColor: '#FFE0E6', // 기본: 연한 코랄
+    borderWidth: 1.5,
+    borderColor: '#FF8FA8',
+    gap: 5,
+    shadowColor: '#FF3B30',
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  // 35주+ — 헤더 라인 안에서 자연스럽게 강조 (벨/프로필 아이콘이 36이라 너무 차이 X)
+  contractionPillEmph: {
+    backgroundColor: '#FFD3DC',
+    borderColor: '#FF6F61',
+    borderWidth: 2,
+    paddingHorizontal: 14,
+    height: 42,
+    gap: 6,
+  },
+  // 37주+ — 출산 임박: 한 단계 더 강조
+  contractionPillUrgent: {
+    backgroundColor: '#FFC7D9',
+    borderColor: '#E91E63',
+    borderWidth: 2.5,
+    paddingHorizontal: 16,
+    height: 44,
+  },
+  contractionPillIcon: {
+    width: 22,
+    height: 22,
+  },
+  contractionPillIconEmph: {
+    width: 26,
+    height: 26,
+  },
+  contractionPillIconUrgent: {
+    width: 28,
+    height: 28,
+  },
+  contractionPillText: {
+    color: '#C0392B',
+    fontSize: 12,
+    fontWeight: '800' as const,
+  },
+  contractionPillTextEmph: {
+    color: '#B71C1C',
+    fontSize: 13,
+    fontWeight: '900' as const,
+  },
+  contractionPillTextUrgent: {
+    color: '#C2185B',
+    fontSize: 14,
+  },
+  contractionPillDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: '#E91E63',
+    marginLeft: 3,
+  },
+  preghomeBigEmojiWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#FCE4EC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#E91E63',
+    shadowOpacity: 0.18,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 5,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.7)',
+  },
+  preghomeBigEmoji: {
+    fontSize: 30,
+    lineHeight: 36,
+    textAlign: 'center' as const,
+  },
+  preghomeBigIcon: {
+    width: 36,
+    height: 36,
+  },
+  preghomeBigTitle: {
+    fontSize: 16,
+    fontWeight: '900' as const,
+    color: '#E91E63',
+    marginBottom: 3,
+  },
+  preghomeBigSub: {
+    fontSize: 12,
+    color: COLOR.textSub,
+    fontWeight: '600' as const,
+  },
+  bagProgressTrack: {
+    height: 6,
+    backgroundColor: '#FCE4EC',
+    borderRadius: 3,
+    marginTop: 8,
+    overflow: 'hidden',
+  },
+  bagProgressFill: {
+    height: '100%',
+    backgroundColor: '#E91E63',
+    borderRadius: 3,
+  },
+  preghomeBigArrow: {
+    fontSize: 22,
+    color: '#E91E63',
+    fontWeight: '600' as const,
+  },
+
   /* === Birth Modal === */
   birthOverlay: {
     flex: 1,
@@ -1973,6 +2448,7 @@ const styles = StyleSheet.create({
     width: '100%' as const,
   },
   birthModalEmoji: { fontSize: 44, marginBottom: 12 },
+  birthModalEmojiImg: { width: 56, height: 56, marginBottom: 12 },
   birthModalTitle: {
     fontSize: 20,
     fontWeight: '700' as const,
@@ -2055,22 +2531,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     bottom: Platform.OS === 'ios' ? 100 : 90,
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#FF3B30',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FF6B6B',
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    shadowColor: '#FF3B30',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.6)',
     zIndex: 100,
   },
   sosFabText: {
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800' as const,
     letterSpacing: 1,
   },

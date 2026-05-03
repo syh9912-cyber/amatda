@@ -7,7 +7,9 @@ import { authApi, childApi } from '../../services/api';
 import {
   cancelAllChildLocalNotifications,
   cancelAllPregnancyLocalNotifications,
+  cancelAllLocalNotifications,
 } from '../../services/pushNotifications';
+import { clearAllSocialSessions } from '../../services/social-auth';
 import { COLORS, SPACING } from '../../constants/theme';
 import { ProfileCard } from '../../components/profile/ProfileCard';
 import { ProfileMenuList } from '../../components/profile/ProfileMenuList';
@@ -36,7 +38,7 @@ export default function ProfileScreen() {
               await childApi.delete(selectedChild.id);
               // 삭제된 아이 관련 로컬 알림 모두 취소
               // (서버 cascade는 push schedules 컬렉션 삭제, 로컬은 별도 처리)
-              await cancelAllChildLocalNotifications(selectedChild.id);
+              await cancelAllChildLocalNotifications(selectedChild.id, selectedChild.name);
               if (selectedChild.isPregnant) {
                 await cancelAllPregnancyLocalNotifications();
               }
@@ -57,8 +59,11 @@ export default function ProfileScreen() {
       {
         text: '로그아웃',
         style: 'destructive',
-        onPress: () => {
+        onPress: async () => {
+          // 정석: 로컬 상태 정리 → 디바이스 SDK 로그아웃 → 모든 로컬 알림 취소
           logout();
+          await clearAllSocialSessions({ unlink: false });
+          await cancelAllLocalNotifications();
           router.replace('/');
         },
       },
@@ -82,8 +87,14 @@ export default function ProfileScreen() {
                 style: 'destructive',
                 onPress: async () => {
                   try {
+                    // 1. 백엔드: user 데이터 삭제 + 소셜 unlink REST 호출
                     await authApi.deleteAccount();
+                    // 2. 디바이스 SDK: 카카오/네이버/구글 토큰 캐시 + 앱 연결 자체 해제
+                    //    (서버 unlink와 별개로 디바이스에 남은 access token / 동의 기록 정리)
+                    await clearAllSocialSessions({ unlink: true });
+                    // 3. 로컬 상태 + 모든 예약 알림 정리
                     logout();
+                    await cancelAllLocalNotifications();
                     router.replace('/');
                   } catch {
                     Alert.alert('오류', '계정 삭제에 실패했습니다.');

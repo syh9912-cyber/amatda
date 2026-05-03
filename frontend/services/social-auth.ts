@@ -259,3 +259,58 @@ export async function socialLogin(provider: SocialProvider): Promise<SocialLogin
   if (provider === 'GOOGLE') return googleLogin();
   return authSessionLogin(provider);
 }
+
+/**
+ * 디바이스 측 소셜 SDK 토큰 캐시 정리.
+ * 로그아웃/계정삭제 시 모든 provider에 대해 호출 (어떤 provider로 로그인했는지 모를 수 있음).
+ *
+ * - logout: SDK가 가진 access token 만 무효화 (다음 로그인 시 동의화면 X 가능)
+ * - unlink: 앱-카카오/네이버/구글 연결 자체 해제 (다음 로그인 시 동의화면 다시 표시)
+ *
+ * 모든 호출은 best-effort — 실패해도 진행. 웹/네이티브 분기.
+ */
+export async function clearAllSocialSessions(opts?: { unlink?: boolean }): Promise<void> {
+  if (Platform.OS === 'web') return;
+  const unlink = opts?.unlink === true;
+
+  // 카카오
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const KakaoMod = require('@react-native-seoul/kakao-login');
+    if (unlink && typeof KakaoMod.unlink === 'function') {
+      await KakaoMod.unlink().catch(() => {});
+    } else if (typeof KakaoMod.logout === 'function') {
+      await KakaoMod.logout().catch(() => {});
+    }
+  } catch {
+    /* SDK 미설치 또는 미로그인 — 무시 */
+  }
+
+  // 네이버
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const NaverMod = require('@react-native-seoul/naver-login');
+    const NaverLogin = NaverMod.default ?? NaverMod;
+    if (unlink && typeof NaverLogin.deleteToken === 'function') {
+      await NaverLogin.deleteToken().catch(() => {});
+    } else if (typeof NaverLogin.logout === 'function') {
+      await NaverLogin.logout().catch(() => {});
+    }
+  } catch {
+    /* SDK 미설치 또는 미로그인 — 무시 */
+  }
+
+  // 구글
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+    if (unlink && typeof GoogleSignin.revokeAccess === 'function') {
+      await GoogleSignin.revokeAccess().catch(() => {});
+    }
+    if (typeof GoogleSignin.signOut === 'function') {
+      await GoogleSignin.signOut().catch(() => {});
+    }
+  } catch {
+    /* SDK 미설치 또는 미로그인 — 무시 */
+  }
+}

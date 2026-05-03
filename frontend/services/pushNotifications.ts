@@ -254,13 +254,13 @@ function getNextTimeAt(hour: number, minute: number, daysFromNow: number): Date 
 
 // --- Schedule individual notifications ---
 
-async function scheduleMorning(childName: string, time: string): Promise<string> {
+async function scheduleMorning(childId: string, childName: string, time: string): Promise<string> {
   const { hour, minute } = parseHM(time, 8, 0);
   return Notifications.scheduleNotificationAsync({
     content: {
       title: '아맞다',
       body: `좋은 아침! 어젯밤 ${childName}는 잘 잤나요?`,
-      data: { screen: 'chatbot' },
+      data: { screen: 'chatbot', childId, childName },
       sound: 'amatda_chime.wav',
     },
     trigger: {
@@ -272,13 +272,13 @@ async function scheduleMorning(childName: string, time: string): Promise<string>
   });
 }
 
-async function scheduleAfternoon(childName: string, time: string): Promise<string> {
+async function scheduleAfternoon(childId: string, childName: string, time: string): Promise<string> {
   const { hour, minute } = parseHM(time, 15, 0);
   return Notifications.scheduleNotificationAsync({
     content: {
       title: '아맞다',
       body: `지금 ${childName}와 15분 놀이 시간 어때요?`,
-      data: { screen: 'play-learning' },
+      data: { screen: 'play-learning', childId, childName },
       sound: 'amatda_chime.wav',
     },
     trigger: {
@@ -290,13 +290,13 @@ async function scheduleAfternoon(childName: string, time: string): Promise<strin
   });
 }
 
-async function scheduleEvening(time: string): Promise<string> {
+async function scheduleEvening(childId: string, time: string): Promise<string> {
   const { hour, minute } = parseHM(time, 21, 0);
   return Notifications.scheduleNotificationAsync({
     content: {
       title: '아맞다',
       body: '오늘의 육아일기가 준비됐어요',
-      data: { screen: 'diary' },
+      data: { screen: 'diary', childId },
       sound: 'amatda_chime.wav',
     },
     trigger: {
@@ -308,12 +308,12 @@ async function scheduleEvening(time: string): Promise<string> {
   });
 }
 
-async function scheduleWeeklyReport(): Promise<string> {
+async function scheduleWeeklyReport(childId: string): Promise<string> {
   return Notifications.scheduleNotificationAsync({
     content: {
       title: '아맞다',
       body: '이번 주 육아 리포트가 도착했어요',
-      data: { screen: 'report' },
+      data: { screen: 'report', childId },
       sound: 'amatda_chime.wav',
     },
     trigger: {
@@ -328,7 +328,7 @@ async function scheduleWeeklyReport(): Promise<string> {
 
 // --- Coaching follow-up (next day 10 AM) ---
 
-export async function scheduleCoachingFollowup(childName: string): Promise<void> {
+export async function scheduleCoachingFollowup(childId: string, childName: string): Promise<void> {
   const prefs = await loadNotificationPrefs();
   if (!prefs.coachingFollowup) return;
 
@@ -345,7 +345,7 @@ export async function scheduleCoachingFollowup(childName: string): Promise<void>
     content: {
       title: '아맞다',
       body: `어제 ${childName} 상담 후 잘 지나갔나요? 궁금한 점이 있으면 말씀해 주세요`,
-      data: { screen: 'chatbot' },
+      data: { screen: 'chatbot', childId, childName },
       sound: 'amatda_chime.wav',
     },
     trigger: {
@@ -361,7 +361,7 @@ export async function scheduleCoachingFollowup(childName: string): Promise<void>
 
 // --- Re-engagement notifications ---
 
-async function scheduleReengagement(childName: string): Promise<ScheduledIds> {
+async function scheduleReengagement(childId: string, childName: string): Promise<ScheduledIds> {
   const ids = await loadScheduledIds();
 
   // Cancel all existing re-engagement notifications
@@ -391,7 +391,7 @@ async function scheduleReengagement(childName: string): Promise<ScheduledIds> {
       content: {
         title: msg.title,
         body: msg.body(childName),
-        data: { screen: msg.screen },
+        data: { screen: msg.screen, childId, childName },
         sound: 'amatda_chime.wav',
       },
       trigger: {
@@ -413,6 +413,7 @@ async function scheduleReengagement(childName: string): Promise<ScheduledIds> {
  */
 export async function syncScheduledNotifications(
   prefs: NotificationPreferences,
+  childId: string,
   childName: string,
 ): Promise<void> {
   const ids = await loadScheduledIds();
@@ -424,7 +425,7 @@ export async function syncScheduledNotifications(
       if (ids.morning) {
         try { await Notifications.cancelScheduledNotificationAsync(ids.morning); } catch { /* ok */ }
       }
-      ids.morning = await scheduleMorning(childName, prefs.morningTime);
+      ids.morning = await scheduleMorning(childId, childName, prefs.morningTime);
       ids.morningScheduledAt = prefs.morningTime;
     }
   } else if (ids.morning) {
@@ -440,7 +441,7 @@ export async function syncScheduledNotifications(
       if (ids.afternoon) {
         try { await Notifications.cancelScheduledNotificationAsync(ids.afternoon); } catch { /* ok */ }
       }
-      ids.afternoon = await scheduleAfternoon(childName, prefs.afternoonTime);
+      ids.afternoon = await scheduleAfternoon(childId, childName, prefs.afternoonTime);
       ids.afternoonScheduledAt = prefs.afternoonTime;
     }
   } else if (ids.afternoon) {
@@ -456,7 +457,7 @@ export async function syncScheduledNotifications(
       if (ids.evening) {
         try { await Notifications.cancelScheduledNotificationAsync(ids.evening); } catch { /* ok */ }
       }
-      ids.evening = await scheduleEvening(prefs.eveningTime);
+      ids.evening = await scheduleEvening(childId, prefs.eveningTime);
       ids.eveningScheduledAt = prefs.eveningTime;
     }
   } else if (ids.evening) {
@@ -467,7 +468,7 @@ export async function syncScheduledNotifications(
 
   // Weekly
   if (prefs.weekly && !ids.weekly) {
-    ids.weekly = await scheduleWeeklyReport();
+    ids.weekly = await scheduleWeeklyReport(childId);
   } else if (!prefs.weekly && ids.weekly) {
     await Notifications.cancelScheduledNotificationAsync(ids.weekly);
     ids.weekly = null;
@@ -480,7 +481,7 @@ export async function syncScheduledNotifications(
  * Schedule re-engagement notifications (cancel+reschedule from now).
  * Call every time the app is opened.
  */
-export async function syncReengagementNotifications(childName: string): Promise<void> {
+export async function syncReengagementNotifications(childId: string, childName: string): Promise<void> {
   const prefs = await loadNotificationPrefs();
   if (!prefs.reengagement) {
     // Cancel all re-engagement
@@ -498,7 +499,7 @@ export async function syncReengagementNotifications(childName: string): Promise<
     return;
   }
 
-  const updatedIds = await scheduleReengagement(childName);
+  const updatedIds = await scheduleReengagement(childId, childName);
   await saveScheduledIds(updatedIds);
   await trackLastAccess();
 }
@@ -516,12 +517,13 @@ export async function cancelAllNotifications(): Promise<void> {
  */
 export async function rescheduleAllNotifications(
   prefs: NotificationPreferences,
+  childId: string,
   childName: string,
 ): Promise<void> {
   await cancelAllNotifications();
-  await syncScheduledNotifications(prefs, childName);
+  await syncScheduledNotifications(prefs, childId, childName);
   if (prefs.reengagement) {
-    await syncReengagementNotifications(childName);
+    await syncReengagementNotifications(childId, childName);
   }
 }
 
@@ -638,7 +640,7 @@ const FIRST_COACHING_KEY = 'amatda_first_coaching_nudge';
  * 2시간 뒤 "맞춤 육아 팁이 준비됐어요" 푸시 예약.
  * 이미 AI 상담을 했으면 자동 취소됨.
  */
-export async function scheduleFirstCoachingNudge(childName: string): Promise<void> {
+export async function scheduleFirstCoachingNudge(childId: string, childName: string): Promise<void> {
   // 이미 예약된 게 있으면 스킵
   const existing = await AsyncStorage.getItem(FIRST_COACHING_KEY);
   if (existing) return;
@@ -650,7 +652,7 @@ export async function scheduleFirstCoachingNudge(childName: string): Promise<voi
     content: {
       title: `${childName} 맞춤 육아 팁이 준비됐어요`,
       body: '궁금한 거 뭐든 물어보세요. 상담이모가 기다리고 있어요!',
-      data: { screen: 'chatbot' },
+      data: { screen: 'chatbot', childId, childName },
       sound: 'amatda_chime.wav',
     },
     trigger: {
@@ -678,7 +680,7 @@ export async function cancelFirstCoachingNudge(): Promise<void> {
 /**
  * 앱 설치 다음날 아침 9시: "어제 써보셨나요?" 넛지.
  */
-export async function scheduleNextDayNudge(childName: string): Promise<void> {
+export async function scheduleNextDayNudge(childId: string, childName: string): Promise<void> {
   const nudgeKey = 'amatda_nextday_nudge';
   const existing = await AsyncStorage.getItem(nudgeKey);
   if (existing) return;
@@ -689,7 +691,7 @@ export async function scheduleNextDayNudge(childName: string): Promise<void> {
     content: {
       title: '아맞다',
       body: `${childName}에게 딱 맞는 육아 코칭, 한번 써보세요!`,
-      data: { screen: 'chatbot' },
+      data: { screen: 'chatbot', childId, childName },
       sound: 'amatda_chime.wav',
     },
     trigger: {
@@ -821,19 +823,70 @@ export async function cancelFeverRecheckReminder(childId: string): Promise<void>
  * 주의: 데일리 미션(매일 9시 알림)은 임신부 모드 기준이라
  *       다른 임신 자녀가 있으면 유지, 임신 자녀 0명이면 별도 정리 권장.
  * ───────────────────────────────────────────────────────── */
-export async function cancelAllChildLocalNotifications(childId: string): Promise<void> {
+export async function cancelAllChildLocalNotifications(
+  childId: string,
+  childName?: string,
+): Promise<void> {
   if (!childId) return;
 
   // 1. 체온 재측정 (per-child key)
   await cancelFeverRecheckReminder(childId).catch(() => {});
 
-  // 2. 시스템 예약 목록에서 data.childId 일치하는 것 모두 취소 (안전망)
+  // 2. ScheduledIds 전역 키 (morning/afternoon/evening/weekly/coachingFollowup/reengagement*)
+  //    — 단일 자녀 모드라 모두 이 자녀 것. 정리 후 다음 자녀 등록 시 재예약됨.
+  try {
+    const ids = await loadScheduledIds();
+    const idKeys: (keyof ScheduledIds)[] = [
+      'morning', 'afternoon', 'evening', 'weekly',
+      'coachingFollowup',
+      'reengagement3d', 'reengagement7d', 'reengagement10d', 'reengagement14d',
+    ];
+    for (const k of idKeys) {
+      const v = ids[k];
+      if (typeof v === 'string' && v) {
+        await Notifications.cancelScheduledNotificationAsync(v).catch(() => {});
+      }
+    }
+    await saveScheduledIds({ ...EMPTY_IDS });
+  } catch { /* ignore */ }
+
+  // 3. 옛 알림 정리 (FIRST_COACHING_KEY, amatda_nextday_nudge — 전역 단일 키)
+  try {
+    const firstCoachingId = await AsyncStorage.getItem(FIRST_COACHING_KEY);
+    if (firstCoachingId) {
+      await Notifications.cancelScheduledNotificationAsync(firstCoachingId).catch(() => {});
+      await AsyncStorage.removeItem(FIRST_COACHING_KEY);
+    }
+    const nextDayId = await AsyncStorage.getItem('amatda_nextday_nudge');
+    if (nextDayId) {
+      await Notifications.cancelScheduledNotificationAsync(nextDayId).catch(() => {});
+      await AsyncStorage.removeItem('amatda_nextday_nudge');
+    }
+  } catch { /* ignore */ }
+
+  // 4. 시스템 예약 목록 — data.childId 매칭 + childName 매칭 fallback
+  //    childName fallback은 옛 알림(childId 없이 예약된 것) 안전망
   try {
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const safeName = childName && childName.length >= 2 ? childName : null;
     for (const n of scheduled) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data = (n.content as any)?.data as Record<string, unknown> | undefined;
-      if (data && data.childId === childId) {
+      const content = n.content as any;
+      const data = content?.data as Record<string, unknown> | undefined;
+      const matchesId = data && data.childId === childId;
+
+      // childName fallback (data.childName 또는 title/body 본문에 포함)
+      let matchesName = false;
+      if (safeName) {
+        if (data && data.childName === safeName) matchesName = true;
+        else {
+          const title = String(content?.title ?? '');
+          const body = String(content?.body ?? '');
+          if (title.includes(safeName) || body.includes(safeName)) matchesName = true;
+        }
+      }
+
+      if (matchesId || matchesName) {
         try {
           await Notifications.cancelScheduledNotificationAsync(n.identifier);
         } catch { /* ignore */ }
@@ -844,9 +897,42 @@ export async function cancelAllChildLocalNotifications(childId: string): Promise
   }
 }
 
-/** 임신 자녀(예정일 기반) 삭제 시 — 임신 일정 알림 일괄 취소 */
+/**
+ * 임신 자녀(예정일 기반) 삭제 시 — 임신 모드 전용 알림 일괄 취소.
+ *
+ * 포함:
+ *  - 임신 검진/D-Day 알림 (PREGNANCY_NOTIF_IDS_KEY)
+ *  - 데일리 미션 9시 알람 (DAILY_MISSION_NOTIF_KEY) ← 임신부 모드 전용이므로 같이 정리
+ */
 export async function cancelAllPregnancyLocalNotifications(): Promise<void> {
   try {
     await cancelPregnancyNotifs();
   } catch { /* ignore */ }
+  try {
+    await cancelDailyMissionReminder();
+  } catch { /* ignore */ }
+}
+
+/**
+ * 로그아웃/계정삭제 시 — 디바이스에 예약된 모든 로컬 알림 + 관련 AsyncStorage 키 일괄 정리.
+ *
+ * 정석 패턴:
+ *  1. expo-notifications 시스템에 예약된 모든 알림 취소
+ *  2. 알림 ID/플래그 저장하던 AsyncStorage 키도 함께 비움 (다음 로그인 시 잔여 ID 충돌 방지)
+ */
+export async function cancelAllLocalNotifications(): Promise<void> {
+  try {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+  } catch { /* ignore */ }
+
+  const keys = [
+    SCHEDULED_IDS_KEY,
+    PREGNANCY_NOTIF_IDS_KEY,
+    DAILY_MISSION_NOTIF_KEY,
+    FIRST_COACHING_KEY,
+    'amatda_nextday_nudge',
+  ];
+  for (const k of keys) {
+    try { await AsyncStorage.removeItem(k); } catch { /* ignore */ }
+  }
 }
