@@ -16,7 +16,7 @@ import { useChildStore } from '../../stores/childStore';
 import { pregnancyApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
-import { pickDeliveryPhone } from '../../services/deliveryHospital';
+import { pickAllPhones, type PickedPhone } from '../../services/deliveryHospital';
 import { MissionToast } from '../../components/common/MissionToast';
 
 type Tab = 'kick' | 'contraction';
@@ -249,21 +249,35 @@ export default function LaborMonitorScreen() {
   /** 진진통 판정 (배경 빨강 + 분만실 전화 노출) */
   const isLaborImminent = contractionGuide.tone === 'danger' || contractionGuide.tone === 'emergency';
 
-  /** 분만실 전화하기 (등록된 번호 우선) */
+  /** 어디로 전화할지 선택 모달 — 번호 여러 개 등록 시 사용 */
+  const [phoneChoiceOpen, setPhoneChoiceOpen] = useState(false);
+  const [phoneChoices, setPhoneChoices] = useState<PickedPhone[]>([]);
+
+  const dialPhone = useCallback((phone: string) => {
+    Linking.openURL(`tel:${phone.replace(/[^0-9]/g, '')}`).catch(() => {
+      Alert.alert('전화 연결 실패', `직접 전화해 주세요: ${phone}`);
+    });
+  }, []);
+
+  /** 분만실 전화하기 — 번호 1개면 바로 전화, 여러 개면 선택 모달 */
   const callDeliveryWard = useCallback(async () => {
     if (!childId) return;
-    const picked = await pickDeliveryPhone(childId);
-    if (!picked) {
+    const all = await pickAllPhones(childId);
+    if (all.length === 0) {
       Alert.alert(
         '병원 번호 등록 필요',
         '먼저 SOS 화면에서 분만 예정 병원 전화번호를 등록해 주세요.',
       );
       return;
     }
-    Linking.openURL(`tel:${picked.phone.replace(/[^0-9]/g, '')}`).catch(() => {
-      Alert.alert('전화 연결 실패', `직접 전화해 주세요: ${picked.phone}`);
-    });
-  }, [childId]);
+    if (all.length === 1) {
+      dialPhone(all[0].phone);
+      return;
+    }
+    // 여러 개 등록 — 시간대 우선순위에 맞는 첫 번호가 위에 표시되는 선택 모달
+    setPhoneChoices(all);
+    setPhoneChoiceOpen(true);
+  }, [childId, dialPhone]);
 
   if (!selectedChild?.isPregnant) {
     return (
@@ -689,6 +703,64 @@ export default function LaborMonitorScreen() {
             </ScrollView>
           </View>
         </View>
+      </Modal>
+
+      {/* === 어디로 전화할까요? — 번호 여러 개 등록 시 선택 모달 (사용자 의도)
+          시간대 우선순위에 따라 위쪽이 추천 번호 (낮: 외래, 밤/주말: 분만실) */}
+      <Modal
+        visible={phoneChoiceOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPhoneChoiceOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.phoneChoiceBackdrop}
+          activeOpacity={1}
+          onPress={() => setPhoneChoiceOpen(false)}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.phoneChoiceSheet}>
+            <Text style={styles.phoneChoiceTitle}>어디로 전화할까요?</Text>
+            <Text style={styles.phoneChoiceSub}>
+              지금 시간대에 권장되는 번호가 위에 있어요
+            </Text>
+            {phoneChoices.map((c, i) => (
+              <TouchableOpacity
+                key={c.source}
+                style={[
+                  styles.phoneChoiceItem,
+                  i === 0 && styles.phoneChoiceItemPrimary,
+                ]}
+                onPress={() => {
+                  setPhoneChoiceOpen(false);
+                  dialPhone(c.phone);
+                }}
+                activeOpacity={0.85}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.phoneChoiceLabel,
+                      i === 0 && styles.phoneChoiceLabelPrimary,
+                    ]}
+                  >
+                    {i === 0 ? '⭐ ' : ''}{c.label}
+                  </Text>
+                  {c.subLabel && (
+                    <Text style={styles.phoneChoiceSubLabel}>{c.subLabel}</Text>
+                  )}
+                  <Text style={styles.phoneChoicePhone}>{c.phone}</Text>
+                </View>
+                <Text style={styles.phoneChoiceCallIcon}>📞</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.phoneChoiceCancel}
+              onPress={() => setPhoneChoiceOpen(false)}
+            >
+              <Text style={styles.phoneChoiceCancelText}>취소</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
 
       <AdSlot />
@@ -1158,5 +1230,80 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '900',
     color: '#C62828',
+  },
+
+  // === 번호 선택 모달 ===
+  phoneChoiceBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  phoneChoiceSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 32,
+  },
+  phoneChoiceTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#1A1A1A',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  phoneChoiceSub: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  phoneChoiceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F8FA',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#EEE',
+  },
+  phoneChoiceItemPrimary: {
+    backgroundColor: '#FFF5EC',
+    borderColor: '#FF8C5A',
+    borderWidth: 1.5,
+  },
+  phoneChoiceLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1A1A1A',
+  },
+  phoneChoiceLabelPrimary: {
+    color: '#C2410C',
+  },
+  phoneChoiceSubLabel: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 2,
+  },
+  phoneChoicePhone: {
+    fontSize: 13,
+    color: '#555',
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  phoneChoiceCallIcon: {
+    fontSize: 22,
+    marginLeft: 12,
+  },
+  phoneChoiceCancel: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  phoneChoiceCancelText: {
+    fontSize: 14,
+    color: '#888',
+    fontWeight: '700',
   },
 });
