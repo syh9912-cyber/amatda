@@ -19,6 +19,7 @@ import {
   syncScheduledNotifications,
   syncReengagementNotifications,
   trackLastAccess,
+  runOneTimeOrphanCleanup,
 } from '../services/pushNotifications';
 import { COLORS } from '../constants/theme';
 
@@ -31,6 +32,7 @@ const queryClient = new QueryClient();
 function useNotificationSetup() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const selectedChild = useChildStore((s) => s.selectedChild);
+  const children = useChildStore((s) => s.children);
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
@@ -39,6 +41,12 @@ function useNotificationSetup() {
     let cancelled = false;
 
     const setup = async () => {
+      // 일회성: OLD 코드(cascade 누락 시절)가 남긴 고아 알림 정리. 한 번 실행 후 영구 no-op.
+      await runOneTimeOrphanCleanup(
+        children.some((c) => c.isPregnant === true),
+      ).catch(() => {});
+      if (cancelled) return;
+
       // Register for push and save token to backend
       const token = await registerForPushNotifications();
       if (cancelled) return;
@@ -57,12 +65,12 @@ function useNotificationSetup() {
         });
 
         // Sync local scheduled notifications
-        await syncScheduledNotifications(prefs, selectedChild.name);
+        await syncScheduledNotifications(prefs, selectedChild.id, selectedChild.name);
       }
 
       // Track access + reschedule re-engagement (cancel old, set new from now)
       await trackLastAccess();
-      await syncReengagementNotifications(selectedChild.name);
+      await syncReengagementNotifications(selectedChild.id, selectedChild.name);
     };
 
     setup().catch(() => {});
@@ -216,13 +224,15 @@ function UpdateScreen({ status, progress }: { status: UpdateStatus; progress: nu
 
   // 마스코트 부드러운 바운스
   useEffect(() => {
-    Animated.loop(
+    const bounceLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(bounce, { toValue: -8, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
         Animated.timing(bounce, { toValue: 8, duration: 1200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
-    ).start();
+    );
+    bounceLoop.start();
     Animated.timing(fadeIn, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    return () => bounceLoop.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

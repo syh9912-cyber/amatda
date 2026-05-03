@@ -914,6 +914,26 @@ export async function cancelAllPregnancyLocalNotifications(): Promise<void> {
 }
 
 /**
+ * 일회성 마이그레이션 — OLD 코드(데일리 미션 cascade 누락)가 만든 잔여 알림을 한 번만 청소.
+ *
+ * 디바이스에 플래그를 저장해 다시는 실행 안 함. 미래 알림은 cascade-delete가 처리.
+ * 이 함수는 한 번 동작 후 영구히 no-op이 됨 (코드는 남아있어도 부담 0).
+ */
+const ORPHAN_CLEANUP_FLAG = 'amatda_orphan_cleanup_v1';
+
+export async function runOneTimeOrphanCleanup(hasPregnantChild: boolean): Promise<void> {
+  try {
+    const done = await AsyncStorage.getItem(ORPHAN_CLEANUP_FLAG);
+    if (done === '1') return;
+    if (!hasPregnantChild) {
+      await cancelDailyMissionReminder().catch(() => {});
+      await cancelPregnancyNotifs().catch(() => {});
+    }
+    await AsyncStorage.setItem(ORPHAN_CLEANUP_FLAG, '1');
+  } catch { /* ignore */ }
+}
+
+/**
  * 로그아웃/계정삭제 시 — 디바이스에 예약된 모든 로컬 알림 + 관련 AsyncStorage 키 일괄 정리.
  *
  * 정석 패턴:
