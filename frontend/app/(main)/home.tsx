@@ -28,6 +28,7 @@ import { NextCheckupModal } from '../../components/home/NextCheckupModal';
 import { getNextCheckup, useCheckupStore } from '../../services/checkup';
 import { ChildSelector } from '../../components/home/ChildSelector';
 import { DailyMissionBadges } from '../../components/pregnancy/DailyMissionBadges';
+import { useUiStore } from '../../stores/uiStore';
 import {
   cancelAllPregnancyLocalNotifications,
   loadNotificationPrefs,
@@ -200,6 +201,7 @@ const TRIAL_AUTO_KEY = 'amatda_trial_auto_started';
 const TRIAL_POPUP_KEY = 'amatda_trial_popup_dismissed';
 
 export default function HomeScreen() {
+  const overlayCount = useUiStore((s) => s.overlayCount);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -573,8 +575,17 @@ export default function HomeScreen() {
             onTapCheckup={() => setCheckupModalOpen(true)}
           />
 
-          {/* 2) 퀵메뉴 8개 (4-stat 바로 아래로 이동) */}
-          <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} child={child} />
+          {/* 2a) 임신부 35주+ — 데일리 미션 (물/영양제) 우선 노출
+              35주 미만 임신부 또는 비임신은 퀵메뉴부터 보여줌 (기존 흐름) */}
+          {child.isPregnant && (child.pregnancyWeeks ?? 0) >= 35 && (
+            <DailyMissionBadges childId={child.id} />
+          )}
+
+          {/* 2b) 퀵메뉴 8개 — 35주+ 임신부에서는 임신 여정 아래로 이동 (우선순위 재배치)
+              그 외에는 4-stat 바로 아래 (기존 흐름) */}
+          {!(child.isPregnant && (child.pregnancyWeeks ?? 0) >= 35) && (
+            <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} child={child} />
+          )}
 
           {/* 3) 임신부 — 주차별 핵심 강조 카드 (34주차+ → 출산가방 체크리스트, 진행률·아빠담당 표시) */}
           {child.isPregnant && (() => {
@@ -637,6 +648,11 @@ export default function HomeScreen() {
             <PregnancyJourneyCard
               child={child as unknown as { id: string; isPregnant?: boolean; pregnancyWeeks?: number; dueDate?: string }}
             />
+          )}
+
+          {/* 4b) 35주+ 임신부 — 임신 여정 아래로 내려간 퀵메뉴 (긴급 카드들이 위에 있도록) */}
+          {child.isPregnant && (child.pregnancyWeeks ?? 0) >= 35 && (
+            <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} child={child} />
           )}
 
           {/* 영아 — AI 분석 + 기질 분석 (파스텔 단일 배너) */}
@@ -817,14 +833,16 @@ export default function HomeScreen() {
       </CenterModal>
     </ScrollView>
 
-    {/* Floating SOS Button */}
-    <TouchableOpacity
-      style={styles.sosFab}
-      onPress={() => router.push('/(main)/sos')}
-      activeOpacity={0.8}
-    >
-      <Text style={styles.sosFabText}>SOS</Text>
-    </TouchableOpacity>
+    {/* Floating SOS Button — 모달/오버레이 활성 시 숨김 (선택지를 가리지 않게) */}
+    {overlayCount === 0 && (
+      <TouchableOpacity
+        style={styles.sosFab}
+        onPress={() => router.push('/(main)/sos')}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.sosFabText}>SOS</Text>
+      </TouchableOpacity>
+    )}
     </View>
   );
 }
