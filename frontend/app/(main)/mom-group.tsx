@@ -16,6 +16,7 @@ import {
   ActionSheetIOS,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChildStore } from '../../stores/childStore';
@@ -263,8 +264,12 @@ export default function MomGroupScreen() {
   const switchRoomType = (t: RoomType) => {
     setRoomType(t);
     setPage(1);
+    // 정석: 방 전환 시 viewMode를 feed로 리셋 → 북마크/내 글 상태에서 방 바꾸는 모순 제거
+    setViewMode('feed');
+    setSearchQuery('');
+    setSearchInput('');
     if (t === 'month') setGroupKey(myGroupKey);
-    else if (t === 'region') setGroupKey(`region:${REGIONS[0].key}`);
+    // 'region'은 deprecated — switchRoomType 호출처 모두 제거
     // radius 모드는 groupKey와 무관 (자체 radiusKey 사용)
   };
 
@@ -719,48 +724,44 @@ export default function MomGroupScreen() {
     ]);
   };
 
-  if (!groupKey) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Stack.Screen options={{ headerShown: false }} />
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}><Text style={styles.backBtn}>{'< 뒤로'}</Text></TouchableOpacity>
-          <Text style={styles.headerTitle}>맘스톡</Text>
-          <View style={{ width: 60 }} />
-        </View>
-        <View style={styles.emptyCenter}>
-          <Text style={styles.emptyText}>출산예정일 또는 아기 생일을 먼저 등록해주세요</Text>
-          <TouchableOpacity
-            style={[styles.sortBtn, styles.sortBtnActive, { marginTop: SPACING.md }]}
-            onPress={() => switchRoomType('region')}
-          >
-            <Text style={styles.sortTextActive}>지역방으로 둘러보기</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
+  // 빈 상태(no groupKey) 분기 제거 — myGroupKey가 currentMonthKey로 항상 fallback되므로 도달 불가
 
   /**
-   * 모던 리스트 행 — 표 형식 폐기, 카테고리 색 dot + 제목 한 줄 + 작성자/시간 + 좋아요/댓글
-   * 핀 글은 살짝 다른 배경 + 좌측 두꺼운 액센트 바
+   * 모던 리스트 행 — Threads 스타일 카드 + 미세한 카테고리 그라디언트
+   * 카드 자체에 카테고리 색의 살짝 틴트 → 위→아래 화이트로 페이드
    */
   const renderBoardRow = (p: Post, _idx: number) => {
     const isBookmarked = bookmarkedIds.has(p.id);
     const cat = CATEGORY_META[p.category] ?? CATEGORY_META.chat;
     const isPinTop = p.isPinned && p.isOfficial;
 
+    // 그라디언트 색 — 핀/공식/폴백/일반에 따라 결정
+    let gradientFrom = `${cat.color}1A`; // ~10% alpha
+    let gradientTo = '#FFFFFF';
+    if (isPinTop) {
+      gradientFrom = '#FFE9D6';      // 산뜻한 피치
+      gradientTo = '#FFFAF3';
+    } else if (p.isFallback) {
+      gradientFrom = '#E8F0FE';      // 산뜻한 라벤더-블루
+      gradientTo = '#FBFCFF';
+    } else if (p.isOfficial) {
+      gradientFrom = '#E1F5FE';      // 공식 = 산뜻한 스카이
+      gradientTo = '#FBFEFF';
+    }
+
     return (
       <TouchableOpacity
         key={p.id}
-        style={[
-          styles.modernRow,
-          isPinTop && styles.modernRowPinned,
-          p.isFallback && styles.modernRowFallback,
-        ]}
-        activeOpacity={0.6}
+        style={styles.modernRowOuter}
+        activeOpacity={0.7}
         onPress={() => openComments(p)}
       >
+        <LinearGradient
+          colors={[gradientFrom, gradientTo]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.modernRow}
+        >
         {/* 좌측 액센트 바 — 핀 글은 코랄, 공식 글은 블루, 일반은 카테고리 색 */}
         <View
           style={[
@@ -796,13 +797,14 @@ export default function MomGroupScreen() {
 
         {/* 우측 인터랙션 카운트 */}
         <View style={styles.modernActions}>
-          <Text style={[styles.modernCount, p.likeCount > 0 && { color: '#E91E63' }]}>
+          <Text style={[styles.modernCount, p.likeCount > 0 && { color: '#EC407A' }]}>
             ♥ {p.likeCount}
           </Text>
           {p.commentCount > 0 ? (
             <Text style={styles.modernCount}>💬 {p.commentCount}</Text>
           ) : null}
         </View>
+        </LinearGradient>
       </TouchableOpacity>
     );
   };
@@ -1001,7 +1003,7 @@ export default function MomGroupScreen() {
             </View>
           )}
         </View>
-      ) : isFeed && (roomType === 'month' ? (
+      ) : isFeed && roomType === 'month' && groupKey ? (
         <View style={styles.monthNav}>
           <TouchableOpacity
             style={[styles.monthArrow, !canGoPrev && { opacity: 0.25 }]}
@@ -1026,28 +1028,7 @@ export default function MomGroupScreen() {
             <Text style={styles.monthArrowText}>{'›'}</Text>
           </TouchableOpacity>
         </View>
-      ) : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.roomPickerScroll}
-          contentContainerStyle={styles.roomPickerRow}
-        >
-          {REGIONS.map((r) => {
-            const key = `region:${r.key}`;
-            const active = groupKey === key;
-            return (
-              <TouchableOpacity
-                key={r.key}
-                style={[styles.roomPickerChip, active && styles.roomPickerChipActive]}
-                onPress={() => setGroupKey(key)}
-              >
-                <Text style={[styles.roomPickerText, active && styles.roomPickerTextActive]}>{r.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      ))}
+      ) : null}
 
       {/* 카테고리 필터 제거 — 사용자 요청 */}
 
@@ -1197,7 +1178,7 @@ export default function MomGroupScreen() {
                 <Text style={styles.backBtn}>{'< 닫기'}</Text>
               </TouchableOpacity>
               <Text style={styles.modalTitle}>
-                {editingPostId ? '글 수정' : `${roomLabel(roomType, groupKey, radiusKey, ageRange)} · 새 글`}
+                {editingPostId ? '글 수정' : `${roomLabel(roomType, groupKey ?? '', radiusKey, ageRange)} · 새 글`}
               </Text>
               <View style={{ width: 60 }} />
             </View>
@@ -1468,29 +1449,29 @@ export default function MomGroupScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F4F8FB' }, // 산뜻한 라이트 블루-그레이 (Notion/Linear 톤)
   // ── 모던 리스트 행 ──────────────────────────────────────
+  // outer: shadow + radius 컨테이너 (LinearGradient 위 layer)
+  modernRowOuter: {
+    marginHorizontal: 12,
+    marginBottom: 10,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF', // gradient 뒤 baseline (overflow 보호)
+    // 산뜻한 그림자 — 깊이감 있지만 무겁지 않게
+    shadowColor: '#88A0B8',
+    shadowOpacity: 0.10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 3,
+  },
   modernRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginHorizontal: 12,
-    marginBottom: 8,
-    paddingVertical: 12,
-    paddingRight: 12,
-    overflow: 'hidden',
-    // 산뜻한 그림자 — 깊이감 있지만 무겁지 않게
-    shadowColor: '#88A0B8',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 2,
+    paddingVertical: 13,
+    paddingRight: 14,
   },
-  modernRowPinned: {
-    backgroundColor: '#FFFAF3', // 더 밝은 피치 크림
-  },
-  modernRowFallback: {
-    backgroundColor: '#F5F8FF', // 더 밝은 라벤더 블루
-  },
+  // (deprecated — gradient로 대체)
+  modernRowPinned: {},
+  modernRowFallback: {},
   modernLeftBar: {
     width: 4,
     alignSelf: 'stretch',
