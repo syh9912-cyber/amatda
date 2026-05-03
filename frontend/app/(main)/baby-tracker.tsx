@@ -1807,16 +1807,35 @@ function BabyTrackerInner() {
 
   // 타임라인 entry 편집 시작
   function openEditModalById(id: string) {
+    // 라이브(진행 중) 수면: records 에 없고 sleepSession state 에만 있음. 별도 처리.
+    if (id === '__active_sleep__') {
+      if (!sleepSession) return;
+      const startDt = new Date(sleepSession.startTime);
+      const startHHMM = `${String(startDt.getHours()).padStart(2, '0')}:${String(startDt.getMinutes()).padStart(2, '0')}`;
+      // 가상 record 를 만들어 setEditRecord — handleEditSave 가 id 로 라이브 분기 인식
+      setEditRecord({
+        id: '__active_sleep__',
+        type: 'sleep',
+        subType: 'sleep_start',
+        time: startHHMM,
+        note: sleepSession.note,
+      } as TrackerRecord);
+      setEditTime(startHHMM);
+      setEditEndDatePrefix('');
+      setEditEndTime('');  // 진행 중이라 종료 시간 없음
+      setEditNote(sleepSession.note ?? '');
+      setEditAmount('');
+      return;
+    }
+
     // 가상 suffix 모두 제거: __start (수면 시작), __wake (수면 종료), __crosswake (어제 sleep 의 오늘 새벽 기상)
     const realId = id.replace(/__start$|__wake$|__crosswake$/, '');
     // 1순위: 오늘 records 에서 찾기
-    let record = records.find((r) => r.id === realId);
+    const record = records.find((r) => r.id === realId);
     // 2순위: cross-day wake — 어제 records 에서 찾은 sleep entry (crossDayWakes 에 가상 entry 보관)
     if (!record) {
       const crossWake = crossDayWakes.find((r) => r.id === id);
       if (crossWake) {
-        // crossDayWakes 의 가상 entry 는 어제 records 의 sleep 을 시간만 바꿔서 만든 것이므로
-        // realId 로는 못 찾음 (오늘에 없음). 어제 sleep 자체를 편집하는 것은 복잡 — 안내만.
         Alert.alert(
           '어제 시작한 수면',
           '이 수면 기록은 어제 시작한 수면이에요. 어제 날짜로 이동해서 편집해주세요.',
@@ -1849,6 +1868,26 @@ function BabyTrackerInner() {
       Alert.alert('시간 형식', '시간을 다시 확인해주세요 (예: 08:30)');
       return;
     }
+
+    // 라이브(진행 중) 수면 — sleepSession 만 갱신 (records 에는 없음). 종료시간/duration 미적용.
+    if (editRecord.id === '__active_sleep__') {
+      if (!sleepSession) { setEditRecord(null); setEntryActionId(null); return; }
+      const [hh, mm] = editTime.split(':').map((s) => parseInt(s, 10));
+      const start = new Date(sleepSession.startTime);
+      start.setHours(hh, mm, 0, 0);
+      const newSession: SleepSession = {
+        ...sleepSession,
+        startTime: start.toISOString(),
+        ...(editNote.trim() ? { note: editNote.trim() } : {}),
+      };
+      saveSleepSession(childId, newSession);
+      setSleepSession(newSession);
+      setEditRecord(null);
+      setEntryActionId(null);
+      showToast('진행중 수면 시작 시간 수정');
+      return;
+    }
+
     let updated: TrackerRecord = { ...editRecord, time: editTime };
     // 메모
     const trimmedNote = editNote.trim();
@@ -1881,6 +1920,7 @@ function BabyTrackerInner() {
     setRecords(newRecords);
     saveRecords(childId, dateStr, newRecords);
     setEditRecord(null);
+    setEntryActionId(null);
     showToast('수정 완료');
   }
 
@@ -2736,70 +2776,59 @@ function BabyTrackerInner() {
         </TouchableOpacity>
       </Modal>
 
-      {/* ---- 타임라인 entry 길게 누르기 → 액션 시트 ---- */}
+      {/* ---- 타임라인 entry 길게 누르기 → 액션 시트 + 편집 (Modal 1개 통합) ----
+           정석: visible 을 둘 중 하나라도 set 되어 있으면 true 로 묶고, 내부에서 editRecord
+           우선 → 편집 view, 없으면 → action sheet view.
+           RN 의 두 Modal 동시 visible 변경 시 두 번째가 안 뜨는 버그를 setTimeout 없이 회피.
+           라이브(__active_sleep__) 수면도 openEditModalById 가 sleepSession 으로부터 가상
+           record 를 만들어 setEditRecord — 같은 view 흐름. */}
       <Modal
-        visible={entryActionId !== null}
+        visible={entryActionId !== null || editRecord !== null}
         transparent
         animationType="fade"
-        onRequestClose={() => setEntryActionId(null)}
+        onRequestClose={() => { setEntryActionId(null); setEditRecord(null); }}
       >
         <TouchableOpacity
           style={pickerStyles.backdrop}
           activeOpacity={1}
-          onPress={() => setEntryActionId(null)}
+          onPress={() => { setEntryActionId(null); setEditRecord(null); }}
         >
           <TouchableOpacity activeOpacity={1} style={pickerStyles.sheet}>
-            <Text style={pickerStyles.title}>기록 옵션</Text>
-            <TouchableOpacity
-              style={editModalStyles.actionRow}
-              onPress={() => {
-                // RN 의 두 Modal 동시 visible 전환 시 두 번째 Modal 이 안 뜨는 버그 회피 —
-                // action sheet 먼저 닫고, 닫힘 애니메이션 끝난 뒤 편집 Modal 열기.
-                const id = entryActionId;
-                setEntryActionId(null);
-                if (id) {
-                  setTimeout(() => openEditModalById(id), 250);
-                }
-              }}
-            >
-              <Text style={editModalStyles.actionRowText}>편집 (시간·메모)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[editModalStyles.actionRow, editModalStyles.actionRowDanger]}
-              onPress={() => {
-                const id = entryActionId;
-                setEntryActionId(null);
-                if (id) handleDeleteRecord(id);
-              }}
-            >
-              <Text style={[editModalStyles.actionRowText, editModalStyles.actionRowTextDanger]}>삭제</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={editModalStyles.cancelRow}
-              onPress={() => setEntryActionId(null)}
-            >
-              <Text style={editModalStyles.cancelRowText}>취소</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* ---- 편집 모달 (시간·메모·양·기상시간) ---- */}
-      <Modal
-        visible={editRecord !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setEditRecord(null)}
-      >
-        <TouchableOpacity
-          style={pickerStyles.backdrop}
-          activeOpacity={1}
-          onPress={() => setEditRecord(null)}
-        >
-          <TouchableOpacity activeOpacity={1} style={pickerStyles.sheet}>
-            <Text style={pickerStyles.title}>
-              {editRecord ? (SUBTYPE_LABELS[editRecord.subType] ?? editRecord.subType) : ''} 편집
-            </Text>
+            {editRecord === null && entryActionId !== null ? (
+              <>
+                <Text style={pickerStyles.title}>기록 옵션</Text>
+                <TouchableOpacity
+                  style={editModalStyles.actionRow}
+                  onPress={() => {
+                    // entryActionId 는 그대로 유지 — editRecord 가 set 되면 자동으로 편집 view 로 전환
+                    if (entryActionId) openEditModalById(entryActionId);
+                  }}
+                >
+                  <Text style={editModalStyles.actionRowText}>편집 (시간·메모)</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[editModalStyles.actionRow, editModalStyles.actionRowDanger]}
+                  onPress={() => {
+                    const id = entryActionId;
+                    setEntryActionId(null);
+                    if (id) handleDeleteRecord(id);
+                  }}
+                >
+                  <Text style={[editModalStyles.actionRowText, editModalStyles.actionRowTextDanger]}>삭제</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={editModalStyles.cancelRow}
+                  onPress={() => setEntryActionId(null)}
+                >
+                  <Text style={editModalStyles.cancelRowText}>취소</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+            {editRecord !== null ? (
+              <Text style={pickerStyles.title}>
+                {SUBTYPE_LABELS[editRecord.subType] ?? editRecord.subType} 편집
+              </Text>
+            ) : null}
             {editRecord ? (
               <>
                 <TimePicker value={editTime} onChange={setEditTime} label={editRecord.type === 'sleep' && editRecord.endTime ? '시작 시간' : '시간'} />
@@ -2834,7 +2863,7 @@ function BabyTrackerInner() {
                 <View style={editModalStyles.btnRow}>
                   <TouchableOpacity
                     style={editModalStyles.cancelBtn}
-                    onPress={() => setEditRecord(null)}
+                    onPress={() => { setEditRecord(null); setEntryActionId(null); }}
                   >
                     <Text style={editModalStyles.cancelText}>취소</Text>
                   </TouchableOpacity>
