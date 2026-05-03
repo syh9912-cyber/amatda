@@ -140,6 +140,71 @@ router.get('/:token/data', async (req: Request, res: Response): Promise<void> =>
   }
 });
 
+/* ===================== POST: 공유 페이지에서 항목 업데이트 (public, 토큰 보유자) ===================== */
+
+router.post('/:token/items/:itemId', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const token = String(req.params.token || '').slice(0, 64);
+    const itemId = String(req.params.itemId || '').slice(0, 64);
+    if (!token || !itemId) { error(res, 'token/itemId 필요', 400); return; }
+
+    const { checked, status } = (req.body || {}) as { checked?: boolean; status?: string };
+    const updates: { checked?: boolean; status?: string | null } = {};
+    if (typeof checked === 'boolean') updates.checked = checked;
+    if (status !== undefined) {
+      if (status === null || ['need', 'ready', 'packed', 'na'].includes(String(status))) {
+        updates.status = status === null ? null : String(status);
+      } else {
+        error(res, 'status 값이 올바르지 않습니다', 400);
+        return;
+      }
+    }
+    if (Object.keys(updates).length === 0) { error(res, '업데이트할 필드 없음', 400); return; }
+
+    // 'packed' 상태면 자동 체크, 그 외면 자동 해제 (앱과 동일 로직)
+    if (updates.status !== undefined) {
+      updates.checked = updates.status === 'packed';
+    } else if (updates.checked !== undefined) {
+      // 체크만 토글 — 상태도 동기화 (✓ → packed, ✗ → packed였으면 ready)
+      // 다음 트랜잭션에서 처리
+    }
+
+    const docRef = db.collection(COLLECTION).doc(token);
+
+    // 트랜잭션으로 items 배열 안 특정 item 업데이트 (atomic)
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(docRef);
+      if (!snap.exists) throw new Error('NOT_FOUND');
+      const data = snap.data() as { expiresAtMs?: number; items?: ShareItem[] };
+      if (data.expiresAtMs && data.expiresAtMs < Date.now()) throw new Error('EXPIRED');
+      const items = (data.items || []).map((it) => {
+        if (it.id !== itemId) return it;
+        const newItem: ShareItem = { ...it };
+        if (updates.checked !== undefined) newItem.checked = updates.checked;
+        if (updates.status !== undefined) {
+          newItem.status = updates.status as ShareItem['status'];
+        } else if (updates.checked === true) {
+          newItem.status = 'packed';
+        } else if (updates.checked === false && it.status === 'packed') {
+          newItem.status = 'ready';
+        }
+        return newItem;
+      });
+      tx.update(docRef, { items });
+    });
+
+    success(res, { updated: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === 'NOT_FOUND' || msg === 'EXPIRED') {
+      error(res, '만료된 링크', 404);
+      return;
+    }
+    logger.error('birthbag-share POST item failed', e);
+    error(res, '업데이트 실패', 500);
+  }
+});
+
 /* ===================== GET HTML: 웹 페이지 (public, 앱 설치 X 가능) ===================== */
 
 router.get('/:token', async (req: Request, res: Response): Promise<void> => {
@@ -258,8 +323,15 @@ function renderShareHtml(data: {
   .sectionCount{font-size:11px;color:#636366;font-weight:700}
   .item{display:flex;gap:10px;padding:8px 4px;align-items:flex-start;border-bottom:1px solid #F0E6DC}
   .item:last-child{border-bottom:none}
-  .checkbox{width:20px;height:20px;border:1.5px solid #D6CDC2;border-radius:6px;flex-shrink:0;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;font-weight:900;margin-top:2px}
+  .checkbox{width:24px;height:24px;border:1.5px solid #D6CDC2;border-radius:6px;flex-shrink:0;background:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;font-weight:900;margin-top:2px;cursor:pointer;transition:background .15s}
+  .checkbox:active{transform:scale(0.92)}
   .checkbox.checked{background:#FF8C5A;border-color:#FF8C5A}
+  .statusRow{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+  .statusBtn{padding:4px 10px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #E0D5C8;background:#FAFAFA;color:#636366;transition:all .15s}
+  .statusBtn:active{transform:scale(0.95)}
+  .statusBtn.active.need{background:#FFF3E0;border-color:#FFB74D;color:#E65100}
+  .statusBtn.active.ready{background:#E8F5E9;border-color:#A5D6A7;color:#2E7D32}
+  .statusBtn.active.packed{background:#E3F2FD;border-color:#90CAF9;color:#1565C0}
   .itemBody{flex:1}
   .itemLabel{font-size:13px;font-weight:600;color:#1C1C1E;line-height:18px}
   .itemLabel.checked{text-decoration:line-through;color:#9A9A9F}
@@ -329,46 +401,122 @@ function applyFilter(f) {
   });
 }
 
+const TOKEN = window.location.pathname.split('/').pop();
+let CURRENT_FILTER = 'all';
+
 function render(filter) {
+  CURRENT_FILTER = filter;
   const items = applyFilter(filter);
   const list = document.getElementById('list');
   if (items.length === 0) {
     list.innerHTML = '<div class="section empty">해당하는 항목이 없어요</div>';
     return;
   }
-  // 카테고리별 그룹
   const byCat = { mom: [], baby: [], docs: [] };
   for (const it of items) (byCat[it.category] || byCat.mom).push(it);
   const html = ['mom', 'baby', 'docs']
     .filter(c => byCat[c].length > 0)
     .map(c => {
-      const list = byCat[c].map(it => {
+      const inner = byCat[c].map(it => {
         const cls = it.checked ? 'checked' : '';
-        const tags = [];
-        if (it.status && STATUS_LABEL[it.status]) {
-          tags.push('<span class="tag tagStatus-' + it.status + '">' + STATUS_LABEL[it.status] + '</span>');
-        }
-        if (it.owner && OWNER_LABEL[it.owner]) {
-          tags.push('<span class="tag tagOwner-' + it.owner + '">' + OWNER_LABEL[it.owner] + '</span>');
-        }
+        const ownerTag = it.owner && OWNER_LABEL[it.owner]
+          ? '<span class="tag tagOwner-' + it.owner + '">' + OWNER_LABEL[it.owner] + '</span>'
+          : '';
+        const statusBtns = ['need', 'ready', 'packed'].map(s => {
+          const active = it.status === s ? 'active' : '';
+          return '<button class="statusBtn ' + active + ' ' + s + '" data-id="' + escapeHtml(it.id) + '" data-status="' + s + '">' + STATUS_LABEL[s] + '</button>';
+        }).join('');
         return '<div class="item">'
-          + '<div class="checkbox ' + cls + '">' + (it.checked ? '✓' : '') + '</div>'
+          + '<div class="checkbox ' + cls + '" data-id="' + escapeHtml(it.id) + '">' + (it.checked ? '✓' : '') + '</div>'
           + '<div class="itemBody">'
           + '<div class="itemLabel ' + cls + '">' + escapeHtml(it.label) + '</div>'
           + (it.hint ? '<div class="itemHint">' + escapeHtml(it.hint) + '</div>' : '')
-          + (tags.length ? '<div class="tagRow">' + tags.join('') + '</div>' : '')
+          + '<div class="statusRow">' + statusBtns + (ownerTag ? '<span style="margin-left:auto">' + ownerTag + '</span>' : '') + '</div>'
           + '</div></div>';
       }).join('');
       return '<div class="section">'
         + '<div class="sectionTitle">' + CAT_LABEL[c] + ' <span class="sectionCount">' + byCat[c].length + '개</span></div>'
-        + list
+        + inner
         + '</div>';
     }).join('');
   list.innerHTML = html;
+  bindItemEvents();
+  updateProgress();
 }
 
 function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
+}
+
+function updateProgress() {
+  const visible = ITEMS.filter(it => it.status !== 'na');
+  const total = visible.length;
+  const done = visible.filter(it => it.checked).length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const dadCount = visible.filter(it => it.owner === 'dad' && !it.checked).length;
+  const needCount = visible.filter(it => it.status === 'need').length;
+  const pv = document.querySelector('.progressValue');
+  const pp = document.querySelector('.progressPct');
+  const pf = document.querySelector('.progressFill');
+  const chips = document.querySelectorAll('.progressCard .chip');
+  if (pv) pv.firstChild.nodeValue = done + '/' + total;
+  if (pp) pp.textContent = '(' + pct + '%)';
+  if (pf) pf.style.width = pct + '%';
+  if (chips.length >= 4) {
+    chips[0].textContent = '총 ' + total;
+    chips[1].textContent = '완료 ' + done;
+    chips[2].textContent = '구매필요 ' + needCount;
+    chips[3].textContent = '아빠 ' + dadCount;
+  }
+}
+
+async function updateItem(itemId, payload) {
+  try {
+    const res = await fetch('/api/birthbag-share/' + TOKEN + '/items/' + itemId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return true;
+  } catch (e) {
+    alert('업데이트 실패. 잠시 후 다시 시도해주세요.');
+    return false;
+  }
+}
+
+function bindItemEvents() {
+  // 체크박스 클릭 → 토글 + 상태도 자동 동기화
+  document.querySelectorAll('.checkbox[data-id]').forEach(el => {
+    el.addEventListener('click', async () => {
+      const id = el.dataset.id;
+      const it = ITEMS.find(x => x.id === id);
+      if (!it) return;
+      const newChecked = !it.checked;
+      it.checked = newChecked;
+      // 자동 상태 동기화 (앱과 동일 로직)
+      if (newChecked) it.status = 'packed';
+      else if (it.status === 'packed') it.status = 'ready';
+      render(CURRENT_FILTER);
+      updateItem(id, { checked: newChecked });
+    });
+  });
+
+  // 상태 버튼 클릭 → 상태 토글 (이미 active면 해제)
+  document.querySelectorAll('.statusBtn[data-id]').forEach(el => {
+    el.addEventListener('click', async () => {
+      const id = el.dataset.id;
+      const status = el.dataset.status;
+      const it = ITEMS.find(x => x.id === id);
+      if (!it) return;
+      const newStatus = it.status === status ? null : status;
+      it.status = newStatus;
+      // packed면 자동 체크, 그 외면 자동 해제
+      it.checked = newStatus === 'packed';
+      render(CURRENT_FILTER);
+      updateItem(id, { status: newStatus });
+    });
+  });
 }
 
 document.querySelectorAll('.filterChip').forEach(el => {
