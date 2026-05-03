@@ -840,7 +840,7 @@ function DailyReferenceCard({
             {feedText}
           </Text>
           <Text style={dailyRefStyles.colHint} numberOfLines={1}>
-            마지막 수유 후 / 권장 {ref.feedIntervalHrMax}h
+            수유 후 / 권장 {ref.feedIntervalHrMax}h
           </Text>
           <View style={dailyRefStyles.barTrack}>
             <View
@@ -1535,6 +1535,8 @@ function BabyTrackerInner() {
   const [editRecord, setEditRecord] = useState<TrackerRecord | null>(null);
   const [editTime, setEditTime] = useState('');
   const [editEndTime, setEditEndTime] = useState('');
+  // cross-day sleep 의 endTime prefix (예: "5/4 ") — TimePicker 는 HH:MM 만 다룸
+  const [editEndDatePrefix, setEditEndDatePrefix] = useState('');
   const [editNote, setEditNote] = useState('');
   const [editAmount, setEditAmount] = useState('');
 
@@ -1810,7 +1812,16 @@ function BabyTrackerInner() {
     if (!record) return;
     setEditRecord(record);
     setEditTime(record.time);
-    setEditEndTime(record.endTime ?? '');
+    // cross-day sleep 의 endTime (예: "5/4 08:30") 은 prefix 분리해서 별도 보관 —
+    // TimePicker 는 HH:MM 만 다루고, 저장 시 prefix 다시 합침 (handleEditSave).
+    if (record.endTime && record.endTime.includes(' ')) {
+      const parts = record.endTime.split(' ');
+      setEditEndDatePrefix(parts.slice(0, -1).join(' ') + ' ');
+      setEditEndTime(parts[parts.length - 1]);
+    } else {
+      setEditEndDatePrefix('');
+      setEditEndTime(record.endTime ?? '');
+    }
     setEditNote(record.note ?? '');
     setEditAmount(record.amount != null ? String(record.amount) : '');
   }
@@ -1835,14 +1846,21 @@ function BabyTrackerInner() {
       else delete updated.amount;
     }
     // 수면: endTime 함께 수정 → duration 재계산
+    // cross-day sleep 은 openEditModalById 에서 prefix 분리 보관 → 저장 시 다시 합침.
     if (editRecord.type === 'sleep' && editRecord.endTime) {
       const endTimeOk = /^\d{1,2}:\d{2}$/.test(editEndTime);
       if (!endTimeOk) {
         Alert.alert('기상 시간 형식', '기상 시간을 다시 확인해주세요 (예: 08:30)');
         return;
       }
-      updated.endTime = editEndTime;
-      updated.duration = calcDurationMinutes(editTime, editEndTime);
+      updated.endTime = editEndDatePrefix + editEndTime;
+      // duration 재계산 — cross-day 면 HH:MM 차이로는 부정확하므로 원본 duration 유지
+      // (사용자가 endTime 만 바꾼 경우엔 정확하지 않을 수 있으나, 음수 duration 방지)
+      if (editEndDatePrefix) {
+        // cross-day: 원본 duration 유지 (정확한 재계산은 startDate context 필요)
+      } else {
+        updated.duration = calcDurationMinutes(editTime, editEndTime);
+      }
     }
     const newRecords = records.map((r) => (r.id === editRecord.id ? updated : r));
     setRecords(newRecords);
@@ -3227,8 +3245,13 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete, onL
     const out: TrackerRecord[] = [];
     for (const r of records) {
       if (r.type === 'sleep' && r.endTime) {
+        // 자정을 넘긴 sleep 의 endTime 은 "M/D HH:MM" 형식 (예: "5/4 08:30").
+        // wake 가상 entry 의 time 은 정렬 시 다른 HH:MM 보다 위에 와야 하므로
+        // (cross-day wake 는 어제 sleep → 오늘 새벽이라 가장 빠른 기록) HH:MM 만 추출.
+        // 사용자 보고 2026-05-04: "기상 누른 후 다른 기록이 기상 위로 올라가는" 버그 fix.
+        const wakeTime = r.endTime.includes(' ') ? r.endTime.split(' ').pop() ?? r.endTime : r.endTime;
         out.push({ ...r, id: `${r.id}__start`, subType: 'sleep_start', endTime: undefined, duration: undefined });
-        out.push({ ...r, id: `${r.id}__wake`, subType: 'sleep_end', time: r.endTime, endTime: undefined, duration: r.duration });
+        out.push({ ...r, id: `${r.id}__wake`, subType: 'sleep_end', time: wakeTime, endTime: undefined, duration: r.duration });
       } else {
         out.push(r);
       }

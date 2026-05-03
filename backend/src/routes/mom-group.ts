@@ -456,20 +456,16 @@ router.get('/posts/radius', authMiddleware, async (req: Request, res: Response) 
 
     // 공식 글 위치 무관 합류 — 반경 필터 결과와 별개로 모든 공식 글 포함
     // (전국 모드에서는 위 쿼리에 이미 다 포함되므로 중복 dedupe만 처리)
+    //
+    // 공식 글에는 birthYear 필터를 적용하지 않는다 — 운영팀 공지는 보통
+    // babyBirthYear 를 비워두고 (전 연령 대상) 등록하므로 필터 적용 시
+    // 모든 공지가 누락됨 (사용자 보고 2026-05-04: "내동네에서 공지글이 하나도 안보임").
     try {
       let officialQ = collections.momGroupPosts
         .where('isOfficial', '==', true)
         .where('hidden', '==', false);
       if (category && isValidCategory(category)) {
         officialQ = officialQ.where('category', '==', category);
-      }
-      if (birthYears && birthYears.length > 0) {
-        // 공식 글에도 동갑 필터 적용 — birthYear가 매칭되거나 babyBirthYear 없는(전 연령용) 글만
-        if (birthYears.length === 1) {
-          officialQ = officialQ.where('babyBirthYear', '==', birthYears[0]);
-        } else {
-          officialQ = officialQ.where('babyBirthYear', 'in', birthYears);
-        }
       }
       const officialSnap = await officialQ.limit(50).get();
       const existingIds = new Set(posts.map((p) => p.id));
