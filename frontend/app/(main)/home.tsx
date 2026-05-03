@@ -27,7 +27,6 @@ import { PregnancyJourneyCard } from '../../components/home/PregnancyJourneyCard
 import { NextCheckupModal } from '../../components/home/NextCheckupModal';
 import { getNextCheckup, useCheckupStore } from '../../services/checkup';
 import { ChildSelector } from '../../components/home/ChildSelector';
-import { DailyMissionBadges } from '../../components/pregnancy/DailyMissionBadges';
 import { useUiStore } from '../../stores/uiStore';
 import {
   cancelAllPregnancyLocalNotifications,
@@ -556,13 +555,28 @@ export default function HomeScreen() {
       {/* === 1. Header === */}
       <Header child={child} onPickPhoto={pickPhoto} />
 
-      {/* === Child Selector (multi-child) === */}
-      {children.length > 1 && (
-        <ChildSelector
-          items={children}
-          selectedId={selectedChild?.id ?? ''}
-          onSelect={selectChild}
-        />
+      {/* === Child Selector + 진통 체크 (같은 줄, 양 끝 정렬) ===
+          - 좌측: ChildSelector (자녀 1명이면 빈 공간)
+          - 우측: ContractionHeaderPill (임신부일 때만)
+          - 둘 다 없으면 줄 자체 생략 */}
+      {(children.length > 1 || child?.isPregnant) && (
+        <View style={styles.childSelectorRow}>
+          <View style={{ flex: 1 }}>
+            {children.length > 1 ? (
+              <ChildSelector
+                items={children}
+                selectedId={selectedChild?.id ?? ''}
+                onSelect={selectChild}
+              />
+            ) : null}
+          </View>
+          {child?.isPregnant && (
+            <ContractionHeaderPill
+              weeks={child.pregnancyWeeks ?? 0}
+              onPress={() => router.push('/(main)/labor-monitor?tab=contraction' as never)}
+            />
+          )}
+        </View>
       )}
 
       {child && (
@@ -575,17 +589,9 @@ export default function HomeScreen() {
             onTapCheckup={() => setCheckupModalOpen(true)}
           />
 
-          {/* 2a) 임신부 35주+ — 데일리 미션 (물/영양제) 우선 노출
-              35주 미만 임신부 또는 비임신은 퀵메뉴부터 보여줌 (기존 흐름) */}
-          {child.isPregnant && (child.pregnancyWeeks ?? 0) >= 35 && (
-            <DailyMissionBadges childId={child.id} />
-          )}
-
-          {/* 2b) 퀵메뉴 8개 — 35주+ 임신부에서는 임신 여정 아래로 이동 (우선순위 재배치)
-              그 외에는 4-stat 바로 아래 (기존 흐름) */}
-          {!(child.isPregnant && (child.pregnancyWeeks ?? 0) >= 35) && (
-            <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} child={child} />
-          )}
+          {/* 2) 퀵메뉴 8개 — 4-stat 바로 아래
+              (DailyMissionBadges 제거됨 — 물/영양제는 4-stat 안에 통합, long-press로 의학 정보 모달) */}
+          <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} child={child} />
 
           {/* 3) 임신부 — 주차별 핵심 강조 카드 (34주차+ → 출산가방 체크리스트, 진행률·아빠담당 표시) */}
           {child.isPregnant && (() => {
@@ -648,11 +654,6 @@ export default function HomeScreen() {
             <PregnancyJourneyCard
               child={child as unknown as { id: string; isPregnant?: boolean; pregnancyWeeks?: number; dueDate?: string }}
             />
-          )}
-
-          {/* 4b) 35주+ 임신부 — 임신 여정 아래로 내려간 퀵메뉴 (긴급 카드들이 위에 있도록) */}
-          {child.isPregnant && (child.pregnancyWeeks ?? 0) >= 35 && (
-            <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} child={child} />
           )}
 
           {/* 영아 — AI 분석 + 기질 분석 (파스텔 단일 배너) */}
@@ -895,13 +896,7 @@ function Header({
         </View>
       </View>
       <View style={styles.headerRight}>
-        {/* 임신부 — 헤더 우측 진통 체크 pill (35주+는 강조/pulse, 37주+는 임박 도트) */}
-        {child?.isPregnant && (
-          <ContractionHeaderPill
-            weeks={child.pregnancyWeeks ?? 0}
-            onPress={() => router.push('/(main)/labor-monitor?tab=contraction' as never)}
-          />
-        )}
+        {/* 진통 체크는 ChildSelector 줄로 이동 (사용자 요청) */}
         <TouchableOpacity
           style={styles.iconBtn}
           onPress={() => router.push('/(main)/notification-settings' as never)}
@@ -1753,6 +1748,14 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 56,
     paddingBottom: 110,
+  },
+  // ChildSelector + 진통체크 같은 줄 정렬 (좌측 셀렉터, 우측 진통)
+  childSelectorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+    minHeight: 44,
   },
   center: {
     flex: 1,

@@ -21,6 +21,7 @@ import { CelebrationOverlay } from '../common/CelebrationOverlay';
 import { MissionToast } from '../common/MissionToast';
 import { recordMissionComplete, type StreakMilestone } from '../../utils/missionStreak';
 import { useUiStore } from '../../stores/uiStore';
+import { MissionInfoModal, type MissionInfoKind } from '../pregnancy/MissionInfoModal';
 
 interface Child {
   id: string;
@@ -176,6 +177,8 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
   const [supplementDone, setSupplementDone] = useState(false);
   const [mood, setMood] = useState<MoodKey>(null);
   const [moodPickerOpen, setMoodPickerOpen] = useState(false);
+  // 물/영양제 카드 long-press 시 의학적 의미 + 가이드 모달
+  const [infoOpen, setInfoOpen] = useState<MissionInfoKind>(null);
   // 모달 활성 시 SOS FAB 등 floating 요소 숨김 — uiStore overlay 카운터 push/pop
   const pushOverlay = useUiStore((s) => s.pushOverlay);
   const popOverlay = useUiStore((s) => s.popOverlay);
@@ -314,6 +317,7 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
           valueBig={`${waterCount}/${WATER_GOAL}`}
           valueSub="물 잔"
           onPress={incWater}
+          onLongPress={() => setInfoOpen('water')}
           tappable
         />
         <View style={styles.divider} />
@@ -322,6 +326,7 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
           valueBig={supplementDone ? '완료' : '아직'}
           valueSub="영양제"
           onPress={toggleSupplement}
+          onLongPress={() => setInfoOpen('supplements')}
           highlighted={supplementDone}
           tappable
         />
@@ -345,6 +350,14 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
         />
       </View>
       <Text style={styles.tapHint}>{'탭해서 기록할 수 있어요'}</Text>
+
+      {/* 물/영양제 long-press 시 의학적 의미 + 가이드 */}
+      <MissionInfoModal
+        kind={infoOpen}
+        water={waterCount}
+        supplements={supplementDone}
+        onClose={() => setInfoOpen(null)}
+      />
 
       {/* 작은 토스트 — 한 번 누를 때마다 */}
       <MissionToast message={toastMsg} onDismiss={() => setToastMsg(null)} />
@@ -399,6 +412,7 @@ function StatCard({
   valueBig,
   valueSub,
   onPress,
+  onLongPress,
   highlighted,
   dim,
   tappable,
@@ -407,6 +421,7 @@ function StatCard({
   valueBig: string;
   valueSub: string;
   onPress?: () => void;
+  onLongPress?: () => void;
   highlighted?: boolean;
   dim?: boolean;
   tappable?: boolean;
@@ -417,6 +432,8 @@ function StatCard({
     <Wrapper
       style={[styles.card, highlighted && styles.cardHighlighted, tappable && styles.cardTappable]}
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={400}
       activeOpacity={0.7}
     >
       {tappable && (
