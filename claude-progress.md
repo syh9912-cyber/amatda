@@ -1,5 +1,403 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-04-27
+> 최종 업데이트: 2026-05-03
+
+---
+
+## 2026-05-03 — 알람·인증 안정화 + 맘스톡 전면 개편 + Pretendard 폰트
+
+대규모 작업일 — 핵심 fix + 새 기능 + UI 재설계 모두 진행.
+
+### A. 알람/인증 안정화 (오전)
+
+**알람 누수 정리** — 임신부 모드 삭제/출생 전환 시 잔여 알람 해결
+- `frontend/services/pushNotifications.ts`
+  - `cancelAllPregnancyLocalNotifications()`에 `cancelDailyMissionReminder()` 호출 추가 (이전엔 검진 알림만 취소했음)
+  - `cancelAllLocalNotifications()` 신규 — 로그아웃/계정삭제 시 모든 예약 알림 + AsyncStorage 알림 키 일괄 정리
+  - `runOneTimeOrphanCleanup()` — OLD 코드(cascade 누락) 잔여 알람 1회 청소 후 영구 no-op (AsyncStorage 플래그)
+- `frontend/app/_layout.tsx`
+  - 부팅 시 `runOneTimeOrphanCleanup` 호출
+- `frontend/app/(main)/home.tsx`
+  - 임신→출생 전환 시 임신 알람 일괄 취소 + 육아 알림 자동 등록 (`syncScheduledNotifications` + `scheduleFirstCoachingNudge`)
+
+**카카오 SDK 디바이스 정리** — 계정삭제 시 앱 크래시 fix
+- `frontend/services/social-auth.ts`
+  - `clearAllSocialSessions()` 신규 — 카카오/네이버/구글 SDK logout만 호출 (unlink는 서버가 이미 처리해서 디바이스에서 재시도 시 네이티브 크래시 발생했음)
+  - 모든 SDK 호출에 3초 타임아웃 보호
+- `frontend/app/(main)/profile.tsx`
+  - 로그아웃: 즉시 로컬 정리 → 리다이렉트 → SDK 정리는 fire-and-forget
+  - 계정삭제: 백엔드 호출 → 로컬 정리 → 리다이렉트 → SDK 정리 fire-and-forget
+
+**삭제된 계정 토큰 → 401** — 잔존 토큰 OTA 다이얼로그 무한 루프 fix
+- `backend/src/routes/auth.ts` (`/me`)
+- `backend/src/routes/subscription.ts` (`/premium/status`, `/premium/start-trial`)
+- 모두 "사용자 없음" 응답을 **404 → 401**로 변경 → axios interceptor가 자동 logout 처리
+
+**자녀 미등록 사용자 접근성**
+- `frontend/app/(main)/home.tsx` — EmptyState에 "맘스톡 둘러보기" + "프로필" 보조 버튼 추가
+- `frontend/app/(main)/mom-group.tsx` — 자녀 없으면 현재 월(YYYY-MM)을 myGroupKey로 fallback → 월방 진입 가능
+
+### B. 맘스톡 공식 계정 시스템 (오후)
+
+**isOfficial 기반 권한**
+- `backend/src/routes/auth.ts` — `/auth/me` 응답에 `isOfficial` 필드 추가
+- `backend/src/routes/mom-group.ts`
+  - 게시글 생성 시 `isOfficial`을 user에서 denormalize 저장 (조회 비용 0)
+  - 댓글에도 동일 적용
+  - 익명 게시글에는 isOfficial 노출 안 함 (정체성 보호)
+
+**전국 노출 + 핀**
+- `/posts/radius`: 위치 무관 모든 공식 글 합류 (반경 필터 무시)
+- `/posts` (월방): 모든 공식 글 합류 (월 무관)
+- `/posts/radius` 폴백: 로컬 글 < 5개 시 전국 인기글 자동 채움
+- `isPinned` 필드: 공식 계정만 설정 가능 (백엔드 검증), 최대 3개 최상단 고정
+- `frontend/services/api.ts`: `createPost`/`updatePost`에 `isPinned` 파라미터 추가
+
+**글쓰기 모달 UI**
+- `frontend/app/(main)/mom-group.tsx`
+  - 공식 계정 + 익명 OFF일 때만 "📌 상단 고정" 토글 노출
+  - `isOfficialUser` 상태 — 마운트 시 `authApi.getProfile()`로 1회 조회
+
+**Firestore 인덱스 7개 추가**
+- `firestore.indexes.json`:
+  - `momGroupPosts`: `hidden + lat`
+  - `momGroupPosts`: `hidden + babyBirthYear + lat`
+  - `momGroupPosts`: `hidden + category + lat`
+  - `momGroupPosts`: `isOfficial + hidden`
+  - `momGroupPosts`: `isOfficial + hidden + category`
+  - `momGroupPosts`: `isOfficial + hidden + babyBirthYear`
+  - `momGroupPosts`: `hidden + createdAt` (폴백 인기 쿼리용)
+
+**시드 게시글 스크립트**
+- `backend/scripts/seed-official-posts.cjs` 신규
+- 정보 6 / 질문 2 / 수다 1 / 축하 1 = 총 10개
+- `_seedKey` 마커로 멱등성 (재실행 시 중복 X)
+- 실행: `node scripts/seed-official-posts.cjs --apply`
+
+### C. 맘스톡 UI 전면 개편
+
+**임신부 35주+ UX 고도화 (홈)**
+- `frontend/components/home/DenseStatsRow.tsx`
+  - "오늘?" → "기록", "입력하기" → "입력" (행동 중심 라벨)
+  - mood에 "속불편" 추가 (후기 입덧 사라진 사용자 공감)
+- `frontend/stores/uiStore.ts` 신규 — overlay 카운터 (모달 활성 시 SOS FAB 자동 숨김)
+- `frontend/app/(main)/home.tsx`
+  - 35주+ 임신부: DailyMissionBadges 우선 노출 → BirthBag → 여정 → 퀵메뉴 순서
+  - DailyMissionBadges는 import만 되어 있고 어디서도 렌더링 안 되던 dead component였음
+  - SOS FAB은 `useUiStore.overlayCount === 0`일 때만 렌더
+
+**모던 리스트 UI (맘스톡)**
+- `frontend/app/(main)/mom-group.tsx`
+  - 표 형식(번호/제목/작성자/날짜/조회/♥) 완전 폐기
+  - LinearGradient 카드 (Threads 스타일, 위→아래 화이트로 페이드)
+  - 카테고리 색 산뜻하게: Material 800/900 → 400/500
+    - 질문 #1565C0 → #29B6F6 (스카이)
+    - 수다 #AD1457 → #EC407A (밝은 핑크)
+    - 정보 #2E7D32 → #66BB6A (그린)
+    - 고민 #E65100 → #FFA726 (오렌지)
+    - 축하 #6A1B9A → #AB47BC (라벤더)
+  - 컨테이너 배경: 베이지 → #F4F8FB (라이트 블루-그레이)
+  - 카드 둥근 모서리 12px → 16px
+  - 카드 그림자 산뜻한 블루-그레이 (#88A0B8 10% opacity)
+  - 좌측 액센트 바 4px (핀=피치, 공식=스카이, 일반=카테고리색)
+  - 공식/전국 칩 색 산뜻하게 (#42A5F5 / #9575CD)
+
+**검색 위치 개선**
+- 페이지 하단 (못 찾는 위치) → 헤더 우측 🔍 아이콘
+- 탭 시 펼침, 인스타·스레드 표준
+- autoFocus 적용
+
+**상태 맵핑 버그 fix**
+- `switchRoomType` 시 `viewMode='feed'` + `searchQuery=''` 자동 리셋 (북마크 상태에서 방 바꾸는 모순 제거)
+- 죽은 'region' 픽커 코드 완전 제거 (실제로 도달 불가능했음)
+- '지역방으로 둘러보기' 빈 상태 제거 (groupKey가 currentMonthKey로 항상 fallback돼서 도달 X)
+
+### D. Pretendard 폰트 전역 적용
+
+**설치/번들**
+- `expo-font` 설치 (~14.0.11)
+- `frontend/assets/fonts/`에 Pretendard 4 weights (Regular/Medium/SemiBold/Bold) 배치 (~6.4MB)
+- `frontend/app.config.js` plugins에 expo-font 등록 (다음 APK 빌드부터 native 임베드)
+- 현재 OTA용: `useFonts` + `require()`로 JS 번들 포함
+
+**자동 weight 매핑** (정석)
+- `frontend/app/_layout.tsx`에 Text/TextInput.render monkey-patch
+- fontWeight에 따라 자동으로 Pretendard 변형 선택 (700→Bold, 600→SemiBold, 500→Medium, 그 외→Regular)
+- 기존 모든 Text 컴포넌트가 코드 변경 없이 자동 Pretendard 적용
+- 사용자 style이 우선 (override 가능)
+- `useFonts` 훅으로 로드 완료 대기 → 미완료 시 ActivityIndicator (FOUT 방지)
+
+### 검증
+- `cd backend && npx tsc --noEmit` ✅ EXIT=0
+- `cd frontend && npx tsc --noEmit` ✅ EXIT=0
+- 백엔드 배포: 여러 차례 (보안 24파일 + analyze 로깅 + isOfficial + 폴백 + 핀 + 401 fix)
+- 프론트 OTA: ~15회 배포 (preview 채널)
+- Firestore 인덱스 배포 완료
+
+### 남은 이슈/메모
+- **APK 재빌드 권장** — Pretendard 폰트 native 임베드 (현재는 OTA로 JS 번들 6.4MB 추가 — 첫 다운로드 느림)
+- 운영자가 시드 글 작성: `cd backend && node scripts/seed-official-posts.cjs --apply` 실행 필요
+- Firestore 인덱스 빌드 ~1-5분 (자동 활성화 후 radius 폴백 정상 동작)
+- 공식 계정 운영 가이드: Firestore Console에서 `users/{uid}.isOfficial: true` 수동 설정
+
+---
+
+## 2026-05-01 — 홈 UX 정리 + 임신부 맞춤추천 분기 + 톤 통일
+
+### 변경 파일
+- `frontend/app/(main)/home.tsx` — DailyTipBanner 제거, RecommendationSection 임신부 분기, addChildBanner 톤다운, 헤더 아이콘 3D 그림자/간격
+- `frontend/components/home/DailyTipBanner.tsx` — 삭제
+- `frontend/components/home/useBabyDailyTip.ts` — 삭제
+- `frontend/app/(main)/recommendations.tsx` — 임신부 4 카테고리(임산부음식·운동/요가·태교·출산용품), 트라이메스터별 설명 분기
+- `frontend/app/(main)/recommendation-list.tsx` — 임신부면 ageGroup을 pregnant_early/mid/late로 송신, CATEGORY_STYLE에 임신부 카테고리 추가
+- `backend/src/data/recommendation-seeds.ts` — 임신부 시드 12개 추가 (4 카테고리 × 3 트라이메스터)
+
+### 작업 목적
+- "오늘 기록을 시작해 보세요" 일줄 배너가 퀵메뉴(아기시간)와 중복 → 삭제
+- 임신부에게 "음식·놀이·학원·책" 추천이 맞지 않음 → 임산부 카테고리 + 주차별 콘텐츠
+- "내 아이 정보 추가하기" 진한 오렌지 단독 배너가 앱 톤과 어색 → 파스텔 피치로 통일
+- 헤더 진통체크/벨/설정 아이콘 높이/간격 불일치 + 입체감 부족
+
+### 검증
+- `cd backend && npx tsc --noEmit` ✅ EXIT=0
+- `cd frontend && npx tsc --noEmit` ✅ EXIT=0
+- `cd frontend && npx expo lint` ✅ 0 errors (97 pre-existing warnings)
+
+### 남은 이슈
+- 임신부 시드 데이터는 첫 호출 시 캐시 미존재 → seed 폴백 사용. POST `/api/recommendations/seed` 호출하면 Firestore에 캐싱됨
+- "전부 입체감" 요청은 헤더 아이콘 위주로 적용. 다른 위치(PregnancyJourneyCard, MonthlyChar 등)는 추가 요청 시 진행 가능
+
+---
+
+## 2026-05-01 — albumPhotos 마이그레이션 + 알림/UI 대규모 개편 + APK v2.9.0 빌드 + 홈 V3 Dashboard
+
+### 배경
+- 출시 동결 해제(4-30) 후 14일 내 출시 위해 회귀·UX·인프라 일괄 정리
+- 베타 테스터 피드백 + Play Store 패키지명 변경 후 OAuth/SHA-1 수정 + 임신부/영아 모드별 home UX 차별화
+
+### 1) albumPhotos 컬렉션 통합 (Rule of Two 승인 후 진행)
+
+#### 배경
+- 옛: `pregnancyRecords`(임신 기록 + 사진) + `milestonePhotos`(출생 후 사진) 두 컬렉션
+- album.ts PDF 생성 시 read-time merge로 통합 출력 (C-1 안전버전 동작 중)
+- 출시 후 마이그레이션은 사용자 데이터 손상 위험 → 베타(테스터 5명, 27 docs) 시점에 통합
+
+#### 진행 절차 (정석 zero-downtime migration)
+1. **백업**: 로컬 JSON + Firebase Storage (`gs://amatda-parenting.firebasestorage.app/firestore-backup-2026-04-30/`)
+2. **Audit**: 27 docs 전체 무결성 확인 (ERROR 0, WARN 0)
+3. **인덱스 배포**: `albumPhotos` (childId+date / childId+phase+createdAt)
+4. **실 마이그레이션**: 27 docs → albumPhotos (옛 ID 보존, emoji 백필 14건 동시 처리)
+5. **Backend dual-write**:
+   - `routes/album.ts` — POST/GET/DELETE/PDF generate (옛 milestonePhotos + 새 albumPhotos 양쪽 쓰기, read는 albumPhotos)
+   - `routes/pregnancy.ts` — POST/GET/DELETE/timeline (옛 pregnancyRecords + 새 albumPhotos 양쪽 쓰기)
+   - `routes/child.ts`, `routes/auth.ts` — cascade delete에 albumPhotos 추가
+   - `services/coaching/auto.diary.ts` — pregnancy 기록 조회를 albumPhotos로
+6. **백엔드 배포** + 라우트 시뮬레이션 검증 (모든 phase 정상)
+
+#### 통합 스키마 (`albumPhotos`)
+```ts
+{
+  userId, childId,
+  phase: 'pregnancy' | 'baby',
+  uri, printUrl, mediaType,
+  title, content, milestoneType, milestoneEmoji, milestoneColor,
+  date (YYYY-MM-DD), monthKey (YYYY-MM), createdAt (Timestamp),
+  week, pregnancyType,
+  _sourceCollection, _sourceId, _migratedAt,
+}
+```
+
+#### 7번 emoji 백필 흡수
+- 옛 pregnancyRecords의 14건 `milestoneEmoji=null` → frontend `ALL_MILESTONES`(20개) + backend `AUTO_MILESTONES`(10개) + `PREG_TYPE_EMOJI` 매핑으로 100% 백필
+- `prenatal_vitamins → 💊`, `first_visit → 🏥` 등
+
+#### 마이그레이션 스크립트
+- `backend/scripts/migrate-album-photos/00-count.cjs` — 카운트
+- `01-backup.cjs` — 로컬 백업
+- `01b-upload-backup-to-storage.cjs` — Cloud Storage 업로드
+- `02-dry-run.cjs` — 변환 시뮬레이션
+- `02b-full-audit.cjs` — 무결성 검증
+- `03-migrate.cjs` — 실 마이그레이션
+- `04-verify-routes.cjs` — 라우트 동작 검증
+
+### 2) 알림 버그 fix — 삭제된 자녀 알림 잔류
+
+#### 원인
+- `pushNotifications.ts` 모든 schedule 함수가 `childName`을 body에 넣지만 `data.childId`는 안 넣음
+- `cancelAllChildLocalNotifications`가 `data.childId === childId` 매칭에만 의존 → 100% 실패
+- `ScheduledIds` 전역 키(morning/afternoon/evening/weekly/coachingFollowup/reengagement) 자녀 삭제 시 정리 안 함
+
+#### 수정
+- 모든 schedule 함수에 `childId`, `childName` 매개변수 추가, `data.childId` 박힘
+- `cancelAllChildLocalNotifications` 강화:
+  1. ScheduledIds 전역 키 모두 cancel + clear
+  2. FIRST_COACHING_KEY, amatda_nextday_nudge 정리
+  3. data.childId 매칭 + childName fallback (옛 알림 안전망)
+- 호출자 5개 파일 업데이트 (_layout, chatbot, profile, child-edit, notification-settings)
+
+#### 추가 fix (열나열나)
+- 체온 전체 삭제 시 `useFeverStore.bump()` 호출 추가 → home 펄스 즉시 해제
+
+### 3) fever.tsx (열나열나) 전면 재설계
+
+#### 사용자 요청 5가지
+1. 정보 다이어트: 단일 행동 카드만 강조
+2. 폰트 크기 혁명: 권장 복용량 56pt → **110pt** 거대 표시
+3. 2x2 약 그리드: 타이레놀/챔프/부루펜/맥시부펜
+4. 챔프 빨강/파랑 토글 (아세트아미노펜/이부프로펜 오복용 방지)
+5. 시간 입력: DateTimePicker(다이얼) → 숫자 키패드 + '지금' 버튼
+6. 광고 슬롯 placeholder ('엄마를 위한 팁' 톤, 현재 미노출)
+
+#### 신규 컴포넌트
+- `FastTimeInput` — 오전/오후 토글 + 시·분 숫자 입력 + '지금' 1탭
+
+### 4) APK v2.9.0 빌드 (com.sylabs.amatda)
+
+#### 배경
+- Play Store 등록 시 옛 패키지(`com.amatda.app`) 충돌로 새 패키지(`com.sylabs.amatda`) 변경 (사용자 작업)
+- 빌드 4회 실패/재시도 후 성공
+
+#### 빌드 시도
+1. **#1 실패** (`81646a1e`): `processReleaseGoogleServices` — google-services.json에 com.sylabs.amatda 매핑 없음
+2. **#2 실패** (`75f0602e`): `eas env:update` 명령이 file env를 손상시킴 (preview env에서 사라짐)
+3. **#3 성공** (`191cd945`): `eas env:create --force`로 재업로드 → 빌드 성공
+4. **#4 성공** (`a63cb8d8`): 새 SHA-1 google-services.json 반영, 백업 APK
+
+#### SHA-1 매핑 fix
+- 실제 EAS keystore SHA-1: `F8:46:ED:C0:70:04:C8:D4:33:94:BE:84:48:66:BD:9F:FE:9F:96:D4`
+- 사용자가 옛 SHA-1(`A0:6C:19:...`)을 콘솔에 등록한 상태였음
+- Firebase Console에서 새 SHA-1 자동 등록 → 새 google-services.json 다운로드 → EAS file env 재업로드
+- Google Cloud Console OAuth Android Client 자동 동기화 (Firebase가 처리)
+- Kakao keyHash 사용자가 등록 (`+EbtwHAEyNQzlL6ESGa9n/6fltQ=`)
+- Naver는 기존 등록값 유지
+
+### 5) 홈 V3 Dashboard (영아/임신부 모드 자동 분기)
+
+#### 신규 컴포넌트 5개
+- `components/home/DenseStatsRow.tsx` — 4-stat 그리드 (모드 자동 분기)
+  - 영아: 수유 / 수면 / 대변 / 키체중 percentile
+  - 임신부: 물(클릭 +1) / 영양제(토글) / 다음검진 D-day / 오늘 컨디션(4-mood)
+  - 단일 카드에 4 column + 디바이더 (mockup 통합 스타일)
+- `components/home/DailyTipBanner.tsx` — 노란 알림 배너
+- `components/home/AIAnalysisRow.tsx` — AI 분석 3-카드 (한 카드 안 통합)
+- `components/home/TraitBarsCard.tsx` — 기질 5막대 (영아 only)
+- `components/home/PregnancyJourneyCard.tsx` — 임신 여정 5단계 (임신부 only, 클릭 → 상세)
+- `components/home/NextCheckupModal.tsx` — 다음 검진 일정 입력 모달
+
+#### 데이터 출처
+- 영아 stats: `features/baby-tracker/storage`(AsyncStorage 로컬)에서 로드 (← server API에서 변경)
+- 임신부 stats: AsyncStorage(물/영양제/mood) + AsyncStorage(다음검진)
+- AI 분석: `useAIAnalysisData.ts` 훅 (영아: dailyTracking 어제vs오늘, 임신부: 7일 추세)
+- 영아 데일리 팁: `useBabyDailyTip.ts` 훅 (어제 vs 오늘 비교 메시지)
+- 기질 5막대: `child.innateData.fiveElements` (이미 0~100 percent 정규화됨, 시각만 1.5배 확대)
+
+#### 다음 검진 일정 (AsyncStorage 기반, Firestore 미사용)
+- `services/checkup.ts` — getNextCheckup / setNextCheckup / clearNextCheckup / daysUntil / formatDday / formatKoreanDate
+- `useCheckupStore` (zustand) — 입력/삭제 시 home 즉시 갱신 트리거
+- 임신앨범 화면 상단에 "다음 검진 일정" 카드 추가 (탭하면 모달)
+- PDF 앨범 출력 시 자동 미포함 (PDF는 albumPhotos만 봄)
+
+#### 갱신 트리거 (zustand store)
+- `stores/feverStore.ts` — 측정/삭제 시 home 펄스 동기화
+- `stores/checkupStore` (in checkup.ts) — 검진 일정 변경 시 home 동기화
+- `stores/trackerStore.ts` — baby-tracker 저장 시 home stats 동기화
+
+### 6) 홈 V3 변천사 (수정 반영)
+
+#### v2.9.1 — 1차
+- 5 컴포넌트 + 단순 헤더 + 만삭 출산 등록 카드
+
+#### v2.9.2 — 펄스 즉시 반영
+- feverStore 트리거로 fever 측정 → home 펄스 즉시 표시
+
+#### v2.9.3 — 4-stat 통합 카드
+- 4-stat / AI 분석 → 단일 카드 안에 column 통합 (mockup 스타일)
+
+#### v2.9.4 — 컴팩트
+- 모든 섹션 padding/icon 축소 (퀵메뉴 8개까지 한 화면)
+
+#### v2.9.5 — 데이터 fix
+- 기질 5막대 percent 정확화 (× 10 버그 수정)
+- 영아 AI 분석 데이터 연동 (어제 vs 오늘)
+- baby-tracker 저장 → home 즉시 갱신 (storage.ts에서 trackerStore.bump 자동 호출)
+- 임신부 AI 옵션 1: 영양제 7일 챙김율 / 컨디션 7일 추세 / 이번 주 핵심
+
+#### v2.9.6 — UI 재구성 (사용자 mockup 반영)
+- AI/기질 분석 단일 행 배너 (파스텔 라벤더/피치)
+- 임신부 home: AI 분석 카드 제거 → 출산가방/검진/태동 등 주차별 핵심 강조 카드
+- 임신 여정 5단계 클릭 → `pregnancy-journey-detail.tsx` 신규 페이지
+  - 단계별 영양제 / 식단 / 운동 / 검사 / 주의사항 / 마일스톤 (early/wk12/stable/late/birth)
+  - 의료적 결정은 산부인과 안내 disclaimer
+
+#### v2.9.7 — 탭 정리 + 순서 재배치
+- `pregnancy-journey-detail` 탭바에서 숨김 (`href: null`)
+- 홈 순서: 4-stat → **퀵메뉴 8개 (위로)** → [임신: 핵심카드 + 여정 / 영아: 팁 + AI + 기질] → 월별특징 / 추천
+
+### 7) 인증 흐름 (이전 작업, 검증 완료)
+- 이메일/소셜 가입 시 별명 화면 경유
+- backend `isNewUser` 정확화
+- set-nickname을 `(auth)` 그룹 밖 `app/onboarding/`으로 이동
+- 회원 탈퇴 + 소셜 unlink — Backend REST 정석 패턴 A
+- 4-30 빌드 #4 (`a63cb8d8`)에서 com.sylabs.amatda 패키지로 빌드 + Firebase Console 새 SHA-1 자동 등록 + Kakao keyHash 등록 완료 → 카카오/구글/네이버 로그인 정상화
+
+### 검증 결과
+- frontend `npx tsc --noEmit` → 0 errors (모든 변경)
+- backend `npx tsc --noEmit` → 0 errors
+- `firebase deploy --only functions:api` → 성공 (dual-write 코드)
+- `firebase deploy --only firestore:indexes` → 성공
+- adb logcat으로 로그인 + 펄스 알림 + baby-tracker 갱신 검증
+
+### OTA 배포 이력 (이번 세션)
+| Update Group | 버전 | 내용 |
+|---|---|---|
+| 21c3ae9d | v2.9.1 | 알림 childId fix + fever 재설계 |
+| aa9aae2c | v2.9.2 | feverStore 펄스 즉시 반영 |
+| 9d73d4be | v2.9.3 | 홈 V3 Dashboard (5 컴포넌트) |
+| 33a0e48f | v2.9.4 | 4-stat / AI 단일 카드 통합 |
+| 86d5c1d1 | v2.9.5 | 기질 percent fix + tracker store 자동 갱신 + 임신부 AI 옵션1 |
+| 3ee17427 | v2.9.6 | AI/기질 파스텔 단일 배너 + 임신부 home 재구성 + 임신 여정 상세 페이지 |
+| 37b242c6 | v2.9.7 | 출산 탭 숨김 + 홈 순서 재배치 (퀵메뉴 위로) |
+
+### 신규/수정 파일 요약
+
+**Frontend 신규**:
+- `stores/feverStore.ts`, `stores/trackerStore.ts`
+- `services/checkup.ts`
+- `components/home/DenseStatsRow.tsx`, `DailyTipBanner.tsx`, `AIAnalysisRow.tsx`, `TraitBarsCard.tsx`, `PregnancyJourneyCard.tsx`, `NextCheckupModal.tsx`
+- `components/home/useBabyDailyTip.ts`, `useAIAnalysisData.ts`
+- `app/(main)/pregnancy-journey-detail.tsx`
+- `assets/quick-bottle.png` (gpt-image-1로 신규 생성)
+
+**Frontend 수정**:
+- `app/(main)/home.tsx` — V3 dashboard 통합, 헤더 단순화, 순서 재배치
+- `app/(main)/_layout.tsx` — pregnancy-journey-detail 탭 숨김
+- `app/(main)/fever.tsx` — FastTimeInput, 4-약 그리드, 챔프 토글, 110pt
+- `app/(main)/pregnancy.tsx` — NextCheckupSection 추가
+- `app/(main)/baby-tracker.tsx` — useTrackerStore 메모 (자동 호출 명시)
+- `app/(main)/chatbot.tsx`, `profile.tsx`, `child-edit.tsx`, `notification-settings.tsx` — 알림 함수 시그니처 변경 반영
+- `services/pushNotifications.ts` — 모든 schedule/cancel 함수에 childId 박음
+- `features/baby-tracker/storage.ts` — saveRecords 직후 trackerStore.bump 자동 호출
+
+**Backend 신규**:
+- `backend/scripts/migrate-album-photos/*` (00~04 + 01b)
+
+**Backend 수정**:
+- `services/firestore.ts` — albumPhotos 컬렉션 추가
+- `routes/album.ts`, `pregnancy.ts`, `child.ts`, `auth.ts` — dual-write
+- `services/coaching/auto.diary.ts` — albumPhotos 쿼리
+
+**인프라**:
+- `firestore.indexes.json` — albumPhotos 인덱스 2개 추가
+- EAS env: GOOGLE_SERVICES_JSON 새 SHA-1 반영 (preview + production)
+- Firebase Console: com.sylabs.amatda + 새 SHA-1 자동 등록
+
+### 남은 이슈 (출시 전 사용자 액션 필요)
+1. ⚠️ **`backend/service-account.json` 삭제** + Firebase Console 키 폐기 (보안)
+2. ⚠️ **OpenAI API 키 폐기** (채팅 노출됨)
+3. **production AAB 빌드** (Play Store 제출용 — preview는 검증 완료)
+4. **Sentry DSN 운영 env 주입**
+5. **Play Console 메타데이터 / 데이터 보안 양식 / 콘텐츠 등급 / 대상 연령층 설문**
+6. **AAB 업로드 → Internal testing → Production 단계 출시**
+7. **albumPhotos 안정화 후 옛 컬렉션 삭제** (1주 모니터링 후, 옵션)
 
 ---
 
@@ -1451,3 +1849,257 @@ sleepKnowledgeCache, dailyTraits, milestonePhotos, kakaoOAuthState
 - **이메일**: test@amatda.com / test1234
 - **테스트 아이**: 윤도(20개월 남아 활동형), 승하(8세 여아 조화형)
 - **카카오 JS키**: a621098190b12a58275dcb80e39a6c18
+
+---
+
+## 2026-04-30 — 열나열나 개편 + 일러스트/UI 정리 (진행 중)
+
+### 완료
+- **열나 → 열나열나 리네이밍** + "지능형 응급 가이드 플랫폼" 개편
+  - `frontend/app/(main)/fever.tsx`: 측정 시각 DateTimePicker, 과거 시각 기록 가능
+  - 액션 우선 메시지 카드 (`buildActionGuide`): emergency / high+해열제최근 / high+미복용 /
+    moderate / mild / recovering 6단계 분기
+  - 해열제 최근 복용 기록(`fever_medlog`) 교차 참조 → "N분 후 가능해요" / "지금 바로"
+- **홈 메뉴 펄스 링** (`home.tsx`)
+  - `useFeverAlert(childId)`: AsyncStorage `fever_history_${childId}` 4시간 내 38℃+ 감지
+  - `FeverPulseCircle`: Animated.loop 빨간 링 애니메이션
+- **삭제 아이 알림 정리** (push 잔여 알림 제거)
+  - `services/pushNotifications.ts`: `cancelAllChildLocalNotifications`,
+    `cancelAllPregnancyLocalNotifications`
+  - `profile.tsx` + `child-edit.tsx`: 아이 삭제 시 호출
+- **커스텀 3D 일러스트 일괄 적용** (이모지 → PNG)
+  - `scripts/gen-quick-icons.py`: PIL로 7종 PNG 생성
+    (thermometer/sprout/syringe/baby/blood/water/pill, 192×192)
+  - 홈 메뉴 + DailyMissionBadges 등 적용
+- **OTA 배포**: `fda12ecb-2e52-43f6-9eee-2fbba2b9db62` (production 채널)
+- **커밋**: `71921f8 feat(fever): 열나 → 열나열나 + 지능형 응급 가이드 플랫폼`
+
+### 미해결 이슈 (다음 작업)
+1. **빨간 펄스 링 오작동**: 측정 기록이 없어도 링이 애니메이션됨
+   - 원인 추정: `useFeverAlert`에서 stale AsyncStorage 데이터 / 빈 배열 검증 부족
+   - 해결 방향: 배열 길이 체크 + childId 매칭 검증 + 마운트 시 명확한 false 초기화
+2. **일러스트 비주얼 어색함**: "검은색 묻은거 처럼" 이상함, 기존 quick-X.png의
+   3D 파스텔 아기자기 톤과 통일 안 됨
+   - 원인 추정: PIL gradient 어두운 endpoint + core_shadow 진함
+   - 해결 방향: 라이트 파스텔 팔레트, 코어 섀도우 약화, 화이트 하이라이트만 유지
+3. **DailyMissionBadges 카드 높이 과다**: 위아래 폭 약 50% 줄여야 함
+   - 수정 대상: `components/pregnancy/DailyMissionBadges.tsx`
+     - `card.paddingVertical: 14 → 7`
+     - `RING_SIZE: 56 → 40`, `RING_STROKE: 6 → 5`
+     - `cardCountBig: 22 → 18`
+     - `ringWrap.marginVertical: 4 → 2`
+
+---
+
+## 2026-04-30 ~ 2026-05-01 — 출시 직전 대규모 UI/UX 개편 + 인증 흐름 정리 (22회 OTA + 5회 Functions 배포)
+
+### 배경
+- 사용자 베타 테스트에서 발견된 회귀/UX 이슈 다수
+- 임신앨범 ↔ 성장앨범 시각·구조 통일 요청
+- 열나열나 화면 정보 과부하 → "초간결·직관적 UI" 전면 개편 요청
+- 회원 탈퇴/재가입 동선 깨짐 (별명 화면 스킵 → 자녀등록 직행)
+- 패키지명 변경 (`com.amatda.app` → `com.sylabs.amatda`) 후 Google/Naver 로그인 DEVELOPER_ERROR
+
+### 1) 초기 fix 3건 — useFeverAlert · 일러스트 · DailyMissionBadges
+- **useFeverAlert 검증 강화** (`frontend/app/(main)/home.tsx`)
+  - `Array.isArray` 체크, `typeof number` type guard 추가
+  - `ts <= 0 || ts > now` 미래/0 timestamp 거부
+  - child 변경 시 즉시 `setIsAlert(false)`로 초기화 → stale 상태 방지
+  - 가장 최근 측정값만 평가 (`valid.sort` + `latest`) → 36℃로 다시 측정 시 alert 자동 해제
+- **7개 quick 아이콘 재생성** (`scripts/regen-quick-icons.cjs` 신규)
+  - gpt-image-1로 thermometer/sprout/syringe/baby/blood/water/pill 신규 생성
+  - PIL 스크립트의 검은 톤(core_shadow + ground_shadow) 제거
+  - 기존 일관된 3D clay 스타일 적용
+- **DailyMissionBadges 컴팩트화** (`frontend/components/pregnancy/DailyMissionBadges.tsx`)
+  - 정사각형 카드 → 가로 row 레이아웃 (AI 분석 카드 높이와 동일)
+  - paddingVertical 14 → 10, ringSize 56 → 38, 폰트 22 → 15
+  - row paddingHorizontal 16 → 4 (그리드와 정렬)
+
+### 2) 임신앨범 일러스트 12개 + 명칭·이모지 매핑 (3D clay 통일)
+- **신규 일러스트 12개 생성** (`scripts/regen-pregnancy-icons.cjs`)
+  - `contraction-clock.png` — 진통체크 (알람시계+분홍 하트)
+  - `preg-test/stethoscope/ultrasound/leaf/ribbon/foot/bag.png`
+  - `preg-mood-good/tired/nausea/pain.png` (엄마 상태 4종)
+- **PREG_EMOJI_ICON 매핑** (`frontend/app/(main)/pregnancy.tsx`)
+  - 시스템 이모지 27종 → 우리 일러스트 require() 매핑
+  - `EmojiOrIcon` 헬퍼 컴포넌트 — 매핑 있으면 Image, 없으면 Text fallback
+  - backend `MOM_SYMPTOM_PRESETS` 옛 이모지(🫠 😖 💩) 추가 매핑
+- **"임신기록" → "임신앨범" 명칭 일괄 변경** (5곳)
+  - `app/(main)/pregnancy.tsx` Stack.Screen title
+  - `app/(main)/_layout.tsx` 탭 라벨
+  - `constants/ageFeatures.ts` 홈 quick action
+  - `app/(main)/home.tsx` quick action label
+  - `app/(main)/album.tsx` 자동 병합 안내, `growth-stats.tsx` 힌트, `pregnancy.tsx` 빈상태, `components/profile/ProfileMenuList.tsx`
+- **진통체크 박스** (`frontend/app/(main)/home.tsx`)
+  - 정사각 76×76 줄바꿈 → 가로 row 패딩(10×6) + "진통 체크" 한 줄
+  - 이모지 ⏱️ → contraction-clock.png 일러스트
+- **mom_health emoji backend fix** (`backend/src/routes/pregnancy.ts`)
+  - timeline 응답에서 emoji='🤰' 고정 → 첫 증상의 emoji로 동적 매핑
+
+### 3) 열나열나 4단계 재설계 + UI 전면 개편
+- **단계 1 — 시각 다이어트** (`frontend/app/(main)/fever.tsx`)
+  - 폰트 30~50% 축소 (screenTitle 26→20, bigTempInput 48→34, levelEmoji 56→36 등)
+  - 패딩·라운드 컴팩트화, 흰 베이스 + 포인트 컬러만 (코랄 #FF8C5A)
+- **단계 2 — 체온/복용 이력 토글**
+  - 메인엔 최신 1건만 표시, "전체 보기 (N건)" 토글로 5건/전체
+- **단계 3 — 다음 행동 카드 (단일)**
+  - `nextDoseCard` — 가장 빠른 다음 복용 1건만 큰 글씨
+  - 같은 종류 + 교차 candidates에서 `Math.min(nextAt)` 선택
+  - 교대 복용 스케줄 리스트 제거
+- **단계 4 — 약 선택 슬림화 + 재개편**
+  - 동적 가이드 헤드라인: "엄마, 당황하지 마세요!\n지금은 [약] [ml]ml 먹일 시간입니다"
+  - 큰 용량 디스플레이 — 56pt 숫자 + 22pt "ml" 단위 분리
+  - 약 선택 칩 (타이레놀/부루펜) 토글 → 상단 멘트 + 용량 실시간 연동
+- **로직·계산식·저장구조 무변경**: `recalcSyrup`, `calcNextDoseAt`, `buildActionGuide`, Firestore 그대로
+
+### 4) 임신앨범 ↔ 성장앨범 시각·구조 통일
+- **B 단계 — 시각 통일** (pregnancy.tsx 스타일 정렬)
+  - `currentBadge` 추가 ("🤰 현재 임신 N주차" pink pill)
+  - `weekBadgeCurrent` 강조 색상 (#C2185B), 카드 본문/날짜 fontWeight: 600
+- **C 단계 안전버전 — 표시만 통합** (`frontend/app/(main)/album.tsx`)
+  - `PregnancyMemoriesSection` 신규 컴포넌트 (collapsible)
+  - 출산 후에도 BabyAlbum 상단에 "🤰 임신앨범 기록 · 출산 전 N건" 섹션
+  - **Firestore 스키마 변경 없음** (Rule of Two 안전)
+- **100% UI 통일 (재구성)**
+  - 임신앨범 페이지 전체 재배치: childLabel, AI 일기 버튼, "{N}장의 기록" 헤더, feedCard(이미지+strip+badge+memo), 임신앨범 만들기 섹션
+  - feedCard 스타일 album.tsx에서 그대로 복사 (stripColor: health #E91E63, record #FF8C5A)
+- **입출력 100% 통일**
+  - 모달 기반 입력 → **인라인 compose 카드** (사진+칩+메모+저장)
+  - 한 번 저장 = 한 카드 (이전엔 3+ 카드 분리)
+  - `handleSaveUnified` 신설: chip.kind별 saveMomHealth / createRecord 분기
+  - 사진 picker: `expo-image-picker` 갤러리 + 4:3 crop
+- **마일스톤 emoji 직접 전송 fix** (`backend/src/routes/pregnancy.ts`)
+  - frontend `createRecord`에 `milestoneEmoji` 필드 추가
+  - backend AUTO_MILESTONES(10개)에 없어도 클라이언트 emoji 우선 사용
+- **칩 2줄 분리** — "마일스톤" / "엄마 기분" 라벨별 한 줄씩
+- **메모 placeholder** — "하고싶은 이야기나 진료기록을 메모하세요"
+- **가족피드 공유 토글** — 자동 공유 → 체크박스 선택
+  - backend `shareToFamily=true && mediaUri` 조건일 때만 posts 게시
+- **주수별 질문 카드 컴팩트** — 큰 박스 → 가로 한 줄 (이미지 22px)
+
+### 5) 인증 흐름 정리
+- **이메일/소셜 가입 시 별명 화면 경유**
+  - `(auth)/register.tsx`: 가입 직후 `/onboarding/set-nickname`으로
+  - `hooks/useLoginHandlers.ts`: backend response 타입 명시, `isNewUser || !user.nickname`로 분기
+- **backend isNewUser 정확화** (`backend/src/routes/auth.ts`)
+  - 기존: `isNewUser: childSnap.empty` (자녀 보유 여부 — user 신규성과 무관)
+  - 수정: user 문서 새로 생성됐을 때만 `isNewUser=true`
+  - response에 `user.nickname`, `needsOnboarding` 추가
+- **(auth)/_layout 가드 버그 수정**
+  - 인증된 사용자가 `(auth)` 진입 시 home으로 강제 redirect → set-nickname 화면이 영영 안 보임
+  - **최종 fix**: `set-nickname.tsx`를 `(auth)` 그룹 밖 `app/onboarding/`으로 이동 → 가드 영향 자체 차단
+- **useFocusEffect 시도 → 롤백**
+  - useFeverAlert를 useFocusEffect로 시도 (포커스마다 재조회)
+  - 앱 hang 발생 (스플래시조차 안 시작) → 즉시 useEffect로 롤백 hotfix
+
+### 6) 회원 탈퇴 + 소셜 unlink — 정석 패턴 A (Backend REST)
+- **시도 1 — Frontend native SDK unlink (실패)**
+  - 카카오/구글/네이버 SDK 직접 호출 → native crash → 제거
+- **최종 — Backend REST API unlink (정석)** (`backend/src/services/social.auth.ts`)
+  - `SocialUserInfo`에 `accessToken` 필드 추가
+  - `unlinkSocialAccount()` 신설:
+    - **카카오**: Admin Key 우선, fallback으로 user access_token
+    - **네이버**: `grant_type=delete` + client_id/secret + access_token
+    - **구글**: `https://oauth2.googleapis.com/revoke?token=...`
+  - `auth.ts /auth/social*` 응답 후 user 문서에 `lastSocialAccessToken` 저장
+  - `DELETE /auth/account`에서 user 데이터 삭제 *전*에 unlink 호출 (실패해도 진행)
+- **카카오 Admin Key 등록**
+  - `backend/.env`: `KAKAO_ADMIN_KEY=88d502f8588a27a665be117d6f70b9d5`
+  - `backend/src/config/env.ts`: KAKAO_ADMIN_KEY env 노출
+  - ⚠️ **채팅에 노출됨 — 재발급 권장**
+
+### 7) APK 빌드 준비 (패키지명 변경)
+- **패키지명**: `com.amatda.app` → `com.sylabs.amatda` (사용자 기존 작업)
+- **SHA-1 keystore 동일성 확인**:
+  - EAS keystore SHA-1: `A0:6C:19:3A:B3:16:FF:66:5C:B6:93:EC:47:A8:64:42:B2:8A:80:40`
+  - google-services.json `com.amatda.app` SHA-1: `a06c193ab316ff665cb693ec47a86442b28a8040` ← 동일
+  - **결론**: keystore 변경 없음, 빌드는 1회만 필요
+- **Firebase Console**: `com.sylabs.amatda` + SHA-1 등록 후 google-services.json 새로 다운로드 → 적용 확인 (Python 파싱 검증)
+- **Google Cloud Console**: OAuth 2.0 Android Client (`com.sylabs.amatda` + SHA-1) — 사용자 등록 완료 ("저장" 클릭 단계)
+- **카카오/네이버 콘솔**: 새 패키지 등록 진행 중
+
+### OTA 배포 이력 (이번 세션 22회)
+| # | Update Group ID | 내용 |
+|---|---|---|
+| 1 | 9eb89032 | useFeverAlert 검증 + 카드 축소 + 검은톤 일러스트 재생성 |
+| 2 | 8a8b3b86 | 진통체크 → quick-baby 이미지 + DailyMission 카드 재반영 |
+| 3 | e7b6febb | useFeverAlert 최신값+해제 / 열나열나 AI글로우 / 임신부 AI카드 숨김 / 물·영양제 컴팩트 |
+| 4 | ed7cee15 | fever 4단계 재설계 (시각 다이어트, 토글, 다음 행동, 슬림 약 선택) |
+| 5 | 25dc4cba | 임신앨범 일러스트 12개 + 명칭 변경 + 이모지 매핑 |
+| 6 | 1b1e193e | 임신기록 잔여 5곳 변경 / 진통체크 가로 / quickCircle 3D / 옛이모지 매핑 |
+| 7 | 7ed50338 | 임신앨범 B단계 — 시각 통일 |
+| 8 | 83b08fad | C단계 안전버전 — PregnancyMemoriesSection collapsible |
+| 9 | 3bd9daa9 | 임신앨범 100% 시각 통일 — feedCard 등 |
+| 10 | c1f700fa | 임신앨범 입출력 100% 통일 — 인라인 compose, 한번저장=한카드 |
+| 11 | 03013a79 | 열나열나 UI 전면 개편 — 동적 가이드 + 큰 용량 + 약 칩 토글 |
+| 12 | ffa32358 | 칩 2줄 분리 + 메모 placeholder + useFocusEffect (이후 롤백) |
+| 13 | 62a2e758 | 가족피드 공유 토글 + 별명 설정 + 주수별 질문 컴팩트 |
+| 14 | 8b9e54f6 | 마일스톤 emoji 클라이언트 직접 전송 |
+| 15 | cf9cefc7 | 소셜 isNewUser 정확화 + nickname 응답 |
+| 16 | 0c2351ab | useLoginHandlers 디버그 로그 |
+| 17 | e945383b | (auth) layout 가드 set-nickname 예외 |
+| 18 | 3355a5d5 | set-nickname → onboarding/ 디렉토리 이동 |
+| 19 | fdb45d74 | 회원 탈퇴 시 소셜 unlink (1차 — frontend native) |
+| 20 | 41bf3314 | 탈퇴 crash 수정 — fire-and-forget |
+| 21 | d831705e | hotfix: useFocusEffect 롤백 |
+| 22 | 4d17074f | 소셜 unlink backend REST 일원화 (정석 패턴 A) |
+
+### Backend 배포 (Firebase Functions, 5회)
+1. mom_health emoji 첫 증상 매핑
+2. shareToFamily 옵션화 + nickname 응답 + isNewUser 정확화
+3. milestoneEmoji 클라이언트 우선
+4. social isNewUser 정확화 (재배포)
+5. 소셜 unlink REST API + lastSocialAccessToken 저장
+
+### 검증
+- frontend `npx tsc --noEmit` → 0 에러 (전 변경)
+- backend `npx tsc --noEmit` → 0 에러
+- backend `firebase deploy --only functions:api` → 모두 성공
+- adb logcat으로 hang/crash 진단 (`com.amatda.app`)
+
+### 남은 이슈 (출시 전)
+1. **APK 빌드 미실행** — 사용자가 EAS 무료 크레딧 리셋 후 진행 예정 (`eas build -p android --profile preview`)
+2. **카카오/네이버 콘솔 등록 확인 필요** — 새 패키지 `com.sylabs.amatda` + SHA-1
+3. **Google Cloud Console 저장** — 사용자 화면 캡처에서 입력 완료, "저장" 클릭만 남음
+4. **결제 회사 가입 진행 중** — PortOne·카카오페이·네이버페이 키 발급 후 backend `.env` 등록
+5. **🚨 카카오 Admin Key 채팅 노출** — `88d502f8...` 재발급 권장
+6. **🚨 OpenAI API Key 채팅 노출** (이전) — `sk-proj-...` 재발급 권장
+7. **이미 저장된 옛 임신 기록** — emoji=null인 채로 남아 fallback 📌 표시 (마이그레이션 필요, 출시 후)
+8. **데이터 모델 통합 (C-2 마이그레이션)** — pregnancyRecords + milestonePhotos → 단일 컬렉션. 출시 후 별도 진행
+
+### 신규/수정 파일 요약
+
+**Frontend**:
+- `app/(main)/home.tsx` — useFeverAlert, FeverPulseCircle 글로우, 진통체크 가로, quickCircle 3D
+- `app/(main)/fever.tsx` — 4단계 재설계 + UI 전면 개편
+- `app/(main)/pregnancy.tsx` — 인라인 compose, feedCard, EmojiOrIcon, 가족피드 토글, 컴팩트 질문
+- `app/(main)/album.tsx` — PregnancyMemoriesSection (collapsible)
+- `app/(main)/_layout.tsx` — 임신앨범 탭 라벨
+- `app/(auth)/_layout.tsx` — set-nickname 예외 가드
+- `app/(auth)/register.tsx` — set-nickname 경유
+- `app/onboarding/set-nickname.tsx` — **신규** ((auth) 그룹 밖)
+- `components/pregnancy/DailyMissionBadges.tsx` — 가로 컴팩트
+- `components/home/ChildSelector.tsx` — marginBottom xs
+- `components/profile/ProfileMenuList.tsx` — 임신앨범 라벨
+- `hooks/useLoginHandlers.ts` — backend response 타입, isNewUser 분기
+- `services/api.ts` — createRecord에 milestoneEmoji + shareToFamily
+- `services/social-auth.ts` — directLogin nickname null 처리
+- `app/(main)/profile.tsx` — 회원 탈퇴 backend 위임 (frontend native SDK 호출 제거)
+- `constants/ageFeatures.ts` — 임신앨범 라벨
+
+**Backend**:
+- `src/routes/auth.ts` — isNewUser 정확화, nickname 응답, lastSocialAccessToken 저장, DELETE /account에 unlink
+- `src/routes/pregnancy.ts` — mom_health emoji 첫 증상 매핑, milestoneEmoji 클라이언트 우선, shareToFamily 옵션
+- `src/services/social.auth.ts` — SocialUserInfo.accessToken 추가, unlinkSocialAccount() 신설
+- `src/config/env.ts` — KAKAO_ADMIN_KEY 노출
+- `.env` — KAKAO_ADMIN_KEY 추가
+
+**Scripts (신규)**:
+- `scripts/regen-quick-icons.cjs` — quick 아이콘 7개 gpt-image-1 재생성
+- `scripts/regen-pregnancy-icons.cjs` — 임신앨범 일러스트 12개 신규 생성
+
+**Assets (신규 + 재생성, 19개)**:
+- `quick-thermometer/sprout/syringe/baby/blood/water/pill.png` (재생성)
+- `contraction-clock.png`
+- `preg-test/stethoscope/ultrasound/leaf/ribbon/foot/bag.png`
+- `preg-mood-good/tired/nausea/pain.png`
