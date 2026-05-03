@@ -51,25 +51,30 @@ async function getUserTier(userId: string): Promise<UserTier> {
     }
 
     return 'free';
-  } catch {
+  } catch (err) {
+    console.error('[ask.handler] getUserTier failed, defaulting to free:', err instanceof Error ? err.message : String(err));
     return 'free';
   }
 }
 
 async function getTodaySessionCount(userId: string): Promise<number> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // ⚠️ 'Today' = KST 자정 기준 (사용자가 한국 거주 가정).
+  // 서버가 UTC 라서 setHours(0,0,0,0) 만 쓰면 UTC 자정 = KST 9시 → 새벽 1~9시 사용자가 잘못 분류됨.
+  const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+  const kstNowDateStr = new Date(Date.now() + KST_OFFSET_MS).toISOString().slice(0, 10); // YYYY-MM-DD in KST
+  const kstMidnight = new Date(kstNowDateStr + 'T00:00:00+09:00'); // KST 자정 (UTC 로 보면 전날 15시)
   try {
     const snap = await collections.coachingSessions
       .where('userId', '==', userId)
-      .where('createdAt', '>=', today.toISOString())
+      .where('createdAt', '>=', kstMidnight.toISOString())
       .get();
     // filter/limit 소스는 AI 비용 없으므로 제외
     return snap.docs.filter((d) => {
       const src = (d.data() as Record<string, unknown>).source as string;
       return src !== 'filter' && src !== 'limit';
     }).length;
-  } catch {
+  } catch (err) {
+    console.error('[ask.handler] getTodaySessionCount failed, defaulting to 0:', err instanceof Error ? err.message : String(err));
     return 0;
   }
 }
@@ -108,7 +113,8 @@ async function getUserStreak(userId: string): Promise<number> {
     }
 
     return streak;
-  } catch {
+  } catch (err) {
+    console.error('[ask.handler] getUserStreak failed, defaulting to 0:', err instanceof Error ? err.message : String(err));
     return 0;
   }
 }
@@ -431,7 +437,8 @@ export function registerAskHandler(router: Router): void {
         followup,
         trackerAutoSaved,
       });
-    } catch {
+    } catch (err) {
+      console.error('[ask.handler] coaching ask failed:', err instanceof Error ? err.message : String(err));
       error(res, '코칭 응답 중 오류가 발생했습니다', 500);
     }
   });

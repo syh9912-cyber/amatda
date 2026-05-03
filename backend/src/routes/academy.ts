@@ -3,6 +3,7 @@ import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections } from '../services/firestore';
 import { getRecommendedAcademyTypes } from '../services/academy.recommend';
+import { isValidLatLng } from '../utils/location';
 
 const router = Router();
 
@@ -19,8 +20,11 @@ router.get('/recommend', authMiddleware, (req: Request, res: Response) => {
   try {
     const dominantType = req.query.dominantType as string;
     const ageMonths = parseInt(req.query.ageMonths as string, 10);
-    const lat = parseFloat(req.query.lat as string) || 34.815;
-    const lng = parseFloat(req.query.lng as string) || 126.463;
+    // 입력 파싱 — fallback 값(서울 기본 좌표)은 isValidLatLng 검증을 항상 통과
+    const rawLat = parseFloat(req.query.lat as string);
+    const rawLng = parseFloat(req.query.lng as string);
+    const lat = isValidLatLng(rawLat, rawLng) ? rawLat : 34.815;
+    const lng = isValidLatLng(rawLat, rawLng) ? rawLng : 126.463;
     const regionName = (req.query.region as string) || '남악';
 
     if (!dominantType || isNaN(ageMonths)) {
@@ -56,7 +60,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     const radius = parseFloat(req.query.radius as string) || 5;
     const ageMonths = parseInt(req.query.ageMonths as string, 10);
     const type = req.query.type as string | undefined;
-    if (isNaN(lat) || isNaN(lng) || isNaN(ageMonths)) { error(res, 'lat, lng, ageMonths 파라미터가 필요합니다'); return; }
+    if (!isValidLatLng(lat, lng) || isNaN(ageMonths)) { error(res, 'lat, lng (유효 범위), ageMonths 파라미터가 필요합니다'); return; }
 
     const snap = await collections.academies.get();
     type RecommendReasons = Record<string, string>;

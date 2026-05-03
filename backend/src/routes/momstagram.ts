@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const router = Router();
 
@@ -172,22 +173,23 @@ router.post('/posts/:id/like', authMiddleware, async (req: Request, res: Respons
       .get();
 
     if (!existingLike.empty) {
-      // 좋아요 취소
+      // 좋아요 취소 — atomic decrement (race-safe)
       const likeDocId = existingLike.docs[0].id;
       await collections.postLikes.doc(likeDocId).delete();
+      await postRef.update({ likes: FieldValue.increment(-1) });
+      // 응답용 표시값 (UI fallback) — 정확값은 다음 fetch 시 동기화
       const currentLikes = (postDoc.data()!.likes as number) || 0;
-      await postRef.update({ likes: Math.max(0, currentLikes - 1) });
       success(res, { liked: false, likes: Math.max(0, currentLikes - 1) });
     } else {
-      // 좋아요
+      // 좋아요 — atomic increment (race-safe)
       const likeId = genId();
       await collections.postLikes.doc(likeId).set({
         postId,
         userId,
-        createdAt: new Date().toISOString(),
+        createdAt: FieldValue.serverTimestamp(),
       });
+      await postRef.update({ likes: FieldValue.increment(1) });
       const currentLikes = (postDoc.data()!.likes as number) || 0;
-      await postRef.update({ likes: currentLikes + 1 });
       success(res, { liked: true, likes: currentLikes + 1 });
     }
   } catch {
@@ -267,11 +269,13 @@ router.post('/posts/:id/comments', authMiddleware, async (req: Request, res: Res
 
     await collections.postComments.doc(commentId).set(comment);
 
+    // atomic increment — 동시 댓글 작성 시 카운트 drift 방지
+    await postRef.update({ commentCount: FieldValue.increment(1) });
     const currentCount = (postDoc.data()!.commentCount as number) || 0;
-    await postRef.update({ commentCount: currentCount + 1 });
 
     success(res, { id: commentId, ...comment }, 201);
-  } catch {
+  } catch (err) {
+    console.error('[momstagram] comment create failed:', err instanceof Error ? err.message : String(err));
     error(res, '댓글 작성 중 오류가 발생했습니다', 500);
   }
 });

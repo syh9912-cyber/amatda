@@ -90,14 +90,31 @@ const NATIONAL_VACCINES: VaccineEntry[] = [
 /*  접종일 계산 유틸                                                    */
 /* ================================================================== */
 
+/**
+ * Date 에 monthsToAdd 개월을 더하되, 일자(day)가 해당 월에 존재하지 않으면 그 달의 마지막 일로 보정.
+ * 예: 2026-01-31 + 1month → setMonth 단순 사용 시 2026-03-03 으로 자동 오버플로우.
+ *      이 함수는 2026-02-28 (또는 윤년 02-29) 로 안전하게 보정.
+ */
+function addMonthsSafe(d: Date, monthsToAdd: number): Date {
+  const targetTotalMonths = d.getFullYear() * 12 + d.getMonth() + monthsToAdd;
+  const targetYear = Math.floor(targetTotalMonths / 12);
+  const targetMonth = ((targetTotalMonths % 12) + 12) % 12;
+  const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const safeDay = Math.min(d.getDate(), lastDayOfTargetMonth);
+  const result = new Date(d);
+  result.setFullYear(targetYear, targetMonth, safeDay);
+  return result;
+}
+
 function calcVaccineDates(birthDate: string): Array<VaccineEntry & { scheduledDate: string; dDay: number }> {
   const birth = new Date(birthDate);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   return NATIONAL_VACCINES.map((v) => {
-    const scheduled = new Date(birth);
-    scheduled.setMonth(scheduled.getMonth() + v.ageMonths);
+    // ⚠️ setMonth(getMonth() + n) 직접 사용 시 day 오버플로우 (예: 1/31 + 1m = 3/3).
+    //   addMonthsSafe 로 월말 보정.
+    const scheduled = addMonthsSafe(birth, v.ageMonths);
     scheduled.setHours(0, 0, 0, 0);
 
     const dDay = Math.ceil((scheduled.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -332,7 +349,9 @@ router.post('/schedule-alerts', authMiddleware, async (req: Request, res: Respon
     let alertCount = 0;
 
     for (const v of upcoming) {
-      const scheduledDate = new Date(v.scheduledDate + 'T09:00:00');
+      // ⚠️ 타임존 명시 필수 — 'T09:00:00' 만 쓰면 Cloud Run UTC 서버에서 9시 UTC(=18시 KST)로 해석됨.
+      // KST 9시에 알림 가도록 +09:00 명시.
+      const scheduledDate = new Date(v.scheduledDate + 'T09:00:00+09:00');
 
       // D-2 알림
       const d2 = new Date(scheduledDate);

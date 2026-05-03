@@ -7,6 +7,7 @@ export interface SocialUserInfo {
   socialId: string;
   email: string | null;
   name: string | null;
+  accessToken: string;  // unlink 시 사용 (관리자 키 없는 provider용)
 }
 
 /** Mock 소셜 인증 응답 */
@@ -17,6 +18,7 @@ function mockSocialUser(provider: SocialProvider): SocialUserInfo {
     socialId: mockId,
     email: `${provider.toLowerCase()}_user@mock.amatda.com`,
     name: `${provider} 테스트 유저`,
+    accessToken: 'mock_access_token',
   };
 }
 
@@ -32,6 +34,7 @@ async function verifyGoogleToken(accessToken: string): Promise<SocialUserInfo> {
     socialId: data.sub,
     email: data.email ?? null,
     name: data.name ?? null,
+    accessToken,
   };
 }
 
@@ -50,6 +53,7 @@ async function verifyKakaoToken(accessToken: string): Promise<SocialUserInfo> {
     socialId: String(data.id),
     email: data.kakao_account?.email ?? null,
     name: data.kakao_account?.profile?.nickname ?? null,
+    accessToken,
   };
 }
 
@@ -67,6 +71,7 @@ async function verifyNaverToken(accessToken: string): Promise<SocialUserInfo> {
     socialId: data.response.id,
     email: data.response.email ?? null,
     name: data.response.name ?? null,
+    accessToken,
   };
 }
 
@@ -194,6 +199,94 @@ export async function exchangeCodeAndVerify(
       );
   }
 
-  // 교환된 토큰으로 사용자 정보 조회
+  // 교환된 토큰으로 사용자 정보 조회 (accessToken은 verifySocialToken 결과에 포함됨)
   return verifySocialToken(provider, accessToken);
+}
+
+// ──────────────────────────────────────────────────────────
+// 소셜 계정 연결 끊기 (탈퇴 시 호출)
+// ──────────────────────────────────────────────────────────
+
+/**
+ * 카카오 unlink — Admin Key 우선, 없으면 사용자 access_token으로 시도.
+ * https://developers.kakao.com/docs/latest/ko/kakaologin/rest-api#unlink
+ */
+async function unlinkKakao(socialId: string, accessToken: string | null): Promise<void> {
+  if (env.KAKAO_ADMIN_KEY) {
+    const params = new URLSearchParams({ target_id_type: 'user_id', target_id: socialId });
+    const res = await fetch('https://kapi.kakao.com/v1/user/unlink', {
+      method: 'POST',
+      headers: {
+        Authorization: `KakaoAK ${env.KAKAO_ADMIN_KEY}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`카카오 admin unlink 실패: ${res.status} ${body}`);
+    }
+    return;
+  }
+  if (accessToken) {
+    const res = await fetch('https://kapi.kakao.com/v1/user/unlink', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`카카오 user unlink 실패: ${res.status} ${body}`);
+    }
+  }
+}
+
+/**
+ * 네이버 unlink — grant_type=delete + 사용자 access_token.
+ * https://developers.naver.com/docs/login/devguide/devguide.md#3-4-3-네이버-로그인-연동-해제하기
+ */
+async function unlinkNaver(accessToken: string | null): Promise<void> {
+  if (!accessToken) throw new Error('네이버 unlink: access_token 없음');
+  const params = new URLSearchParams({
+    grant_type: 'delete',
+    client_id: env.NAVER_CLIENT_ID,
+    client_secret: env.NAVER_CLIENT_SECRET,
+    access_token: accessToken,
+    service_provider: 'NAVER',
+  });
+  const res = await fetch(`https://nid.naver.com/oauth2.0/token?${params.toString()}`);
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`네이버 unlink 실패: ${res.status} ${body}`);
+  }
+}
+
+/**
+ * Google revoke — 사용자 access_token.
+ * https://developers.google.com/identity/protocols/oauth2/web-server#tokenrevoke
+ */
+async function revokeGoogle(accessToken: string | null): Promise<void> {
+  if (!accessToken) throw new Error('Google revoke: access_token 없음');
+  const res = await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(accessToken)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Google revoke 실패: ${res.status} ${body}`);
+  }
+}
+
+/** 소셜 계정 연결 끊기 통합 — 탈퇴 시 호출. 실패해도 user 삭제는 진행해야 하므로 호출부에서 try/catch. */
+export async function unlinkSocialAccount(
+  provider: SocialProvider,
+  socialId: string,
+  accessToken: string | null,
+): Promise<void> {
+  if (env.MOCK_SOCIAL) return;
+  switch (provider) {
+    case 'KAKAO': return unlinkKakao(socialId, accessToken);
+    case 'NAVER': return unlinkNaver(accessToken);
+    case 'GOOGLE': return revokeGoogle(accessToken);
+    default: throw new Error(`unlink 지원 안 됨: ${provider}`);
+  }
 }

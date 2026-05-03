@@ -51,6 +51,11 @@ export const collections = {
   momGroupComments: db.collection('momGroupComments'),
   momGroupBookmarks: db.collection('momGroupBookmarks'),
   milestonePhotos: db.collection('milestonePhotos'),
+
+  // 통합 앨범 컬렉션 (2026-05-01 마이그레이션) — 임신 + 출생후 사진을 단일 컬렉션에 통합
+  // phase: 'pregnancy' | 'baby' 로 구분
+  // 옛 milestonePhotos + pregnancyRecords의 read 대상 — dual-write 기간엔 양쪽 모두 쓰기
+  albumPhotos: db.collection('albumPhotos'),
   // 코칭 하루 상담 횟수 카운터 (문서 ID: {userId}_{YYYY-MM-DD})
   // getTodaySessionCount() 전체 컬렉션 쿼리 대체 → 단일 문서 읽기로 성능 개선
   rateLimits: db.collection('rateLimits'),

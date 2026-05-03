@@ -31,7 +31,7 @@ const AUTO_MILESTONES: Record<string, { title: string; emoji: string }> = {
 /** POST /api/pregnancy/records — 기록 생성 */
 router.post('/records', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { childId, type, title, content, mediaUri, mediaType, milestoneType, week } = req.body as {
+    const { childId, type, title, content, mediaUri, mediaType, milestoneType, milestoneEmoji, week, shareToFamily } = req.body as {
       childId: string;
       type: RecordType;
       title?: string;
@@ -39,7 +39,9 @@ router.post('/records', authMiddleware, async (req: Request, res: Response) => {
       mediaUri?: string;
       mediaType?: 'photo' | 'video';
       milestoneType?: string;
+      milestoneEmoji?: string;
       week?: number;
+      shareToFamily?: boolean;
     };
 
     if (!childId || !type) {
@@ -68,6 +70,7 @@ router.post('/records', authMiddleware, async (req: Request, res: Response) => {
     const finalTitle = title || autoMs?.title || type;
 
     const id = genId();
+    const finalEmoji = milestoneEmoji || autoMs?.emoji || null;
     const data: Record<string, unknown> = {
       childId,
       userId: req.userId!,
@@ -77,15 +80,40 @@ router.post('/records', authMiddleware, async (req: Request, res: Response) => {
       mediaUri: mediaUri || null,
       mediaType: mediaType || null,
       milestoneType: milestoneType || null,
-      milestoneEmoji: autoMs?.emoji || null,
+      // 우선순위: 클라이언트가 보낸 emoji → AUTO_MILESTONES 매핑 → null
+      milestoneEmoji: finalEmoji,
       week: recordWeek,
       createdAt: FieldValue.serverTimestamp(),
     };
 
-    await collections.pregnancyRecords.doc(id).set(data);
+    // dual-write: 옛 pregnancyRecords + 새 albumPhotos (같은 doc ID, phase='pregnancy')
+    const nowIso = new Date().toISOString();
+    const albumDoc: Record<string, unknown> = {
+      userId: req.userId!,
+      childId,
+      phase: 'pregnancy',
+      uri: mediaUri || null,
+      printUrl: mediaUri || null,
+      mediaType: mediaType || (mediaUri ? 'photo' : null),
+      title: finalTitle,
+      content: content || null,
+      milestoneType: milestoneType || null,
+      milestoneEmoji: finalEmoji,
+      milestoneColor: '#E91E63',
+      date: nowIso.slice(0, 10),
+      monthKey: nowIso.slice(0, 7),
+      createdAt: FieldValue.serverTimestamp(),
+      week: recordWeek,
+      pregnancyType: type,
+    };
 
-    // 가족피드에 자동 공유 (사진/영상이 있는 기록만)
-    if (mediaUri) {
+    const batch = db.batch();
+    batch.set(collections.pregnancyRecords.doc(id), data);
+    batch.set(collections.albumPhotos.doc(id), albumDoc);
+    await batch.commit();
+
+    // 가족피드 공유 — 사용자 명시 선택 시에만 (사진/영상 있는 기록만)
+    if (shareToFamily === true && mediaUri) {
       try {
         const userDoc = await collections.users.doc(req.userId!).get();
         const userData = userDoc.exists ? (userDoc.data() as Record<string, unknown>) : undefined;
@@ -133,26 +161,36 @@ router.get('/records', authMiddleware, async (req: Request, res: Response) => {
     const childId = req.query.childId as string;
     if (!childId) { error(res, 'childId는 필수입니다'); return; }
 
-    const snap = await collections.pregnancyRecords
+    // dual-read: 새 albumPhotos에서 phase='pregnancy'만 읽음
+    // 응답 형식은 옛 pregnancyRecords 호환 유지 (mediaUri/type/week 등)
+    const snap = await collections.albumPhotos
       .where('childId', '==', childId)
       .limit(200)
       .get();
 
-    const records = snap.docs.map((d) => {
-      const data = d.data();
-      return {
-        id: d.id,
-        type: data.type,
-        title: data.title,
-        content: data.content,
-        mediaUri: data.mediaUri,
-        mediaType: data.mediaType,
-        milestoneType: data.milestoneType,
-        milestoneEmoji: data.milestoneEmoji,
-        week: data.week,
-        createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? data.createdAt,
-      };
-    });
+    const records = snap.docs
+      .filter((d) => (d.data() as Record<string, unknown>).phase === 'pregnancy')
+      .map((d) => {
+        const data = d.data() as Record<string, unknown>;
+        const ca = data.createdAt;
+        let createdAtIso: string | undefined;
+        if (typeof ca === 'string') createdAtIso = ca;
+        else if (ca && typeof (ca as { toDate?: () => Date }).toDate === 'function') {
+          createdAtIso = (ca as { toDate: () => Date }).toDate().toISOString();
+        }
+        return {
+          id: d.id,
+          type: data.pregnancyType,             // 새 pregnancyType → 옛 type
+          title: data.title,
+          content: data.content,
+          mediaUri: data.uri,                   // 새 uri → 옛 mediaUri
+          mediaType: data.mediaType,
+          milestoneType: data.milestoneType,
+          milestoneEmoji: data.milestoneEmoji,
+          week: data.week,
+          createdAt: createdAtIso,
+        };
+      });
 
     success(res, records);
   } catch {
@@ -164,12 +202,30 @@ router.get('/records', authMiddleware, async (req: Request, res: Response) => {
 router.delete('/records/:id', authMiddleware, async (req: Request<{ id: string }>, res: Response) => {
   try {
     const recordId = req.params.id;
-    const doc = await collections.pregnancyRecords.doc(recordId).get();
-    if (!doc.exists || doc.data()!.userId !== req.userId) {
+    // 소유권 확인: 양 컬렉션 모두 점검
+    const [oldDoc, albumDoc] = await Promise.all([
+      collections.pregnancyRecords.doc(recordId).get(),
+      collections.albumPhotos.doc(recordId).get(),
+    ]);
+
+    const ownerOld = oldDoc.exists ? oldDoc.data()!.userId : null;
+    const ownerAlbum = albumDoc.exists ? albumDoc.data()!.userId : null;
+
+    if (!oldDoc.exists && !albumDoc.exists) {
       error(res, '기록을 찾을 수 없습니다', 404);
       return;
     }
-    await collections.pregnancyRecords.doc(recordId).delete();
+    if ((ownerOld && ownerOld !== req.userId) || (ownerAlbum && ownerAlbum !== req.userId)) {
+      error(res, '기록을 찾을 수 없습니다', 404);
+      return;
+    }
+
+    // dual-delete: atomic
+    const batch = db.batch();
+    if (oldDoc.exists) batch.delete(collections.pregnancyRecords.doc(recordId));
+    if (albumDoc.exists) batch.delete(collections.albumPhotos.doc(recordId));
+    await batch.commit();
+
     success(res, { deleted: true });
   } catch {
     error(res, '기록 삭제 중 오류가 발생했습니다', 500);
@@ -1013,11 +1069,14 @@ router.get('/timeline', authMiddleware, async (req: Request, res: Response) => {
     const childId = req.query.childId as string;
     if (!childId) { error(res, 'childId는 필수입니다'); return; }
 
-    // 임신기록 조회 (인덱스 불필요하도록 orderBy 제거, 코드에서 정렬)
-    const recSnap = await collections.pregnancyRecords
+    // 임신기록 조회 — 새 albumPhotos에서 phase='pregnancy'만 (인덱스 불필요)
+    const albumSnap = await collections.albumPhotos
       .where('childId', '==', childId)
       .limit(500)
       .get();
+    const recSnap = {
+      docs: albumSnap.docs.filter((d) => (d.data() as Record<string, unknown>).phase === 'pregnancy'),
+    };
 
     // 엄마상태 기록 조회
     const healthSnap = await collections.momHealthChecks
@@ -1039,19 +1098,25 @@ router.get('/timeline', authMiddleware, async (req: Request, res: Response) => {
     }>> = {};
 
     for (const d of recSnap.docs) {
-      const data = d.data();
+      const data = d.data() as Record<string, unknown>;
       const w = (data.week as number) ?? 0;
       if (!timeline[w]) timeline[w] = [];
+      const ca = data.createdAt;
+      let createdAtIso = '';
+      if (typeof ca === 'string') createdAtIso = ca;
+      else if (ca && typeof (ca as { toDate?: () => Date }).toDate === 'function') {
+        createdAtIso = (ca as { toDate: () => Date }).toDate().toISOString();
+      }
       timeline[w].push({
         id: d.id,
         source: 'record',
-        type: data.type as string,
+        type: (data.pregnancyType as string) || (data.type as string),  // 새/옛 둘 다 호환
         title: data.title as string,
         emoji: (data.milestoneEmoji as string) || undefined,
         content: (data.content as string) || undefined,
-        mediaUri: (data.mediaUri as string) || undefined,
+        mediaUri: (data.uri as string) || (data.mediaUri as string) || undefined, // 새 uri 우선
         mediaType: (data.mediaType as string) || undefined,
-        createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? '',
+        createdAt: createdAtIso,
       });
     }
 
@@ -1059,15 +1124,19 @@ router.get('/timeline', authMiddleware, async (req: Request, res: Response) => {
       const data = d.data();
       const w = (data.week as number) ?? 0;
       if (!timeline[w]) timeline[w] = [];
-      const symptomLabels = (data.symptoms as string[])
+      const symptoms = (data.symptoms as string[]) ?? [];
+      const symptomLabels = symptoms
         .map((sid) => MOM_SYMPTOM_PRESETS.find((p) => p.id === sid)?.label ?? sid)
         .join(', ');
+      // 첫 증상의 emoji를 카드 아이콘으로 (없으면 입덧 emoji)
+      const firstSymptomEmoji =
+        MOM_SYMPTOM_PRESETS.find((p) => p.id === symptoms[0])?.emoji ?? '🤢';
       timeline[w].push({
         id: d.id,
         source: 'health',
         type: 'mom_health',
         title: `엄마 상태: ${symptomLabels}`,
-        emoji: '🤰',
+        emoji: firstSymptomEmoji,
         content: (data.memo as string) || undefined,
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? '',
       });

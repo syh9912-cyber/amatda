@@ -3,6 +3,7 @@ import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
 import { env } from '../config/env';
+import { isValidLatLng } from '../utils/location';
 
 const router = Router();
 
@@ -79,15 +80,17 @@ router.get(
   authMiddleware,
   async (req: Request, res: Response) => {
     try {
-      const lat = req.query.lat as string;
-      const lng = req.query.lng as string;
+      const latNum = parseFloat(req.query.lat as string);
+      const lngNum = parseFloat(req.query.lng as string);
       const radiusKm = parseFloat(req.query.radius as string) || 5;
       const keyword = (req.query.keyword as string) || '';
 
-      if (!lat || !lng || isNaN(parseFloat(lat)) || isNaN(parseFloat(lng))) {
-        error(res, '위도(lat)와 경도(lng)를 입력해주세요');
+      if (!isValidLatLng(latNum, lngNum)) {
+        error(res, '위도(lat)와 경도(lng)를 유효한 범위로 입력해주세요 (-90~90 / -180~180)');
         return;
       }
+      const lat = String(latNum);
+      const lng = String(lngNum);
 
       const apiKey = env.KAKAO_REST_API_KEY;
       if (!apiKey) {
@@ -205,8 +208,8 @@ router.get(
       const lng = parseFloat(req.query.lng as string);
       const radius = parseFloat(req.query.radius as string) || 5;
 
-      if (isNaN(lat) || isNaN(lng)) {
-        error(res, '위도(lat)와 경도(lng)를 입력해주세요');
+      if (!isValidLatLng(lat, lng)) {
+        error(res, '위도(lat)와 경도(lng)를 유효한 범위로 입력해주세요');
         return;
       }
 

@@ -33,6 +33,8 @@ import uploadRoutes from './routes/upload';
 import albumRoutes from './routes/album';
 import trackerRoutes from './routes/tracker';
 import momGroupRoutes from './routes/mom-group';
+import momLocationRoutes from './routes/mom-location';
+import birthbagShareRoutes from './routes/birthbag-share';
 
 /* ------------------------------------------------------------------ */
 /* 🚀 함수 분리 아키텍처 (claude-progress.md 2026-04-16 의도)          */
@@ -83,6 +85,8 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/album', albumRoutes);
 app.use('/api/tracker', trackerRoutes);
 app.use('/api/mom-group', momGroupRoutes);
+app.use('/api/mom-location', momLocationRoutes);
+app.use('/api/birthbag-share', birthbagShareRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok', service: 'api', version: '1.0.0', timestamp: new Date().toISOString() } });

@@ -1,18 +1,23 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-// 프로덕션에서 JWT 시크릿 미설정 시 서버 시작 차단
+// JWT 시크릿은 환경(prod/dev) 관계없이 반드시 설정. 프로덕션 자동 감지 의존 시
+// K_SERVICE/GCLOUD_PROJECT 가 누락되면 약한 dev 시크릿으로 폴백되는 위험이 있어
+// fail-closed: env 가 없으면 무조건 throw.
 const jwtSecret = process.env.JWT_SECRET;
 const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
-const isProduction = !!process.env.K_SERVICE || !!process.env.GCLOUD_PROJECT;
-if (isProduction && (!jwtSecret || !jwtRefreshSecret)) {
-  throw new Error('FATAL: JWT_SECRET / JWT_REFRESH_SECRET 환경변수가 설정되지 않았습니다.');
+if (!jwtSecret || !jwtRefreshSecret) {
+  throw new Error(
+    'FATAL: JWT_SECRET / JWT_REFRESH_SECRET 환경변수가 설정되지 않았습니다. ' +
+    '로컬 개발: backend/.env 에 강한 무작위 값으로 지정. ' +
+    '프로덕션: Cloud Run/Functions secret 으로 등록.'
+  );
 }
 
 // 여권(passport) 공개 링크 해시용 salt. 유출 시 임의 아이 여권 조회가 가능하므로
 // fallback 하드코딩 금지 — 미설정 시 서버 기동 자체를 실패시킨다(fail-closed).
 const passportSalt = process.env.PASSPORT_SALT;
-if (isProduction && !passportSalt) {
+if (!passportSalt) {
   throw new Error('FATAL: PASSPORT_SALT 환경변수가 설정되지 않았습니다.');
 }
 
@@ -30,8 +35,8 @@ export function getPassportSalt(): string {
 
 export const env = {
   PORT: parseInt(process.env.APP_PORT || process.env.PORT || '3001', 10),
-  JWT_SECRET: jwtSecret || 'dev-secret-local-only',
-  JWT_REFRESH_SECRET: jwtRefreshSecret || 'dev-refresh-secret-local-only',
+  JWT_SECRET: jwtSecret, // 위에서 throw 보장 — 항상 정의됨
+  JWT_REFRESH_SECRET: jwtRefreshSecret, // 위에서 throw 보장
   MOCK_AI: process.env.MOCK_AI === 'true',
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
   MOCK_SOCIAL: process.env.MOCK_SOCIAL === 'true',
@@ -40,6 +45,7 @@ export const env = {
   KAKAO_JAVASCRIPT_KEY: process.env.KAKAO_JAVASCRIPT_KEY || '',
   KAKAO_REST_API_KEY: process.env.KAKAO_REST_API_KEY || '',
   KAKAO_CLIENT_SECRET: process.env.KAKAO_CLIENT_SECRET || '',
+  KAKAO_ADMIN_KEY: process.env.KAKAO_ADMIN_KEY || '',
   NAVER_CLIENT_ID: process.env.NAVER_CLIENT_ID || '',
   NAVER_CLIENT_SECRET: process.env.NAVER_CLIENT_SECRET || '',
 

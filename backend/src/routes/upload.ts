@@ -81,18 +81,24 @@ router.post('/', authMiddleware, (req: Request, res: Response) => {
 
       try {
         const buffer = Buffer.concat(chunks);
+        // Firebase 다운로드 토큰 — 추측 불가능한 UUID. 토큰이 metadata에 있으면
+        // ?alt=media&token=<uuid> URL은 storage rules와 무관하게 동작 (Firebase 내부 검증).
+        // 결과적으로 storage.rules의 anonymous public read 의존성 제거.
+        const downloadToken = uuidv4();
         await file.save(buffer, {
           metadata: {
             contentType: mimeType,
-            metadata: { uploadedBy: userId, originalName: filename },
+            metadata: {
+              uploadedBy: userId,
+              originalName: filename,
+              firebaseStorageDownloadTokens: downloadToken,
+            },
           },
           resumable: false,
         });
 
-        // Storage 규칙에서 allow read: if true → 공개 URL 사용
-        // (getSignedUrl은 IAM signBlob 권한 필요해서 Cloud Functions에서 자주 실패)
         const bucketName = file.bucket.name;
-        const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(storagePath)}?alt=media`;
+        const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(storagePath)}?alt=media&token=${downloadToken}`;
         const mediaType = mimeType.startsWith('video') ? 'video' : mimeType.startsWith('audio') ? 'audio' : 'photo';
         if (!res.headersSent) success(res, { url: publicUrl, mediaType, storagePath });
       } catch (err) {

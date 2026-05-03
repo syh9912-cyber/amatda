@@ -6,10 +6,12 @@ import { success, error } from '../utils/response';
 import {
   verifySocialToken,
   exchangeCodeAndVerify,
+  unlinkSocialAccount,
   SocialProvider,
 } from '../services/social.auth';
 import { collections, genId, db } from '../services/firestore';
 import { authMiddleware } from '../middleware/auth';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const router = Router();
 
@@ -34,7 +36,7 @@ router.post('/register', async (req: Request, res: Response) => {
     const passwordHash = await bcrypt.hash(password, 10);
     await collections.users.doc(id).set({
       email, passwordHash, authProvider: 'LOCAL', socialId: null,
-      subscriptionTier: 'FREE', createdAt: new Date().toISOString(),
+      subscriptionTier: 'FREE', createdAt: FieldValue.serverTimestamp(),
       parentRole: parentRole || '',
     });
 
@@ -90,7 +92,10 @@ router.post('/social', async (req: Request, res: Response) => {
     // 기존 유저 찾기
     let userId: string | null = null;
     let userEmail: string | null = null;
+    let isNewUser = false;
 
+    // ⚠️ TODO race: 동일 사용자가 50ms 안에 2번 소셜 로그인 시 중복 user 가능. Firestore Transaction
+    // 으로 묶는 리팩토링 필요 (/social, /social-code, /kakao/callback 통합 헬퍼 추출).
     const bySocial = await collections.users
       .where('socialId', '==', socialUser.socialId)
       .where('authProvider', '==', upperProvider).limit(1).get();
@@ -110,17 +115,30 @@ router.post('/social', async (req: Request, res: Response) => {
     if (!userId) {
       userId = genId();
       userEmail = socialUser.email;
+      isNewUser = true;
       await collections.users.doc(userId).set({
         email: socialUser.email, passwordHash: null, authProvider: upperProvider,
-        socialId: socialUser.socialId, subscriptionTier: 'FREE', createdAt: new Date().toISOString(),
+        socialId: socialUser.socialId, subscriptionTier: 'FREE', createdAt: FieldValue.serverTimestamp(),
       });
     }
+
+    // 마지막 소셜 access_token 저장 (탈퇴 시 unlink REST 호출용)
+    await collections.users.doc(userId).update({
+      lastSocialAccessToken: socialUser.accessToken,
+      lastSocialAccessTokenAt: FieldValue.serverTimestamp(),
+    });
+
+    // 닉네임 조회 (탈퇴 후 재가입 시 별명 화면 분기를 위해 응답에 포함)
+    const userDoc = await collections.users.doc(userId).get();
+    const nickname = (userDoc.data()?.nickname as string | undefined) ?? null;
 
     const childSnap = await collections.children.where('userId', '==', userId).limit(1).get();
     const tokens = generateTokens(userId);
     success(res, {
-      user: { id: userId, email: userEmail, authProvider: upperProvider },
-      ...tokens, isNewUser: childSnap.empty,
+      user: { id: userId, email: userEmail, nickname, authProvider: upperProvider },
+      ...tokens,
+      isNewUser,                     // user 문서가 새로 생성됐는지
+      needsOnboarding: childSnap.empty,  // 자녀 등록 필요 여부 (별개 정보)
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : '소셜 로그인 처리 중 오류가 발생했습니다';
@@ -151,7 +169,10 @@ router.post('/social-code', async (req: Request, res: Response) => {
     // 기존 유저 찾기 (기존 /social 엔드포인트와 동일 로직)
     let userId: string | null = null;
     let userEmail: string | null = null;
+    let isNewUser = false;
 
+    // ⚠️ TODO race: 동일 사용자가 50ms 안에 2번 소셜 로그인 시 중복 user 가능. Firestore Transaction
+    // 으로 묶는 리팩토링 필요 (/social, /social-code, /kakao/callback 통합 헬퍼 추출).
     const bySocial = await collections.users
       .where('socialId', '==', socialUser.socialId)
       .where('authProvider', '==', upperProvider).limit(1).get();
@@ -171,17 +192,29 @@ router.post('/social-code', async (req: Request, res: Response) => {
     if (!userId) {
       userId = genId();
       userEmail = socialUser.email;
+      isNewUser = true;
       await collections.users.doc(userId).set({
         email: socialUser.email, passwordHash: null, authProvider: upperProvider,
-        socialId: socialUser.socialId, subscriptionTier: 'FREE', createdAt: new Date().toISOString(),
+        socialId: socialUser.socialId, subscriptionTier: 'FREE', createdAt: FieldValue.serverTimestamp(),
       });
     }
+
+    // 마지막 소셜 access_token 저장 (탈퇴 시 unlink REST 호출용)
+    await collections.users.doc(userId).update({
+      lastSocialAccessToken: socialUser.accessToken,
+      lastSocialAccessTokenAt: FieldValue.serverTimestamp(),
+    });
+
+    const userDoc = await collections.users.doc(userId).get();
+    const nickname = (userDoc.data()?.nickname as string | undefined) ?? null;
 
     const childSnap = await collections.children.where('userId', '==', userId).limit(1).get();
     const tokens = generateTokens(userId);
     success(res, {
-      user: { id: userId, email: userEmail, authProvider: upperProvider },
-      ...tokens, isNewUser: childSnap.empty,
+      user: { id: userId, email: userEmail, nickname, authProvider: upperProvider },
+      ...tokens,
+      isNewUser,
+      needsOnboarding: childSnap.empty,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : '소셜 로그인 처리 중 오류가 발생했습니다';
@@ -212,9 +245,13 @@ router.get('/kakao/check/:state', async (req: Request, res: Response) => {
       return;
     }
     // 결과 반환 후 삭제 (1회 소비)
-    await docRef.delete().catch(() => {});
+    await docRef.delete().catch((err) => {
+      console.error('[auth/kakao/check] result doc delete failed:', err instanceof Error ? err.message : String(err));
+    });
     success(res, { status: 'done', ...data.result as Record<string, unknown> });
-  } catch {
+  } catch (err) {
+    // 폴링 중 일시적 오류 — pending 상태로 클라이언트가 재시도하게 두지만 서버 로그는 남김
+    console.error('[auth/kakao/check] polling failed, returning pending:', err instanceof Error ? err.message : String(err));
     success(res, { status: 'pending' });
   }
 });
@@ -268,9 +305,15 @@ router.get('/kakao/callback', async (req: Request, res: Response) => {
       isNewUser = true;
       await collections.users.doc(userId).set({
         email: socialUser.email, passwordHash: null, authProvider: 'KAKAO',
-        socialId: socialUser.socialId, subscriptionTier: 'FREE', createdAt: new Date().toISOString(),
+        socialId: socialUser.socialId, subscriptionTier: 'FREE', createdAt: FieldValue.serverTimestamp(),
       });
     }
+
+    // 마지막 카카오 access_token 저장 (탈퇴 시 unlink REST 호출용)
+    await collections.users.doc(userId!).update({
+      lastSocialAccessToken: socialUser.accessToken,
+      lastSocialAccessTokenAt: FieldValue.serverTimestamp(),
+    });
 
     const accessToken = jwt.sign({ userId }, env.JWT_SECRET, { expiresIn: '1h' });
     const refreshToken = jwt.sign({ userId }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
@@ -409,33 +452,54 @@ router.delete('/account', authMiddleware, async (req: Request, res: Response) =>
   try {
     const userId = req.userId!;
 
-    // Firestore batch는 500건 한도 — 모든 삭제 대상을 모아서 분할 커밋
+    // 0. 소셜 계정 연결 끊기 (탈퇴 후 재가입 시 동의 화면부터 다시 시작되도록)
+    //    실패해도 user 데이터 삭제는 진행한다.
+    try {
+      const userDocBeforeDelete = await collections.users.doc(userId).get();
+      const userData = userDocBeforeDelete.data() as Record<string, unknown> | undefined;
+      const provider = userData?.authProvider as SocialProvider | undefined;
+      const socialId = userData?.socialId as string | undefined;
+      const lastToken = userData?.lastSocialAccessToken as string | undefined;
+      if (provider && socialId) {
+        await unlinkSocialAccount(provider, socialId, lastToken ?? null);
+        console.log(`[deleteAccount] unlink OK (${provider}, ${socialId})`);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'unknown';
+      console.error('[deleteAccount] unlink failed (계속 진행):', msg);
+    }
+
+    // Firestore batch는 500건 한도 — 모든 삭제 대상을 모아서 분할 커밋.
+    // 각 컬렉션 쿼리에는 안전 상한(.limit) 적용 — 아주 큰 사용자는 잔여분이
+    // 다음 호출에서 처리되도록 (idempotent retry 가능).
     const refs: FirebaseFirestore.DocumentReference[] = [];
+    const COLLECTION_FETCH_LIMIT = 5000; // 컬렉션당 최대 5000건 한 번에
 
     // 1. Find all children for this user
-    const childrenSnap = await collections.children.where('userId', '==', userId).get();
+    const childrenSnap = await collections.children.where('userId', '==', userId).limit(100).get();
     const childIds = childrenSnap.docs.map((d) => d.id);
     childrenSnap.docs.forEach((d) => refs.push(d.ref));
 
     // 2. Delete ALL related data for each child (GDPR/앱스토어 컴플라이언스)
     for (const childId of childIds) {
       const childSnaps = await Promise.all([
-        collections.observations.where('childId', '==', childId).get(),
-        collections.dailyTracking.where('childId', '==', childId).get(),
-        collections.subscriptions.where('childId', '==', childId).get(),
-        collections.coachingSessions.where('childId', '==', childId).get(),
-        collections.followups.where('childId', '==', childId).get(),
-        collections.learnedKnowledge.where('childId', '==', childId).get(),
-        collections.pregnancyRecords.where('childId', '==', childId).get(),
-        collections.momHealthChecks.where('childId', '==', childId).get(),
-        collections.gdmRecords.where('childId', '==', childId).get(),
-        collections.vaccinations.where('childId', '==', childId).get(),
-        collections.dailyTraits.where('childId', '==', childId).get(),
-        collections.milestoneChecks.where('childId', '==', childId).get(),
-        collections.sleepPredictions.where('childId', '==', childId).get(),
-        collections.autoDiaries.where('childId', '==', childId).get(),
-        collections.recommendationCache.where('childId', '==', childId).get(),
-        collections.analysisUsage.where('childId', '==', childId).get(),
+        collections.observations.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.dailyTracking.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.subscriptions.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.coachingSessions.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.followups.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.learnedKnowledge.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.pregnancyRecords.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.albumPhotos.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.momHealthChecks.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.gdmRecords.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.vaccinations.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.dailyTraits.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.milestoneChecks.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.sleepPredictions.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.autoDiaries.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.recommendationCache.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
+        collections.analysisUsage.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
       ]);
       for (const snap of childSnaps) {
         snap.docs.forEach((d) => refs.push(d.ref));
@@ -444,14 +508,14 @@ router.delete('/account', authMiddleware, async (req: Request, res: Response) =>
 
     // 3. Delete user-level data (userId 기반)
     const userSnaps = await Promise.all([
-      collections.chatLogs.where('userId', '==', userId).get(),
-      collections.posts.where('userId', '==', userId).get(),
-      collections.postLikes.where('userId', '==', userId).get(),
-      collections.postComments.where('userId', '==', userId).get(),
-      collections.pushSchedules.where('userId', '==', userId).get(),
-      collections.familyMembers.where('userId', '==', userId).get(),
-      collections.conversationSummaries.where('userId', '==', userId).get(),
-      collections.clinicReviews.where('userId', '==', userId).get(),
+      collections.chatLogs.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
+      collections.posts.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
+      collections.postLikes.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
+      collections.postComments.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
+      collections.pushSchedules.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
+      collections.familyMembers.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
+      collections.conversationSummaries.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
+      collections.clinicReviews.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
     ]);
     for (const snap of userSnaps) {
       snap.docs.forEach((d) => refs.push(d.ref));
@@ -469,8 +533,10 @@ router.delete('/account', authMiddleware, async (req: Request, res: Response) =>
       await batch.commit();
     }
 
+    console.log(`[deleteAccount] userId=${userId} deletedRefs=${refs.length}`);
     success(res, { message: '계정과 모든 관련 데이터가 삭제되었습니다' });
-  } catch {
+  } catch (err) {
+    console.error('[deleteAccount] 실패:', err instanceof Error ? err.message : String(err));
     error(res, '계정 삭제 중 오류가 발생했습니다', 500);
   }
 });

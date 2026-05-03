@@ -5,6 +5,7 @@ import { success, error } from '../utils/response';
 import { collections, db, genId } from '../services/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '../utils/logger';
+import { distanceKm, isValidLatLng, radiusBoundingBox } from '../utils/location';
 
 const router = Router();
 
@@ -47,11 +48,15 @@ async function checkRateLimit(userId: string, kind: 'post' | 'comment'): Promise
   const limit = kind === 'post' ? POSTS_PER_DAY : COMMENTS_PER_DAY;
   const docId = `momgroup_${kind}_${userId}_${todayKey()}`;
   const ref = collections.rateLimits.doc(docId);
-  const snap = await ref.get();
-  const count = snap.exists ? ((snap.data()?.count as number | undefined) ?? 0) : 0;
-  if (count >= limit) return false;
-  await ref.set({ count: count + 1, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-  return true;
+  // ⚠️ atomic check-then-increment — 동시 요청이 모두 read=5/limit=10 본 후 모두 통과되는 race 방지.
+  // 트랜잭션으로 read+write 원자성 보장.
+  return await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const count = snap.exists ? ((snap.data()?.count as number | undefined) ?? 0) : 0;
+    if (count >= limit) return false;
+    tx.set(ref, { count: count + 1, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    return true;
+  });
 }
 
 const REGION_KEYS = new Set([
@@ -192,7 +197,14 @@ router.get('/posts', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-/** POST /api/mom-group/posts { groupKey, title, content, category, anonymous?, imageUrl? } */
+/**
+ * POST /api/mom-group/posts
+ * { groupKey, title, content, category, anonymous?, imageUrl? }
+ *
+ * 추가 필드 (radius 매칭용 — 사용자 위치/자녀 출생연도 자동 첨부):
+ *   lat, lng (선택, users/{userId} 의 저장 위치를 자동 사용)
+ *   babyBirthYear (선택, 자동 사용)
+ */
 router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { groupKey, title, content, category, anonymous, imageUrl } = req.body as {
@@ -217,20 +229,26 @@ router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
     const ok = await checkRateLimit(req.userId!, 'post');
     if (!ok) { error(res, `하루 게시글은 ${POSTS_PER_DAY}개까지 작성할 수 있어요`, 429); return; }
 
+    const userDoc = await collections.users.doc(req.userId!).get();
+    const userData = userDoc.exists ? userDoc.data() : null;
+
     const isAnon = Boolean(anonymous);
     let nickname: string;
     if (isAnon) {
       nickname = anonTagFor(req.userId!, groupKey);
     } else {
-      const userDoc = await collections.users.doc(req.userId!).get();
-      const userNickname = userDoc.exists ? (userDoc.data()?.nickname as string | undefined) : undefined;
+      const userNickname = userData?.nickname as string | undefined;
       nickname = pickNickname(userNickname, req.userId!);
     }
 
     const img = (typeof imageUrl === 'string' && imageUrl.startsWith('https://')) ? imageUrl : null;
 
-    const id = genId();
-    await collections.momGroupPosts.doc(id).set({
+    // 사용자 위치 + 자녀 출생연도 자동 첨부 (radius 매칭용)
+    const lat = userData?.lat;
+    const lng = userData?.lng;
+    const babyBirthYear = userData?.babyBirthYear;
+
+    const baseDoc: Record<string, unknown> = {
       groupKey,
       userId: req.userId!,
       nickname,
@@ -245,7 +263,17 @@ router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
       reportCount: 0,
       hidden: false,
       createdAt: FieldValue.serverTimestamp(),
-    });
+    };
+    if (typeof lat === 'number' && typeof lng === 'number') {
+      baseDoc.lat = lat;
+      baseDoc.lng = lng;
+    }
+    if (typeof babyBirthYear === 'number') {
+      baseDoc.babyBirthYear = babyBirthYear;
+    }
+
+    const id = genId();
+    await collections.momGroupPosts.doc(id).set(baseDoc);
 
     success(res, { id, groupKey, nickname, category, anonymous: isAnon, title: titleText, content: body, imageUrl: img }, 201);
   } catch (err) {
@@ -253,6 +281,163 @@ router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
     error(res, '게시글 저장 중 오류가 발생했습니다', 500);
   }
 });
+
+/**
+ * GET /api/mom-group/posts/radius
+ *   ?radius=5|10|50|100|0   (0 = 전국)
+ *   &birthYear=2024         (선택, 동갑 매칭)
+ *   &category=...           (선택)
+ *   &sort=recent|popular
+ *   &page=1 &pageSize=20
+ *   &q=검색어
+ *
+ * 사용자 본인 위치(users/{userId}.lat/lng)를 중심으로 반경 내 게시물 조회.
+ * radius=0 → 전국 (위치 무관, birthYear 만 적용)
+ */
+router.get('/posts/radius', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const radiusKm = Math.max(0, Number(req.query.radius ?? 10));
+    // birthYears: comma-separated 또는 단일 birthYear 호환
+    const birthYearsRaw = (req.query.birthYears as string | undefined) ?? '';
+    let birthYears: number[] | null = null;
+    if (birthYearsRaw) {
+      birthYears = birthYearsRaw
+        .split(',')
+        .map((s) => Number(s.trim()))
+        .filter((n) => !isNaN(n) && n >= 2010 && n <= 2050);
+      if (birthYears.length === 0) birthYears = null;
+      // Firestore 'in' 쿼리 최대 30
+      if (birthYears && birthYears.length > 30) birthYears = birthYears.slice(0, 30);
+    } else if (req.query.birthYear) {
+      const single = Number(req.query.birthYear);
+      if (!isNaN(single) && single >= 2010 && single <= 2050) birthYears = [single];
+    }
+    const category = req.query.category as string | undefined;
+    const sort = (req.query.sort as string) === 'popular' ? 'popular' : 'recent';
+    const searchQ = ((req.query.q as string) ?? '').trim().toLowerCase();
+    const page = Math.max(1, Number(req.query.page ?? 1));
+    const pageSize = Math.min(Math.max(1, Number(req.query.pageSize ?? DEFAULT_PAGE_SIZE)), MAX_PAGE_SIZE);
+
+    // 0이면 전국 — 위치 필터 없이 birthYear만
+    const isNationwide = radiusKm === 0;
+
+    // 사용자 위치 조회 (전국 모드면 생략)
+    let center: { lat: number; lng: number } | null = null;
+    if (!isNationwide) {
+      const userDoc = await collections.users.doc(req.userId!).get();
+      const ud = userDoc.exists ? userDoc.data() : null;
+      const lat = ud?.lat;
+      const lng = ud?.lng;
+      if (typeof lat !== 'number' || typeof lng !== 'number') {
+        error(res, '먼저 위치를 등록해주세요', 412);
+        return;
+      }
+      center = { lat, lng };
+    }
+
+    // Firestore 쿼리: hidden=false + (옵션) birthYear=X + (옵션) lat 범위
+    let q: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = collections.momGroupPosts
+      .where('hidden', '==', false);
+
+    if (birthYears && birthYears.length > 0) {
+      // 단일이면 ==, 여러개면 in
+      if (birthYears.length === 1) {
+        q = q.where('babyBirthYear', '==', birthYears[0]);
+      } else {
+        q = q.where('babyBirthYear', 'in', birthYears);
+      }
+    }
+
+    if (center) {
+      const bb = radiusBoundingBox(center, radiusKm);
+      // Firestore 단일 필드 range 쿼리만 지원 → lat 범위만 적용, lng는 in-memory
+      q = q.where('lat', '>=', bb.minLat).where('lat', '<=', bb.maxLat);
+    }
+    if (category && isValidCategory(category)) {
+      q = q.where('category', '==', category);
+    }
+
+    const snap = await q.limit(500).get();
+    let posts = snap.docs.map((d) => {
+      const data = d.data();
+      const ca = data.createdAt as { toDate?: () => Date } | undefined;
+      const ua = data.updatedAt as { toDate?: () => Date } | undefined;
+      return {
+        id: d.id,
+        groupKey: data.groupKey as string,
+        userId: data.userId as string,
+        nickname: data.nickname as string,
+        category: (data.category as Category | undefined) ?? 'chat',
+        anonymous: (data.anonymous as boolean | undefined) ?? false,
+        title: (data.title as string | undefined) ?? '',
+        content: data.content as string,
+        imageUrl: (data.imageUrl as string | null | undefined) ?? null,
+        likeCount: (data.likeCount as number | undefined) ?? 0,
+        commentCount: (data.commentCount as number | undefined) ?? 0,
+        viewCount: (data.viewCount as number | undefined) ?? 0,
+        hidden: (data.hidden as boolean | undefined) ?? false,
+        isEdited: (data.isEdited as boolean | undefined) ?? false,
+        createdAt: ca?.toDate?.().toISOString() ?? '',
+        updatedAt: ua?.toDate?.().toISOString() ?? '',
+        isMine: data.userId === req.userId,
+        lat: typeof data.lat === 'number' ? (data.lat as number) : null,
+        lng: typeof data.lng === 'number' ? (data.lng as number) : null,
+        babyBirthYear: typeof data.babyBirthYear === 'number' ? (data.babyBirthYear as number) : null,
+        distanceKm: 0 as number | null,
+      };
+    });
+
+    // lng + 정확 거리 후처리 (전국 모드는 스킵)
+    if (center) {
+      const bb = radiusBoundingBox(center, radiusKm);
+      posts = posts
+        .filter((p) => p.lng != null && p.lng >= bb.minLng && p.lng <= bb.maxLng)
+        .map((p) => {
+          const d = (p.lat != null && p.lng != null)
+            ? distanceKm(center as { lat: number; lng: number }, { lat: p.lat, lng: p.lng })
+            : null;
+          return { ...p, distanceKm: d };
+        })
+        .filter((p) => p.distanceKm != null && p.distanceKm <= radiusKm);
+    } else {
+      posts.forEach((p) => { p.distanceKm = null; });
+    }
+
+    // 검색 필터
+    if (searchQ) {
+      posts = posts.filter((p) =>
+        p.title.toLowerCase().includes(searchQ) ||
+        p.content.toLowerCase().includes(searchQ) ||
+        p.nickname.toLowerCase().includes(searchQ),
+      );
+    }
+
+    // 정렬
+    if (sort === 'popular') {
+      posts.sort((a, b) => {
+        const pb = b.likeCount * 2 + b.commentCount;
+        const pa = a.likeCount * 2 + a.commentCount;
+        if (pb !== pa) return pb - pa;
+        return b.createdAt.localeCompare(a.createdAt);
+      });
+    } else {
+      posts.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    }
+
+    const total = posts.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const start = (page - 1) * pageSize;
+    const paged = posts.slice(start, start + pageSize);
+
+    success(res, { posts: paged, page, pageSize, total, totalPages, radiusKm, birthYears });
+  } catch (err) {
+    logger.error('mom-group:listPostsRadius', err, { userId: req.userId });
+    error(res, '게시글 조회 중 오류가 발생했습니다', 500);
+  }
+});
+
+// 사용 변수 경고 방지 (utility 사용)
+void isValidLatLng;
 
 /** PUT /api/mom-group/posts/:id — 본인 글 수정 { title, content, category, imageUrl? } */
 router.put('/posts/:id', authMiddleware, async (req: Request, res: Response) => {
@@ -578,6 +763,135 @@ router.get('/bookmarks', authMiddleware, async (req: Request, res: Response) => 
   } catch (err) {
     logger.error('mom-group:listBookmarks', err, { userId: req.userId });
     error(res, '북마크 조회 중 오류가 발생했습니다', 500);
+  }
+});
+
+/**
+ * GET /api/mom-group/posts/radius/counts
+ *   ?birthYear=2024
+ *
+ * 각 반경(5/10/50/100km/전국)마다 활동 게시글 개수 반환.
+ * UI에서 "5km · 활동 3명" 같은 활성도 표시용.
+ */
+router.get('/posts/radius/counts', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    // birthYears 배열 또는 단일 birthYear 호환
+    const birthYearsRaw = (req.query.birthYears as string | undefined) ?? '';
+    let birthYears: number[] | null = null;
+    if (birthYearsRaw) {
+      birthYears = birthYearsRaw
+        .split(',')
+        .map((s) => Number(s.trim()))
+        .filter((n) => !isNaN(n) && n >= 2010 && n <= 2050);
+      if (birthYears.length === 0) birthYears = null;
+      if (birthYears && birthYears.length > 30) birthYears = birthYears.slice(0, 30);
+    } else if (req.query.birthYear) {
+      const single = Number(req.query.birthYear);
+      if (!isNaN(single) && single >= 2010 && single <= 2050) birthYears = [single];
+    }
+
+    const userDoc = await collections.users.doc(req.userId!).get();
+    const ud = userDoc.exists ? userDoc.data() : null;
+    const lat = ud?.lat;
+    const lng = ud?.lng;
+    const hasLoc = typeof lat === 'number' && typeof lng === 'number';
+
+    // 전국 카운트는 항상 가능 (위치 무관)
+    let nationwideQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = collections.momGroupPosts
+      .where('hidden', '==', false);
+    if (birthYears && birthYears.length > 0) {
+      if (birthYears.length === 1) nationwideQuery = nationwideQuery.where('babyBirthYear', '==', birthYears[0]);
+      else nationwideQuery = nationwideQuery.where('babyBirthYear', 'in', birthYears);
+    }
+    const nationwideSnap = await nationwideQuery.limit(1000).get();
+    const nationwide = nationwideSnap.size;
+
+    if (!hasLoc) {
+      success(res, {
+        hasLocation: false,
+        counts: { '5': 0, '10': 0, '50': 0, '100': 0, '0': nationwide },
+      });
+      return;
+    }
+
+    // 위치 있음: 가장 큰 반경(100km) 한 번만 쿼리하고 in-memory 거리 계산으로 모든 반경 카운트
+    const center = { lat: lat as number, lng: lng as number };
+    const bb = radiusBoundingBox(center, 100);
+    let q: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = collections.momGroupPosts
+      .where('hidden', '==', false)
+      .where('lat', '>=', bb.minLat)
+      .where('lat', '<=', bb.maxLat);
+    if (birthYears && birthYears.length > 0) {
+      if (birthYears.length === 1) q = q.where('babyBirthYear', '==', birthYears[0]);
+      else q = q.where('babyBirthYear', 'in', birthYears);
+    }
+    const snap = await q.limit(1000).get();
+
+    const counts: Record<string, number> = { '5': 0, '10': 0, '50': 0, '100': 0, '0': nationwide };
+    for (const doc of snap.docs) {
+      const d = doc.data();
+      const pLat = d.lat as number | undefined;
+      const pLng = d.lng as number | undefined;
+      if (typeof pLat !== 'number' || typeof pLng !== 'number') continue;
+      if (pLng < bb.minLng || pLng > bb.maxLng) continue;
+      const dist = distanceKm(center, { lat: pLat, lng: pLng });
+      if (dist <= 5)   counts['5'] += 1;
+      if (dist <= 10)  counts['10'] += 1;
+      if (dist <= 50)  counts['50'] += 1;
+      if (dist <= 100) counts['100'] += 1;
+    }
+
+    success(res, { hasLocation: true, counts });
+  } catch (err) {
+    logger.error('mom-group:radiusCounts', err, { userId: req.userId });
+    error(res, '활동 카운트 조회 실패', 500);
+  }
+});
+
+/**
+ * POST /api/mom-group/admin/delete-region-posts
+ * 일회용 정리 — 옛 region: groupKey 글들을 모두 삭제 (테스트 데이터 정리).
+ *
+ * 안전장치: 모든 삭제 대상의 groupKey가 'region:' 으로 시작하는 것만 처리.
+ * 삭제 결과 (count)만 반환. 실데이터 손상 방지 위해 dry-run 옵션 지원.
+ */
+router.post('/admin/delete-region-posts', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const dryRun = req.body?.dryRun === true || req.query.dryRun === 'true';
+
+    // groupKey 가 'region:' 으로 시작하는 모든 post 찾기
+    // Firestore prefix 쿼리 → range 쿼리로 (>= 'region:' && < 'region;')
+    const snap = await collections.momGroupPosts
+      .where('groupKey', '>=', 'region:')
+      .where('groupKey', '<', 'region;')
+      .get();
+
+    const ids: string[] = [];
+    for (const doc of snap.docs) {
+      const gk = doc.data().groupKey as string | undefined;
+      if (gk && gk.startsWith('region:')) ids.push(doc.id);
+    }
+
+    if (dryRun) {
+      success(res, { dryRun: true, willDelete: ids.length, sample: ids.slice(0, 10) });
+      return;
+    }
+
+    // 배치 삭제 (Firestore batch 한도 500)
+    let deleted = 0;
+    for (let i = 0; i < ids.length; i += 400) {
+      const chunk = ids.slice(i, i + 400);
+      const batch = db.batch();
+      chunk.forEach((id) => batch.delete(collections.momGroupPosts.doc(id)));
+      await batch.commit();
+      deleted += chunk.length;
+    }
+
+    // 관련 댓글·북마크도 함께 (옵션 — 안전하게 그대로 둬도 OK)
+    success(res, { deleted, totalFound: ids.length });
+  } catch (err) {
+    logger.error('mom-group:deleteRegionPosts', err, { userId: req.userId });
+    error(res, '삭제 실패', 500);
   }
 });
 

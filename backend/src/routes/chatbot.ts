@@ -39,7 +39,10 @@ async function getAiResponse(message: string): Promise<string> {
     });
     const data = await response.json() as { choices?: { message?: { content?: string } }[] };
     return data.choices?.[0]?.message?.content ?? '잠시 후 다시 시도해주세요.';
-  } catch { return '일시적인 오류가 발생했습니다.'; }
+  } catch (err) {
+    console.error('[chatbot] OpenAI 호출 실패:', err instanceof Error ? err.message : String(err));
+    return '일시적인 오류가 발생했습니다.';
+  }
 }
 
 router.post('/', authMiddleware, async (req: Request, res: Response) => {

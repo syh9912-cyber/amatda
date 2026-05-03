@@ -11,6 +11,7 @@
 import PDFDocument from 'pdfkit';
 import path from 'path';
 import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 import * as admin from 'firebase-admin';
 import { storage, collections } from './firestore';
 
@@ -654,16 +655,23 @@ export async function uploadAlbumPDF(
   const storagePath = `growth_albums/${userId}/${childId}/${albumId}.pdf`;
   const file = storage.file(storagePath);
 
+  // 추측 불가능한 다운로드 토큰 — storage rules와 무관하게 인증된 다운로드
+  const downloadToken = uuidv4();
   await file.save(pdfBuffer, {
     metadata: {
       contentType: 'application/pdf',
-      metadata: { userId, childId, albumId },
+      metadata: {
+        userId,
+        childId,
+        albumId,
+        firebaseStorageDownloadTokens: downloadToken,
+      },
     },
     resumable: false,
   });
 
   const bucketName = file.bucket.name;
-  return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(storagePath)}?alt=media`;
+  return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(storagePath)}?alt=media&token=${downloadToken}`;
 }
 
 // ─── 앨범 상태 업데이트 ────────────────────────────────────────────────

@@ -302,6 +302,7 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
       // 마일스톤/앨범
       collections.milestoneChecks.where('childId', '==', childId).get(),
       collections.milestonePhotos.where('childId', '==', childId).get(),
+      collections.albumPhotos.where('childId', '==', childId).get(),
       collections.growthAlbums.where('childId', '==', childId).get(),
       // 헬스/예방접종
       collections.vaccinations.where('childId', '==', childId).get(),
@@ -373,7 +374,10 @@ router.post('/:id/analyze', authMiddleware, async (req: Request, res: Response) 
     const updated = await collections.children.doc(req.params.id as string).get();
     const formatted = formatChild(updated.id, updated.data()!);
     success(res, { ...formatted, analysisReport: report });
-  } catch { error(res, '분석 리포트 생성 중 오류가 발생했습니다', 500); }
+  } catch (err) {
+    console.error('[Child] Analyze error:', err instanceof Error ? err.message : String(err), err instanceof Error ? err.stack : undefined);
+    error(res, '분석 리포트 생성 중 오류가 발생했습니다', 500);
+  }
 });
 
 router.post('/:id/daily-tracking', authMiddleware, async (req: Request, res: Response) => {

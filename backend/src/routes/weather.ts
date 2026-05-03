@@ -6,6 +6,7 @@ import { getRecommendedActivities } from '../services/weather.activities';
 import { success, error } from '../utils/response';
 import { collections } from '../services/firestore';
 import { parseInnateDataFull } from '../utils/parse';
+import { isValidLatLng } from '../utils/location';
 
 const DEFAULT_LAT = 34.815;
 const DEFAULT_LNG = 126.463;
@@ -26,9 +27,12 @@ router.get('/:childId', authMiddleware, async (req: Request, res: Response) => {
     const dominantType: string = innate.dominantType;
     const traitWeather = getTraitWeather(dominantType);
 
-    // 좌표: 쿼리 파라미터 → 기본값(남악)
-    const lat = parseFloat(req.query.lat as string) || DEFAULT_LAT;
-    const lng = parseFloat(req.query.lng as string) || DEFAULT_LNG;
+    // 좌표: 쿼리 파라미터 (유효성 검증) → 기본값(남악)
+    const rawLat = parseFloat(req.query.lat as string);
+    const rawLng = parseFloat(req.query.lng as string);
+    const valid = isValidLatLng(rawLat, rawLng);
+    const lat = valid ? rawLat : DEFAULT_LAT;
+    const lng = valid ? rawLng : DEFAULT_LNG;
 
     // 실제 날씨 조회 (실패 시 null → fallback)
     const realWeather = await fetchRealWeather(lat, lng);

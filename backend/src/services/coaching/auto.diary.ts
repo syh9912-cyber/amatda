@@ -48,10 +48,11 @@ export async function generateAutoDiary(
 
   // 임산부: 트래킹 데이터 없어도 코칭 세션만으로 생성 가능
   if (isPregnant && !dayData.notes && dayData.coachingSessions.length === 0) {
-    // 임신 기록 확인
+    // 임신 기록 확인 — 새 albumPhotos에서 phase='pregnancy'만
     try {
-      const recSnap = await collections.pregnancyRecords
+      const recSnap = await collections.albumPhotos
         .where('childId', '==', childId)
+        .where('phase', '==', 'pregnancy')
         .orderBy('createdAt', 'desc')
         .limit(3)
         .get();

@@ -9,6 +9,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
@@ -87,7 +88,32 @@ router.post('/photos', authMiddleware, async (req: Request, res: Response) => {
       createdAt: now,
     };
 
-    await collections.milestonePhotos.doc(id).set(photo);
+    // dual-write: 옛 milestonePhotos + 새 albumPhotos (같은 doc ID)
+    // 옛 컬렉션은 dual-read fallback 안전망. 검증 후 단계적 제거.
+    const albumDoc = {
+      userId,
+      childId,
+      phase: 'baby' as const,
+      uri,
+      printUrl: printUrl || uri,
+      mediaType: 'photo' as const,
+      title: milestone || '추억',
+      content: memo || null,
+      milestoneType: null,
+      milestoneEmoji: milestoneEmoji || null,
+      milestoneColor: milestoneColor || null,
+      date: photoDate,
+      monthKey,
+      createdAt: Timestamp.fromDate(new Date(now)),
+      week: null,
+      pregnancyType: null,
+    };
+
+    const batch = collections.children.firestore.batch();
+    batch.set(collections.milestonePhotos.doc(id), photo);
+    batch.set(collections.albumPhotos.doc(id), albumDoc);
+    await batch.commit();
+
     success(res, { id, ...photo }, 201);
   } catch (err) {
     logger.error('album', err);
@@ -111,16 +137,41 @@ router.get('/photos/:childId', authMiddleware, async (req: Request, res: Respons
 
     // orderBy 없이 childId 단일 필드 인덱스만 사용 → JS에서 정렬
     // (복합 인덱스 의존 시 빌드 중 에러로 사진 목록이 비어 보이는 문제 방지)
-    const snap = await collections.milestonePhotos
+    // dual-read: 새 albumPhotos에서 phase='baby'만 읽음 (출생 후 사진)
+    // 응답 형식은 옛 milestonePhotos 호환 유지 (uri/milestone/memo 필드명)
+    const snap = await collections.albumPhotos
       .where('childId', '==', childId)
       .limit(1000)
       .get();
 
     const photos = snap.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((d) => (d.data() as Record<string, unknown>).phase === 'baby')
+      .map((d) => {
+        const data = d.data() as Record<string, unknown>;
+        const ca = data.createdAt;
+        let createdAtIso: string | undefined;
+        if (typeof ca === 'string') createdAtIso = ca;
+        else if (ca && typeof (ca as { toDate?: () => Date }).toDate === 'function') {
+          createdAtIso = (ca as { toDate: () => Date }).toDate().toISOString();
+        }
+        return {
+          id: d.id,
+          userId: data.userId,
+          childId: data.childId,
+          uri: data.uri,
+          printUrl: data.printUrl,
+          milestone: data.title,                 // 새 title → 옛 milestone 매핑
+          milestoneEmoji: data.milestoneEmoji,
+          milestoneColor: data.milestoneColor,
+          memo: data.content,                    // 새 content → 옛 memo 매핑
+          date: data.date,
+          monthKey: data.monthKey,
+          createdAt: createdAtIso,
+        };
+      })
       .sort((a, b) => {
-        const da = ((a as Record<string, unknown>).date as string) ?? '';
-        const db = ((b as Record<string, unknown>).date as string) ?? '';
+        const da = (a.date as string) ?? '';
+        const db = (b.date as string) ?? '';
         return db.localeCompare(da); // 최신순
       });
     success(res, photos);
@@ -139,13 +190,32 @@ router.delete('/photos/:id', authMiddleware, async (req: Request, res: Response)
     const userId = req.userId!;
     const photoId = param(req.params.id);
 
-    const doc = await collections.milestonePhotos.doc(photoId).get();
-    if (!doc.exists || (doc.data() as Record<string, unknown>).userId !== userId) {
+    // 소유권 확인: 새 albumPhotos 우선, 없으면 옛 milestonePhotos에서
+    const albumDoc = await collections.albumPhotos.doc(photoId).get();
+    const oldDoc = await collections.milestonePhotos.doc(photoId).get();
+
+    const ownerInAlbum = albumDoc.exists
+      ? (albumDoc.data() as Record<string, unknown>).userId
+      : null;
+    const ownerInOld = oldDoc.exists
+      ? (oldDoc.data() as Record<string, unknown>).userId
+      : null;
+
+    if (!albumDoc.exists && !oldDoc.exists) {
+      error(res, '사진을 찾을 수 없습니다', 404);
+      return;
+    }
+    if ((ownerInAlbum && ownerInAlbum !== userId) || (ownerInOld && ownerInOld !== userId)) {
       error(res, '사진을 찾을 수 없습니다', 404);
       return;
     }
 
-    await collections.milestonePhotos.doc(photoId).delete();
+    // dual-delete: 양쪽 컬렉션에서 삭제 (atomic)
+    const batch = collections.children.firestore.batch();
+    if (albumDoc.exists) batch.delete(collections.albumPhotos.doc(photoId));
+    if (oldDoc.exists) batch.delete(collections.milestonePhotos.doc(photoId));
+    await batch.commit();
+
     success(res, { deleted: true });
   } catch (err) {
     logger.error('album', err);
@@ -262,74 +332,62 @@ async function generateAlbumInBackground(
   const lastDay = new Date(toYear, toMon, 0).getDate(); // day 0 = 전월 마지막날
   const toDate = `${dateTo}-${String(lastDay).padStart(2, '0')}`;
 
+  // 통합 컬렉션 albumPhotos에서 단일 쿼리로 읽음 (임신 + 출생후 모두 포함)
   // childId 단일 필드 인덱스만 사용 → JS에서 날짜 필터+정렬
-  // 이유1: 복합 인덱스 빌드 중 에러 방지
-  // 이유2: "YYYY.MM.DD"(점) 포맷 구버전 사진도 포함
-  const snap = await collections.milestonePhotos
+  const snap = await collections.albumPhotos
     .where('childId', '==', childId)
     .limit(1000)
     .get();
 
-  // 날짜 정규화 헬퍼: "YYYY.MM.DD" → "YYYY-MM-DD"
+  // 날짜 정규화 헬퍼: "YYYY.MM.DD" → "YYYY-MM-DD" (구버전 호환)
   function normDate(d: string): string {
     return d.replace(/\./g, '-');
   }
 
-  const milestonePhotos: AlbumPhoto[] = snap.docs.map((d) => {
+  const photos: AlbumPhoto[] = [];
+  for (const d of snap.docs) {
     const data = d.data() as Record<string, unknown>;
-    return {
-      printUrl: (data.printUrl as string) || (data.uri as string),
-      thumbUrl: (data.uri as string),
-      date: normDate((data.date as string) || ''),
-      milestone: data.milestone as string | undefined,
-      milestoneEmoji: data.milestoneEmoji as string | undefined,
-      milestoneColor: data.milestoneColor as string | undefined,
-      memo: data.memo as string | undefined,
-    };
-  }).filter((p) => {
-    if (!p.printUrl || !p.date) return false;
-    return p.date >= fromDate && p.date <= toDate;
-  });
+    const isPregnancy = data.phase === 'pregnancy';
 
-  // ── 임신기록 자동 병합: pregnancyRecords의 사진을 앨범에 포함 ──
-  // 출산 후에도 임신 시절 기록이 이어져 하나의 앨범이 되게 함
-  const pregSnap = await collections.pregnancyRecords
-    .where('childId', '==', childId)
-    .limit(500)
-    .get();
+    // 사진 없는 것 + 영상은 제외
+    const uri = data.uri as string | null;
+    const printUrl = (data.printUrl as string | null) || uri;
+    if (!uri || !printUrl || data.mediaType === 'video') continue;
 
-  const pregnancyPhotos: AlbumPhoto[] = [];
-  for (const d of pregSnap.docs) {
-    const data = d.data() as Record<string, unknown>;
-    const mediaUri = data.mediaUri as string | undefined;
-    const mediaType = data.mediaType as string | undefined;
-    if (!mediaUri || mediaType === 'video') continue;
+    // date 추출 (저장 형식 통일됨, 정규화는 안전망)
+    const date = normDate((data.date as string) || '');
+    if (!date || date < fromDate || date > toDate) continue;
 
-    let dateStr = '';
-    const ca = data.createdAt as { toDate?: () => Date } | string | undefined;
-    if (typeof ca === 'string') dateStr = ca.slice(0, 10);
-    else if (ca && typeof ca.toDate === 'function') dateStr = ca.toDate().toISOString().slice(0, 10);
-    if (!dateStr || dateStr < fromDate || dateStr > toDate) continue;
-
+    // 임신 phase는 milestone 텍스트에 주차 추가
     const week = data.week as number | undefined;
     const title = (data.title as string | undefined) ?? '';
     const content = data.content as string | undefined;
 
-    pregnancyPhotos.push({
-      printUrl: mediaUri,
-      thumbUrl: mediaUri,
-      date: dateStr,
-      milestone: week ? `임신 ${week}주차` : (title || '임신기록'),
-      milestoneEmoji: (data.milestoneEmoji as string | undefined) || '🤰',
-      milestoneColor: '#E91E63',
-      memo: content || title || undefined,
-    });
+    const photo: AlbumPhoto = {
+      printUrl,
+      thumbUrl: uri,
+      date,
+    };
+    const milestone = isPregnancy
+      ? (week ? `임신 ${week}주차` : (title || '임신기록'))
+      : (title || '');
+    if (milestone) photo.milestone = milestone;
+
+    const emoji = (data.milestoneEmoji as string | undefined) || (isPregnancy ? '🤰' : undefined);
+    if (emoji) photo.milestoneEmoji = emoji;
+
+    const color = (data.milestoneColor as string | undefined) || (isPregnancy ? '#E91E63' : undefined);
+    if (color) photo.milestoneColor = color;
+
+    const memo = isPregnancy ? (content || title || '') : (content || '');
+    if (memo) photo.memo = memo;
+
+    photos.push(photo);
   }
 
-  // 병합 + 날짜순 정렬 (임신 → 출산 → 성장 자연스럽게 이어짐)
-  const photos: AlbumPhoto[] = [...pregnancyPhotos, ...milestonePhotos]
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(0, 400);
+  // 날짜순 정렬 (임신 → 출산 → 성장 자연스러운 시간순) + 400장 제한
+  photos.sort((a, b) => a.date.localeCompare(b.date));
+  if (photos.length > 400) photos.length = 400;
 
   if (photos.length === 0) {
     await updateAlbumStatus(albumId, 'error', { errorMessage: '해당 기간에 저장된 사진이 없습니다' });

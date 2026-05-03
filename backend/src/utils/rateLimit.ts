@@ -36,10 +36,12 @@ export async function getUserTier(userId: string): Promise<UserTier> {
   return tier;
 }
 
-/** 기능별 일일 카운터 단일 문서 ID */
+/** 기능별 일일 카운터 단일 문서 ID — KST 자정 기준 (한국 사용자 가정) */
 function counterDocId(userId: string, feature: string): string {
-  const today = new Date().toISOString().slice(0, 10);
-  return `${userId}_${feature}_${today}`;
+  // ⚠️ UTC 사용 시 KST 자정~9시 사이에 카운터가 잘못된 날짜로 분류됨.
+  const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+  const todayKst = new Date(Date.now() + KST_OFFSET_MS).toISOString().slice(0, 10);
+  return `${userId}_${feature}_${todayKst}`;
 }
 
 /** 오늘 사용 횟수 조회 */
@@ -56,18 +58,20 @@ export async function getDailyUsage(userId: string, feature: string): Promise<nu
 /** 오늘 사용 횟수 원자적 증가 (best-effort) */
 export async function incrementDailyUsage(userId: string, feature: string): Promise<void> {
   try {
+    const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+    const todayKst = new Date(Date.now() + KST_OFFSET_MS).toISOString().slice(0, 10);
     await collections.rateLimits.doc(counterDocId(userId, feature)).set(
       {
         count: admin.firestore.FieldValue.increment(1),
         userId,
         feature,
-        date: new Date().toISOString().slice(0, 10),
+        date: todayKst,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true },
     );
-  } catch {
-    /* 베스트 에포트 */
+  } catch (err) {
+    console.error('[rateLimit] incrementDailyUsage failed:', err instanceof Error ? err.message : String(err));
   }
 }
 

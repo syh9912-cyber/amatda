@@ -1,5 +1,19 @@
 import { RedFlagResult } from './types';
 
+/**
+ * 위험 키워드 4단계 (CLAUDE.md 정의)와 본 모듈 내부 명칭 매핑
+ * — 코드 내부에서는 'emergency' / 'urgent' / 'monitor' 사용 (38곳 참조).
+ *
+ *   CLAUDE.md spec      ↔  코드 내부 명칭         처리
+ *   ──────────────────────────────────────────────────────────────────
+ *   EMERGENCY           ↔  'emergency'           AI 응답 X, 즉시 119 안내
+ *   HOSPITAL            ↔  'urgent'              병원/24h 내 진료 권고
+ *   EXPERT              ↔  'monitor' (1~2일 관찰 후 진료 권유 = 전문가 상담 권고와 의미적 매핑)
+ *   GENERAL             ↔  (FlagRule 매칭 X)     일반 AI 응답
+ *
+ * 향후 명명 통일 시 ask.handler.ts 등 모든 참조 위치를 한 번에 변경할 것
+ * (현재는 운영 안정성 우선 — 이름 변경 risk 회피).
+ */
 interface FlagRule {
   pattern: RegExp;
   label: string;
