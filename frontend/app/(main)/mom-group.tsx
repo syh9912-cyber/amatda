@@ -70,12 +70,14 @@ interface Comment {
   isOfficial?: boolean;
 }
 
+// 산뜻한 컬러 팔레트 — Material 400~500 (밝고 명도 높음)
+// 어두운 톤(800/900)은 옛 게시판 느낌이라 의도적으로 회피
 const CATEGORY_META: Record<MomGroupCategory, { label: string; emoji: string; color: string; bg: string }> = {
-  question: { label: '질문', emoji: '❓', color: '#1565C0', bg: '#E3F2FD' },
-  chat: { label: '수다', emoji: '💬', color: '#AD1457', bg: '#FCE4EC' },
-  info: { label: '정보', emoji: '📚', color: '#2E7D32', bg: '#E8F5E9' },
-  worry: { label: '고민', emoji: '😔', color: '#E65100', bg: '#FFF3E0' },
-  celebration: { label: '축하', emoji: '🎉', color: '#6A1B9A', bg: '#F3E5F5' },
+  question:    { label: '질문', emoji: '❓', color: '#29B6F6', bg: '#E1F5FE' }, // 산뜻한 하늘
+  chat:        { label: '수다', emoji: '💬', color: '#EC407A', bg: '#FCE4EC' }, // 밝은 핑크
+  info:        { label: '정보', emoji: '📚', color: '#66BB6A', bg: '#E8F5E9' }, // 프레시 그린
+  worry:       { label: '고민', emoji: '😔', color: '#FFA726', bg: '#FFF3E0' }, // 따뜻한 오렌지
+  celebration: { label: '축하', emoji: '🎉', color: '#AB47BC', bg: '#F3E5F5' }, // 라벤더
 };
 const CATEGORY_KEYS: MomGroupCategory[] = ['question', 'chat', 'info', 'worry', 'celebration'];
 
@@ -763,7 +765,7 @@ export default function MomGroupScreen() {
         <View
           style={[
             styles.modernLeftBar,
-            { backgroundColor: isPinTop ? '#FF8C5A' : p.isOfficial ? '#1976D2' : cat.color },
+            { backgroundColor: isPinTop ? '#FFAB6E' : p.isOfficial ? '#42A5F5' : cat.color },
           ]}
         />
 
@@ -1136,17 +1138,8 @@ export default function MomGroupScreen() {
           </View>
         ) : (
           <>
-            {/* 표형 헤더 */}
-            <View style={styles.boardHeaderRow}>
-              <Text style={[styles.colNo, styles.colHeaderText]}>번호</Text>
-              <View style={styles.colTitleWrap}>
-                <Text style={[styles.colHeaderText, { textAlign: 'left' }]}>제목</Text>
-              </View>
-              <Text style={[styles.colAuthor, styles.colHeaderText]}>작성자</Text>
-              <Text style={[styles.colDate, styles.colHeaderText]}>날짜</Text>
-              <Text style={[styles.colViews, styles.colHeaderText]}>조회</Text>
-              <Text style={[styles.colLikes, styles.colHeaderText]}>♥</Text>
-            </View>
+            {/* 모던 리스트 — 표형 헤더 제거됨 */}
+            <View style={{ height: 6 }} />
             {list.map((p, i) => renderBoardRow(p, i))}
             {/* 페이지네이션 (feed 모드만) */}
             {isFeed && totalPages > 1 && (
@@ -1473,29 +1466,35 @@ export default function MomGroupScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAF7F2' },
+  container: { flex: 1, backgroundColor: '#F4F8FB' }, // 산뜻한 라이트 블루-그레이 (Notion/Linear 톤)
   // ── 모던 리스트 행 ──────────────────────────────────────
   modernRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    borderRadius: 12,
     marginHorizontal: 12,
-    marginBottom: 6,
-    paddingVertical: 11,
+    marginBottom: 8,
+    paddingVertical: 12,
     paddingRight: 12,
     overflow: 'hidden',
+    // 산뜻한 그림자 — 깊이감 있지만 무겁지 않게
+    shadowColor: '#88A0B8',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 2,
   },
   modernRowPinned: {
-    backgroundColor: '#FFF5EC', // 핀 글 — 살짝 피치
+    backgroundColor: '#FFFAF3', // 더 밝은 피치 크림
   },
   modernRowFallback: {
-    backgroundColor: '#F5F2FA', // 폴백(전국 인기) — 살짝 라벤더
+    backgroundColor: '#F5F8FF', // 더 밝은 라벤더 블루
   },
   modernLeftBar: {
-    width: 3,
+    width: 4,
     alignSelf: 'stretch',
-    marginRight: 10,
+    marginRight: 12,
   },
   modernContent: { flex: 1, justifyContent: 'center' },
   modernTitleRow: {
@@ -1505,29 +1504,30 @@ const styles = StyleSheet.create({
   },
   modernPinIcon: { fontSize: 12 },
   modernCatText: {
-    fontSize: 11.5,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   modernOfficialChip: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFFFFF',
-    backgroundColor: '#1976D2',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 3,
-    marginLeft: 5,
+    backgroundColor: '#42A5F5', // 산뜻한 스카이 블루
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+    marginLeft: 6,
     overflow: 'hidden',
   },
   modernFallbackChip: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFFFFF',
-    backgroundColor: '#7C4DFF',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 3,
-    marginLeft: 5,
+    backgroundColor: '#9575CD', // 부드러운 라벤더
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+    marginLeft: 6,
     overflow: 'hidden',
   },
   modernTitle: {
