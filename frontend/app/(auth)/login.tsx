@@ -17,7 +17,8 @@ import { AuthDivider } from '../../components/ui/AuthDivider';
 import { SocialLoginButtons } from '../../components/ui/SocialLoginButtons';
 import { useLoginHandlers } from '../../hooks/useLoginHandlers';
 
-const BG = '#F2F2F7';
+const BG_TOP = '#FFF5EC';    // 따뜻한 피치 크림 (상단)
+const BG_BOTTOM = '#F8FAFD'; // 차분한 화이트 (하단)
 const { width: SW } = Dimensions.get('window');
 
 export default function LoginScreen() {
@@ -29,25 +30,24 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >
+      {/* 전체 화면 부드러운 그라디언트 배경 */}
+      <LinearGradient
+        colors={[BG_TOP, BG_BOTTOM]}
+        locations={[0, 0.55]}
+        style={StyleSheet.absoluteFill}
+      />
       <View style={styles.scroll}>
-        {/* ── Full-width character image + gradient fade ── */}
-        <View style={styles.imageSection}>
-          {/* 투명 배경 아티팩트 방지: 이미지 뒤에 solid 배경 */}
-          <View style={styles.imageBg} />
+        {/* ── 투명 배경 캐릭터 일러스트 (그라디언트 위에 떠 있음) ── */}
+        <View style={styles.heroWrap}>
           <Image
-            source={require('../../assets/child-diary.png')}
-            style={styles.bgImage}
-            resizeMode="cover"
+            source={require('../../assets/login-hero.png')}
+            style={styles.heroImage}
+            resizeMode="contain"
             fadeDuration={0}
-          />
-          <LinearGradient
-            colors={['transparent', `${BG}80`, BG]}
-            locations={[0.2, 0.6, 0.95]}
-            style={styles.gradientOverlay}
           />
         </View>
 
-        {/* ── Brand (overlaps gradient area) ── */}
+        {/* ── Brand (일러스트 아래) ── */}
         <View style={styles.brandWrap}>
           <AppNameDisplay size="small" />
           <Text style={styles.tagline}>
@@ -127,39 +127,30 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: BG_TOP,
   },
   scroll: {
     flex: 1,
   },
 
-  /* ── Full-width image with gradient ── */
-  imageSection: {
+  /* ── 캐릭터 hero (투명 배경, 그라디언트 위에 떠 있음) ── */
+  heroWrap: {
     width: SW,
-    height: SW * 0.55,
-    overflow: 'hidden',
+    height: SW * 0.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 30,
   },
-  imageBg: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#FFF8F2',
-  },
-  bgImage: {
-    width: SW,
-    height: SW * 0.7,
-  },
-  gradientOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: SW * 0.4,
+  heroImage: {
+    width: SW * 0.85,
+    height: SW * 0.5,
   },
 
   /* ── Brand ── */
   brandWrap: {
     alignItems: 'center',
-    marginTop: -8,
-    marginBottom: 12,
+    marginTop: 4,
+    marginBottom: 14,
   },
   tagline: {
     fontSize: 12,
@@ -174,23 +165,23 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
-    padding: 18,
-    shadowColor: '#000',
+    padding: 16,
+    shadowColor: '#88A0B8',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 24,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 3,
   },
   form: {
-    gap: 10,
+    gap: 8,
   },
   button: {
     backgroundColor: '#1C1C1E',
-    borderRadius: 14,
-    height: 48,
+    borderRadius: 12,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 14,
+    marginTop: 12,
   },
   buttonDisabled: {
     opacity: 0.5,
@@ -212,13 +203,13 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     letterSpacing: -0.2,
   },
   dividerWrap: {
-    marginTop: 14,
-    marginBottom: 10,
+    marginTop: 12,
+    marginBottom: 8,
   },
   registerLink: {
     marginTop: 12,
