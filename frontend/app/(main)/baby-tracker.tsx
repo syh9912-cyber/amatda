@@ -3352,11 +3352,21 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete, onL
       const base = orderMap.get(realId) ?? orderMap.get(entry.id) ?? 999998;
       return entry.id.endsWith('__wake') ? base + 1 : base;
     };
+    // === 디버그 로그 (정렬 문제 추적용) — 운영 안정 후 제거 ===
+    console.log('[BABYTRACKER-SORT] records prop (raw input):',
+      records.map((r, i) => `[${i}] ${r.type}/${r.subType} time=${r.time} endTime=${r.endTime ?? '-'} id=${r.id}`).join(' | ')
+    );
+    console.log('[BABYTRACKER-SORT] expanded BEFORE sort:',
+      out.map((r, i) => `[${i}] ${r.subType} time=${r.time} id=${r.id} order=${orderOf(r)}`).join(' | ')
+    );
     out.sort((a, b) => {
       const diff = toMin(a.time) - toMin(b.time);
       if (diff !== 0) return diff;
       return orderOf(a) - orderOf(b);
     });
+    console.log('[BABYTRACKER-SORT] expanded AFTER sort (화면 위→아래):',
+      out.map((r, i) => `[${i}] ${r.subType} time=${r.time} id=${r.id}`).join(' | ')
+    );
     return out;
   }, [records, activeSleepSession, dateStr]);
 
