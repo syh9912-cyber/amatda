@@ -1689,6 +1689,22 @@ function EmptyState() {
       >
         <Text style={styles.addButtonText}>자녀 등록하기</Text>
       </TouchableOpacity>
+
+      {/* 자녀 미등록 사용자도 커뮤니티/프로필 접근 가능하게 */}
+      <View style={styles.emptySecondaryRow}>
+        <TouchableOpacity
+          style={styles.emptySecondaryBtn}
+          onPress={() => router.push('/(main)/mom-group')}
+        >
+          <Text style={styles.emptySecondaryText}>맘스톡 둘러보기</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.emptySecondaryBtn}
+          onPress={() => router.push('/(main)/profile')}
+        >
+          <Text style={styles.emptySecondaryText}>프로필</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -2105,6 +2121,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLOR.textSub,
     marginBottom: 24,
+  },
+  emptySecondaryRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  emptySecondaryBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  emptySecondaryText: {
+    fontSize: 14,
+    color: COLOR.textSub,
+    fontWeight: '500',
   },
   addButton: {
     backgroundColor: COLOR.accent,
