@@ -3340,9 +3340,23 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete, onL
       if (Number.isNaN(hi) || Number.isNaN(mi)) return 0;
       return hi * 60 + mi;
     };
-    // 같은 분이면 stable sort 로 입력 순서 유지 — records 배열 순서가 누른 순서이므로
-    // 자동으로 누른 순서대로 표시됨 (race condition 은 setRecords functional 로 해결됨).
-    out.sort((a, b) => toMin(a.time) - toMin(b.time));
+    // 같은 시간 tiebreaker — 사용자 의도: "시간 수정 없으면 누른 순서대로".
+    // records prop (= allRecordsSorted = today + crossDayWakes 합친 것) 의 array index 가
+    // 누른 순서를 반영. 그것을 tiebreaker 로 사용.
+    // sleep 한 entry 의 __wake 는 항상 같은 sleep 의 __start 바로 뒤로 오도록 +1 offset.
+    const orderMap = new Map<string, number>();
+    records.forEach((r, i) => orderMap.set(r.id, i * 10));
+    const orderOf = (entry: TrackerRecord): number => {
+      if (entry.id === '__active_sleep__') return 999999;
+      const realId = entry.id.replace(/__start$|__wake$|__crosswake$/, '');
+      const base = orderMap.get(realId) ?? orderMap.get(entry.id) ?? 999998;
+      return entry.id.endsWith('__wake') ? base + 1 : base;
+    };
+    out.sort((a, b) => {
+      const diff = toMin(a.time) - toMin(b.time);
+      if (diff !== 0) return diff;
+      return orderOf(a) - orderOf(b);
+    });
     return out;
   }, [records, activeSleepSession, dateStr]);
 
