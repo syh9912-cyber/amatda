@@ -70,17 +70,21 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
       error(res, '항목이 너무 많습니다', 400);
       return;
     }
-    const sanitizedItems: ShareItem[] = body.items.map((it) => ({
-      id: String(it.id || '').slice(0, 64),
-      label: String(it.label || '').slice(0, 100),
-      hint: it.hint ? String(it.hint).slice(0, 200) : undefined,
-      category: (['mom', 'baby', 'docs'] as const).includes(it.category as 'mom') ? it.category : 'mom',
-      owner: it.owner === 'mom' || it.owner === 'dad' || it.owner === 'both' ? it.owner : null,
-      status: ['need', 'ready', 'packed', 'na'].includes(String(it.status))
-        ? (it.status as ShareItem['status'])
-        : null,
-      checked: it.checked === true,
-    } as ShareItem));
+    // Firestore는 undefined 거부 → null 또는 omit으로 처리
+    const sanitizedItems = body.items.map((it) => {
+      const item: Record<string, unknown> = {
+        id: String(it.id || '').slice(0, 64),
+        label: String(it.label || '').slice(0, 100),
+        category: (['mom', 'baby', 'docs'] as const).includes(it.category as 'mom') ? it.category : 'mom',
+        owner: it.owner === 'mom' || it.owner === 'dad' || it.owner === 'both' ? it.owner : null,
+        status: ['need', 'ready', 'packed', 'na'].includes(String(it.status))
+          ? it.status
+          : null,
+        checked: it.checked === true,
+      };
+      if (it.hint) item.hint = String(it.hint).slice(0, 200);
+      return item;
+    });
 
     const token = generateToken();
     const now = Date.now();
@@ -107,7 +111,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
 
     success(res, { token, url, expiresAtMs: expiresAt });
   } catch (e) {
-    logger.error('birthbag-share POST failed', { error: e instanceof Error ? e.message : String(e) });
+    logger.error('birthbag-share POST failed', e);
     error(res, '공유 링크 생성 실패', 500);
   }
 });
