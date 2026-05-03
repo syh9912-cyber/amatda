@@ -12,8 +12,28 @@ module.exports = ({ config }) => {
     androidConfig.googleServicesFile = './google-services.json';
   }
 
+  // expo-font 플러그인 + Pretendard 폰트 임베드
+  const existingPlugins = Array.isArray(config.plugins) ? [...config.plugins] : [];
+  const fontsPlugin = [
+    'expo-font',
+    {
+      fonts: [
+        './assets/fonts/Pretendard-Regular.otf',
+        './assets/fonts/Pretendard-Medium.otf',
+        './assets/fonts/Pretendard-SemiBold.otf',
+        './assets/fonts/Pretendard-Bold.otf',
+      ],
+    },
+  ];
+  // 중복 방지 (이미 expo-font 들어있으면 스킵)
+  const hasFont = existingPlugins.some(
+    (p) => p === 'expo-font' || (Array.isArray(p) && p[0] === 'expo-font'),
+  );
+  if (!hasFont) existingPlugins.push(fontsPlugin);
+
   return {
     ...config,
     android: androidConfig,
+    plugins: existingPlugins,
   };
 };

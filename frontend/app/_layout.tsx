@@ -1,5 +1,45 @@
 import { useEffect, useRef, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
-import { View, ActivityIndicator, Text, Image, Animated, Easing, StyleSheet, Dimensions, AppState, AppStateStatus } from 'react-native';
+import React from 'react';
+import { View, ActivityIndicator, Text, TextInput, Image, Animated, Easing, StyleSheet, Dimensions, AppState, AppStateStatus } from 'react-native';
+import { useFonts } from 'expo-font';
+
+/**
+ * Pretendard 폰트 전역 적용 — Text/TextInput.render를 가로채서
+ * fontWeight에 따라 자동으로 Pretendard 변형(Regular/Medium/SemiBold/Bold)을 매핑.
+ *
+ * 한 번만 실행 (모듈 로드 시).
+ */
+function pretendardFamilyForWeight(weight: string | number | undefined): string {
+  const w = String(weight ?? '400');
+  if (w === '700' || w === '800' || w === '900' || w === 'bold') return 'Pretendard-Bold';
+  if (w === '600' || w === 'semibold') return 'Pretendard-SemiBold';
+  if (w === '500' || w === 'medium') return 'Pretendard-Medium';
+  return 'Pretendard-Regular';
+}
+
+(function applyPretendardDefault() {
+  const patch = (Comp: { render?: (...args: unknown[]) => React.ReactElement | null }) => {
+    if (!Comp || !Comp.render) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const orig = Comp.render as any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    Comp.render = function (...args: any[]) {
+      const elem = orig.apply(this, args);
+      if (!elem) return elem;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const flat = StyleSheet.flatten((elem as any).props?.style) as Record<string, unknown> | null;
+      const family = pretendardFamilyForWeight(flat?.fontWeight as string | number | undefined);
+      return React.cloneElement(elem, {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        style: [{ fontFamily: family }, (elem as any).props?.style],
+      });
+    };
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  patch(Text as any);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  patch(TextInput as any);
+})();
 import { Stack, router } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
@@ -332,6 +372,15 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const hydrate = useAuthStore((s) => s.hydrate);
   const { status, progress } = useOTAUpdate();
 
+  // Pretendard 폰트 로드 — 로드 완료 전엔 ActivityIndicator 표시
+  // (앱 번들에 임베드되어 있어도 RN은 명시적 로드 권장)
+  const [fontsLoaded] = useFonts({
+    'Pretendard-Regular': require('../assets/fonts/Pretendard-Regular.otf'),
+    'Pretendard-Medium': require('../assets/fonts/Pretendard-Medium.otf'),
+    'Pretendard-SemiBold': require('../assets/fonts/Pretendard-SemiBold.otf'),
+    'Pretendard-Bold': require('../assets/fonts/Pretendard-Bold.otf'),
+  });
+
   useEffect(() => {
     initSentry();
     hydrate()
@@ -349,7 +398,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     return <UpdateScreen status={status} progress={progress} />;
   }
 
-  if (!ready) {
+  if (!ready || !fontsLoaded) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background }}>
         <ActivityIndicator size="large" color={COLORS.primary} />
