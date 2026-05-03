@@ -394,6 +394,7 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
       nickname: data.nickname ?? null,
       authProvider: data.authProvider,
       parentRole: data.parentRole ?? '',
+      isOfficial: data.isOfficial === true,
     });
   } catch { error(res, '정보 조회 중 오류', 500); }
 });

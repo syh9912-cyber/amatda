@@ -19,7 +19,7 @@ import { Image } from 'expo-image';
 import { Stack, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChildStore } from '../../stores/childStore';
-import { momGroupApi, momLocationApi, uploadApi, type MomGroupCategory, type MomGroupSort } from '../../services/api';
+import { momGroupApi, momLocationApi, uploadApi, authApi, type MomGroupCategory, type MomGroupSort } from '../../services/api';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
@@ -48,6 +48,7 @@ interface Post {
   isMine: boolean;
   isOfficial?: boolean;
   isFallback?: boolean;
+  isPinned?: boolean;
 }
 
 const REPORT_REASON_OPTIONS: { key: 'abuse' | 'ad' | 'privacy' | 'spam' | 'other'; label: string }[] = [
@@ -220,8 +221,10 @@ export default function MomGroupScreen() {
   const [writeContent, setWriteContent] = useState('');
   const [writeCategory, setWriteCategory] = useState<MomGroupCategory>('chat');
   const [writeAnonymous, setWriteAnonymous] = useState(false);
+  const [writePinned, setWritePinned] = useState(false);
   const [writing, setWriting] = useState(false);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [isOfficialUser, setIsOfficialUser] = useState(false);
 
   const [activePost, setActivePost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -294,6 +297,16 @@ export default function MomGroupScreen() {
     if (roomType !== 'radius') return;
     refreshLocation();
   }, [roomType, refreshLocation]);
+
+  // 공식 계정 여부 확인 (마운트 시 1회) — 글쓰기 시 핀 옵션 노출 여부 판정
+  useEffect(() => {
+    authApi.getProfile()
+      .then((res) => {
+        const data = res.data?.data as { isOfficial?: boolean } | undefined;
+        setIsOfficialUser(data?.isOfficial === true);
+      })
+      .catch(() => {});
+  }, []);
 
   // 화면 포커스 복귀 시 위치 재확인 (위치 등록 화면에서 돌아왔을 때)
   useFocusEffect(
@@ -455,6 +468,7 @@ export default function MomGroupScreen() {
     setWriteContent('');
     setWriteCategory('chat');
     setWriteAnonymous(false);
+    setWritePinned(false);
     setPostImage(null);
     setEditingPostId(null);
   };
@@ -465,6 +479,7 @@ export default function MomGroupScreen() {
     setWriteContent(p.content || '');
     setWriteCategory(p.category);
     setWriteAnonymous(p.anonymous);
+    setWritePinned(p.isPinned === true);
     setPostImage(p.imageUrl ?? null);
     setShowWriteModal(true);
   };
@@ -498,6 +513,7 @@ export default function MomGroupScreen() {
           content: body,
           category: writeCategory,
           ...(imageUrl !== undefined ? { imageUrl } : {}),
+          ...(isOfficialUser ? { isPinned: writePinned } : {}),
         });
       } else {
         // radius 모드 글쓰기: 자신의 myGroupKey(월방)에 저장 → 자동으로 lat/lng/babyBirthYear 첨부됨
@@ -510,6 +526,7 @@ export default function MomGroupScreen() {
           writeCategory,
           writeAnonymous,
           imageUrl ?? null,
+          isOfficialUser ? writePinned : undefined,
         );
       }
 
@@ -1212,6 +1229,22 @@ export default function MomGroupScreen() {
                     onValueChange={setWriteAnonymous}
                     trackColor={{ false: '#D1D5DB', true: '#F48FB1' }}
                     thumbColor={writeAnonymous ? '#E91E63' : '#F3F4F6'}
+                  />
+                </View>
+              )}
+
+              {/* 상단 고정 토글 (공식 계정만 + 익명 OFF일 때만) */}
+              {isOfficialUser && !writeAnonymous && (
+                <View style={styles.anonRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.anonTitle}>📌 상단 고정</Text>
+                    <Text style={styles.anonDesc}>피드 최상단에 고정 노출됩니다 (전체 공식 글 중 최신 3개까지만 적용)</Text>
+                  </View>
+                  <Switch
+                    value={writePinned}
+                    onValueChange={setWritePinned}
+                    trackColor={{ false: '#D1D5DB', true: '#90CAF9' }}
+                    thumbColor={writePinned ? '#1976D2' : '#F3F4F6'}
                   />
                 </View>
               )}

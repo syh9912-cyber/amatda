@@ -207,8 +207,8 @@ router.get('/posts', authMiddleware, async (req: Request, res: Response) => {
  */
 router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { groupKey, title, content, category, anonymous, imageUrl } = req.body as {
-      groupKey?: string; title?: string; content?: string; category?: string; anonymous?: boolean; imageUrl?: string;
+    const { groupKey, title, content, category, anonymous, imageUrl, isPinned } = req.body as {
+      groupKey?: string; title?: string; content?: string; category?: string; anonymous?: boolean; imageUrl?: string; isPinned?: boolean;
     };
     if (!groupKey || !isValidGroupKey(groupKey)) {
       error(res, 'groupKey가 필요합니다');
@@ -253,6 +253,10 @@ router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
     // 익명 게시글에는 노출 안 함 (정체성 노출 방지).
     const isOfficial = !isAnon && userData?.isOfficial === true;
 
+    // 상단 고정 — 공식 계정만 가능. 비공식 시도는 무시.
+    const wantsPin = isPinned === true;
+    const isPinnedFinal = wantsPin && isOfficial;
+
     const baseDoc: Record<string, unknown> = {
       groupKey,
       userId: req.userId!,
@@ -268,6 +272,7 @@ router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
       reportCount: 0,
       hidden: false,
       isOfficial,
+      isPinned: isPinnedFinal,
       createdAt: FieldValue.serverTimestamp(),
     };
     if (typeof lat === 'number' && typeof lng === 'number') {
@@ -391,6 +396,7 @@ router.get('/posts/radius', authMiddleware, async (req: Request, res: Response) 
         babyBirthYear: typeof data.babyBirthYear === 'number' ? (data.babyBirthYear as number) : null,
         distanceKm: 0 as number | null,
         isOfficial: data.isOfficial === true,
+        isPinned: data.isPinned === true,
         isFallback: false,
       };
     });
@@ -432,12 +438,17 @@ router.get('/posts/radius', authMiddleware, async (req: Request, res: Response) 
       posts.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     }
 
-    // 공식 게시글 상단 고정 — 정렬 후 official을 앞으로 분리
-    // (검색/카테고리 필터에서도 공식 글은 우선 노출)
+    // 상단 고정 — isPinned=true인 공식 글만 최상단 (최대 3개), 최신순
+    // 그 외(공식이지만 핀 안 한 글, 일반 글)는 정상 정렬 유지
+    const PIN_LIMIT = 3;
     {
-      const officialOnly = posts.filter((p) => p.isOfficial);
-      const regularOnly = posts.filter((p) => !p.isOfficial);
-      posts = [...officialOnly, ...regularOnly];
+      const pinned = posts
+        .filter((p) => p.isPinned && p.isOfficial)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, PIN_LIMIT);
+      const pinnedIds = new Set(pinned.map((p) => p.id));
+      const rest = posts.filter((p) => !pinnedIds.has(p.id));
+      posts = [...pinned, ...rest];
     }
 
     // 전국 인기글 폴백 — 로컬 게시글이 너무 적으면 (5개 미만) 첫 페이지에 한해 전국 인기글을 뒤에 붙임.
@@ -494,6 +505,7 @@ router.get('/posts/radius', authMiddleware, async (req: Request, res: Response) 
               babyBirthYear: typeof data.babyBirthYear === 'number' ? (data.babyBirthYear as number) : null,
               distanceKm: null as number | null,
               isOfficial: data.isOfficial === true,
+              isPinned: data.isPinned === true,
               isFallback: true,
             };
           })
@@ -503,10 +515,14 @@ router.get('/posts/radius', authMiddleware, async (req: Request, res: Response) 
 
         if (fallbackPosts.length > 0) {
           posts = [...posts, ...fallbackPosts];
-          // 폴백 합류 후 공식 글 다시 상단 고정 (로컬·폴백 official 모두 최상단)
-          const officialAfter = posts.filter((p) => p.isOfficial);
-          const regularAfter = posts.filter((p) => !p.isOfficial);
-          posts = [...officialAfter, ...regularAfter];
+          // 폴백 합류 후 isPinned 재고정 (로컬·폴백의 핀 글 모두 최상단, 합쳐서 최대 3개)
+          const pinnedAfter = posts
+            .filter((p) => p.isPinned && p.isOfficial)
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+            .slice(0, PIN_LIMIT);
+          const pinnedAfterIds = new Set(pinnedAfter.map((p) => p.id));
+          const restAfter = posts.filter((p) => !pinnedAfterIds.has(p.id));
+          posts = [...pinnedAfter, ...restAfter];
           isFallbackUsed = true;
         }
       } catch (fbErr) {
@@ -536,16 +552,26 @@ router.put('/posts/:id', authMiddleware, async (req: Request, res: Response) => 
     const id = req.params.id as string;
     const doc = await collections.momGroupPosts.doc(id).get();
     if (!doc.exists) { error(res, '게시글을 찾을 수 없습니다', 404); return; }
-    if (doc.data()?.userId !== req.userId) { error(res, '권한이 없습니다', 403); return; }
+    const docData = doc.data();
+    if (docData?.userId !== req.userId) { error(res, '권한이 없습니다', 403); return; }
 
-    const { title, content, category, imageUrl } = req.body as {
-      title?: string; content?: string; category?: string; imageUrl?: string | null;
+    const { title, content, category, imageUrl, isPinned } = req.body as {
+      title?: string; content?: string; category?: string; imageUrl?: string | null; isPinned?: boolean;
     };
 
     const update: Record<string, unknown> = {
       updatedAt: FieldValue.serverTimestamp(),
       isEdited: true,
     };
+
+    // 상단 고정 토글 — 공식 계정만 변경 가능
+    if (isPinned !== undefined) {
+      const postIsOfficial = docData?.isOfficial === true;
+      if (postIsOfficial) {
+        update.isPinned = isPinned === true;
+      }
+      // 비공식 게시글은 isPinned 변경 무시
+    }
 
     if (title !== undefined) {
       const t = title.trim();

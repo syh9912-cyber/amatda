@@ -444,6 +444,9 @@ export const uploadApi = {
    * @param fileUri 로컬 파일 URI (file:///...)
    * @param folder  저장 폴더 (default: "pregnancy")
    * @returns { url, mediaType, storagePath }
+   *
+   * ⚠️ 프라이버시: 이미지는 ImageManipulator로 재인코딩 → EXIF(위치/디바이스/촬영시각) 자동 제거.
+   *               비디오/오디오는 변환 없이 원본 업로드 (EXIF 없음).
    */
   upload: async (fileUri: string, folder = 'pregnancy'): Promise<{ url: string; mediaType: 'photo' | 'video' | 'audio'; storagePath: string }> => {
     const token = useAuthStore.getState().accessToken;
@@ -458,12 +461,34 @@ export const uploadApi = {
       wav: 'audio/wav', aac: 'audio/aac', mp3: 'audio/mpeg',
     };
     const mimeType = mimeMap[ext] || 'image/jpeg';
+    const isImage = mimeType.startsWith('image/');
+
+    // 이미지면 EXIF 제거를 위해 ImageManipulator로 재인코딩 (JPEG 출력)
+    let uploadUri = fileUri;
+    let uploadFilename = filename;
+    let uploadMimeType = mimeType;
+    if (isImage) {
+      try {
+        const ImageManipulator = await import('expo-image-manipulator');
+        const result = await ImageManipulator.manipulateAsync(
+          fileUri,
+          [], // 변환 없이 재인코딩만 → EXIF 제거 + 동일 크기
+          { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG },
+        );
+        uploadUri = result.uri;
+        uploadFilename = filename.replace(/\.[^.]+$/, '.jpg');
+        uploadMimeType = 'image/jpeg';
+      } catch (e) {
+        // 재인코딩 실패 시 원본 업로드 (예: HEIC 디코딩 미지원 디바이스)
+        console.warn('[uploadApi] EXIF strip failed, using original:', e);
+      }
+    }
 
     const formData = new FormData();
     formData.append('file', {
-      uri: fileUri,
-      name: filename,
-      type: mimeType,
+      uri: uploadUri,
+      name: uploadFilename,
+      type: uploadMimeType,
     } as unknown as Blob);
     formData.append('folder', folder);
 
@@ -534,7 +559,9 @@ export const pregnancyApi = {
     mediaUri?: string;
     mediaType?: 'photo' | 'video';
     milestoneType?: string;
+    milestoneEmoji?: string;
     week?: number;
+    shareToFamily?: boolean;
   }) => api.post('/pregnancy/records', data),
   getRecords: (childId: string) =>
     api.get('/pregnancy/records', { params: { childId } }),
@@ -658,13 +685,16 @@ export const momGroupApi = {
     category: MomGroupCategory,
     anonymous: boolean,
     imageUrl?: string | null,
+    isPinned?: boolean,
   ) =>
     api.post('/mom-group/posts', {
-      groupKey, title, content, category, anonymous, imageUrl: imageUrl ?? undefined,
+      groupKey, title, content, category, anonymous,
+      imageUrl: imageUrl ?? undefined,
+      ...(isPinned ? { isPinned: true } : {}),
     }),
   updatePost: (
     id: string,
-    data: { title?: string; content?: string; category?: MomGroupCategory; imageUrl?: string | null },
+    data: { title?: string; content?: string; category?: MomGroupCategory; imageUrl?: string | null; isPinned?: boolean },
   ) => api.put(`/mom-group/posts/${id}`, data),
   deletePost: (id: string) =>
     api.delete(`/mom-group/posts/${id}`),
@@ -682,6 +712,61 @@ export const momGroupApi = {
     api.post(`/mom-group/posts/${id}/bookmark`),
   listBookmarks: () =>
     api.get('/mom-group/bookmarks'),
+  /** 각 반경(5/10/50/100km/전국) 활동 글 카운트. birthYears 는 동갑(±N) 매칭용 */
+  radiusCounts: (birthYears?: number[]) =>
+    api.get('/mom-group/posts/radius/counts', {
+      params: birthYears && birthYears.length > 0 ? { birthYears: birthYears.join(',') } : {},
+    }),
+  /** 일회용: 옛 region: 글 모두 삭제 (테스트 데이터 정리용) */
+  adminDeleteRegionPosts: (dryRun = false) =>
+    api.post('/mom-group/admin/delete-region-posts', { dryRun }),
+  /** 반경 기반 검색 (radius=0 → 전국). birthYears는 동갑(±N) 매칭용 배열 */
+  listPostsByRadius: (opts: {
+    radius: 0 | 5 | 10 | 50 | 100;
+    birthYears?: number[];
+    category?: MomGroupCategory;
+    sort?: MomGroupSort;
+    page?: number;
+    pageSize?: number;
+    q?: string;
+  }) =>
+    api.get('/mom-group/posts/radius', {
+      params: {
+        radius: opts.radius,
+        ...(opts.birthYears && opts.birthYears.length > 0 ? { birthYears: opts.birthYears.join(',') } : {}),
+        ...(opts.category ? { category: opts.category } : {}),
+        ...(opts.sort ? { sort: opts.sort } : {}),
+        ...(opts.page !== undefined ? { page: opts.page } : {}),
+        ...(opts.pageSize !== undefined ? { pageSize: opts.pageSize } : {}),
+        ...(opts.q ? { q: opts.q } : {}),
+      },
+    }),
+};
+
+// Mom Location (위치 등록 — 반경 매칭용)
+export const momLocationApi = {
+  get: () => api.get('/mom-location'),
+  put: (data: { lat: number; lng: number; locationLabel?: string; babyBirthYear?: number }) =>
+    api.put('/mom-location', data),
+  remove: () => api.delete('/mom-location'),
+};
+
+// 출산가방 공유 — 카카오톡/링크/문자로 가족 공유
+export const birthBagShareApi = {
+  create: (payload: {
+    ownerLabel?: string;
+    birthType?: 'natural' | 'csection';
+    postpartumPlan?: 'sanhujowon' | 'home';
+    items: Array<{
+      id: string;
+      label: string;
+      hint?: string;
+      category: 'mom' | 'baby' | 'docs';
+      owner?: 'mom' | 'dad' | 'both' | null;
+      status?: 'need' | 'ready' | 'packed' | 'na' | null;
+      checked?: boolean;
+    }>;
+  }) => api.post('/birthbag-share', payload),
 };
 
 // Vaccination (예방접종)
