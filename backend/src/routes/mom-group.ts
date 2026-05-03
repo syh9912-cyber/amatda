@@ -432,6 +432,14 @@ router.get('/posts/radius', authMiddleware, async (req: Request, res: Response) 
       posts.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     }
 
+    // 공식 게시글 상단 고정 — 정렬 후 official을 앞으로 분리
+    // (검색/카테고리 필터에서도 공식 글은 우선 노출)
+    {
+      const officialOnly = posts.filter((p) => p.isOfficial);
+      const regularOnly = posts.filter((p) => !p.isOfficial);
+      posts = [...officialOnly, ...regularOnly];
+    }
+
     // 전국 인기글 폴백 — 로컬 게시글이 너무 적으면 (5개 미만) 첫 페이지에 한해 전국 인기글을 뒤에 붙임.
     // 검색어/카테고리 필터가 있으면 폴백 안 함 (검색은 정확도 우선).
     const FALLBACK_THRESHOLD = 5;
@@ -495,6 +503,10 @@ router.get('/posts/radius', authMiddleware, async (req: Request, res: Response) 
 
         if (fallbackPosts.length > 0) {
           posts = [...posts, ...fallbackPosts];
+          // 폴백 합류 후 공식 글 다시 상단 고정 (로컬·폴백 official 모두 최상단)
+          const officialAfter = posts.filter((p) => p.isOfficial);
+          const regularAfter = posts.filter((p) => !p.isOfficial);
+          posts = [...officialAfter, ...regularAfter];
           isFallbackUsed = true;
         }
       } catch (fbErr) {

@@ -725,7 +725,7 @@ export default function MomGroupScreen() {
         activeOpacity={0.6}
         onPress={() => openComments(p)}
       >
-        <Text style={styles.colNo}>{rowNo > 0 ? rowNo : ''}</Text>
+        <Text style={styles.colNo}>{p.isOfficial ? '📌' : (rowNo > 0 ? rowNo : '')}</Text>
         <View style={styles.colTitleWrap}>
           <Text style={styles.colTitle} numberOfLines={1}>
             {p.isOfficial ? <Text style={styles.officialBadgeInline}>공식 </Text> : null}
@@ -735,6 +735,9 @@ export default function MomGroupScreen() {
             {p.imageUrl ? <Text style={styles.inlineMark}> 📷</Text> : null}
             {isBookmarked ? <Text style={styles.inlineMark}> 🔖</Text> : null}
           </Text>
+          {p.isOfficial ? (
+            <Text style={styles.officialSubLabel}>운영팀 안내</Text>
+          ) : null}
         </View>
         <Text style={styles.colAuthor} numberOfLines={1}>
           {p.anonymous ? '익명' : (p.isOfficial ? `${p.nickname} ✓` : p.nickname)}
@@ -1279,6 +1282,11 @@ export default function MomGroupScreen() {
                     {activePost.title}
                   </Text>
                 ) : null}
+                {activePost.isOfficial ? (
+                  <View style={styles.officialBanner}>
+                    <Text style={styles.officialBannerText}>📌 운영팀 안내 · 아맞다 공식 게시글입니다</Text>
+                  </View>
+                ) : null}
                 <Text style={styles.postNickname}>
                   {activePost.nickname}
                   {activePost.isOfficial ? <Text style={styles.officialCheck}> ✓ 공식</Text> : null}
@@ -1738,6 +1746,27 @@ const styles = StyleSheet.create({
     color: '#1976D2',
     fontWeight: '700',
     fontSize: 12,
+  },
+  officialSubLabel: {
+    fontSize: 10,
+    color: '#1976D2',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  officialBanner: {
+    backgroundColor: '#E3F2FD',
+    borderLeftWidth: 3,
+    borderLeftColor: '#1976D2',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    marginBottom: 4,
+    borderRadius: 6,
+  },
+  officialBannerText: {
+    fontSize: 12,
+    color: '#1565C0',
+    fontWeight: '600',
   },
   colAuthor: {
     width: 52,
