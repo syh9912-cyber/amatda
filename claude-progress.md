@@ -1,9 +1,154 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-05-03
+> 최종 업데이트: 2026-05-03 (오후/저녁)
 
 ---
 
-## 2026-05-03 — 알람·인증 안정화 + 맘스톡 전면 개편 + Pretendard 폰트
+## 2026-05-03 (오후/저녁) — 출시 준비 마지막 단계: 브랜드 + 인증 + APK
+
+오전 작업 후 오후/저녁에 진행한 출시 직전 작업 모음.
+
+### A. 새 브랜드 아이덴티티
+
+**앱 아이콘 (rembg AI 배경 제거 + 정사각 크롭)**
+- `assets/amatda.png` — 사용자 제공 원본 (1698×926, 흰 배경)
+- `assets/login-hero.png` — 배경 투명 + 캐릭터+책 영역만 크롭 (692×658, 비율 1.05)
+- `assets/icon.png` — iOS opaque 피치 배경(#FFF5EC) + 캐릭터+책만 88% 영역
+- `assets/adaptive-icon.png` — Android transparent foreground (동일 크롭)
+- `app.json` adaptiveIcon backgroundColor #FFFFFF → #FFF5EC
+
+**로그인 화면 리뉴얼**
+- AppNameDisplay (아맞다 텍스트) + tagline 제거
+- 캐릭터 일러스트만 + 그라디언트 배경 (#FFF5EC → #F8FAFD)
+- 여러 차례 사이즈 조정 후 SW * 0.85 width / SW * 0.81 height (중간값) 정착
+- AuthInput 56→46px, borderRadius 16→12, fontSize 16→14
+- 로그인 버튼 48→44px, fontSize 14, fontWeight 700
+- marginTop 60 (status bar 아래 여유)
+
+### B. Sentry 에러 자동 추적 활성화
+
+**SDK 설치 + 설정**
+- `@sentry/react-native` 이미 설치
+- `services/sentry.ts` DSN 하드코딩 fallback (OTA로 즉시 활성화)
+- DSN: `https://dd7124a12d7082892c04cee84ecc0aac@o4511325473865728.ingest.us.sentry.io/4511325488873472`
+- EAS env에 `EXPO_PUBLIC_SENTRY_DSN` 등록 (preview/production)
+
+**자동 추적 통합**
+- `Sentry.reactNavigationIntegration` 등록 — Expo Router 화면 이동 자동 추적
+- `Sentry.wrap(RootLayout)` — 모든 unhandled error 자동 캡처 + Touch event 추적
+- `screenshot 첨부` + `네이티브 frames tracking`
+
+**사용자 식별 연동**
+- `authStore.setAuth` → `sentrySetUser(userId, email)`
+- `authStore.logout` → `sentryClearUser()`
+- `authStore.hydrate` → 앱 재시작 시 사용자 복원
+
+**Source Map 자동 업로드 (Auth Token)**
+- Sentry Auth Token 발급 + EAS Secret `SENTRY_AUTH_TOKEN` 등록 (preview/production)
+- `app.config.js` plugins에 `@sentry/react-native/expo` 등록
+- 다음 APK 빌드부터 source map 자동 업로드 → 운영 스택 트레이스 가독성 ↑
+
+### C. 보안 + 인증 마무리
+
+**Naver Client Secret 회전**
+- 새 시크릿 발급 → EAS env `EXPO_PUBLIC_NAVER_CLIENT_SECRET` 등록 (sensitive)
+- 이전 노출됐던 secret 무효화 효과
+
+**Storage 백필 — 78개 객체**
+- `backend/scripts/backfill-storage-tokens.cjs --apply`
+- 기존 firestore-backup-2026-04-30, growth_albums, pregnancy 객체 모두 토큰 메타데이터 추가
+- storage.rules 강화 가능한 기반 마련
+
+**Firestore TTL — 스킵**
+- `share_birthbag` 컬렉션에 첫 문서 생성 후 활성화 예정
+- 출시 후 첫 사용자가 공유하면 그때 적용
+
+**출생일 암호화 — 영구 스킵**
+- 분석 결과: Firestore 기본 암호화로 충분, 앱 레벨 암호화는 효과 미미 + 30곳 코드 수정 위험 ↑
+- 한국 PIPA상 일반 개인정보 분류 (민감정보 X)
+
+### D. 개인정보 처리방침 — 네이버 검수 대비
+
+**`public/privacy.html` + `app/(main)/privacy.tsx` 동기화 보강**
+- 새 섹션 "1-1. 소셜 로그인 정보 처리"
+  · 카카오/네이버/구글 각각 수집 정보, 이용 목적, 보유 기간, 처리방침 URL
+  · 회원 탈퇴 시 unlink 요청 명시
+- 1번 (수집 항목) 보강: 소셜 로그인 + 푸시 토큰 + 커뮤니티 닉네임
+- 8번 (위탁) 보강: Sentry, Kakao Corp, NAVER Cloud, Google LLC + **국외 이전 고지** (개인정보보호법 제28조의8)
+- 배포: https://amatda-parenting.web.app/privacy 갱신 + OTA로 인앱 화면 동기화
+
+### E. 출산가방 공유 — 4번의 fix
+
+**Fix 1: undefined 필드 거부** (Firestore)
+- `sanitizedItems` 안 `hint: undefined` → Firestore가 거부 → 모든 공유 silent 500
+- 조건부 추가로 변경 (hint 있으면만 포함)
+- `logger.error` 호출 호환성 fix (잘못된 인자 전달 → safeStringify로 JSON.stringify)
+
+**Fix 2: CSP가 인라인 스크립트 차단**
+- 글로벌 helmet `script-src 'self'` → 공유 페이지 인라인 JS 차단 → 항목 리스트 빈 화면
+- 이 endpoint만 CSP 완화 (`'unsafe-inline'`) — XSS는 escapeHtml + jsonForScriptTag로 방어 완료
+
+**Fix 3: 체크 ↔ 상태 자동 동기화 (앱)**
+- `toggleChecked`: ✓ → 'packed' / ✗ → 'packed'였으면 'ready'로 다운그레이드
+- `setItemStatus`: 'packed' → 자동 ✓ / 그 외 → 자동 ✗
+
+**Fix 4: 공유 받은 사람도 인터랙티브** (단방향 → 양방향)
+- 신규 endpoint `POST /api/birthbag-share/:token/items/:itemId` (트랜잭션 atomic)
+- 공유 페이지 HTML: 체크박스 + 상태 버튼 클릭 시 즉시 백엔드 업데이트
+- 진행률/chip 실시간 갱신
+- 가족이 가방에 넣으면 즉시 반영
+
+### F. 맘스톡 공식 계정 시드 글 — 각자 다른 셋
+
+**스크립트 리팩토링**
+- `backend/scripts/seed-official-posts.cjs`
+- POSTS_A (운영팀 페르소나): 정보 8 + 모유 균형 정보 1 + 공지 1 = 10개
+- POSTS_B (도우미 페르소나): 질문 4 + 수다 4 + 공감 1 + 챌린지 1 = 10개
+- 계정 사전순 인덱스로 자동 분배 (재실행 시 매핑 안정)
+- `--cleanup` 모드 추가 — `_seedKey` 있는 글 일괄 삭제 (재시작 용이)
+
+**실행 결과**
+- 공식 계정 2개 발견 ("아맞다 공식" + "아맞다공식")
+- 기존 중복 20개 cleanup → 신규 unique 20개 작성
+
+### G. 자녀 미등록 사용자 월방 접근
+
+- `mom-group.tsx`: 자녀 birthDate 없으면 현재 월(YYYY-MM)을 myGroupKey로 fallback
+- 공식 계정(자녀 없음)도 월방 진입 + 글쓰기 가능
+
+### H. 401 무한루프 fix
+
+- `subscription.ts`, `auth.ts`: 토큰 유효한데 userDoc 없는 경우 → **404 → 401 변경**
+- 프론트 axios interceptor가 401 자동 logout 처리 → OTA 다이얼로그 무한 루프 해소
+
+### I. APK 빌드 — 여러 차례
+
+- `eb58d56f` (취소) — 새 아이콘 + 로그인 변경 적용 전이라 취소
+- `a11bd1f1` — 새 아이콘 + 로그인 화면 + Pretendard + Sentry
+- `f204c77e` — 아이콘 재크롭 (전체 콘텐츠) + 로그인 텍스트 제거
+- `59c615ac` — **최종**: 아이콘 캐릭터+책만 (별/배너 제거) + 88% 영역
+
+### 검증
+- `cd backend && npx tsc --noEmit` ✅ EXIT=0
+- `cd frontend && npx tsc --noEmit` ✅ EXIT=0
+- 백엔드 배포: 5+회 (보안 fix, isOfficial, 폴백, 핀, 401 fix, CSP fix, 인터랙티브 share)
+- 프론트 OTA: 30+회 (preview 채널)
+
+### 남은 작업 (사용자)
+1. **카카오 콘솔 로고 업데이트** (5분, 즉시 가능)
+2. **네이버 검수 신청** — 캡처 9개 + privacy URL + 새 아이콘 첨부
+3. **Google OAuth 확인 신청** — 사용자 100명 가까워질 때
+4. **Firestore TTL** — 첫 출산가방 공유 발생 후
+5. **Storage backfill 추가** (선택, 새 사용자 사진 늘어날 때)
+
+### 메모
+- Sentry source map 다음 빌드부터 자동 업로드 (Auth token 등록 완료)
+- APK 다운로드 링크: https://expo.dev/accounts/song9912/projects/amatda/builds/59c615ac-c638-4f1f-b7bd-9449258d26f9
+- 공식 계정 시드 글 20개 작성 완료 (운영팀/도우미 페르소나 각 10개)
+- 출산가방 공유: 양방향 작동 (가족이 체크 가능)
+
+---
+
+## 2026-05-03 (오전) — 알람·인증 안정화 + 맘스톡 전면 개편 + Pretendard 폰트
 
 대규모 작업일 — 핵심 fix + 새 기능 + UI 재설계 모두 진행.
 
