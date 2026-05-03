@@ -1807,9 +1807,24 @@ function BabyTrackerInner() {
 
   // 타임라인 entry 편집 시작
   function openEditModalById(id: string) {
-    const realId = id.replace(/__start$|__wake$/, '');
-    const record = records.find((r) => r.id === realId);
-    if (!record) return;
+    // 가상 suffix 모두 제거: __start (수면 시작), __wake (수면 종료), __crosswake (어제 sleep 의 오늘 새벽 기상)
+    const realId = id.replace(/__start$|__wake$|__crosswake$/, '');
+    // 1순위: 오늘 records 에서 찾기
+    let record = records.find((r) => r.id === realId);
+    // 2순위: cross-day wake — 어제 records 에서 찾은 sleep entry (crossDayWakes 에 가상 entry 보관)
+    if (!record) {
+      const crossWake = crossDayWakes.find((r) => r.id === id);
+      if (crossWake) {
+        // crossDayWakes 의 가상 entry 는 어제 records 의 sleep 을 시간만 바꿔서 만든 것이므로
+        // realId 로는 못 찾음 (오늘에 없음). 어제 sleep 자체를 편집하는 것은 복잡 — 안내만.
+        Alert.alert(
+          '어제 시작한 수면',
+          '이 수면 기록은 어제 시작한 수면이에요. 어제 날짜로 이동해서 편집해주세요.',
+        );
+        return;
+      }
+      return;
+    }
     setEditRecord(record);
     setEditTime(record.time);
     // cross-day sleep 의 endTime (예: "5/4 08:30") 은 prefix 분리해서 별도 보관 —
@@ -2738,8 +2753,13 @@ function BabyTrackerInner() {
             <TouchableOpacity
               style={editModalStyles.actionRow}
               onPress={() => {
-                if (entryActionId) openEditModalById(entryActionId);
+                // RN 의 두 Modal 동시 visible 전환 시 두 번째 Modal 이 안 뜨는 버그 회피 —
+                // action sheet 먼저 닫고, 닫힘 애니메이션 끝난 뒤 편집 Modal 열기.
+                const id = entryActionId;
                 setEntryActionId(null);
+                if (id) {
+                  setTimeout(() => openEditModalById(id), 250);
+                }
               }}
             >
               <Text style={editModalStyles.actionRowText}>편집 (시간·메모)</Text>
@@ -3268,8 +3288,18 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete, onL
         note: '진행중',
       } as TrackerRecord);
     }
-    // 시간순 정렬 (오래된 → 최신, 위에서 아래로 누적)
-    out.sort((a, b) => a.time.localeCompare(b.time));
+    // 시간순 정렬 — 분 단위 숫자 비교로 변경 (이전 string localeCompare 는 "9:30" vs "09:35"
+    // 같은 zero-pad 누락 데이터에서 잘못 정렬됨. 사용자 보고: 소변/대변이 기상 위로 표시).
+    const toMin = (t: string): number => {
+      // cross-day prefix ("M/D ") 가 있으면 strip
+      const hhmm = t.includes(' ') ? t.split(' ').pop() ?? t : t;
+      const [h, m] = hhmm.split(':');
+      const hi = Number(h);
+      const mi = Number(m);
+      if (Number.isNaN(hi) || Number.isNaN(mi)) return 0;
+      return hi * 60 + mi;
+    };
+    out.sort((a, b) => toMin(a.time) - toMin(b.time));
     return out;
   }, [records, activeSleepSession, dateStr]);
 
