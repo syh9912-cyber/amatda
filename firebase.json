@@ -25,7 +25,15 @@
     "ignore": [
       "node_modules",
       ".git",
-      "prisma/dev.db"
+      "prisma/dev.db",
+      "/scripts",
+      "/src",
+      "/tsconfig.json",
+      "/tsconfig.tsbuildinfo",
+      ".env.local",
+      ".env.backup-pre-secret-migration",
+      "**/*.test.ts",
+      "**/*.spec.ts"
     ],
     "gen": 2,
     "predeploy": [

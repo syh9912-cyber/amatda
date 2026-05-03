@@ -8,6 +8,7 @@ import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections } from '../services/firestore';
 import { calculateAge } from '../services/age.calculator';
+import { logger } from '../utils/logger';
 import { analyzeAll } from '../services/growthAnalysis';
 import { getChildIfAccessible } from '../utils/childAccess';
 
@@ -40,7 +41,7 @@ router.get('/analysis/:childId', authMiddleware, async (req: Request, res: Respo
 
     success(res, analysis);
   } catch (err: unknown) {
-    console.error('growth analysis error:', err);
+    logger.error('growth/analysis', err);
     error(res, '성장 분석 중 오류가 발생했습니다', 500);
   }
 });
@@ -83,7 +84,7 @@ router.post('/update/:childId', authMiddleware, async (req: Request, res: Respon
 
     success(res, { updated: updates, analysis });
   } catch (err: unknown) {
-    console.error('growth update error:', err);
+    logger.error('growth/update', err);
     error(res, '성장 정보 업데이트 중 오류가 발생했습니다', 500);
   }
 });

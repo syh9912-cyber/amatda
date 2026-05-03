@@ -10,8 +10,11 @@ import {
   SocialProvider,
 } from '../services/social.auth';
 import { collections, genId, db } from '../services/firestore';
+import { findOrCreateSocialUser } from '../services/socialUser.service';
 import { authMiddleware } from '../middleware/auth';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { logger } from '../utils/logger';
+import { encryptToken, decryptToken } from '../utils/crypto';
 
 const router = Router();
 
@@ -33,7 +36,7 @@ router.post('/register', async (req: Request, res: Response) => {
     if (!existing.empty) { error(res, '이미 가입된 이메일입니다', 409); return; }
 
     const id = genId();
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
     await collections.users.doc(id).set({
       email, passwordHash, authProvider: 'LOCAL', socialId: null,
       subscriptionTier: 'FREE', createdAt: FieldValue.serverTimestamp(),
@@ -42,7 +45,10 @@ router.post('/register', async (req: Request, res: Response) => {
 
     const tokens = generateTokens(id);
     success(res, { user: { id, email }, ...tokens }, 201);
-  } catch { error(res, '회원가입 처리 중 오류가 발생했습니다', 500); }
+  } catch (e) {
+    logger.error('auth/register', e);
+    error(res, '회원가입 처리 중 오류가 발생했습니다', 500);
+  }
 });
 
 // POST /api/auth/login
@@ -63,7 +69,10 @@ router.post('/login', async (req: Request, res: Response) => {
 
     const tokens = generateTokens(doc.id);
     success(res, { user: { id: doc.id, email: user.email }, ...tokens });
-  } catch { error(res, '로그인 처리 중 오류가 발생했습니다', 500); }
+  } catch (e) {
+    logger.error('auth/login', e);
+    error(res, '로그인 처리 중 오류가 발생했습니다', 500);
+  }
 });
 
 // POST /api/auth/refresh
@@ -74,7 +83,11 @@ router.post('/refresh', async (req: Request, res: Response) => {
     const payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as { userId: string };
     const tokens = generateTokens(payload.userId);
     success(res, tokens);
-  } catch { error(res, '유효하지 않은 리프레시 토큰입니다', 401); }
+  } catch (e) {
+    // 만료/위변조 등 정상 흐름에서도 발생 — info 레벨로 기록하되 운영 에러는 추적 가능하게
+    logger.warn('auth/refresh', e instanceof Error ? e.message : String(e));
+    error(res, '유효하지 않은 리프레시 토큰입니다', 401);
+  }
 });
 
 // POST /api/auth/social
@@ -89,48 +102,15 @@ router.post('/social', async (req: Request, res: Response) => {
 
     const socialUser = await verifySocialToken(upperProvider, accessToken);
 
-    // 기존 유저 찾기
-    let userId: string | null = null;
-    let userEmail: string | null = null;
-    let isNewUser = false;
-
-    // ⚠️ TODO race: 동일 사용자가 50ms 안에 2번 소셜 로그인 시 중복 user 가능. Firestore Transaction
-    // 으로 묶는 리팩토링 필요 (/social, /social-code, /kakao/callback 통합 헬퍼 추출).
-    const bySocial = await collections.users
-      .where('socialId', '==', socialUser.socialId)
-      .where('authProvider', '==', upperProvider).limit(1).get();
-
-    if (!bySocial.empty) {
-      userId = bySocial.docs[0].id;
-      userEmail = bySocial.docs[0].data().email;
-    } else if (socialUser.email) {
-      const byEmail = await collections.users.where('email', '==', socialUser.email).limit(1).get();
-      if (!byEmail.empty) {
-        userId = byEmail.docs[0].id;
-        userEmail = byEmail.docs[0].data().email;
-        await collections.users.doc(userId).update({ socialId: socialUser.socialId, authProvider: upperProvider });
-      }
-    }
-
-    if (!userId) {
-      userId = genId();
-      userEmail = socialUser.email;
-      isNewUser = true;
-      await collections.users.doc(userId).set({
-        email: socialUser.email, passwordHash: null, authProvider: upperProvider,
-        socialId: socialUser.socialId, subscriptionTier: 'FREE', createdAt: FieldValue.serverTimestamp(),
-      });
-    }
+    // race-safe transaction: socialIdIndex/{provider}_{socialId} 결정적 ID 로 동시 가입 방지
+    const { userId, email: userEmail, nickname, isNewUser } =
+      await findOrCreateSocialUser(upperProvider, socialUser);
 
     // 마지막 소셜 access_token 저장 (탈퇴 시 unlink REST 호출용)
     await collections.users.doc(userId).update({
-      lastSocialAccessToken: socialUser.accessToken,
+      lastSocialAccessToken: encryptToken(socialUser.accessToken),
       lastSocialAccessTokenAt: FieldValue.serverTimestamp(),
     });
-
-    // 닉네임 조회 (탈퇴 후 재가입 시 별명 화면 분기를 위해 응답에 포함)
-    const userDoc = await collections.users.doc(userId).get();
-    const nickname = (userDoc.data()?.nickname as string | undefined) ?? null;
 
     const childSnap = await collections.children.where('userId', '==', userId).limit(1).get();
     const tokens = generateTokens(userId);
@@ -141,6 +121,7 @@ router.post('/social', async (req: Request, res: Response) => {
       needsOnboarding: childSnap.empty,  // 자녀 등록 필요 여부 (별개 정보)
     });
   } catch (e) {
+    logger.error('auth/social', e);
     const msg = e instanceof Error ? e.message : '소셜 로그인 처리 중 오류가 발생했습니다';
     error(res, msg, 500);
   }
@@ -166,47 +147,15 @@ router.post('/social-code', async (req: Request, res: Response) => {
     // 인가 코드 -> 토큰 교환 -> 사용자 정보 조회
     const socialUser = await exchangeCodeAndVerify(upperProvider, code, redirectUri);
 
-    // 기존 유저 찾기 (기존 /social 엔드포인트와 동일 로직)
-    let userId: string | null = null;
-    let userEmail: string | null = null;
-    let isNewUser = false;
-
-    // ⚠️ TODO race: 동일 사용자가 50ms 안에 2번 소셜 로그인 시 중복 user 가능. Firestore Transaction
-    // 으로 묶는 리팩토링 필요 (/social, /social-code, /kakao/callback 통합 헬퍼 추출).
-    const bySocial = await collections.users
-      .where('socialId', '==', socialUser.socialId)
-      .where('authProvider', '==', upperProvider).limit(1).get();
-
-    if (!bySocial.empty) {
-      userId = bySocial.docs[0].id;
-      userEmail = bySocial.docs[0].data().email;
-    } else if (socialUser.email) {
-      const byEmail = await collections.users.where('email', '==', socialUser.email).limit(1).get();
-      if (!byEmail.empty) {
-        userId = byEmail.docs[0].id;
-        userEmail = byEmail.docs[0].data().email;
-        await collections.users.doc(userId).update({ socialId: socialUser.socialId, authProvider: upperProvider });
-      }
-    }
-
-    if (!userId) {
-      userId = genId();
-      userEmail = socialUser.email;
-      isNewUser = true;
-      await collections.users.doc(userId).set({
-        email: socialUser.email, passwordHash: null, authProvider: upperProvider,
-        socialId: socialUser.socialId, subscriptionTier: 'FREE', createdAt: FieldValue.serverTimestamp(),
-      });
-    }
+    // race-safe transaction (위 /social 과 동일)
+    const { userId, email: userEmail, nickname, isNewUser } =
+      await findOrCreateSocialUser(upperProvider, socialUser);
 
     // 마지막 소셜 access_token 저장 (탈퇴 시 unlink REST 호출용)
     await collections.users.doc(userId).update({
-      lastSocialAccessToken: socialUser.accessToken,
+      lastSocialAccessToken: encryptToken(socialUser.accessToken),
       lastSocialAccessTokenAt: FieldValue.serverTimestamp(),
     });
-
-    const userDoc = await collections.users.doc(userId).get();
-    const nickname = (userDoc.data()?.nickname as string | undefined) ?? null;
 
     const childSnap = await collections.children.where('userId', '==', userId).limit(1).get();
     const tokens = generateTokens(userId);
@@ -217,13 +166,18 @@ router.post('/social-code', async (req: Request, res: Response) => {
       needsOnboarding: childSnap.empty,
     });
   } catch (e) {
+    logger.error('auth/social-code', e);
     const msg = e instanceof Error ? e.message : '소셜 로그인 처리 중 오류가 발생했습니다';
-    console.error('[social-code] error:', msg);
     error(res, msg, 500);
   }
 });
 
 // 카카오 로그인 임시 저장소 — Firestore 기반 (Cloud Functions 인스턴스 간 공유)
+//
+// ⚠️ TTL 정책: Firestore native TTL 활성화 필요 — `expiresAt` (Timestamp) 필드 기준.
+//   gcloud firestore fields ttls update expiresAt --collection-group=kakaoOAuthState --enable-ttl
+//   미설정 시 폴링이 1회 소비 후 doc.delete() 하지만, 사용자가 콜백 페이지를 떠나거나
+//   네트워크 문제로 폴링이 결과를 못 받아간 케이스는 누적될 수 있음. TTL 안전망 권장.
 const KAKAO_STATE_COLLECTION = 'kakaoOAuthState';
 const KAKAO_STATE_TTL_MS = 5 * 60 * 1000; // 5분
 
@@ -246,12 +200,13 @@ router.get('/kakao/check/:state', async (req: Request, res: Response) => {
     }
     // 결과 반환 후 삭제 (1회 소비)
     await docRef.delete().catch((err) => {
-      console.error('[auth/kakao/check] result doc delete failed:', err instanceof Error ? err.message : String(err));
+      logger.warn('auth/kakao/check', `result doc delete failed: ${err instanceof Error ? err.message : String(err)}`);
     });
     success(res, { status: 'done', ...data.result as Record<string, unknown> });
   } catch (err) {
-    // 폴링 중 일시적 오류 — pending 상태로 클라이언트가 재시도하게 두지만 서버 로그는 남김
-    console.error('[auth/kakao/check] polling failed, returning pending:', err instanceof Error ? err.message : String(err));
+    // 폴링 중 일시적 오류 — pending 상태로 클라이언트가 재시도하게 두지만 서버 로그는 남김.
+    // 폴링 라우트는 1~2초마다 호출되므로 logger.warn (Sentry 미전송) 사용 — 일시 장애로 Sentry 폭주 방지.
+    logger.warn('auth/kakao/check', `polling failed, returning pending: ${err instanceof Error ? err.message : String(err)}`);
     success(res, { status: 'pending' });
   }
 });
@@ -261,7 +216,7 @@ router.get('/kakao/check/:state', async (req: Request, res: Response) => {
 router.get('/kakao/callback', async (req: Request, res: Response) => {
   const { code, state, error: kakaoError, error_description } = req.query;
   const statePreview = typeof state === 'string' && state.length > 8 ? `${state.slice(0, 8)}…` : '(none)';
-  console.log('[kakao/callback] hit! state:', statePreview, 'hasCode:', !!code, 'error:', kakaoError || 'none');
+  logger.info('auth/kakao/callback', `hit state=${statePreview} hasCode=${!!code} error=${kakaoError || 'none'}`);
 
   if (kakaoError || !code) {
     // XSS 방지: HTML 특수문자 이스케이프
@@ -279,57 +234,23 @@ router.get('/kakao/callback', async (req: Request, res: Response) => {
     const redirectUri = 'https://api-usglfifguq-uc.a.run.app/api/auth/kakao/callback';
     const socialUser = await exchangeCodeAndVerify('KAKAO', String(code), redirectUri);
 
-    let userId: string | null = null;
-    let userEmail: string | null = null;
-    let isNewUser = false;
-
-    const bySocial = await collections.users
-      .where('socialId', '==', socialUser.socialId)
-      .where('authProvider', '==', 'KAKAO').limit(1).get();
-
-    if (!bySocial.empty) {
-      userId = bySocial.docs[0].id;
-      userEmail = bySocial.docs[0].data().email as string;
-    } else if (socialUser.email) {
-      const byEmail = await collections.users.where('email', '==', socialUser.email).limit(1).get();
-      if (!byEmail.empty) {
-        userId = byEmail.docs[0].id;
-        userEmail = byEmail.docs[0].data().email as string;
-        await collections.users.doc(userId).update({ socialId: socialUser.socialId, authProvider: 'KAKAO' });
-      }
-    }
-
-    if (!userId) {
-      userId = genId();
-      userEmail = socialUser.email;
-      isNewUser = true;
-      await collections.users.doc(userId).set({
-        email: socialUser.email, passwordHash: null, authProvider: 'KAKAO',
-        socialId: socialUser.socialId, subscriptionTier: 'FREE', createdAt: FieldValue.serverTimestamp(),
-      });
-    }
+    // race-safe transaction (위 /social, /social-code 와 동일)
+    const { userId, email: userEmail, nickname, isNewUser } =
+      await findOrCreateSocialUser('KAKAO', socialUser);
 
     // 마지막 카카오 access_token 저장 (탈퇴 시 unlink REST 호출용)
-    await collections.users.doc(userId!).update({
-      lastSocialAccessToken: socialUser.accessToken,
+    await collections.users.doc(userId).update({
+      lastSocialAccessToken: encryptToken(socialUser.accessToken),
       lastSocialAccessTokenAt: FieldValue.serverTimestamp(),
     });
 
-    const accessToken = jwt.sign({ userId }, env.JWT_SECRET, { expiresIn: '1h' });
-    const refreshToken = jwt.sign({ userId }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
-
-    // 기존 유저인 경우 닉네임 조회
-    let nickname: string | null = null;
-    if (!isNewUser) {
-      const userDoc = await collections.users.doc(userId!).get();
-      nickname = (userDoc.data()?.nickname as string) ?? null;
-    }
+    const { accessToken, refreshToken } = generateTokens(userId);
 
     // 딥링크로 앱 자동복귀 (인앱 브라우저가 감지 → 자동 닫힘)
     const deepParams = new URLSearchParams({
       accessToken,
       refreshToken,
-      userId: userId!,
+      userId,
       email: userEmail || '',
       nickname: nickname || '',
       isNewUser: String(isNewUser),
@@ -338,12 +259,14 @@ router.get('/kakao/callback', async (req: Request, res: Response) => {
 
     // polling 저장소 — Firestore에 저장 (인스턴스 간 공유)
     if (stateKey) {
+      const expiresMs = Date.now() + KAKAO_STATE_TTL_MS;
       await db.collection(KAKAO_STATE_COLLECTION).doc(stateKey).set({
         result: {
           user: { id: userId, email: userEmail, nickname },
           accessToken, refreshToken, isNewUser,
         },
-        expires: Date.now() + KAKAO_STATE_TTL_MS,
+        expires: expiresMs,                            // legacy: ms timestamp (in-app 체크용)
+        expiresAt: Timestamp.fromMillis(expiresMs),    // Firestore native TTL 필드
       });
     }
 
@@ -356,7 +279,7 @@ router.get('/kakao/callback', async (req: Request, res: Response) => {
     </body></html>`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown error';
-    console.error('[kakao/callback] error:', msg);
+    logger.error('auth/kakao/callback', err);
     const errorDeep = `amatda://auth/callback?error=${encodeURIComponent(msg)}`;
     res.send(`<html><head><meta charset="utf-8">
       <meta http-equiv="refresh" content="0;url=${errorDeep}">
@@ -379,7 +302,10 @@ router.put('/nickname', authMiddleware, async (req: Request, res: Response) => {
     if (parentRole) updateData.parentRole = parentRole;
     await collections.users.doc(req.userId!).update(updateData);
     success(res, { nickname: nickname.trim(), parentRole: parentRole || '' });
-  } catch { error(res, '별명 설정 중 오류', 500); }
+  } catch (e) {
+    logger.error('auth/nickname', e);
+    error(res, '별명 설정 중 오류', 500);
+  }
 });
 
 // GET /api/auth/me — 현재 유저 정보 조회
@@ -396,7 +322,10 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
       parentRole: data.parentRole ?? '',
       isOfficial: data.isOfficial === true,
     });
-  } catch { error(res, '정보 조회 중 오류', 500); }
+  } catch (e) {
+    logger.error('auth/me', e);
+    error(res, '정보 조회 중 오류', 500);
+  }
 });
 
 // POST /api/auth/change-password
@@ -414,10 +343,13 @@ router.post('/change-password', authMiddleware, async (req: Request, res: Respon
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!valid) { error(res, '현재 비밀번호가 올바르지 않습니다', 401); return; }
 
-    const newHash = await bcrypt.hash(newPassword, 10);
+    const newHash = await bcrypt.hash(newPassword, 12);
     await collections.users.doc(req.userId!).update({ passwordHash: newHash });
     success(res, { message: '비밀번호가 변경되었습니다' });
-  } catch { error(res, '비밀번호 변경 중 오류가 발생했습니다', 500); }
+  } catch (e) {
+    logger.error('auth/change-password', e);
+    error(res, '비밀번호 변경 중 오류가 발생했습니다', 500);
+  }
 });
 
 // POST /api/auth/set-password — 소셜 로그인 유저가 비밀번호를 처음 설정
@@ -439,10 +371,13 @@ router.post('/set-password', authMiddleware, async (req: Request, res: Response)
       return;
     }
 
-    const newHash = await bcrypt.hash(newPassword, 10);
+    const newHash = await bcrypt.hash(newPassword, 12);
     await collections.users.doc(req.userId!).update({ passwordHash: newHash });
     success(res, { message: '비밀번호가 설정되었습니다' });
-  } catch { error(res, '비밀번호 설정 중 오류가 발생했습니다', 500); }
+  } catch (e) {
+    logger.error('auth/set-password', e);
+    error(res, '비밀번호 설정 중 오류가 발생했습니다', 500);
+  }
 });
 
 // GET /api/auth/me — 현재 유저 정보 조회 (확장)
@@ -453,21 +388,32 @@ router.delete('/account', authMiddleware, async (req: Request, res: Response) =>
   try {
     const userId = req.userId!;
 
+    // 사용자 정보 사전 조회 — unlink 와 socialIdIndex 삭제에 모두 필요
+    const userDocBeforeDelete = await collections.users.doc(userId).get();
+    const userData = userDocBeforeDelete.data() as Record<string, unknown> | undefined;
+    const provider = userData?.authProvider as SocialProvider | undefined;
+    const socialId = userData?.socialId as string | undefined;
+
     // 0. 소셜 계정 연결 끊기 (탈퇴 후 재가입 시 동의 화면부터 다시 시작되도록)
     //    실패해도 user 데이터 삭제는 진행한다.
     try {
-      const userDocBeforeDelete = await collections.users.doc(userId).get();
-      const userData = userDocBeforeDelete.data() as Record<string, unknown> | undefined;
-      const provider = userData?.authProvider as SocialProvider | undefined;
-      const socialId = userData?.socialId as string | undefined;
-      const lastToken = userData?.lastSocialAccessToken as string | undefined;
+      const storedToken = userData?.lastSocialAccessToken as string | undefined;
+      // 저장된 토큰이 'gcm:' prefix면 복호화. 평문(legacy)이면 그대로 사용.
+      let lastToken: string | null = null;
+      if (storedToken) {
+        try {
+          lastToken = decryptToken(storedToken);
+        } catch (decErr) {
+          // 키가 회전됐거나 형식 불일치 — unlink 는 admin key fallback 으로 시도
+          logger.warn('auth/deleteAccount/decrypt', decErr instanceof Error ? decErr.message : String(decErr));
+        }
+      }
       if (provider && socialId) {
-        await unlinkSocialAccount(provider, socialId, lastToken ?? null);
-        console.log(`[deleteAccount] unlink OK (${provider}, ${socialId})`);
+        await unlinkSocialAccount(provider, socialId, lastToken);
+        logger.info('auth/deleteAccount', `unlink OK (${provider})`);
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'unknown';
-      console.error('[deleteAccount] unlink failed (계속 진행):', msg);
+      logger.error('auth/deleteAccount/unlink', e);
     }
 
     // Firestore batch는 500건 한도 — 모든 삭제 대상을 모아서 분할 커밋.
@@ -522,8 +468,11 @@ router.delete('/account', authMiddleware, async (req: Request, res: Response) =>
       snap.docs.forEach((d) => refs.push(d.ref));
     }
 
-    // 4. Delete the user document itself
+    // 4. Delete the user document itself + socialIdIndex (재가입 시 깨끗한 상태)
     refs.push(collections.users.doc(userId));
+    if (provider && socialId) {
+      refs.push(collections.socialIdIndex.doc(`${provider}_${socialId}`));
+    }
 
     // 5. 500건씩 나눠서 batch commit
     const BATCH_LIMIT = 500;
@@ -534,10 +483,10 @@ router.delete('/account', authMiddleware, async (req: Request, res: Response) =>
       await batch.commit();
     }
 
-    console.log(`[deleteAccount] userId=${userId} deletedRefs=${refs.length}`);
+    logger.info('auth/deleteAccount', `userId=${userId} deletedRefs=${refs.length}`);
     success(res, { message: '계정과 모든 관련 데이터가 삭제되었습니다' });
   } catch (err) {
-    console.error('[deleteAccount] 실패:', err instanceof Error ? err.message : String(err));
+    logger.error('auth/deleteAccount', err);
     error(res, '계정 삭제 중 오류가 발생했습니다', 500);
   }
 });

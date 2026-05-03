@@ -3,6 +3,7 @@ import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -275,7 +276,7 @@ router.post('/posts/:id/comments', authMiddleware, async (req: Request, res: Res
 
     success(res, { id: commentId, ...comment }, 201);
   } catch (err) {
-    console.error('[momstagram] comment create failed:', err instanceof Error ? err.message : String(err));
+    logger.error('momstagram/comment-create', err);
     error(res, '댓글 작성 중 오류가 발생했습니다', 500);
   }
 });

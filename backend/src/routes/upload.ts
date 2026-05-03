@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { authMiddleware } from '../middleware/auth';
 import { storage } from '../services/firestore';
 import { success, error } from '../utils/response';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -102,7 +103,7 @@ router.post('/', authMiddleware, (req: Request, res: Response) => {
         const mediaType = mimeType.startsWith('video') ? 'video' : mimeType.startsWith('audio') ? 'audio' : 'photo';
         if (!res.headersSent) success(res, { url: publicUrl, mediaType, storagePath });
       } catch (err) {
-        console.error('[Upload] Storage error:', err);
+        logger.error('upload/storage', err);
         if (!res.headersSent) error(res, '파일 업로드 중 오류가 발생했습니다', 500);
       }
     });
@@ -115,7 +116,7 @@ router.post('/', authMiddleware, (req: Request, res: Response) => {
   });
 
   busboy.on('error', (err: Error) => {
-    console.error('[Upload] Busboy error:', err);
+    logger.error('upload/busboy', err);
     if (!res.headersSent) error(res, '업로드 처리 중 오류가 발생했습니다', 500);
   });
 

@@ -338,7 +338,7 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     success(res, { id: childId, message: '삭제되었습니다' });
   } catch (err) {
-    console.error('[Child] Delete error:', err);
+    logger.error('child/delete', err);
     error(res, '자녀 삭제 중 오류가 발생했습니다', 500);
   }
 });
@@ -375,7 +375,7 @@ router.post('/:id/analyze', authMiddleware, async (req: Request, res: Response) 
     const formatted = formatChild(updated.id, updated.data()!);
     success(res, { ...formatted, analysisReport: report });
   } catch (err) {
-    console.error('[Child] Analyze error:', err instanceof Error ? err.message : String(err), err instanceof Error ? err.stack : undefined);
+    logger.error('child/analyze', err);
     error(res, '분석 리포트 생성 중 오류가 발생했습니다', 500);
   }
 });

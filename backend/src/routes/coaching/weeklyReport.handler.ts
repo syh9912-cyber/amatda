@@ -4,6 +4,7 @@ import { success, error } from '../../utils/response';
 import { collections } from '../../services/firestore';
 import { buildChildContext } from '../../services/coaching/context.builder';
 import { isGeminiAvailable, callGeminiJSON } from '../../services/coaching/gemini.client';
+import { logger } from '../../utils/logger';
 
 function getMostFrequent(arr: string[]): string | null {
   if (arr.length === 0) return null;
@@ -102,7 +103,7 @@ JSON만 출력해:
         });
       }
     } catch (err) {
-      console.error('Weekly report error:', err);
+      logger.error('coaching/weekly-report', err);
       error(res, '주간 리포트 생성 중 오류', 500);
     }
   });

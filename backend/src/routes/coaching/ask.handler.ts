@@ -8,6 +8,7 @@ import { CoachingAIResponse, UserTier, TIER_CONFIGS, getLevelByStreak } from '..
 import { filterUselessQuestion } from '../../services/coaching/useless.filter';
 import { detectRedFlags } from '../../services/coaching/red.flag.detector';
 import { findTopCoachingEntries, formatCandidatesForPrompt } from '../../services/coaching/db.searcher';
+import { logger } from '../../utils/logger';
 import { buildChildContext, buildTrackingSummary } from '../../services/coaching/context.builder';
 import {
   getConversationContext,
@@ -52,7 +53,7 @@ async function getUserTier(userId: string): Promise<UserTier> {
 
     return 'free';
   } catch (err) {
-    console.error('[ask.handler] getUserTier failed, defaulting to free:', err instanceof Error ? err.message : String(err));
+    logger.error('ask.handler/getUserTier', err);
     return 'free';
   }
 }
@@ -74,7 +75,7 @@ async function getTodaySessionCount(userId: string): Promise<number> {
       return src !== 'filter' && src !== 'limit';
     }).length;
   } catch (err) {
-    console.error('[ask.handler] getTodaySessionCount failed, defaulting to 0:', err instanceof Error ? err.message : String(err));
+    logger.error('ask.handler/getTodaySessionCount', err);
     return 0;
   }
 }
@@ -114,7 +115,7 @@ async function getUserStreak(userId: string): Promise<number> {
 
     return streak;
   } catch (err) {
-    console.error('[ask.handler] getUserStreak failed, defaulting to 0:', err instanceof Error ? err.message : String(err));
+    logger.error('ask.handler/getUserStreak', err);
     return 0;
   }
 }
@@ -333,7 +334,7 @@ export function registerAskHandler(router: Router): void {
       try {
         aiResponse = await callGemini(systemPrompt, runtimePrompt, config.maxOutputTokens);
       } catch (err) {
-        console.error('Gemini call failed:', err instanceof Error ? err.message : err);
+        logger.error('ask.handler/gemini', err);
         aiResponse = getMockResponse(child.temperament, categoryKo);
       }
 
@@ -438,7 +439,7 @@ export function registerAskHandler(router: Router): void {
         trackerAutoSaved,
       });
     } catch (err) {
-      console.error('[ask.handler] coaching ask failed:', err instanceof Error ? err.message : String(err));
+      logger.error('ask.handler/ask', err);
       error(res, '코칭 응답 중 오류가 발생했습니다', 500);
     }
   });

@@ -1,5 +1,7 @@
 // Cloud Functions에서 console.error는 자동으로 Cloud Logging에 기록됨
-// 운영 장애 추적을 위한 공통 로거
+// 운영 장애 추적을 위한 공통 로거 + Sentry 자동 전파
+import { captureException } from '../services/sentry';
+
 function safeStringify(v: unknown): string {
   if (v instanceof Error) return v.message;
   if (typeof v === 'string') return v;
@@ -19,6 +21,8 @@ export const logger = {
     const message = safeStringify(err);
     const stack = err instanceof Error ? err.stack : undefined;
     console.error(`[${context}]`, message, { stack, ...extra });
+    // Sentry 자동 전파 (DSN 미설정 시 no-op)
+    captureException(err, { context, ...(extra || {}) });
   },
   warn: (context: string, msg: string, extra?: Record<string, unknown>) => {
     console.warn(`[${context}]`, msg, extra ?? {});

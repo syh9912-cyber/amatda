@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { callGeminiJSON, isGeminiAvailable } from '../services/coaching/gemini.client';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -127,7 +128,7 @@ router.post('/voice-parse', authMiddleware, async (req: Request, res: Response) 
 
     return success(res, parsed);
   } catch (err) {
-    console.error('Voice parse error:', err);
+    logger.error('tracker/voice-parse', err);
     return error(res, '음성 텍스트 분석에 실패했습니다');
   }
 });
@@ -440,7 +441,7 @@ router.post('/import', authMiddleware, (req: Request, res: Response) => {
         columns: headers,
       });
     } catch (err) {
-      console.error('Excel import error:', err);
+      logger.error('tracker/excel-import', err);
       return error(res, '엑셀 파일 처리에 실패했습니다. BabyTime에서 내보낸 파일인지 확인해주세요.');
     }
   });

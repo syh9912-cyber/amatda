@@ -16,14 +16,17 @@
  */
 
 import { Router, Request, Response } from 'express';
+import { createHash } from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
-import { collections, genId, db } from '../services/firestore';
+import { collections, db } from '../services/firestore';
 import { logger } from '../utils/logger';
 import * as portone from '../services/payment/portone.client';
 import * as googlePlay from '../services/payment/google-play.client';
 import * as appleIap from '../services/payment/apple-iap.client';
 import {
+  env,
   isPortOneAvailable,
   isGooglePlayBillingAvailable,
   isAppleIAPAvailable,
@@ -54,6 +57,20 @@ function getProductOrError(productId: string, res: Response): typeof PRODUCTS[st
     return null;
   }
   return p;
+}
+
+/**
+ * 결제 문서 ID — 멱등성 키.
+ * 같은 (platform, key) 조합은 항상 같은 docId 로 매핑되어, verify 가 두 번 호출돼도
+ * 문서가 한 개만 생성되고 사용자 활성화도 안전하게 1회만 처리됨.
+ *
+ * SHA256 hash 사용 이유:
+ *   - paymentId / purchaseToken / originalTransactionId 가 '/' 같은 특수문자 또는
+ *     1500바이트 한도 초과 가능성 → hash 로 64자 hex 고정
+ *   - 원본 키는 paymentKey/purchaseToken/originalTransactionId 필드에 저장되어 query 가능
+ */
+function paymentDocIdFor(platform: 'portone' | 'google' | 'apple', key: string): string {
+  return `${platform}_${createHash('sha256').update(key).digest('hex')}`;
 }
 
 async function activateUserSubscription(
@@ -103,11 +120,28 @@ router.post('/portone/verify', authMiddleware, async (req: Request, res: Respons
       return;
     }
 
+    // 멱등성: 같은 paymentId 로 두 번 verify 호출 시 → 두 번째는 기존 결과 그대로 응답
+    const paymentDocId = paymentDocIdFor('portone', paymentId);
+    const docRef = collections.payments.doc(paymentDocId);
+    const existing = await docRef.get();
+    if (existing.exists) {
+      const data = existing.data()!;
+      logger.info('payment.portone.verify', `idempotent hit paymentDocId=${paymentDocId}`);
+      success(res, {
+        paymentDocId,
+        productId: data.productId,
+        expiresAt: data.expiresAt,
+        autoRenew: false,
+        idempotent: true,
+        message: `${product.name} 결제가 이미 처리되어 있습니다.`,
+      });
+      return;
+    }
+
     // 영수증 저장 + 사용자 활성화
     const now = new Date();
     const expiresAt = new Date(now.getTime() + product.periodMs);
-    const paymentDocId = genId();
-    await collections.payments.doc(paymentDocId).set({
+    await docRef.set({
       userId: req.userId!,
       platform: 'portone',
       productId,
@@ -187,7 +221,8 @@ router.post('/portone/billing-key', authMiddleware, async (req: Request, res: Re
 
     const now = new Date();
     const expiresAt = new Date(now.getTime() + product.periodMs);
-    const paymentDocId = genId();
+    // 멱등성: firstPaymentId 는 매 호출 timestamp 로 새로 생성되지만, 만일을 대비해 키 기반 docId
+    const paymentDocId = paymentDocIdFor('portone', firstPaymentId);
     await collections.payments.doc(paymentDocId).set({
       userId: req.userId!,
       platform: 'portone',
@@ -287,8 +322,25 @@ router.post('/iap/verify', authMiddleware, async (req: Request, res: Response) =
       rawForLog.apple = v.sub.raw;
     }
 
-    const paymentDocId = genId();
-    await collections.payments.doc(paymentDocId).set({
+    // 멱등성: 같은 영수증으로 두 번 verify 호출 시 → 두 번째는 기존 결과 그대로 응답
+    const paymentDocId = paymentDocIdFor(platform, receiptKey);
+    const docRef = collections.payments.doc(paymentDocId);
+    const existing = await docRef.get();
+    if (existing.exists) {
+      const data = existing.data()!;
+      logger.info('payment.iap.verify', `idempotent hit paymentDocId=${paymentDocId}`);
+      success(res, {
+        paymentDocId,
+        productId: data.productId,
+        expiresAt: data.expiresAt,
+        autoRenew,
+        idempotent: true,
+        message: '결제가 이미 처리되어 있습니다.',
+      });
+      return;
+    }
+
+    await docRef.set({
       userId: req.userId!,
       platform,
       productId,
@@ -406,16 +458,30 @@ router.get('/history', authMiddleware, async (req: Request, res: Response) => {
 // ─────────────────────────────────────────────────────────
 router.post('/webhook/portone', async (req: Request, res: Response) => {
   try {
-    // express.raw 미들웨어가 라우트 등록 시 적용되어야 rawBody 사용 가능.
-    // 여기서는 임시로 JSON.stringify 사용 (정확한 검증을 위해선 raw body 필요)
-    const rawBody = JSON.stringify(req.body);
+    // raw body 는 index.ts 의 express.json verify 콜백이 보존한 Buffer
+    // (req.body 와 별개로 보관 — 다른 라우트 영향 없음).
+    // PortOne HMAC 은 원본 byte 단위로 계산되므로 JSON.stringify(req.body) 는 사용 불가
+    // (키 순서 / 공백 / 유니코드 이스케이프가 PortOne 원본과 다름 → 검증 깨짐).
+    const rawBody = (req as Request & { rawBody?: Buffer }).rawBody?.toString('utf8') ?? '';
     const headers = {
       id: (req.headers['webhook-id'] as string) ?? '',
       timestamp: (req.headers['webhook-timestamp'] as string) ?? '',
       signature: (req.headers['webhook-signature'] as string) ?? '',
     };
 
-    if (headers.id && !portone.verifyWebhookSignature(rawBody, headers)) {
+    // fail-closed: 시크릿 미설정 시에도 portone.verifyWebhookSignature 자체가 false 반환하도록
+    // portone.client.ts 에서 변경. 추가로 헤더 누락도 명시적으로 거부 (이전에는 헤더 없으면 검증 스킵 → 우회 가능).
+    if (!headers.id || !headers.timestamp || !headers.signature) {
+      logger.warn('payment.webhook.portone', `webhook 서명 헤더 누락 id=${!!headers.id} ts=${!!headers.timestamp} sig=${!!headers.signature}`);
+      res.status(401).send('missing signature headers');
+      return;
+    }
+    if (!rawBody) {
+      logger.warn('payment.webhook.portone', 'rawBody 없음 (express.json verify 콜백 미설정?)');
+      res.status(400).send('empty body');
+      return;
+    }
+    if (!portone.verifyWebhookSignature(rawBody, headers)) {
       logger.warn('payment.webhook.portone', '서명 검증 실패');
       res.status(401).send('invalid signature');
       return;
@@ -450,11 +516,55 @@ router.post('/webhook/portone', async (req: Request, res: Response) => {
   }
 });
 
+// Google Pub/Sub OIDC JWT 검증용 — module-level singleton 으로 JWK 캐시 재사용.
+const googleOAuthClient = new OAuth2Client();
+
+/**
+ * Google Pub/Sub Push subscription 인증 검증.
+ * Pub/Sub 는 Authorization: Bearer <OIDC JWT> 헤더로 호출하고, JWT 의 audience 는
+ * subscription 생성 시 명시한 oidc_token.audience 와 일치한다.
+ *
+ * fail-closed: GOOGLE_PUBSUB_AUDIENCE 미설정이거나 토큰 검증 실패 시 false.
+ */
+async function verifyGooglePubSubAuth(req: Request): Promise<boolean> {
+  if (!env.GOOGLE_PUBSUB_AUDIENCE) {
+    logger.warn('payment.webhook.google', 'GOOGLE_PUBSUB_AUDIENCE 미설정 — 모든 Google webhook 거부 (fail-closed)');
+    return false;
+  }
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return false;
+  const token = auth.slice(7);
+  try {
+    const ticket = await googleOAuthClient.verifyIdToken({
+      idToken: token,
+      audience: env.GOOGLE_PUBSUB_AUDIENCE,
+    });
+    const payload = ticket.getPayload();
+    if (!payload) return false;
+    // 선택: SA email 검증 (설정된 경우만)
+    if (env.GOOGLE_PUBSUB_SA_EMAIL && payload.email !== env.GOOGLE_PUBSUB_SA_EMAIL) {
+      logger.warn('payment.webhook.google', `SA email 불일치: ${payload.email} ≠ ${env.GOOGLE_PUBSUB_SA_EMAIL}`);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    logger.warn('payment.webhook.google', `OIDC 검증 실패: ${e instanceof Error ? e.message : String(e)}`);
+    return false;
+  }
+}
+
 // ─────────────────────────────────────────────────────────
 // 7. Webhook — Google Real-Time Developer Notification (Pub/Sub)
 // ─────────────────────────────────────────────────────────
 router.post('/webhook/google', async (req: Request, res: Response) => {
   try {
+    // OIDC JWT 검증 — Pub/Sub Push 가 첨부한 Bearer 토큰 확인.
+    // 미통과 시 401 — 누구나 임의 데이터로 사용자 구독 상태 조작하는 것을 차단.
+    if (!(await verifyGooglePubSubAuth(req))) {
+      res.status(401).send('unauthorized');
+      return;
+    }
+
     // Pub/Sub push: { message: { data: base64, ... }, subscription: '...' }
     const messageData = (req.body as { message?: { data?: string } })?.message?.data;
     if (!messageData) {
@@ -514,15 +624,35 @@ router.post('/webhook/google', async (req: Request, res: Response) => {
 // ─────────────────────────────────────────────────────────
 // 8. Webhook — Apple App Store Server Notification V2
 // ─────────────────────────────────────────────────────────
+//
+// 보안 전략:
+//   Apple JWS 의 정석 검증은 Apple Root CA 4개로 인증서 체인을 따라가야 하는데
+//   (@apple/app-store-server-library 권장), 출시 전 단계에서 라이브러리 도입 +
+//   인증서 관리 부담이 큼. 대신 Google webhook 과 동일한 안전 패턴 적용:
+//
+//     1) signedTransactionInfo 디코딩 (서명 검증 없이 originalTransactionId 만 추출)
+//     2) Apple App Store Server API 에 직접 조회 → 진위 검증
+//        - 위조된 originalTransactionId 는 Apple API 가 거부 (404)
+//        - 실제 구독 상태(만료일, autoRenew, productId)를 Apple 응답으로 동기화
+//     3) Apple API 응답을 신뢰 (notificationType 은 무시 — 가짜 webhook 으로
+//        EXPIRED 마크하는 것 차단)
+//
+// 향후 강화: @apple/app-store-server-library 도입 후 JWS 서명 검증 + Apple Root CA
+//          체인 검증 추가 (별도 PR).
 router.post('/webhook/apple', async (req: Request, res: Response) => {
   try {
-    // Apple은 signedPayload(JWS) 1개 필드로 옴
-    const signedPayload = (req.body as { signedPayload?: string })?.signedPayload;
-    if (!signedPayload) {
-      res.status(200).send('no-payload');
+    if (!isAppleIAPAvailable()) {
+      // Apple App Store Server API 키 미설정 → 진위 검증 불가능 → 거부
+      logger.warn('payment.webhook.apple', 'Apple IAP 키 미설정 — webhook 거부 (fail-closed)');
+      res.status(503).send('apple-iap-not-configured');
       return;
     }
-    // JWS payload 디코딩 (서명 검증은 운영 시 Apple root cert 추가)
+
+    const signedPayload = (req.body as { signedPayload?: string })?.signedPayload;
+    if (!signedPayload) {
+      res.status(400).send('no-payload');
+      return;
+    }
     const parts = signedPayload.split('.');
     if (parts.length !== 3) {
       res.status(400).send('bad-jws');
@@ -531,45 +661,73 @@ router.post('/webhook/apple', async (req: Request, res: Response) => {
     const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as {
       notificationType?: string;
       subtype?: string;
-      data?: { signedTransactionInfo?: string };
+      data?: { signedTransactionInfo?: string; bundleId?: string; environment?: string };
     };
     logger.info(
       'payment.webhook.apple',
-      `${payload.notificationType ?? 'unknown'} / ${payload.subtype ?? ''}`,
+      `${payload.notificationType ?? 'unknown'} / ${payload.subtype ?? ''} env=${payload.data?.environment ?? '?'}`,
     );
 
-    // signedTransactionInfo 디코딩 → originalTransactionId 추출 → payments 동기화
+    // bundleId 확인 — 다른 앱의 webhook 이 잘못 들어오는 케이스 차단
+    if (payload.data?.bundleId && payload.data.bundleId !== env.APPLE_BUNDLE_ID) {
+      logger.warn('payment.webhook.apple', `bundleId 불일치: ${payload.data.bundleId} ≠ ${env.APPLE_BUNDLE_ID}`);
+      res.status(400).send('bundle-mismatch');
+      return;
+    }
+
     const tx = payload.data?.signedTransactionInfo;
-    if (tx) {
-      const txParts = tx.split('.');
-      if (txParts.length === 3) {
-        const txPayload = JSON.parse(Buffer.from(txParts[1], 'base64url').toString('utf8')) as {
-          originalTransactionId?: string;
-          productId?: string;
-          expiresDate?: number;
-        };
-        const originalId = txPayload.originalTransactionId;
-        if (originalId) {
-          const snap = await collections.payments
-            .where('originalTransactionId', '==', originalId)
-            .limit(1)
-            .get();
-          if (!snap.empty) {
-            const doc = snap.docs[0];
-            await doc.ref.update({
-              status: payload.notificationType === 'EXPIRED' ? 'CANCELLED' : 'PAID',
-              expiresAt: txPayload.expiresDate ? new Date(txPayload.expiresDate).toISOString() : undefined,
-              webhookVerifiedAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
-            const userId = doc.data().userId as string | undefined;
-            if (userId && txPayload.expiresDate) {
-              await collections.users.doc(userId).update({
-                premiumExpiresAt: new Date(txPayload.expiresDate).toISOString(),
-              });
-            }
-          }
-        }
+    if (!tx) {
+      // 일부 notification type 은 transaction 정보 없음 (예: TEST) — 200 OK
+      res.status(200).send('no-transaction');
+      return;
+    }
+    const txParts = tx.split('.');
+    if (txParts.length !== 3) {
+      res.status(400).send('bad-tx-jws');
+      return;
+    }
+    const txPayload = JSON.parse(Buffer.from(txParts[1], 'base64url').toString('utf8')) as {
+      originalTransactionId?: string;
+      productId?: string;
+    };
+    const originalId = txPayload.originalTransactionId;
+    if (!originalId) {
+      res.status(400).send('no-original-tx-id');
+      return;
+    }
+
+    // 핵심: Apple API 재조회로 진위 검증 + 실제 상태 가져오기
+    let appleStatus: Awaited<ReturnType<typeof appleIap.getSubscriptionStatus>>;
+    try {
+      appleStatus = await appleIap.getSubscriptionStatus(originalId);
+    } catch (e) {
+      logger.warn(
+        'payment.webhook.apple',
+        `Apple API 조회 실패 — 위조된 originalId 가능성: ${e instanceof Error ? e.message : String(e)}`,
+      );
+      res.status(401).send('apple-api-rejected');
+      return;
+    }
+
+    const snap = await collections.payments
+      .where('originalTransactionId', '==', originalId)
+      .limit(1)
+      .get();
+    if (!snap.empty) {
+      const doc = snap.docs[0];
+      await doc.ref.update({
+        status: appleStatus.active ? 'PAID' : 'CANCELLED',
+        expiresAt: appleStatus.expiresAt?.toISOString() ?? null,
+        webhookVerifiedAt: new Date().toISOString(),
+        raw: appleStatus.raw as Record<string, unknown> | undefined,
+        updatedAt: new Date().toISOString(),
+      });
+      const userId = doc.data().userId as string | undefined;
+      if (userId && appleStatus.expiresAt) {
+        await collections.users.doc(userId).update({
+          premiumExpiresAt: appleStatus.expiresAt.toISOString(),
+          subscriptionAutoRenew: appleStatus.autoRenew ?? false,
+        });
       }
     }
 

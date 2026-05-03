@@ -1,5 +1,10 @@
 import dotenv from 'dotenv';
+// 운영(Cloud Functions): backend/.env 는 일반 env (APP_PORT 등), secret 은 Secret Manager.
+// 로컬 개발: backend/.env (일반) + backend/.env.local (secret) 둘 다 로드.
+//   .env.local 은 git/deploy 모두 ignore — 로컬 개발자별 secret 보관용.
+//   override:true 로 .env.local 가 우선 (.env 와 같은 키가 있으면 .env.local 값 사용).
 dotenv.config();
+dotenv.config({ path: '.env.local', override: true });
 
 // JWT 시크릿은 환경(prod/dev) 관계없이 반드시 설정. 프로덕션 자동 감지 의존 시
 // K_SERVICE/GCLOUD_PROJECT 가 누락되면 약한 dev 시크릿으로 폴백되는 위험이 있어
@@ -69,6 +74,15 @@ export const env = {
   APPLE_KEY_ID: process.env.APPLE_KEY_ID || '',
   APPLE_PRIVATE_KEY: process.env.APPLE_PRIVATE_KEY || '',           // .p8 파일 내용
   APPLE_SHARED_SECRET: process.env.APPLE_SHARED_SECRET || '',       // (구) shared secret 방식 사용 시
+
+  // ─── Webhook 인증 ───
+  // Google Pub/Sub Push subscription 의 OIDC JWT audience.
+  // 일반적으로 webhook URL (예: https://api-XXXX-uc.a.run.app/api/payment/webhook/google)
+  // 또는 Pub/Sub subscription 생성 시 명시한 oidc_token.audience 값.
+  // 미설정 시 Google webhook 은 모두 거부 (fail-closed).
+  GOOGLE_PUBSUB_AUDIENCE: process.env.GOOGLE_PUBSUB_AUDIENCE || '',
+  // 선택: Pub/Sub push 가 사용하는 service account email — 설정 시 sub claim 도 검증.
+  GOOGLE_PUBSUB_SA_EMAIL: process.env.GOOGLE_PUBSUB_SA_EMAIL || '',
 };
 
 /** 결제 시스템 사용 가능 여부 (실제 키가 등록되어 있는지) */

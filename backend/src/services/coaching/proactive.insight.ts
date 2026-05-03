@@ -6,6 +6,7 @@
  */
 
 import { collections } from '../firestore';
+import { logger } from '../../utils/logger';
 import { buildTrackingSummary } from './context.builder';
 import { getMilestoneContext } from './milestone.detector';
 import { callGeminiText, isGeminiAvailable } from './gemini.client';
@@ -261,7 +262,7 @@ async function generatePregnancyInsights(child: ChildProfile): Promise<Proactive
     insights.sort((a, b) => b.priority - a.priority);
     return insights.slice(0, 3);
   } catch (err) {
-    console.error('[PregnancyInsights] error:', err);
+    logger.error('PregnancyInsights', err);
     // 에러 시에도 최소 폴백 인사이트 1개 반환
     return [{
       type: 'encouragement',

@@ -176,8 +176,11 @@ export function verifyWebhookSignature(
   headers: { id: string; timestamp: string; signature: string },
 ): boolean {
   if (!env.PORTONE_WEBHOOK_SECRET) {
-    logger.warn('portone.client', 'PORTONE_WEBHOOK_SECRET 미설정 — 서명 검증 스킵 (개발용만)');
-    return true;
+    // fail-closed: 시크릿 미설정 시 모든 webhook 거부 — 운영에서 시크릿 누락된 채
+    // 가짜 webhook 으로 결제 상태가 조작되는 것을 막음. 시크릿 등록 전까지는
+    // PortOne webhook 이 동작하지 않으므로 PORTONE_WEBHOOK_SECRET 등록 필수.
+    logger.warn('portone.client', 'PORTONE_WEBHOOK_SECRET 미설정 — 모든 webhook 거부 (fail-closed)');
+    return false;
   }
   // PortOne 시크릿 형식: 'whsec_BASE64' — base64 디코드 필요
   const secretRaw = env.PORTONE_WEBHOOK_SECRET.startsWith('whsec_')

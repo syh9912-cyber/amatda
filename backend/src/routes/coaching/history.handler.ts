@@ -4,6 +4,7 @@ import { success, error } from '../../utils/response';
 import { collections } from '../../services/firestore';
 import { buildChildContext } from '../../services/coaching/context.builder';
 import { getChildIfAccessible } from '../../utils/childAccess';
+import { logger } from '../../utils/logger';
 
 // ─── 성장 마일스톤 데이터 ───
 
@@ -367,7 +368,7 @@ export function registerHistoryHandlers(router: Router): void {
 
       success(res, limited);
     } catch (err) {
-      console.error('History error:', err);
+      logger.error('coaching/history', err);
       error(res, '코칭 기록 조회 중 오류가 발생했습니다', 500);
     }
   });
@@ -397,7 +398,7 @@ export function registerHistoryHandlers(router: Router): void {
 
       success(res, dueFollowups);
     } catch (err) {
-      console.error('Followups error:', err);
+      logger.error('coaching/followups', err);
       error(res, '팔로업 조회 중 오류가 발생했습니다', 500);
     }
   });

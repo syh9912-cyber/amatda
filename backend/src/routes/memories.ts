@@ -7,6 +7,7 @@ import { calculateAge, formatAgeKo } from '../services/age.calculator';
 import { safeParse } from '../utils/parse';
 import { getChildIfAccessible } from '../utils/childAccess';
 import { generatePassportPng } from '../services/passportImage';
+import { logger } from '../utils/logger';
 
 const PASSPORT_SALT = 'amatda-passport-2024';
 
@@ -154,7 +155,7 @@ router.get('/year-ago/:childId', authMiddleware, async (req: Request, res: Respo
       memory,
     });
   } catch (err: unknown) {
-    console.error('year-ago error:', err);
+    logger.error('memories/year-ago', err);
     error(res, '1년 전 추억 조회 중 오류가 발생했습니다', 500);
   }
 });
@@ -248,7 +249,7 @@ router.get('/child-card/:childId', authMiddleware, async (req: Request, res: Res
 
     success(res, card);
   } catch (err: unknown) {
-    console.error('child-card error:', err);
+    logger.error('memories/child-card', err);
     error(res, '아이 카드 생성 중 오류가 발생했습니다', 500);
   }
 });
@@ -290,7 +291,7 @@ router.get('/child-card-image/:childId', authMiddleware, async (req: Request, re
     res.set('Cache-Control', 'no-store');
     res.send(pngBuffer);
   } catch (err: unknown) {
-    console.error('child-card-image error:', err);
+    logger.error('memories/child-card-image', err);
     error(res, '여권 이미지 생성 중 오류가 발생했습니다', 500);
   }
 });
@@ -349,7 +350,7 @@ router.get('/passport-view/:childId', async (req: Request, res: Response) => {
     res.set('Cache-Control', 'public, max-age=3600');
     res.send(pngBuffer);
   } catch (err: unknown) {
-    console.error('passport-view error:', err);
+    logger.error('memories/passport-view', err);
     error(res, '여권 이미지 조회 실패', 500);
   }
 });
@@ -430,7 +431,7 @@ router.get('/timeline/:childId', authMiddleware, async (req: Request, res: Respo
       totalSessions: sessionsSnap.size,
     });
   } catch (err: unknown) {
-    console.error('timeline error:', err);
+    logger.error('memories/timeline', err);
     error(res, '성장 타임라인 조회 중 오류가 발생했습니다', 500);
   }
 });

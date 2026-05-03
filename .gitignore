@@ -3,6 +3,8 @@ dist/
 .env
 .env.local
 .env*.local
+.env.backup*
+*.env.backup*
 *.db
 *.db-journal
 .expo/
@@ -27,6 +29,11 @@ LOCAL-CONFIG.md
 *키스토어*.txt
 google-services.json
 GoogleService-Info.plist
+# Firebase Admin SDK service account (마이그레이션용 일회성 키)
+service-account.json
+backend/service-account.json
+**/service-account*.json
+**/firebase-adminsdk-*.json
 
 # Google OAuth client credential dump (id-secret format)
 [0-9]*-*.txt
@@ -48,3 +55,7 @@ frontend/assets.backup/
 
 # 일회성 테스트 스크립트
 test-milestone-*.cjs
+
+# 마이그레이션 스크립트의 백업 데이터 (사용자 PII 포함 가능)
+backend/scripts/migrate-album-photos/backup-*/
+backend/scripts/**/backup-*/

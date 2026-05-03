@@ -4,6 +4,7 @@ import { success, error } from '../../utils/response';
 import { buildChildContext } from '../../services/coaching/context.builder';
 import { generateDailyInsights } from '../../services/coaching/proactive.insight';
 import { checkDailyLimit, incrementDailyUsage } from '../../utils/rateLimit';
+import { logger } from '../../utils/logger';
 
 const INSIGHT_FREE_DAILY_LIMIT = 3;
 
@@ -47,7 +48,7 @@ export function registerDailyInsightHandler(router: Router): void {
       await incrementDailyUsage(userId, 'daily_insight');
       success(res, { insights });
     } catch (err) {
-      console.error('Daily insight error:', err);
+      logger.error('coaching/daily-insight', err);
       error(res, '인사이트 생성에 실패했습니다', 500);
     }
   });

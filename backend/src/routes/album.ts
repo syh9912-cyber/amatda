@@ -296,7 +296,7 @@ router.post('/generate', authMiddleware, async (req: Request, res: Response) => 
     setImmediate(() => {
       generateAlbumInBackground(albumId, userId, childId, childName, dateFrom, dateTo, monthDiff + 1)
         .catch((err) => {
-          console.error('[Album] Background generation failed:', err);
+          logger.error('album/background-generation', err);
           updateAlbumStatus(albumId, 'error', {
             errorMessage: err instanceof Error ? err.message : '알 수 없는 오류',
           }).catch(() => {});

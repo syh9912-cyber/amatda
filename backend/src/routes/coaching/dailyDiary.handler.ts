@@ -4,6 +4,7 @@ import { success, error } from '../../utils/response';
 import { collections } from '../../services/firestore';
 import { buildChildContext } from '../../services/coaching/context.builder';
 import { isGeminiAvailable, callGeminiText } from '../../services/coaching/gemini.client';
+import { logger } from '../../utils/logger';
 
 function buildTrackingText(data: Record<string, unknown>): string {
   const parts: string[] = [];
@@ -122,7 +123,7 @@ ${trackingSummaryText}
         });
       }
     } catch (err: unknown) {
-      console.error('daily-diary error:', err);
+      logger.error('coaching/daily-diary', err);
       error(res, '육아일기 생성 중 오류', 500);
     }
   });

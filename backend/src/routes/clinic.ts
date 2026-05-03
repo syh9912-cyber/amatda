@@ -4,6 +4,7 @@ import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
 import { env } from '../config/env';
 import { isValidLatLng } from '../utils/location';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -192,7 +193,7 @@ router.get(
 
       success(res, results);
     } catch (err: unknown) {
-      console.error('clinic search error:', err);
+      logger.error('clinic/search', err);
       error(res, '병원 검색 중 오류가 발생했습니다', 500);
     }
   }
@@ -237,7 +238,7 @@ router.get(
 
       success(res, { clinics: nearbyClinics, count: nearbyClinics.length });
     } catch (err: unknown) {
-      console.error('nearby error:', err);
+      logger.error('clinic/nearby', err);
       error(res, '주변 병원 조회 중 오류가 발생했습니다', 500);
     }
   }
@@ -465,7 +466,7 @@ router.post(
 
       success(res, { id: reviewId, ...review }, 201);
     } catch (err: unknown) {
-      console.error('review-post error:', err);
+      logger.error('clinic/review-post', err);
       error(res, '후기 작성 중 오류가 발생했습니다', 500);
     }
   }
@@ -508,7 +509,7 @@ router.get(
         count: reviews.length,
       });
     } catch (err: unknown) {
-      console.error('clinic-reviews error:', err);
+      logger.error('clinic/reviews', err);
       error(res, '후기 조회 중 오류가 발생했습니다', 500);
     }
   }
@@ -537,7 +538,7 @@ router.get(
 
       success(res, { reviews, count: reviews.length });
     } catch (err: unknown) {
-      console.error('my-reviews error:', err);
+      logger.error('clinic/my-reviews', err);
       error(res, '내 후기 조회 중 오류가 발생했습니다', 500);
     }
   }

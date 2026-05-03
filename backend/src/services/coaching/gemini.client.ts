@@ -1,4 +1,5 @@
 import { env } from '../../config/env';
+import { logger } from '../../utils/logger';
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
 
@@ -70,12 +71,12 @@ export async function callGeminiText(
   try {
     data = JSON.parse(rawBody) as GeminiResponse;
   } catch {
-    console.error('Gemini raw response not JSON:', rawBody.substring(0, 200));
+    logger.error('gemini/parse', new Error('Gemini response not JSON'), { rawPreview: rawBody.substring(0, 200) });
     throw new Error('Gemini response not JSON');
   }
 
   if (data.error) {
-    console.error('Gemini API error:', data.error.message);
+    logger.error('gemini/api', new Error('Gemini API error: ' + data.error.message));
     throw new Error('Gemini API error: ' + data.error.message);
   }
 
@@ -83,8 +84,10 @@ export async function callGeminiText(
   if (!text) {
     const finishReason = data.candidates?.[0]?.finishReason ?? 'UNKNOWN';
     const blockReason = data.promptFeedback?.blockReason ?? 'NONE';
-    console.error(
-      `Gemini empty response. finishReason=${finishReason} blockReason=${blockReason} full=${JSON.stringify(data).substring(0, 500)}`,
+    logger.error(
+      'gemini/empty',
+      new Error(`Gemini empty response (finishReason=${finishReason}, blockReason=${blockReason})`),
+      { finishReason, blockReason, fullPreview: JSON.stringify(data).substring(0, 500) },
     );
     throw new Error(`Gemini empty response (finishReason=${finishReason}, blockReason=${blockReason})`);
   }
@@ -119,7 +122,7 @@ export async function callGeminiJSON<T = Record<string, unknown>>(
       jsonMatch = truncated.match(/\{[\s\S]*\}/);
     }
     if (!jsonMatch) {
-      console.error('Gemini no JSON in response:', text.substring(0, 300));
+      logger.error('gemini/no-json', new Error('JSON parse failed'), { textPreview: text.substring(0, 300) });
       throw new Error('JSON parse failed');
     }
   }
@@ -127,7 +130,7 @@ export async function callGeminiJSON<T = Record<string, unknown>>(
   try {
     return JSON.parse(jsonMatch[0]) as T;
   } catch {
-    console.error('Gemini JSON parse error, raw:', jsonMatch[0].substring(0, 300));
+    logger.error('gemini/json-parse', new Error('JSON parse failed'), { rawPreview: jsonMatch[0].substring(0, 300) });
     throw new Error('JSON parse failed');
   }
 }

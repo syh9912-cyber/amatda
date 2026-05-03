@@ -18,6 +18,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { db } from '../services/firestore';
@@ -26,6 +27,21 @@ import { logger } from '../utils/logger';
 import { randomBytes } from 'crypto';
 
 const router = Router();
+
+/**
+ * 항목 업데이트 전용 rate-limit — 공유 토큰 보유자가 무한 호출하는 것을 방지.
+ * 키는 토큰 단위(:token) — 토큰 한 건당 분당 30회까지 (UX 상 한 화면에서
+ * 항목 30개 이상을 1분 안에 토글하기 어려움).
+ */
+const itemUpdateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  keyGenerator: (req) => `birthbag:${String(req.params.token || 'unknown').slice(0, 64)}`,
+  message: { success: false, error: '요청이 너무 많아요. 잠시 후 다시 시도해주세요.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: false,
+});
 
 const COLLECTION = 'share_birthbag';
 const SHARE_TTL_DAYS = 30;
@@ -66,7 +82,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
     }
 
     // 검증/정제: 100개 초과 거부, 라벨 100자 제한
-    if (body.items.length > 200) {
+    if (body.items.length > 100) {
       error(res, '항목이 너무 많습니다', 400);
       return;
     }
@@ -142,7 +158,7 @@ router.get('/:token/data', async (req: Request, res: Response): Promise<void> =>
 
 /* ===================== POST: 공유 페이지에서 항목 업데이트 (public, 토큰 보유자) ===================== */
 
-router.post('/:token/items/:itemId', async (req: Request, res: Response): Promise<void> => {
+router.post('/:token/items/:itemId', itemUpdateLimiter, async (req: Request, res: Response): Promise<void> => {
   try {
     const token = String(req.params.token || '').slice(0, 64);
     const itemId = String(req.params.itemId || '').slice(0, 64);

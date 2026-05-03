@@ -1,5 +1,385 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-05-03 (오후/저녁)
+> 최종 업데이트: 2026-05-04 — 출시 전 보안 일제 강화 + Secret Manager 마이그레이션
+
+---
+
+## 2026-05-04 — 출시 전 종합 보안 강화 (배포 대기 중)
+
+> 사용자가 "출시 늦어도 좋으니 위험요소 단계별 처리" 결정 → 결제 webhook 보안 / 결제 멱등성 / Sentry 커버리지 / 에셋 압축 / Firebase Secret Manager 마이그레이션 일괄 처리.
+>
+> **현재 상태: 모든 코드 변경 + secret 등록 완료. 배포 대기 중.**
+
+### A. 결제 라우트 보안 강화 (3건)
+
+**문제:** webhook 서명 검증이 우회 가능했음. 가짜 webhook 으로 사용자 결제 status 조작 가능.
+
+1. **PortOne webhook raw body + 서명 검증**
+   - 기존: `JSON.stringify(req.body)` 로 HMAC 계산 → 키 순서/공백 차이로 검증 실패
+   - 기존: `webhook-id` 헤더 없으면 검증 자체 스킵 (우회 가능)
+   - 기존: `PORTONE_WEBHOOK_SECRET` 미설정 시 무조건 통과
+   - 변경: `index.ts` 의 `express.json` `verify` 콜백으로 `req.rawBody` Buffer 보존 → HMAC 정확 계산
+   - 변경: 서명 헤더 누락 시 401 거부, secret 미설정 시 fail-closed
+   - **live test 통과**: req.body 정상 파싱 + req.rawBody 원본 byte 일치 확인
+
+2. **Google Pub/Sub OIDC JWT 검증**
+   - 기존: 인증 없이 `messageData` 처리 → 누구나 직접 호출로 사용자 구독 조작 가능
+   - 변경: `google-auth-library` 의 `OAuth2Client.verifyIdToken({audience})` 으로 OIDC 검증
+   - 환경변수 `GOOGLE_PUBSUB_AUDIENCE` (필수), `GOOGLE_PUBSUB_SA_EMAIL` (선택)
+   - fail-closed: audience 미설정 시 모든 webhook 거부
+
+3. **Apple webhook Apple API 재조회 검증**
+   - 기존: JWS payload 디코딩만 + `notificationType` 으로 status 결정 → 가짜 webhook 으로 EXPIRED 마크 가능
+   - 변경: Google webhook 과 동일 패턴 — `signedTransactionInfo` 에서 `originalTransactionId` 만 추출
+   - **Apple App Store Server API 재조회** 로 진위 검증 (위조된 originalId 는 Apple 이 거부)
+   - bundleId 매칭 검증 추가
+   - Apple JWS 정석 검증 (`@apple/app-store-server-library` + Apple Root CA) 은 별도 PR 로 미룸
+
+### B. 결제 멱등성
+
+**문제:** `paymentDocId = genId()` — 같은 `paymentId` 두 번 verify 호출 시 payments 문서 두 개 생성 + 사용자 활성화 두 번 실행.
+
+**해결:** `paymentDocIdFor(platform, key)` 헬퍼 추가 — `${platform}_${SHA256(key)}` 형식으로 doc ID 생성. 같은 키는 항상 같은 docId → 두 번째 호출은 멱등 응답으로 처리.
+
+3개 verify 엔드포인트 모두 적용 (PortOne 1회결제 / 빌링키 / IAP).
+
+### C. payments 컬렉션 인덱스 추가
+
+**문제:** `payment.history` 의 `where('userId').orderBy('createdAt desc')` 복합 인덱스 없음 → 첫 호출 시 500 에러.
+
+**해결:** `firestore.indexes.json` 에 추가:
+```json
+{ "collectionGroup": "payments", "fields": [{"fieldPath":"userId","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"}] }
+```
+
+### D. Sentry 커버리지 확대 (~50% → 100%)
+
+**문제:** 코드 전반 `console.error` 44건 → Sentry 자동 전파 안 됨.
+
+**해결:** 19개 파일 일괄 치환 — `console.error` → `logger.error` (Sentry 자동 전파).
+파일: clinic / memories / growth / sleep / tracker / upload / momstagram / chatbot / gemini.client / proactive.insight / album / child / rateLimit / coaching/ask / dailyDiary / dailyInsight / history / weeklyReport / auth.
+
+추가로 logger.ts 자체에 `import { logger } from '../utils/logger'` 누락 16개 파일 import 추가.
+
+### E. Sentry flush 이중 안전망
+
+**문제:** Cloud Functions 는 응답 종료 후 컨테이너가 곧바로 frozen → Sentry 비동기 큐가 마지막 요청 이벤트를 못 보낼 수 있음.
+
+**해결:** `sentry.ts` 에:
+- `captureException` 안에서 `Sentry.flush(2000)` fire-and-forget
+- `flushOnFinishMiddleware()` — Express `res.on('finish')` 시 추가 flush
+- index.ts 양쪽 app 에 부착
+
+### F. /api/coaching rate-limit userId 키
+
+**문제:** keyGenerator 가 `req.userId` 보지만 rate-limit 미들웨어는 authMiddleware 보다 먼저 실행 → 항상 IP 키로 fallback. 한국 통신사 CG-NAT 환경에서 다수 사용자가 같은 IP 로 묶여 false rate-limit 가능.
+
+**해결:** `security.ts` 에 `rateLimitUserKey(req)` 헬퍼 추가 — JWT 를 가볍게 디코드 (DB 무접근) 해서 userId 키 산출. 위변조/만료된 토큰은 IP 키로 fallback.
+
+### G. 출산가방 공유 페이지 CORS fix (운영 에러 발견)
+
+**문제 (운영 로그):** `Error: CORS: origin not allowed: https://api-usglfifguq-uc.a.run.app` 6건.
+- 출산가방 공유 페이지가 백엔드 자기 호스트에서 렌더링되고 fetch 호출 → 모바일 브라우저가 same-origin POST 에서도 preflight 보냄
+- security.ts 의 CORS allowlist 에 운영 호스트 자기 자신이 없어서 거부됨
+- 사용자가 항목 체크 시 "업데이트 실패" alert 발생
+
+**해결:** `security.ts` allowlist 에 `https://api-usglfifguq-uc.a.run.app`, `https://coachingapi-usglfifguq-uc.a.run.app` 명시 추가 + `*.a.run.app` / `*.cloudfunctions.net` 정규식으로 일반 Cloud Run/Functions 호스트 자동 허용.
+
+### H. birthbag-share 항목 업데이트 rate-limit
+
+토큰 보유자 누구나 무한 호출 가능했던 문제 — 토큰 단위 30/분 제한 추가.
+
+### I. firebase.json functions.ignore 보강
+
+`scripts`, `src`, `tsconfig.json`, `tsconfig.tsbuildinfo`, `**/*.test.ts`, `**/*.spec.ts` 추가 — 함수 패키지 슬림화. 일회성 마이그레이션 스크립트 + ts 소스가 더 이상 deploy 안 됨.
+
+⚠️ `.env` 도 한 번 추가했다가 즉시 되돌림 — backend/.env 가 dotenv 로 운영 환경변수 공급원이라 ignore 시 부팅 실패. Phase 5 (Secret Manager 마이그레이션 완료 후) 에 다시 추가 예정.
+
+### J. Pretendard 폰트 제거
+
+`backend/fonts/Pretendard-*.otf` 4개 (6.4MB) 제거 — 백엔드 src 에서 미참조 (album.pdf.service.ts 는 NotoSansKR 사용). 함수 패키지 6.4MB 슬림화.
+
+### K. dead set-nickname 제거
+
+`(auth)/set-nickname.tsx` 라우트 호출자 0건 — 실사용은 `onboarding/set-nickname.tsx`. 파일 삭제 + `(auth)/_layout.tsx` 분기 정리.
+
+### L. 프론트 에셋 91% 압축 (41MB → 3.7MB)
+
+**문제:** `quick-*.png` 7개 + `preg-*.png` 13개가 모두 1024x1024 / 1.3-1.6MB. 표시 크기는 80-200px 인데 원본 해상도 4-12배 과도.
+
+**해결:** 기존 `frontend/scripts/optimize-assets.js` (sharp 기반) 활용:
+- 카테고리별 캡: quick-* → 192px, preg-* → 512px, mascot → 640px, sos → 512px
+- PNG 재인코딩 + palette quantization (256 색)
+- in-place 변경, 원본은 `frontend/assets.backup/v2.9.0-pre-resize/` 자동 백업
+- **결과: 78개 PNG, 41MB → 3.7MB (-91%)**, 코드 변경 0
+- 빅 위너: sos-burn-fall (1.79MB → 76KB), main.png (1.09MB → 71KB), preg-mood-* (각 1.4MB → 30-45KB)
+
+### M. Firebase Secret Manager 마이그레이션 (Phase 1-4 완료)
+
+**배경:** backend/.env 가 deploy 패키지에 평문으로 포함되어 Cloud Functions 컨테이너 안에 그대로 저장됨. JWT_SECRET / PASSPORT_SALT / 소셜 로그인 키 등 16개 민감값 노출 위험.
+
+**진행:** Firebase Functions Secret Manager (KMS 암호화 + 접근 감사) 로 단계별 마이그레이션.
+
+**Phase 1 — TOKEN_ENCRYPTION_KEY 신규 등록**
+- 32바이트 hex 자동 생성 + 등록 (이전엔 미설정 → 소셜 access_token 평문 저장)
+- 효과: 소셜 토큰 AES-256-GCM 암호화 활성화 (배포 후)
+
+**Phase 2-4 — 기존 13개 secret 마이그레이션**
+- backend/.env 값을 grep + pipe 로 직접 읽지 않고 stdin 으로 firebase 에 전달 (값 화면 노출 0)
+- 등록 완료: SENTRY_DSN_BACKEND, GEMINI_API_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, KAKAO_JAVASCRIPT_KEY, KAKAO_REST_API_KEY, KAKAO_CLIENT_SECRET, KAKAO_ADMIN_KEY, NAVER_CLIENT_ID, NAVER_CLIENT_SECRET, JWT_SECRET, JWT_REFRESH_SECRET, PASSPORT_SALT
+- **총 14개 secret Secret Manager 등록 완료**
+
+**코드 변경:** `index.ts` 양쪽 함수 (api / coachingApi) 의 `onRequest` 옵션에 `secrets: REGISTERED_SECRETS` 추가 — Firebase 가 함수 시작 시 process.env 에 자동 주입.
+
+**호환성:** backend/.env 도 그대로 유지 (이중 fallback). 배포 후 Secret Manager 가 우선, 동작 검증 통과하면 Phase 5 진행.
+
+**보류 (결제사 승인 후 등록 예정):**
+- PORTONE_API_SECRET, PORTONE_WEBHOOK_SECRET, PORTONE_STORE_ID, PORTONE_CHANNEL_KEY_TOSS/KAKAO/NAVER (PortOne 가입 승인 대기 중)
+- GOOGLE_PUBSUB_AUDIENCE, GOOGLE_PUBSUB_SA_EMAIL (Google Play 결제 도입 시)
+- GOOGLE_PLAY_SERVICE_ACCOUNT_JSON (동일)
+- APPLE_BUNDLE_ID, APPLE_ISSUER_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY (Apple 결제 도입 시)
+
+### 검증
+- backend tsc --noEmit: EXIT 0 (모든 단계)
+- frontend tsc --noEmit: EXIT 0
+- frontend expo lint: 0 errors / 162 warnings (모두 기존)
+- secret 등록 14개 모두 ENABLED 상태 확인
+
+### 배포 결과 (2026-05-04)
+
+**firestore 인덱스 배포** ✅
+- payments 컬렉션 (userId ASC, createdAt DESC) 추가 빌드 완료
+
+**functions 배포 — 4차 시도만에 성공** (시행착오 기록):
+
+1차 ❌: `Secret environment variable overlaps non secret environment variable: JWT_SECRET`
+- 원인: backend/.env 가 deploy 패키지에 있어 일반 env vars 로 등록되어 있는데, 같은 이름을 secret env 로 추가 시도 → 충돌
+
+2차 ❌: 동일 에러
+- firebase.json 에서 `.env` 만 ignore 추가 → 일반 env vars 가 자동 제거되지 않음 (Firebase 가 .env 없으면 기존 vars 보존)
+
+3차 ❌: `dist/src/index.js does not exist`
+- firebase.json ignore 의 `src` 패턴이 gitignore-style 로 모든 디렉토리 매칭 → `dist/src` 도 제외돼 빌드 산출물 사라짐
+
+4차 ✅: 성공
+- ignore 패턴을 `/src`, `/scripts`, `/tsconfig.*` 로 명시 (루트만)
+- backend/.env 에서 14개 secret 키 → backend/.env.local 로 분리
+- backend/.env 는 일반 변수(APP_PORT/MOCK_AI/MOCK_SOCIAL)만 보존
+- env.ts 의 dotenv 가 .env + .env.local 둘 다 로드 (override:true)
+- 빈 secret 키들이 deploy 시 일반 env vars 자동 제거 + secret env vars 14개 적용
+
+**검증 결과:**
+- api / coachingApi `/api/health` 200 OK
+- 새 revision `api-00202-sus` ACTIVE 상태
+- secret env 14개 모두 Cloud Run service config 에 정상 등록
+- STARTUP TCP probe succeeded 확인 (18:05:49)
+- 이전 함수 시작 시 발생하던 `[sentry] SENTRY_DSN_BACKEND 미설정` warn 더 이상 발생 안 함
+
+**5차 배포 (긴급 핫픽스):**
+- 사용자 카카오/네이버/구글 로그인 모두 500 에러 보고
+- 운영 로그 분석: `TOKEN_ENCRYPTION_KEY 형식 오류: hex 64자 필요. 현재 길이: 65`
+- 원인: 처음 등록 시 `node -e "console.log(...)"` 사용 → console.log 끝 newline(\n) 1자 포함되어 65자로 등록
+- 해결 1: TOKEN_ENCRYPTION_KEY v2 새 버전 등록 (`process.stdout.write` 로 newline 없이)
+- 해결 2: backend/src/utils/crypto.ts 의 loadKey() 에 `.trim()` 방어 추가 — Secret Manager 값에 leading/trailing whitespace 가 들어와도 안전
+- 5차 배포 후 사용자 재테스트: **카카오/네이버/구글 3개 모두 로그인 성공 확인**
+
+**최종 파일 상태:**
+- backend/.env (deploy 됨): APP_PORT, MOCK_AI, MOCK_SOCIAL (일반 변수만)
+- backend/.env.local (deploy 제외, git 제외): 14개 secret 키 (로컬 개발용)
+- backend/.env.backup-pre-secret-migration (deploy/git 제외): 마이그레이션 전 원본 백업
+- Firebase Secret Manager: 14개 secret 등록 완료
+- 코드: index.ts 의 REGISTERED_SECRETS 배열 + 양쪽 함수 secrets 옵션
+
+### 남은 작업
+
+1. **사용자 직접 검증**:
+   - 출산가방 공유 페이지 항목 체크/상태 변경 정상 동작 확인 (CORS fix 효과)
+   - 카카오/네이버/구글 로그인 정상 동작 (secret 정상 주입 확인)
+   - 새 사용자 가입 → 소셜 access_token 암호화 저장 확인 (선택)
+2. **결제사 승인 후 등록 예정 (Phase 별도)**:
+   - PortOne 가입 승인 후: PORTONE_API_SECRET, PORTONE_WEBHOOK_SECRET, PORTONE_STORE_ID, PORTONE_CHANNEL_KEY_*
+   - Google Play 결제 도입 시: GOOGLE_PUBSUB_AUDIENCE, GOOGLE_PUBSUB_SA_EMAIL, GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
+   - Apple 결제 도입 시: APPLE_BUNDLE_ID, APPLE_ISSUER_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY
+   - 등록 후 index.ts 의 REGISTERED_SECRETS 에 추가 + 재배포
+
+---
+
+## 2026-05-04 (00:00~) — 백엔드 Sentry 자동 수집 + 매일 8시 자동 점검 routine
+
+### A. 백엔드 Sentry 자동 수집 활성화
+
+**문제:** 프론트(Expo)는 `@sentry/react-native` 으로 자동 수집되지만 백엔드(Firebase Functions) 는
+Cloud Logging 까지만 — 실시간 알림 / 스택 트레이스 분류 / 빈도 분석 없었음.
+
+**구현:**
+- `npm install @sentry/node` (v10.51.0)
+- 신규 `backend/src/services/sentry.ts` — `initSentry()` / `attachSentryErrorHandler(app)` / `captureException()`
+- `backend/src/index.ts` 최상단에서 `initSentry()` 호출 (다른 import 보다 먼저)
+- 두 Express 앱(api, coachingApi) 모두 `attachSentryErrorHandler` 부착
+- `backend/src/utils/logger.ts` → `logger.error` 가 자동으로 `Sentry.captureException` 호출
+  → 기존 라우트 코드 수정 0줄. 라우트 안 `logger.error('context', err)` 호출 전부 자동 Sentry 전파
+
+**환경변수:**
+- `SENTRY_DSN_BACKEND` (`backend/.env` 추가) — 프론트와 동일 Sentry 프로젝트 DSN 사용
+- 미설정 시: warn 로그만 + capture 모두 no-op (회귀 0)
+- 보호: PII 자동 첨부 끔 (`sendDefaultPii: false`), tag `runtime: 'backend'` / `service: K_SERVICE`
+- traces sample 10% (성능 트레이싱 가벼움)
+
+**배포:**
+- `cd backend && npm run build && firebase deploy --only functions`
+- 1차 시도 직후 재배포 시 HTTP 409 (Cloud Functions 큐 충돌) → 잠시 후 재시도 성공
+- 두 함수 (api, coachingApi) 모두 `Successful update operation` ✅
+
+### B. 매일 아침 8시 KST 자동 점검 routine (별도 세션에서 생성)
+
+**목표:** 매일 한 번 운영 에러 자동 점검 + 단순 fix 자동 / 위험 항목 보고 파일.
+
+**준비 작업 (이 세션에서):**
+- Sentry MCP 커넥터 본인 계정 연결: https://claude.ai/customize/connectors
+- 첫 시도 시 이 대화 세션이 연결 전 스냅샷을 캐시해 인식 못 함 → 새 채팅 세션 안내
+
+**실제 routine 생성: 별도 채팅 세션에서 `/schedule` 으로 진행**
+- 새 세션은 fresh 커넥터 목록 로드 → Sentry MCP 자동 attach 가능
+- 이 세션은 정리/기록 담당
+
+**routine 사양 (별도 세션 진행 내용):**
+- 모델: claude-sonnet-4-6
+- 레포: `https://github.com/syh9912-cyber/amatda`
+- 환경: `env_01YcDVdCMjMcReC3Z5myt1FD` (기본 클라우드)
+- 스케줄: 8am KST = `0 23 * * *` UTC
+
+### 종합 검증
+- `cd backend && npx tsc --noEmit` — EXIT 0
+- 운영 배포: api / coachingApi 모두 정상 갱신
+- Sentry init 로그: 운영에서 DSN 인식 후 silent 활성 (테스트 에러 발생 시 대시보드에 도착 확인 가능)
+
+### 본인이 추가로 해야 할 일 (선택)
+1. **`TOKEN_ENCRYPTION_KEY` 등록** — 소셜 access_token 암호화 활성 (#3 작업 후속)
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   firebase functions:secrets:set TOKEN_ENCRYPTION_KEY
+   ```
+2. **Sentry 대시보드에서 Alert Rule 설정** — 새 issue 발생 시 메일/슬랙 알림
+3. **매일 routine 결과 확인** — `daily-checkup-YYYY-MM-DD.md` 또는 Sentry 정리 결과 commit 검토
+
+---
+
+## 2026-05-03 (심야) — 보안 강화 3건 (storage 검증 / 소셜 race / 토큰 암호화)
+
+앞선 리뷰에서 Rule of Two 로 보류했던 3건 모두 처리.
+
+### #1 storage.rules — 검증 → URL 재작성 → rules 닫기 → 배포 (전 단계 완료)
+
+**작성한 파일:**
+- `backend/scripts/audit-storage-urls.cjs` — Storage 메타 + Firestore URL 양쪽 토큰 보유 검사
+- `backend/scripts/rewrite-firestore-urls.cjs` — 토큰 누락된 Firestore URL 에 `?alt=media&token=<UUID>` 부착 (--dry / --apply)
+
+**실행 결과:**
+1. `audit-storage-urls.cjs` 1차: A) Storage 78/78 PASS / B) Firestore 46건 누락 (albumPhotos 20, milestonePhotos 20, momGroupPosts 3, children 2, posts 1)
+2. `rewrite-firestore-urls.cjs --apply`: 26 docs / 46 URLs 재작성, 실패 0
+3. `audit-storage-urls.cjs` 2차: A/B 모두 100% PASS
+4. `storage.rules` 7개 경로 (`pregnancy`, `profiles`, `momstagram`, `diary`, `album`, `lullaby`, `growth_albums`) 모두 `allow read: if true` → `allow read: if false`
+5. `firebase deploy --only storage` — Deploy complete ✅
+
+**효과:**
+- 익명 사용자가 경로 추측으로 사진/PDF 직접 받기 차단
+- 정상 토큰 URL (`?alt=media&token=<UUID>`) 은 storage.rules 와 무관하게 그대로 동작 → 운영 사진 깨짐 0건
+
+### #2 소셜 가입 race condition — Firestore Transaction + 결정적 인덱스
+
+**문제:** `/social`, `/social-code`, `/kakao/callback` 세 곳이 50ms 내 동시 호출 시
+같은 socialId 로 user 두 개 생성될 수 있음 (TODO 주석으로 명시되어 있던 항목).
+
+**해결 구조:**
+- `socialIdIndex/{provider}_{socialId}` 결정적 ID 인덱스 컬렉션 도입 (firestore.ts collections 추가)
+- 새 헬퍼: `backend/src/services/socialUser.service.ts` → `findOrCreateSocialUser()`
+- `db.runTransaction` 안에서 인덱스 → socialId query → email 매칭 → 새 user 순으로 처리
+- 두 동시 요청이 같은 인덱스 id 로 set 시도하면 transaction 이 retry → 한쪽이 기존 user 발견
+
+**변경한 파일:**
+- `backend/src/services/firestore.ts` — `socialIdIndex` 컬렉션 추가
+- `backend/src/services/socialUser.service.ts` — 신규
+- `backend/src/routes/auth.ts` — `/social`, `/social-code`, `/kakao/callback` 헬퍼 사용으로 단순화 + TODO 주석 제거
+
+**호환성:**
+- 기존 가입자 (인덱스 없음) → 첫 로그인 시 socialId query 매칭 → 인덱스 lazy 생성
+- 인덱스만 남고 user 삭제된 고아 케이스 → 인덱스 덮어쓰기로 새 user
+- DELETE /account 에 socialIdIndex 삭제 추가 → 재가입 시 깨끗한 상태
+
+### #3 소셜 access_token Firestore 암호화 (AES-256-GCM)
+
+**문제:** `lastSocialAccessToken` 평문 저장. Firestore export 유출 시 모든 사용자
+카카오/네이버 access_token 노출. (Naver/Google unlink 가 access_token 필수라 제거 불가.)
+
+**해결:**
+- `backend/src/utils/crypto.ts` — AES-256-GCM 암복호화 유틸
+- `encryptToken()` / `decryptToken()` — `gcm:<iv>:<ct>:<tag>` 형식
+- 환경변수 `TOKEN_ENCRYPTION_KEY` (hex 64자 = 32바이트)
+- **옵션:** 키 미설정 시 평문 통과 + warn 로그 (회귀 없음). 운영 강화 시 secret 등록.
+- 복호화는 `gcm:` prefix 감지 → legacy 평문도 그대로 반환 (점진적 마이그레이션)
+
+**변경한 파일:**
+- `backend/src/utils/crypto.ts` — 신규
+- `backend/src/routes/auth.ts` — 저장 3곳 (`/social`, `/social-code`, `/kakao/callback`) `encryptToken()`,
+  DELETE /account unlink 흐름에 `decryptToken()`
+
+**운영 배포 전 권장:**
+```bash
+# 32바이트 hex 키 생성
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+# 출력값을 EAS / Cloud Run / Firebase Functions secret 으로 등록
+firebase functions:secrets:set TOKEN_ENCRYPTION_KEY
+```
+
+### 검증
+- `cd backend && npx tsc --noEmit` — EXIT 0
+- `cd frontend && npx tsc --noEmit` — EXIT 0
+- `cd frontend && npx expo lint` — EXIT 0
+
+### 부수 정리
+- auth.ts 의 `console.error` / `console.log` (kakao/callback, deleteAccount unlink) 모두 logger 로 변경
+
+---
+
+## 2026-05-03 (밤) — 출시 전 종합 리뷰 + 안전한 fix 일괄 적용
+
+전체 코드베이스 보안·구조 검토 후 위험 낮은 5건 수정. 구조 변경이 필요한 항목은 별도 승인 대기.
+
+### 통과 (정상 항목)
+- backend/frontend tsc --noEmit, expo lint 모두 EXIT 0
+- Firestore rules 클라 직접 접근 전면 차단 (`allow read, write: if false`)
+- JWT_SECRET / PASSPORT_SALT — env 미설정 시 throw (fail-closed)
+- AI 파이프라인 순서 정확 (redflag → RAG → trait → Gemini)
+- 출산가방 공유 페이지 escapeHtml + jsonForScriptTag XSS 방어
+- /api/seed 라우트 제거 확인
+- `any` 타입 / `onSnapshot` / 사주·오행 UI 노출 모두 0건
+
+### 수정 적용
+
+**P1 — 운영 디버깅 / 보안**
+
+1. `auth.ts` 빈 catch에 logger 추가 — register/login/refresh/nickname/me/change-password/set-password
+   - 운영에서 회원가입·로그인 실패 원인 추적 가능
+2. bcrypt rounds 10 → 12 — register, change-password, set-password
+3. `/api/coaching/*` 전용 rate limit 추가 — 사용자당 60회/15분 (Gemini 빌링 폭주 방어)
+   - keyGenerator: 인증 후 userId, 미인증 IP
+4. `useLoginHandlers` console.log에서 email 제거 — Sentry breadcrumb PII 유출 방지
+5. `birthbag-share` items 상한 200 → 100 (주석과 일치)
+
+### 보류 (Rule of Two — 별도 승인 필요)
+
+- **storage.rules `allow read: if true` 제거** (P0)
+  - 사유: 토큰 백필 검증 없이 닫으면 기존 운영 사진/PDF 모두 403
+  - 필요 작업: 백필 객체 비율 실측 → 0건 미적용 확인 → 단계별 전환
+- **소셜 가입 race condition transaction** (auth.ts /social, /social-code, /kakao/callback)
+  - 사유: socialId 기반 인덱스 컬렉션 도입 또는 doc ID 전략 변경 = 인증 흐름 핵심 구조 변경
+  - 현재 TODO 명시 상태 유지. 별도 PR 권장
+- **소셜 access_token Firestore 평문 저장**
+  - 사유: 제거 시 unlink 흐름(KAKAO_ADMIN_KEY 미설정 환경) 영향. 정책 결정 필요
+
+### 검증
+- `cd backend && npx tsc --noEmit` — EXIT 0
+- `cd frontend && npx tsc --noEmit` — EXIT 0
+- `cd frontend && npx expo lint` — EXIT 0 (162 warnings 모두 기존, 신규 0)
 
 ---
 

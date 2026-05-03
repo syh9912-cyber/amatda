@@ -1,4 +1,8 @@
-import express from 'express';
+// Sentry 는 다른 import 보다 먼저 — instrumentation 이 require 후킹을 사용
+import { initSentry, attachSentryErrorHandler, flushOnFinishMiddleware } from './services/sentry';
+initSentry();
+
+import express, { Request } from 'express';
 import * as functions from 'firebase-functions';
 import { env } from './config/env';
 import { setupSecurity } from './middleware/security';
@@ -53,7 +57,18 @@ import birthbagShareRoutes from './routes/birthbag-share';
 
 /* ─── 비코칭 라우트용 메인 Express ─── */
 const app = express();
-app.use(express.json({ limit: '10mb' }));
+// webhook HMAC 검증을 위해 raw body 보존 — req.body 는 평소대로 파싱된 객체로 사용,
+// req.rawBody (Buffer) 는 PortOne 등 webhook 서명 검증 시에만 참조.
+app.use(
+  express.json({
+    limit: '10mb',
+    verify: (req, _res, buf) => {
+      (req as Request & { rawBody?: Buffer }).rawBody = buf;
+    },
+  }),
+);
+// 응답 종료 시 Sentry 큐 flush (Cloud Functions frozen 전 이벤트 손실 방지)
+app.use(flushOnFinishMiddleware());
 setupSecurity(app);
 
 app.use('/api/auth', authRoutes);
@@ -88,10 +103,6 @@ app.use('/api/mom-group', momGroupRoutes);
 app.use('/api/mom-location', momLocationRoutes);
 app.use('/api/birthbag-share', birthbagShareRoutes);
 
-app.get('/api/health', (_req, res) => {
-  res.json({ success: true, data: { status: 'ok', service: 'api', version: '1.0.0', timestamp: new Date().toISOString() } });
-});
-
 /* ─── /api/coaching 안전망 마운트 ───
  *
  * 정석은 coachingApi 함수가 /api/coaching/* 를 처리하는 것 (메모리 1GB).
@@ -101,22 +112,81 @@ app.get('/api/health', (_req, res) => {
  * 그 케이스에서도 코칭이 끊기지 않도록 메인 api에도 /api/coaching 마운트.
  * EAS Cloud env 정비 + 신규 빌드 배포 후에는 트래픽이 자연스럽게
  * coachingApi 함수로 옮겨감 (메모리 분리 효과 회복).
+ *
+ * ⚠️ 반드시 attachSentryErrorHandler 보다 먼저 등록 — Express 에러
+ *    미들웨어는 등록 순서상 라우트 뒤에 와야 catch 됨.
  */
 app.use('/api/coaching', coachingRoutes);
+
+app.get('/api/health', (_req, res) => {
+  res.json({ success: true, data: { status: 'ok', service: 'api', version: '1.0.0', timestamp: new Date().toISOString() } });
+});
+
+// Sentry Express 에러 핸들러 — 모든 라우트 등록 후 마지막에 부착
+attachSentryErrorHandler(app);
 
 /* ─── 로컬 개발용 (devApp 통합 — 위에서 이미 마운트됨) ─── */
 const isFirebase = process.env.FUNCTIONS_EMULATOR || process.env.GCLOUD_PROJECT || process.env.K_SERVICE;
 
 /* ─── 코칭 전용 Express ─── */
 const coachingApp = express();
-coachingApp.use(express.json({ limit: '10mb' }));
+coachingApp.use(
+  express.json({
+    limit: '10mb',
+    verify: (req, _res, buf) => {
+      (req as Request & { rawBody?: Buffer }).rawBody = buf;
+    },
+  }),
+);
+coachingApp.use(flushOnFinishMiddleware());
 setupSecurity(coachingApp);
 coachingApp.use('/api/coaching', coachingRoutes);
 coachingApp.get('/api/health', (_req, res) => {
   res.json({ success: true, data: { status: 'ok', service: 'coachingApi', version: '1.0.0', timestamp: new Date().toISOString() } });
 });
+attachSentryErrorHandler(coachingApp);
 
 /* ─── Firebase Functions exports ─── */
+
+/**
+ * Firebase Functions Secret Manager 바인딩.
+ *
+ * 여기 명시된 secret 만 함수 컨테이너의 process.env 에 자동 주입됨.
+ * 미명시 secret 은 Secret Manager 에 등록되어 있어도 함수에서 접근 불가.
+ *
+ * 등록 완료 (2026-05-04):
+ *   - TOKEN_ENCRYPTION_KEY     (소셜 access_token AES-256-GCM 암호화)
+ *   - SENTRY_DSN_BACKEND       (백엔드 에러 자동 수집)
+ *   - GEMINI_API_KEY           (Gemini AI)
+ *   - JWT_SECRET, JWT_REFRESH_SECRET (인증 토큰 서명)
+ *   - PASSPORT_SALT            (여권 공개 링크 해시)
+ *   - KAKAO_*, NAVER_*, GOOGLE_* (소셜 로그인)
+ *
+ * 결제사 승인 후 등록 예정:
+ *   - PORTONE_API_SECRET, PORTONE_WEBHOOK_SECRET, PORTONE_STORE_ID, PORTONE_CHANNEL_KEY_*
+ *   - GOOGLE_PUBSUB_AUDIENCE, GOOGLE_PUBSUB_SA_EMAIL
+ *   - GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
+ *   - APPLE_ISSUER_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY, APPLE_BUNDLE_ID
+ *
+ * Phase 5 완료 후 backend/.env 는 로컬 개발 전용으로 축소되고
+ * functions.ignore 에 추가되어 deploy 패키지에서 제외됨.
+ */
+const REGISTERED_SECRETS: string[] = [
+  'TOKEN_ENCRYPTION_KEY',
+  'SENTRY_DSN_BACKEND',
+  'GEMINI_API_KEY',
+  'JWT_SECRET',
+  'JWT_REFRESH_SECRET',
+  'PASSPORT_SALT',
+  'KAKAO_JAVASCRIPT_KEY',
+  'KAKAO_REST_API_KEY',
+  'KAKAO_CLIENT_SECRET',
+  'KAKAO_ADMIN_KEY',
+  'NAVER_CLIENT_ID',
+  'NAVER_CLIENT_SECRET',
+  'GOOGLE_CLIENT_ID',
+  'GOOGLE_CLIENT_SECRET',
+];
 
 // memory: 512MiB — 비코칭 라우트는 가벼운 CRUD가 다수
 // concurrency: 20 — 동시 요청 과다 시 메모리 스파이크 방지
@@ -127,6 +197,7 @@ export const api = functions.https.onRequest(
     memory: '512MiB',
     concurrency: 20,
     timeoutSeconds: 300,
+    secrets: REGISTERED_SECRETS,
   },
   app
 );
@@ -140,6 +211,7 @@ export const coachingApi = functions.https.onRequest(
     memory: '1GiB',
     concurrency: 5,
     timeoutSeconds: 300,
+    secrets: REGISTERED_SECRETS,
   },
   coachingApp
 );

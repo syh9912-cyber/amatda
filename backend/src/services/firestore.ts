@@ -100,6 +100,12 @@ export const collections = {
   //   cardName?: string, cardNumberMasked?: string,
   // }
   billingKeys: db.collection('billingKeys'),
+
+  // 소셜 가입 race condition 방어용 결정적 인덱스.
+  // 문서 ID: `${provider}_${socialId}` (예: KAKAO_1234567890)
+  // 같은 socialId 로 동시에 두 요청이 와도 transaction이 retry → 한쪽만 user 생성.
+  // 문서: { userId, provider, socialId, createdAt }
+  socialIdIndex: db.collection('socialIdIndex'),
 };
 
 /** 문서 ID 생성 */

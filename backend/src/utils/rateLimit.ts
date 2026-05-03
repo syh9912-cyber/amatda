@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import { collections } from '../services/firestore';
+import { logger } from './logger';
 
 export type UserTier = 'free' | 'paid';
 
@@ -71,7 +72,7 @@ export async function incrementDailyUsage(userId: string, feature: string): Prom
       { merge: true },
     );
   } catch (err) {
-    console.error('[rateLimit] incrementDailyUsage failed:', err instanceof Error ? err.message : String(err));
+    logger.error('rateLimit/incrementDailyUsage', err);
   }
 }
 

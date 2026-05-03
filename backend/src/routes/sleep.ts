@@ -8,6 +8,7 @@ import { callGeminiText } from '../services/coaching/gemini.client';
 import { maskChildName } from '../utils/masking';
 import { getChildIfAccessible } from '../utils/childAccess';
 import { checkDailyLimit, incrementDailyUsage } from '../utils/rateLimit';
+import { logger } from '../utils/logger';
 
 const SLEEP_FREE_DAILY_LIMIT = 3;
 
@@ -219,7 +220,7 @@ router.post('/predict', authMiddleware, async (req: Request, res: Response) => {
     });
 
   } catch (err) {
-    console.error('Sleep predict error:', err);
+    logger.error('sleep/predict', err);
     error(res, '수면 예측 중 오류가 발생했습니다');
   }
 });
@@ -250,7 +251,7 @@ router.get('/history', authMiddleware, async (req: Request, res: Response) => {
 
     success(res, { history });
   } catch (err) {
-    console.error('Sleep history error:', err);
+    logger.error('sleep/history', err);
     error(res, '수면 기록 조회 중 오류가 발생했습니다');
   }
 });
