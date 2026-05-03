@@ -31,7 +31,7 @@
       "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#FFF5EC"
       },
       "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false,
