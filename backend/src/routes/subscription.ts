@@ -61,7 +61,7 @@ const PAYMENT_METHODS = [
 router.get('/premium/status', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userDoc = await collections.users.doc(req.userId!).get();
-    if (!userDoc.exists) { error(res, '사용자 없음', 404); return; }
+    if (!userDoc.exists) { error(res, '계정이 존재하지 않습니다 (재로그인 필요)', 401); return; }
     const user = userDoc.data() as Record<string, unknown>;
 
     const tier = (user.subscriptionTier as string) || 'FREE';
@@ -128,7 +128,7 @@ router.get('/premium/status', authMiddleware, async (req: Request, res: Response
 router.post('/premium/start-trial', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userDoc = await collections.users.doc(req.userId!).get();
-    if (!userDoc.exists) { error(res, '사용자 없음', 404); return; }
+    if (!userDoc.exists) { error(res, '계정이 존재하지 않습니다 (재로그인 필요)', 401); return; }
     const user = userDoc.data() as Record<string, unknown>;
 
     if (user.trialStartedAt) {

@@ -386,7 +386,7 @@ router.put('/nickname', authMiddleware, async (req: Request, res: Response) => {
 router.get('/me', authMiddleware, async (req: Request, res: Response) => {
   try {
     const doc = await collections.users.doc(req.userId!).get();
-    if (!doc.exists) { error(res, '사용자 없음', 404); return; }
+    if (!doc.exists) { error(res, '계정이 존재하지 않습니다 (재로그인 필요)', 401); return; }
     const data = doc.data() as Record<string, unknown>;
     success(res, {
       id: doc.id,
