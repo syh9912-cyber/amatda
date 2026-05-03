@@ -261,54 +261,55 @@ export async function socialLogin(provider: SocialProvider): Promise<SocialLogin
 }
 
 /**
- * 디바이스 측 소셜 SDK 토큰 캐시 정리.
- * 로그아웃/계정삭제 시 모든 provider에 대해 호출 (어떤 provider로 로그인했는지 모를 수 있음).
+ * 디바이스 측 소셜 SDK 토큰 캐시 정리 (logout만 — 안전).
  *
- * - logout: SDK가 가진 access token 만 무효화 (다음 로그인 시 동의화면 X 가능)
- * - unlink: 앱-카카오/네이버/구글 연결 자체 해제 (다음 로그인 시 동의화면 다시 표시)
+ * 중요: unlink는 호출하지 않음. 이유:
+ *  1. 백엔드가 이미 서버측 unlink REST를 호출함 (auth.ts deleteAccount)
+ *  2. 서버 unlink로 토큰이 이미 무효화된 상태에서 디바이스가 다시 unlink 시도하면
+ *     네이티브 SDK가 예외 발생 → JS try/catch 우회 → 앱 크래시 (Android에서 발생)
+ *  3. logout()만 호출하면 디바이스 캐시 정리만 하므로 안전
  *
- * 모든 호출은 best-effort — 실패해도 진행. 웹/네이티브 분기.
+ * 모든 호출은 best-effort + 타임아웃 보호 — 실패해도 진행. 웹은 no-op.
  */
-export async function clearAllSocialSessions(opts?: { unlink?: boolean }): Promise<void> {
-  if (Platform.OS === 'web') return;
-  const unlink = opts?.unlink === true;
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
+  return Promise.race([
+    p.catch(() => null as T | null),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
 
-  // 카카오
+export async function clearAllSocialSessions(): Promise<void> {
+  if (Platform.OS === 'web') return;
+
+  // 카카오 — logout만
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const KakaoMod = require('@react-native-seoul/kakao-login');
-    if (unlink && typeof KakaoMod.unlink === 'function') {
-      await KakaoMod.unlink().catch(() => {});
-    } else if (typeof KakaoMod.logout === 'function') {
-      await KakaoMod.logout().catch(() => {});
+    if (typeof KakaoMod.logout === 'function') {
+      await withTimeout(KakaoMod.logout(), 3000);
     }
   } catch {
     /* SDK 미설치 또는 미로그인 — 무시 */
   }
 
-  // 네이버
+  // 네이버 — logout만
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const NaverMod = require('@react-native-seoul/naver-login');
     const NaverLogin = NaverMod.default ?? NaverMod;
-    if (unlink && typeof NaverLogin.deleteToken === 'function') {
-      await NaverLogin.deleteToken().catch(() => {});
-    } else if (typeof NaverLogin.logout === 'function') {
-      await NaverLogin.logout().catch(() => {});
+    if (typeof NaverLogin.logout === 'function') {
+      await withTimeout(NaverLogin.logout(), 3000);
     }
   } catch {
     /* SDK 미설치 또는 미로그인 — 무시 */
   }
 
-  // 구글
+  // 구글 — signOut만 (revokeAccess는 unlink와 같은 위험)
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { GoogleSignin } = require('@react-native-google-signin/google-signin');
-    if (unlink && typeof GoogleSignin.revokeAccess === 'function') {
-      await GoogleSignin.revokeAccess().catch(() => {});
-    }
     if (typeof GoogleSignin.signOut === 'function') {
-      await GoogleSignin.signOut().catch(() => {});
+      await withTimeout(GoogleSignin.signOut(), 3000);
     }
   } catch {
     /* SDK 미설치 또는 미로그인 — 무시 */

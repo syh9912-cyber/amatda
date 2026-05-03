@@ -60,11 +60,12 @@ export default function ProfileScreen() {
         text: '로그아웃',
         style: 'destructive',
         onPress: async () => {
-          // 정석: 로컬 상태 정리 → 디바이스 SDK 로그아웃 → 모든 로컬 알림 취소
+          // 즉시 로컬 정리 + 리다이렉트 (사용자 흐름 안 막음)
           logout();
-          await clearAllSocialSessions({ unlink: false });
           await cancelAllLocalNotifications();
           router.replace('/');
+          // SDK 정리는 fire-and-forget — 어떤 이유로 실패/지연돼도 사용자 영향 없음
+          clearAllSocialSessions().catch(() => {});
         },
       },
     ]);
@@ -87,15 +88,15 @@ export default function ProfileScreen() {
                 style: 'destructive',
                 onPress: async () => {
                   try {
-                    // 1. 백엔드: user 데이터 삭제 + 소셜 unlink REST 호출
+                    // 1. 백엔드: user 데이터 삭제 + 소셜 unlink REST 호출 (서버측 unlink 완료)
                     await authApi.deleteAccount();
-                    // 2. 디바이스 SDK: 카카오/네이버/구글 토큰 캐시 + 앱 연결 자체 해제
-                    //    (서버 unlink와 별개로 디바이스에 남은 access token / 동의 기록 정리)
-                    await clearAllSocialSessions({ unlink: true });
-                    // 3. 로컬 상태 + 모든 예약 알림 정리
+                    // 2. 즉시 로컬 정리 + 리다이렉트
                     logout();
                     await cancelAllLocalNotifications();
                     router.replace('/');
+                    // 3. 디바이스 SDK 캐시 정리는 fire-and-forget
+                    //    (서버가 이미 unlink했으므로 디바이스는 logout만 — unlink 호출 시 네이티브 크래시 위험)
+                    clearAllSocialSessions().catch(() => {});
                   } catch {
                     Alert.alert('오류', '계정 삭제에 실패했습니다.');
                   }
