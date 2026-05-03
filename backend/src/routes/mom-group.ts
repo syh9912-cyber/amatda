@@ -127,7 +127,7 @@ router.get('/posts', authMiddleware, async (req: Request, res: Response) => {
     // 검색/페이징을 위해 충분히 로드 (최대 500개)
     const snap = await q.limit(500).get();
 
-    let posts = snap.docs.map((d) => {
+    const mapDoc = (d: FirebaseFirestore.QueryDocumentSnapshot) => {
       const data = d.data();
       const ca = data.createdAt as { toDate?: () => Date } | undefined;
       const ua = data.updatedAt as { toDate?: () => Date } | undefined;
@@ -149,8 +149,34 @@ router.get('/posts', authMiddleware, async (req: Request, res: Response) => {
         createdAt: ca?.toDate?.().toISOString() ?? '',
         updatedAt: ua?.toDate?.().toISOString() ?? '',
         isMine: data.userId === req.userId,
+        isOfficial: data.isOfficial === true,
+        isPinned: data.isPinned === true,
       };
-    });
+    };
+
+    let posts = snap.docs.map(mapDoc);
+
+    // 공식 글 전역 노출 — 월방/카테고리 filter와 무관하게 모든 공식 글 합류
+    // (mine 모드는 본인 글만 봐야 하므로 제외)
+    if (!mine) {
+      try {
+        let officialQ = collections.momGroupPosts
+          .where('isOfficial', '==', true)
+          .where('hidden', '==', false);
+        if (category && isValidCategory(category)) {
+          officialQ = officialQ.where('category', '==', category);
+        }
+        const officialSnap = await officialQ.limit(50).get();
+        const existingIds = new Set(posts.map((p) => p.id));
+        for (const d of officialSnap.docs) {
+          if (!existingIds.has(d.id)) {
+            posts.push(mapDoc(d));
+          }
+        }
+      } catch {
+        // 공식 글 조회 실패는 일반 결과에 영향 X
+      }
+    }
 
     // mine 모드에선 hidden도 보여줌 (내 글 숨겨져도 확인 가능)
     if (!mine) posts = posts.filter((p) => !p.hidden);
@@ -178,6 +204,17 @@ router.get('/posts', authMiddleware, async (req: Request, res: Response) => {
       });
     } else {
       posts.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    }
+
+    // 핀 글(공식 + isPinned) 최상단 고정 — 최대 3개
+    if (!mine) {
+      const pinned = posts
+        .filter((p) => p.isPinned && p.isOfficial)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, 3);
+      const pinnedIds = new Set(pinned.map((p) => p.id));
+      const rest = posts.filter((p) => !pinnedIds.has(p.id));
+      posts = [...pinned, ...rest];
     }
 
     if (!hasPagination) {
@@ -415,6 +452,61 @@ router.get('/posts/radius', authMiddleware, async (req: Request, res: Response) 
         .filter((p) => p.distanceKm != null && p.distanceKm <= radiusKm);
     } else {
       posts.forEach((p) => { p.distanceKm = null; });
+    }
+
+    // 공식 글 위치 무관 합류 — 반경 필터 결과와 별개로 모든 공식 글 포함
+    // (전국 모드에서는 위 쿼리에 이미 다 포함되므로 중복 dedupe만 처리)
+    try {
+      let officialQ = collections.momGroupPosts
+        .where('isOfficial', '==', true)
+        .where('hidden', '==', false);
+      if (category && isValidCategory(category)) {
+        officialQ = officialQ.where('category', '==', category);
+      }
+      if (birthYears && birthYears.length > 0) {
+        // 공식 글에도 동갑 필터 적용 — birthYear가 매칭되거나 babyBirthYear 없는(전 연령용) 글만
+        if (birthYears.length === 1) {
+          officialQ = officialQ.where('babyBirthYear', '==', birthYears[0]);
+        } else {
+          officialQ = officialQ.where('babyBirthYear', 'in', birthYears);
+        }
+      }
+      const officialSnap = await officialQ.limit(50).get();
+      const existingIds = new Set(posts.map((p) => p.id));
+      for (const d of officialSnap.docs) {
+        if (existingIds.has(d.id)) continue;
+        const data = d.data();
+        const ca = data.createdAt as { toDate?: () => Date } | undefined;
+        const ua = data.updatedAt as { toDate?: () => Date } | undefined;
+        posts.push({
+          id: d.id,
+          groupKey: data.groupKey as string,
+          userId: data.userId as string,
+          nickname: data.nickname as string,
+          category: (data.category as Category | undefined) ?? 'chat',
+          anonymous: (data.anonymous as boolean | undefined) ?? false,
+          title: (data.title as string | undefined) ?? '',
+          content: data.content as string,
+          imageUrl: (data.imageUrl as string | null | undefined) ?? null,
+          likeCount: (data.likeCount as number | undefined) ?? 0,
+          commentCount: (data.commentCount as number | undefined) ?? 0,
+          viewCount: (data.viewCount as number | undefined) ?? 0,
+          hidden: false,
+          isEdited: (data.isEdited as boolean | undefined) ?? false,
+          createdAt: ca?.toDate?.().toISOString() ?? '',
+          updatedAt: ua?.toDate?.().toISOString() ?? '',
+          isMine: data.userId === req.userId,
+          lat: typeof data.lat === 'number' ? (data.lat as number) : null,
+          lng: typeof data.lng === 'number' ? (data.lng as number) : null,
+          babyBirthYear: typeof data.babyBirthYear === 'number' ? (data.babyBirthYear as number) : null,
+          distanceKm: null,
+          isOfficial: true,
+          isPinned: data.isPinned === true,
+          isFallback: false,
+        });
+      }
+    } catch {
+      // 공식 글 조회 실패는 일반 결과에 영향 X
     }
 
     // 검색 필터
