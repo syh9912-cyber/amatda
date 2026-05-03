@@ -20,6 +20,10 @@ export interface TrackerRecord {
   amount?: number;
   duration?: number;
   note?: string;
+  // 정렬 안정화 — 같은 분에 여러 기록이 있을 때 '누른 순서' 보장 키.
+  // sleep 의 경우 sleep_start 누른 시점 (sleepSession.startTime), 다른 type 은 추가 시점.
+  // 옛 데이터엔 없을 수 있어 optional. 정렬 fallback 은 records.index.
+  createdAt?: string;
 }
 
 export interface DaySummary {

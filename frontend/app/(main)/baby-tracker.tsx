@@ -1148,6 +1148,7 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
       type: tab,
       subType,
       time,
+      createdAt: new Date().toISOString(),
     };
 
     if (tab === 'feeding') {
@@ -1653,6 +1654,7 @@ function BabyTrackerInner() {
       type,
       subType,
       time: nowTime(),
+      createdAt: new Date().toISOString(),
     };
     handleAddRecord(record);
     showToast(`${SUBTYPE_LABELS[subType] ?? subType} 기록 완료`);
@@ -1715,6 +1717,7 @@ function BabyTrackerInner() {
         type: payload.type,
         subType: payload.subType,
         time: timedActionTime,
+        createdAt: new Date().toISOString(),
         ...(note ? { note } : {}),
       };
       handleAddRecord(record);
@@ -1766,6 +1769,7 @@ function BabyTrackerInner() {
         time: startHHMM,
         endTime: endLabel,
         duration,
+        createdAt: sleepSession.startTime,  // 수면 시작 누른 시점 기준 정렬
         ...(combinedNote ? { note: combinedNote } : {}),
       };
       const existing = await loadRecords(childId, sleepSession.startDate);
@@ -1982,6 +1986,7 @@ function BabyTrackerInner() {
       time: startHHMM,
       endTime: endHHMM,
       duration: diff,
+      createdAt: breastSession.startTime,  // 수유 시작 시점 기준 정렬
       note: combinedNote,
     };
     const existing = await loadRecords(childId, breastSession.startDate);
@@ -2063,6 +2068,9 @@ function BabyTrackerInner() {
       time: startHHMM,
       endTime: endLabel,
       duration,
+      // createdAt = sleepSession.startTime — 수면 시작을 누른 시점 기준으로 정렬되도록.
+      // (records 배열엔 wake 누른 시점에 추가되지만 사용자는 start 시점을 시작점으로 인식)
+      createdAt: sleepSession.startTime,
       ...(sleepSession.note ? { note: sleepSession.note } : {}),
     };
 
@@ -3340,33 +3348,30 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete, onL
       if (Number.isNaN(hi) || Number.isNaN(mi)) return 0;
       return hi * 60 + mi;
     };
-    // 같은 시간 tiebreaker — 사용자 의도: "시간 수정 없으면 누른 순서대로".
-    // records prop (= allRecordsSorted = today + crossDayWakes 합친 것) 의 array index 가
-    // 누른 순서를 반영. 그것을 tiebreaker 로 사용.
-    // sleep 한 entry 의 __wake 는 항상 같은 sleep 의 __start 바로 뒤로 오도록 +1 offset.
+    // 같은 시간 tiebreaker — 누른 순서대로.
+    // 1순위: createdAt (record 추가 시점, sleep 은 sleep_start 누른 시점)
+    // 2순위 (createdAt 없는 옛 데이터): records 배열 index
+    // sleep __wake 는 항상 같은 sleep __start 바로 뒤로 오도록 +1 ms offset.
     const orderMap = new Map<string, number>();
     records.forEach((r, i) => orderMap.set(r.id, i * 10));
     const orderOf = (entry: TrackerRecord): number => {
-      if (entry.id === '__active_sleep__') return 999999;
+      if (entry.id === '__active_sleep__') return Number.MAX_SAFE_INTEGER;
       const realId = entry.id.replace(/__start$|__wake$|__crosswake$/, '');
-      const base = orderMap.get(realId) ?? orderMap.get(entry.id) ?? 999998;
+      // 1순위: createdAt
+      const orig = records.find((r) => r.id === realId);
+      if (orig?.createdAt) {
+        const ts = new Date(orig.createdAt).getTime();
+        return entry.id.endsWith('__wake') ? ts + 1 : ts;
+      }
+      // 2순위: records.index
+      const base = orderMap.get(realId) ?? orderMap.get(entry.id) ?? Number.MAX_SAFE_INTEGER - 1;
       return entry.id.endsWith('__wake') ? base + 1 : base;
     };
-    // === 디버그 로그 (정렬 문제 추적용) — 운영 안정 후 제거 ===
-    console.log('[BABYTRACKER-SORT] records prop (raw input):',
-      records.map((r, i) => `[${i}] ${r.type}/${r.subType} time=${r.time} endTime=${r.endTime ?? '-'} id=${r.id}`).join(' | ')
-    );
-    console.log('[BABYTRACKER-SORT] expanded BEFORE sort:',
-      out.map((r, i) => `[${i}] ${r.subType} time=${r.time} id=${r.id} order=${orderOf(r)}`).join(' | ')
-    );
     out.sort((a, b) => {
       const diff = toMin(a.time) - toMin(b.time);
       if (diff !== 0) return diff;
       return orderOf(a) - orderOf(b);
     });
-    console.log('[BABYTRACKER-SORT] expanded AFTER sort (화면 위→아래):',
-      out.map((r, i) => `[${i}] ${r.subType} time=${r.time} id=${r.id}`).join(' | ')
-    );
     return out;
   }, [records, activeSleepSession, dateStr]);
 
