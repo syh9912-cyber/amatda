@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import * as Updates from 'expo-updates';
+import NetInfo from '@react-native-community/netinfo';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../stores/authStore';
 import { useChildStore } from '../stores/childStore';
@@ -102,13 +103,18 @@ function useOTAUpdate() {
     if (__DEV__ || checkingRef.current) return;
     checkingRef.current = true;
 
+    let progressTimer: ReturnType<typeof setInterval> | null = null;
+
     try {
+      // 오프라인이면 OTA 체크 자체가 reject되어 Sentry에 무의미한 에러가 쌓인다
+      const net = await NetInfo.fetch();
+      if (net.isConnected === false) return;
+
       setStatus('checking');
       const update = await Updates.checkForUpdateAsync();
 
       if (!update.isAvailable) {
         setStatus('idle');
-        checkingRef.current = false;
         return;
       }
 
@@ -117,7 +123,7 @@ function useOTAUpdate() {
       setProgress(0);
 
       const startTime = Date.now();
-      const progressTimer = setInterval(() => {
+      progressTimer = setInterval(() => {
         const elapsed = Date.now() - startTime;
         // 0~3초: 0→70%, 3~6초: 70→90% (점점 느려지는 느낌)
         const p = elapsed < 3000
@@ -129,6 +135,7 @@ function useOTAUpdate() {
       await Updates.fetchUpdateAsync();
 
       clearInterval(progressTimer);
+      progressTimer = null;
       setProgress(1);
       setStatus('ready');
 
@@ -143,6 +150,7 @@ function useOTAUpdate() {
       );
       setStatus('idle');
     } finally {
+      if (progressTimer) clearInterval(progressTimer);
       checkingRef.current = false;
     }
   }, []);
