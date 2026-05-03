@@ -248,6 +248,11 @@ router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
     const lng = userData?.lng;
     const babyBirthYear = userData?.babyBirthYear;
 
+    // 공식 계정 여부 — 사용자 문서의 isOfficial 플래그 denormalize.
+    // 운영자가 Firestore Console에서 직접 users/{uid}.isOfficial=true 설정.
+    // 익명 게시글에는 노출 안 함 (정체성 노출 방지).
+    const isOfficial = !isAnon && userData?.isOfficial === true;
+
     const baseDoc: Record<string, unknown> = {
       groupKey,
       userId: req.userId!,
@@ -262,6 +267,7 @@ router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
       viewCount: 0,
       reportCount: 0,
       hidden: false,
+      isOfficial,
       createdAt: FieldValue.serverTimestamp(),
     };
     if (typeof lat === 'number' && typeof lng === 'number') {
@@ -384,6 +390,8 @@ router.get('/posts/radius', authMiddleware, async (req: Request, res: Response) 
         lng: typeof data.lng === 'number' ? (data.lng as number) : null,
         babyBirthYear: typeof data.babyBirthYear === 'number' ? (data.babyBirthYear as number) : null,
         distanceKm: 0 as number | null,
+        isOfficial: data.isOfficial === true,
+        isFallback: false,
       };
     });
 
@@ -424,12 +432,83 @@ router.get('/posts/radius', authMiddleware, async (req: Request, res: Response) 
       posts.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     }
 
+    // 전국 인기글 폴백 — 로컬 게시글이 너무 적으면 (5개 미만) 첫 페이지에 한해 전국 인기글을 뒤에 붙임.
+    // 검색어/카테고리 필터가 있으면 폴백 안 함 (검색은 정확도 우선).
+    const FALLBACK_THRESHOLD = 5;
+    const FALLBACK_LIMIT = 10;
+    const FALLBACK_DAYS = 14;
+    let isFallbackUsed = false;
+
+    if (
+      !isNationwide &&
+      !searchQ &&
+      !category &&
+      page === 1 &&
+      posts.length < FALLBACK_THRESHOLD
+    ) {
+      try {
+        const since = new Date();
+        since.setDate(since.getDate() - FALLBACK_DAYS);
+        const fallbackSnap = await collections.momGroupPosts
+          .where('hidden', '==', false)
+          .where('createdAt', '>=', since)
+          .orderBy('createdAt', 'desc')
+          .limit(100)
+          .get();
+
+        const localIds = new Set(posts.map((p) => p.id));
+        const fallbackPosts = fallbackSnap.docs
+          .filter((d) => !localIds.has(d.id))
+          .map((d) => {
+            const data = d.data();
+            const ca = data.createdAt as { toDate?: () => Date } | undefined;
+            const ua = data.updatedAt as { toDate?: () => Date } | undefined;
+            return {
+              id: d.id,
+              groupKey: data.groupKey as string,
+              userId: data.userId as string,
+              nickname: data.nickname as string,
+              category: (data.category as Category | undefined) ?? 'chat',
+              anonymous: (data.anonymous as boolean | undefined) ?? false,
+              title: (data.title as string | undefined) ?? '',
+              content: data.content as string,
+              imageUrl: (data.imageUrl as string | null | undefined) ?? null,
+              likeCount: (data.likeCount as number | undefined) ?? 0,
+              commentCount: (data.commentCount as number | undefined) ?? 0,
+              viewCount: (data.viewCount as number | undefined) ?? 0,
+              hidden: false,
+              isEdited: (data.isEdited as boolean | undefined) ?? false,
+              createdAt: ca?.toDate?.().toISOString() ?? '',
+              updatedAt: ua?.toDate?.().toISOString() ?? '',
+              isMine: data.userId === req.userId,
+              lat: null as number | null,
+              lng: null as number | null,
+              babyBirthYear: typeof data.babyBirthYear === 'number' ? (data.babyBirthYear as number) : null,
+              distanceKm: null as number | null,
+              isOfficial: data.isOfficial === true,
+              isFallback: true,
+            };
+          })
+          // 인기 점수 정렬 후 상위 N개만
+          .sort((a, b) => (b.likeCount * 2 + b.commentCount) - (a.likeCount * 2 + a.commentCount))
+          .slice(0, FALLBACK_LIMIT);
+
+        if (fallbackPosts.length > 0) {
+          posts = [...posts, ...fallbackPosts];
+          isFallbackUsed = true;
+        }
+      } catch (fbErr) {
+        logger.error('mom-group:fallback', fbErr, { userId: req.userId });
+        // 폴백 실패는 무시 — 로컬 결과만 반환
+      }
+    }
+
     const total = posts.length;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const start = (page - 1) * pageSize;
     const paged = posts.slice(start, start + pageSize);
 
-    success(res, { posts: paged, page, pageSize, total, totalPages, radiusKm, birthYears });
+    success(res, { posts: paged, page, pageSize, total, totalPages, radiusKm, birthYears, fallbackUsed: isFallbackUsed });
   } catch (err) {
     logger.error('mom-group:listPostsRadius', err, { userId: req.userId });
     error(res, '게시글 조회 중 오류가 발생했습니다', 500);
@@ -560,6 +639,7 @@ router.get('/posts/:id/comments', authMiddleware, async (req: Request, res: Resp
           content: data.content as string,
           createdAt: ca?.toDate?.().toISOString() ?? '',
           isMine: data.userId === req.userId,
+          isOfficial: data.isOfficial === true,
         };
       })
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -589,12 +669,15 @@ router.post('/posts/:id/comments', authMiddleware, async (req: Request, res: Res
 
     const isAnon = Boolean(anonymous);
     let nickname: string;
+    let isOfficial = false;
     if (isAnon && postGroupKey) {
       nickname = anonTagFor(req.userId!, postGroupKey);
     } else {
       const userDoc = await collections.users.doc(req.userId!).get();
-      const userNickname = userDoc.exists ? (userDoc.data()?.nickname as string | undefined) : undefined;
+      const userData = userDoc.exists ? userDoc.data() : null;
+      const userNickname = userData?.nickname as string | undefined;
       nickname = pickNickname(userNickname, req.userId!);
+      isOfficial = userData?.isOfficial === true;
     }
 
     const id = genId();
@@ -605,6 +688,7 @@ router.post('/posts/:id/comments', authMiddleware, async (req: Request, res: Res
       anonymous: isAnon,
       content: body,
       createdAt: FieldValue.serverTimestamp(),
+      isOfficial,
     });
 
     await collections.momGroupPosts.doc(postId).update({

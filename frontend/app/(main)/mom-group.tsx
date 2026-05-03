@@ -16,10 +16,10 @@ import {
   ActionSheetIOS,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChildStore } from '../../stores/childStore';
-import { momGroupApi, uploadApi, type MomGroupCategory, type MomGroupSort } from '../../services/api';
+import { momGroupApi, momLocationApi, uploadApi, type MomGroupCategory, type MomGroupSort } from '../../services/api';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
@@ -46,6 +46,8 @@ interface Post {
   updatedAt?: string;
   isEdited?: boolean;
   isMine: boolean;
+  isOfficial?: boolean;
+  isFallback?: boolean;
 }
 
 const REPORT_REASON_OPTIONS: { key: 'abuse' | 'ad' | 'privacy' | 'spam' | 'other'; label: string }[] = [
@@ -64,6 +66,7 @@ interface Comment {
   content: string;
   createdAt: string;
   isMine: boolean;
+  isOfficial?: boolean;
 }
 
 const CATEGORY_META: Record<MomGroupCategory, { label: string; emoji: string; color: string; bg: string }> = {
@@ -134,8 +137,17 @@ function compactDate(iso: string): string {
 
 const MONTH_WINDOW = 3; // 내 예정월 ±3개월까지 이동 허용
 
-type RoomType = 'month' | 'region';
+type RoomType = 'month' | 'region' | 'radius';
 type ViewMode = 'feed' | 'bookmarks' | 'mine';
+
+type RadiusKey = 5 | 10 | 50 | 100 | 0; // 0 = 전국
+const RADIUS_TABS: { key: RadiusKey; label: string; sub: string }[] = [
+  { key: 5,   label: '5km',  sub: '바로 옆' },
+  { key: 10,  label: '10km', sub: '우리 동네' },
+  { key: 50,  label: '50km', sub: '우리 도시' },
+  { key: 100, label: '100km', sub: '근교' },
+  { key: 0,   label: '전국', sub: '나이별' },
+];
 
 const REGIONS: { key: string; label: string }[] = [
   { key: 'seoul', label: '서울' }, { key: 'busan', label: '부산' },
@@ -149,10 +161,21 @@ const REGIONS: { key: string; label: string }[] = [
   { key: 'jeju', label: '제주' },
 ];
 
-function roomLabel(roomType: RoomType, groupKey: string): string {
+function roomLabel(roomType: RoomType, groupKey: string, radiusKey?: number, ageRange?: number): string {
   if (roomType === 'month') return formatGroupLabel(groupKey);
+  if (roomType === 'radius') {
+    const meta = RADIUS_TABS.find((r) => r.key === (radiusKey ?? 10));
+    const ageLabel = ageRange === 0 ? '동갑' : ageRange ? `±${ageRange}살` : '';
+    return `내 동네 · ${meta?.label ?? ''}${ageLabel ? ` · ${ageLabel}` : ''}`;
+  }
   const r = REGIONS.find((x) => `region:${x.key}` === groupKey);
   return `${r?.label ?? ''} 지역방`;
+}
+
+function writePlaceholder(roomType: RoomType): string {
+  if (roomType === 'radius') return '내 동네 맘들과 나누고 싶은 이야기를 적어주세요...';
+  if (roomType === 'month') return '같은 달 출산 맘들과 나누고 싶은 이야기를 적어주세요...';
+  return '같은 지역 맘들과 나누고 싶은 이야기를 적어주세요...';
 }
 
 function displayTitle(p: Post): string {
@@ -171,6 +194,12 @@ export default function MomGroupScreen() {
 
   const [roomType, setRoomType] = useState<RoomType>('month');
   const [groupKey, setGroupKey] = useState<string | null>(myGroupKey);
+  // radius 모드 선택값 (기본 우리 동네 10km, 동갑 매칭 기본)
+  const [radiusKey, setRadiusKey] = useState<RadiusKey>(10);
+  const [ageRange, setAgeRange] = useState<0 | 1 | 2>(0); // ±N 살
+  const [hasLocation, setHasLocation] = useState<boolean | null>(null); // null=미체크
+  const [locationLabel, setLocationLabel] = useState<string>('');
+  const [radiusCounts, setRadiusCounts] = useState<Record<string, number>>({});
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -223,13 +252,115 @@ export default function MomGroupScreen() {
     setRoomType(t);
     setPage(1);
     if (t === 'month') setGroupKey(myGroupKey);
-    else setGroupKey(`region:${REGIONS[0].key}`);
+    else if (t === 'region') setGroupKey(`region:${REGIONS[0].key}`);
+    // radius 모드는 groupKey와 무관 (자체 radiusKey 사용)
   };
 
+  // radius 모드용 자녀 출생연도 (동갑 매칭)
+  const myBabyBirthYear = useMemo(() => {
+    if (!selectedChild) return null;
+    if (selectedChild.isPregnant) {
+      if (selectedChild.dueDate) {
+        const y = new Date(selectedChild.dueDate).getFullYear();
+        return isNaN(y) ? null : y;
+      }
+      return null;
+    }
+    if (selectedChild.birthDate) {
+      const y = new Date(selectedChild.birthDate).getFullYear();
+      return isNaN(y) ? null : y;
+    }
+    return null;
+  }, [selectedChild]);
+
+  // 매칭 대상 출생연도 배열 (±ageRange)
+  const targetBirthYears = useMemo(() => {
+    if (!myBabyBirthYear) return undefined;
+    const list: number[] = [];
+    for (let d = -ageRange; d <= ageRange; d++) list.push(myBabyBirthYear + d);
+    return list;
+  }, [myBabyBirthYear, ageRange]);
+
+  // 위치 등록 여부 확인 — radius 모드 진입 시마다 재조회 (등록 후 돌아오면 즉시 반영)
+  const refreshLocation = useCallback(() => {
+    momLocationApi.get().then((res) => {
+      const data = res.data?.data as { hasLocation?: boolean; locationLabel?: string } | undefined;
+      setHasLocation(!!data?.hasLocation);
+      setLocationLabel(data?.locationLabel ?? '');
+    }).catch(() => setHasLocation(false));
+  }, []);
+
+  useEffect(() => {
+    if (roomType !== 'radius') return;
+    refreshLocation();
+  }, [roomType, refreshLocation]);
+
+  // 화면 포커스 복귀 시 위치 재확인 (위치 등록 화면에서 돌아왔을 때)
+  useFocusEffect(
+    useCallback(() => {
+      if (roomType === 'radius') refreshLocation();
+    }, [roomType, refreshLocation]),
+  );
+
+  // radius 모드 진입 시 반경별 활동 카운트 조회
+  useEffect(() => {
+    if (roomType !== 'radius') return;
+    momGroupApi.radiusCounts(targetBirthYears)
+      .then((res) => {
+        const data = res.data?.data as { counts?: Record<string, number> } | undefined;
+        if (data?.counts) setRadiusCounts(data.counts);
+      })
+      .catch(() => setRadiusCounts({}));
+  }, [roomType, targetBirthYears, hasLocation]);
+
   const canWrite =
-    roomType === 'month' ? groupKey === myGroupKey : true;
+    roomType === 'month' ? groupKey === myGroupKey
+    : roomType === 'radius' ? !!hasLocation
+    : true;
 
   const loadPosts = useCallback(async () => {
+    void targetBirthYears; // 의존성 인지용
+    if (roomType === 'radius') {
+      // 전국 모드(radiusKey===0)는 위치 미등록이어도 OK
+      if (radiusKey !== 0 && !hasLocation) {
+        setPosts([]);
+        setTotalPages(1);
+        setTotalCount(0);
+        return;
+      }
+      setLoading(true);
+      try {
+        const res = await momGroupApi.listPostsByRadius({
+          radius: radiusKey,
+          birthYears: targetBirthYears,
+          category: categoryFilter ?? undefined,
+          sort: sortMode,
+          page,
+          pageSize: PAGE_SIZE,
+          q: searchQuery || undefined,
+        });
+        const payload = res.data.data as
+          | { posts: Post[]; page: number; pageSize: number; total: number; totalPages: number }
+          | undefined;
+        if (payload && Array.isArray(payload.posts)) {
+          setPosts(payload.posts);
+          setTotalPages(payload.totalPages);
+          setTotalCount(payload.total);
+        } else {
+          setPosts([]);
+          setTotalPages(1);
+          setTotalCount(0);
+        }
+      } catch {
+        // silent — 초기 로드 시 alert 띄우지 않기 (사용자 새로고침 시도하면 retry)
+        setPosts([]);
+        setTotalPages(1);
+        setTotalCount(0);
+      }
+      setLoading(false);
+      return;
+    }
+
     if (!groupKey) return;
     setLoading(true);
     try {
@@ -257,7 +388,7 @@ export default function MomGroupScreen() {
       Alert.alert('오류', '게시글을 불러오지 못했어요');
     }
     setLoading(false);
-  }, [groupKey, categoryFilter, sortMode, page, searchQuery, searchField]);
+  }, [roomType, groupKey, radiusKey, hasLocation, targetBirthYears, categoryFilter, sortMode, page, searchQuery, searchField]);
 
   useEffect(() => { loadPosts(); }, [loadPosts]);
 
@@ -369,9 +500,11 @@ export default function MomGroupScreen() {
           ...(imageUrl !== undefined ? { imageUrl } : {}),
         });
       } else {
-        if (!groupKey) throw new Error('no groupKey');
+        // radius 모드 글쓰기: 자신의 myGroupKey(월방)에 저장 → 자동으로 lat/lng/babyBirthYear 첨부됨
+        const postGroupKey = roomType === 'radius' ? myGroupKey : groupKey;
+        if (!postGroupKey) throw new Error('no groupKey');
         await momGroupApi.createPost(
-          groupKey,
+          postGroupKey,
           title,
           body,
           writeCategory,
@@ -595,6 +728,8 @@ export default function MomGroupScreen() {
         <Text style={styles.colNo}>{rowNo > 0 ? rowNo : ''}</Text>
         <View style={styles.colTitleWrap}>
           <Text style={styles.colTitle} numberOfLines={1}>
+            {p.isOfficial ? <Text style={styles.officialBadgeInline}>공식 </Text> : null}
+            {p.isFallback ? <Text style={styles.fallbackBadgeInline}>전국 </Text> : null}
             {displayTitle(p)}
             {p.commentCount > 0 ? <Text style={styles.commentCountInline}> [{p.commentCount}]</Text> : null}
             {p.imageUrl ? <Text style={styles.inlineMark}> 📷</Text> : null}
@@ -602,7 +737,7 @@ export default function MomGroupScreen() {
           </Text>
         </View>
         <Text style={styles.colAuthor} numberOfLines={1}>
-          {p.anonymous ? '익명' : p.nickname}
+          {p.anonymous ? '익명' : (p.isOfficial ? `${p.nickname} ✓` : p.nickname)}
         </Text>
         <Text style={styles.colDate}>{compactDate(p.createdAt)}</Text>
         <Text style={styles.colViews}>{p.viewCount ?? 0}</Text>
@@ -628,9 +763,9 @@ export default function MomGroupScreen() {
         <View style={{ width: 60 }} />
       </View>
 
-      {/* 방 타입 탭 */}
+      {/* 방 타입 탭 (지역방 deprecated — 내 동네 radius 모드로 대체) */}
       <View style={styles.roomTabRow}>
-        {(['month', 'region'] as const).map((t) => (
+        {(['month', 'radius'] as const).map((t) => (
           <TouchableOpacity
             key={t}
             style={[styles.roomTab, roomType === t && styles.roomTabActive]}
@@ -640,14 +775,106 @@ export default function MomGroupScreen() {
               style={[styles.roomTabText, roomType === t && styles.roomTabTextActive]}
               numberOfLines={1}
             >
-              {t === 'month' ? '월방' : '지역방'}
+              {t === 'month' ? '월방' : '내 동네'}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
       {/* 방 선택 UI */}
-      {isFeed && (roomType === 'month' ? (
+      {isFeed && roomType === 'radius' ? (
+        <View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.roomPickerScroll}
+            contentContainerStyle={styles.roomPickerRow}
+          >
+            {RADIUS_TABS.map((r) => {
+              const active = radiusKey === r.key;
+              const count = radiusCounts[String(r.key)] ?? 0;
+              return (
+                <TouchableOpacity
+                  key={r.key}
+                  style={[styles.roomPickerChip, active && styles.roomPickerChipActive]}
+                  onPress={() => { setRadiusKey(r.key); setPage(1); }}
+                >
+                  <Text style={[styles.roomPickerText, active && styles.roomPickerTextActive]}>
+                    {r.label}
+                  </Text>
+                  <Text style={[styles.roomPickerSub, active && { color: '#FFFFFF', opacity: 0.9 }]}>
+                    {r.sub}
+                    {count > 0 ? ` · ${count}` : ''}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          {/* 위치 미등록 안내 (전국 모드는 OK) */}
+          {radiusKey !== 0 && hasLocation === false && (
+            <TouchableOpacity
+              style={styles.locationPrompt}
+              onPress={() => router.push('/(main)/mom-location-setup')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.locationPromptText}>
+                위치를 먼저 등록해주세요 — 탭하여 등록
+              </Text>
+            </TouchableOpacity>
+          )}
+          {/* 등록된 위치 + 변경 버튼 */}
+          {radiusKey !== 0 && hasLocation === true && (
+            <View style={styles.locationInfo}>
+              <Text style={styles.locationInfoText} numberOfLines={1}>
+                {'현재 등록: '}
+                <Text style={styles.locationInfoStrong}>
+                  {locationLabel || '위치 좌표 등록됨'}
+                </Text>
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push('/(main)/mom-location-setup')}
+                style={styles.locationChangeBtn}
+                hitSlop={8}
+              >
+                <Text style={styles.locationChangeText}>변경</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {/* 동갑 ±N 살 선택 */}
+          {myBabyBirthYear && (
+            <View style={styles.ageRangeRow}>
+              <Text style={styles.ageRangeLabel}>아이 나이 차이</Text>
+              <View style={styles.ageRangeChips}>
+                {([0, 1, 2] as const).map((d) => {
+                  const active = ageRange === d;
+                  const label = d === 0 ? '동갑' : `±${d}살`;
+                  return (
+                    <TouchableOpacity
+                      key={d}
+                      style={[styles.ageRangeChip, active && styles.ageRangeChipActive]}
+                      onPress={() => { setAgeRange(d); setPage(1); }}
+                    >
+                      <Text style={[styles.ageRangeChipText, active && styles.ageRangeChipTextActive]}>
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+          {/* 매칭 안내 */}
+          {myBabyBirthYear && targetBirthYears && (
+            <View style={styles.matchHint}>
+              <Text style={styles.matchHintText}>
+                {ageRange === 0
+                  ? `동갑 매칭: ${myBabyBirthYear}년생`
+                  : `매칭 범위: ${targetBirthYears[0]}~${targetBirthYears[targetBirthYears.length - 1]}년생`}
+              </Text>
+            </View>
+          )}
+        </View>
+      ) : isFeed && (roomType === 'month' ? (
         <View style={styles.monthNav}>
           <TouchableOpacity
             style={[styles.monthArrow, !canGoPrev && { opacity: 0.25 }]}
@@ -750,8 +977,37 @@ export default function MomGroupScreen() {
                     ? `"${searchQuery}" 검색 결과가 없어요`
                     : categoryFilter
                       ? '이 카테고리에 아직 글이 없어요'
-                      : '첫 게시글을 남겨보세요!'}
+                      : roomType === 'radius' && hasLocation
+                        ? `${radiusKey === 0 ? '전국' : `${radiusKey}km 안`}에 글이 없어요`
+                        : '첫 게시글을 남겨보세요!'}
             </Text>
+            {/* radius 모드에서 빈 화면이면 다음 반경 제안 */}
+            {roomType === 'radius' && !isBookmarkView && !isMineView && !searchQuery && !categoryFilter && (
+              <View style={styles.expandRow}>
+                {(() => {
+                  const sequence: RadiusKey[] = [5, 10, 50, 100, 0];
+                  const idx = sequence.indexOf(radiusKey);
+                  const nextOptions = sequence.slice(idx + 1);
+                  return nextOptions.slice(0, 2).map((next) => {
+                    const meta = RADIUS_TABS.find((r) => r.key === next);
+                    if (!meta) return null;
+                    const count = radiusCounts[String(next)] ?? 0;
+                    return (
+                      <TouchableOpacity
+                        key={next}
+                        style={styles.expandBtn}
+                        onPress={() => { setRadiusKey(next); setPage(1); }}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={styles.expandBtnText}>
+                          {`${meta.label} 보기${count > 0 ? ` (${count})` : ''}`}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  });
+                })()}
+              </View>
+            )}
           </View>
         ) : (
           <>
@@ -889,7 +1145,7 @@ export default function MomGroupScreen() {
                 <Text style={styles.backBtn}>{'< 닫기'}</Text>
               </TouchableOpacity>
               <Text style={styles.modalTitle}>
-                {editingPostId ? '글 수정' : `${roomLabel(roomType, groupKey)} · 새 글`}
+                {editingPostId ? '글 수정' : `${roomLabel(roomType, groupKey, radiusKey, ageRange)} · 새 글`}
               </Text>
               <View style={{ width: 60 }} />
             </View>
@@ -914,7 +1170,7 @@ export default function MomGroupScreen() {
               <Text style={styles.writeLabel}>내용</Text>
               <TextInput
                 style={styles.writeInput}
-                placeholder="같은 달 출산 엄마들과 나누고 싶은 이야기를 적어주세요..."
+                placeholder={writePlaceholder(roomType)}
                 placeholderTextColor={COLORS.textSecondary}
                 multiline
                 value={writeContent}
@@ -1017,10 +1273,16 @@ export default function MomGroupScreen() {
                   </Text>
                 </View>
                 {activePost.title ? (
-                  <Text style={styles.detailTitle}>{activePost.title}</Text>
+                  <Text style={styles.detailTitle}>
+                    {activePost.isOfficial ? <Text style={styles.officialBadgeInline}>공식 </Text> : null}
+                    {activePost.isFallback ? <Text style={styles.fallbackBadgeInline}>전국 인기 </Text> : null}
+                    {activePost.title}
+                  </Text>
                 ) : null}
                 <Text style={styles.postNickname}>
-                  {activePost.nickname}{activePost.anonymous ? ' · 익명' : ''}
+                  {activePost.nickname}
+                  {activePost.isOfficial ? <Text style={styles.officialCheck}> ✓ 공식</Text> : null}
+                  {activePost.anonymous ? ' · 익명' : ''}
                 </Text>
                 <Text style={styles.postContent}>{activePost.content}</Text>
                 {activePost.imageUrl ? (
@@ -1077,7 +1339,9 @@ export default function MomGroupScreen() {
                   <View key={c.id} style={styles.commentRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.commentNickname}>
-                        {c.nickname}{c.anonymous ? ' · 익명' : ''} · {timeAgo(c.createdAt)}
+                        {c.nickname}
+                        {c.isOfficial ? <Text style={styles.officialCheck}> ✓ 공식</Text> : null}
+                        {c.anonymous ? ' · 익명' : ''} · {timeAgo(c.createdAt)}
                       </Text>
                       <Text style={styles.commentText}>{c.content}</Text>
                     </View>
@@ -1177,6 +1441,103 @@ const styles = StyleSheet.create({
   roomPickerChipActive: { backgroundColor: '#F8BBD0', borderColor: '#E91E63' },
   roomPickerText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, fontWeight: '600' },
   roomPickerTextActive: { color: '#AD1457', fontWeight: '700' },
+  roomPickerSub: { fontSize: 9, color: COLORS.textLight, fontWeight: '600', marginTop: 1 },
+  locationPrompt: {
+    backgroundColor: '#FFF0E6',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginHorizontal: 16,
+    marginVertical: 6,
+    borderWidth: 1,
+    borderColor: '#FFD4BB',
+  },
+  locationPromptText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FF8C5A',
+    textAlign: 'center',
+  },
+  locationInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FAF7',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginHorizontal: 16,
+    marginVertical: 6,
+    borderWidth: 1,
+    borderColor: '#B8E1D2',
+    gap: 8,
+  },
+  locationInfoText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1A6B4C',
+  },
+  locationInfoStrong: {
+    fontWeight: '900',
+    color: '#0F4D33',
+  },
+  locationChangeBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#1A6B4C',
+  },
+  locationChangeText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  matchHint: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
+  matchHintText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#AD1457',
+  },
+  ageRangeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    gap: 10,
+  },
+  ageRangeLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
+  ageRangeChips: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  ageRangeChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.background,
+  },
+  ageRangeChipActive: {
+    backgroundColor: '#F8BBD0',
+    borderColor: '#E91E63',
+  },
+  ageRangeChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+  },
+  ageRangeChipTextActive: {
+    color: '#AD1457',
+    fontWeight: '900',
+  },
 
   monthNav: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -1284,7 +1645,25 @@ const styles = StyleSheet.create({
 
   emptyFeed: { alignItems: 'center', padding: SPACING.xl * 2 },
   emptyFeedEmoji: { fontSize: 40, marginBottom: SPACING.md },
-  emptyFeedText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
+  emptyFeedText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginBottom: 16 },
+  expandRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  expandBtn: {
+    backgroundColor: '#FF8C5A',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 16,
+  },
+  expandBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '900',
+  },
 
   // 클래식 표형 게시판 행
   boardHeaderRow: {
@@ -1334,6 +1713,31 @@ const styles = StyleSheet.create({
   },
   inlineMark: {
     fontSize: 11,
+  },
+  officialBadgeInline: {
+    fontSize: 11,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    backgroundColor: '#1976D2',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  fallbackBadgeInline: {
+    fontSize: 11,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    backgroundColor: '#7C4DFF',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  officialCheck: {
+    color: '#1976D2',
+    fontWeight: '700',
+    fontSize: 12,
   },
   colAuthor: {
     width: 52,
