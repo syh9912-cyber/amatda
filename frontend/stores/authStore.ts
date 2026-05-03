@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { saveAuth, loadAuthAsync, clearAuth } from '../services/storage';
+import { setUser as sentrySetUser, clearUser as sentryClearUser } from './../services/sentry';
 
 interface AuthState {
   accessToken: string | null;
@@ -29,6 +30,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setAuth: ({ accessToken, refreshToken, userId, email }) => {
     set({ accessToken, refreshToken, userId, email, isAuthenticated: true });
     saveAuth({ accessToken, refreshToken, userId, email });
+    // Sentry 사용자 식별 — 어떤 유저가 크래시 났는지 대시보드에서 확인 가능
+    try { sentrySetUser(userId, email); } catch { /* ignore */ }
   },
 
   // ✅ refresh 토큰 갱신 시 — userId/email은 스토어에 이미 있음
@@ -67,6 +70,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       email: null,
       isAuthenticated: false,
     });
+    // Sentry 사용자 식별 해제
+    try { sentryClearUser(); } catch { /* ignore */ }
   },
 
   hydrate: async () => {
@@ -78,6 +83,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthenticated: true,
           isHydrated: true,
         });
+        // 앱 재시작 시 Sentry 사용자 복원
+        if (saved.userId) {
+          try { sentrySetUser(saved.userId, saved.email ?? undefined); } catch { /* ignore */ }
+        }
       } else {
         set({ isHydrated: true });
       }

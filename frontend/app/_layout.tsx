@@ -40,7 +40,8 @@ function pretendardFamilyForWeight(weight: string | number | undefined): string 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   patch(TextInput as any);
 })();
-import { Stack, router } from 'expo-router';
+import { Stack, router, useNavigationContainerRef } from 'expo-router';
+import * as Sentry from '@sentry/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -51,7 +52,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useChildStore } from '../stores/childStore';
 import { useLocationStore } from '../stores/locationStore';
 import { retentionApi } from '../services/api';
-import { initSentry, captureError } from '../services/sentry';
+import { initSentry, captureError, navigationIntegration } from '../services/sentry';
 import { OfflineBanner } from '../components/common/OfflineBanner';
 import {
   registerForPushNotifications,
@@ -444,7 +445,15 @@ class ErrorBoundary extends Component<
   }
 }
 
-export default function RootLayout() {
+function RootLayout() {
+  // Sentry Expo Router 화면 자동 추적 — 화면 이동 시점에 trace 시작
+  const navigationRef = useNavigationContainerRef();
+  useEffect(() => {
+    if (navigationRef?.current) {
+      navigationIntegration.registerNavigationContainer(navigationRef);
+    }
+  }, [navigationRef]);
+
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
@@ -459,3 +468,6 @@ export default function RootLayout() {
     </ErrorBoundary>
   );
 }
+
+// Sentry로 RootLayout 감싸기 — 자동 에러 캡처 + Touch Event 추적
+export default Sentry.wrap(RootLayout);

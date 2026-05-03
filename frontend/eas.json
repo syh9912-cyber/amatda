@@ -23,14 +23,12 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api-usglfifguq-uc.a.run.app/api",
         "EXPO_PUBLIC_COACHING_API_URL": "https://coachingapi-usglfifguq-uc.a.run.app/api",
-        "EXPO_PUBLIC_KAKAO_REST_API_KEY": "0aa17590759470d930a9720d273b8a8f",
-        "EXPO_PUBLIC_NAVER_CLIENT_ID": "qOGYhBqjcM5I9arCidK4",
-        "EXPO_PUBLIC_NAVER_CLIENT_SECRET": "I9k_bmrqYz",
         "EXPO_PUBLIC_NAVER_URL_SCHEME": "naverlogin",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "712169890278-s470hnnvpsrk6vhltt8tc0193ojiuufu.apps.googleusercontent.com",
         "EXPO_PUBLIC_ADS_ENABLED": "true",
         "EXPO_PUBLIC_ADS_FORCE_SHOW": "false",
-        "EXPO_PUBLIC_ADS_MOCK": "true"
+        "EXPO_PUBLIC_ADS_MOCK": "true",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://dd7124a12d7082892c04cee84ecc0aac@o4511325473865728.ingest.us.sentry.io/4511325488873472"
       }
     },
     "production": {
@@ -41,14 +39,12 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api-usglfifguq-uc.a.run.app/api",
         "EXPO_PUBLIC_COACHING_API_URL": "https://coachingapi-usglfifguq-uc.a.run.app/api",
-        "EXPO_PUBLIC_KAKAO_REST_API_KEY": "0aa17590759470d930a9720d273b8a8f",
-        "EXPO_PUBLIC_NAVER_CLIENT_ID": "qOGYhBqjcM5I9arCidK4",
-        "EXPO_PUBLIC_NAVER_CLIENT_SECRET": "I9k_bmrqYz",
         "EXPO_PUBLIC_NAVER_URL_SCHEME": "naverlogin",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "712169890278-s470hnnvpsrk6vhltt8tc0193ojiuufu.apps.googleusercontent.com",
         "EXPO_PUBLIC_ADS_ENABLED": "true",
         "EXPO_PUBLIC_ADS_FORCE_SHOW": "false",
-        "EXPO_PUBLIC_ADS_MOCK": "false"
+        "EXPO_PUBLIC_ADS_MOCK": "false",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://dd7124a12d7082892c04cee84ecc0aac@o4511325473865728.ingest.us.sentry.io/4511325488873472"
       }
     }
   }
