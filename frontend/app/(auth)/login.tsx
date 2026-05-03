@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { AppNameDisplay } from '../../components/ui/AppNameDisplay';
 import { AuthInput } from '../../components/ui/AuthInput';
 import { AuthDivider } from '../../components/ui/AuthDivider';
 import { SocialLoginButtons } from '../../components/ui/SocialLoginButtons';
@@ -37,7 +36,7 @@ export default function LoginScreen() {
         style={StyleSheet.absoluteFill}
       />
       <View style={styles.scroll}>
-        {/* ── 투명 배경 캐릭터 일러스트 (그라디언트 위에 떠 있음) ── */}
+        {/* ── 투명 배경 캐릭터 일러스트 (텍스트 없이 크게) ── */}
         <View style={styles.heroWrap}>
           <Image
             source={require('../../assets/login-hero.png')}
@@ -45,14 +44,6 @@ export default function LoginScreen() {
             resizeMode="contain"
             fadeDuration={0}
           />
-        </View>
-
-        {/* ── Brand (일러스트 아래) ── */}
-        <View style={styles.brandWrap}>
-          <AppNameDisplay size="small" />
-          <Text style={styles.tagline}>
-            아이의 기질을 기록하는 특별한 다이어리
-          </Text>
         </View>
 
         {/* ── Login Card ── */}
@@ -133,31 +124,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  /* ── 캐릭터 hero (투명 배경, 그라디언트 위에 떠 있음) ── */
+  /* ── 캐릭터 hero (텍스트 없이 크게) ── */
   heroWrap: {
     width: SW,
-    height: SW * 0.5,
+    height: SW * 0.72,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 30,
+    paddingTop: 24,
+    marginBottom: 8,
   },
   heroImage: {
-    width: SW * 0.85,
-    height: SW * 0.5,
-  },
-
-  /* ── Brand ── */
-  brandWrap: {
-    alignItems: 'center',
-    marginTop: 4,
-    marginBottom: 14,
-  },
-  tagline: {
-    fontSize: 12,
-    color: '#A0A0A0',
-    marginTop: 4,
-    fontWeight: '400',
-    letterSpacing: -0.2,
+    width: SW * 0.95,
+    height: SW * 0.72,
   },
 
   /* ── Card — 은은한 그림자, 깨끗한 배경 ── */
