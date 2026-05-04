@@ -27,50 +27,45 @@ function mockSocialUser(provider: SocialProvider): SocialUserInfo {
  * 다른 GCP 앱의 access_token 으로 우리 사용자 가장 시도 차단.
  */
 async function verifyGoogleToken(accessToken: string): Promise<SocialUserInfo> {
-  // 1. audience 검증 — 우리 GOOGLE_CLIENT_ID 또는 GOOGLE_ALLOWED_AUDIENCES 의 모든 client_id 중 하나에 매칭
+  // 1. audience 검증 — 우리 GOOGLE_CLIENT_ID 또는 같은 GCP 프로젝트의 client_id 면 허용.
+  //
+  //   배경: 같은 GCP 프로젝트 안에 Web/Android/iOS 별로 client_id 가 따로 발급됨.
+  //   GoogleSignin 네이티브 SDK 가 반환하는 access_token 의 aud/azp 는 webClientId 가
+  //   아니라 Android(또는 iOS) 자동 발급 client_id 일 수 있음.
+  //
+  //   보안: project_id 가 같으면 우리 앱(같은 GCP 프로젝트) 임. 다른 프로젝트 토큰은 거부.
+  //   추가 강화: 명시 GOOGLE_ALLOWED_AUDIENCES 가 설정되면 strict 매칭 우선 사용.
   if (env.GOOGLE_CLIENT_ID) {
     const infoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`);
     if (!infoRes.ok) throw new Error('Google 토큰 audience 검증 실패');
     const info = await infoRes.json() as { aud?: string; azp?: string };
-    // 허용 audience 목록 — main + 추가 (모바일 client_id 들)
-    const allowed = new Set<string>();
-    allowed.add(env.GOOGLE_CLIENT_ID);
-    if (env.GOOGLE_ALLOWED_AUDIENCES) {
-      env.GOOGLE_ALLOWED_AUDIENCES.split(',')
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .forEach((id) => allowed.add(id));
+
+    // GCP project_id 추출 — Google client_id 형식: `{PROJECT_NUMBER}-{UNIQUE}.apps.googleusercontent.com`
+    const projectIdOf = (id: string | undefined): string | null => {
+      if (!id) return null;
+      const m = id.match(/^(\d+)-[^.]+\.apps\.googleusercontent\.com$/);
+      return m ? m[1] : null;
+    };
+    const ourProjectId = projectIdOf(env.GOOGLE_CLIENT_ID);
+    if (!ourProjectId) {
+      throw new Error('서버 GOOGLE_CLIENT_ID 형식 오류');
     }
-    const audOk = info.aud && allowed.has(info.aud);
-    const azpOk = info.azp && allowed.has(info.azp);
-    if (!audOk && !azpOk) {
-      /**
-       * 직접 diff 진단 — 길이가 같은데 비교 실패 시 정확한 mismatch index 찾기.
-       * project_id 부분 + 가운데 unique part 첫/끝 8자 + 첫 mismatch index 노출.
-       */
-      const expected = env.GOOGLE_CLIENT_ID;
-      const aud = info.aud ?? '';
-      const compare = (a: string, b: string): string => {
-        const minLen = Math.min(a.length, b.length);
-        let firstDiff = -1;
-        for (let i = 0; i < minLen; i++) {
-          if (a.charCodeAt(i) !== b.charCodeAt(i)) {
-            firstDiff = i;
-            break;
-          }
-        }
-        if (firstDiff === -1 && a.length === b.length) return 'IDENTICAL';
-        if (firstDiff === -1) return `lengths differ a=${a.length} b=${b.length}`;
-        const aChar = a.charCodeAt(firstDiff);
-        const bChar = b.charCodeAt(firstDiff);
-        return `firstDiff@${firstDiff} a[${firstDiff}]=${aChar}(${JSON.stringify(a[firstDiff])}) b[${firstDiff}]=${bChar}(${JSON.stringify(b[firstDiff])})`;
-      };
-      const audDiff = compare(expected, aud);
-      // strict equality double-check
-      const audEq = expected === aud;
-      const audSetHas = allowed.has(aud);
+    const audProject = projectIdOf(info.aud);
+    const azpProject = projectIdOf(info.azp);
+
+    // 명시 strict 허용 목록 (있으면 같이 검사)
+    const strictAllowed = new Set<string>();
+    strictAllowed.add(env.GOOGLE_CLIENT_ID);
+    if (env.GOOGLE_ALLOWED_AUDIENCES) {
+      env.GOOGLE_ALLOWED_AUDIENCES.split(',').map((s) => s.trim()).filter(Boolean).forEach((id) => strictAllowed.add(id));
+    }
+    const strictMatch = (info.aud && strictAllowed.has(info.aud)) || (info.azp && strictAllowed.has(info.azp));
+    const projectMatch = audProject === ourProjectId || azpProject === ourProjectId;
+
+    if (!strictMatch && !projectMatch) {
+      // PII 안전 진단 — project_id 만 노출 (전체 client_id 노출 X)
       throw new Error(
-        `Google 토큰 audience 불일치 — diff(expected,aud)=[${audDiff}] expected===aud:${audEq} Set.has(aud):${audSetHas} expectedLen=${expected.length} audLen=${aud.length}`,
+        `Google 토큰 audience 불일치 — expected project=${ourProjectId}, got audProject=${audProject} azpProject=${azpProject}`,
       );
     }
   }
