@@ -5,6 +5,15 @@ import { success, error } from '../utils/response';
 import { collections, db, genId } from '../services/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import { isGeminiAvailable, callGeminiJSON } from '../services/coaching/gemini.client';
+import {
+  EPDS_QUESTIONS,
+  EPDS_EXTRA_BY_STAGE,
+  calcEpdsScore,
+  classifyRiskLevel,
+  riskMessage,
+  nextRecommendedDate,
+  type EpdsRiskLevel,
+} from '../data/epdsQuestions';
 
 const router = Router();
 
@@ -1705,6 +1714,210 @@ ${foodLines || '(기록 없음)'}
     }
   } catch {
     error(res, 'AI 분석 중 오류가 발생했습니다', 500);
+  }
+});
+
+/* ================================================================== */
+/*  Mental Check (EPDS — 산전·산후 우울 자가검사)                       */
+/* ================================================================== */
+//
+// 4 라우트:
+// - GET  /pregnancy/mental-check/questions?stage=
+// - POST /pregnancy/mental-check
+// - GET  /pregnancy/mental-check?childId=
+// - GET  /pregnancy/mental-check/analysis?childId=
+//
+// Firestore: collections.momMentalChecks
+// 인덱스: (childId asc, createdAt desc) — firestore.indexes.json 추가됨
+
+const VALID_STAGES = new Set(['prenatal', 'postpartum_early', 'postpartum_mid', 'postpartum_late', 'general']);
+const HISTORY_LIMIT = 50;
+
+function normalizeStage(raw: unknown): string {
+  const s = typeof raw === 'string' ? raw : 'general';
+  return VALID_STAGES.has(s) ? s : 'general';
+}
+
+router.get('/mental-check/questions', authMiddleware, (req: Request, res: Response) => {
+  try {
+    const stage = normalizeStage(req.query.stage);
+    success(res, {
+      stage,
+      questions: EPDS_QUESTIONS,
+      extraQuestions: EPDS_EXTRA_BY_STAGE[stage] ?? [],
+    });
+  } catch {
+    error(res, '문항 조회 중 오류가 발생했습니다', 500);
+  }
+});
+
+router.post('/mental-check', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { childId, answers, extraAnswers, shareWithPartner, stage } = req.body as {
+      childId?: string;
+      answers?: number[];
+      extraAnswers?: number[];
+      shareWithPartner?: boolean;
+      stage?: string;
+    };
+
+    if (!childId) { error(res, 'childId 는 필수입니다'); return; }
+    if (!Array.isArray(answers) || answers.length !== EPDS_QUESTIONS.length) {
+      error(res, `answers 는 ${EPDS_QUESTIONS.length}개 배열이어야 합니다`);
+      return;
+    }
+
+    // 자녀 소유권 확인
+    const childDoc = await collections.children.doc(childId).get();
+    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) {
+      error(res, '자녀를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const totalScore = calcEpdsScore(answers);
+    const riskLevel: EpdsRiskLevel = classifyRiskLevel(totalScore, answers);
+    const message = riskMessage(riskLevel);
+    const nextRecommendedAt = nextRecommendedDate(riskLevel);
+    const normalizedStage = normalizeStage(stage);
+
+    const id = genId();
+    const createdAt = new Date().toISOString();
+    await collections.momMentalChecks.doc(id).set({
+      id,
+      userId: req.userId!,
+      childId,
+      score: totalScore,
+      riskLevel,
+      stage: normalizedStage,
+      shareWithPartner: shareWithPartner === true,
+      answers,
+      extraAnswers: Array.isArray(extraAnswers) ? extraAnswers : [],
+      createdAt,
+      nextRecommendedAt,
+    });
+
+    // notifiedFamily: 가족 푸시 발송 별도 작업 — 현재 0 으로 단순 반환
+    success(res, {
+      score: totalScore,
+      maxScore: EPDS_QUESTIONS.length * 3,
+      riskLevel,
+      message,
+      notifiedFamily: 0,
+      nextRecommendedAt,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '저장 중 오류';
+    error(res, msg, 500);
+  }
+});
+
+router.get('/mental-check', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const childId = req.query.childId as string | undefined;
+    if (!childId) { error(res, 'childId 는 필수입니다'); return; }
+
+    const childDoc = await collections.children.doc(childId).get();
+    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) {
+      error(res, '자녀를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const snap = await collections.momMentalChecks
+      .where('childId', '==', childId)
+      .orderBy('createdAt', 'desc')
+      .limit(HISTORY_LIMIT)
+      .get();
+
+    const records = snap.docs.map((d) => {
+      const data = d.data() as Record<string, unknown>;
+      return {
+        id: d.id,
+        score: Number(data.score ?? 0),
+        riskLevel: String(data.riskLevel ?? 'low'),
+        shareWithPartner: data.shareWithPartner === true,
+        createdAt: String(data.createdAt ?? ''),
+      };
+    });
+
+    success(res, records);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '조회 중 오류';
+    error(res, msg, 500);
+  }
+});
+
+router.get('/mental-check/analysis', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const childId = req.query.childId as string | undefined;
+    if (!childId) { error(res, 'childId 는 필수입니다'); return; }
+
+    const childDoc = await collections.children.doc(childId).get();
+    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) {
+      error(res, '자녀를 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const snap = await collections.momMentalChecks
+      .where('childId', '==', childId)
+      .orderBy('createdAt', 'desc')
+      .limit(HISTORY_LIMIT)
+      .get();
+
+    const items = snap.docs.map((d) => {
+      const data = d.data() as Record<string, unknown>;
+      return {
+        score: Number(data.score ?? 0),
+        riskLevel: String(data.riskLevel ?? 'low'),
+        createdAt: String(data.createdAt ?? ''),
+        stage: String(data.stage ?? 'general'),
+      };
+    });
+
+    if (items.length === 0) {
+      success(res, { count: 0, recommendation: '첫 검사를 시작해보세요. 5분이면 충분해요.' });
+      return;
+    }
+
+    const scores = items.map((i) => i.score);
+    const avgScore = scores.reduce((s, n) => s + n, 0) / scores.length;
+    const latestScore = items[0].score;
+    const prevScore = items.length >= 2 ? items[1].score : null;
+
+    // 최근 3건 vs 이전 3건 평균 비교 → 추세
+    const recent = scores.slice(0, 3);
+    const earlier = scores.slice(3, 6);
+    const recentAvg = recent.length > 0 ? recent.reduce((s, n) => s + n, 0) / recent.length : null;
+    const earlierAvg = earlier.length > 0 ? earlier.reduce((s, n) => s + n, 0) / earlier.length : null;
+
+    let direction: 'improving' | 'stable' | 'worsening' | 'unknown' = 'unknown';
+    if (recentAvg !== null && earlierAvg !== null) {
+      const diff = recentAvg - earlierAvg;
+      if (diff <= -2) direction = 'improving';
+      else if (diff >= 2) direction = 'worsening';
+      else direction = 'stable';
+    }
+
+    // 저장된 riskLevel 사용 (자해 신호 반영된 정확한 값)
+    const latestRisk = items[0].riskLevel as EpdsRiskLevel;
+    const recommendation = riskMessage(latestRisk);
+    const nextRecommendedAt = nextRecommendedDate(latestRisk);
+
+    success(res, {
+      count: items.length,
+      avgScore: Math.round(avgScore * 10) / 10,
+      latestScore,
+      prevScore,
+      direction,
+      recentAvg: recentAvg !== null ? Math.round(recentAvg * 10) / 10 : null,
+      earlierAvg: earlierAvg !== null ? Math.round(earlierAvg * 10) / 10 : null,
+      timeline: items.slice(0, 12).map((i) => ({ score: i.score, createdAt: i.createdAt, riskLevel: i.riskLevel })).reverse(),
+      recommendation,
+      nextRecommendedAt,
+      stage: items[0].stage,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '분석 중 오류';
+    error(res, msg, 500);
   }
 });
 
