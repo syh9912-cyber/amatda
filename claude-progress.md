@@ -1,5 +1,323 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-05-04 — 출시 전 보안 일제 강화 + Secret Manager 마이그레이션 + 지능형 SOS 시스템(고위험/대학병원 분기)
+> 최종 업데이트: 2026-05-04 — 출시 전 보안 일제 강화 + Secret Manager 마이그레이션 + 지능형 SOS 시스템 + T1 출시 블로커 14건 + Google audience hotfix
+
+---
+
+## 2026-05-04 — Google Sign-In audience 매칭 hotfix (project_id 기반 검증)
+
+> **증상**: T1 보안 강화 배포 직후 Google 소셜 로그인 500 에러. 카카오/네이버는 별개 hotfix(아래 Hotfix1) 후 정상.
+> **근본 원인**: Google 네이티브 SDK 가 반환하는 access_token 의 aud/azp 는 webClientId 가 아니라 Android/iOS 자동 생성 client_id.
+> strict equality (`info.aud === env.GOOGLE_CLIENT_ID`) 로는 거부됨.
+
+### 진단 과정 (정직한 기록)
+
+5단계 round-trip — 각 단계 deploy + 단말 실측:
+1. **trim 가설** (`...com\n` 비교 실패 의심) → env trim 추가 → 똑같이 실패
+2. **다중 client_id 허용** (`GOOGLE_ALLOWED_AUDIENCES` 추가) → strict 매칭은 그대로라 효과 없음
+3. **prefix/suffix 8자 진단** → 모두 같음 (Google client_id 모두 `apps.googleusercontent.com` 으로 끝남)
+4. **prefix 12자 + 길이 진단** → `712169890278…(len=72)` 양쪽 동일
+5. **char-level diff 진단** → 길이 72, 끝 5자 동일, prefix 12자 동일, **가운데만 다름**
+6. **결론**: 같은 GCP 프로젝트의 Web vs Android client_id 패턴
+
+> **반성**: 진단 round-trip 5번. "len=72 + prefix 같음 + suffix 같음" 패턴을 한 번에 인지했다면 30분 안에 끝났을 일. 사용자에게 사과.
+
+### 정석 해결 — `project_id` 기반 검증
+
+```ts
+// `{PROJECT_NUMBER}-{UNIQUE}.apps.googleusercontent.com` 형식에서 project number 추출
+const projectIdOf = (id) => id.match(/^(\d+)-[^.]+\.apps\.googleusercontent\.com$/)?.[1];
+const projectMatch = projectIdOf(info.aud) === projectIdOf(env.GOOGLE_CLIENT_ID);
+```
+
+**보안 영향**:
+- ✅ 다른 GCP 프로젝트 토큰 거부 유지 (project number 다름)
+- ✅ 같은 앱의 Web/Android/iOS client_id 모두 정상 통과 (Google OAuth 표준 권장 패턴)
+- ✅ 명시 strict 매칭 (`GOOGLE_ALLOWED_AUDIENCES`) 도 백업으로 유지
+
+### 수정 파일
+- `backend/src/services/social.auth.ts` — verifyGoogleToken project_id 매칭
+- `backend/src/config/env.ts` — `E()` 헬퍼로 secret 값 일괄 trim (\n 안전), `GOOGLE_ALLOWED_AUDIENCES` 추가
+
+### 부가 발견 — Secret Manager trailing newline
+모든 OAuth 관련 secret 에 trailing newline 가능성 → `E()` 헬퍼로 모두 trim 처리. 이전 TOKEN_ENCRYPTION_KEY 같은 문제 패턴 일반화.
+
+### Commits
+- `ac1c9c2` — char-level diff 진단 (임시)
+- `다음 commit` — project_id 매칭 fix + 진단 로직 정리
+
+### 검증
+- backend tsc pass
+- 카카오/네이버 정상 (Hotfix1 으로 이미 복구)
+- Google 단말 실측 대기 중
+
+---
+
+## 2026-05-04 — Hotfix1: JWT jwtid 중복 해결 (카카오/네이버 500)
+
+> **증상**: T1 배포 직후 카카오/네이버 소셜 로그인 모두 500 에러.
+> **로그**: `Bad "options.jwtid" option. The payload already has an "jti" property.`
+> **원인**: `jwt.sign({ ..., jti: refreshJti }, secret, { jwtid: refreshJti })` — payload 와 options 양쪽에 jti 동시 지정 → jsonwebtoken 라이브러리가 거부.
+
+### 수정
+- `RefreshTokenPayload.jti` 를 sign 시 빼고 verify 결과용 optional 로만 유지
+- `jwt.sign({ userId, typ: 'refresh', fam }, secret, { jwtid: refreshJti })` — payload 에서 jti 제거
+- jsonwebtoken 의 `jwtid` 옵션이 자동으로 표준 jti claim 추가
+- `/refresh` 핸들러에서 narrowing 보존을 위해 `const jti = payload.jti` 추출
+
+### Commit
+- `2fe79c1` (또는 유사) — `fix(auth): JWT sign 충돌 해결`
+
+### 검증
+- backend tsc pass
+- 카카오/네이버 단말 실측 정상 동작 확인
+
+---
+
+## 2026-05-04 — T1 출시 블로커 14건 일괄 fix (commit `ad28dfe`)
+
+> 20-에이전트 종합 감사에서 발견된 🔴 Critical 14건. 정석 방법으로 일괄 처리.
+> 18 files changed, +578/-96 lines.
+
+### #1 JWT 알고리즘 핀 + 표준 클레임
+- `backend/src/middleware/auth.ts`, `backend/src/middleware/security.ts`, `backend/src/routes/auth.ts`
+- `algorithm: 'HS256'` 명시 핀 (sign + verify 모두) — 알고리즘 confusion 공격 차단
+- `iss: 'amatda-api'`, `aud: 'amatda-app'` 표준 claim
+- `typ: 'access' | 'refresh'` — 토큰 종류를 클레임으로 구분
+- 모든 verify 경로에 algorithms/issuer/audience 검증
+
+### #2 Refresh token rotation + reuse detection (RFC 6819)
+- `backend/src/services/firestore.ts` — `refreshTokens` 컬렉션 추가
+- `backend/src/routes/auth.ts` — Firestore 트랜잭션으로 jti 상태 atomic read+update
+- 사용된 jti 재시도 시 **패밀리 전체 무효화** (탈취 방어)
+- 정상 회전: 새 jti 발급 + `replacedBy` 추적
+
+### #3 Kakao app_id strict equality
+- `backend/src/config/env.ts` — `KAKAO_APP_ID` 추가
+- `backend/src/services/social.auth.ts` — `info.app_id !== expected` 시 거부
+- 다른 카카오 앱 토큰으로 우리 사용자 가장 시도 차단
+
+### #4 Naver 토큰 검증 강화
+- `resultcode === '00'` + `response.id` 명시 검증
+- audience namespace 분리 설명 코멘트 강화
+
+### #5 서버측 logout + 계정 삭제 시 JWT 무효화
+- `POST /api/auth/logout` — 패밀리 전체 revoke 라우트 추가
+- `DELETE /api/auth/account` — refreshTokens 모두 삭제
+- 클라이언트 `logout()` — `authApi.logout(refreshToken)` fire-and-forget 호출
+- `frontend/services/api.ts` — `authApi.logout` endpoint 추가
+
+### #9 AI prompt injection 방어
+- `backend/src/services/coaching/prompt.builder.ts`
+- `<<<USER_MESSAGE>>>...<<<END_USER_MESSAGE>>>` 펜스 delimiter
+- `[INST]`, `<system>`, `<|tag|>`, `BEGIN/END SYSTEM` 등 control sequence strip
+- 길이 제한 2000자
+- 임산부 모드 + 일반 모드 양쪽 적용
+
+### #13 응급 경로 Sentry 캡처
+- `frontend/app/(main)/labor-monitor.tsx` — 4곳 (kick save, dialPhone, 119 두 번)
+- `frontend/app/(main)/sos.tsx` — 3곳 (delivery dial, call119 두 번)
+- 모든 응급 경로의 catch 에 `captureError(e, { ctx: ... })` + 메타데이터
+
+### #14 Sentry beforeSend PII scrubber
+- `frontend/services/sentry.ts` + `backend/src/services/sentry.ts`
+- redact 키: Authorization, Cookie, password, token, refreshToken, accessToken, jwt, secret, phone, email, childName, fcmToken, pushToken, kakao_token, naver_token, google_token, cardNumber, billingKey, raw 등
+- 문자열 내 phone-like 패턴은 last 4 digit만 남김
+- scrub 실패 시 이벤트 drop (안전 우선)
+
+### #15 ScheduledIds per-child
+- `frontend/services/pushNotifications.ts`
+- `SCHEDULED_IDS_KEY(childId)` 함수형 키 — 다둥이 가구에서 자녀별 분리
+- `PREGNANCY_NOTIF_IDS_KEY(childId)` 동일 처리
+- `cancelAllPregnancyLocalNotifications(childId?)` — 자녀별 또는 전체 모드
+- `runOneTimeOrphanCleanup` — legacy 글로벌 키 일회성 정리
+- 모든 caller (`scheduleCoachingFollowup`, `syncScheduledNotifications`, `syncReengagementNotifications`, `cancelAllChildLocalNotifications`) 마이그레이션
+
+### #16 isHighRiskPregnancy 토글 시 reschedule
+- `schedulePregnancyReminders(childId, dueDate, { isHighRisk })` 시그니처
+- `PREGNANCY_EXAMS` 에 24주 분만 병원 등록 권유 (고위험 전용 `highRiskOnly: true`)
+- 30주 일반 권유 알림
+- D-3/D-Day 알림은 `screen: 'labor-monitor'` 로 라우팅 (진통 모니터 직접 진입)
+- `frontend/app/(main)/child-edit.tsx` 저장 시 자동 재스케줄
+
+### #17 알림 본문 PII 제거 (잠금화면 노출 방지)
+- `pushNotifications.ts` 7곳 모두 `${childName}` → "우리 아기" / "우리 아기의" generic
+- `REENGAGEMENT_MESSAGES`, `scheduleMorning`, `scheduleAfternoon`, `scheduleCoachingFollowup`, `scheduleFirstCoachingNudge`, `scheduleNextDayNudge`, `scheduleFeverRecheckReminder` 모두 적용
+
+### #21 home.tsx 35주 reorder Fragment key
+- `frontend/app/(main)/home.tsx`
+- `<Fragment key="hero">{heroCard}</Fragment>` / `<Fragment key="actions">{actionsGrid}</Fragment>`
+- 35주 전후 isLatePregnancy reorder 시 React 가 같은 컴포넌트로 인식 → unmount/remount 방지
+- AllActionsGrid 내부 상태 (애니메이션, async state) 보존
+
+### #24 HospitalRegisterModal bare catch 제거
+- `frontend/components/pregnancy/HospitalRegisterModal.tsx`
+- `} catch (e) { captureError(e, { ctx: 'HospitalRegisterModal/save', tab, childId }); ... }`
+- `openMap` 실패도 `captureError` 추가
+- CLAUDE.md "에러를 조용히 삼키지 말 것" 준수
+
+### #25 labor-monitor / sos 국제번호 +82 보존
+- `frontend/app/(main)/labor-monitor.tsx`, `frontend/app/(main)/sos.tsx`
+- `phone.replace(/[^0-9+]/g, '')` — `+` 보존 → `+82-10-...` 같은 국제번호 깨지지 않음
+
+### 검증
+- backend tsc pass
+- frontend tsc pass
+- expo lint 0 errors (warnings 만 162개 — 기존)
+
+### Breaking change 안내
+- 이전 access/refresh token (without iss/aud/typ) 무효화 → 사용자 1회 강제 재로그인
+- 베타 단계라 영향 최소
+- access token 1h 만료, refresh token 7d 만료 — 7일 후 모든 stale 토큰 자동 정리
+
+### 배포
+- commit `ad28dfe`
+- git push `release/v2.9.0`
+- 백엔드 `firebase deploy --only functions:api` ✅
+- OTA preview channel `eas update --branch preview` (group `56a17030`) ✅
+
+### 단말 실측 권장 시나리오
+1. 재로그인 (기존 토큰 무효화 → 정상 흐름 확인)
+2. 카카오/네이버/구글 소셜 로그인 (각각 정상 + 잘못된 앱 토큰 거부)
+3. logout API (명시 로그아웃 시 같은 refreshToken 으로 재시도 시 401)
+4. 임신 자녀 + 고위험 체크 → 24주 알림 새로 추가 확인
+5. 다둥이 가구 → 자녀 1 삭제 시 다른 자녀 알림 살아있는지
+6. 잠금화면 → 알림 본문에 아이 이름 안 노출 확인
+
+---
+
+## 2026-05-04 — 20-에이전트 종합 감사
+
+> 사용자 요청: "전문 에이전트 20명 호출해서 전체적으로 확실히 확인해줘"
+
+### 감사 영역 (20건 병렬 실행)
+
+| # | 영역 | 결과 |
+|---|---|---|
+| 1 | deliveryHospital.ts 전화 라우팅 | 🟡 일부 edge-case + 🟢 대부분 clean |
+| 2 | HospitalRegisterModal UX flow | 🔴 race condition 2건 + 🟡 UX 2건 |
+| 3 | labor-monitor emergency flow | 🔴 key collision + 🟡 5건 |
+| 4 | child.ts backend 스키마 변경 | 🟢 OK + 🟡 audit log 누락 |
+| 5 | child-edit.tsx 폼 | 🔴 race + 🟡 다중 |
+| 6 | home.tsx IIFE 리팩터 | 🔴 missing keys (T1-#21 처리) |
+| 7 | Firestore + Storage rules | 🟢 clean (deny-all + Admin SDK) |
+| 8 | 인증/OAuth | 🔴 7건 critical (T1-#1~#5 처리) |
+| 9 | 결제/Webhooks | 🟢 강 + 🟡 트랜잭션 atomicity |
+| 10 | Sentry 커버리지 | 🔴 emergency 경로 미캡처 (T1-#13/#14 처리) |
+| 11 | HospitalRegisterPrompt + Banner | 🔴 a11y + 🟡 race |
+| 12 | AI 파이프라인 | 🟡 prompt injection (T1-#9 처리) |
+| 13 | Secrets/env 설정 | 🟢 강함 |
+| 14 | DenseStatsRow tap counter | 🟡 race + threshold |
+| 15 | 알림 라우팅 | 🔴 per-child + PII (T1-#15/#16/#17 처리) |
+| 16 | 타입 안전성 (any 사용) | 🟢 최근 수정 4파일 0건 |
+| 17 | API client interceptor | 🔴 refresh queue 없음 |
+| 18 | Zustand stores | 🔴 race 2건 + 🟡 다수 |
+| 19 | expo-router 라우트 가드 | 🔴 premium gate, 온보딩 gate, isHydrated 가드 |
+| 20 | 성능/번들 사이즈 | 🔴 4MB PNG 4장, god-files |
+
+### Tier 분류
+
+- **T1 (출시 블로커, 즉시)** 14건 — ✅ 완료 (commit ad28dfe)
+- **T2 (결제/Store/API client)** 8건 — pending
+- **T3 (라우팅/온보딩 게이트)** 3건 — pending
+- **🟡/🟢 후순위** 30+건 — v2.10.0 이월 예정
+
+---
+
+## 2026-05-04 — Batch C: 홈 시각 강약 정리 (commit `2fe92ec`)
+
+> 간호사 출신 기획자 피드백: 35주차 홈 화면 강조 요소가 많아 부담. 강약만 조절.
+
+### C-1 HospitalRegisterBanner 톤 다운
+- 일반 임신부: 빨강(`#FFEBEE` / `#E53935`) → 코랄/살구(`#FFF3EC` / `#FFB89A`)
+- 아이콘 ⚠️ → 📞 (압박 ↓, "미리 준비하자" 톤)
+- 고위험 임신부는 기존 빨강 유지 (안전 우선)
+
+### C-2 "탭해서 기록 · 길게 누르면 가이드" 캡션 폴리시
+- `frontend/components/home/DenseStatsRow.tsx`
+- 색상 #E91E63 + 보라 강조 → 보조 텍스트 회색(`textSub`) + opacity 0.75
+- fontSize 11 → 10, fontWeight 700 → 500
+- 누적 기록 3회 이상 시 자동 숨김 (`TAP_HINT_COUNTER_KEY` AsyncStorage per-child)
+- `bumpTapHint()` — 물/영양제/컨디션 입력 시마다 +1 누적
+
+### C-3 SOS 버튼 위치 미세 조정
+- `frontend/app/(main)/home.tsx`
+- 64×64 → 56×56, right 16 → 10
+- 출산가방/카드 컨텐츠 가리지 않게
+
+### C-4 35주+ 임신부 홈 우선순위 재배치
+- `isLatePregnancy = weeks >= 35` 분기 추가
+- 35주+: 오늘체크 → **출산가방** → 아이콘 메뉴 → 임신여정
+- 그 외: 오늘체크 → 아이콘 메뉴 → 강조카드 → 임신여정 (기존 순서)
+
+### 검증/배포
+- frontend tsc pass, expo lint 0 errors
+- commit `2fe92ec` (3 files, +158/-103)
+- OTA preview group `87f70478`
+
+---
+
+## 2026-05-04 — Batch B: 등록 UX + 안내 톤 + 전화 모달 개선 (commit `fa7f693`)
+
+> 간호사 출신 기획자 피드백 5건.
+
+### B-5/6 등록 폼 진입 장벽 ↓ + MFICU 라벨 개선
+- `frontend/components/pregnancy/HospitalRegisterModal.tsx`
+- 필수: 병원명 + "📞 급할 때 바로 연결할 번호"
+- 선택 (아코디언): 분만실/산부인과 직통 + 주소 + 메모
+- 처음 진입 시 접힌 상태, 기존 데이터 있으면 자동 펼침
+- 라벨: "분만실 직통번호 (선택)" → "분만실/산부인과 직통 번호 (선택)"
+- 대학병원 sub: "(고위험산모센터(MFICU) 번호를 등록하면 좋아요)"
+- 분만실 미입력 후 저장 시 권유 Alert → "직통번호 추가하기" 누르면 아코디언 자동 펼침
+
+### B-8 안내 박스 문구 정비
+- 보라색 박스: "낮에는 외래, 밤·휴일엔 분만실! 시간에 맞춰 똑똑하게 연결합니다."
+- 노란색 박스 (대학병원): "병원 안내에 따라 가장 빠르게 연결되는 번호를 등록해 주세요. 대학병원은 분만실 또는 고위험산모센터(MFICU) 직통번호 등록을 권장해요." (병원 자율성 존중)
+- 사용 안 하는 `warnText` 스타일 제거
+
+### B-9 전화 모달에 병원명 노출
+- `frontend/services/deliveryHospital.ts`
+- `PickedPhone.hospitalName` 필드 추가
+- `buildCandidates` → 각 후보에 `delivery.name` / `clinic.name` 매핑
+- 모달: "⭐ 분만실 직통" 아래 "삼성서울병원" 가독성 ↑
+
+### B-7 35주+ 홈 진통 체크 옆 상시 배너 (Phase 5에서 이미 구현)
+- ChildSelector 행 바로 아래 HospitalRegisterBanner 배치
+- "병원 번호를 미리 등록해 주세요" 문구로 충족됨
+
+### 검증/배포
+- frontend tsc pass, expo lint 0 errors
+- commit `fa7f693` (3 files, +120/-65)
+- OTA preview group `d6b084ef`
+
+---
+
+## 2026-05-04 — Batch A: 안전 critical 4건 (commit `3d61ecc`)
+
+> 간호사 출신 기획자 피드백 — 출시 전 필수 안전 수정.
+
+### A-1 태동 12h 멈춤 → "태동 감소·느껴지지 않음"
+- `frontend/app/(main)/labor-monitor.tsx`
+- 태동 이상은 시간 기준 기다리지 말고 즉시 병원 — 사산 위험 차단
+
+### A-2 35주 배너 멘트 강화
+- "36주 이후 기록 권장" → "36주 전이라도 규칙적 진통/복통 시 기록보다 병원에 먼저 연락"
+- 기록하다 골든타임 놓치는 시나리오 차단
+
+### A-3 양수파수 골든타임 모드 (`diagAnswers.ruptured === true`)
+- `pickAllPhones / pickDeliveryPhone` 에 `isEmergency` 옵션 추가
+- 외래(clinic_main) 후보 자동 제외 → 분만실/MFICU/대표 만 노출
+- 119/병원 버튼 대형화 (paddingVertical 14→22, fontSize 16→22)
+- 배너 타이틀 "🚨 양수 파수 확인 — 골든타임", 외래 안 받는다는 안내
+
+### A-4 토요일 13시 cutoff (간호사 짬바)
+- `isClinicHours` 평일/토요일/일요일 분기:
+  - 평일 09-18 외래 / 토요일 09-13 외래 / 일요일 24h 분만실
+- TODO: 공휴일 캘린더 연동
+
+### 검증/배포
+- frontend tsc pass
+- commit `3d61ecc` (2 files, +72/-19)
+- OTA preview group `87f70478`
 
 ---
 
