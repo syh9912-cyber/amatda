@@ -292,7 +292,6 @@ export const retentionApi = {
   pushContent: (childId: string) =>
     api.get(`/retention/push-content/${childId}`),
   // 앱 접속 기록 (앱 진입 시 1회 호출 — 세션당)
-  recordVisit: () => api.post('/retention/visit', {}),
 };
 
 // Growth Analysis (성장 분석)

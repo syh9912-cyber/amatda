@@ -13,8 +13,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Stack, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useChildStore } from '../../stores/childStore';
-import { memoriesApi, retentionApi } from '../../services/api';
-import { LEVELS } from './parent-level';
+import { memoriesApi } from '../../services/api';
 import { captureRef } from 'react-native-view-shot';
 import { AdSlot } from '../../components/ads/AdSlot';
 
@@ -41,20 +40,16 @@ export default function ChildCardScreen() {
   const [card, setCard] = useState<ChildCardData | null>(null);
   const [error, setError] = useState(false);
   const [sharing, setSharing] = useState(false);
-  const [parentLevel, setParentLevel] = useState(1);
   const passportRef = useRef<View>(null);
 
-  useEffect(() => {
-    if (!child) return;
-    retentionApi.streak(child.id).then((res) => {
-      const d = res.data?.data as { level?: number } | undefined;
-      if (d?.level) setParentLevel(d.level);
-    }).catch(() => {});
-  }, [child?.id]);
-
-  const skin = LEVELS.find((l) => l.level === parentLevel) ?? LEVELS[0];
-  const SKIN_PRIMARY = skin.passportColors[0];
-  const SKIN_ACCENT = parentLevel >= 4 ? '#D4AF37' : parentLevel >= 3 ? '#F8BBD0' : parentLevel >= 2 ? '#81C784' : '#D4AF37';
+  /**
+   * 여권 단일 스킨 — parent-level 시스템 제거에 따라 기본 톤 1개로 고정.
+   * (이전: parentLevel 에 따라 색 분기. 이제 모든 사용자 동일.)
+   */
+  const SKIN_PRIMARY = '#1A3A5C';
+  const SKIN_GRADIENT_END = '#2A5A8C';
+  const SKIN_ACCENT = '#D4AF37';
+  const SKIN_GRADIENT: [string, string] = [SKIN_PRIMARY, SKIN_GRADIENT_END];
 
   const fetchCard = () => {
     if (!child) return;
@@ -156,12 +151,6 @@ export default function ChildCardScreen() {
       ) : (
         <>
           {/* ═══ Passport Card — 2-Page Fold ═══ */}
-          {/* Level badge */}
-          <View style={s.levelBadgeRow}>
-            <Text style={s.levelBadgeIcon}>{skin.icon}</Text>
-            <Text style={s.levelBadgeText}>{skin.name}</Text>
-          </View>
-
           <View ref={passportRef} collapsable={false} style={[s.card, { borderColor: SKIN_PRIMARY }]}>
             <View style={s.foldContainer}>
 
@@ -169,7 +158,7 @@ export default function ChildCardScreen() {
               <View style={s.page}>
                 {/* Dark header — skin-colored */}
                 <LinearGradient
-                  colors={skin.passportColors.length >= 2 ? skin.passportColors as [string, string, ...string[]] : [skin.passportColors[0], skin.passportColors[0]]}
+                  colors={SKIN_GRADIENT}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={s.header}
@@ -285,7 +274,7 @@ export default function ChildCardScreen() {
               <View style={s.page}>
                 {/* Same header as page 1 — skin-colored */}
                 <LinearGradient
-                  colors={skin.passportColors.length >= 2 ? skin.passportColors as [string, string, ...string[]] : [skin.passportColors[0], skin.passportColors[0]]}
+                  colors={SKIN_GRADIENT}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={s.header}
@@ -414,24 +403,6 @@ const s = StyleSheet.create({
   loadTxt: { fontSize: 14, color: '#FFF8', marginTop: 12 },
   retryBtn: { marginTop: 16, backgroundColor: GOLD, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 12 },
   retryTxt: { color: NAVY, fontSize: 14, fontWeight: '700' },
-
-  /* Level badge */
-  levelBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    gap: 6,
-  },
-  levelBadgeIcon: {
-    fontSize: 20,
-  },
-  levelBadgeText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: GOLD,
-    letterSpacing: 1,
-  },
 
   /* Card container */
   card: {
