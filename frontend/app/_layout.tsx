@@ -123,7 +123,7 @@ function useNotificationSetup() {
       'chatbot', 'recommendations', 'vaccination', 'birth-bag',
       'gdm', 'lullaby', 'cry-analyzer', 'poop-analyzer', 'album', 'growth-stats',
       'play-learning', 'monthly-characteristic', 'subscription',
-      'notification-settings', 'parent-level', 'clinic', 'coparenting',
+      'notification-settings', 'clinic', 'coparenting',
       'ai-analysis', 'recommendation-list', 'mom-location-setup',
     ]);
     responseListener.current = Notifications.addNotificationResponseReceivedListener(
@@ -256,18 +256,6 @@ function useLocationSetup() {
  * 백엔드가 오늘 날짜를 users.{uid}.visitDates에 추가 (이미 있으면 무시).
  * 실패해도 앱 사용에 영향 없음 (silent catch).
  */
-function useRetentionVisit() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    retentionApi.recordVisit().catch(() => {
-      // silent — 네트워크 실패는 무시
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
-}
-
 /* ── Update Screen (Modern) ── */
 const { width: SCREEN_W } = Dimensions.get('window');
 const PROGRESS_BAR_W = SCREEN_W * 0.65;
@@ -415,7 +403,6 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   useNotificationSetup();
   useLocationSetup();
-  useRetentionVisit();
 
   // 업데이트 다운로드/적용 중이면 업데이트 화면 표시
   if (status === 'downloading' || status === 'ready' || status === 'restarting') {

@@ -146,7 +146,6 @@ export default function MainLayout() {
       <Tabs.Screen name="recommendation-list" options={{ href: null }} />
       <Tabs.Screen name="lullaby" options={{ href: null }} />
       <Tabs.Screen name="coparenting" options={{ href: null }} />
-      <Tabs.Screen name="parent-level" options={{ href: null }} />
       <Tabs.Screen name="sos" options={{ href: null }} />
       <Tabs.Screen name="pregnancy" options={{ href: null }} />
       <Tabs.Screen name="vaccination" options={{ href: null }} />

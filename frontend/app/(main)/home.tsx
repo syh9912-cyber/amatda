@@ -117,7 +117,6 @@ const ALL_ACTIONS: QuickAction[] = [
   { icon: require('../../assets/quick-learning.png'), label: '생활 기록', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['elementary'] },
   // 놀이 학습은 맞춤추천 카드에 이미 있으므로 퀵메뉴에서는 초등만 노출
   { icon: require('../../assets/play-activity.png'), label: '놀이 학습', route: '/(main)/play-learning', bg: COLOR.yellowBg, ages: ['elementary'] },
-  { icon: require('../../assets/quick-parent-level.png'), label: '새싹부모', route: '/(main)/parent-level', bg: '#E8F5E9', ages: ['infant', 'toddler', 'elementary'] },
 ];
 
 const VACCINE_ACTION: QuickAction = {
@@ -135,12 +134,6 @@ function getActionsForAge(ageGroup: AgeGroupKey, child?: Child | null): QuickAct
     }
   }
 
-  // 새싹부모는 임신부 제외하고 반드시 포함
-  if (ageGroup !== 'pregnant') {
-    const hasSprout = filtered.some((a) => a.route === '/(main)/parent-level');
-    const sprout = ALL_ACTIONS.find((a) => a.route === '/(main)/parent-level');
-    if (!hasSprout && sprout) filtered.push(sprout);
-  }
   return filtered.slice(0, 8);
 }
 
@@ -1335,7 +1328,6 @@ function AllActionsGrid({ ageGroup, child }: { ageGroup: AgeGroupKey; child?: Ch
   return (
     <View style={styles.quickSection}>
       {actions.map((action) => {
-        const isSprout = action.route === '/(main)/parent-level';
         const showPulse = action.feverAlert && feverAlert;
 
         const inner = (
@@ -1345,7 +1337,6 @@ function AllActionsGrid({ ageGroup, child }: { ageGroup: AgeGroupKey; child?: Ch
             ) : (
               <Image source={action.icon} style={styles.quickIcon} resizeMode="contain" />
             )}
-            {isSprout && <View style={styles.sproutBadge}><Text style={styles.sproutBadgeText}>GO</Text></View>}
           </>
         );
 
@@ -1361,7 +1352,7 @@ function AllActionsGrid({ ageGroup, child }: { ageGroup: AgeGroupKey; child?: Ch
             ) : (
               <View style={[styles.quickCircle, { backgroundColor: action.bg }]}>{inner}</View>
             )}
-            <Text style={[styles.quickLabel, isSprout && styles.sproutLabel, showPulse && styles.feverAlertLabel]}>
+            <Text style={[styles.quickLabel, showPulse && styles.feverAlertLabel]}>
               {action.label}
             </Text>
           </TouchableOpacity>
@@ -1791,24 +1782,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: COLOR.text,
-  },
-  sproutBadge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: COLOR.accent,
-    borderRadius: 8,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-  },
-  sproutBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  sproutLabel: {
-    color: COLOR.accent,
-    fontWeight: '700',
   },
   feverAlertLabel: {
     color: '#FF3B30',
