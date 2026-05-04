@@ -1,8 +1,9 @@
 /**
- * 30주+ 임신부 분만 병원 등록 유도 팝업.
+ * 임신부 분만 병원 등록 유도 팝업.
  *
  * 표시 조건:
- *   - 임신부 + weeks >= 30
+ *   - 일반 임신부: weeks >= 30
+ *   - 고위험 임신부(isHighRisk): weeks >= 24 — 조산 위험 고려
  *   - 분만/진료 병원 둘 다 미등록
  *   - "3일 보지 않기" 옵션 사용 후 3일 미경과
  *
@@ -21,20 +22,26 @@ import { getHospital } from '../../services/deliveryHospital';
 interface Props {
   childId: string;
   weeks: number;
+  /** 고위험 임신 여부 — true 면 24주부터 노출 + 위험 강조 톤 */
+  isHighRisk?: boolean;
   /** 같은 세션에서 한 번만 표시되도록 외부에서 제어 — 매 화면 이동마다 뜨면 안 됨 */
   enabled?: boolean;
 }
 
 const SNOOZE_KEY = (childId: string) => `hospital_register_prompt_snooze_${childId}`;
 const SNOOZE_DAYS = 3;
+const NORMAL_THRESHOLD = 30;
+const HIGH_RISK_THRESHOLD = 24;
 
-export function HospitalRegisterPrompt({ childId, weeks, enabled = true }: Props) {
+export function HospitalRegisterPrompt({ childId, weeks, isHighRisk = false, enabled = true }: Props) {
   const [shouldShow, setShouldShow] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [checked, setChecked] = useState(false);
 
+  const threshold = isHighRisk ? HIGH_RISK_THRESHOLD : NORMAL_THRESHOLD;
+
   const checkConditions = useCallback(async () => {
-    if (!childId || weeks < 30) {
+    if (!childId || weeks < threshold) {
       setShouldShow(false);
       return;
     }
@@ -64,7 +71,7 @@ export function HospitalRegisterPrompt({ childId, weeks, enabled = true }: Props
       // ignore
     }
     setShouldShow(true);
-  }, [childId, weeks]);
+  }, [childId, weeks, threshold]);
 
   useEffect(() => {
     if (!enabled || checked) return;
@@ -99,17 +106,36 @@ export function HospitalRegisterPrompt({ childId, weeks, enabled = true }: Props
         onRequestClose={handleClose}
       >
         <View style={styles.backdrop}>
-          <View style={styles.card}>
+          <View style={[styles.card, isHighRisk && styles.cardHighRisk]}>
             <TouchableOpacity onPress={handleClose} style={styles.closeBtn} hitSlop={10}>
               <Text style={styles.closeBtnText}>✕</Text>
             </TouchableOpacity>
-            <Text style={styles.icon}>⏰</Text>
-            <Text style={styles.title}>출산이 가까워지고 있어요</Text>
-            <Text style={styles.body}>
-              급한 순간 바로 전화할 수 있도록{'\n'}
-              <Text style={styles.bodyEmph}>병원 번호를 미리 등록</Text>해 주세요.
+            <Text style={styles.icon}>{isHighRisk ? '🚨' : '⏰'}</Text>
+            <Text style={[styles.title, isHighRisk && styles.titleHighRisk]}>
+              {isHighRisk ? '고위험 임신 — 병원 등록이 꼭 필요해요' : '출산이 가까워지고 있어요'}
             </Text>
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleRegister} activeOpacity={0.85}>
+            <Text style={styles.body}>
+              {isHighRisk ? (
+                <>
+                  조산 가능성을 고려해 24주부터 안내드려요.{'\n'}
+                  급한 순간 바로 전화할 수 있도록{'\n'}
+                  <Text style={[styles.bodyEmph, styles.bodyEmphHighRisk]}>
+                    분만 병원 번호를 지금 등록
+                  </Text>
+                  해 주세요.
+                </>
+              ) : (
+                <>
+                  급한 순간 바로 전화할 수 있도록{'\n'}
+                  <Text style={styles.bodyEmph}>병원 번호를 미리 등록</Text>해 주세요.
+                </>
+              )}
+            </Text>
+            <TouchableOpacity
+              style={[styles.primaryBtn, isHighRisk && styles.primaryBtnHighRisk]}
+              onPress={handleRegister}
+              activeOpacity={0.85}
+            >
               <Text style={styles.primaryBtnText}>지금 등록하기</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.secondaryBtn} onPress={handleSnooze} activeOpacity={0.7}>
@@ -147,6 +173,10 @@ const styles = StyleSheet.create({
     paddingTop: 28,
     alignItems: 'center',
   },
+  cardHighRisk: {
+    borderTopWidth: 4,
+    borderTopColor: '#D9534F',
+  },
   closeBtn: {
     position: 'absolute',
     top: 12,
@@ -168,6 +198,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
   },
+  titleHighRisk: { color: '#D9534F' },
   body: {
     fontSize: 14,
     color: '#4A4A4A',
@@ -179,6 +210,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FF8C5A',
   },
+  bodyEmphHighRisk: { color: '#D9534F' },
   primaryBtn: {
     width: '100%',
     backgroundColor: '#FF8C5A',
@@ -187,6 +219,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  primaryBtnHighRisk: { backgroundColor: '#D9534F' },
   primaryBtnText: {
     fontSize: 16,
     fontWeight: '900',

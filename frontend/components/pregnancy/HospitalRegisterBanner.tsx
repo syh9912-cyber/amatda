@@ -1,8 +1,8 @@
 /**
- * 35주+ 임신부 홈 배너 — 분만 병원 번호 미등록 시 경고 노출.
+ * 임신부 홈 배너 — 분만 병원 번호 미등록 시 경고 노출.
  *
- * 35주차부터 출산 가능성이 급격히 높아지므로 응급 상황에서 즉시 전화할
- * 병원 번호가 등록돼 있어야 함. 미등록이면 홈 상단에 빨간 배너로 안내.
+ * 일반 임신부: 35주+
+ * 고위험 임신부: 28주+ (조산 위험 → 더 일찍 등록 유도)
  *
  * 클릭 시 HospitalRegisterModal 열어 즉시 등록 가능.
  * 등록 완료되면 자동으로 배너 사라짐.
@@ -15,11 +15,16 @@ import { getHospital } from '../../services/deliveryHospital';
 interface Props {
   childId: string;
   weeks: number;
+  /** 고위험 임신 여부 — true 면 28주부터 강조 톤 노출 */
+  isHighRisk?: boolean;
   /** 다른 화면에서 등록 후 돌아왔을 때 강제 재조회용 */
   refreshKey?: number;
 }
 
-export function HospitalRegisterBanner({ childId, weeks, refreshKey }: Props) {
+const NORMAL_THRESHOLD = 35;
+const HIGH_RISK_THRESHOLD = 28;
+
+export function HospitalRegisterBanner({ childId, weeks, isHighRisk = false, refreshKey }: Props) {
   const [registered, setRegistered] = useState<boolean | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -41,8 +46,9 @@ export function HospitalRegisterBanner({ childId, weeks, refreshKey }: Props) {
     checkRegistered();
   }, [checkRegistered, refreshKey]);
 
-  // 35주 미만 또는 등록 완료 시 표시 안 함
-  if (weeks < 35 || registered !== false) return null;
+  const threshold = isHighRisk ? HIGH_RISK_THRESHOLD : NORMAL_THRESHOLD;
+  // 임계 미만 또는 등록 완료 시 표시 안 함
+  if (weeks < threshold || registered !== false) return null;
 
   return (
     <>
@@ -51,11 +57,17 @@ export function HospitalRegisterBanner({ childId, weeks, refreshKey }: Props) {
         activeOpacity={0.85}
         onPress={() => setModalOpen(true)}
       >
-        <Text style={styles.icon}>⚠️</Text>
+        <Text style={styles.icon}>{isHighRisk ? '🚨' : '⚠️'}</Text>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>병원 번호를 미리 등록해 주세요</Text>
+          <Text style={styles.title}>
+            {isHighRisk
+              ? '고위험 임신 — 분만 병원을 지금 등록하세요'
+              : '병원 번호를 미리 등록해 주세요'}
+          </Text>
           <Text style={styles.sub}>
-            출산이 가까워지고 있어요. 급한 순간 바로 전화할 수 있도록 준비해 두세요.
+            {isHighRisk
+              ? '조산 가능성을 고려해 28주부터 안내드려요. 급한 순간 즉시 전화할 수 있도록 준비해 주세요.'
+              : '출산이 가까워지고 있어요. 급한 순간 바로 전화할 수 있도록 준비해 두세요.'}
           </Text>
         </View>
         <Text style={styles.arrow}>{'>'}</Text>

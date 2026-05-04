@@ -1,5 +1,70 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-05-04 — 출시 전 보안 일제 강화 + Secret Manager 마이그레이션
+> 최종 업데이트: 2026-05-04 — 출시 전 보안 일제 강화 + Secret Manager 마이그레이션 + 지능형 SOS 시스템(고위험/대학병원 분기)
+
+---
+
+## 2026-05-04 — 지능형 SOS 시스템 (고위험 임신 + 대학병원 분기)
+
+> 사용자 요구: 산모 유형(일반/고위험)과 병원 급수(의원/대병)에 따라 응급 안내 강도/임계/우선순위가 자동 분기.
+>
+> **6단계 정석 구현. 모두 BACKEND tsc + FRONTEND tsc 통과, expo lint 0 errors.**
+
+### Phase 1 — 데이터 모델
+- `frontend/services/deliveryHospital.ts` — `HospitalInfo.isUniversityHospital?: boolean` 추가
+- `frontend/stores/childStore.ts` — `Child.isHighRiskPregnancy?: boolean` 추가
+- `backend/src/routes/child.ts` — formatChild 출력에 `isHighRiskPregnancy` 포함 (Firestore raw → API DTO 매핑), PUT /:id route 에서 boolean validation 후 저장
+
+### Phase 2 — HospitalRegisterModal 대학병원 체크박스 + 조건부 UI
+- 분만 탭에서만 "🏥 대학병원(상급종합병원)이에요" 체크박스 노출
+- 체크 시 보라색 안내 박스 (낮에도 분만실/MFICU 우선 안내됨)
+- 분만실 직통 라벨/플레이스홀더가 "고위험 산모센터(MFICU)/분만실 직통 *" 로 변경 + 미입력 시 빨강 경고
+- save 시 `isUniversityHospital` 필드 함께 전송 (delivery 탭일 때만)
+
+### Phase 3 — child-edit.tsx 고위험 체크박스
+- 임신 정보 편집 화면(자녀 정보 관리)의 출산예정일 다음에 "⚠️ 고위험 임신이에요" 체크박스 배치
+- 체크 시 노란 안내 박스 (24주부터 알림 + 진통 시 더 빠른 응급 안내)
+- handleSave 페이로드에 `payload.isHighRiskPregnancy = isHighRiskPregnancy` 추가
+- 옛 문서 호환: `isHighRiskPregnancy === true` 비교로 undefined/false 안전 처리
+- 추후 수정 가능 — 사용자가 잘못 체크해도 다시 풀 수 있음
+
+### Phase 4 — pickAllPhones 대학병원 분기
+- `buildCandidates()` / `buildOrder()` helper 분리로 후보 라벨 + 우선순위가 대학병원 여부에 따라 분기
+- 일반 의원/종합병원: 시간대 스위칭 (외래 시간 → 외래 대표, 야간 → 분만실)
+- **대학병원 (delivery.isUniversityHospital=true)**: 시간대 무관, 분만실(MFICU) 직통이 항상 1순위. 대표 번호는 "교환 통해 분만실 연결 요청" subLabel
+- 라벨도 "분만실 직통" → "고위험 산모센터(MFICU) / 분만실" 자동 변경
+
+### Phase 5 — 24주/30주 임계 분기 + 진통 위급 강조 (고위험)
+- `HospitalRegisterPrompt`: 일반 30주+ → 고위험 24주+ 노출 임계 차등화. UI 강조 (빨강 보더, 🚨 아이콘, "고위험 임신 — 병원 등록이 꼭 필요해요" 타이틀)
+- `HospitalRegisterBanner`: 일반 35주+ → 고위험 28주+ 노출. 타이틀/문구 분기
+- `home.tsx`: 두 컴포넌트에 `isHighRisk={child.isHighRiskPregnancy === true}` 전달
+- `labor-monitor.tsx` emergency banner: 고위험이면 짙은 빨강 + "🚨 고위험 임신 — 위험 신호 시 즉시 119" 톤으로 자동 전환
+
+### Phase 6 — 진통 화면 [등록하기] 강제 버튼
+- `labor-monitor.tsx`: 화면 마운트 시 `pickAllPhones` 으로 등록 여부 사전 조회 (`hasRegisteredHospital`)
+- 미등록 시 emergency banner 안에 "🏥 분만 병원이 아직 등록되지 않았어요 — 지금 등록하기 ›" 버튼 강제 노출
+- `callDeliveryWard` 미등록 분기: 단순 Alert → "119 전화 / 병원 등록 / 취소" 3-way Alert. 등록 선택 시 `HospitalRegisterModal` 즉시 오픈
+- 등록 완료 onSaved 콜백에서 `refreshHospitalRegistered()` 호출 → 버튼 자동 사라짐
+
+### 검증
+- `cd backend && npx tsc --noEmit` — 통과
+- `cd frontend && npx tsc --noEmit` — 통과
+- `cd frontend && npx expo lint` — 0 errors (기존 warning 만 존재, 신규 코드 무관)
+
+### 수정 파일
+- `frontend/services/deliveryHospital.ts`
+- `frontend/stores/childStore.ts`
+- `frontend/components/pregnancy/HospitalRegisterModal.tsx`
+- `frontend/components/pregnancy/HospitalRegisterPrompt.tsx`
+- `frontend/components/pregnancy/HospitalRegisterBanner.tsx`
+- `frontend/app/(main)/child-edit.tsx`
+- `frontend/app/(main)/home.tsx`
+- `frontend/app/(main)/labor-monitor.tsx`
+- `backend/src/routes/child.ts`
+
+### 남은 작업
+- 백엔드 배포 (child route DTO 변경)
+- OTA preview 채널 push (frontend UI)
+- 사용자 단말 실측: 고위험 토글 → home에서 24주차에 prompt 노출 확인, labor-monitor에서 등록하기 버튼 작동 확인
 
 ---
 

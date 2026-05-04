@@ -52,6 +52,7 @@ export function HospitalRegisterModal({
   const [deliveryWardPhone, setDeliveryWardPhone] = useState('');
   const [address, setAddress] = useState('');
   const [memo, setMemo] = useState('');
+  const [isUniversityHospital, setIsUniversityHospital] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -68,6 +69,7 @@ export function HospitalRegisterModal({
       setDeliveryWardPhone(info?.deliveryWardPhone ?? '');
       setAddress(info?.address ?? '');
       setMemo(info?.memo ?? '');
+      setIsUniversityHospital(info?.isUniversityHospital === true);
     });
   }, [visible, childId, tab]);
 
@@ -84,6 +86,7 @@ export function HospitalRegisterModal({
         deliveryWardPhone: deliveryWardPhone.trim() || undefined,
         address: address.trim() || undefined,
         memo: memo.trim() || undefined,
+        isUniversityHospital: tab === 'delivery' ? isUniversityHospital : undefined,
       });
       // 분만 병원이고 직통번호가 비어있으면 부드러운 추가 권유 (사용자 의도: "스마트 제안")
       if (tab === 'delivery' && !deliveryWardPhone.trim()) {
@@ -163,6 +166,39 @@ export function HospitalRegisterModal({
             </View>
           )}
 
+          {/* 대학병원 체크박스 — 분만 탭에서만 노출 */}
+          {tab === 'delivery' && (
+            <>
+              <TouchableOpacity
+                style={[styles.checkboxRow, isUniversityHospital && styles.checkboxRowActive]}
+                onPress={() => setIsUniversityHospital((v) => !v)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, isUniversityHospital && styles.checkboxChecked]}>
+                  {isUniversityHospital && <Text style={styles.checkboxMark}>✓</Text>}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.checkboxLabel}>🏥 대학병원(상급종합병원)이에요</Text>
+                  <Text style={styles.checkboxSub}>
+                    예: 서울대병원, 삼성서울병원, 차병원 본원 등
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {isUniversityHospital && (
+                <View style={styles.uniInfoBox}>
+                  <Text style={styles.uniInfoText}>
+                    💡 대학병원은 야간/주말 외래가 닫혀있어,{'\n'}
+                    <Text style={{ fontWeight: '800', color: '#7C5CFF' }}>
+                      낮에도 분만실(MFICU) 직통 번호
+                    </Text>
+                    로 안내됩니다.
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+
           <Text style={styles.label}>병원명 *</Text>
           <TextInput
             style={styles.input}
@@ -182,15 +218,28 @@ export function HospitalRegisterModal({
             keyboardType="phone-pad"
           />
 
-          <Text style={styles.label}>분만실 직통번호 (선택)</Text>
+          <Text style={styles.label}>
+            {tab === 'delivery' && isUniversityHospital
+              ? '고위험 산모센터(MFICU) / 분만실 직통 *'
+              : '분만실 직통번호 (선택)'}
+          </Text>
           <TextInput
             style={styles.input}
             value={deliveryWardPhone}
             onChangeText={setDeliveryWardPhone}
-            placeholder="예: 02-3468-3010 (있으면 SOS 시 우선 연결)"
+            placeholder={
+              tab === 'delivery' && isUniversityHospital
+                ? '대학병원은 야간/주말 외래가 안 받아요'
+                : '예: 02-3468-3010 (있으면 SOS 시 우선 연결)'
+            }
             placeholderTextColor="#BBB"
             keyboardType="phone-pad"
           />
+          {tab === 'delivery' && isUniversityHospital && !deliveryWardPhone.trim() && (
+            <Text style={styles.warnText}>
+              ⚠️ 대학병원은 분만실 직통 번호가 꼭 필요해요. 병원 안내 데스크에 문의하세요.
+            </Text>
+          )}
 
           <Text style={styles.label}>주소 (선택)</Text>
           <View style={styles.addressRow}>
@@ -296,4 +345,52 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   saveBtnText: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F7FF',
+    borderWidth: 1,
+    borderColor: '#E4DFFA',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  checkboxRowActive: {
+    backgroundColor: '#EFEAFF',
+    borderColor: '#7C5CFF',
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: '#BBB',
+    backgroundColor: '#FFF',
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    borderColor: '#7C5CFF',
+    backgroundColor: '#7C5CFF',
+  },
+  checkboxMark: { color: '#FFF', fontSize: 14, fontWeight: '900', lineHeight: 16 },
+  checkboxLabel: { fontSize: 14, fontWeight: '700', color: '#1A1A1A' },
+  checkboxSub: { fontSize: 12, color: '#777', marginTop: 2 },
+  uniInfoBox: {
+    backgroundColor: '#FFF8E8',
+    borderLeftWidth: 3,
+    borderLeftColor: '#F5B400',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  uniInfoText: { fontSize: 13, color: '#5A4A20', lineHeight: 19 },
+  warnText: {
+    fontSize: 12,
+    color: '#D9534F',
+    marginTop: 6,
+    fontWeight: '600',
+  },
 });

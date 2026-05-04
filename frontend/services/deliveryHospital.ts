@@ -21,12 +21,19 @@ export interface HospitalInfo {
   name: string;
   /** 대표 전화번호 */
   mainPhone: string;
-  /** 분만실 직통 번호 (선택) */
+  /** 분만실 직통 번호 (선택) — 대학병원이면 'MFICU/분만실' 통합 */
   deliveryWardPhone?: string;
   /** 주소 (선택, 지도 검색용) */
   address?: string;
   /** 산모 메모 (가족분만실 유무 등) */
   memo?: string;
+  /**
+   * 대학병원/상급종합병원 여부 (옵션, 기본 false).
+   * true 면:
+   *  - 외래 야간/주말 연결 안 됨 → 낮에도 분만실/MFICU 강조 노출
+   *  - 라벨이 "분만실 직통" → "고위험 산모센터/분만실" 로 표시
+   */
+  isUniversityHospital?: boolean;
   /** 마지막 업데이트 ISO */
   updatedAt: string;
 }
@@ -83,13 +90,68 @@ function isClinicHours(now: Date = new Date()): boolean {
 }
 
 /**
- * 분만실 전화 번호 우선순위 picker — 시간대 스위칭 적용.
+ * 분만실 전화 번호 우선순위 picker — 시간대 + 병원급 스위칭 적용.
  *
- * 외래(낮) 시간: clinic.mainPhone (외래 대표) → delivery.mainPhone → delivery.deliveryWardPhone → clinic.deliveryWardPhone
- * 분만실(밤/주말) 시간: delivery.deliveryWardPhone → delivery.mainPhone → clinic.deliveryWardPhone → clinic.mainPhone
+ * 일반 의원/종합병원:
+ *   외래(낮) 시간: clinic.mainPhone → delivery.mainPhone → delivery.deliveryWardPhone → clinic.deliveryWardPhone
+ *   분만실(밤/주말): delivery.deliveryWardPhone → delivery.mainPhone → clinic.deliveryWardPhone → clinic.mainPhone
+ *
+ * 대학병원(상급종합) — delivery.isUniversityHospital === true:
+ *   외래/야간 무관: delivery.deliveryWardPhone(MFICU/분만실) → delivery.mainPhone → clinic.* (시간대 적용)
+ *   ※ 대학병원 외래는 응급 연결이 안되므로 분만실(MFICU) 직통이 항상 1순위.
  *
  * options.now 로 테스트 가능.
  */
+function buildCandidates(
+  delivery: HospitalInfo | null,
+  clinic: HospitalInfo | null,
+): { phone?: string; source: PhoneSource; label: string; subLabel?: string }[] {
+  const isUni = delivery?.isUniversityHospital === true;
+  return [
+    {
+      phone: delivery?.deliveryWardPhone,
+      source: 'delivery_ward',
+      label: isUni ? '고위험 산모센터(MFICU) / 분만실' : '분만실 직통',
+      subLabel: isUni ? '대학병원 — 24시간 응급 연결' : '밤/주말 우선',
+    },
+    {
+      phone: delivery?.mainPhone,
+      source: 'delivery_main',
+      label: '분만 병원 대표',
+      subLabel: isUni ? '교환 통해 분만실 연결 요청' : undefined,
+    },
+    {
+      phone: clinic?.deliveryWardPhone,
+      source: 'clinic_ward',
+      label: '진료 병원 분만실',
+      subLabel: '밤/주말 우선',
+    },
+    {
+      phone: clinic?.mainPhone,
+      source: 'clinic_main',
+      label: '외래 대표',
+      subLabel: '낮 진료시간 우선',
+    },
+  ];
+}
+
+function buildOrder(
+  delivery: HospitalInfo | null,
+  clinicTime: boolean,
+): PhoneSource[] {
+  const isUni = delivery?.isUniversityHospital === true;
+  // 대학병원: 시간대와 무관하게 분만실(MFICU) 직통이 항상 1순위.
+  if (isUni) {
+    return clinicTime
+      ? ['delivery_ward', 'delivery_main', 'clinic_main', 'clinic_ward']
+      : ['delivery_ward', 'delivery_main', 'clinic_ward', 'clinic_main'];
+  }
+  // 일반 의원/종합병원: 시간대 스위칭.
+  return clinicTime
+    ? ['clinic_main', 'delivery_main', 'delivery_ward', 'clinic_ward']
+    : ['delivery_ward', 'delivery_main', 'clinic_ward', 'clinic_main'];
+}
+
 export async function pickDeliveryPhone(
   childId: string,
   options?: { now?: Date },
@@ -98,19 +160,8 @@ export async function pickDeliveryPhone(
   const clinic = await getHospital(childId, 'clinic');
   const clinicTime = isClinicHours(options?.now);
 
-  // 후보 조립
-  type Cand = { phone?: string; source: PhoneSource; label: string; subLabel?: string };
-  const all: Cand[] = [
-    { phone: delivery?.deliveryWardPhone, source: 'delivery_ward', label: '분만실 직통', subLabel: '밤/주말 우선' },
-    { phone: delivery?.mainPhone, source: 'delivery_main', label: '분만 병원 대표' },
-    { phone: clinic?.deliveryWardPhone, source: 'clinic_ward', label: '진료 병원 분만실', subLabel: '밤/주말 우선' },
-    { phone: clinic?.mainPhone, source: 'clinic_main', label: '외래 대표', subLabel: '낮 진료시간 우선' },
-  ];
-
-  // 시간대별 우선순위 재정렬
-  const order: PhoneSource[] = clinicTime
-    ? ['clinic_main', 'delivery_main', 'delivery_ward', 'clinic_ward']
-    : ['delivery_ward', 'delivery_main', 'clinic_ward', 'clinic_main'];
+  const all = buildCandidates(delivery, clinic);
+  const order = buildOrder(delivery, clinicTime);
 
   for (const src of order) {
     const cand = all.find((c) => c.source === src);
@@ -122,7 +173,7 @@ export async function pickDeliveryPhone(
 }
 
 /**
- * 등록된 모든 전화번호를 시간대 우선순위 정렬해 반환.
+ * 등록된 모든 전화번호를 시간대 + 병원급 우선순위 정렬해 반환.
  * 진진통 시 "어디로 전화할까요?" 선택지에 사용 — 1개면 바로, 여러 개면 선택 모달.
  */
 export async function pickAllPhones(
@@ -133,17 +184,8 @@ export async function pickAllPhones(
   const clinic = await getHospital(childId, 'clinic');
   const clinicTime = isClinicHours(options?.now);
 
-  type Cand = { phone?: string; source: PhoneSource; label: string; subLabel?: string };
-  const all: Cand[] = [
-    { phone: delivery?.deliveryWardPhone, source: 'delivery_ward', label: '분만실 직통', subLabel: '밤/주말 우선' },
-    { phone: delivery?.mainPhone, source: 'delivery_main', label: '분만 병원 대표' },
-    { phone: clinic?.deliveryWardPhone, source: 'clinic_ward', label: '진료 병원 분만실', subLabel: '밤/주말 우선' },
-    { phone: clinic?.mainPhone, source: 'clinic_main', label: '외래 대표', subLabel: '낮 진료시간 우선' },
-  ];
-
-  const order: PhoneSource[] = clinicTime
-    ? ['clinic_main', 'delivery_main', 'delivery_ward', 'clinic_ward']
-    : ['delivery_ward', 'delivery_main', 'clinic_ward', 'clinic_main'];
+  const all = buildCandidates(delivery, clinic);
+  const order = buildOrder(delivery, clinicTime);
 
   const out: PickedPhone[] = [];
   for (const src of order) {

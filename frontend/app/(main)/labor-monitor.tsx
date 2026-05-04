@@ -18,6 +18,7 @@ import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/the
 import { AdSlot } from '../../components/ads/AdSlot';
 import { pickAllPhones, type PickedPhone } from '../../services/deliveryHospital';
 import { MissionToast } from '../../components/common/MissionToast';
+import { HospitalRegisterModal } from '../../components/pregnancy/HospitalRegisterModal';
 
 type Tab = 'kick' | 'contraction';
 
@@ -253,20 +254,54 @@ export default function LaborMonitorScreen() {
   const [phoneChoiceOpen, setPhoneChoiceOpen] = useState(false);
   const [phoneChoices, setPhoneChoices] = useState<PickedPhone[]>([]);
 
+  /** 분만 병원 등록 여부 (등록 안 됐으면 진통 화면에 [등록하기] 강제 노출) */
+  const [hasRegisteredHospital, setHasRegisteredHospital] = useState<boolean | null>(null);
+  const [hospitalRegisterOpen, setHospitalRegisterOpen] = useState(false);
+
+  /** 고위험 임신 — 위급 강조 톤 분기 */
+  const isHighRiskPregnancy = selectedChild?.isHighRiskPregnancy === true;
+
+  const refreshHospitalRegistered = useCallback(async () => {
+    if (!childId) return;
+    const all = await pickAllPhones(childId);
+    setHasRegisteredHospital(all.length > 0);
+  }, [childId]);
+
+  useEffect(() => {
+    refreshHospitalRegistered();
+  }, [refreshHospitalRegistered]);
+
   const dialPhone = useCallback((phone: string) => {
     Linking.openURL(`tel:${phone.replace(/[^0-9]/g, '')}`).catch(() => {
       Alert.alert('전화 연결 실패', `직접 전화해 주세요: ${phone}`);
     });
   }, []);
 
-  /** 분만실 전화하기 — 번호 1개면 바로 전화, 여러 개면 선택 모달 */
+  /** 분만실 전화하기 — 번호 1개면 바로 전화, 여러 개면 선택 모달, 미등록이면 등록 모달 */
   const callDeliveryWard = useCallback(async () => {
     if (!childId) return;
     const all = await pickAllPhones(childId);
     if (all.length === 0) {
+      // 미등록 — 진통 위급 상황에서 119로 안내 + 즉시 등록 가능한 모달
       Alert.alert(
         '병원 번호 등록 필요',
-        '먼저 SOS 화면에서 분만 예정 병원 전화번호를 등록해 주세요.',
+        '분만 예정 병원이 등록되어 있지 않아요.\n지금 등록하시겠어요?\n\n급한 상황이면 먼저 119에 전화하세요.',
+        [
+          {
+            text: '119 전화',
+            onPress: () => {
+              Linking.openURL('tel:119').catch(() => {
+                Alert.alert('전화 연결 실패', '직접 119에 전화해 주세요.');
+              });
+            },
+          },
+          {
+            text: '병원 등록',
+            style: 'default',
+            onPress: () => setHospitalRegisterOpen(true),
+          },
+          { text: '취소', style: 'cancel' },
+        ],
       );
       return;
     }
@@ -371,14 +406,21 @@ export default function LaborMonitorScreen() {
         ) : (
           <>
             {/* === 위급 증상 119 즉시 안내 — 진통 화면 진입 시 항상 노출 ===
-                양수 파수 / 다량 출혈 / 태동 12h+ 멈춤 / 극심한 복통 → 진통 수치 무관 */}
-            <View style={styles.emergencyBanner}>
-              <Text style={styles.emergencyBannerTitle}>🚨 이런 증상은 119 먼저!</Text>
+                양수 파수 / 다량 출혈 / 태동 12h+ 멈춤 / 극심한 복통 → 진통 수치 무관
+                고위험 임신: 더 짙은 빨강 + "고위험 — 즉시 119" 톤 */}
+            <View style={[styles.emergencyBanner, isHighRiskPregnancy && styles.emergencyBannerHighRisk]}>
+              <Text style={[styles.emergencyBannerTitle, isHighRiskPregnancy && styles.emergencyBannerTitleHighRisk]}>
+                {isHighRiskPregnancy
+                  ? '🚨 고위험 임신 — 위험 신호 시 즉시 119'
+                  : '🚨 이런 증상은 119 먼저!'}
+              </Text>
               <Text style={styles.emergencyBannerText}>
                 양수 파수 · 다량 출혈 · 태동 12시간 이상 멈춤 · 극심한 복통
               </Text>
               <Text style={styles.emergencyBannerSub}>
-                앱 확인보다 119가 먼저입니다. 애매하거나 불안하면 지금 바로 병원에 전화하세요.
+                {isHighRiskPregnancy
+                  ? '고위험 임신은 합병증 위험이 더 큽니다. 애매해도 망설이지 말고 119를 먼저 부르세요.'
+                  : '앱 확인보다 119가 먼저입니다. 애매하거나 불안하면 지금 바로 병원에 전화하세요.'}
               </Text>
               <View style={styles.emergencyBtnRow}>
                 <TouchableOpacity
@@ -400,6 +442,18 @@ export default function LaborMonitorScreen() {
                   <Text style={styles.emergencyHospitalText}>🏥 병원</Text>
                 </TouchableOpacity>
               </View>
+              {/* 미등록 시 [지금 등록하기] 강제 노출 — 응급 상황 전 사전 등록 유도 */}
+              {hasRegisteredHospital === false && (
+                <TouchableOpacity
+                  style={styles.emergencyRegisterBtn}
+                  onPress={() => setHospitalRegisterOpen(true)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.emergencyRegisterText}>
+                    🏥 분만 병원이 아직 등록되지 않았어요 — 지금 등록하기 ›
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {currentWeek < 36 && (
@@ -767,6 +821,18 @@ export default function LaborMonitorScreen() {
 
       {/* 작은 토스트 — 태동/진통 기록 완료 시 (사용 흐름 방해 X) */}
       <MissionToast message={toastMsg} onDismiss={() => setToastMsg(null)} />
+
+      {/* 분만 병원 등록 모달 — 미등록 시 [등록하기] / Alert 에서 호출 */}
+      <HospitalRegisterModal
+        visible={hospitalRegisterOpen}
+        childId={childId}
+        initialKind="delivery"
+        onClose={() => setHospitalRegisterOpen(false)}
+        onSaved={() => {
+          setHospitalRegisterOpen(false);
+          refreshHospitalRegistered();
+        }}
+      />
     </View>
   );
 }
@@ -1182,11 +1248,37 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 14,
   },
+  // 고위험 임신 — 더 짙은 빨강 + 두꺼운 보더
+  emergencyBannerHighRisk: {
+    backgroundColor: '#FFD8D8',
+    borderWidth: 2.5,
+    borderColor: '#B71C1C',
+  },
   emergencyBannerTitle: {
     fontSize: 16,
     fontWeight: '900',
     color: '#B71C1C',
     marginBottom: 6,
+  },
+  emergencyBannerTitleHighRisk: {
+    fontSize: 17,
+    color: '#7A0000',
+  },
+  emergencyRegisterBtn: {
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#FF8C5A',
+    alignItems: 'center',
+  },
+  emergencyRegisterText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#D9534F',
+    textAlign: 'center',
   },
   emergencyBannerText: {
     fontSize: 13,

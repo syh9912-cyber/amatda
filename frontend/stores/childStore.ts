@@ -76,6 +76,11 @@ export interface Child {
   momWeight?: number | null;
   momBloodType?: string | null;
   momSpecialNotes?: string | null;
+  /**
+   * 고위험 임신 여부 — 다태/임신성고혈압/GDM/조산기/35세 이상 등.
+   * 사용자가 child-edit.tsx 에서 직접 체크. 옛 문서는 undefined → false 처리.
+   */
+  isHighRiskPregnancy?: boolean;
 }
 
 interface ChildState {

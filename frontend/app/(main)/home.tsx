@@ -581,21 +581,23 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* === 35주+ 임신부: 분만 병원 미등록 시 경고 배너 ===
-          출산이 임박한 시점에 응급 상황 대비 — 등록되면 자동 사라짐 */}
+      {/* === 임신부 분만 병원 미등록 경고 배너 ===
+          일반 35주+ / 고위험 28주+ — 등록되면 자동 사라짐 */}
       {child?.isPregnant && (
         <HospitalRegisterBanner
           childId={child.id}
           weeks={child.pregnancyWeeks ?? 0}
+          isHighRisk={child.isHighRiskPregnancy === true}
         />
       )}
 
-      {/* === 30주+ 임신부: 분만 병원 미등록 시 1회성 팝업 (3일 보지 않기 옵션) ===
-          앱 마운트 시 1회만 체크, snooze 만료 후 재노출 */}
+      {/* === 임신부: 분만 병원 미등록 시 1회성 팝업 (3일 보지 않기 옵션) ===
+          일반 30주+ / 고위험 24주+ 분기 — snooze 만료 후 재노출 */}
       {child?.isPregnant && (
         <HospitalRegisterPrompt
           childId={child.id}
           weeks={child.pregnancyWeeks ?? 0}
+          isHighRisk={child.isHighRiskPregnancy === true}
         />
       )}
 

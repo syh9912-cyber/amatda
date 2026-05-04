@@ -61,6 +61,8 @@ function formatChild(id: string, data: Record<string, unknown>) {
     momWeight: typeof data.momWeight === 'number' ? data.momWeight : null,
     momBloodType: (data.momBloodType as string) || null,
     momSpecialNotes: (data.momSpecialNotes as string) || null,
+    // 고위험 임신 — child-edit 에서 직접 체크 (다태/임고/GDM/조산기/35세+ 등)
+    isHighRiskPregnancy: data.isHighRiskPregnancy === true,
   };
 }
 
@@ -269,6 +271,9 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
     if (req.body.momSpecialNotes !== undefined) updates.momSpecialNotes = req.body.momSpecialNotes || null;
     if (req.body.dueDate !== undefined) updates.dueDate = req.body.dueDate || null;
     if (req.body.pregnancyNotes !== undefined) updates.pregnancyNotes = req.body.pregnancyNotes || null;
+    if (req.body.isHighRiskPregnancy !== undefined) {
+      updates.isHighRiskPregnancy = req.body.isHighRiskPregnancy === true;
+    }
 
     await collections.children.doc(req.params.id as string).update(updates);
     const updated = await collections.children.doc(req.params.id as string).get();

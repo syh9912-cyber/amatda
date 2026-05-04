@@ -42,6 +42,7 @@ export default function ChildEditScreen() {
   const [momWeight, setMomWeight] = useState('');
   const [momBloodType, setMomBloodType] = useState('');
   const [momSpecialNotes, setMomSpecialNotes] = useState('');
+  const [isHighRiskPregnancy, setIsHighRiskPregnancy] = useState(false);
 
   const isPregnant = selectedChild?.isPregnant === true;
 
@@ -61,6 +62,7 @@ export default function ChildEditScreen() {
     setMomWeight(selectedChild.momWeight ? String(selectedChild.momWeight) : '');
     setMomBloodType(selectedChild.momBloodType ?? '');
     setMomSpecialNotes(selectedChild.momSpecialNotes ?? '');
+    setIsHighRiskPregnancy(selectedChild.isHighRiskPregnancy === true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild?.id]);
 
@@ -89,6 +91,7 @@ export default function ChildEditScreen() {
         payload.momWeight = momWeight.trim() ? parseFloat(momWeight) : null;
         payload.momBloodType = momBloodType || null;
         payload.momSpecialNotes = momSpecialNotes.trim() || null;
+        payload.isHighRiskPregnancy = isHighRiskPregnancy;
       } else {
         payload.height = height.trim() ? parseFloat(height) : null;
         payload.weight = weight.trim() ? parseFloat(weight) : null;
@@ -199,6 +202,33 @@ export default function ChildEditScreen() {
               placeholder="YYYY-MM-DD"
               placeholderTextColor={COLORS.textLight}
             />
+
+            {/* 고위험 임신 체크박스 — SOS/진통 화면 안내 강도에 영향 */}
+            <Text style={styles.label}>고위험 임신 여부</Text>
+            <TouchableOpacity
+              style={[styles.checkRow, isHighRiskPregnancy && styles.checkRowActive]}
+              onPress={() => setIsHighRiskPregnancy((v) => !v)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.checkBox, isHighRiskPregnancy && styles.checkBoxOn]}>
+                {isHighRiskPregnancy && <Text style={styles.checkMark}>✓</Text>}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.checkTitle}>⚠️ 고위험 임신이에요</Text>
+                <Text style={styles.checkSub}>
+                  쌍둥이/세쌍둥이, 임신성 고혈압, 임신성 당뇨, 조산 이력,{'\n'}
+                  35세 이상 고령 임신, 전치태반, 기타 의사 권고 사항
+                </Text>
+              </View>
+            </TouchableOpacity>
+            {isHighRiskPregnancy && (
+              <View style={styles.highRiskInfo}>
+                <Text style={styles.highRiskInfoText}>
+                  💡 24주부터 분만 병원 등록 알림이 표시되고,{'\n'}
+                  진통 발생 시 더 빠른 응급 안내가 제공됩니다.
+                </Text>
+              </View>
+            )}
 
             <Text style={styles.label}>임신 특이사항</Text>
             <TextInput
@@ -389,4 +419,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteBtnText: { color: '#E8847C', fontSize: FONT_SIZE.md, fontWeight: '600' },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+  },
+  checkRowActive: {
+    backgroundColor: '#FFF1ED',
+    borderColor: '#E8847C',
+  },
+  checkBox: {
+    width: 22,
+    height: 22,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: '#BBB',
+    backgroundColor: '#FFF',
+    marginRight: 12,
+    marginTop: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkBoxOn: {
+    borderColor: '#E8847C',
+    backgroundColor: '#E8847C',
+  },
+  checkMark: { color: '#FFF', fontSize: 14, fontWeight: '900', lineHeight: 16 },
+  checkTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text },
+  checkSub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4, lineHeight: 17 },
+  highRiskInfo: {
+    backgroundColor: '#FFF8E8',
+    borderLeftWidth: 3,
+    borderLeftColor: '#F5B400',
+    padding: SPACING.md,
+    borderRadius: 8,
+    marginTop: SPACING.sm,
+  },
+  highRiskInfoText: { fontSize: 13, color: '#5A4A20', lineHeight: 19 },
 });
