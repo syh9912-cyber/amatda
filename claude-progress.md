@@ -1,5 +1,135 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-05-04 — 출시 전 보안 일제 강화 + Secret Manager 마이그레이션 + 지능형 SOS 시스템 + T1 출시 블로커 14건 + Google audience hotfix
+> 최종 업데이트: 2026-05-05 — 출시 전 dead code 대정리 + 회귀 hotfix + mental-check 백엔드 신규 + 무료 코칭 한도 단일화 (10회/일)
+
+---
+
+## 2026-05-05 — Dead code 대정리 + 회귀 fix + mental-check 신규 (대규모)
+
+> **세션 결과 요약**: 약 -8100줄 코드 정리 + APK 19~29MB 감소 + 두 번째 로그인 -2~5초 + parent-level 게임화 시스템 통째 제거 + mental-check (EPDS) 백엔드 신규 + 회귀 2건 hotfix (Google silent sign-in 롤백, sos require 경로).
+
+### 🔥 회귀 fix (P0)
+
+#### Google Sign-In silent 패턴 롤백 (`fe0f9ea`, revert `50ab08d`)
+- **증상**: "Google 로그인 또 안 돼" — 단말 사용자 보고
+- **원인**: 5/4 commit `50ab08d` 가 카카오/네이버와 UX 통일을 위해 silent sign-in 패턴 (`signInSilently()` 시도 → 실패 시 picker fallback) 도입. 라이브러리 stale token / picker dismiss 문제로 실 단말에서 깨짐
+- **fix**: 해당 커밋 통째 revert → 원래 단순 `await GoogleSignin.signIn()` 패턴 복귀
+- **출시 우선 판단**: 카카오/네이버 UX 통일은 출시 후 안정화 단계로 이연. Gmail 등 Google 표준 앱도 매번 picker 사용
+
+#### SOS WebP 변환 시 IC_HEIMLICH/CPR/BURN/FOREIGN require 누락 (`59dcf06`)
+- **증상**: OTA 빌드 시 metro bundler `Unable to resolve module ../../assets/sos/heimlich-infant-1.png`
+- **원인**: `1072791` 의 PNG→WebP 변환 시 SOS_STEP_IMAGES 만 .webp 로 바꾸고 같은 파일을 가리키는 상단 가이드 버튼 아이콘 4개 require 누락
+- **tsc 한계**: tsc 는 require 경로 검증 안 해서 못 잡음. metro bundler 가 빌드 시점에야 잡음
+- **fix**: 4개 require 모두 .webp 로 변경
+
+### 🎯 핵심 성과
+
+| 영역 | 효과 |
+|---|---|
+| 두 번째 로그인 속도 | -2~5초 (Gemini dailyInsight dead code 제거) |
+| APK 크기 | -19~29MB (deps 5개 제거 + SOS PNG→WebP 14MB 절약) |
+| 코드량 | 약 -8100줄 (dead 화면/컴포넌트/라우트/서비스 일괄 정리) |
+| 백엔드 부하 | retention/streak/visit, daily-insight, weather, food, sleep, sibling, mate, academy, chatbot, ad, kit subscription 등 dead API 호출 사라짐 |
+| Firestore 인덱스 | 4개 dead 인덱스 제거 (ads×2, chatLogs, sleepPredictions) |
+
+### 📦 모든 커밋 (시간순)
+
+#### Curation 1차 (성능)
+1. `c23da43` perf(deps): 미사용 deps 5개 제거 (ffmpeg-static, expo-media-library, expo-document-picker, expo-intent-launcher, expo-crypto, expo-build-properties — APK 5~15MB)
+2. `1072791` perf(sos): PNG → WebP 변환 (15.40MB → 1.30MB, -91.6%) + 4-패널 sizing 수정 (각 이미지 자기 비율로 표시) + dead asset 8개 정리
+3. `3d2677a` perf(home): Plan A useEffect 명시적 병렬화 (Promise.allSettled)
+4. `824f359` perf(home): dailyInsight dead code 제거 (Gemini 호출 사라짐 — proactiveInsights state, loadProactiveInsights, InsightCards 모두 정의만 있고 사용 0)
+
+#### Curation A — 화면 6개
+5. `2ecc5f6` chore: dead 화면 6개 제거 (compatibility, mates, community, report, academy, sleep-predict) + 의존 API (siblingApi, academyApi, sleepApi, observationApi.report)
+
+#### Curation B — 컴포넌트 23개
+6. `95c52f4` chore: dead 컴포넌트 정리 (CompactStats, dailyCard, AIAnalysisRow, TraitBarsCard, baby-tracker/* 6, MessageBubble/QuickReplies, DailyMissionBadges, ui/Button+Card+Divider+IconButton+LoadingScreen+AuthHeader, AdBanner, SplashVideoPlayer)
+
+#### Curation C — parent-level 시스템 통째 (Phase 1~4)
+7. `a788164` Phase 1 — frontend 진입 차단 (홈 메뉴, 푸시 화이트리스트, recordVisit hook)
+8. `0412ead` Phase 2 — child-card LEVELS 의존 제거 + 단일 스킨 + parent-level.tsx 삭제
+9. `81e4029` Phase 3 — backend USER_LEVELS 제거 + 무료 코칭 dailyLimit 10회/일 단일화 (이전: streak 기반 5단계 10~50회 분기)
+10. `c6b0d4e` Phase 4 — backend retention.ts 슬림화 (700줄 → 80줄, push-schedule 만 유지)
+
+#### 추가 정리 (단계 1~5 + A1/A2/B1/C1/C3)
+11. `26e9e8f` 단계 1 — frontend 안전 dead (dataExport, useLocation, safeLink + api 메소드 5개 + ageFeatures HOME_MENUS_BY_AGE)
+12. `b6c7635` 단계 2 — chatbot 시스템 통째 (frontend chatbotApi + backend routes/chatbot.ts + collections.faq)
+13. `df4d720` 단계 3 — 광고 옛 시스템 (adApi + routes/ad.ts)
+14. `63e7797` 단계 4 — kit 구독 + premium/subscribe deprecated 제거
+15. `6f5e1d7` 단계 5 — 잡 dead 라우트 (vaccination upcoming/presets, coaching weeklyReport/dailyInsight handler, observation report, recommendations seed)
+16. `ff55681` A1 — backend index.ts dead 라우트 4개 mount 제거 (academy/sibling/mate/sleep)
+17. `e42d956` A2 — retentionApi dead 메소드 3개 (countdown/streak/pushContent)
+18. `adc9c46` B1 — frontend dead API (foodApi/weatherApi/coachingApi.ask)
+19. `d6d6400` C1 — backend dead 파일 14개 도미노 정리 (라우트 7개 + 서비스 7개, -1584줄 단일 커밋)
+20. `3bbad16` C3 — Firestore 인덱스 4개 + collections 정의 2개 dead 정리
+
+#### 신규 기능
+21. `a80e55f` feat(pregnancy): mental-check (EPDS) 백엔드 4 라우트 신규
+    - `backend/src/data/epdsQuestions.ts` 신규 (~135줄): EPDS 표준 10문항 한국어 + stage별 보조 문항 5세트 + 채점/분류 로직
+    - 4 라우트: GET questions / POST save / GET history / GET analysis
+    - 5단계 위험도 (low/mild/moderate/high/urgent) + 자해 신호 시 무조건 urgent
+    - urgent 안내: 1577-0199(정신건강위기) / 1393(자살예방) / 119
+    - Firestore 인덱스 추가: momMentalChecks (childId asc, createdAt desc)
+
+#### 기타 fix
+22. (커밋 hash) fix(pregnancy): 메모 라벨 오타 — 르바이에 → 르봐이예
+23. `fe0f9ea` revert: silent sign-in 롤백 (Google 로그인 회귀)
+24. `59dcf06` fix(sos): IC_*_INFANT require 경로 .png → .webp (회귀 fix)
+
+### 🚨 중요한 정책 변경 (Rule of Two 영역)
+
+1. **무료 코칭 일일 한도 단일화** (10회/일)
+   - 이전: USER_LEVELS 5단계 (새싹 10 / 줄기 15 / 꽃봉오리 20 / 만개 30 / 열매 50)
+   - 새: 모든 무료 사용자 일일 10회 단일 정책 (FREE_DAILY_LIMIT)
+   - 사용자 결정에 따른 단순화
+
+2. **parent-level 게임화 시스템 통째 제거** (frontend + backend + Firestore)
+   - 부모 레벨/뱃지/연속접속 보상 시스템 전체 제거
+   - 여권(child-card) 스킨 단일 톤 고정 (#1A3A5C/#2A5A8C)
+   - users.visitDates 데이터는 보존 (cascade cleanup 만 활성, 신규 쓰기 자연 중단)
+
+3. **dead 백엔드 라우트 정리** (다른 클라이언트 / 미래 사용 보호)
+   - 모바일 only 앱 + frontend 호출 0건 확인된 것만 제거
+
+### 🩺 Mental-check (EPDS) 신규 구현 — mom-wellness 화면 살림
+
+> **발견**: mom-wellness.tsx 화면이 호출하는 `pregnancyApi.mentalCheck*` 4개 메소드의 백엔드 라우트가 누락되어 있어 항상 404 실패. 사용자 결정으로 화면 살림 → 백엔드 신규 구현.
+
+- 4 라우트: questions / save / history / analysis
+- EPDS 표준 10문항 한국어 (공개 임상 자료 기반 번역)
+- stage별 보조 문항 5세트 (prenatal / postpartum_early/mid/late / general)
+- 점수 계산: 문항 1·2 역채점, 3~10 정채점 (0~30점)
+- 5단계 위험도 분류 + 자해 신호 시 무조건 urgent
+- 위험도별 사용자 안내 메시지 + 다음 권장 검사일 (urgent 1주 → low 4주)
+- Firestore: collections.momMentalChecks 활용 + 인덱스 1개 추가
+
+#### 보류 (별도 작업)
+- shareWithPartner=true 시 가족 푸시 발송 → 현재 notifiedFamily=0 단순 반환
+- AI(Gemini) 기반 맞춤 권고 → 현재 정적 메시지
+
+### 📋 미해결 / 다음 작업
+
+- [ ] 가족 푸시 발송 로직 (mental-check shareWithPartner)
+- [ ] EPDS analysis 의 AI 기반 맞춤 권고 (현재 정적 메시지)
+- [ ] users.visitDates 데이터 정리 결정 (현재는 보존)
+- [ ] backend dead 라우트 즉시 삭제 vs 410 응답 모니터링 정책
+- [ ] components/report/* 가 onboarding 에서만 사용 → 위치 재배치 검토
+- [ ] APK 새 빌드 (deps native 5개 제거 효과는 다음 빌드 시 적용)
+
+### ✅ 검증
+
+- frontend tsc pass (모든 단계)
+- backend tsc pass (모든 단계)
+- 회귀 2건 (Google silent sign-in, sos require) 발견 즉시 fix
+- Agent 진단 시 false negative 3건 (`coachingApi.firstTalk/milestones/send` multiline 호출 패턴 — multiline grep 으로 보강 후 확인)
+- Mental-check 임상 안전: urgent 시 1577-0199/1393/119 안내, 자해 신호 시 무조건 urgent
+
+### 🚀 배포
+
+- backend: `firebase deploy --only functions` (Curation 정리분 + mental-check 신규)
+- firestore: `firebase deploy --only firestore:indexes` (momMentalChecks 인덱스 추가, ads/chatLogs/sleepPredictions 인덱스 제거)
+- OTA: `eas update --branch preview` (frontend Curation 정리분)
+- APK 빌드: 미수행 (deps native 효과 보려면 추후 별도)
 
 ---
 
