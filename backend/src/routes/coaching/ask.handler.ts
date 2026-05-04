@@ -4,7 +4,7 @@ import { success, error } from '../../utils/response';
 import { collections, genId } from '../../services/firestore';
 import { maskChildName } from '../../utils/masking';
 
-import { CoachingAIResponse, UserTier, TIER_CONFIGS, getLevelByStreak } from '../../services/coaching/types';
+import { CoachingAIResponse, UserTier, TIER_CONFIGS, FREE_DAILY_LIMIT } from '../../services/coaching/types';
 import { filterUselessQuestion } from '../../services/coaching/useless.filter';
 import { detectRedFlags } from '../../services/coaching/red.flag.detector';
 import { findTopCoachingEntries, formatCandidatesForPrompt } from '../../services/coaching/db.searcher';
@@ -76,46 +76,6 @@ async function getTodaySessionCount(userId: string): Promise<number> {
     }).length;
   } catch (err) {
     logger.error('ask.handler/getTodaySessionCount', err);
-    return 0;
-  }
-}
-
-async function getUserStreak(userId: string): Promise<number> {
-  try {
-    const snap = await collections.dailyTracking
-      .where('userId', '==', userId)
-      .orderBy('date', 'desc')
-      .limit(90)
-      .get();
-
-    if (snap.empty) return 0;
-
-    const dates = snap.docs
-      .map((d) => (d.data() as Record<string, unknown>).date as string)
-      .filter(Boolean)
-      .sort()
-      .reverse();
-
-    const uniqueDates = [...new Set(dates)];
-    const today = new Date().toISOString().slice(0, 10);
-
-    let streak = 0;
-    let checkDate = today;
-
-    for (const d of uniqueDates) {
-      if (d === checkDate) {
-        streak++;
-        const prev = new Date(checkDate);
-        prev.setDate(prev.getDate() - 1);
-        checkDate = prev.toISOString().slice(0, 10);
-      } else if (d < checkDate) {
-        break;
-      }
-    }
-
-    return streak;
-  } catch (err) {
-    logger.error('ask.handler/getUserStreak', err);
     return 0;
   }
 }
@@ -260,17 +220,12 @@ export function registerAskHandler(router: Router): void {
       const allowBypass = redFlag.detected &&
         (redFlag.urgency === 'emergency' || redFlag.urgency === 'urgent');
       if (tier === 'free' && !allowBypass) {
-        const [todayCount, userStreak] = await Promise.all([
-          getTodaySessionCount(req.userId!),
-          getUserStreak(req.userId!),
-        ]);
-        const userLevel = getLevelByStreak(userStreak);
-        const dailyLimit = userLevel.dailyLimit;
+        const todayCount = await getTodaySessionCount(req.userId!);
 
-        if (todayCount >= dailyLimit) {
+        if (todayCount >= FREE_DAILY_LIMIT) {
           success(res, {
             sessionId: null,
-            answer: `오늘 상담 횟수(${dailyLimit}회)를 모두 사용했어요. 꾸준히 기록하면 레벨이 올라 더 많이 상담할 수 있어요! 지금은 ${userLevel.name} (Lv.${userLevel.level})이에요.`,
+            answer: `오늘 상담 횟수(${FREE_DAILY_LIMIT}회)를 모두 사용했어요. 내일 다시 만나요!`,
             reason: '',
             solutions: [],
             source: 'limit',

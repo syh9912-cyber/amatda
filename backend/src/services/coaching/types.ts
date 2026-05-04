@@ -141,32 +141,7 @@ export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
   },
 };
 
-// ─── 레벨업 시스템 (무료 사용자 연속 기록 보상) ───
-
-export interface UserLevel {
-  level: number;
-  name: string;
-  minDays: number;
-  dailyLimit: number;        // 해당 레벨의 하루 상담 횟수
-  badge: string;
-}
-
-export const USER_LEVELS: UserLevel[] = [
-  { level: 1, name: '새싹 부모', minDays: 0, dailyLimit: 10, badge: 'sprout' },
-  { level: 2, name: '줄기 부모', minDays: 7, dailyLimit: 15, badge: 'stem' },
-  { level: 3, name: '꽃봉오리 부모', minDays: 14, dailyLimit: 20, badge: 'bud' },
-  { level: 4, name: '만개 부모', minDays: 30, dailyLimit: 30, badge: 'bloom' },
-  { level: 5, name: '열매 부모', minDays: 60, dailyLimit: 50, badge: 'fruit' },
-];
-
-export function getLevelByStreak(streakDays: number): UserLevel {
-  for (let i = USER_LEVELS.length - 1; i >= 0; i--) {
-    if (streakDays >= USER_LEVELS[i].minDays) return USER_LEVELS[i];
-  }
-  return USER_LEVELS[0];
-}
-
-export function getNextLevel(current: UserLevel): UserLevel | null {
-  const idx = USER_LEVELS.findIndex((l) => l.level === current.level);
-  return idx < USER_LEVELS.length - 1 ? USER_LEVELS[idx + 1] : null;
-}
+// ─── 무료 사용자 코칭 일일 한도 (단일 값) ───
+// 이전: USER_LEVELS 시스템 (연속접속 streak 기반 레벨업 → 레벨별 dailyLimit)
+// 정책 변경: 모든 무료 사용자 일일 10회 단일 정책으로 통일.
+export const FREE_DAILY_LIMIT = 10;

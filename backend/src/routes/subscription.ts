@@ -100,7 +100,7 @@ router.get('/premium/status', authMiddleware, async (req: Request, res: Response
     const effectiveTier = premiumActive || trialActive ? 'PAID' : 'FREE';
 
     const freeRestrictions = effectiveTier === 'FREE' ? [
-      '레벨에 따라 상담 횟수 제한 (레벨업으로 증가)',
+      '하루 10회 상담 가능',
       '울음/대변 분석 하루 3회',
       '광고 포함',
     ] : [];
@@ -189,7 +189,7 @@ router.get('/premium/plans', async (_req: Request, res: Response) => {
     ],
     paymentMethods: PAYMENT_METHODS,
     freeFeatures: [
-      '레벨업으로 상담 횟수 증가 (최대 50회/일)',
+      '하루 10회 무료 상담',
       'DB 전체 참고 맞춤 답변',
       '대화 맥락 7일 유지',
       '기질 기반 개인화 상담',
