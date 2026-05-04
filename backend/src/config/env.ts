@@ -46,7 +46,18 @@ export const env = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
   MOCK_SOCIAL: process.env.MOCK_SOCIAL === 'true',
   DATABASE_URL: process.env.DATABASE_URL || 'file:./dev.db',
+  /**
+   * Google OAuth 메인 client_id (web/server 용).
+   * Android/iOS 앱은 별도 client_id를 가질 수 있어 GOOGLE_ALLOWED_AUDIENCES 로 보완.
+   */
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+  /**
+   * Google OAuth 허용 audience 목록 — 콤마(,) 구분.
+   * 예: "ANDROID_CLIENT_ID,IOS_CLIENT_ID" — 모바일 앱 client_id 들 등록.
+   * GOOGLE_CLIENT_ID 외에도 이 목록의 client_id 가 token 의 aud/azp 에 매칭되면 통과.
+   * 미설정 시 GOOGLE_CLIENT_ID 만 검사 (기존 동작 유지).
+   */
+  GOOGLE_ALLOWED_AUDIENCES: process.env.GOOGLE_ALLOWED_AUDIENCES || '',
   KAKAO_JAVASCRIPT_KEY: process.env.KAKAO_JAVASCRIPT_KEY || '',
   KAKAO_REST_API_KEY: process.env.KAKAO_REST_API_KEY || '',
   KAKAO_CLIENT_SECRET: process.env.KAKAO_CLIENT_SECRET || '',

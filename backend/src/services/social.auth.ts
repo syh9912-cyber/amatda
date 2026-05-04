@@ -27,13 +27,30 @@ function mockSocialUser(provider: SocialProvider): SocialUserInfo {
  * 다른 GCP 앱의 access_token 으로 우리 사용자 가장 시도 차단.
  */
 async function verifyGoogleToken(accessToken: string): Promise<SocialUserInfo> {
-  // 1. audience 검증 — 우리 GOOGLE_CLIENT_ID 와 일치하는 토큰인지
+  // 1. audience 검증 — 우리 GOOGLE_CLIENT_ID 또는 GOOGLE_ALLOWED_AUDIENCES 의 모든 client_id 중 하나에 매칭
   if (env.GOOGLE_CLIENT_ID) {
     const infoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`);
     if (!infoRes.ok) throw new Error('Google 토큰 audience 검증 실패');
     const info = await infoRes.json() as { aud?: string; azp?: string };
-    if (info.aud !== env.GOOGLE_CLIENT_ID && info.azp !== env.GOOGLE_CLIENT_ID) {
-      throw new Error('Google 토큰 audience 불일치 — 다른 앱의 토큰입니다.');
+    // 허용 audience 목록 — main + 추가 (모바일 client_id 들)
+    const allowed = new Set<string>();
+    allowed.add(env.GOOGLE_CLIENT_ID);
+    if (env.GOOGLE_ALLOWED_AUDIENCES) {
+      env.GOOGLE_ALLOWED_AUDIENCES.split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .forEach((id) => allowed.add(id));
+    }
+    const audOk = info.aud && allowed.has(info.aud);
+    const azpOk = info.azp && allowed.has(info.azp);
+    if (!audOk && !azpOk) {
+      // 디버깅: client_id 마지막 8자만 노출 (전체 노출 X — Sentry 에 남으니 안전)
+      const expectedTails = Array.from(allowed).map((id) => id.slice(-8)).join('|');
+      const audTail = (info.aud ?? '').slice(-8);
+      const azpTail = (info.azp ?? '').slice(-8);
+      throw new Error(
+        `Google 토큰 audience 불일치 — expected one of ...${expectedTails}, got aud=...${audTail} azp=...${azpTail}`,
+      );
     }
   }
   // 2. 사용자 정보 조회
