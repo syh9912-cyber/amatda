@@ -286,9 +286,13 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    loadChildren();
-    checkProactivePopup();
-    checkTrialStatus();
+    // mount 시 3개를 명시적으로 병렬 시작 (각자 내부에서 에러 처리).
+    // void + .catch 로 unhandled promise rejection 방지.
+    void Promise.allSettled([
+      loadChildren(),
+      checkProactivePopup(),
+      checkTrialStatus(),
+    ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -310,8 +314,11 @@ export default function HomeScreen() {
     setStreak(null);
     setProactiveInsights([]);
     if (selectedChild) {
-      loadRetentionData(selectedChild.id);
-      loadProactiveInsights(selectedChild.id);
+      // 자녀별 데이터 2종 명시적 병렬 시작 (allSettled — 한쪽 실패해도 다른 쪽 진행)
+      void Promise.allSettled([
+        loadRetentionData(selectedChild.id),
+        loadProactiveInsights(selectedChild.id),
+      ]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild?.id, loadRetentionData, loadProactiveInsights]);
