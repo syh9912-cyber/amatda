@@ -37,10 +37,10 @@ const IC_CONTRACTION = require('../../assets/contraction-clock.png') as ImageSou
 const IC_HOSPITAL = require('../../assets/icon-hospital.png') as ImageSourcePropType;
 const IC_FAMILY = require('../../assets/mascot-happy.png') as ImageSourcePropType;
 const IC_HEART = require('../../assets/icon-heart.png') as ImageSourcePropType;
-const IC_HEIMLICH = require('../../assets/sos/heimlich-infant-1.png') as ImageSourcePropType;
-const IC_CPR = require('../../assets/sos/cpr-infant-1.png') as ImageSourcePropType;
-const IC_BURN = require('../../assets/sos/burn_fall-1.png') as ImageSourcePropType;
-const IC_FOREIGN = require('../../assets/sos/foreign-1.png') as ImageSourcePropType;
+const IC_HEIMLICH = require('../../assets/sos/heimlich-infant-1.webp') as ImageSourcePropType;
+const IC_CPR = require('../../assets/sos/cpr-infant-1.webp') as ImageSourcePropType;
+const IC_BURN = require('../../assets/sos/burn_fall-1.webp') as ImageSourcePropType;
+const IC_FOREIGN = require('../../assets/sos/foreign-1.webp') as ImageSourcePropType;
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
