@@ -138,39 +138,46 @@ const SEVERITY_CONFIG: Record<SeverityLevel, {
 /* Emergency Guide Data                                                */
 /* ------------------------------------------------------------------ */
 
-const SOS_IMAGES: Record<string, ImageSourcePropType> = {
-  heimlich: require('../../assets/sos-heimlich.png'),
-  cpr: require('../../assets/sos-cpr.png'),
-  burn_fall: require('../../assets/sos-burn-fall.png'),
-  foreign: require('../../assets/sos-foreign.png'),
-};
-
 /** 4-패널 분할 이미지 (영유아 기준 — 각 패널이 한 step. 텍스트가 이미지에 포함됨) */
 const SOS_STEP_IMAGES: Record<string, ImageSourcePropType[]> = {
   heimlich: [
-    require('../../assets/sos/heimlich-infant-1.png'),
-    require('../../assets/sos/heimlich-infant-2.png'),
-    require('../../assets/sos/heimlich-infant-3.png'),
-    require('../../assets/sos/heimlich-infant-4.png'),
+    require('../../assets/sos/heimlich-infant-1.webp'),
+    require('../../assets/sos/heimlich-infant-2.webp'),
+    require('../../assets/sos/heimlich-infant-3.webp'),
+    require('../../assets/sos/heimlich-infant-4.webp'),
   ],
   cpr: [
-    require('../../assets/sos/cpr-infant-1.png'),
-    require('../../assets/sos/cpr-infant-2.png'),
-    require('../../assets/sos/cpr-infant-3.png'),
-    require('../../assets/sos/cpr-infant-4.png'),
+    require('../../assets/sos/cpr-infant-1.webp'),
+    require('../../assets/sos/cpr-infant-2.webp'),
+    require('../../assets/sos/cpr-infant-3.webp'),
+    require('../../assets/sos/cpr-infant-4.webp'),
   ],
   burn_fall: [
-    require('../../assets/sos/burn_fall-1.png'),
-    require('../../assets/sos/burn_fall-2.png'),
-    require('../../assets/sos/burn_fall-3.png'),
-    require('../../assets/sos/burn_fall-4.png'),
+    require('../../assets/sos/burn_fall-1.webp'),
+    require('../../assets/sos/burn_fall-2.webp'),
+    require('../../assets/sos/burn_fall-3.webp'),
+    require('../../assets/sos/burn_fall-4.webp'),
   ],
   foreign: [
-    require('../../assets/sos/foreign-1.png'),
-    require('../../assets/sos/foreign-2.png'),
-    require('../../assets/sos/foreign-3.png'),
-    require('../../assets/sos/foreign-4.png'),
+    require('../../assets/sos/foreign-1.webp'),
+    require('../../assets/sos/foreign-2.webp'),
+    require('../../assets/sos/foreign-3.webp'),
+    require('../../assets/sos/foreign-4.webp'),
   ],
+};
+
+/**
+ * 각 step 이미지의 실제 aspect ratio (width / height).
+ * PNG 원본 dimension 기반 (모두 width=941, height만 다름).
+ *
+ * 컨테이너에 고정 aspectRatio 를 두면 letterbox 가 생기거나 잘림이 발생.
+ * 이미지마다 자기 비율로 표시하기 위해 매핑.
+ */
+const STEP_IMAGE_ASPECTS: Record<string, number[]> = {
+  heimlich: [941 / 482, 941 / 439, 941 / 404, 941 / 347],
+  cpr:      [941 / 452, 941 / 429, 941 / 380, 941 / 411],
+  burn_fall:[941 / 468, 941 / 438, 941 / 382, 941 / 384],
+  foreign:  [941 / 456, 941 / 441, 941 / 412, 941 / 363],
 };
 
 const EMERGENCY_GUIDES = [
@@ -801,16 +808,23 @@ function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; o
           style={guideStyles.pager}
         >
           {/* Page 0..3 — 4 패널 이미지 (텍스트가 이미지에 포함됨) */}
-          {stepImages.map((src, idx) => (
-            <View key={`panel-${idx}`} style={[guideStyles.panelPage, { width: SCREEN_WIDTH }]}>
-              <View style={guideStyles.panelImageWrap}>
-                <Image source={src} style={guideStyles.panelImage} resizeMode="contain" />
+          {stepImages.map((src, idx) => {
+            const imageAspect = STEP_IMAGE_ASPECTS[guideKey]?.[idx] ?? 941 / 440;
+            return (
+              <View key={`panel-${idx}`} style={[guideStyles.panelPage, { width: SCREEN_WIDTH }]}>
+                <View style={guideStyles.panelImageWrap}>
+                  <Image
+                    source={src}
+                    style={[guideStyles.panelImage, { aspectRatio: imageAspect }]}
+                    resizeMode="contain"
+                  />
+                </View>
+                {idx === 0 ? (
+                  <Text style={guideStyles.swipeHint}>옆으로 넘기면 다음 단계</Text>
+                ) : null}
               </View>
-              {idx === 0 ? (
-                <Text style={guideStyles.swipeHint}>옆으로 넘기면 다음 단계</Text>
-              ) : null}
-            </View>
-          ))}
+            );
+          })}
 
           {/* 마지막 — 경고 카드 */}
           <View style={[guideStyles.cardPage, { width: SCREEN_WIDTH }]}>
@@ -994,12 +1008,13 @@ const guideStyles = StyleSheet.create({
   },
   panelImageWrap: {
     width: SCREEN_WIDTH - 24,
-    aspectRatio: 941 / 440,
-    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    // aspectRatio 제거 — Image 자체가 자기 비율로 결정 (letterbox 방지)
   },
   panelImage: {
     width: '100%',
-    height: '100%',
+    // height / aspectRatio 는 사용처에서 STEP_IMAGE_ASPECTS 로 동적 적용
   },
   bigImageWrap: {
     width: SCREEN_WIDTH - 40,
