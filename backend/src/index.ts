@@ -17,7 +17,6 @@ import paymentRoutes from './routes/payment';
 import weatherRoutes from './routes/weather';
 import siblingRoutes from './routes/sibling';
 import mateRoutes from './routes/mate';
-import adRoutes from './routes/ad';
 // seed 라우트 제거 — 프로덕션에서 인증 없이 DB 삭제 가능한 보안 취약점
 // import seedRoutes from './routes/seed';
 import momstagramRoutes from './routes/momstagram';
@@ -81,7 +80,6 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/siblings', siblingRoutes);
 app.use('/api/mates', mateRoutes);
-app.use('/api/ads', adRoutes);
 // app.use('/api/seed', seedRoutes); // 프로덕션 제거
 app.use('/api/momstagram', momstagramRoutes);
 app.use('/api/clinics', clinicRoutes);

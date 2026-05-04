@@ -186,15 +186,6 @@ export const subscriptionApi = {
   cancel: (id: string) => api.put(`/subscriptions/${id}/cancel`),
 };
 
-// Ads
-export const adApi = {
-  list: (type?: string, limit = 3) => {
-    const params: Record<string, string> = { limit: String(limit) };
-    if (type) params.type = type;
-    return api.get('/ads', { params });
-  },
-};
-
 // Momstagram (맘스타그램)
 export const momstagramApi = {
   getFeed: (page = 0, limit = 20) =>
