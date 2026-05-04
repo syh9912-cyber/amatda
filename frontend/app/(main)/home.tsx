@@ -201,6 +201,7 @@ const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 const TRIAL_AUTO_KEY = 'amatda_trial_auto_started';
 const TRIAL_POPUP_KEY = 'amatda_trial_popup_dismissed';
 
+
 export default function HomeScreen() {
   const overlayCount = useUiStore((s) => s.overlayCount);
   const [loading, setLoading] = useState(true);
@@ -221,10 +222,6 @@ export default function HomeScreen() {
   const [countdown, setCountdown] = useState<CountdownData | null>(null);
   const [, setDailyCard] = useState<DailyCardData | null>(null);
   const [streak, setStreak] = useState<StreakData | null>(null);
-
-  const [proactiveInsights, setProactiveInsights] = useState<{
-    type: string; title: string; message: string; actionLabel?: string; actionRoute?: string;
-  }[]>([]);
 
   const { children, selectedChild, setChildren, selectChild } =
     useChildStore();
@@ -296,32 +293,15 @@ export default function HomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadProactiveInsights = useCallback(async (childId: string) => {
-    try {
-      const res = await coachingApi.dailyInsight(childId);
-      const data = res.data?.data as { insights?: { type: string; title: string; message: string; actionLabel?: string; actionRoute?: string }[] } | undefined;
-      if (data?.insights && data.insights.length > 0) {
-        setProactiveInsights(data.insights);
-      }
-    } catch {
-      // 인사이트 로딩 실패해도 앱은 정상
-    }
-  }, []);
-
   useEffect(() => {
     // selectedChild 변경 시 이전 아이의 countdown 즉시 초기화 (D-day 오표시 방지)
     setCountdown(null);
     setStreak(null);
-    setProactiveInsights([]);
     if (selectedChild) {
-      // 자녀별 데이터 2종 명시적 병렬 시작 (allSettled — 한쪽 실패해도 다른 쪽 진행)
-      void Promise.allSettled([
-        loadRetentionData(selectedChild.id),
-        loadProactiveInsights(selectedChild.id),
-      ]);
+      void loadRetentionData(selectedChild.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChild?.id, loadRetentionData, loadProactiveInsights]);
+  }, [selectedChild?.id, loadRetentionData]);
 
   // 다음 검진 ISO 로드 (자녀 변경 + checkupVer 트리거)
   useEffect(() => {
@@ -480,14 +460,11 @@ export default function HomeScreen() {
     setLoadError(false);
     await loadChildren();
     if (selectedChild) {
-      await Promise.allSettled([
-        loadRetentionData(selectedChild.id),
-        loadProactiveInsights(selectedChild.id),
-      ]);
+      await loadRetentionData(selectedChild.id);
     }
     setRefreshing(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChild?.id, loadRetentionData, loadProactiveInsights]);
+  }, [selectedChild?.id, loadRetentionData]);
 
   const pickPhoto = async () => {
     if (!selectedChild) return;
@@ -1684,60 +1661,6 @@ const aiCardStyles = StyleSheet.create({
   newBadgeText: { fontSize: 9, fontWeight: '800', color: '#7C5A00' },
   arrow: { fontSize: 18, color: '#7C83EC', marginLeft: 4 },
 });
-
-function InsightCards({ insights }: { insights: { type: string; title: string; message: string; actionLabel?: string; actionRoute?: string }[] }) {
-  const TYPE_COLORS: Record<string, { bg: string; accent: string; icon: string }> = {
-    pattern_alert: { bg: '#FFF0E6', accent: '#FF8C5A', icon: '!' },
-    // milestone_tip 삭제됨 — 사용자 요청으로 발달포인트 카드 제거
-    encouragement: { bg: '#FFF8E1', accent: '#FFD76E', icon: '♥' },
-    smart_question: { bg: '#EEEDFC', accent: '#7C83EC', icon: '?' },
-    weekly_summary: { bg: '#E8F4FD', accent: '#5BA8D9', icon: 'Σ' },
-  };
-
-  return (
-    <View style={{ marginBottom: 16 }}>
-      {insights.map((ins, idx) => {
-        const colors = TYPE_COLORS[ins.type] || TYPE_COLORS.encouragement;
-        return (
-          <TouchableOpacity
-            key={`${ins.type}-${idx}`}
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: 14,
-              padding: 16,
-              marginBottom: idx < insights.length - 1 ? 8 : 0,
-              borderLeftWidth: 3,
-              borderLeftColor: colors.accent,
-              borderWidth: 1,
-              borderColor: '#F0F0F0',
-            }}
-            activeOpacity={ins.actionRoute ? 0.7 : 1}
-            onPress={() => {
-              if (ins.actionRoute) router.push(ins.actionRoute as never);
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <View style={{
-                width: 24, height: 24, borderRadius: 12,
-                backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center',
-                marginRight: 8,
-              }}>
-                <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '700' }}>{colors.icon}</Text>
-              </View>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: COLOR.text }}>{ins.title}</Text>
-            </View>
-            <Text style={{ fontSize: 13, color: COLOR.textSub, lineHeight: 20 }}>{ins.message}</Text>
-            {ins.actionLabel && (
-              <Text style={{ fontSize: 12, color: colors.accent, fontWeight: '600', marginTop: 8 }}>
-                {ins.actionLabel} {'>'}
-              </Text>
-            )}
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
-}
 
 function EmptyState() {
   return (
