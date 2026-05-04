@@ -150,32 +150,12 @@ export const questionApi = {
     api.get('/questions/onboarding', { params: { ageGroup } }),
 };
 
-// Food Guide
-export const foodApi = {
-  list: (ageMonths: number, type?: string) => {
-    const params: Record<string, string> = { ageMonths: String(ageMonths) };
-    if (type) params.type = type;
-    return api.get('/food-guide', { params });
-  },
-};
-
 // Observations
 export const observationApi = {
   create: (childId: string, content: string, type = 'TEXT') =>
     api.post('/observations', { childId, content, type }),
   list: (childId: string) =>
     api.get(`/observations/${childId}`),
-};
-
-// Academies
-// Weather
-export const weatherApi = {
-  get: (childId: string, lat?: number, lng?: number) => {
-    const params: Record<string, string> = {};
-    if (lat !== undefined) params.lat = String(lat);
-    if (lng !== undefined) params.lng = String(lng);
-    return api.get(`/weather/${childId}`, { params });
-  },
 };
 
 // Momstagram (맘스타그램)
@@ -222,8 +202,6 @@ export const memoriesApi = {
 // Coaching (상담이모) — coachingAxios 사용 (별도 Cloud Run 인스턴스)
 // 코칭 API가 느려져도 auth/children/food 등 경량 API는 무영향
 export const coachingApi = {
-  ask: (childId: string, message: string, category?: string, photoUrl?: string) =>
-    coachingAxios.post('coaching/ask', { childId, message, category, photoUrl }),
   send: (childId: string, message: string, category?: string) =>
     coachingAxios.post('coaching/ask', { childId, message, category }),
   history: (childId: string) =>
