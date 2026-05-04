@@ -1,49 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
-import { collections, genId } from '../services/firestore';
-import { logger } from '../utils/logger';
+import { collections } from '../services/firestore';
 
 const router = Router();
 
-router.get('/:childId', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const snap = await collections.subscriptions
-      .where('childId', '==', req.params.childId)
-      .where('userId', '==', req.userId!).get();
-    success(res, snap.docs.map((d) => {
-      const s = d.data();
-      return { id: d.id, kitType: s.kitType, status: s.status, nextDeliveryDate: s.nextDeliveryDate };
-    }));
-  } catch { error(res, '구독 조회 중 오류가 발생했습니다', 500); }
-});
-
-router.post('/', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const { childId, kitType } = req.body;
-    if (!childId || !kitType) { error(res, 'childId와 kitType을 입력해주세요'); return; }
-    const childDoc = await collections.children.doc(childId).get();
-    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) { error(res, '자녀를 찾을 수 없습니다', 404); return; }
-
-    const now = new Date();
-    const nextDelivery = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0];
-    const id = genId();
-    await collections.subscriptions.doc(id).set({ userId: req.userId!, childId, kitType, status: 'ACTIVE', nextDeliveryDate: nextDelivery });
-    success(res, { id, kitType, status: 'ACTIVE', nextDeliveryDate: nextDelivery }, 201);
-  } catch { error(res, '구독 등록 중 오류가 발생했습니다', 500); }
-});
-
-router.put('/:id/cancel', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const doc = await collections.subscriptions.doc(req.params.id as string).get();
-    if (!doc.exists || doc.data()!.userId !== req.userId) { error(res, '구독을 찾을 수 없습니다', 404); return; }
-    if (doc.data()!.status === 'CANCELLED') { error(res, '이미 해지된 구독입니다'); return; }
-    await collections.subscriptions.doc(req.params.id as string).update({ status: 'CANCELLED' });
-    success(res, { id: doc.id, status: 'CANCELLED' });
-  } catch { error(res, '구독 해지 중 오류가 발생했습니다', 500); }
-});
-
 // ─── 프리미엄 구독 시스템 ───
+// kit 구독(GET /:childId / POST / / PUT /:id/cancel) 은 사용자 호출 0건으로 제거됨.
+// collections.subscriptions 자체는 auth.ts/child.ts cascade 에서 사용 중이라 유지.
 
 const PLANS = {
   monthly: { id: 'premium_monthly', name: 'VIP 월간', price: 3900, period: 'month' },
@@ -151,16 +115,6 @@ router.post('/premium/start-trial', authMiddleware, async (req: Request, res: Re
   } catch {
     error(res, '체험판 시작 중 오류', 500);
   }
-});
-
-// POST /api/subscription/premium/subscribe — DEPRECATED 보안 위험 라우트 차단
-//
-// 이 라우트는 결제 검증 없이 planId 만으로 PAID 활성화하던 dead code 였음.
-// 누구나 호출하면 영구 무료 PAID 가 됐던 CRITICAL 취약점 (보안 점검 2026-05-04 발견).
-// 모든 결제 활성화는 반드시 payment.ts (PortOne/Google/Apple 영수증 검증) 경유해야 함.
-router.post('/premium/subscribe', authMiddleware, async (_req: Request, res: Response) => {
-  logger.warn('subscription.premium.subscribe', '차단된 라우트 호출 — payment.ts 경로 사용 필요');
-  error(res, '이 결제 경로는 더 이상 사용되지 않습니다. 앱을 최신 버전으로 업데이트해주세요.', 410);
 });
 
 // GET /api/subscription/premium/plans — 요금제 목록

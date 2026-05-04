@@ -178,14 +178,6 @@ export const weatherApi = {
   },
 };
 
-// Subscriptions
-export const subscriptionApi = {
-  list: (childId: string) => api.get(`/subscriptions/${childId}`),
-  create: (childId: string, kitType: string) =>
-    api.post('/subscriptions', { childId, kitType }),
-  cancel: (id: string) => api.put(`/subscriptions/${id}/cancel`),
-};
-
 // Momstagram (맘스타그램)
 export const momstagramApi = {
   getFeed: (page = 0, limit = 20) =>
@@ -307,9 +299,6 @@ export const premiumApi = {
     api.get('/subscriptions/premium/status'),
   startTrial: () =>
     api.post('/subscriptions/premium/start-trial', {}),
-  /** @deprecated Use paymentApi.* instead. 보존: 기존 화면 fallback 용. */
-  subscribe: (planId: string, paymentMethod: string) =>
-    api.post('/subscriptions/premium/subscribe', { planId, paymentMethod }),
 };
 
 // ─── 결제 (Phase 1 백엔드) ───
