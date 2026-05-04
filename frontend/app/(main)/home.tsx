@@ -17,12 +17,10 @@ import {
 import { router, useFocusEffect } from 'expo-router';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { childApi, coachingApi, retentionApi, premiumApi, uploadApi } from '../../services/api';
+import { childApi, coachingApi, premiumApi, uploadApi } from '../../services/api';
 import { useChildStore, Child } from '../../stores/childStore';
 import { useFeverStore } from '../../stores/feverStore';
 import { DenseStatsRow } from '../../components/home/DenseStatsRow';
-import { AIAnalysisRow } from '../../components/home/AIAnalysisRow';
-import { TraitBarsCard } from '../../components/home/TraitBarsCard';
 import { PregnancyJourneyCard } from '../../components/home/PregnancyJourneyCard';
 import { HospitalRegisterBanner } from '../../components/pregnancy/HospitalRegisterBanner';
 import { HospitalRegisterPrompt } from '../../components/pregnancy/HospitalRegisterPrompt';
@@ -147,34 +145,6 @@ function getActionsForAge(ageGroup: AgeGroupKey, child?: Child | null): QuickAct
 }
 
 /* ------------------------------------------------------------------ */
-/* Retention Types                                                     */
-/* ------------------------------------------------------------------ */
-
-interface CountdownData {
-  daysSinceBirth: number;
-  childName: string;
-  displayText: string;
-  nextMilestone: { label: string; daysUntil: number; monthsUntil?: number } | null;
-  isPregnant?: boolean;
-  daysUntilDue?: number;
-  pregnancyWeeks?: number;
-}
-
-interface DailyCardData {
-  emoji: string;
-  tip: string;
-  category: string;
-}
-
-interface StreakData {
-  currentStreak: number;
-  longestStreak: number;
-  level: number;
-  levelName: string;
-  nextLevelDays: number;
-  totalSessions: number;
-}
-
 function getAgeText(months: number): string {
   if (months < 12) return `${months}개월`;
   const years = Math.floor(months / 12);
@@ -219,10 +189,6 @@ export default function HomeScreen() {
   const checkupVer = useCheckupStore((s) => s.version);
   // babyTip은 selectedChild 선언 이후에 호출 (TDZ 방지)
 
-  const [countdown, setCountdown] = useState<CountdownData | null>(null);
-  const [, setDailyCard] = useState<DailyCardData | null>(null);
-  const [streak, setStreak] = useState<StreakData | null>(null);
-
   const { children, selectedChild, setChildren, selectChild } =
     useChildStore();
   const { updateChild } = useChildStore();
@@ -235,23 +201,6 @@ export default function HomeScreen() {
   const [birthDateVal, setBirthDateVal] = useState('');
   const [birthTimeVal, setBirthTimeVal] = useState('');
   const [birthLoading, setBirthLoading] = useState(false);
-
-  const loadRetentionData = useCallback(async (childId: string) => {
-    const results = await Promise.allSettled([
-      retentionApi.countdown(childId),
-      retentionApi.dailyCard(childId),
-      retentionApi.streak(childId),
-    ]);
-    if (results[0].status === 'fulfilled') {
-      setCountdown(results[0].value.data?.data ?? null);
-    }
-    if (results[1].status === 'fulfilled') {
-      setDailyCard(results[1].value.data?.data ?? null);
-    }
-    if (results[2].status === 'fulfilled') {
-      setStreak(results[2].value.data?.data ?? null);
-    }
-  }, []);
 
   const checkTrialStatus = useCallback(async () => {
     try {
@@ -292,16 +241,6 @@ export default function HomeScreen() {
     ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    // selectedChild 변경 시 이전 아이의 countdown 즉시 초기화 (D-day 오표시 방지)
-    setCountdown(null);
-    setStreak(null);
-    if (selectedChild) {
-      void loadRetentionData(selectedChild.id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChild?.id, loadRetentionData]);
 
   // 다음 검진 ISO 로드 (자녀 변경 + checkupVer 트리거)
   useEffect(() => {
@@ -459,12 +398,9 @@ export default function HomeScreen() {
     setRefreshing(true);
     setLoadError(false);
     await loadChildren();
-    if (selectedChild) {
-      await loadRetentionData(selectedChild.id);
-    }
     setRefreshing(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChild?.id, loadRetentionData]);
+  }, []);
 
   const pickPhoto = async () => {
     if (!selectedChild) return;
@@ -1471,62 +1407,6 @@ function RecommendationSection({ child }: { child: Child }) {
         <Text style={styles.recoBannerDesc}>{desc}</Text>
       </View>
       <Text style={styles.recoBannerArrow}>{'›'}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function CompactStats({
-  countdown,
-  streak,
-}: {
-  countdown: CountdownData | null;
-  streak: StreakData | null;
-}) {
-  if (!countdown && !streak) return null;
-
-  const LEVEL_ICONS: Record<number, string> = {
-    1: '🌱', 2: '🪴', 3: '🌸', 4: '🌻', 5: '💎',
-  };
-
-  return (
-    <TouchableOpacity
-      style={styles.compactStats}
-      onPress={() => router.push('/(main)/parent-level')}
-      activeOpacity={0.7}
-    >
-      <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {countdown && (
-            <View style={styles.compactStatItem}>
-              <Text style={styles.compactStatValue}>
-                {countdown.isPregnant ? `D-${countdown.daysUntilDue}` : `D+${countdown.daysSinceBirth}`}
-              </Text>
-              <Text style={styles.compactStatLabel}>{countdown.childName}</Text>
-            </View>
-          )}
-          {countdown && streak && <View style={styles.compactDivider} />}
-          {streak && (
-            <View style={styles.compactStatItem}>
-              <View style={styles.compactStatValueRow}>
-                <Image source={require('../../assets/quick-sprout.png')} style={styles.compactStatIconImg} resizeMode="contain" />
-                <Text style={styles.compactStatValue}>{` ${streak.currentStreak}일째`}</Text>
-              </View>
-              <Text style={styles.compactStatLabel}>{streak.levelName}</Text>
-            </View>
-          )}
-          {countdown?.nextMilestone && (
-            <>
-              <View style={styles.compactDivider} />
-              <View style={styles.compactStatItem}>
-                <Text style={styles.compactStatValue}>D-{countdown.nextMilestone.daysUntil}</Text>
-                <Text style={styles.compactStatLabel}>{countdown.nextMilestone.label}</Text>
-              </View>
-            </>
-          )}
-        </View>
-        <Text style={styles.compactStatsHint}>👉 눌러서 부모 레벨·보상 확인</Text>
-      </View>
-      <Text style={{ fontSize: 18, color: COLOR.textLight, marginLeft: 4 }}>{'>'}</Text>
     </TouchableOpacity>
   );
 }

@@ -285,8 +285,6 @@ export const coachingApi = {
 export const retentionApi = {
   countdown: (childId: string) =>
     api.get(`/retention/countdown/${childId}`),
-  dailyCard: (childId: string) =>
-    api.get(`/retention/daily-card/${childId}`),
   streak: (childId: string) =>
     api.get(`/retention/streak/${childId}`),
   pushSchedule: (data: Record<string, unknown>) =>
