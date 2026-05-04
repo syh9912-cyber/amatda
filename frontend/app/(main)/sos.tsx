@@ -21,6 +21,7 @@ import { sosApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { pickDeliveryPhone, getHospital, type HospitalInfo } from '../../services/deliveryHospital';
 import { HospitalRegisterModal } from '../../components/pregnancy/HospitalRegisterModal';
+import { captureError } from '../../services/sentry';
 
 /* PNG 아이콘 (기본 이모지 대신 — 앱 일러스트 톤 통일) */
 const IC_THERMOMETER = require('../../assets/quick-thermometer.png') as ImageSourcePropType;
@@ -366,7 +367,10 @@ export default function SOSScreen() {
       );
       return;
     }
-    Linking.openURL(`tel:${picked.phone.replace(/[^0-9]/g, '')}`).catch(() => {
+    // #25: 국제번호 +82 보존
+    const cleaned = picked.phone.replace(/[^0-9+]/g, '');
+    Linking.openURL(`tel:${cleaned}`).catch((e) => {
+      captureError(e, { ctx: 'sos/dialDelivery', phoneLast4: picked.phone.slice(-4) });
       Alert.alert('전화 연결 실패', `직접 전화해 주세요: ${picked.phone}`);
     });
   }, [selectedChild?.id]);
@@ -381,7 +385,8 @@ export default function SOSScreen() {
 
   /* -- Call 119 -- */
   const call119 = useCallback(() => {
-    Linking.openURL('tel:119').catch(() => {
+    Linking.openURL('tel:119').catch((e) => {
+      captureError(e, { ctx: 'sos/call119' });
       Alert.alert('전화 연결 실패', '전화 앱을 열 수 없습니다. 직접 119를 눌러주세요.');
     });
   }, []);
@@ -836,7 +841,7 @@ function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; o
             style={guideStyles.call119Btn}
             onPress={() =>
               Linking.openURL('tel:119').catch((err) => {
-                console.error('[sos] tel:119 failed', err);
+                captureError(err, { ctx: 'sos/call119-bottom' });
                 Alert.alert('전화 연결 실패', '직접 119로 전화해주세요.');
               })
             }

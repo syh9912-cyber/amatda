@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, Fragment } from 'react';
 import {
   View,
   Text,
@@ -359,7 +359,8 @@ export default function HomeScreen() {
         updateChild(updatedChild);
       }
       // 임신부 모드 → 출생 전환 시 임신 전용 알림(검진/D-Day/데일리 미션 9시) 일괄 취소
-      await cancelAllPregnancyLocalNotifications();
+      // #15 per-child: 해당 자녀 키만 정리
+      await cancelAllPregnancyLocalNotifications(child?.id);
       // 출생 직후 육아 모드 알림 자동 등록 (사용자가 알림 설정 안 들어가도 첫 알림이 오도록)
       if (updatedChild) {
         try {
@@ -680,17 +681,19 @@ export default function HomeScreen() {
             {statsRow}
 
             {/* 2) 35주+ 임신부 → 출산가방을 아이콘 앞으로 (출산 임박 우선순위)
-                 그 외 → 기존 순서 (퀵메뉴 → 강조 카드) */}
+                 그 외 → 기존 순서 (퀵메뉴 → 강조 카드)
+                 #21 안정적 key 사용: 35주 전후 reorder 시 React 가 같은 컴포넌트로 인식해
+                 unmount/mount 하지 않음 (AllActionsGrid 내부 상태 보존). */}
             {isLatePregnancy ? (
-              <>
-                {heroCard}
-                {actionsGrid}
-              </>
+              <Fragment>
+                <Fragment key="hero">{heroCard}</Fragment>
+                <Fragment key="actions">{actionsGrid}</Fragment>
+              </Fragment>
             ) : (
-              <>
-                {actionsGrid}
-                {heroCard}
-              </>
+              <Fragment>
+                <Fragment key="actions">{actionsGrid}</Fragment>
+                <Fragment key="hero">{heroCard}</Fragment>
+              </Fragment>
             )}
 
             {/* 3) 임신부 — 임신 여정 5단계 */}

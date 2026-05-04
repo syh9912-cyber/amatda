@@ -15,7 +15,9 @@ import { childApi } from '../../services/api';
 import {
   cancelAllChildLocalNotifications,
   cancelAllPregnancyLocalNotifications,
+  schedulePregnancyReminders,
 } from '../../services/pushNotifications';
+import { captureError } from '../../services/sentry';
 import { useChildStore, Child } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
@@ -102,9 +104,26 @@ export default function ChildEditScreen() {
       const res = await childApi.update(selectedChild.id, payload);
       const updated = res.data?.data ?? res.data;
       updateChild({ ...selectedChild, ...updated } as Child);
+
+      // #16 isHighRiskPregnancy 토글 또는 dueDate 변경 → 임신 알림 재스케줄
+      // (24주 분만병원 등록 알림이 고위험에만 표시되도록)
+      if (isPregnant) {
+        const finalDueDate = (updated as { dueDate?: string })?.dueDate ?? dueDate.trim();
+        if (finalDueDate) {
+          try {
+            await schedulePregnancyReminders(selectedChild.id, finalDueDate, {
+              isHighRisk: isHighRiskPregnancy,
+            });
+          } catch (e) {
+            captureError(e, { ctx: 'child-edit/reschedulePregnancy', childId: selectedChild.id });
+          }
+        }
+      }
+
       Alert.alert('완료', '정보가 수정되었습니다.');
       router.back();
-    } catch {
+    } catch (e) {
+      captureError(e, { ctx: 'child-edit/save', childId: selectedChild.id });
       Alert.alert('오류', '정보 수정에 실패했습니다.');
     } finally {
       setLoading(false);
@@ -127,7 +146,8 @@ export default function ChildEditScreen() {
               // 삭제된 아이 관련 로컬 알림 모두 취소
               await cancelAllChildLocalNotifications(selectedChild.id, selectedChild.name);
               if (selectedChild.isPregnant) {
-                await cancelAllPregnancyLocalNotifications();
+                // #15 per-child: 해당 자녀 임신 알림만 정리
+                await cancelAllPregnancyLocalNotifications(selectedChild.id);
               }
               removeChild(selectedChild.id);
               Alert.alert('완료', `${label}가 삭제되었습니다.`);

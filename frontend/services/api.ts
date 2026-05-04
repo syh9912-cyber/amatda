@@ -105,6 +105,9 @@ export const authApi = {
     api.get('/auth/me'),
   deleteAccount: () =>
     api.delete('/auth/account'),
+  // 서버측 refresh token 패밀리 무효화 (#5 보안). best-effort — 실패해도 로컬 logout 진행.
+  logout: (refreshToken: string) =>
+    api.post('/auth/logout', { refreshToken }),
 };
 
 // Children

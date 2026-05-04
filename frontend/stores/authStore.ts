@@ -62,6 +62,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
+    // #5 보안: 서버측 refresh token 패밀리 무효화 — fire-and-forget
+    //   실패해도 로컬 상태는 즉시 클리어 (로컬 로그아웃은 절대 차단하지 않음).
+    //   순환 import 회피를 위해 dynamic import.
+    const refreshToken = get().refreshToken;
+    if (refreshToken) {
+      import('../services/api')
+        .then(({ authApi }) => authApi.logout(refreshToken).catch(() => { /* best-effort */ }))
+        .catch(() => { /* ignore */ });
+    }
     clearAuth();
     set({
       accessToken: null,

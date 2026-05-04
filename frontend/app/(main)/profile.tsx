@@ -40,7 +40,8 @@ export default function ProfileScreen() {
               // (서버 cascade는 push schedules 컬렉션 삭제, 로컬은 별도 처리)
               await cancelAllChildLocalNotifications(selectedChild.id, selectedChild.name);
               if (selectedChild.isPregnant) {
-                await cancelAllPregnancyLocalNotifications();
+                // #15 per-child: 해당 자녀 임신 알림만 정리
+                await cancelAllPregnancyLocalNotifications(selectedChild.id);
               }
               removeChild(selectedChild.id);
               Alert.alert('완료', '아이 정보가 삭제되었습니다.');

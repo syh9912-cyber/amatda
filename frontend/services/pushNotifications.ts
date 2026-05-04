@@ -45,7 +45,12 @@ interface ScheduledIds {
 // --- Constants ---
 
 const PREFS_KEY = 'amatda_notification_prefs';
-const SCHEDULED_IDS_KEY = 'amatda_notification_ids';
+/**
+ * #15 per-child scheduling — 다둥이 가구에서 자녀별 알림 ID 가 서로 덮어쓰지 않도록.
+ *   Legacy 글로벌 키는 옛 데이터 정리용으로 유지 (clearAllScheduledIds 호출 시 함께 삭제).
+ */
+const SCHEDULED_IDS_KEY_LEGACY = 'amatda_notification_ids';
+const SCHEDULED_IDS_KEY = (childId: string) => `amatda_notification_ids_${childId}`;
 const LAST_ACCESS_KEY = 'amatda_last_access';
 const LAST_COACHING_KEY = 'amatda_last_coaching';
 
@@ -75,15 +80,24 @@ const EMPTY_IDS: ScheduledIds = {
 
 // --- Re-engagement messages (rotated) ---
 
+/**
+ * #17 잠금화면 PII 제거 — 알림 본문에 childName 노출 금지.
+ *  - 잠금화면은 비밀번호 없이 보임 → 같이 사는 가족·지인이 아이 이름 노출됨
+ *  - 카페/지하철에서도 화면 위로 떠서 노출
+ *  - generic 문구로 통일 ("아이"/"우리 아기")
+ *  - 이름 호출이 꼭 필요한 화면 안 알림은 전송하지 않음. 푸시는 모두 generic.
+ *
+ * 이전 매개변수 _name 은 시그니처 호환용 (caller 변경 없이 빈 string 반환).
+ */
 const REENGAGEMENT_MESSAGES = {
   '3d': {
     title: '아맞다',
-    body: (name: string) => `${name}는 잘 지내고 있나요? 요즘 어떻게 지내는지 궁금해요!`,
+    body: (_name: string) => `우리 아기 잘 지내고 있나요? 요즘 어떻게 지내는지 궁금해요!`,
     screen: 'home',
   },
   '7d': {
     title: '아맞다',
-    body: (name: string) => `${name}의 성장일기가 많이 밀렸어요! 잠깐만 시간 내주시면 소중한 기록이 됩니다`,
+    body: (_name: string) => `성장일기가 많이 밀렸어요! 잠깐만 시간 내주시면 소중한 기록이 됩니다`,
     screen: 'diary',
   },
   '10d': {
@@ -93,7 +107,7 @@ const REENGAGEMENT_MESSAGES = {
   },
   '14d': {
     title: '아맞다',
-    body: (name: string) => `${name}의 성장, 놓치지 마세요! 오늘 잠깐이라도 기록해볼까요?`,
+    body: (_name: string) => `우리 아기의 성장, 놓치지 마세요! 오늘 잠깐이라도 기록해볼까요?`,
     screen: 'home',
   },
 } as const;
@@ -182,9 +196,10 @@ export async function saveNotificationPrefs(prefs: NotificationPreferences): Pro
   await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
 }
 
-async function loadScheduledIds(): Promise<ScheduledIds> {
+async function loadScheduledIds(childId: string): Promise<ScheduledIds> {
+  if (!childId) return { ...EMPTY_IDS };
   try {
-    const raw = await AsyncStorage.getItem(SCHEDULED_IDS_KEY);
+    const raw = await AsyncStorage.getItem(SCHEDULED_IDS_KEY(childId));
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
       if (typeof parsed === 'object' && parsed !== null) {
@@ -197,8 +212,9 @@ async function loadScheduledIds(): Promise<ScheduledIds> {
   return { ...EMPTY_IDS };
 }
 
-async function saveScheduledIds(ids: ScheduledIds): Promise<void> {
-  await AsyncStorage.setItem(SCHEDULED_IDS_KEY, JSON.stringify(ids));
+async function saveScheduledIds(childId: string, ids: ScheduledIds): Promise<void> {
+  if (!childId) return;
+  await AsyncStorage.setItem(SCHEDULED_IDS_KEY(childId), JSON.stringify(ids));
 }
 
 // --- Last access tracking ---
@@ -259,7 +275,7 @@ async function scheduleMorning(childId: string, childName: string, time: string)
   return Notifications.scheduleNotificationAsync({
     content: {
       title: '아맞다',
-      body: `좋은 아침! 어젯밤 ${childName}는 잘 잤나요?`,
+      body: `좋은 아침! 어젯밤 우리 아기는 잘 잤나요?`, // #17 PII 제거
       data: { screen: 'chatbot', childId, childName },
       sound: 'amatda_chime.wav',
     },
@@ -277,7 +293,7 @@ async function scheduleAfternoon(childId: string, childName: string, time: strin
   return Notifications.scheduleNotificationAsync({
     content: {
       title: '아맞다',
-      body: `지금 ${childName}와 15분 놀이 시간 어때요?`,
+      body: `지금 우리 아기와 15분 놀이 시간 어때요?`, // #17 PII 제거
       data: { screen: 'play-learning', childId, childName },
       sound: 'amatda_chime.wav',
     },
@@ -332,7 +348,7 @@ export async function scheduleCoachingFollowup(childId: string, childName: strin
   const prefs = await loadNotificationPrefs();
   if (!prefs.coachingFollowup) return;
 
-  const ids = await loadScheduledIds();
+  const ids = await loadScheduledIds(childId);
 
   // Cancel existing follow-up
   if (ids.coachingFollowup) {
@@ -344,7 +360,7 @@ export async function scheduleCoachingFollowup(childId: string, childName: strin
   ids.coachingFollowup = await Notifications.scheduleNotificationAsync({
     content: {
       title: '아맞다',
-      body: `어제 ${childName} 상담 후 잘 지나갔나요? 궁금한 점이 있으면 말씀해 주세요`,
+      body: `어제 상담 후 잘 지나갔나요? 궁금한 점이 있으면 말씀해 주세요`, // #17 PII (childName) 제거
       data: { screen: 'chatbot', childId, childName },
       sound: 'amatda_chime.wav',
     },
@@ -355,14 +371,14 @@ export async function scheduleCoachingFollowup(childId: string, childName: strin
     },
   });
 
-  await saveScheduledIds(ids);
+  await saveScheduledIds(childId, ids);
   await trackLastCoaching();
 }
 
 // --- Re-engagement notifications ---
 
 async function scheduleReengagement(childId: string, childName: string): Promise<ScheduledIds> {
-  const ids = await loadScheduledIds();
+  const ids = await loadScheduledIds(childId);
 
   // Cancel all existing re-engagement notifications
   type ReKey = 'reengagement3d' | 'reengagement7d' | 'reengagement10d' | 'reengagement14d';
@@ -416,7 +432,7 @@ export async function syncScheduledNotifications(
   childId: string,
   childName: string,
 ): Promise<void> {
-  const ids = await loadScheduledIds();
+  const ids = await loadScheduledIds(childId);
 
   // Morning
   const morningChanged = ids.morningScheduledAt !== prefs.morningTime;
@@ -474,7 +490,7 @@ export async function syncScheduledNotifications(
     ids.weekly = null;
   }
 
-  await saveScheduledIds(ids);
+  await saveScheduledIds(childId, ids);
 }
 
 /**
@@ -485,7 +501,7 @@ export async function syncReengagementNotifications(childId: string, childName: 
   const prefs = await loadNotificationPrefs();
   if (!prefs.reengagement) {
     // Cancel all re-engagement
-    const ids = await loadScheduledIds();
+    const ids = await loadScheduledIds(childId);
     type ReKey = 'reengagement3d' | 'reengagement7d' | 'reengagement10d' | 'reengagement14d';
     const reKeys: ReKey[] = ['reengagement3d', 'reengagement7d', 'reengagement10d', 'reengagement14d'];
     for (const key of reKeys) {
@@ -495,21 +511,22 @@ export async function syncReengagementNotifications(childId: string, childName: 
         ids[key] = null;
       }
     }
-    await saveScheduledIds(ids);
+    await saveScheduledIds(childId, ids);
     return;
   }
 
   const updatedIds = await scheduleReengagement(childId, childName);
-  await saveScheduledIds(updatedIds);
+  await saveScheduledIds(childId, updatedIds);
   await trackLastAccess();
 }
 
 /**
- * Cancel all scheduled local notifications and clear stored IDs.
+ * Cancel all scheduled local notifications and clear stored IDs (모든 자녀).
  */
 export async function cancelAllNotifications(): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
-  await saveScheduledIds({ ...EMPTY_IDS });
+  // per-child 키들은 cancelAllChildLocalNotifications 가 정리. 여기는 legacy 글로벌 키 정리.
+  try { await AsyncStorage.removeItem(SCHEDULED_IDS_KEY_LEGACY); } catch { /* ok */ }
 }
 
 /**
@@ -529,19 +546,29 @@ export async function rescheduleAllNotifications(
 
 // --- 임신 D-Day / 주요 검사 알림 ---
 
-const PREGNANCY_NOTIF_IDS_KEY = 'amatda_pregnancy_notif_ids';
+/**
+ * #15 per-child key — 다둥이/쌍둥이 가구에서 자녀별로 분리 저장.
+ * Legacy 글로벌 키는 cancelAllPregnancyLocalNotifications 가 정리.
+ */
+const PREGNANCY_NOTIF_IDS_KEY_LEGACY = 'amatda_pregnancy_notif_ids';
+const PREGNANCY_NOTIF_IDS_KEY = (childId: string) => `amatda_pregnancy_notif_ids_${childId}`;
 
 interface PregnancyExamSchedule {
   weekFromLMP: number;
   title: string;
   body: string;
+  highRiskOnly?: boolean;  // #16 고위험 임신부 전용 알림
 }
 
 const PREGNANCY_EXAMS: PregnancyExamSchedule[] = [
   { weekFromLMP: 12, title: '1차 기형아 검사 (NT)', body: '11~13주 목투명대 검사 시기예요. 병원 예약을 확인해 주세요.' },
   { weekFromLMP: 16, title: '쿼드 검사', body: '15~20주 쿼드 검사 시기예요. 예약했는지 확인해 주세요.' },
   { weekFromLMP: 20, title: '정밀 초음파', body: '20~24주 정밀초음파 시기예요. 아기의 발달을 자세히 볼 수 있어요.' },
+  // #16 고위험 임신부: 24주부터 분만 병원 등록 권유 (조산 가능성 대비)
+  { weekFromLMP: 24, title: '분만 병원 등록 권유 (고위험)', body: '고위험 임신은 조산 가능성이 있어요. 분만 병원 번호를 미리 등록해 두세요.', highRiskOnly: true },
   { weekFromLMP: 25, title: '임당 검사 (GCT)', body: '24~28주 임신성 당뇨 검사 시기예요.' },
+  // 일반 임신부: 30주부터 분만 병원 등록 권유
+  { weekFromLMP: 30, title: '분만 병원 등록 권유', body: '출산이 가까워지고 있어요. 급한 순간 바로 전화할 수 있도록 분만 병원 번호를 등록해 두세요.' },
   { weekFromLMP: 32, title: '태동 검사 (NST)', body: '32주 전후 NST 검사 시기예요.' },
   { weekFromLMP: 36, title: 'GBS 검사', body: '36주 B형 연쇄상구균 검사 시기예요.' },
   { weekFromLMP: 38, title: '출산 가방 준비', body: '출산 가방 체크리스트를 확인해 주세요.' },
@@ -553,32 +580,43 @@ function dueDateToLMP(dueDate: Date): Date {
   return lmp;
 }
 
-async function cancelPregnancyNotifs(): Promise<void> {
+async function cancelPregnancyNotifs(childId: string): Promise<void> {
   try {
-    const raw = await AsyncStorage.getItem(PREGNANCY_NOTIF_IDS_KEY);
+    const raw = await AsyncStorage.getItem(PREGNANCY_NOTIF_IDS_KEY(childId));
     if (!raw) return;
     const ids: string[] = JSON.parse(raw);
     for (const id of ids) {
       try { await Notifications.cancelScheduledNotificationAsync(id); } catch { /* ok */ }
     }
-    await AsyncStorage.removeItem(PREGNANCY_NOTIF_IDS_KEY);
+    await AsyncStorage.removeItem(PREGNANCY_NOTIF_IDS_KEY(childId));
   } catch { /* ok */ }
 }
 
 /**
- * 출산예정일 기준 주요 검사 + D-7/D-3/D-Day 알림 스케줄.
- * 이미 지난 시점은 스킵. 중복 방지 위해 기존 예약 전체 취소 후 재스케줄.
+ * 출산예정일 기준 주요 검사 + D-7/D-3/D-Day 알림 스케줄. (#15 #16)
+ *   - childId 별로 분리 저장 (다둥이 가구 호환)
+ *   - isHighRisk=true 면 24주 분만병원 등록 권유 + 일반 30주 권유 알림 추가
+ *   - flag 토글 시 다시 호출하면 cancel + 재스케줄됨
  */
-export async function schedulePregnancyReminders(dueDateIso: string): Promise<void> {
-  await cancelPregnancyNotifs();
+export async function schedulePregnancyReminders(
+  childId: string,
+  dueDateIso: string,
+  options?: { isHighRisk?: boolean },
+): Promise<void> {
+  if (!childId) return;
+  await cancelPregnancyNotifs(childId);
 
   const due = new Date(dueDateIso);
   if (isNaN(due.getTime())) return;
   const lmp = dueDateToLMP(due);
   const now = Date.now();
   const scheduledIds: string[] = [];
+  const isHighRisk = options?.isHighRisk === true;
 
   for (const exam of PREGNANCY_EXAMS) {
+    // #16 고위험 전용 알림은 isHighRisk 면만 스케줄
+    if (exam.highRiskOnly && !isHighRisk) continue;
+
     const triggerDate = new Date(lmp);
     triggerDate.setDate(triggerDate.getDate() + exam.weekFromLMP * 7);
     triggerDate.setHours(9, 0, 0, 0);
@@ -588,7 +626,7 @@ export async function schedulePregnancyReminders(dueDateIso: string): Promise<vo
       content: {
         title: `아맞다 · ${exam.title}`,
         body: exam.body,
-        data: { screen: 'pregnancy' },
+        data: { screen: 'pregnancy', childId },
         sound: 'amatda_chime.wav',
       },
       trigger: {
@@ -616,7 +654,10 @@ export async function schedulePregnancyReminders(dueDateIso: string): Promise<vo
       content: {
         title: `아맞다 · ${c.title}`,
         body: c.body,
-        data: { screen: 'pregnancy' },
+        // #17 D-3/D-Day 는 진통 가능성 → labor-monitor 로 라우팅 (PII 없는 generic)
+        data: c.offset >= -3
+          ? { screen: 'labor-monitor', tab: 'contraction', childId }
+          : { screen: 'pregnancy', childId },
         sound: 'amatda_chime.wav',
       },
       trigger: {
@@ -628,7 +669,7 @@ export async function schedulePregnancyReminders(dueDateIso: string): Promise<vo
     scheduledIds.push(id);
   }
 
-  await AsyncStorage.setItem(PREGNANCY_NOTIF_IDS_KEY, JSON.stringify(scheduledIds));
+  await AsyncStorage.setItem(PREGNANCY_NOTIF_IDS_KEY(childId), JSON.stringify(scheduledIds));
 }
 
 // --- 이탈 방지: 첫 AI 상담 유도 푸시 ---
@@ -650,7 +691,7 @@ export async function scheduleFirstCoachingNudge(childId: string, childName: str
 
   const id = await Notifications.scheduleNotificationAsync({
     content: {
-      title: `${childName} 맞춤 육아 팁이 준비됐어요`,
+      title: `맞춤 육아 팁이 준비됐어요`, // #17 PII 제거
       body: '궁금한 거 뭐든 물어보세요. 상담이모가 기다리고 있어요!',
       data: { screen: 'chatbot', childId, childName },
       sound: 'amatda_chime.wav',
@@ -690,7 +731,7 @@ export async function scheduleNextDayNudge(childId: string, childName: string): 
   const id = await Notifications.scheduleNotificationAsync({
     content: {
       title: '아맞다',
-      body: `${childName}에게 딱 맞는 육아 코칭, 한번 써보세요!`,
+      body: `우리 아기에게 딱 맞는 육아 코칭, 한번 써보세요!`, // #17 PII 제거
       data: { screen: 'chatbot', childId, childName },
       sound: 'amatda_chime.wav',
     },
@@ -787,7 +828,7 @@ export async function scheduleFeverRecheckReminder(
   const id = await Notifications.scheduleNotificationAsync({
     content: {
       title: '🌡 체온 재측정 알림',
-      body: `${childName ? `${childName}의 ` : ''}체온을 측정한 지 1시간이 지났어요! 지금 상태를 다시 한번 체크해 주세요.`,
+      body: `체온을 측정한 지 1시간이 지났어요! 지금 상태를 다시 한번 체크해 주세요.`, // #17 PII 제거
       data: { screen: 'fever', source: 'fever_recheck' },
       sound: 'amatda_chime.wav',
     },
@@ -832,10 +873,9 @@ export async function cancelAllChildLocalNotifications(
   // 1. 체온 재측정 (per-child key)
   await cancelFeverRecheckReminder(childId).catch(() => {});
 
-  // 2. ScheduledIds 전역 키 (morning/afternoon/evening/weekly/coachingFollowup/reengagement*)
-  //    — 단일 자녀 모드라 모두 이 자녀 것. 정리 후 다음 자녀 등록 시 재예약됨.
+  // 2. ScheduledIds — #15 per-child 키. 해당 자녀 것만 정리 (다른 자녀 영향 X).
   try {
-    const ids = await loadScheduledIds();
+    const ids = await loadScheduledIds(childId);
     const idKeys: (keyof ScheduledIds)[] = [
       'morning', 'afternoon', 'evening', 'weekly',
       'coachingFollowup',
@@ -847,7 +887,7 @@ export async function cancelAllChildLocalNotifications(
         await Notifications.cancelScheduledNotificationAsync(v).catch(() => {});
       }
     }
-    await saveScheduledIds({ ...EMPTY_IDS });
+    await AsyncStorage.removeItem(SCHEDULED_IDS_KEY(childId));
   } catch { /* ignore */ }
 
   // 3. 옛 알림 정리 (FIRST_COACHING_KEY, amatda_nextday_nudge — 전역 단일 키)
@@ -901,12 +941,37 @@ export async function cancelAllChildLocalNotifications(
  * 임신 자녀(예정일 기반) 삭제 시 — 임신 모드 전용 알림 일괄 취소.
  *
  * 포함:
- *  - 임신 검진/D-Day 알림 (PREGNANCY_NOTIF_IDS_KEY)
- *  - 데일리 미션 9시 알람 (DAILY_MISSION_NOTIF_KEY) ← 임신부 모드 전용이므로 같이 정리
+ *  - 임신 검진/D-Day 알림 (#15 per-child + legacy 글로벌 키)
+ *  - 데일리 미션 9시 알람 (DAILY_MISSION_NOTIF_KEY) — 임신부 모드 전용이므로 같이 정리
+ *
+ * childId 없이 호출 시 — 모든 자녀의 임신 알림을 정리 (계정 삭제 등).
+ * childId 있으면 — 해당 자녀만 정리 (임신 자녀 1명만 삭제).
  */
-export async function cancelAllPregnancyLocalNotifications(): Promise<void> {
+export async function cancelAllPregnancyLocalNotifications(childId?: string): Promise<void> {
   try {
-    await cancelPregnancyNotifs();
+    if (childId) {
+      // 특정 자녀만 정리
+      await cancelPregnancyNotifs(childId);
+    } else {
+      // 모든 자녀 정리 — AsyncStorage 키 스캔
+      const allKeys = await AsyncStorage.getAllKeys();
+      const pregKeys = allKeys.filter((k) => k.startsWith('amatda_pregnancy_notif_ids_'));
+      for (const k of pregKeys) {
+        const childIdFromKey = k.replace('amatda_pregnancy_notif_ids_', '');
+        if (childIdFromKey) await cancelPregnancyNotifs(childIdFromKey);
+      }
+    }
+    // Legacy 글로벌 키 — 옛날 데이터 정리
+    try {
+      const raw = await AsyncStorage.getItem(PREGNANCY_NOTIF_IDS_KEY_LEGACY);
+      if (raw) {
+        const ids: string[] = JSON.parse(raw);
+        for (const id of ids) {
+          try { await Notifications.cancelScheduledNotificationAsync(id); } catch { /* ok */ }
+        }
+        await AsyncStorage.removeItem(PREGNANCY_NOTIF_IDS_KEY_LEGACY);
+      }
+    } catch { /* ok */ }
   } catch { /* ignore */ }
   try {
     await cancelDailyMissionReminder();
@@ -927,7 +992,8 @@ export async function runOneTimeOrphanCleanup(hasPregnantChild: boolean): Promis
     if (done === '1') return;
     if (!hasPregnantChild) {
       await cancelDailyMissionReminder().catch(() => {});
-      await cancelPregnancyNotifs().catch(() => {});
+      // #15 모든 자녀 임신 알림 정리 (per-child + legacy)
+      await cancelAllPregnancyLocalNotifications().catch(() => {});
     }
     await AsyncStorage.setItem(ORPHAN_CLEANUP_FLAG, '1');
   } catch { /* ignore */ }
@@ -945,14 +1011,25 @@ export async function cancelAllLocalNotifications(): Promise<void> {
     await Notifications.cancelAllScheduledNotificationsAsync();
   } catch { /* ignore */ }
 
-  const keys = [
-    SCHEDULED_IDS_KEY,
-    PREGNANCY_NOTIF_IDS_KEY,
+  // 단일 키들 (legacy 글로벌 키 포함)
+  const singleKeys = [
+    SCHEDULED_IDS_KEY_LEGACY,
+    PREGNANCY_NOTIF_IDS_KEY_LEGACY,
     DAILY_MISSION_NOTIF_KEY,
     FIRST_COACHING_KEY,
     'amatda_nextday_nudge',
   ];
-  for (const k of keys) {
+  for (const k of singleKeys) {
     try { await AsyncStorage.removeItem(k); } catch { /* ignore */ }
   }
+  // #15 per-child 키들 — 동적 스캔
+  try {
+    const allKeys = await AsyncStorage.getAllKeys();
+    const perChildKeys = allKeys.filter(
+      (k) => k.startsWith('amatda_notification_ids_') || k.startsWith('amatda_pregnancy_notif_ids_'),
+    );
+    for (const k of perChildKeys) {
+      try { await AsyncStorage.removeItem(k); } catch { /* ignore */ }
+    }
+  } catch { /* ignore */ }
 }

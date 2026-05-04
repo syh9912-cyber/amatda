@@ -51,6 +51,12 @@ export const env = {
   KAKAO_REST_API_KEY: process.env.KAKAO_REST_API_KEY || '',
   KAKAO_CLIENT_SECRET: process.env.KAKAO_CLIENT_SECRET || '',
   KAKAO_ADMIN_KEY: process.env.KAKAO_ADMIN_KEY || '',
+  /**
+   * Kakao Developers 콘솔 → 내 애플리케이션 → 앱 키 페이지의 "ID" 값 (정수).
+   * Kakao /v1/user/access_token_info 응답의 app_id 와 strict 비교 — 다른 카카오 앱 토큰 거부 (#3 보안).
+   * 미설정 시 strict 검증 비활성 (개발환경 호환).
+   */
+  KAKAO_APP_ID: process.env.KAKAO_APP_ID || '',
   NAVER_CLIENT_ID: process.env.NAVER_CLIENT_ID || '',
   NAVER_CLIENT_SECRET: process.env.NAVER_CLIENT_SECRET || '',
 

@@ -19,7 +19,12 @@ function rateLimitUserKey(req: Request): string {
   const header = req.headers.authorization;
   if (header && header.startsWith('Bearer ')) {
     try {
-      const payload = jwt.verify(header.slice(7), env.JWT_SECRET) as { userId?: string };
+      // 알고리즘/issuer/audience 핀 — auth middleware 와 동일 정책 (#1 보안 강화)
+      const payload = jwt.verify(header.slice(7), env.JWT_SECRET, {
+        algorithms: ['HS256'],
+        issuer: 'amatda-api',
+        audience: 'amatda-app',
+      }) as { userId?: string };
       if (payload?.userId) return `user:${payload.userId}`;
     } catch {
       // 만료/위변조 → IP 키 fallback

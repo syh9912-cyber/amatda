@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 import { env } from '../config/env';
 import { success, error } from '../utils/response';
 import {
@@ -18,10 +19,77 @@ import { encryptToken, decryptToken } from '../utils/crypto';
 
 const router = Router();
 
-function generateTokens(userId: string) {
-  const accessToken = jwt.sign({ userId }, env.JWT_SECRET, { expiresIn: '1h' });
-  const refreshToken = jwt.sign({ userId }, env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
-  return { accessToken, refreshToken };
+/**
+ * JWT 표준 클레임 정책 (#1 출시 전 보안 강화):
+ *   - alg: HS256 명시 핀 (sign + verify 모두) — 알고리즘 confusion 공격 차단
+ *   - iss: 'amatda-api' — 발급자 명시
+ *   - aud: 'amatda-app' — 대상 명시
+ *   - typ: 'access' | 'refresh' — 클레임으로 토큰 종류 구분 (시크릿만으로 구분하지 않음)
+ *   - jti: crypto.randomUUID() — 토큰 고유 식별자 (revoke / rotation 추적용)
+ */
+const JWT_ISSUER = 'amatda-api';
+const JWT_AUDIENCE = 'amatda-app';
+const JWT_ALGO: jwt.Algorithm = 'HS256';
+
+interface AccessTokenPayload {
+  userId: string;
+  typ: 'access';
+}
+interface RefreshTokenPayload {
+  userId: string;
+  typ: 'refresh';
+  jti: string;
+  fam: string; // familyId — 같은 로그인 세션의 refresh chain
+}
+
+const REFRESH_EXPIRES_DAYS = 7;
+
+/**
+ * Refresh token 가족 단위로 발급 (#2 RFC 6819 rotation).
+ * 새 로그인이면 familyId 새로 만들고, refresh 시엔 기존 familyId 유지 + 회전.
+ */
+async function generateTokens(userId: string, familyId?: string) {
+  const refreshJti = randomUUID();
+  const fam = familyId ?? randomUUID();
+  const issuedAt = new Date();
+  const expiresAt = new Date(issuedAt.getTime() + REFRESH_EXPIRES_DAYS * 24 * 60 * 60 * 1000);
+
+  // Firestore 에 새 jti 등록 — 사용 추적용
+  await collections.refreshTokens.doc(refreshJti).set({
+    jti: refreshJti,
+    familyId: fam,
+    userId,
+    used: false,
+    revoked: false,
+    issuedAt: issuedAt.toISOString(),
+    expiresAt: expiresAt.toISOString(),
+  });
+
+  const accessToken = jwt.sign(
+    { userId, typ: 'access' } satisfies AccessTokenPayload,
+    env.JWT_SECRET,
+    { algorithm: JWT_ALGO, expiresIn: '1h', issuer: JWT_ISSUER, audience: JWT_AUDIENCE },
+  );
+  const refreshToken = jwt.sign(
+    { userId, typ: 'refresh', jti: refreshJti, fam } satisfies RefreshTokenPayload,
+    env.JWT_REFRESH_SECRET,
+    { algorithm: JWT_ALGO, expiresIn: `${REFRESH_EXPIRES_DAYS}d`, issuer: JWT_ISSUER, audience: JWT_AUDIENCE, jwtid: refreshJti },
+  );
+  return { accessToken, refreshToken, refreshJti, familyId: fam };
+}
+
+/**
+ * 토큰 패밀리 전체 무효화 — refresh 토큰 reuse 가 감지되면 호출.
+ * 탈취 시나리오: 공격자 A가 B 의 refresh 토큰 사용 → A 와 B 모두 즉시 로그아웃.
+ */
+async function revokeRefreshTokenFamily(familyId: string, reason: string): Promise<void> {
+  const snap = await collections.refreshTokens.where('familyId', '==', familyId).get();
+  const batch = db.batch();
+  snap.docs.forEach((d) => {
+    batch.update(d.ref, { revoked: true, revokedReason: reason, revokedAt: new Date().toISOString() });
+  });
+  if (!snap.empty) await batch.commit();
+  logger.warn('auth/refresh-revoke-family', `familyId=${familyId} reason=${reason} count=${snap.size}`);
 }
 
 // POST /api/auth/register
@@ -43,7 +111,7 @@ router.post('/register', async (req: Request, res: Response) => {
       parentRole: parentRole || '',
     });
 
-    const tokens = generateTokens(id);
+    const tokens = await generateTokens(id);
     success(res, { user: { id, email }, ...tokens }, 201);
   } catch (e) {
     logger.error('auth/register', e);
@@ -67,7 +135,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) { error(res, '이메일 또는 비밀번호가 올바르지 않습니다', 401); return; }
 
-    const tokens = generateTokens(doc.id);
+    const tokens = await generateTokens(doc.id);
     success(res, { user: { id: doc.id, email: user.email }, ...tokens });
   } catch (e) {
     logger.error('auth/login', e);
@@ -80,13 +148,92 @@ router.post('/refresh', async (req: Request, res: Response) => {
   try {
     const { refreshToken } = req.body;
     if (!refreshToken) { error(res, '리프레시 토큰이 필요합니다'); return; }
-    const payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as { userId: string };
-    const tokens = generateTokens(payload.userId);
+    // 알고리즘/issuer/audience 모두 검증 — 알고리즘 confusion / 다른 시스템 토큰 거부
+    const payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET, {
+      algorithms: [JWT_ALGO],
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+    }) as RefreshTokenPayload;
+    if (payload.typ !== 'refresh' || !payload.jti || !payload.fam) {
+      error(res, '유효하지 않은 리프레시 토큰입니다', 401);
+      return;
+    }
+
+    // #2 RFC 6819 rotation + reuse detection.
+    // 트랜잭션으로 jti 상태 read+update 를 원자적으로 처리 — 두 클라이언트가 동시에 같은 jti
+    // 사용 시도해도 한쪽만 성공.
+    const result = await db.runTransaction(async (tx) => {
+      const ref = collections.refreshTokens.doc(payload.jti);
+      const doc = await tx.get(ref);
+      if (!doc.exists) {
+        // DB 에 없는 jti — 이전 시스템 또는 이미 정리된 토큰 → 거부 + 패밀리 무효화 시도
+        return { ok: false as const, reason: 'jti not found' };
+      }
+      const data = doc.data() as { used: boolean; revoked: boolean; familyId: string; userId: string };
+      if (data.revoked) {
+        return { ok: false as const, reason: 'revoked', familyId: data.familyId };
+      }
+      if (data.used) {
+        // ⚠️ Reuse detected — 토큰 탈취 가능성 → 패밀리 전체 무효화
+        return { ok: false as const, reason: 'reuse-detected', familyId: data.familyId };
+      }
+      // 정상 사용 — used 마킹
+      tx.update(ref, { used: true, usedAt: new Date().toISOString() });
+      return { ok: true as const, userId: data.userId, familyId: data.familyId };
+    });
+
+    if (!result.ok) {
+      if (result.reason === 'reuse-detected' && result.familyId) {
+        await revokeRefreshTokenFamily(result.familyId, 'refresh-token-reuse');
+      }
+      error(res, '유효하지 않은 리프레시 토큰입니다', 401);
+      return;
+    }
+
+    // 새 토큰 발급 — 같은 familyId 유지 (회전)
+    const tokens = await generateTokens(result.userId, result.familyId);
+    // 새 토큰 발급되면 이전 jti의 replacedBy 필드에 새 jti 기록 (감사 추적)
+    await collections.refreshTokens.doc(payload.jti).update({ replacedBy: tokens.refreshJti });
     success(res, tokens);
   } catch (e) {
     // 만료/위변조 등 정상 흐름에서도 발생 — info 레벨로 기록하되 운영 에러는 추적 가능하게
     logger.warn('auth/refresh', e instanceof Error ? e.message : String(e));
     error(res, '유효하지 않은 리프레시 토큰입니다', 401);
+  }
+});
+
+// POST /api/auth/logout — 서버측 refresh token 무효화 (#5 보안)
+//   클라이언트가 refreshToken 을 보내면 해당 토큰 + 같은 패밀리 전체 revoke.
+//   accessToken 은 1시간 단명이므로 자연 만료 대기.
+router.post('/logout', async (req: Request, res: Response) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      // 클라이언트가 토큰 없이 로그아웃 호출해도 200 — 멱등성 보장
+      success(res, { message: 'logged out' });
+      return;
+    }
+    // 서명 검증 — 위조된 토큰으로 다른 사용자 패밀리 무효화 못하도록
+    let payload: RefreshTokenPayload;
+    try {
+      payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET, {
+        algorithms: [JWT_ALGO],
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE,
+      }) as RefreshTokenPayload;
+    } catch {
+      // 위조/만료 — 멱등성: 어차피 revoke 할 것 없음
+      success(res, { message: 'logged out' });
+      return;
+    }
+    if (payload.fam) {
+      await revokeRefreshTokenFamily(payload.fam, 'user-logout');
+    }
+    success(res, { message: 'logged out' });
+  } catch (e) {
+    logger.error('auth/logout', e);
+    // 로그아웃은 best-effort — 실패해도 200 (클라이언트는 어차피 로컬 토큰 삭제)
+    success(res, { message: 'logged out' });
   }
 });
 
@@ -113,7 +260,7 @@ router.post('/social', async (req: Request, res: Response) => {
     });
 
     const childSnap = await collections.children.where('userId', '==', userId).limit(1).get();
-    const tokens = generateTokens(userId);
+    const tokens = await generateTokens(userId);
     success(res, {
       user: { id: userId, email: userEmail, nickname, authProvider: upperProvider },
       ...tokens,
@@ -158,7 +305,7 @@ router.post('/social-code', async (req: Request, res: Response) => {
     });
 
     const childSnap = await collections.children.where('userId', '==', userId).limit(1).get();
-    const tokens = generateTokens(userId);
+    const tokens = await generateTokens(userId);
     success(res, {
       user: { id: userId, email: userEmail, nickname, authProvider: upperProvider },
       ...tokens,
@@ -240,7 +387,7 @@ router.get('/kakao/callback', async (req: Request, res: Response) => {
       lastSocialAccessTokenAt: FieldValue.serverTimestamp(),
     });
 
-    const { accessToken, refreshToken } = generateTokens(userId);
+    const { accessToken, refreshToken } = await generateTokens(userId);
 
     // 보안: 토큰을 URL 쿼리/HTML에 절대 포함하지 않음 (브라우저 history/Referer 누출).
     // 앱은 stateKey 만 받아 /api/auth/kakao/check/:state 로 polling 해서 토큰 획득.
@@ -459,6 +606,8 @@ router.delete('/account', authMiddleware, async (req: Request, res: Response) =>
       collections.familyMembers.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
       collections.conversationSummaries.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
       collections.clinicReviews.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
+      // #5 보안: 계정 삭제 시 모든 refresh token revoke — stale token 으로 다시 들어올 수 없게
+      collections.refreshTokens.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
     ]);
     for (const snap of userSnaps) {
       snap.docs.forEach((d) => refs.push(d.ref));

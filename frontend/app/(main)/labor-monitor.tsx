@@ -19,6 +19,7 @@ import { AdSlot } from '../../components/ads/AdSlot';
 import { pickAllPhones, type PickedPhone } from '../../services/deliveryHospital';
 import { MissionToast } from '../../components/common/MissionToast';
 import { HospitalRegisterModal } from '../../components/pregnancy/HospitalRegisterModal';
+import { captureError } from '../../services/sentry';
 
 type Tab = 'kick' | 'contraction';
 
@@ -133,7 +134,8 @@ export default function LaborMonitorScreen() {
       setToastMsg(`태동 ${kickCount}회 기록 완료했어요 👣`);
       setKickCount(0);
       setKickElapsed(0);
-    } catch {
+    } catch (e) {
+      captureError(e, { ctx: 'labor-monitor/saveKickSession', childId, count: kickCount });
       Alert.alert('오류', '태동 기록 저장에 실패했습니다');
     }
     setKickSaving(false);
@@ -272,7 +274,10 @@ export default function LaborMonitorScreen() {
   }, [refreshHospitalRegistered]);
 
   const dialPhone = useCallback((phone: string) => {
-    Linking.openURL(`tel:${phone.replace(/[^0-9]/g, '')}`).catch(() => {
+    // #25: 국제번호 +82 보존 — `+` 도 허용하여 +82-10-... 같은 형식 깨지지 않게
+    const cleaned = phone.replace(/[^0-9+]/g, '');
+    Linking.openURL(`tel:${cleaned}`).catch((e) => {
+      captureError(e, { ctx: 'labor-monitor/dialPhone', phoneLast4: phone.slice(-4) });
       Alert.alert('전화 연결 실패', `직접 전화해 주세요: ${phone}`);
     });
   }, []);
@@ -293,7 +298,8 @@ export default function LaborMonitorScreen() {
           {
             text: '119 전화',
             onPress: () => {
-              Linking.openURL('tel:119').catch(() => {
+              Linking.openURL('tel:119').catch((e) => {
+                captureError(e, { ctx: 'labor-monitor/119-fallback' });
                 Alert.alert('전화 연결 실패', '직접 119에 전화해 주세요.');
               });
             },
@@ -438,7 +444,8 @@ export default function LaborMonitorScreen() {
                 <TouchableOpacity
                   style={[styles.emergency119Btn, diagAnswers.ruptured && styles.emergency119BtnUrgent]}
                   onPress={() => {
-                    Linking.openURL('tel:119').catch(() => {
+                    Linking.openURL('tel:119').catch((e) => {
+                      captureError(e, { ctx: 'labor-monitor/119-banner', urgent: diagAnswers.ruptured });
                       Alert.alert('전화 연결 실패', '직접 119에 전화해 주세요.');
                     });
                   }}

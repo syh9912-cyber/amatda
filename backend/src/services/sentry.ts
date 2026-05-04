@@ -15,6 +15,49 @@ import type { Express } from 'express';
 
 let initialized = false;
 
+/**
+ * #14 PII scrubber — frontend 와 동일 정책. 백엔드는 추가로 webhook payload 의
+ * 결제 카드/계좌 정보, JWT 페이로드 등이 흘러갈 수 있어 더 엄격하게 처리.
+ */
+const PII_KEY_PATTERNS = /^(authorization|cookie|password|refreshtoken|accesstoken|access_token|refresh_token|token|jwt|secret|phone|phonenumber|email|childname|child_name|fcmtoken|fcm_token|pushtoken|push_token|kakao_token|naver_token|google_token|cardnumber|card_number|customerkey|billingkey|webhookbody|raw)$/i;
+const PHONE_PATTERN = /(\+?\d[\d\s\-()]{7,}\d)/g;
+
+function scrubObject(obj: unknown, depth = 0): unknown {
+  if (obj == null || depth > 6) return obj;
+  if (typeof obj === 'string') return obj.replace(PHONE_PATTERN, (m) => `***${m.slice(-4)}`);
+  if (Array.isArray(obj)) return obj.map((v) => scrubObject(v, depth + 1));
+  if (typeof obj === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      if (PII_KEY_PATTERNS.test(k)) out[k] = '[REDACTED]';
+      else out[k] = scrubObject(v, depth + 1);
+    }
+    return out;
+  }
+  return obj;
+}
+
+function beforeSendScrub(event: Sentry.ErrorEvent): Sentry.ErrorEvent | null {
+  try {
+    if (event.request?.headers) event.request.headers = scrubObject(event.request.headers) as Record<string, string>;
+    if (event.request?.cookies) event.request.cookies = '[REDACTED]' as unknown as Record<string, string>;
+    if (event.request?.data) event.request.data = scrubObject(event.request.data);
+    if (event.request?.query_string) event.request.query_string = scrubObject(event.request.query_string) as string;
+    if (event.extra) event.extra = scrubObject(event.extra) as Record<string, unknown>;
+    if (event.contexts) event.contexts = scrubObject(event.contexts) as Sentry.ErrorEvent['contexts'];
+    if (event.breadcrumbs) {
+      event.breadcrumbs = event.breadcrumbs.map((b) => ({
+        ...b,
+        data: b.data ? (scrubObject(b.data) as Record<string, unknown>) : b.data,
+        message: b.message ? (scrubObject(b.message) as string) : b.message,
+      }));
+    }
+  } catch {
+    return null;
+  }
+  return event;
+}
+
 export function initSentry(): void {
   if (initialized) return;
   const dsn = process.env.SENTRY_DSN_BACKEND;
@@ -27,6 +70,7 @@ export function initSentry(): void {
     environment: process.env.NODE_ENV || 'production',
     tracesSampleRate: 0.1,
     sendDefaultPii: false, // PII 보호 — IP/email 등 자동 첨부 끔
+    beforeSend: beforeSendScrub, // #14 PII scrubber
     initialScope: {
       tags: { runtime: 'backend', service: process.env.K_SERVICE || 'unknown' },
     },

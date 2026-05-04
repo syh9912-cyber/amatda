@@ -30,6 +30,7 @@ import {
   getHospital,
   saveHospital,
 } from '../../services/deliveryHospital';
+import { captureError } from '../../services/sentry';
 
 interface Props {
   visible: boolean;
@@ -113,7 +114,9 @@ export function HospitalRegisterModal({
         onSaved?.();
         onClose();
       }
-    } catch {
+    } catch (e) {
+      // #24 정석 방법: 에러 silent 삼키지 않고 Sentry 로 추적
+      captureError(e, { ctx: 'HospitalRegisterModal/save', tab, childId });
       Alert.alert('저장 실패', '다시 시도해 주세요.');
     } finally {
       setSaving(false);
@@ -126,7 +129,8 @@ export function HospitalRegisterModal({
       return;
     }
     const q = encodeURIComponent(address.trim() || name.trim());
-    Linking.openURL(`https://map.kakao.com/link/search/${q}`).catch(() => {
+    Linking.openURL(`https://map.kakao.com/link/search/${q}`).catch((e) => {
+      captureError(e, { ctx: 'HospitalRegisterModal/openMap', q });
       Alert.alert('지도 앱을 열 수 없습니다.');
     });
   };

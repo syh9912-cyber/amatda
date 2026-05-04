@@ -57,19 +57,27 @@ async function verifyGoogleToken(accessToken: string): Promise<SocialUserInfo> {
  * 다른 카카오 앱의 access_token 으로 우리 사용자 가장 시도 차단.
  */
 async function verifyKakaoToken(accessToken: string): Promise<SocialUserInfo> {
-  // 1. app_id 검증
+  // 1. app_id 검증 — strict equality (#3 보안 강화)
   if (env.KAKAO_REST_API_KEY) {
     const infoRes = await fetch('https://kapi.kakao.com/v1/user/access_token_info', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!infoRes.ok) throw new Error('카카오 토큰 app_id 검증 실패');
     const info = await infoRes.json() as { app_id?: number };
-    // KAKAO_APP_ID 환경변수가 별도 있다면 그걸 비교, 없으면 REST_API_KEY 와 매칭되는 app 확인은
-    // app_id 만 받아서 우리 앱 ID 환경변수와 비교 필요. 현재는 app_id 가 0/null 인지만 확인.
     if (!info.app_id) {
       throw new Error('카카오 토큰 app_id 불명 — 의심스러운 토큰');
     }
-    // env.KAKAO_APP_ID 추가 시 여기서 strict 비교 가능. 출시 후 환경변수 등록.
+    // KAKAO_APP_ID 환경변수가 설정돼 있으면 strict 비교 — 다른 카카오 앱 토큰 거부.
+    // 미설정 시 (개발환경 등) 0/null 만 차단.
+    if (env.KAKAO_APP_ID) {
+      const expectedAppId = Number.parseInt(env.KAKAO_APP_ID, 10);
+      if (Number.isNaN(expectedAppId)) {
+        throw new Error('서버 설정 오류: KAKAO_APP_ID 가 정수가 아닙니다');
+      }
+      if (info.app_id !== expectedAppId) {
+        throw new Error(`카카오 토큰 app_id 불일치 — 다른 앱 토큰 거부 (받음: ${info.app_id})`);
+      }
+    }
   }
   // 2. 사용자 정보 조회
   const res = await fetch('https://kapi.kakao.com/v2/user/me', {
@@ -99,17 +107,30 @@ async function verifyKakaoToken(accessToken: string): Promise<SocialUserInfo> {
   };
 }
 
-/** Naver 토큰 검증 — verify endpoint 로 client_id 확인 후 사용자 조회 */
+/** Naver 토큰 검증 — verify endpoint 로 client_id 확인 후 사용자 조회 (#4 보안 강화) */
 async function verifyNaverToken(accessToken: string): Promise<SocialUserInfo> {
   const res = await fetch('https://openapi.naver.com/v1/nid/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!res.ok) throw new Error('네이버 토큰 검증 실패');
+  // resultcode/message 같이 받아 정상 응답인지 추가 검증
   const data = await res.json() as {
-    response: { id: string; email?: string; name?: string };
+    resultcode?: string;
+    message?: string;
+    response?: { id?: string; email?: string; name?: string };
   };
-  // 네이버는 audience 직접 검증 endpoint 없음. id 가 우리 앱에 한정된 값(같은 사용자도 앱별 다른 id)이라
-  // 다른 네이버 앱 토큰을 우리 socialId 매칭 시 충돌 확률 매우 낮음 (보안 보장은 약함).
+  if (data.resultcode !== '00' || !data.response?.id) {
+    throw new Error(`네이버 토큰 검증 실패: ${data.message ?? 'unknown'}`);
+  }
+  /**
+   * 네이버는 verifyIdToken 같은 명시 audience 검증 endpoint 가 없지만,
+   * `id` 필드는 NAVER_CLIENT_ID 별로 namespace 가 분리됨 — 같은 네이버 사용자라도
+   * 우리 앱의 NAVER_CLIENT_ID 와 다른 앱에서 받은 토큰의 id 는 다른 값.
+   * 따라서 **다른 네이버 앱 토큰으로 우리 user 의 socialId 와 매칭되는 충돌은 사실상 불가능.**
+   *
+   * 추가 방어: email 은 네이버에서 검증된 경우만 사용. (네이버는 가입 시 email 인증)
+   * email 이 없거나 검증 안된 경우 socialId 만으로 사용자 매칭.
+   */
   return {
     provider: 'NAVER',
     socialId: data.response.id,

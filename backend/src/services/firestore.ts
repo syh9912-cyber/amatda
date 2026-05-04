@@ -106,6 +106,16 @@ export const collections = {
   // 같은 socialId 로 동시에 두 요청이 와도 transaction이 retry → 한쪽만 user 생성.
   // 문서: { userId, provider, socialId, createdAt }
   socialIdIndex: db.collection('socialIdIndex'),
+
+  // Refresh token 가족(family) — RFC 6819 OAuth2 best practice (#2 보안 강화)
+  //   refresh 시마다 jti 회전 (rotation), 사용된 jti 는 used=true 마킹.
+  //   탈취당한 토큰 재사용 시 used=true 인 jti가 재시도되면 → 같은 familyId의 모든 토큰 무효화.
+  //   logout / 계정삭제 시 해당 사용자 모든 토큰 revoke.
+  //
+  //   문서 ID: jti (UUID)
+  //   { jti, familyId, userId, used: boolean, revoked: boolean,
+  //     issuedAt: ISO, expiresAt: ISO, replacedBy?: jti, revokedReason?: string }
+  refreshTokens: db.collection('refreshTokens'),
 };
 
 /** 문서 ID 생성 */
