@@ -9,11 +9,9 @@ import { setupSecurity } from './middleware/security';
 import authRoutes from './routes/auth';
 import childRoutes from './routes/child';
 import questionRoutes from './routes/question';
-import foodRoutes from './routes/food';
 import observationRoutes from './routes/observation';
 import subscriptionRoutes from './routes/subscription';
 import paymentRoutes from './routes/payment';
-import weatherRoutes from './routes/weather';
 // seed 라우트 제거 — 프로덕션에서 인증 없이 DB 삭제 가능한 보안 취약점
 // import seedRoutes from './routes/seed';
 import momstagramRoutes from './routes/momstagram';
@@ -68,11 +66,9 @@ setupSecurity(app);
 app.use('/api/auth', authRoutes);
 app.use('/api/children', childRoutes);
 app.use('/api/questions', questionRoutes);
-app.use('/api/food-guide', foodRoutes);
 app.use('/api/observations', observationRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/payment', paymentRoutes);
-app.use('/api/weather', weatherRoutes);
 // app.use('/api/seed', seedRoutes); // 프로덕션 제거
 app.use('/api/momstagram', momstagramRoutes);
 app.use('/api/clinics', clinicRoutes);
