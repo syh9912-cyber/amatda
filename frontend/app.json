@@ -50,7 +50,6 @@
     "plugins": [
       "expo-web-browser",
       "expo-router",
-      "expo-video",
       "expo-secure-store",
       [
         "@react-native-seoul/kakao-login",

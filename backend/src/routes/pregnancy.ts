@@ -4,7 +4,7 @@ import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections, db, genId } from '../services/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
-import { isGeminiAvailable, callGeminiJSON } from '../services/coaching/gemini.client';
+import { isGeminiAvailable, callGeminiJSON, callGeminiText } from '../services/coaching/gemini.client';
 import {
   EPDS_QUESTIONS,
   EPDS_EXTRA_BY_STAGE,
@@ -1738,6 +1738,20 @@ function normalizeStage(raw: unknown): string {
   return VALID_STAGES.has(s) ? s : 'general';
 }
 
+function partnerPushBody(level: EpdsRiskLevel): string {
+  switch (level) {
+    case 'low':
+    case 'mild':
+      return '오늘 마음 건강 체크인을 했어요. 가끔 안부를 물어봐 주세요.';
+    case 'moderate':
+      return '마음 건강 체크에서 약간의 어려움이 감지됐어요. 오늘 한번 안아줘 보세요.';
+    case 'high':
+      return '마음 건강 체크에서 도움이 필요한 신호가 감지됐어요. 오늘 꼭 옆에 있어주세요.';
+    case 'urgent':
+      return '지금 많이 힘든 상태예요. 즉시 연락하고 전문 도움도 함께 찾아보세요.';
+  }
+}
+
 router.get('/mental-check/questions', authMiddleware, (req: Request, res: Response) => {
   try {
     const stage = normalizeStage(req.query.stage);
@@ -1796,13 +1810,47 @@ router.post('/mental-check', authMiddleware, async (req: Request, res: Response)
       nextRecommendedAt,
     });
 
-    // notifiedFamily: 가족 푸시 발송 별도 작업 — 현재 0 으로 단순 반환
+    // shareWithPartner=true 시 familyMembers 에서 accepted 멤버에게 pushSchedules 등록
+    let notifiedFamily = 0;
+    if (shareWithPartner === true) {
+      try {
+        const membersSnap = await collections.familyMembers
+          .where('childId', '==', childId)
+          .where('status', '==', 'accepted')
+          .get();
+
+        const batch = db.batch();
+        let hasPush = false;
+
+        for (const doc of membersSnap.docs) {
+          const member = doc.data();
+          const memberId = (member.inviteeUserId ?? member.userId) as string | null;
+          if (!memberId || memberId === req.userId) continue;
+
+          const scheduleId = genId();
+          batch.set(collections.pushSchedules.doc(scheduleId), {
+            userId: memberId,
+            type: 'mental_check_share',
+            title: '엄마 마음 건강 체크인',
+            body: partnerPushBody(riskLevel),
+            data: { childId, riskLevel },
+            scheduledAt: FieldValue.serverTimestamp(),
+            status: 'pending',
+          });
+          notifiedFamily++;
+          hasPush = true;
+        }
+
+        if (hasPush) await batch.commit();
+      } catch { /* 가족 알림 실패해도 본 기록은 유지 */ }
+    }
+
     success(res, {
       score: totalScore,
       maxScore: EPDS_QUESTIONS.length * 3,
       riskLevel,
       message,
-      notifiedFamily: 0,
+      notifiedFamily,
       nextRecommendedAt,
     });
   } catch (e) {
@@ -1899,8 +1947,39 @@ router.get('/mental-check/analysis', authMiddleware, async (req: Request, res: R
 
     // 저장된 riskLevel 사용 (자해 신호 반영된 정확한 값)
     const latestRisk = items[0].riskLevel as EpdsRiskLevel;
-    const recommendation = riskMessage(latestRisk);
     const nextRecommendedAt = nextRecommendedDate(latestRisk);
+
+    // AI 맞춤 권고 — Gemini 가용 시 사용, 아니면 정적 메시지 폴백
+    let recommendation = riskMessage(latestRisk);
+    if (isGeminiAvailable() && items.length >= 1) {
+      try {
+        const trendLabel = direction === 'improving' ? '호전 중' : direction === 'worsening' ? '악화 중' : direction === 'stable' ? '안정적' : '측정 부족';
+        const stageLabel: Record<string, string> = {
+          prenatal: '임신 중', postpartum_early: '산후 초기(0~3개월)', postpartum_mid: '산후 중기(4~6개월)', postpartum_late: '산후 후기(7개월+)', general: '일반',
+        };
+        const prompt = `EPDS 산전·산후 우울 자가검사 결과를 바탕으로 맞춤 권고 메시지를 2~3문장으로 작성해주세요.
+
+검사 정보:
+- 시기: ${stageLabel[items[0].stage] ?? '일반'}
+- 총 검사 횟수: ${items.length}회
+- 최근 점수: ${latestScore}점 (0~30점)
+- 평균 점수: ${Math.round(avgScore * 10) / 10}점
+- 추세: ${trendLabel}
+- 위험도: ${latestRisk}
+
+규칙: 따뜻한 한국어 구어체, 80자 이내. urgent/high 는 전문 도움 연락처(1577-0199) 포함. 코드블록·이모지 없이 텍스트만.`;
+
+        const aiRaw = await callGeminiText(prompt, {
+          systemPrompt: '당신은 산전·산후 정신건강 전문 상담사입니다. 검사 데이터를 바탕으로 따뜻하고 실질적인 권고를 제공하세요.',
+          temperature: 0.4,
+          maxTokens: 200,
+        }).catch(() => null);
+
+        if (aiRaw && aiRaw.trim().length > 10) {
+          recommendation = aiRaw.trim();
+        }
+      } catch { /* Gemini 실패 시 정적 메시지 유지 */ }
+    }
 
     success(res, {
       count: items.length,
