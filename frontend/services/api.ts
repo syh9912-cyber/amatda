@@ -246,17 +246,10 @@ export const coachingApi = {
     coachingAxios.post(`coaching/milestones/${childId}/check`, { checks }),
 };
 
-// Retention (growth countdown, daily tip, streak)
+// Retention (FCM 푸시 스케줄 등록만 유지 — 다른 라우트는 parent-level 시스템과 함께 정리됨)
 export const retentionApi = {
-  countdown: (childId: string) =>
-    api.get(`/retention/countdown/${childId}`),
-  streak: (childId: string) =>
-    api.get(`/retention/streak/${childId}`),
   pushSchedule: (data: Record<string, unknown>) =>
     api.post('/retention/push-schedule', data),
-  pushContent: (childId: string) =>
-    api.get(`/retention/push-content/${childId}`),
-  // 앱 접속 기록 (앱 진입 시 1회 호출 — 세션당)
 };
 
 // Growth Analysis (성장 분석)
