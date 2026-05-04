@@ -54,6 +54,8 @@ export function HospitalRegisterModal({
   const [memo, setMemo] = useState('');
   const [isUniversityHospital, setIsUniversityHospital] = useState(false);
   const [saving, setSaving] = useState(false);
+  // 추가 정보 아코디언 — 분만실 직통/주소/메모는 선택 입력 → 진입 장벽 ↓
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     if (!visible || !childId) return;
@@ -70,12 +72,15 @@ export function HospitalRegisterModal({
       setAddress(info?.address ?? '');
       setMemo(info?.memo ?? '');
       setIsUniversityHospital(info?.isUniversityHospital === true);
+      // 기존에 직통/주소/메모 중 하나라도 있으면 아코디언 자동 펼침 (수정 흐름)
+      const hasMore = !!(info?.deliveryWardPhone || info?.address || info?.memo);
+      setMoreOpen(hasMore);
     });
   }, [visible, childId, tab]);
 
   const handleSave = async () => {
     if (!name.trim() || !mainPhone.trim()) {
-      Alert.alert('필수 입력', '병원명과 대표 전화번호는 필수입니다.');
+      Alert.alert('필수 입력', '병원명과 급할 때 연결할 번호는 필수입니다.');
       return;
     }
     setSaving(true);
@@ -88,17 +93,21 @@ export function HospitalRegisterModal({
         memo: memo.trim() || undefined,
         isUniversityHospital: tab === 'delivery' ? isUniversityHospital : undefined,
       });
-      // 분만 병원이고 직통번호가 비어있으면 부드러운 추가 권유 (사용자 의도: "스마트 제안")
+      // 분만 병원 + 분만실/산부인과 직통 미입력 시 부드러운 추가 권유 (스마트 제안)
       if (tab === 'delivery' && !deliveryWardPhone.trim()) {
         Alert.alert(
           '저장 완료',
-          '밤이나 주말에 전화할 분만실 직통 번호가 따로 있나요?\n없으면 그냥 넘어가도 괜찮아요.',
+          '병원 안내에 따라 밤·주말에 따로 받는 직통 번호가 있나요?\n없으면 그냥 넘어가도 괜찮아요.',
           [
             { text: '없어요 / 다음에', style: 'cancel', onPress: () => { onSaved?.(); onClose(); } },
-            { text: '직통번호 추가하기', onPress: () => {/* 모달 유지 — 사용자가 직통번호 필드에 입력 후 다시 저장 */} },
+            {
+              text: '직통번호 추가하기',
+              onPress: () => {
+                setMoreOpen(true); // 아코디언 펼치기 — 사용자가 직통번호 필드에 입력 후 다시 저장
+              },
+            },
           ],
         );
-        // 모달 닫지 않음 — 사용자가 추가 입력 가능. "없어요" 선택 시 cancel onPress 가 닫음.
       } else {
         Alert.alert('저장 완료', `${tab === 'delivery' ? '분만 예정' : '현재 진료'} 병원 정보가 저장되었습니다.`);
         onSaved?.();
@@ -152,10 +161,10 @@ export function HospitalRegisterModal({
           {tab === 'delivery' ? (
             <View style={styles.guideBox}>
               <Text style={styles.guideText}>
-                친정에서의 출산 등으로 분만 장소가 진료 병원과 다를 경우 여기에 등록하세요.{'\n'}
-                <Text style={{ fontWeight: '700', color: '#7C5CFF' }}>
-                  SOS 화면에서 이 번호로 즉시 연결됩니다.
-                </Text>
+                <Text style={{ fontWeight: '800', color: '#7C5CFF' }}>
+                  낮에는 외래, 밤·휴일엔 분만실!
+                </Text>{'\n'}
+                시간에 맞춰 똑똑하게 연결합니다.
               </Text>
             </View>
           ) : (
@@ -188,11 +197,11 @@ export function HospitalRegisterModal({
               {isUniversityHospital && (
                 <View style={styles.uniInfoBox}>
                   <Text style={styles.uniInfoText}>
-                    💡 대학병원은 야간/주말 외래가 닫혀있어,{'\n'}
+                    💡 병원 안내에 따라 가장 빠르게 연결되는 번호를 등록해 주세요.{'\n'}
                     <Text style={{ fontWeight: '800', color: '#7C5CFF' }}>
-                      낮에도 분만실(MFICU) 직통 번호
+                      대학병원은 분만실 또는 고위험산모센터(MFICU) 직통번호
                     </Text>
-                    로 안내됩니다.
+                    {' '}등록을 권장해요.
                   </Text>
                 </View>
               )}
@@ -208,7 +217,10 @@ export function HospitalRegisterModal({
             placeholderTextColor="#BBB"
           />
 
-          <Text style={styles.label}>대표 전화번호 *</Text>
+          <Text style={styles.label}>📞 급할 때 바로 연결할 번호 *</Text>
+          <Text style={styles.subLabel}>
+            병원 외래든 분만실이든, 가장 빨리 받는 번호 하나만 입력해도 OK
+          </Text>
           <TextInput
             style={styles.input}
             value={mainPhone}
@@ -218,52 +230,62 @@ export function HospitalRegisterModal({
             keyboardType="phone-pad"
           />
 
-          <Text style={styles.label}>
-            {tab === 'delivery' && isUniversityHospital
-              ? '고위험 산모센터(MFICU) / 분만실 직통 *'
-              : '분만실 직통번호 (선택)'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            value={deliveryWardPhone}
-            onChangeText={setDeliveryWardPhone}
-            placeholder={
-              tab === 'delivery' && isUniversityHospital
-                ? '대학병원은 야간/주말 외래가 안 받아요'
-                : '예: 02-3468-3010 (있으면 SOS 시 우선 연결)'
-            }
-            placeholderTextColor="#BBB"
-            keyboardType="phone-pad"
-          />
-          {tab === 'delivery' && isUniversityHospital && !deliveryWardPhone.trim() && (
-            <Text style={styles.warnText}>
-              ⚠️ 대학병원은 분만실 직통 번호가 꼭 필요해요. 병원 안내 데스크에 문의하세요.
+          {/* 추가 정보 아코디언 — 분만실 직통 / 주소 / 메모 */}
+          <TouchableOpacity
+            style={styles.accordionHeader}
+            onPress={() => setMoreOpen((v) => !v)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.accordionHeaderText}>
+              {moreOpen ? '▾ 추가 정보 접기' : '▸ 추가 정보 입력하기 (선택)'}
             </Text>
+            <Text style={styles.accordionHeaderSub}>
+              {moreOpen ? '' : '분만실 직통 · 주소 · 메모'}
+            </Text>
+          </TouchableOpacity>
+
+          {moreOpen && (
+            <>
+              <Text style={styles.label}>분만실 / 산부인과 직통 번호 (선택)</Text>
+              <Text style={styles.subLabel}>
+                {tab === 'delivery' && isUniversityHospital
+                  ? '대학병원은 고위험산모센터(MFICU) 번호를 등록하면 좋아요'
+                  : '있으면 밤·주말에 우선 연결되는 번호'}
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={deliveryWardPhone}
+                onChangeText={setDeliveryWardPhone}
+                placeholder="예: 02-3468-3010"
+                placeholderTextColor="#BBB"
+                keyboardType="phone-pad"
+              />
+
+              <Text style={styles.label}>주소 (선택)</Text>
+              <View style={styles.addressRow}>
+                <TextInput
+                  style={[styles.input, { flex: 1, marginRight: 8 }]}
+                  value={address}
+                  onChangeText={setAddress}
+                  placeholder="주소를 입력하세요"
+                  placeholderTextColor="#BBB"
+                />
+                <TouchableOpacity style={styles.mapBtn} onPress={handleOpenMap} hitSlop={8}>
+                  <Text style={styles.mapBtnText}>🗺️ 지도</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.label}>메모 (가족 분만실 / 르바이에 / 기타 특징)</Text>
+              <TextInput
+                style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
+                value={memo}
+                onChangeText={setMemo}
+                placeholder="예: 가족 분만실 가능, 1인 입원실 신청 완료"
+                placeholderTextColor="#BBB"
+                multiline
+              />
+            </>
           )}
-
-          <Text style={styles.label}>주소 (선택)</Text>
-          <View style={styles.addressRow}>
-            <TextInput
-              style={[styles.input, { flex: 1, marginRight: 8 }]}
-              value={address}
-              onChangeText={setAddress}
-              placeholder="주소를 입력하세요"
-              placeholderTextColor="#BBB"
-            />
-            <TouchableOpacity style={styles.mapBtn} onPress={handleOpenMap} hitSlop={8}>
-              <Text style={styles.mapBtnText}>🗺️ 지도</Text>
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.label}>메모 (가족 분만실 / 르바이에 / 기타 특징)</Text>
-          <TextInput
-            style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
-            value={memo}
-            onChangeText={setMemo}
-            placeholder="예: 가족 분만실 가능, 1인 입원실 신청 완료"
-            placeholderTextColor="#BBB"
-            multiline
-          />
 
           <TouchableOpacity
             style={[styles.saveBtn, saving && { opacity: 0.5 }]}
@@ -319,6 +341,18 @@ const styles = StyleSheet.create({
   },
   guideText: { fontSize: 13.5, color: '#3C3450', lineHeight: 20 },
   label: { fontSize: 14, fontWeight: '700', color: '#333', marginTop: 14, marginBottom: 6 },
+  subLabel: { fontSize: 12, color: '#888', marginBottom: 8, marginTop: -2, lineHeight: 16 },
+  accordionHeader: {
+    marginTop: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: '#F5F5F7',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  accordionHeaderText: { fontSize: 14, fontWeight: '700', color: '#444' },
+  accordionHeaderSub: { fontSize: 12, color: '#888', marginTop: 2 },
   input: {
     borderWidth: 1,
     borderColor: '#DDD',
@@ -387,10 +421,4 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   uniInfoText: { fontSize: 13, color: '#5A4A20', lineHeight: 19 },
-  warnText: {
-    fontSize: 12,
-    color: '#D9534F',
-    marginTop: 6,
-    fontWeight: '600',
-  },
 });

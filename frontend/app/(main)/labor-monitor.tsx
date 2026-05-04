@@ -813,6 +813,9 @@ export default function LaborMonitorScreen() {
                   >
                     {i === 0 ? '⭐ ' : ''}{c.label}
                   </Text>
+                  {c.hospitalName && (
+                    <Text style={styles.phoneChoiceHospitalName}>{c.hospitalName}</Text>
+                  )}
                   {c.subLabel && (
                     <Text style={styles.phoneChoiceSubLabel}>{c.subLabel}</Text>
                   )}
@@ -1413,6 +1416,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#888',
     marginTop: 2,
+  },
+  phoneChoiceHospitalName: {
+    fontSize: 12,
+    color: '#444',
+    marginTop: 2,
+    fontWeight: '600',
   },
   phoneChoicePhone: {
     fontSize: 13,

@@ -77,6 +77,8 @@ export interface PickedPhone {
   label: string;
   /** UI 표시용 부가 설명 (예: "밤/주말 우선", "낮 진료시간 우선") */
   subLabel?: string;
+  /** 사용자가 등록한 실제 병원명 (예: "삼성서울병원") — 모달 가독성 ↑ */
+  hospitalName?: string;
 }
 
 /**
@@ -115,7 +117,7 @@ function isClinicHours(now: Date = new Date()): boolean {
 function buildCandidates(
   delivery: HospitalInfo | null,
   clinic: HospitalInfo | null,
-): { phone?: string; source: PhoneSource; label: string; subLabel?: string }[] {
+): { phone?: string; source: PhoneSource; label: string; subLabel?: string; hospitalName?: string }[] {
   const isUni = delivery?.isUniversityHospital === true;
   return [
     {
@@ -123,24 +125,28 @@ function buildCandidates(
       source: 'delivery_ward',
       label: isUni ? '고위험 산모센터(MFICU) / 분만실' : '분만실 직통',
       subLabel: isUni ? '대학병원 — 24시간 응급 연결' : '밤/주말 우선',
+      hospitalName: delivery?.name,
     },
     {
       phone: delivery?.mainPhone,
       source: 'delivery_main',
       label: '분만 병원 대표',
       subLabel: isUni ? '교환 통해 분만실 연결 요청' : undefined,
+      hospitalName: delivery?.name,
     },
     {
       phone: clinic?.deliveryWardPhone,
       source: 'clinic_ward',
       label: '진료 병원 분만실',
       subLabel: '밤/주말 우선',
+      hospitalName: clinic?.name,
     },
     {
       phone: clinic?.mainPhone,
       source: 'clinic_main',
       label: '외래 대표',
       subLabel: '낮 진료시간 우선',
+      hospitalName: clinic?.name,
     },
   ];
 }
@@ -178,7 +184,13 @@ export async function pickDeliveryPhone(
     if (options?.isEmergency && src === 'clinic_main') continue;
     const cand = all.find((c) => c.source === src);
     if (cand?.phone) {
-      return { phone: cand.phone, source: cand.source, label: cand.label, subLabel: cand.subLabel };
+      return {
+        phone: cand.phone,
+        source: cand.source,
+        label: cand.label,
+        subLabel: cand.subLabel,
+        hospitalName: cand.hospitalName,
+      };
     }
   }
   return null;
@@ -208,7 +220,13 @@ export async function pickAllPhones(
     if (options?.isEmergency && src === 'clinic_main') continue;
     const cand = all.find((c) => c.source === src);
     if (cand?.phone) {
-      out.push({ phone: cand.phone, source: cand.source, label: cand.label, subLabel: cand.subLabel });
+      out.push({
+        phone: cand.phone,
+        source: cand.source,
+        label: cand.label,
+        subLabel: cand.subLabel,
+        hospitalName: cand.hospitalName,
+      });
     }
   }
   return out;
