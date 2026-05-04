@@ -35,11 +35,16 @@ interface AccessTokenPayload {
   userId: string;
   typ: 'access';
 }
+/**
+ * Refresh token 페이로드 — `jti` 는 jsonwebtoken 의 jwtid 옵션이 자동으로 설정 (JWT 표준 클레임).
+ * payload 에 jti 직접 넣으면 "Bad options.jwtid" 충돌 발생 → 절대 넣지 말 것.
+ * verify 시 payload 에 자동으로 jti 가 포함되어 돌아옴.
+ */
 interface RefreshTokenPayload {
   userId: string;
   typ: 'refresh';
-  jti: string;
   fam: string; // familyId — 같은 로그인 세션의 refresh chain
+  jti?: string; // verify 결과에서만 사용 (sign 시 직접 넣지 않음)
 }
 
 const REFRESH_EXPIRES_DAYS = 7;
@@ -70,8 +75,9 @@ async function generateTokens(userId: string, familyId?: string) {
     env.JWT_SECRET,
     { algorithm: JWT_ALGO, expiresIn: '1h', issuer: JWT_ISSUER, audience: JWT_AUDIENCE },
   );
+  // payload 에는 jti 넣지 않음 — jwtid 옵션이 자동으로 표준 claim 으로 설정.
   const refreshToken = jwt.sign(
-    { userId, typ: 'refresh', jti: refreshJti, fam } satisfies RefreshTokenPayload,
+    { userId, typ: 'refresh', fam },
     env.JWT_REFRESH_SECRET,
     { algorithm: JWT_ALGO, expiresIn: `${REFRESH_EXPIRES_DAYS}d`, issuer: JWT_ISSUER, audience: JWT_AUDIENCE, jwtid: refreshJti },
   );
@@ -158,12 +164,13 @@ router.post('/refresh', async (req: Request, res: Response) => {
       error(res, '유효하지 않은 리프레시 토큰입니다', 401);
       return;
     }
+    const jti = payload.jti; // narrowing 보존을 위해 const 로 추출
 
     // #2 RFC 6819 rotation + reuse detection.
     // 트랜잭션으로 jti 상태 read+update 를 원자적으로 처리 — 두 클라이언트가 동시에 같은 jti
     // 사용 시도해도 한쪽만 성공.
     const result = await db.runTransaction(async (tx) => {
-      const ref = collections.refreshTokens.doc(payload.jti);
+      const ref = collections.refreshTokens.doc(jti);
       const doc = await tx.get(ref);
       if (!doc.exists) {
         // DB 에 없는 jti — 이전 시스템 또는 이미 정리된 토큰 → 거부 + 패밀리 무효화 시도
@@ -193,7 +200,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
     // 새 토큰 발급 — 같은 familyId 유지 (회전)
     const tokens = await generateTokens(result.userId, result.familyId);
     // 새 토큰 발급되면 이전 jti의 replacedBy 필드에 새 jti 기록 (감사 추적)
-    await collections.refreshTokens.doc(payload.jti).update({ replacedBy: tokens.refreshJti });
+    await collections.refreshTokens.doc(jti).update({ replacedBy: tokens.refreshJti });
     success(res, tokens);
   } catch (e) {
     // 만료/위변조 등 정상 흐름에서도 발생 — info 레벨로 기록하되 운영 에러는 추적 가능하게
