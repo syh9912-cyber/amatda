@@ -194,41 +194,6 @@ router.get('/schedule', authMiddleware, async (req: Request, res: Response) => {
 });
 
 /**
- * GET /api/vaccination/upcoming?childId=xxx&limit=5
- * 다가오는 접종 목록 (D-day 가까운 순, 미완료만)
- */
-router.get('/upcoming', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const childId = req.query.childId as string;
-    const limitStr = req.query.limit as string;
-    const limit = Math.min(parseInt(limitStr || '5', 10), 20);
-    if (!childId) { error(res, 'childId는 필수입니다'); return; }
-
-    const childDoc = await collections.children.doc(childId).get();
-    if (!childDoc.exists) { error(res, '아이를 찾을 수 없습니다', 404); return; }
-
-    const birthDate = childDoc.data()!.birthDate as string | null;
-    if (!birthDate) { error(res, '출생일이 등록되지 않은 아이입니다'); return; }
-
-    const schedule = calcVaccineDates(birthDate);
-
-    // 완료 기록
-    const doneSnap = await vaccinationsCol.where('childId', '==', childId).get();
-    const doneIds = new Set(doneSnap.docs.map((d) => d.data().vaccineId as string));
-
-    // 미완료 + 아직 지나지 않았거나 최근 지난 것 (dDay >= -30)
-    const upcoming = schedule
-      .filter((v) => !doneIds.has(v.id) && v.dDay >= -30)
-      .sort((a, b) => a.dDay - b.dDay)
-      .slice(0, limit);
-
-    success(res, upcoming);
-  } catch {
-    error(res, '다가오는 접종 조회 중 오류가 발생했습니다', 500);
-  }
-});
-
-/**
  * POST /api/vaccination/complete — 접종 완료 기록
  * body: { childId, vaccineId, completedAt?, hospitalName? }
  */
@@ -394,13 +359,6 @@ router.post('/schedule-alerts', authMiddleware, async (req: Request, res: Respon
   } catch {
     error(res, '접종 알림 예약 중 오류가 발생했습니다', 500);
   }
-});
-
-/**
- * GET /api/vaccination/presets — 접종 프리셋 목록 (클라이언트 캐시용)
- */
-router.get('/presets', authMiddleware, (_req: Request, res: Response) => {
-  success(res, NATIONAL_VACCINES);
 });
 
 export default router;

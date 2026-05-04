@@ -340,8 +340,6 @@ export const recommendationApi = {
     api.get('/recommendations/list', {
       params: { category, ageGroup, temperament },
     }),
-  seed: () =>
-    api.post('/recommendations/seed'),
 };
 
 // Coparenting (가족육아)
@@ -698,8 +696,6 @@ export const birthBagShareApi = {
 export const vaccinationApi = {
   schedule: (childId: string) =>
     api.get('/vaccination/schedule', { params: { childId } }),
-  upcoming: (childId: string, limit = 5) =>
-    api.get('/vaccination/upcoming', { params: { childId, limit: String(limit) } }),
   complete: (childId: string, vaccineId: string, completedAt?: string, hospitalName?: string) =>
     api.post('/vaccination/complete', { childId, vaccineId, completedAt, hospitalName }),
   undoComplete: (id: string) =>

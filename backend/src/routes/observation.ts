@@ -1,9 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
-import { generateCrossReport } from '../services/ai.service';
 import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
-import { parseInnateDataFull } from '../utils/parse';
 import { getChildIfAccessible } from '../utils/childAccess';
 
 const router = Router();
@@ -55,27 +53,6 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     await collections.observations.doc(req.params.id as string).delete();
     success(res, { id: req.params.id, message: '삭제되었습니다' });
   } catch { error(res, '관찰 일기 삭제 중 오류가 발생했습니다', 500); }
-});
-
-router.get('/report/:childId', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const access = await getChildIfAccessible(req.params.childId as string, req.userId, 'viewRecords', res);
-    if (!access) return;
-
-    const data = access.data;
-    const innate = parseInnateDataFull(data.innateData) as { dominantType: string; fiveElements: Record<string, number> };
-
-    const snap = await collections.observations
-      .where('childId', '==', req.params.childId)
-      .orderBy('createdAt', 'desc').limit(10).get();
-    const recentTexts = snap.docs.map((d) => d.data().rawContent as string).filter(Boolean);
-
-    const report = generateCrossReport(innate, recentTexts);
-    const observedSummary = recentTexts.length
-      ? `최근 ${recentTexts.length}개 관찰 일기 기반`
-      : '관찰 데이터 없음';
-    success(res, { childName: data.name, innateType: innate.dominantType, fiveElements: innate.fiveElements, observedSummary, ...report });
-  } catch { error(res, '리포트 생성 중 오류가 발생했습니다', 500); }
 });
 
 export default router;

@@ -189,59 +189,6 @@ router.get('/list', authMiddleware, async (req: Request, res: Response) => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  POST /api/recommendations/seed — 시드 데이터 DB 저장               */
-/* ------------------------------------------------------------------ */
-router.post('/seed', async (_req: Request, res: Response) => {
-  try {
-    const temperaments = ['활동형', '탐구형', '안정형', '분석형', '창의형'];
-    let created = 0;
-    let skipped = 0;
-
-    for (const seed of RECOMMENDATION_SEEDS) {
-      for (const temp of temperaments) {
-        // 이미 있는지 확인
-        const existing = await collections.recommendationCache
-          .where('title', '==', seed.title)
-          .where('ageGroup', '==', seed.ageGroup)
-          .where('temperament', '==', temp)
-          .limit(1)
-          .get();
-
-        if (!existing.empty) {
-          skipped++;
-          continue;
-        }
-
-        const docId = genId();
-        await collections.recommendationCache.doc(docId).set({
-          category: seed.category,
-          title: seed.title,
-          ageGroup: seed.ageGroup,
-          temperament: temp,
-          answer: seed.answer,
-          reasons: seed.reasons,
-          actions: seed.actions,
-          personalNote: seed.temperamentNotes[temp] ?? '',
-          source: 'seed',
-          createdAt: new Date().toISOString(),
-        });
-        created++;
-      }
-    }
-
-    success(res, {
-      message: `시드 완료: ${created}개 생성, ${skipped}개 스킵 (이미 존재)`,
-      created,
-      skipped,
-      total: RECOMMENDATION_SEEDS.length * temperaments.length,
-    });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : '시드 중 오류';
-    error(res, msg, 500);
-  }
-});
-
-/* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
