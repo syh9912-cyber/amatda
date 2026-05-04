@@ -45,18 +45,32 @@ async function verifyGoogleToken(accessToken: string): Promise<SocialUserInfo> {
     const azpOk = info.azp && allowed.has(info.azp);
     if (!audOk && !azpOk) {
       /**
-       * 디버깅용 진단 — invisible character (newline, BOM, zero-width 등) 포함 여부 확인용.
-       * JSON.stringify 로 escape character 까지 노출. PII 안전하게 길이 + 끝 5자만 보여줌.
+       * 직접 diff 진단 — 길이가 같은데 비교 실패 시 정확한 mismatch index 찾기.
+       * project_id 부분 + 가운데 unique part 첫/끝 8자 + 첫 mismatch index 노출.
        */
-      const diag = (id: string): string => {
-        if (!id) return '(empty)';
-        const tail = JSON.stringify(id.slice(-5)); // \n, \r 등 invisible char 까지 escape 표시
-        const charCodes = Array.from(id.slice(-5)).map((c) => c.charCodeAt(0)).join(',');
-        return `len=${id.length} tail=${tail} codes=[${charCodes}]`;
+      const expected = env.GOOGLE_CLIENT_ID;
+      const aud = info.aud ?? '';
+      const compare = (a: string, b: string): string => {
+        const minLen = Math.min(a.length, b.length);
+        let firstDiff = -1;
+        for (let i = 0; i < minLen; i++) {
+          if (a.charCodeAt(i) !== b.charCodeAt(i)) {
+            firstDiff = i;
+            break;
+          }
+        }
+        if (firstDiff === -1 && a.length === b.length) return 'IDENTICAL';
+        if (firstDiff === -1) return `lengths differ a=${a.length} b=${b.length}`;
+        const aChar = a.charCodeAt(firstDiff);
+        const bChar = b.charCodeAt(firstDiff);
+        return `firstDiff@${firstDiff} a[${firstDiff}]=${aChar}(${JSON.stringify(a[firstDiff])}) b[${firstDiff}]=${bChar}(${JSON.stringify(b[firstDiff])})`;
       };
-      const expectedDiags = Array.from(allowed).map(diag).join(' | ');
+      const audDiff = compare(expected, aud);
+      // strict equality double-check
+      const audEq = expected === aud;
+      const audSetHas = allowed.has(aud);
       throw new Error(
-        `Google 토큰 audience 불일치 — expected:[${expectedDiags}] got aud=[${diag(info.aud ?? '')}] azp=[${diag(info.azp ?? '')}]`,
+        `Google 토큰 audience 불일치 — diff(expected,aud)=[${audDiff}] expected===aud:${audEq} Set.has(aud):${audSetHas} expectedLen=${expected.length} audLen=${aud.length}`,
       );
     }
   }
