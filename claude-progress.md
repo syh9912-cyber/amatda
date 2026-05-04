@@ -42,8 +42,8 @@
 - APK (EAS): 빌드 진행 중 (커밋 c42d17f 기준)
 
 ### 📋 남은 이슈
-- [ ] APK EAS 빌드 성공 여부 확인 (진행 중)
-- [ ] OTA `eas update --branch preview` (빌드 성공 후)
+- [x] APK EAS 빌드 성공 (v2.8.1, 797초, FINISHED)
+- [ ] OTA `eas update --branch preview` (코드변경 반영 위해 권장)
 - [ ] components/report/* onboarding 전용 위치 재배치 (선택사항)
 
 ---
