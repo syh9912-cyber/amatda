@@ -279,7 +279,7 @@ export function HospitalRegisterModal({
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.label}>메모 (가족 분만실 / 르바이에 / 기타 특징)</Text>
+              <Text style={styles.label}>메모 (가족 분만실 / 르봐이예 / 기타 특징)</Text>
               <TextInput
                 style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
                 value={memo}
