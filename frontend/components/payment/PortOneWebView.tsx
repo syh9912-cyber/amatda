@@ -152,7 +152,27 @@ export function PortOneWebView({ visible, params, onResult, onClose }: Props) {
           domStorageEnabled
           thirdPartyCookiesEnabled
           setSupportMultipleWindows={false}
-          originWhitelist={['*']}
+          // 보안: PortOne 결제 흐름에 필요한 도메인 + 백엔드 호스트 + custom scheme(딥링크) 만 허용
+          originWhitelist={[
+            'https://*.portone.io',
+            'https://*.iamport.kr',
+            'https://api-usglfifguq-uc.a.run.app',
+            'https://amatda-parenting.web.app',
+            // 결제 PG 도메인 — 토스/카카오/네이버페이 등 (필요 시 추가)
+            'https://*.tosspayments.com',
+            'https://*.kakaopay.com',
+            'https://*.naverpay.com',
+            'amatda://',
+            'about:',
+          ]}
+          // 위 외 도메인 navigation 차단 (피싱 사이트 우회 차단)
+          onShouldStartLoadWithRequest={(req: { url?: string }) => {
+            const url = req.url || '';
+            const allowed = [
+              'https://', 'amatda://', 'about:', 'data:image',
+            ].some((p) => url.startsWith(p));
+            return allowed;
+          }}
         />
       ) : null}
     </Modal>

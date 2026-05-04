@@ -19,6 +19,7 @@ function yesterdayKST(): string {
 import { calculateAge } from '../services/age.calculator';
 import { safeParse } from '../utils/parse';
 import { getChildIfAccessible } from '../utils/childAccess';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -552,6 +553,14 @@ router.post('/push-schedule', authMiddleware, async (req: Request, res: Response
 
     if (!childId || !pushToken) {
       error(res, 'childId와 pushToken은 필수입니다');
+      return;
+    }
+
+    // 보안: pushToken 형식 검증 — Expo push token 만 허용 (위조 발송 차단).
+    // Expo 토큰 형식: ExponentPushToken[xxxxx] 또는 ExpoPushToken[xxxxx]
+    if (!/^Expo(?:nent)?PushToken\[[A-Za-z0-9_-]+\]$/.test(pushToken)) {
+      logger.warn('retention/push-schedule', 'invalid pushToken format');
+      error(res, 'pushToken 형식이 올바르지 않습니다');
       return;
     }
 

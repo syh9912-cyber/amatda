@@ -117,17 +117,40 @@ function useNotificationSetup() {
     setup().catch(() => {});
 
     // Handle notification tap -> navigate to relevant screen
+    // 보안: data.screen 을 화이트리스트로 제한 (위조 push 의 라우트 탈출 차단).
+    const ALLOWED_PUSH_SCREENS = new Set([
+      'home', 'baby-tracker', 'pregnancy', 'fever', 'labor-monitor', 'sos',
+      'chatbot', 'community', 'recommendations', 'vaccination', 'birth-bag',
+      'gdm', 'lullaby', 'cry-analyzer', 'poop-analyzer', 'album', 'growth-stats',
+      'sleep-predict', 'play-learning', 'monthly-characteristic', 'subscription',
+      'notification-settings', 'parent-level', 'academy', 'clinic', 'coparenting',
+      'ai-analysis', 'recommendation-list', 'mom-location-setup',
+    ]);
     responseListener.current = Notifications.addNotificationResponseReceivedListener(
       (response) => {
         const data = response.notification.request.content.data as
           | Record<string, unknown>
           | undefined;
         const screen = typeof data?.screen === 'string' ? data.screen : null;
-        if (screen) {
+        if (screen && ALLOWED_PUSH_SCREENS.has(screen)) {
           router.push(`/(main)/${screen}` as never);
         }
       },
     );
+
+    // 콜드 스타트 (앱 종료 상태에서 푸시 클릭) 시 마지막 응답 처리
+    Notifications.getLastNotificationResponseAsync()
+      .then((response) => {
+        if (!response) return;
+        const data = response.notification.request.content.data as
+          | Record<string, unknown>
+          | undefined;
+        const screen = typeof data?.screen === 'string' ? data.screen : null;
+        if (screen && ALLOWED_PUSH_SCREENS.has(screen)) {
+          router.push(`/(main)/${screen}` as never);
+        }
+      })
+      .catch(() => {});
 
     return () => {
       cancelled = true;

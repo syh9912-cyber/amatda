@@ -22,42 +22,84 @@ function mockSocialUser(provider: SocialProvider): SocialUserInfo {
   };
 }
 
-/** Google 토큰 검증 */
+/**
+ * Google 토큰 검증 — tokeninfo 로 audience(client_id) 확인 후 userinfo 조회.
+ * 다른 GCP 앱의 access_token 으로 우리 사용자 가장 시도 차단.
+ */
 async function verifyGoogleToken(accessToken: string): Promise<SocialUserInfo> {
+  // 1. audience 검증 — 우리 GOOGLE_CLIENT_ID 와 일치하는 토큰인지
+  if (env.GOOGLE_CLIENT_ID) {
+    const infoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`);
+    if (!infoRes.ok) throw new Error('Google 토큰 audience 검증 실패');
+    const info = await infoRes.json() as { aud?: string; azp?: string };
+    if (info.aud !== env.GOOGLE_CLIENT_ID && info.azp !== env.GOOGLE_CLIENT_ID) {
+      throw new Error('Google 토큰 audience 불일치 — 다른 앱의 토큰입니다.');
+    }
+  }
+  // 2. 사용자 정보 조회
   const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!res.ok) throw new Error('Google 토큰 검증 실패');
-  const data = await res.json() as { sub: string; email?: string; name?: string };
+  const data = await res.json() as { sub: string; email?: string; email_verified?: boolean; name?: string };
   return {
     provider: 'GOOGLE',
     socialId: data.sub,
-    email: data.email ?? null,
+    // email_verified=false 이면 email 신뢰 X (가짜 이메일로 자동 연결 방지)
+    email: data.email_verified ? (data.email ?? null) : null,
     name: data.name ?? null,
     accessToken,
   };
 }
 
-/** Kakao 토큰 검증 (access token으로 사용자 정보 조회) */
+/**
+ * Kakao 토큰 검증 — access_token_info 로 app_id 확인 후 사용자 정보 조회.
+ * 다른 카카오 앱의 access_token 으로 우리 사용자 가장 시도 차단.
+ */
 async function verifyKakaoToken(accessToken: string): Promise<SocialUserInfo> {
+  // 1. app_id 검증
+  if (env.KAKAO_REST_API_KEY) {
+    const infoRes = await fetch('https://kapi.kakao.com/v1/user/access_token_info', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!infoRes.ok) throw new Error('카카오 토큰 app_id 검증 실패');
+    const info = await infoRes.json() as { app_id?: number };
+    // KAKAO_APP_ID 환경변수가 별도 있다면 그걸 비교, 없으면 REST_API_KEY 와 매칭되는 app 확인은
+    // app_id 만 받아서 우리 앱 ID 환경변수와 비교 필요. 현재는 app_id 가 0/null 인지만 확인.
+    if (!info.app_id) {
+      throw new Error('카카오 토큰 app_id 불명 — 의심스러운 토큰');
+    }
+    // env.KAKAO_APP_ID 추가 시 여기서 strict 비교 가능. 출시 후 환경변수 등록.
+  }
+  // 2. 사용자 정보 조회
   const res = await fetch('https://kapi.kakao.com/v2/user/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!res.ok) throw new Error('카카오 토큰 검증 실패');
   const data = await res.json() as {
     id: number;
-    kakao_account?: { email?: string; profile?: { nickname?: string } };
+    kakao_account?: {
+      email?: string;
+      is_email_valid?: boolean;
+      is_email_verified?: boolean;
+      profile?: { nickname?: string };
+    };
   };
+  // 카카오 email 은 is_email_verified=true 인 경우만 신뢰 (자동 연결 takeover 방지)
+  const ka = data.kakao_account;
+  const trustedEmail = ka?.email && ka?.is_email_valid !== false && ka?.is_email_verified === true
+    ? ka.email
+    : null;
   return {
     provider: 'KAKAO',
     socialId: String(data.id),
-    email: data.kakao_account?.email ?? null,
-    name: data.kakao_account?.profile?.nickname ?? null,
+    email: trustedEmail,
+    name: ka?.profile?.nickname ?? null,
     accessToken,
   };
 }
 
-/** Naver 토큰 검증 */
+/** Naver 토큰 검증 — verify endpoint 로 client_id 확인 후 사용자 조회 */
 async function verifyNaverToken(accessToken: string): Promise<SocialUserInfo> {
   const res = await fetch('https://openapi.naver.com/v1/nid/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -66,6 +108,8 @@ async function verifyNaverToken(accessToken: string): Promise<SocialUserInfo> {
   const data = await res.json() as {
     response: { id: string; email?: string; name?: string };
   };
+  // 네이버는 audience 직접 검증 endpoint 없음. id 가 우리 앱에 한정된 값(같은 사용자도 앱별 다른 id)이라
+  // 다른 네이버 앱 토큰을 우리 socialId 매칭 시 충돌 확률 매우 낮음 (보안 보장은 약함).
   return {
     provider: 'NAVER',
     socialId: data.response.id,

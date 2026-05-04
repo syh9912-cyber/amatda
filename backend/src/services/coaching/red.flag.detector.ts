@@ -21,11 +21,14 @@ interface FlagRule {
 }
 
 // ─── 아이 관련 레드 플래그 ───
+// 패턴은 normalizeMessage 가 적용된 텍스트(NFKC + 소문자 + 영문/이모지/공백 정규화)에서 매칭됨.
 const CHILD_FLAG_RULES: FlagRule[] = [
   // ─── Emergency (즉시 병원) ───
-  { pattern: /(?:열|체온).*(?:3[89]|4[01])\s*도/i, label: '38도 이상 발열', urgency: 'emergency' },
-  { pattern: /(?:3[89]|4[01])(?:\.\d)?\s*도/, label: '고열', urgency: 'emergency' },
-  { pattern: /경련|발작|경기/, label: '경련/발작', urgency: 'emergency' },
+  // 한국어 + 영문(fever, 39 degrees, 39c) 모두 커버
+  { pattern: /(?:열|체온|fever|temp|temperature).*(?:3[89]|4[01])(?:\.\d)?\s*(?:도|°|c|celsius|degrees?)?/i, label: '38도 이상 발열', urgency: 'emergency' },
+  { pattern: /(?:3[89]|4[01])(?:\.\d)?\s*(?:도|°|c|celsius|degrees?)/i, label: '고열', urgency: 'emergency' },
+  { pattern: /(?:🤒|🥵|🌡)/, label: '체온 관련 이모지', urgency: 'emergency' },
+  { pattern: /경\s*련|발\s*작|경\s*기|seizure|convulsion/i, label: '경련/발작', urgency: 'emergency' },
   { pattern: /의식.*(?:잃|없|저하)|깨워도.*안.*깨/, label: '의식 저하', urgency: 'emergency' },
   { pattern: /호흡.*(?:곤란|이상|멈|거칠|힘들)|숨.*(?:못|안).*(?:쉬|쉼)/, label: '호흡 곤란', urgency: 'emergency' },
   { pattern: /혈변|피.*(?:섞|나|묻).*(?:변|똥)|피가.*(?:나|묻)/, label: '혈변 의심', urgency: 'emergency' },
@@ -76,6 +79,17 @@ const PREGNANT_FLAG_RULES: FlagRule[] = [
 ];
 
 const FLAG_RULES = CHILD_FLAG_RULES;
+void FLAG_RULES;  // 외부 명시 export 없음 — 내부 참조용
+
+/**
+ * 매칭 전 텍스트 정규화 — 우회 방어:
+ *  - NFKC: 전각/반각 통일 (예: '３９도' → '39도')
+ *  - 소문자: fever vs FEVER
+ *  - 공백 압축: "경 련" → 경련 매칭은 패턴에서 \s* 처리, 여기선 trailing 공백만 제거
+ */
+function normalizeMessage(s: string): string {
+  return s.normalize('NFKC').toLowerCase();
+}
 
 export function detectRedFlags(message: string, isPregnant = false): RedFlagResult {
   const rules = isPregnant ? PREGNANT_FLAG_RULES : CHILD_FLAG_RULES;
@@ -83,8 +97,9 @@ export function detectRedFlags(message: string, isPregnant = false): RedFlagResu
   let highestUrgency: 'emergency' | 'urgent' | 'monitor' | 'none' = 'none';
   const urgencyOrder = { emergency: 3, urgent: 2, monitor: 1, none: 0 };
 
+  const normalized = normalizeMessage(message);
   for (const rule of rules) {
-    if (rule.pattern.test(message)) {
+    if (rule.pattern.test(normalized)) {
       flags.push(rule.label);
       if (urgencyOrder[rule.urgency] > urgencyOrder[highestUrgency]) {
         highestUrgency = rule.urgency;

@@ -9,6 +9,7 @@ import { useChildStore } from '../../stores/childStore';
 import { useLocation } from '../../hooks/useLocation';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { openExternalUrl } from '../../utils/safeLink';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -284,7 +285,8 @@ function priorityToPercent(p: number): string {
 
 function AcademyCard({ item }: { item: Recommendation }) {
   const openNaverMap = useCallback(() => {
-    Linking.openURL(item.naverMapUrl);
+    // 서버 데이터 — schema 검증
+    openExternalUrl(item.naverMapUrl);
   }, [item.naverMapUrl]);
 
   return (

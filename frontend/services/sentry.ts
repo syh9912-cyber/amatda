@@ -22,6 +22,8 @@ export function initSentry(): void {
     attachScreenshot: true,
     enableNativeFramesTracking: true,
     integrations: [navigationIntegration],
+    // PII 보호 — IP/사용자 헤더 등 자동 첨부 끔
+    sendDefaultPii: false,
   });
 }
 
@@ -40,8 +42,11 @@ export function captureError(error: unknown, context?: Record<string, unknown>):
   }
 }
 
-export function setUser(userId: string, email?: string): void {
-  Sentry.setUser({ id: userId, email });
+export function setUser(userId: string, _email?: string): void {
+  // 보안: email 은 Sentry 에 보내지 않음 (PII).
+  // 디버깅에 필요하면 userId 로 Firestore users/{userId} 조회.
+  // _email 매개변수는 호출부 호환성 유지용 (silently ignored).
+  Sentry.setUser({ id: userId });
 }
 
 export function clearUser(): void {

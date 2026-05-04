@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -152,64 +153,14 @@ router.post('/premium/start-trial', authMiddleware, async (req: Request, res: Re
   }
 });
 
-// POST /api/subscription/premium/subscribe — 프리미엄 구독 (결제 후)
-router.post('/premium/subscribe', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const { planId, paymentMethod } = req.body as {
-      planId: string;
-      paymentMethod: string;
-    };
-
-    if (!planId || !paymentMethod) {
-      error(res, 'planId와 paymentMethod는 필수입니다');
-      return;
-    }
-
-    const plan = planId === 'premium_yearly' ? PLANS.yearly : PLANS.monthly;
-    const validMethod = PAYMENT_METHODS.find((m) => m.id === paymentMethod);
-    if (!validMethod) { error(res, '유효하지 않은 결제 수단입니다'); return; }
-
-    const now = new Date();
-    const expiresAt = new Date(now);
-    if (plan.period === 'year') {
-      expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-    } else {
-      expiresAt.setMonth(expiresAt.getMonth() + 1);
-    }
-
-    // 결제 기록 저장
-    const paymentId = genId();
-    await collections.subscriptions.doc(paymentId).set({
-      userId: req.userId,
-      type: 'premium',
-      planId: plan.id,
-      planName: plan.name,
-      price: plan.price,
-      paymentMethod,
-      status: 'ACTIVE',
-      startedAt: now.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-      createdAt: now.toISOString(),
-    });
-
-    // 유저 티어 업데이트
-    await collections.users.doc(req.userId!).update({
-      subscriptionTier: 'PAID',
-      premiumStartedAt: now.toISOString(),
-      premiumExpiresAt: expiresAt.toISOString(),
-      premiumPlanId: plan.id,
-    });
-
-    success(res, {
-      subscriptionId: paymentId,
-      plan: plan.name,
-      price: plan.price,
-      expiresAt: expiresAt.toISOString(),
-      message: `${plan.name} 구독이 시작되었습니다!`,
-    });
-  } catch {
-    error(res, '구독 처리 중 오류', 500);
-  }
+// POST /api/subscription/premium/subscribe — DEPRECATED 보안 위험 라우트 차단
+//
+// 이 라우트는 결제 검증 없이 planId 만으로 PAID 활성화하던 dead code 였음.
+// 누구나 호출하면 영구 무료 PAID 가 됐던 CRITICAL 취약점 (보안 점검 2026-05-04 발견).
+// 모든 결제 활성화는 반드시 payment.ts (PortOne/Google/Apple 영수증 검증) 경유해야 함.
+router.post('/premium/subscribe', authMiddleware, async (_req: Request, res: Response) => {
+  logger.warn('subscription.premium.subscribe', '차단된 라우트 호출 — payment.ts 경로 사용 필요');
+  error(res, '이 결제 경로는 더 이상 사용되지 않습니다. 앱을 최신 버전으로 업데이트해주세요.', 410);
 });
 
 // GET /api/subscription/premium/plans — 요금제 목록

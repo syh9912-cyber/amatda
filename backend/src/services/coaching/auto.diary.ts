@@ -176,10 +176,11 @@ async function writeDiary(
         ? data.coachingSessions.map((s) => `${s.category}: "${s.message}" → "${s.answer}"`).join('\n')
         : '오늘은 상담 없음';
 
+      // CLAUDE.md: AI prompt 에 아이 실명/태명 절대 금지 → '아이'/'아가' 라벨 사용
       const prompt = isPregnant
         ? `너는 임산부 일기 작가다. 아래 데이터를 바탕으로 따뜻한 임신일기를 써라.
 
-태명: ${childName} (${ageInfo})
+대상: 아가 (${ageInfo})
 날짜: ${date}
 
 오늘의 기록:
@@ -191,13 +192,13 @@ ${coachingDesc}
 규칙:
 - 3~5문장. 임산부 시점 일기체로.
 - 데이터를 자연스러운 이야기로 녹여라. 숫자 나열 금지.
-- 태명을 사용하고, 임신 주수에 맞는 감성을 담아라.
+- "아가"라는 호칭을 사용하고, 임신 주수에 맞는 감성을 담아라.
 - 몸이 힘든 날이면 위로를, 좋은 날이면 기쁨을 함께 나눠라.
 - 마지막 문장은 아가에 대한 기대나 따뜻한 마무리로.
 - 100~200자 사이.`
         : `너는 육아 일기 작가다. 아래 데이터를 바탕으로 따뜻한 육아일기를 써라.
 
-아이: ${childName} (${ageInfo}, ${temperament} 기질)
+대상: 아이 (${ageInfo}, ${temperament} 기질)
 날짜: ${date}
 
 오늘의 기록:

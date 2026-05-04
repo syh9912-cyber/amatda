@@ -73,6 +73,63 @@ function paymentDocIdFor(platform: 'portone' | 'google' | 'apple', key: string):
   return `${platform}_${createHash('sha256').update(key).digest('hex')}`;
 }
 
+/**
+ * PG raw 응답에서 PII / 카드정보 / 구매자 개인정보를 제거하고
+ * 회계/디버깅에 필요한 화이트리스트 필드만 추출.
+ *
+ * 보안 점검 결과 (2026-05-04): 기존엔 PG raw 를 통째로 Firestore 에 저장 →
+ * card.number(masked) / customer.email / customer.phoneNumber / buyer.* 등이
+ * Firestore export / 백업에 동봉돼 GDPR / 결제표준(PCI-DSS) 위반 우려.
+ */
+function sanitizePortOneRaw(p: unknown): Record<string, unknown> {
+  const r = (p ?? {}) as Record<string, unknown>;
+  const method = (r.method ?? {}) as Record<string, unknown>;
+  const channel = (r.channel ?? {}) as Record<string, unknown>;
+  const amount = (r.amount ?? {}) as Record<string, unknown>;
+  return {
+    id: r.id,
+    status: r.status,
+    storeId: r.storeId,
+    orderName: r.orderName,
+    paidAt: r.paidAt,
+    cancelledAt: r.cancelledAt,
+    currency: r.currency,
+    amountTotal: amount.total,
+    amountPaid: amount.paid,
+    methodType: method.type,
+    methodProvider: method.provider,
+    channelType: channel.type,
+    channelKey: channel.key,
+    // 명시적 제외: customer, buyer, card, customData (PII / 카드정보)
+  };
+}
+
+function sanitizeGoogleRaw(p: unknown): Record<string, unknown> {
+  const r = (p ?? {}) as Record<string, unknown>;
+  return {
+    state: r.state,
+    expiryTime: r.expiryTime,
+    autoRenewing: r.autoRenewing,
+    productId: r.productId,
+    // 명시적 제외: emailAddress / orderId / linkedPurchaseToken / acknowledgementState 등
+  };
+}
+
+function sanitizeAppleRaw(p: unknown): Record<string, unknown> {
+  const r = (p ?? {}) as Record<string, unknown>;
+  const tx = (r.txInfo ?? {}) as Record<string, unknown>;
+  const renew = (r.renewInfo ?? {}) as Record<string, unknown>;
+  return {
+    productId: tx.productId,
+    transactionType: tx.type,
+    expiresDate: tx.expiresDate,
+    purchaseDate: tx.purchaseDate,
+    autoRenewStatus: renew.autoRenewStatus,
+    environment: tx.environment,
+    // 명시적 제외: appAccountToken / originalTransactionId / signedDate / deviceVerification
+  };
+}
+
 async function activateUserSubscription(
   userId: string,
   productId: string,
@@ -153,7 +210,7 @@ router.post('/portone/verify', authMiddleware, async (req: Request, res: Respons
       paidAt: result.payment.paidAt ?? now.toISOString(),
       expiresAt: expiresAt.toISOString(),
       webhookVerifiedAt: now.toISOString(),
-      raw: result.payment as unknown as Record<string, unknown>,
+      raw: sanitizePortOneRaw(result.payment),
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     });
@@ -235,7 +292,7 @@ router.post('/portone/billing-key', authMiddleware, async (req: Request, res: Re
       paymentMethod: charge.method?.type ?? 'card',
       paidAt: charge.paidAt ?? now.toISOString(),
       expiresAt: expiresAt.toISOString(),
-      raw: charge as unknown as Record<string, unknown>,
+      raw: sanitizePortOneRaw(charge),
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     });
@@ -353,7 +410,9 @@ router.post('/iap/verify', authMiddleware, async (req: Request, res: Response) =
       paymentMethod: platform === 'google' ? 'google_play' : 'apple_iap',
       paidAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
-      raw: rawForLog,
+      raw: platform === 'google'
+        ? sanitizeGoogleRaw((rawForLog as { google?: unknown }).google)
+        : sanitizeAppleRaw((rawForLog as { apple?: unknown }).apple),
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     });
@@ -501,7 +560,7 @@ router.post('/webhook/portone', async (req: Request, res: Response) => {
             status: payment.status,
             updatedAt: new Date().toISOString(),
             webhookVerifiedAt: new Date().toISOString(),
-            raw: payment as unknown as Record<string, unknown>,
+            raw: sanitizePortOneRaw(payment),
           });
         }
       } catch (e) {
@@ -597,7 +656,7 @@ router.post('/webhook/google', async (req: Request, res: Response) => {
             status: verify.sub.state.includes('ACTIVE') ? 'PAID' : 'CANCELLED',
             expiresAt: verify.sub.expiryTime,
             webhookVerifiedAt: new Date().toISOString(),
-            raw: verify.sub.raw as Record<string, unknown>,
+            raw: sanitizeGoogleRaw(verify.sub.raw),
             updatedAt: new Date().toISOString(),
           });
           // 사용자 만료일 갱신
@@ -719,7 +778,7 @@ router.post('/webhook/apple', async (req: Request, res: Response) => {
         status: appleStatus.active ? 'PAID' : 'CANCELLED',
         expiresAt: appleStatus.expiresAt?.toISOString() ?? null,
         webhookVerifiedAt: new Date().toISOString(),
-        raw: appleStatus.raw as Record<string, unknown> | undefined,
+        raw: sanitizeAppleRaw(appleStatus.raw),
         updatedAt: new Date().toISOString(),
       });
       const userId = doc.data().userId as string | undefined;

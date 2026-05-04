@@ -95,7 +95,17 @@ export async function findOrCreateSocialUser(
       };
     }
 
-    // 3) email 매칭 (LOCAL 가입 → 소셜 연결)
+    // 3) email 매칭 — LOCAL 계정이 있으면 자동 연결 안 함 (CRITICAL takeover 방지).
+    //
+    // 보안 점검 (2026-05-04): 카카오 email 등 소셜 제공 email 로 기존 LOCAL 계정에
+    // 자동 연결하던 코드는 다음 시나리오로 takeover 가능:
+    //   1) 피해자가 abc@kakao.com 으로 LOCAL 가입
+    //   2) 공격자가 abc@kakao.com 인증 안 된 카카오 계정 생성
+    //   3) 공격자가 카카오 로그인 → 우리 백엔드가 이메일 매칭 → 피해자 LOCAL 계정에 socialId 덮어씀
+    //   4) 공격자는 카카오로 피해자 계정 침입 가능
+    //
+    // 이제 email 만으로는 자동 연결 X. 같은 email LOCAL 계정이 있으면 새 user 생성하지 않고
+    // 명시적 연결 동의 흐름 필요 (현재는 안내 후 차단).
     if (socialUser.email) {
       const byEmailQuery = collections.users
         .where('email', '==', socialUser.email)
@@ -104,22 +114,29 @@ export async function findOrCreateSocialUser(
       if (!byEmailSnap.empty) {
         const doc = byEmailSnap.docs[0];
         const data = doc.data();
-        tx.update(doc.ref, {
-          socialId: socialUser.socialId,
-          authProvider: provider,
-        });
-        tx.set(indexRef, {
-          userId: doc.id,
-          provider,
-          socialId: socialUser.socialId,
-          createdAt: FieldValue.serverTimestamp(),
-        });
-        return {
-          userId: doc.id,
-          email: (data.email as string | null | undefined) ?? socialUser.email,
-          nickname: (data.nickname as string | null | undefined) ?? null,
-          isNewUser: false,
-        };
+        const existingProvider = (data.authProvider as string | undefined) ?? 'LOCAL';
+        // 같은 provider 면 안전한 매칭 (예: 카카오 사용자가 이메일은 같은데 이전에 socialId 가
+        // 다른 카카오 계정으로 가입한 케이스 — 보통 발생 안 하나 안전)
+        if (existingProvider === provider) {
+          tx.update(doc.ref, { socialId: socialUser.socialId });
+          tx.set(indexRef, {
+            userId: doc.id,
+            provider,
+            socialId: socialUser.socialId,
+            createdAt: FieldValue.serverTimestamp(),
+          });
+          return {
+            userId: doc.id,
+            email: (data.email as string | null | undefined) ?? socialUser.email,
+            nickname: (data.nickname as string | null | undefined) ?? null,
+            isNewUser: false,
+          };
+        }
+        // 다른 provider (LOCAL 또는 다른 소셜) 와는 자동 연결 차단
+        throw new Error(
+          `이미 ${existingProvider === 'LOCAL' ? '이메일/비밀번호' : existingProvider} 로 가입된 이메일이에요. ` +
+          `해당 방법으로 로그인 후 설정에서 ${provider} 계정을 연결해주세요.`,
+        );
       }
     }
 

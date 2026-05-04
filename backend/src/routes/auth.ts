@@ -219,12 +219,8 @@ router.get('/kakao/callback', async (req: Request, res: Response) => {
   logger.info('auth/kakao/callback', `hit state=${statePreview} hasCode=${!!code} error=${kakaoError || 'none'}`);
 
   if (kakaoError || !code) {
-    // XSS 방지: HTML 특수문자 이스케이프
     const rawMsg = String(error_description || kakaoError || 'no_code');
-    const errMsg = rawMsg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    res.send(`<html><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;background:#FFF5EC;">
-      <div style="text-align:center;"><h2>로그인 실패</h2><p>${errMsg}</p><p>앱으로 돌아가주세요.</p></div>
-    </body></html>`);
+    res.type('html').send(simpleHtml('로그인 실패', rawMsg + ' — 앱으로 돌아가주세요.'));
     return;
   }
 
@@ -246,49 +242,49 @@ router.get('/kakao/callback', async (req: Request, res: Response) => {
 
     const { accessToken, refreshToken } = generateTokens(userId);
 
-    // 딥링크로 앱 자동복귀 (인앱 브라우저가 감지 → 자동 닫힘)
-    const deepParams = new URLSearchParams({
-      accessToken,
-      refreshToken,
-      userId,
-      email: userEmail || '',
-      nickname: nickname || '',
-      isNewUser: String(isNewUser),
-    });
-    const deepLink = `amatda://auth/callback?${deepParams.toString()}`;
-
-    // polling 저장소 — Firestore에 저장 (인스턴스 간 공유)
-    if (stateKey) {
-      const expiresMs = Date.now() + KAKAO_STATE_TTL_MS;
-      await db.collection(KAKAO_STATE_COLLECTION).doc(stateKey).set({
-        result: {
-          user: { id: userId, email: userEmail, nickname },
-          accessToken, refreshToken, isNewUser,
-        },
-        expires: expiresMs,                            // legacy: ms timestamp (in-app 체크용)
-        expiresAt: Timestamp.fromMillis(expiresMs),    // Firestore native TTL 필드
-      });
+    // 보안: 토큰을 URL 쿼리/HTML에 절대 포함하지 않음 (브라우저 history/Referer 누출).
+    // 앱은 stateKey 만 받아 /api/auth/kakao/check/:state 로 polling 해서 토큰 획득.
+    // 카카오 nickname/email 등도 HTML 보간 안 함 (XSS 방어).
+    if (!stateKey) {
+      logger.warn('auth/kakao/callback', 'state 누락 — CSRF 방어 차단');
+      res.status(400).type('html').send(simpleHtml('로그인 실패', 'state 파라미터가 누락되었어요. 앱에서 다시 시도해주세요.'));
+      return;
     }
+    const expiresMs = Date.now() + KAKAO_STATE_TTL_MS;
+    await db.collection(KAKAO_STATE_COLLECTION).doc(stateKey).set({
+      result: {
+        user: { id: userId, email: userEmail, nickname },
+        accessToken, refreshToken, isNewUser,
+      },
+      expires: expiresMs,
+      expiresAt: Timestamp.fromMillis(expiresMs),
+    });
 
-    // HTML 리디렉트 (브라우저 호환성 극대화)
-    res.send(`<html><head><meta charset="utf-8">
-      <meta http-equiv="refresh" content="0;url=${deepLink}">
-    </head><body>
-      <script>window.location.href="${deepLink}";</script>
-      <p style="text-align:center;margin-top:40vh;font-family:sans-serif;color:#999;">앱으로 돌아가는 중...</p>
-    </body></html>`);
+    // 딥링크에 stateKey 만 — 토큰은 polling 으로 가져감
+    const safeStateKey = encodeURIComponent(stateKey);
+    const deepLink = `amatda://auth/callback?state=${safeStateKey}`;
+    res.type('html').send(simpleRedirectHtml(deepLink));
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'unknown error';
     logger.error('auth/kakao/callback', err);
-    const errorDeep = `amatda://auth/callback?error=${encodeURIComponent(msg)}`;
-    res.send(`<html><head><meta charset="utf-8">
-      <meta http-equiv="refresh" content="0;url=${errorDeep}">
-    </head><body>
-      <script>window.location.href="${errorDeep}";</script>
-      <p style="text-align:center;margin-top:40vh;font-family:sans-serif;color:#999;">앱으로 돌아가는 중...</p>
-    </body></html>`);
+    // 에러도 토큰 없이 — state 만 (앱이 polling 시 result 없으면 실패 처리)
+    const safeStateKey = encodeURIComponent(stateKey);
+    const errorDeep = `amatda://auth/callback?state=${safeStateKey}&error=1`;
+    res.type('html').send(simpleRedirectHtml(errorDeep));
   }
 });
+
+/** 카카오 callback 의 안전한 redirect HTML — meta refresh 만 (script 보간 X). */
+function simpleRedirectHtml(deepLink: string): string {
+  // deepLink 는 우리가 만든 URL 이라 안전하지만 추가 방어로 quotation 만 escape.
+  const safe = deepLink.replace(/"/g, '%22');
+  return `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=${safe}"></head><body><p style="text-align:center;margin-top:40vh;font-family:sans-serif;color:#999;">앱으로 돌아가는 중...</p></body></html>`;
+}
+
+/** 단순 메시지 HTML (이스케이프된 안전한 텍스트만) */
+function simpleHtml(title: string, message: string): string {
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return `<!doctype html><html><head><meta charset="utf-8"></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;background:#FFF5EC;"><div style="text-align:center;"><h2>${esc(title)}</h2><p>${esc(message)}</p></div></body></html>`;
+}
 
 // PUT /api/auth/nickname — 별명 설정/변경
 router.put('/nickname', authMiddleware, async (req: Request, res: Response) => {

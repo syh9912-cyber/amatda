@@ -1,6 +1,7 @@
-import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import api from '../../services/api';
+import { openExternalUrl } from '../../utils/safeLink';
 
 interface AdData {
   id: string;
@@ -20,7 +21,8 @@ export function AdBanner({ ad, variant = 'card' }: Props) {
     try {
       await api.post(`/ads/${ad.id}/click`);
     } catch { /* ignore */ }
-    Linking.openURL(ad.linkUrl).catch(() => {});
+    // 서버에서 받은 광고 URL — schema 검증 (javascript:/file: 차단)
+    openExternalUrl(ad.linkUrl);
   };
 
   if (variant === 'inline') {

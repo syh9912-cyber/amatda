@@ -254,8 +254,12 @@ export function registerAskHandler(router: Router): void {
       const tier = await getUserTier(req.userId!);
       const config = TIER_CONFIGS[tier];
 
-      // ─── Step 6: 하루 상담 횟수 체크 (무료, 레드플래그는 제외) ───
-      if (tier === 'free' && !redFlag.detected) {
+      // ─── Step 6: 하루 상담 횟수 체크 (무료) ───
+      // 보안 점검 (2026-05-04): redFlag 제외 시 비용 폭주 — monitor 키워드(예: "37.5도")만
+      // 넣으면 무료 사용자가 무제한 Gemini 호출 가능. emergency/urgent 만 limit 면제.
+      const allowBypass = redFlag.detected &&
+        (redFlag.urgency === 'emergency' || redFlag.urgency === 'urgent');
+      if (tier === 'free' && !allowBypass) {
         const [todayCount, userStreak] = await Promise.all([
           getTodaySessionCount(req.userId!),
           getUserStreak(req.userId!),
@@ -305,7 +309,9 @@ export function registerAskHandler(router: Router): void {
       const { systemPrompt, runtimePrompt } = buildPrompt({
         category: categoryKo,
         userMessage: maskedMessage,
-        childName: child.name,
+        // CLAUDE.md 핵심 규칙: 아이 실명은 절대 AI prompt 에 들어가면 안 됨.
+        // child.name 직접 전달은 마스킹 우회 — 항상 '아이' 라벨 사용.
+        childName: '아이',
         ageInfo: child.ageInfo,
         gender: child.gender,
         temperament: `${child.temperament} (${child.temperamentDetail})`,
@@ -330,17 +336,29 @@ export function registerAskHandler(router: Router): void {
       });
 
       // ─── Step 9: AI 호출 ───
+      // CLAUDE.md: EMERGENCY 는 AI 응답 없이 즉시 119 안내. Gemini 호출 비용 + 응답 지연 회피.
       let aiResponse: CoachingAIResponse;
-      try {
-        aiResponse = await callGemini(systemPrompt, runtimePrompt, config.maxOutputTokens);
-      } catch (err) {
-        logger.error('ask.handler/gemini', err);
-        aiResponse = getMockResponse(child.temperament, categoryKo);
-      }
-
-      // 레드플래그가 있으면 AI 응답에 추가
-      if (redFlag.detected && redFlag.message) {
-        aiResponse.medical = redFlag.message;
+      if (redFlag.detected && redFlag.urgency === 'emergency') {
+        const emergencyMsg = redFlag.message ?? '응급 상황으로 보여요. 즉시 119 또는 가까운 응급실로 가세요.';
+        aiResponse = {
+          redFlag: redFlag.flags.join(', '),
+          judgement: '🚨 즉시 의료기관 방문 필요',
+          reasons: redFlag.flags,
+          actions: ['119 또는 가까운 응급실로 즉시 이동', '이동 중 의료진 안내에 따라 응급조치'],
+          medical: emergencyMsg,
+          personalNote: '앱 안내보다 119 가 먼저입니다. 망설이지 마세요.',
+        };
+      } else {
+        try {
+          aiResponse = await callGemini(systemPrompt, runtimePrompt, config.maxOutputTokens);
+        } catch (err) {
+          logger.error('ask.handler/gemini', err);
+          aiResponse = getMockResponse(child.temperament, categoryKo);
+        }
+        // 레드플래그(emergency 외)가 있으면 AI 응답에 medical 추가
+        if (redFlag.detected && redFlag.message) {
+          aiResponse.medical = redFlag.message;
+        }
       }
 
       // ─── Step 10: 응답 포맷 + 저장 ───
