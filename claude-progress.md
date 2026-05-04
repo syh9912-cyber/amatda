@@ -1,5 +1,52 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-05-05 — 출시 전 dead code 대정리 + 회귀 hotfix + mental-check 백엔드 신규 + 무료 코칭 한도 단일화 (10회/일)
+> 최종 업데이트: 2026-05-05 (세션 2) — mental-check 가족 푸시 + AI 권고 + APK 빌드 dep 정리 + Firestore 인덱스 4개 콘솔 삭제
+
+---
+
+## 2026-05-05 (세션 2) — mental-check 완성 + APK 빌드 dep 정리
+
+### ✅ 완료 항목
+
+#### 1. mental-check 가족 푸시 발송 로직 (`pregnancy.ts`)
+- `POST /mental-check`: `shareWithPartner=true` 시 familyMembers (accepted) 조회 → pushSchedules 등록
+- riskLevel별 메시지 4종 (`partnerPushBody` 헬퍼)
+- low/mild: 안부 요청 / moderate: 관심 요청 / high: 즉시 함께 / urgent: 전문도움 촉구
+- 실패 시에도 본 기록은 유지 (try/catch 격리)
+
+#### 2. mental-check AI 권고 (`GET /mental-check/analysis`)
+- Gemini 가용 시 검사 이력(횟수/점수/추세/stage)을 컨텍스트로 개인화 권고 생성
+- 실패 시 정적 `riskMessage()` 폴백 — 안전성 보장
+
+#### 3. APK 빌드 dep 정리 (EAS 빌드 실패 원인 연쇄 수정)
+- **원인 1**: `expo-video@~2.0.0` (SDK 54 호환 불가) → 제거 (코드에서 import 없음)
+- **원인 2**: EAS npm 엄격 피어dep 모드 → `.npmrc` `legacy-peer-deps=true` 추가
+- **원인 3**: `react-native-worklets` 미명시 → 명시적 의존성 추가 (reanimated@4 Babel 플러그인 필수)
+- `expo-asset ~12.0.13`, `expo-image-picker ~17.0.11` 호환 버전 업데이트
+- package-lock.json 클린 재생성
+
+#### 4. Firestore 인덱스 콘솔 정리
+- `firebase deploy --only firestore:indexes --force` 로 dead 4개(ads×2, chatLogs, sleepPredictions) 콘솔에서 실제 삭제
+
+#### 5. mom-wellness 베타 검증
+- API 메서드 4개 모두 확인 (questions/save/history/analysis)
+- 결과 화면: riskLevel, recommendation(AI), notifiedFamily, nextRecommendedAt 모두 표시 확인
+- urgent 시 1577-0199/1393 연락처 표시 확인
+
+#### 6. users.visitDates 정책 결정
+- **현상 유지**: 백엔드/프론트 쓰기 코드 모두 제거됨. 읽는 코드도 없음. 기존 데이터 보존, 신규 쓰기 자연 중단.
+- 삭제 마이그레이션 불필요 (비용/영향 없음)
+
+### 🚀 배포 현황
+- backend: 배포 완료 (mental-check 가족 푸시 + AI 권고)
+- firestore:indexes: 배포 완료 (dead 4개 삭제)
+- APK (EAS): 빌드 진행 중 (커밋 c42d17f 기준)
+
+### 📋 남은 이슈
+- [ ] APK EAS 빌드 성공 여부 확인 (진행 중)
+- [ ] OTA `eas update --branch preview` (빌드 성공 후)
+- [ ] components/report/* onboarding 전용 위치 재배치 (선택사항)
+
+---
 
 ---
 
