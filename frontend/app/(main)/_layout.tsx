@@ -123,16 +123,11 @@ export default function MainLayout() {
 
       {/* === Hidden screens === */}
       <Tabs.Screen name="diary" options={{ href: null }} />
-      <Tabs.Screen name="community" options={{ href: null }} />
       <Tabs.Screen name="album" options={{ href: null }} />
       <Tabs.Screen name="momstagram-post" options={{ href: null }} />
-      <Tabs.Screen name="report" options={{ href: null }} />
       <Tabs.Screen name="nutrition" options={{ href: null }} />
-      <Tabs.Screen name="academy" options={{ href: null }} />
       <Tabs.Screen name="subscription" options={{ href: null }} />
-      <Tabs.Screen name="compatibility" options={{ href: null }} />
       <Tabs.Screen name="timer" options={{ href: null }} />
-      <Tabs.Screen name="mates" options={{ href: null }} />
       <Tabs.Screen name="trait-detail" options={{ href: null }} />
       <Tabs.Screen name="growth-stats" options={{ href: null }} />
       <Tabs.Screen name="privacy" options={{ href: null }} />
@@ -152,7 +147,6 @@ export default function MainLayout() {
       <Tabs.Screen name="lullaby" options={{ href: null }} />
       <Tabs.Screen name="coparenting" options={{ href: null }} />
       <Tabs.Screen name="parent-level" options={{ href: null }} />
-      <Tabs.Screen name="sleep-predict" options={{ href: null }} />
       <Tabs.Screen name="sos" options={{ href: null }} />
       <Tabs.Screen name="pregnancy" options={{ href: null }} />
       <Tabs.Screen name="vaccination" options={{ href: null }} />

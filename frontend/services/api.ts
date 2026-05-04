@@ -167,32 +167,9 @@ export const observationApi = {
     api.get(`/observations/${childId}`),
   delete: (id: string) =>
     api.delete(`/observations/${id}`),
-  report: (childId: string) =>
-    api.get(`/observations/report/${childId}`),
 };
 
 // Academies
-export const academyApi = {
-  list: (lat: number, lng: number, ageMonths: number, type?: string, radius = 5) => {
-    const params: Record<string, string> = {
-      lat: String(lat), lng: String(lng),
-      ageMonths: String(ageMonths), radius: String(radius),
-    };
-    if (type) params.type = type;
-    return api.get('/academies', { params });
-  },
-  recommend: (dominantType: string, ageMonths: number, lat?: number, lng?: number, region?: string) => {
-    const params: Record<string, string> = {
-      dominantType,
-      ageMonths: String(ageMonths),
-    };
-    if (lat !== undefined) params.lat = String(lat);
-    if (lng !== undefined) params.lng = String(lng);
-    if (region) params.region = region;
-    return api.get('/academies/recommend', { params });
-  },
-};
-
 // Weather
 export const weatherApi = {
   get: (childId: string, lat?: number, lng?: number) => {
@@ -212,10 +189,6 @@ export const subscriptionApi = {
 };
 
 // Siblings
-export const siblingApi = {
-  compatibility: () => api.get('/siblings/compatibility'),
-};
-
 // Chatbot
 export const chatbotApi = {
   send: (message: string) => api.post('/chatbot', { message }),
@@ -410,16 +383,6 @@ export const recommendationApi = {
     }),
   seed: () =>
     api.post('/recommendations/seed'),
-};
-
-// Sleep Prediction (수면 예측)
-export const sleepApi = {
-  predict: (childId: string) =>
-    api.post('/sleep/predict', { childId }),
-  history: (childId: string) =>
-    api.get('/sleep/history', { params: { childId } }),
-  pattern: (months: number) =>
-    api.get('/sleep/pattern', { params: { months } }),
 };
 
 // Coparenting (가족육아)

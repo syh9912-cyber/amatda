@@ -120,10 +120,10 @@ function useNotificationSetup() {
     // 보안: data.screen 을 화이트리스트로 제한 (위조 push 의 라우트 탈출 차단).
     const ALLOWED_PUSH_SCREENS = new Set([
       'home', 'baby-tracker', 'pregnancy', 'fever', 'labor-monitor', 'sos',
-      'chatbot', 'community', 'recommendations', 'vaccination', 'birth-bag',
+      'chatbot', 'recommendations', 'vaccination', 'birth-bag',
       'gdm', 'lullaby', 'cry-analyzer', 'poop-analyzer', 'album', 'growth-stats',
-      'sleep-predict', 'play-learning', 'monthly-characteristic', 'subscription',
-      'notification-settings', 'parent-level', 'academy', 'clinic', 'coparenting',
+      'play-learning', 'monthly-characteristic', 'subscription',
+      'notification-settings', 'parent-level', 'clinic', 'coparenting',
       'ai-analysis', 'recommendation-list', 'mom-location-setup',
     ]);
     responseListener.current = Notifications.addNotificationResponseReceivedListener(
