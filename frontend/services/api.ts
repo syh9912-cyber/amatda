@@ -165,8 +165,6 @@ export const observationApi = {
     api.post('/observations', { childId, content, type }),
   list: (childId: string) =>
     api.get(`/observations/${childId}`),
-  delete: (id: string) =>
-    api.delete(`/observations/${id}`),
 };
 
 // Academies
@@ -244,8 +242,6 @@ export const memoriesApi = {
     api.get(`/memories/year-ago/${childId}`),
   childCard: (childId: string) =>
     api.get(`/memories/child-card/${childId}`),
-  timeline: (childId: string) =>
-    api.get(`/memories/timeline/${childId}`),
 };
 
 // Coaching (상담이모) — coachingAxios 사용 (별도 Cloud Run 인스턴스)
@@ -257,16 +253,12 @@ export const coachingApi = {
     coachingAxios.post('coaching/ask', { childId, message, category }),
   history: (childId: string) =>
     coachingAxios.get(`coaching/history/${childId}`),
-  checkin: (childId: string, mood: string) =>
-    coachingAxios.post('coaching/ask', { childId, message: `오늘 아이 컨디션: ${mood}`, category: '체크인' }),
   followups: (childId: string) =>
     coachingAxios.get(`coaching/followups/${childId}`),
   dismissFollowup: (followupId: string) =>
     coachingAxios.post(`coaching/followup/${followupId}/respond`, { answer: '나중에' }),
   respondFollowup: (followupId: string, response: string) =>
     coachingAxios.post(`coaching/followup/${followupId}/respond`, { answer: response }),
-  weeklyReport: (childId: string) =>
-    coachingAxios.post('coaching/weekly-report', { childId }),
   dailyDiary: (childId: string) =>
     coachingAxios.post('coaching/daily-diary', { childId }),
   analyzeMedia: (childId: string, type: 'cry' | 'poop', description?: string, mediaBase64?: string, mediaMimeType?: string) =>
@@ -277,8 +269,6 @@ export const coachingApi = {
     coachingAxios.get(`coaching/milestones/${childId}`),
   saveMilestoneChecks: (childId: string, checks: Record<string, boolean>) =>
     coachingAxios.post(`coaching/milestones/${childId}/check`, { checks }),
-  dailyInsight: (childId: string) =>
-    coachingAxios.get(`coaching/daily-insight?childId=${childId}`),
 };
 
 // Retention (growth countdown, daily tip, streak)

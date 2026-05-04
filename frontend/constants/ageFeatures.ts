@@ -130,41 +130,6 @@ export interface QuickMenu {
   emoji: string;
 }
 
-const HOME_MENUS_BY_AGE: Record<AgeGroupKey, QuickMenu[]> = {
-  pregnant: [
-    { key: 'tracker', label: '임신앨범', route: '/(main)/pregnancy', emoji: '📝' },
-    { key: 'growth', label: '주수별 발달', route: '/(main)/pregnancy', emoji: '📊' },
-    { key: 'clinic', label: '산부인과', route: '/(main)/clinic', emoji: '🏥' },
-  ],
-  infant: [
-    { key: 'tracker', label: '육아기록', route: '/(main)/baby-tracker', emoji: '📝' },
-    { key: 'vaccine', label: '접종달력', route: '/(main)/vaccination', emoji: '💉' },
-    { key: 'cry', label: '울음분석', route: '/(main)/cry-analyzer', emoji: '😢' },
-    { key: 'poop', label: '대변분석', route: '/(main)/poop-analyzer', emoji: '💩' },
-    { key: 'growth', label: '성장통계', route: '/(main)/growth-stats', emoji: '📊' },
-    { key: 'play', label: '놀이추천', route: '/(main)/play-learning', emoji: '🎨' },
-  ],
-  toddler: [
-    { key: 'tracker', label: '육아기록', route: '/(main)/baby-tracker', emoji: '📝' },
-    { key: 'vaccine', label: '접종달력', route: '/(main)/vaccination', emoji: '💉' },
-    { key: 'poop', label: '배변분석', route: '/(main)/poop-analyzer', emoji: '🚽' },
-    { key: 'growth', label: '성장통계', route: '/(main)/growth-stats', emoji: '📊' },
-    { key: 'play', label: '놀이/학습', route: '/(main)/play-learning', emoji: '🎨' },
-    { key: 'academy', label: '학원추천', route: '/(main)/academy', emoji: '🏫' },
-  ],
-  elementary: [
-    { key: 'tracker', label: '생활기록', route: '/(main)/baby-tracker', emoji: '📝' },
-    { key: 'growth', label: '성장통계', route: '/(main)/growth-stats', emoji: '📊' },
-    { key: 'play', label: '활동추천', route: '/(main)/play-learning', emoji: '🎯' },
-    { key: 'academy', label: '학원추천', route: '/(main)/academy', emoji: '🏫' },
-    { key: 'clinic', label: '소아과', route: '/(main)/clinic', emoji: '🏥' },
-  ],
-};
-
-export function getHomeMenus(ageGroup: AgeGroupKey): QuickMenu[] {
-  return HOME_MENUS_BY_AGE[ageGroup];
-}
-
 // ─── 화면 접근 가능 여부 ───
 
 const SCREEN_ACCESS: Record<string, AgeGroupKey[]> = {
