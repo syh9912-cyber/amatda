@@ -44,12 +44,20 @@ async function verifyGoogleToken(accessToken: string): Promise<SocialUserInfo> {
     const audOk = info.aud && allowed.has(info.aud);
     const azpOk = info.azp && allowed.has(info.azp);
     if (!audOk && !azpOk) {
-      // 디버깅: client_id 마지막 8자만 노출 (전체 노출 X — Sentry 에 남으니 안전)
-      const expectedTails = Array.from(allowed).map((id) => id.slice(-8)).join('|');
-      const audTail = (info.aud ?? '').slice(-8);
-      const azpTail = (info.azp ?? '').slice(-8);
+      /**
+       * 디버깅용 client_id 식별자 — Google client_id 는 `{project_no}-{unique}.apps.googleusercontent.com` 형식.
+       * 모두 `.apps.googleusercontent.com` 으로 끝나므로 suffix 8자로는 구분 불가.
+       * 대신 unique part(첫 점 앞 prefix) 의 첫 12자 + 길이를 노출 — PII 안전하면서 식별 가능.
+       */
+      const fingerprint = (id: string): string => {
+        if (!id) return '(empty)';
+        const prefix = id.split('.')[0]; // "712169890278-s470hnnvpsrk6vhltt8tc0193ojiuufu"
+        const head = prefix.slice(0, 12);
+        return `${head}…(len=${id.length})`;
+      };
+      const expectedFps = Array.from(allowed).map(fingerprint).join(' | ');
       throw new Error(
-        `Google 토큰 audience 불일치 — expected one of ...${expectedTails}, got aud=...${audTail} azp=...${azpTail}`,
+        `Google 토큰 audience 불일치 — expected: [${expectedFps}], got aud=${fingerprint(info.aud ?? '')} azp=${fingerprint(info.azp ?? '')}`,
       );
     }
   }
