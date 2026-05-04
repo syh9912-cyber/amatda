@@ -186,14 +186,6 @@ export const subscriptionApi = {
   cancel: (id: string) => api.put(`/subscriptions/${id}/cancel`),
 };
 
-// Siblings
-// Chatbot
-export const chatbotApi = {
-  send: (message: string) => api.post('/chatbot', { message }),
-  history: () => api.get('/chatbot/history'),
-};
-
-
 // Ads
 export const adApi = {
   list: (type?: string, limit = 3) => {

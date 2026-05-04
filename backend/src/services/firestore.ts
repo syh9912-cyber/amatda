@@ -16,7 +16,6 @@ export const collections = {
   questions: db.collection('questions'),
   foodGuides: db.collection('foodGuides'),
   academies: db.collection('academies'),
-  faq: db.collection('faq'),
   ads: db.collection('ads'),
   subscriptions: db.collection('subscriptions'),
   chatLogs: db.collection('chatLogs'),

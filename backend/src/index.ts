@@ -16,7 +16,6 @@ import subscriptionRoutes from './routes/subscription';
 import paymentRoutes from './routes/payment';
 import weatherRoutes from './routes/weather';
 import siblingRoutes from './routes/sibling';
-import chatbotRoutes from './routes/chatbot';
 import mateRoutes from './routes/mate';
 import adRoutes from './routes/ad';
 // seed 라우트 제거 — 프로덕션에서 인증 없이 DB 삭제 가능한 보안 취약점
@@ -81,7 +80,6 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/siblings', siblingRoutes);
-app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/mates', mateRoutes);
 app.use('/api/ads', adRoutes);
 // app.use('/api/seed', seedRoutes); // 프로덕션 제거

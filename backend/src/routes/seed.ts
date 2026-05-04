@@ -3,7 +3,6 @@ import { success, error } from '../utils/response';
 import { collections } from '../services/firestore';
 import { ACADEMIES } from '../../prisma/seed-data/academies';
 import { FOOD_GUIDES } from '../../prisma/seed-data/food-guides';
-import { FAQ_DATA } from '../../prisma/seed-data/faq';
 import { ONBOARDING_QUESTIONS } from '../../prisma/seed-data/onboarding-questions';
 
 const router = Router();
@@ -68,41 +67,6 @@ router.post('/food-guides', async (_req: Request, res: Response) => {
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'unknown error';
     error(res, `foodGuides 시딩 오류: ${msg}`, 500);
-  }
-});
-
-/**
- * POST /api/seed/faq
- * 기존 faq 컬렉션을 삭제하고 100개 FAQ 데이터를 재시딩
- * 임시 엔드포인트 — 배포 후 1회 호출 뒤 제거
- */
-router.post('/faq', async (_req: Request, res: Response) => {
-  try {
-    // 기존 문서 삭제 (batch는 500개 제한이므로 분할)
-    const existing = await collections.faq.get();
-    const batchSize = 400;
-    for (let i = 0; i < existing.docs.length; i += batchSize) {
-      const chunk = existing.docs.slice(i, i + batchSize);
-      const batch = collections.faq.firestore.batch();
-      chunk.forEach((doc) => batch.delete(doc.ref));
-      await batch.commit();
-    }
-
-    // 새 데이터 시딩
-    let count = 0;
-    for (const faq of FAQ_DATA) {
-      await collections.faq.doc().set({
-        question: faq.question,
-        answer: faq.answer,
-        category: faq.category,
-      });
-      count++;
-    }
-
-    success(res, { message: `FAQ 재시딩 완료: ${count}개`, count });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : 'unknown error';
-    error(res, `FAQ 시딩 오류: ${msg}`, 500);
   }
 });
 
