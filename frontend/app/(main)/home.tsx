@@ -601,82 +601,100 @@ export default function HomeScreen() {
         />
       )}
 
-      {child && (
-        <>
-          {/* === Dashboard 상단 섹션 (모드별 분기) === */}
+      {child && (() => {
+        // 35주+ 임신부: 출산 임박 → 출산가방을 아이콘 메뉴 앞으로. 그 외엔 기본 순서.
+        const weeks = child.pregnancyWeeks ?? 0;
+        const isLatePregnancy = !!child.isPregnant && weeks >= 35;
 
-          {/* 1) 4-stat 그리드 (모드 자동 분기 — 영아: 수유/수면/대변/percentile, 임신부: 물/영양제/검진/컨디션) */}
+        const heroCard = child.isPregnant && (() => {
+          const isNearDue = weeks >= 37;
+          const isBagReady = weeks >= 34 && weeks < 37;
+          if (isBagReady) {
+            return (
+              <BirthBagBigCard
+                childId={child.id}
+                onPress={() => router.push('/(main)/birth-bag' as never)}
+              />
+            );
+          }
+          const msg = isNearDue
+            ? `${child.name} 출산하셨나요?`
+            : weeks >= 24
+            ? `${child.name} 정밀 초음파 받으셨나요?`
+            : weeks >= 16
+            ? `${child.name} 첫 태동 느끼셨나요?`
+            : weeks >= 12
+            ? `${child.name} 안정기 진입! 검진 예약하세요`
+            : `${child.name} 엽산 챙기고 계신가요?`;
+          const subMsg = isNearDue
+            ? '탭하면 육아 모드로 전환됩니다'
+            : '탭해서 기록하기';
+          const heroIcon = isNearDue
+            ? require('../../assets/preg-ribbon.png')
+            : require('../../assets/preg-test.png');
+          return (
+            <TouchableOpacity
+              style={styles.preghomeBigCard}
+              activeOpacity={0.85}
+              onPress={() => {
+                if (isNearDue) {
+                  setBirthName(child.name || '');
+                  setBirthGender(null);
+                  setBirthDateVal('');
+                  setBirthTimeVal('');
+                  setBirthModalVisible(true);
+                } else {
+                  router.push('/(main)/pregnancy' as never);
+                }
+              }}
+            >
+              <View style={styles.preghomeBigEmojiWrap}>
+                <Image source={heroIcon} style={styles.preghomeBigIcon} resizeMode="contain" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.preghomeBigTitle}>{msg}</Text>
+                <Text style={styles.preghomeBigSub}>{subMsg}</Text>
+              </View>
+              <Text style={styles.preghomeBigArrow}>{'>'}</Text>
+            </TouchableOpacity>
+          );
+        })();
+
+        const statsRow = (
           <DenseStatsRow
             child={child as unknown as { id: string; isPregnant?: boolean; ageInfo?: { months: number; group: string }; birthDate?: string; height?: number; weight?: number }}
             onTapCheckup={() => setCheckupModalOpen(true)}
           />
+        );
+        const actionsGrid = <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} child={child} />;
+        const journey = child.isPregnant ? (
+          <PregnancyJourneyCard
+            child={child as unknown as { id: string; isPregnant?: boolean; pregnancyWeeks?: number; dueDate?: string }}
+          />
+        ) : null;
 
-          {/* 2) 퀵메뉴 8개 — 4-stat 바로 아래
-              (DailyMissionBadges 제거됨 — 물/영양제는 4-stat 안에 통합, long-press로 의학 정보 모달) */}
-          <AllActionsGrid ageGroup={child.ageInfo?.group ?? 'infant'} child={child} />
+        return (
+          <>
+            {/* === Dashboard 상단 섹션 (모드별 + 주수별 우선순위 분기) === */}
+            {/* 1) 오늘 체크 (4-stat) — 항상 최상단 */}
+            {statsRow}
 
-          {/* 3) 임신부 — 주차별 핵심 강조 카드 (34주차+ → 출산가방 체크리스트, 진행률·아빠담당 표시) */}
-          {child.isPregnant && (() => {
-            const weeks = child.pregnancyWeeks ?? 0;
-            const isNearDue = weeks >= 37;
-            const isBagReady = weeks >= 34 && weeks < 37;
-            if (isBagReady) {
-              return (
-                <BirthBagBigCard
-                  childId={child.id}
-                  onPress={() => router.push('/(main)/birth-bag' as never)}
-                />
-              );
-            }
-            const msg = isNearDue
-              ? `${child.name} 출산하셨나요?`
-              : weeks >= 24
-              ? `${child.name} 정밀 초음파 받으셨나요?`
-              : weeks >= 16
-              ? `${child.name} 첫 태동 느끼셨나요?`
-              : weeks >= 12
-              ? `${child.name} 안정기 진입! 검진 예약하세요`
-              : `${child.name} 엽산 챙기고 계신가요?`;
-            const subMsg = isNearDue
-              ? '탭하면 육아 모드로 전환됩니다'
-              : '탭해서 기록하기';
-            const heroIcon = isNearDue
-              ? require('../../assets/preg-ribbon.png')
-              : require('../../assets/preg-test.png');
-            return (
-              <TouchableOpacity
-                style={styles.preghomeBigCard}
-                activeOpacity={0.85}
-                onPress={() => {
-                  if (isNearDue) {
-                    setBirthName(child.name || '');
-                    setBirthGender(null);
-                    setBirthDateVal('');
-                    setBirthTimeVal('');
-                    setBirthModalVisible(true);
-                  } else {
-                    router.push('/(main)/pregnancy' as never);
-                  }
-                }}
-              >
-                <View style={styles.preghomeBigEmojiWrap}>
-                  <Image source={heroIcon} style={styles.preghomeBigIcon} resizeMode="contain" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.preghomeBigTitle}>{msg}</Text>
-                  <Text style={styles.preghomeBigSub}>{subMsg}</Text>
-                </View>
-                <Text style={styles.preghomeBigArrow}>{'>'}</Text>
-              </TouchableOpacity>
-            );
-          })()}
+            {/* 2) 35주+ 임신부 → 출산가방을 아이콘 앞으로 (출산 임박 우선순위)
+                 그 외 → 기존 순서 (퀵메뉴 → 강조 카드) */}
+            {isLatePregnancy ? (
+              <>
+                {heroCard}
+                {actionsGrid}
+              </>
+            ) : (
+              <>
+                {actionsGrid}
+                {heroCard}
+              </>
+            )}
 
-          {/* 4) 임신부 — 임신 여정 5단계 (강조 카드 아래) */}
-          {child.isPregnant && (
-            <PregnancyJourneyCard
-              child={child as unknown as { id: string; isPregnant?: boolean; pregnancyWeeks?: number; dueDate?: string }}
-            />
-          )}
+            {/* 3) 임신부 — 임신 여정 5단계 */}
+            {journey}
 
           {/* 영아 — AI 분석 + 기질 분석 (파스텔 단일 배너) */}
           {!child.isPregnant && (
@@ -686,13 +704,14 @@ export default function HomeScreen() {
             </>
           )}
 
-          {/* === Monthly Characteristic === */}
-          <MonthlyCharCard child={child} />
+            {/* === Monthly Characteristic === */}
+            <MonthlyCharCard child={child} />
 
-          {/* === Recommendations === */}
-          <RecommendationSection child={child} />
-        </>
-      )}
+            {/* === Recommendations === */}
+            <RecommendationSection child={child} />
+          </>
+        );
+      })()}
 
       {/* Add Child — 거대 배너 (둘째 등록 유도) */}
       <TouchableOpacity
@@ -2603,14 +2622,14 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
   },
 
-  /* === SOS Floating Button === */
+  /* === SOS Floating Button — 카드 컨텐츠 안 가리도록 우측 끝/소형 === */
   sosFab: {
     position: 'absolute',
-    right: 16,
+    right: 10,
     bottom: Platform.OS === 'ios' ? 100 : 90,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#FF6B6B',
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
@@ -2625,7 +2644,7 @@ const styles = StyleSheet.create({
   },
   sosFabText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800' as const,
     letterSpacing: 1,
   },

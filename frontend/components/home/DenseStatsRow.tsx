@@ -67,6 +67,9 @@ const ASSETS = {
 const WATER_KEY = (cid: string, ymd: string) => `amatda_water_${cid}_${ymd}`;
 const SUPPLEMENT_KEY = (cid: string, ymd: string) => `amatda_supplement_${cid}_${ymd}`;
 const MOOD_KEY = (cid: string, ymd: string) => `amatda_mood_${cid}_${ymd}`;
+// "탭해서 기록" 가이드 캡션 — 사용자가 3회 이상 기록하면 자동 숨김 (학습됐다고 판단)
+const TAP_HINT_COUNTER_KEY = (cid: string) => `amatda_tap_hint_count_${cid}`;
+const TAP_HINT_HIDE_THRESHOLD = 3;
 
 const WATER_GOAL = 8;
 
@@ -241,6 +244,9 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
   const [checkupDate, setCheckupDate] = useState<string | null>(null);
   const checkupVer = useCheckupStore((s) => s.version);
 
+  // "탭해서 기록" 캡션 자동 숨김 — 누적 기록 횟수 ≥ 3 이면 학습됐다고 보고 숨김
+  const [tapHintHidden, setTapHintHidden] = useState(false);
+
   // 오늘자 AsyncStorage 로드
   const reload = useCallback(async () => {
     const ymd = todayYMD();
@@ -248,15 +254,28 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
       const w = await AsyncStorage.getItem(WATER_KEY(child.id, ymd));
       const s = await AsyncStorage.getItem(SUPPLEMENT_KEY(child.id, ymd));
       const m = await AsyncStorage.getItem(MOOD_KEY(child.id, ymd));
+      const c = await AsyncStorage.getItem(TAP_HINT_COUNTER_KEY(child.id));
       setWaterCount(w ? Math.max(0, Math.min(WATER_GOAL, parseInt(w, 10) || 0)) : 0);
       setSupplementDone(s === '1');
       setMood((m as MoodKey) ?? null);
+      setTapHintHidden(c ? (parseInt(c, 10) || 0) >= TAP_HINT_HIDE_THRESHOLD : false);
     } catch { /* ignore */ }
   }, [child.id]);
 
   useEffect(() => {
     reload();
   }, [reload]);
+
+  /** 사용자가 카드를 탭/롱프레스로 한 번 사용할 때마다 카운터 +1 — 임계 도달 시 가이드 숨김 */
+  const bumpTapHint = useCallback(async () => {
+    if (tapHintHidden) return;
+    try {
+      const raw = await AsyncStorage.getItem(TAP_HINT_COUNTER_KEY(child.id));
+      const next = (raw ? parseInt(raw, 10) || 0 : 0) + 1;
+      await AsyncStorage.setItem(TAP_HINT_COUNTER_KEY(child.id), String(next));
+      if (next >= TAP_HINT_HIDE_THRESHOLD) setTapHintHidden(true);
+    } catch { /* ignore */ }
+  }, [child.id, tapHintHidden]);
 
   // 다음 검진 로드 (checkupVer 트리거)
   useEffect(() => {
@@ -273,6 +292,7 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
     const next = Math.min(WATER_GOAL, waterCount + 1);
     setWaterCount(next);
     await AsyncStorage.setItem(WATER_KEY(child.id, todayYMD()), String(next)).catch(() => {});
+    bumpTapHint();
     const justHitGoal = prev < WATER_GOAL && next === WATER_GOAL;
     const tryAll = justHitGoal && supplementDone;
     const celebrated = tryAll ? await maybeCelebrateAllDone(next, true) : false;
@@ -285,6 +305,7 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
     const next = !supplementDone;
     setSupplementDone(next);
     await AsyncStorage.setItem(SUPPLEMENT_KEY(child.id, todayYMD()), next ? '1' : '0').catch(() => {});
+    bumpTapHint();
     if (!supplementDone && next) {
       const tryAll = waterCount >= WATER_GOAL;
       const celebrated = tryAll ? await maybeCelebrateAllDone(waterCount, true) : false;
@@ -299,6 +320,7 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
     closeMoodPicker();
     if (key) {
       await AsyncStorage.setItem(MOOD_KEY(child.id, todayYMD()), key).catch(() => {});
+      bumpTapHint();
       setToastMsg('컨디션 기록했어요 😊');
     }
   };
@@ -349,10 +371,13 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
           tappable
         />
       </View>
-      <Text style={styles.tapHint}>
-        {'탭해서 기록 · '}
-        <Text style={styles.tapHintAccent}>길게 누르면 가이드</Text>
-      </Text>
+      {/* 학습 후 자동 숨김 — 누적 3회 기록하면 사라짐 (TAP_HINT_HIDE_THRESHOLD) */}
+      {!tapHintHidden && (
+        <Text style={styles.tapHint}>
+          {'탭해서 기록 · '}
+          <Text style={styles.tapHintAccent}>길게 누르면 가이드</Text>
+        </Text>
+      )}
 
       {/* 물/영양제 long-press 시 의학적 의미 + 가이드 */}
       <MissionInfoModal
@@ -524,16 +549,17 @@ const styles = StyleSheet.create({
     lineHeight: 11,
   },
   tapHintAccent: {
-    color: '#7B1FA2',
-    fontWeight: '700',
+    color: COLOR.textSub,
+    fontWeight: '600',
   },
   tapHint: {
-    fontSize: 11,
-    color: '#E91E63',
-    fontWeight: '700',
+    fontSize: 10,
+    color: COLOR.textSub,
+    fontWeight: '500',
     textAlign: 'center',
     marginTop: 4,
     marginBottom: 2,
+    opacity: 0.75,
   },
   cardIcon: {
     width: 22,

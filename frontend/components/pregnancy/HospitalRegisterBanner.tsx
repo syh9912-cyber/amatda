@@ -53,24 +53,24 @@ export function HospitalRegisterBanner({ childId, weeks, isHighRisk = false, ref
   return (
     <>
       <TouchableOpacity
-        style={styles.banner}
+        style={[styles.banner, isHighRisk && styles.bannerHighRisk]}
         activeOpacity={0.85}
         onPress={() => setModalOpen(true)}
       >
-        <Text style={styles.icon}>{isHighRisk ? '🚨' : '⚠️'}</Text>
+        <Text style={styles.icon}>{isHighRisk ? '🚨' : '📞'}</Text>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>
+          <Text style={[styles.title, isHighRisk && styles.titleHighRisk]}>
             {isHighRisk
               ? '고위험 임신 — 분만 병원을 지금 등록하세요'
               : '병원 번호를 미리 등록해 주세요'}
           </Text>
-          <Text style={styles.sub}>
+          <Text style={[styles.sub, isHighRisk && styles.subHighRisk]}>
             {isHighRisk
               ? '조산 가능성을 고려해 28주부터 안내드려요. 급한 순간 즉시 전화할 수 있도록 준비해 주세요.'
               : '출산이 가까워지고 있어요. 급한 순간 바로 전화할 수 있도록 준비해 두세요.'}
           </Text>
         </View>
-        <Text style={styles.arrow}>{'>'}</Text>
+        <Text style={[styles.arrow, isHighRisk && styles.arrowHighRisk]}>{'>'}</Text>
       </TouchableOpacity>
 
       <HospitalRegisterModal
@@ -88,12 +88,13 @@ export function HospitalRegisterBanner({ childId, weeks, isHighRisk = false, ref
 }
 
 const styles = StyleSheet.create({
+  // 일반 임신부 — 코랄/살구 톤 (압박감 ↓, "미리 준비하자" 느낌)
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFEBEE',
-    borderWidth: 1.5,
-    borderColor: '#E53935',
+    backgroundColor: '#FFF3EC',
+    borderWidth: 1,
+    borderColor: '#FFB89A',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -101,25 +102,34 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 4,
   },
+  // 고위험 임신 — 기존 빨강 유지 (안전 우선)
+  bannerHighRisk: {
+    backgroundColor: '#FFEBEE',
+    borderWidth: 1.5,
+    borderColor: '#E53935',
+  },
   icon: {
     fontSize: 22,
     marginRight: 10,
   },
   title: {
     fontSize: 14,
-    fontWeight: '900',
-    color: '#B71C1C',
+    fontWeight: '800',
+    color: '#C2410C',
     marginBottom: 3,
   },
+  titleHighRisk: { color: '#B71C1C', fontWeight: '900' },
   sub: {
     fontSize: 12,
-    color: '#7A1F1F',
+    color: '#7A4527',
     lineHeight: 16,
   },
+  subHighRisk: { color: '#7A1F1F' },
   arrow: {
     fontSize: 18,
-    fontWeight: '900',
-    color: '#C62828',
+    fontWeight: '800',
+    color: '#D8631F',
     marginLeft: 8,
   },
+  arrowHighRisk: { color: '#C62828', fontWeight: '900' },
 });
