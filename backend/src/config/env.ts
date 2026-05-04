@@ -6,6 +6,13 @@ import dotenv from 'dotenv';
 dotenv.config();
 dotenv.config({ path: '.env.local', override: true });
 
+/**
+ * Secret Manager 값 trim — Firebase Secret 업로드 시 trailing newline 이 들어가는 경우가 있어
+ * 비교 (e.g. info.aud !== env.GOOGLE_CLIENT_ID) 가 실패함. 모든 env 값을 안전하게 trim.
+ * 이전 TOKEN_ENCRYPTION_KEY 도 같은 문제 (utils/crypto.ts 에서 별도 trim) — 여기서 일괄 처리.
+ */
+const E = (key: string, fallback = ''): string => (process.env[key] ?? fallback).trim();
+
 // JWT 시크릿은 환경(prod/dev) 관계없이 반드시 설정. 프로덕션 자동 감지 의존 시
 // K_SERVICE/GCLOUD_PROJECT 가 누락되면 약한 dev 시크릿으로 폴백되는 위험이 있어
 // fail-closed: env 가 없으면 무조건 throw.
@@ -50,26 +57,26 @@ export const env = {
    * Google OAuth 메인 client_id (web/server 용).
    * Android/iOS 앱은 별도 client_id를 가질 수 있어 GOOGLE_ALLOWED_AUDIENCES 로 보완.
    */
-  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+  GOOGLE_CLIENT_ID: E('GOOGLE_CLIENT_ID'),
   /**
    * Google OAuth 허용 audience 목록 — 콤마(,) 구분.
    * 예: "ANDROID_CLIENT_ID,IOS_CLIENT_ID" — 모바일 앱 client_id 들 등록.
    * GOOGLE_CLIENT_ID 외에도 이 목록의 client_id 가 token 의 aud/azp 에 매칭되면 통과.
    * 미설정 시 GOOGLE_CLIENT_ID 만 검사 (기존 동작 유지).
    */
-  GOOGLE_ALLOWED_AUDIENCES: process.env.GOOGLE_ALLOWED_AUDIENCES || '',
-  KAKAO_JAVASCRIPT_KEY: process.env.KAKAO_JAVASCRIPT_KEY || '',
-  KAKAO_REST_API_KEY: process.env.KAKAO_REST_API_KEY || '',
-  KAKAO_CLIENT_SECRET: process.env.KAKAO_CLIENT_SECRET || '',
-  KAKAO_ADMIN_KEY: process.env.KAKAO_ADMIN_KEY || '',
+  GOOGLE_ALLOWED_AUDIENCES: E('GOOGLE_ALLOWED_AUDIENCES'),
+  KAKAO_JAVASCRIPT_KEY: E('KAKAO_JAVASCRIPT_KEY'),
+  KAKAO_REST_API_KEY: E('KAKAO_REST_API_KEY'),
+  KAKAO_CLIENT_SECRET: E('KAKAO_CLIENT_SECRET'),
+  KAKAO_ADMIN_KEY: E('KAKAO_ADMIN_KEY'),
   /**
    * Kakao Developers 콘솔 → 내 애플리케이션 → 앱 키 페이지의 "ID" 값 (정수).
    * Kakao /v1/user/access_token_info 응답의 app_id 와 strict 비교 — 다른 카카오 앱 토큰 거부 (#3 보안).
    * 미설정 시 strict 검증 비활성 (개발환경 호환).
    */
-  KAKAO_APP_ID: process.env.KAKAO_APP_ID || '',
-  NAVER_CLIENT_ID: process.env.NAVER_CLIENT_ID || '',
-  NAVER_CLIENT_SECRET: process.env.NAVER_CLIENT_SECRET || '',
+  KAKAO_APP_ID: E('KAKAO_APP_ID'),
+  NAVER_CLIENT_ID: E('NAVER_CLIENT_ID'),
+  NAVER_CLIENT_SECRET: E('NAVER_CLIENT_SECRET'),
 
   // ─── 결제 (Phase 1, 키 발급 후 채움) ───
   // PortOne v2 (https://portone.io)
