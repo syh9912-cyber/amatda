@@ -45,19 +45,18 @@ async function verifyGoogleToken(accessToken: string): Promise<SocialUserInfo> {
     const azpOk = info.azp && allowed.has(info.azp);
     if (!audOk && !azpOk) {
       /**
-       * 디버깅용 client_id 식별자 — Google client_id 는 `{project_no}-{unique}.apps.googleusercontent.com` 형식.
-       * 모두 `.apps.googleusercontent.com` 으로 끝나므로 suffix 8자로는 구분 불가.
-       * 대신 unique part(첫 점 앞 prefix) 의 첫 12자 + 길이를 노출 — PII 안전하면서 식별 가능.
+       * 디버깅용 진단 — invisible character (newline, BOM, zero-width 등) 포함 여부 확인용.
+       * JSON.stringify 로 escape character 까지 노출. PII 안전하게 길이 + 끝 5자만 보여줌.
        */
-      const fingerprint = (id: string): string => {
+      const diag = (id: string): string => {
         if (!id) return '(empty)';
-        const prefix = id.split('.')[0]; // "712169890278-s470hnnvpsrk6vhltt8tc0193ojiuufu"
-        const head = prefix.slice(0, 12);
-        return `${head}…(len=${id.length})`;
+        const tail = JSON.stringify(id.slice(-5)); // \n, \r 등 invisible char 까지 escape 표시
+        const charCodes = Array.from(id.slice(-5)).map((c) => c.charCodeAt(0)).join(',');
+        return `len=${id.length} tail=${tail} codes=[${charCodes}]`;
       };
-      const expectedFps = Array.from(allowed).map(fingerprint).join(' | ');
+      const expectedDiags = Array.from(allowed).map(diag).join(' | ');
       throw new Error(
-        `Google 토큰 audience 불일치 — expected: [${expectedFps}], got aud=${fingerprint(info.aud ?? '')} azp=${fingerprint(info.azp ?? '')}`,
+        `Google 토큰 audience 불일치 — expected:[${expectedDiags}] got aud=[${diag(info.aud ?? '')}] azp=[${diag(info.azp ?? '')}]`,
       );
     }
   }
