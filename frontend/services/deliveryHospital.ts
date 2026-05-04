@@ -80,13 +80,23 @@ export interface PickedPhone {
 }
 
 /**
- * 평일 09:00 ~ 18:00 = 외래(낮) 시간, 그 외 = 분만실(밤/주말) 시간으로 판정.
+ * 외래(낮) 시간 판정 — 한국 의료 운영 패턴 반영.
+ *
+ *   평일(월~금): 09:00 ~ 18:00 = 외래 운영
+ *   토요일      : 09:00 ~ 13:00 = 외래 운영 (오후 1시 이후는 외래 닫힘 — 간호사 실무 기준)
+ *   일요일/공휴일: 24시간 분만실 (외래 운영 안함)
+ *
+ * TODO: 공휴일 캘린더 연동 — 현재는 일요일만 휴일 처리.
  */
 function isClinicHours(now: Date = new Date()): boolean {
   const dow = now.getDay();           // 0=일, 6=토
   const hour = now.getHours();
-  const isWeekday = dow >= 1 && dow <= 5;
-  return isWeekday && hour >= 9 && hour < 18;
+  // 평일 09-18 = 외래
+  if (dow >= 1 && dow <= 5) return hour >= 9 && hour < 18;
+  // 토요일 09-13 = 외래 (13시 이후는 분만실 우선)
+  if (dow === 6) return hour >= 9 && hour < 13;
+  // 일요일 = 분만실 24시간
+  return false;
 }
 
 /**
@@ -154,7 +164,7 @@ function buildOrder(
 
 export async function pickDeliveryPhone(
   childId: string,
-  options?: { now?: Date },
+  options?: { now?: Date; isEmergency?: boolean },
 ): Promise<PickedPhone | null> {
   const delivery = await getHospital(childId, 'delivery');
   const clinic = await getHospital(childId, 'clinic');
@@ -164,6 +174,8 @@ export async function pickDeliveryPhone(
   const order = buildOrder(delivery, clinicTime);
 
   for (const src of order) {
+    // 양수파수/출혈 등 위급 증상 시 외래(clinic_main) 후보 스킵 — 골든타임 사수
+    if (options?.isEmergency && src === 'clinic_main') continue;
     const cand = all.find((c) => c.source === src);
     if (cand?.phone) {
       return { phone: cand.phone, source: cand.source, label: cand.label, subLabel: cand.subLabel };
@@ -175,10 +187,13 @@ export async function pickDeliveryPhone(
 /**
  * 등록된 모든 전화번호를 시간대 + 병원급 우선순위 정렬해 반환.
  * 진진통 시 "어디로 전화할까요?" 선택지에 사용 — 1개면 바로, 여러 개면 선택 모달.
+ *
+ * options.isEmergency = true 면 외래(clinic_main) 후보를 제외 — 양수파수/출혈 등 위급 증상 시 사용.
+ *   대낮이라도 외래로는 응급 안 받으므로 분만실/MFICU 직통과 분만 병원 대표(교환→분만실)만 노출.
  */
 export async function pickAllPhones(
   childId: string,
-  options?: { now?: Date },
+  options?: { now?: Date; isEmergency?: boolean },
 ): Promise<PickedPhone[]> {
   const delivery = await getHospital(childId, 'delivery');
   const clinic = await getHospital(childId, 'clinic');
@@ -189,6 +204,8 @@ export async function pickAllPhones(
 
   const out: PickedPhone[] = [];
   for (const src of order) {
+    // 양수파수/출혈 등 위급 증상 시 외래(clinic_main) 후보 스킵 — 골든타임 사수
+    if (options?.isEmergency && src === 'clinic_main') continue;
     const cand = all.find((c) => c.source === src);
     if (cand?.phone) {
       out.push({ phone: cand.phone, source: cand.source, label: cand.label, subLabel: cand.subLabel });

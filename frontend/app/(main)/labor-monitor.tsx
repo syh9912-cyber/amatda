@@ -277,10 +277,13 @@ export default function LaborMonitorScreen() {
     });
   }, []);
 
-  /** 분만실 전화하기 — 번호 1개면 바로 전화, 여러 개면 선택 모달, 미등록이면 등록 모달 */
+  /** 분만실 전화하기 — 번호 1개면 바로 전화, 여러 개면 선택 모달, 미등록이면 등록 모달.
+   *  양수파수/출혈 등 위급 증상 시(isEmergency) 외래 후보 자동 제외 → MFICU/분만실/119 만 노출. */
   const callDeliveryWard = useCallback(async () => {
     if (!childId) return;
-    const all = await pickAllPhones(childId);
+    // 양수 파수 = 즉시 emergency. (현 contractionGuide.tone === 'emergency' 와 동일 조건)
+    const isEmergency = diagAnswers.ruptured === true;
+    const all = await pickAllPhones(childId, { isEmergency });
     if (all.length === 0) {
       // 미등록 — 진통 위급 상황에서 119로 안내 + 즉시 등록 가능한 모달
       Alert.alert(
@@ -312,7 +315,7 @@ export default function LaborMonitorScreen() {
     // 여러 개 등록 — 시간대 우선순위에 맞는 첫 번호가 위에 표시되는 선택 모달
     setPhoneChoices(all);
     setPhoneChoiceOpen(true);
-  }, [childId, dialPhone]);
+  }, [childId, dialPhone, diagAnswers.ruptured]);
 
   if (!selectedChild?.isPregnant) {
     return (
@@ -406,25 +409,34 @@ export default function LaborMonitorScreen() {
         ) : (
           <>
             {/* === 위급 증상 119 즉시 안내 — 진통 화면 진입 시 항상 노출 ===
-                양수 파수 / 다량 출혈 / 태동 12h+ 멈춤 / 극심한 복통 → 진통 수치 무관
-                고위험 임신: 더 짙은 빨강 + "고위험 — 즉시 119" 톤 */}
-            <View style={[styles.emergencyBanner, isHighRiskPregnancy && styles.emergencyBannerHighRisk]}>
+                양수 파수 / 다량 출혈 / 태동 감소·안느껴짐 / 극심한 복통 → 진통 수치 무관
+                고위험 임신: 짙은 빨강 + "고위험 — 즉시 119" 톤
+                양수파수 확인(diagAnswers.ruptured): 골든타임 모드 — 외래 후보 제거 + 버튼 대형화 */}
+            <View style={[
+              styles.emergencyBanner,
+              isHighRiskPregnancy && styles.emergencyBannerHighRisk,
+              diagAnswers.ruptured && styles.emergencyBannerUrgent,
+            ]}>
               <Text style={[styles.emergencyBannerTitle, isHighRiskPregnancy && styles.emergencyBannerTitleHighRisk]}>
-                {isHighRiskPregnancy
+                {diagAnswers.ruptured
+                  ? '🚨 양수 파수 확인 — 골든타임'
+                  : isHighRiskPregnancy
                   ? '🚨 고위험 임신 — 위험 신호 시 즉시 119'
                   : '🚨 이런 증상은 119 먼저!'}
               </Text>
               <Text style={styles.emergencyBannerText}>
-                양수 파수 · 다량 출혈 · 태동 12시간 이상 멈춤 · 극심한 복통
+                양수 파수 · 다량 출혈 · 태동 감소·느껴지지 않음 · 극심한 복통
               </Text>
               <Text style={styles.emergencyBannerSub}>
-                {isHighRiskPregnancy
+                {diagAnswers.ruptured
+                  ? '대낮이라도 외래는 응급 안 받습니다. 분만실 직통 또는 119로 즉시 연락하세요.'
+                  : isHighRiskPregnancy
                   ? '고위험 임신은 합병증 위험이 더 큽니다. 애매해도 망설이지 말고 119를 먼저 부르세요.'
                   : '앱 확인보다 119가 먼저입니다. 애매하거나 불안하면 지금 바로 병원에 전화하세요.'}
               </Text>
               <View style={styles.emergencyBtnRow}>
                 <TouchableOpacity
-                  style={styles.emergency119Btn}
+                  style={[styles.emergency119Btn, diagAnswers.ruptured && styles.emergency119BtnUrgent]}
                   onPress={() => {
                     Linking.openURL('tel:119').catch(() => {
                       Alert.alert('전화 연결 실패', '직접 119에 전화해 주세요.');
@@ -432,14 +444,16 @@ export default function LaborMonitorScreen() {
                   }}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.emergency119Text}>📞 119</Text>
+                  <Text style={[styles.emergency119Text, diagAnswers.ruptured && styles.emergency119TextUrgent]}>📞 119</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.emergencyHospitalBtn}
+                  style={[styles.emergencyHospitalBtn, diagAnswers.ruptured && styles.emergencyHospitalBtnUrgent]}
                   onPress={callDeliveryWard}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.emergencyHospitalText}>🏥 병원</Text>
+                  <Text style={[styles.emergencyHospitalText, diagAnswers.ruptured && styles.emergencyHospitalTextUrgent]}>
+                    {diagAnswers.ruptured ? '🏥 분만실 직통' : '🏥 병원'}
+                  </Text>
                 </TouchableOpacity>
               </View>
               {/* 미등록 시 [지금 등록하기] 강제 노출 — 응급 상황 전 사전 등록 유도 */}
@@ -459,7 +473,7 @@ export default function LaborMonitorScreen() {
             {currentWeek < 36 && (
               <View style={styles.noticeBox}>
                 <Text style={styles.noticeText}>
-                  ℹ️ 진통 간격 기록은 보통 36주 이후 필요해요 (현재 {currentWeek}주차)
+                  ℹ️ 현재 {currentWeek}주차예요. 36주 전이라도 규칙적인 진통이나 복통이 느껴지면 기록보다 병원에 먼저 연락해 주세요.
                 </Text>
               </View>
             )}
@@ -1322,6 +1336,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '900',
     color: '#C62828',
+  },
+  // === 양수파수 확인 — 골든타임 모드 (대문짝 버튼) ===
+  emergencyBannerUrgent: {
+    backgroundColor: '#FFCDD2',
+    borderColor: '#B71C1C',
+    borderWidth: 3,
+  },
+  emergency119BtnUrgent: {
+    paddingVertical: 22,
+    backgroundColor: '#B71C1C',
+  },
+  emergency119TextUrgent: {
+    fontSize: 22,
+  },
+  emergencyHospitalBtnUrgent: {
+    paddingVertical: 22,
+    borderColor: '#B71C1C',
+    borderWidth: 2.5,
+  },
+  emergencyHospitalTextUrgent: {
+    fontSize: 18,
+    color: '#7A0000',
   },
 
   // === 번호 선택 모달 ===
