@@ -159,14 +159,14 @@ async function googleLogin(): Promise<SocialLoginResult | null> {
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { GoogleSignin, statusCodes } = require('@react-native-google-signin/google-signin') as {
+    const { GoogleSignin } = require('@react-native-google-signin/google-signin') as {
       GoogleSignin: {
         configure: (opts: { webClientId: string; offlineAccess?: boolean }) => void;
         hasPlayServices: () => Promise<boolean>;
         signIn: () => Promise<unknown>;
+        signInSilently: () => Promise<unknown>;
         getTokens: () => Promise<{ idToken: string; accessToken: string }>;
       };
-      statusCodes: Record<string, string>;
     };
 
     GoogleSignin.configure({
@@ -175,7 +175,30 @@ async function googleLogin(): Promise<SocialLoginResult | null> {
     });
 
     await GoogleSignin.hasPlayServices();
-    await GoogleSignin.signIn();
+
+    /**
+     * 정석 패턴: silent sign-in 먼저 시도 → 실패하면 picker.
+     *  - 첫 로그인 / 다른 계정 사용자: silent 실패 (SIGN_IN_REQUIRED) → picker 노출 (정상)
+     *  - 재로그인 (토큰 만료, 앱 재시작): silent 성공 → 자동 로그인 (카카오/네이버와 UX 일치)
+     *  - 사용자가 명시적으로 "다른 계정" 원하면 logout 후 재시도 → picker
+     *
+     * 보안: silent 도 권한은 sign-in 시 부여한 그대로. 토큰 발급만 캐시 기반.
+     */
+    try {
+      await GoogleSignin.signInSilently();
+    } catch (silentErr: unknown) {
+      // SIGN_IN_REQUIRED ('4') = 캐시 없거나 만료 → picker fallback (정상 흐름)
+      // 기타 에러 (네트워크 등) 도 picker fallback 으로 처리하면 사용자에게 명시적 액션 기회
+      const code = (silentErr as { code?: string | number } | null)?.code;
+      const codeStr = code != null ? String(code) : '';
+      if (codeStr !== 'SIGN_IN_REQUIRED' && codeStr !== '4') {
+        // 디버깅용 — 예상 외 에러도 picker 시도
+        const msg = silentErr instanceof Error ? silentErr.message : String(silentErr);
+        console.log('[GoogleLogin] silent sign-in 실패 → picker fallback:', msg);
+      }
+      await GoogleSignin.signIn();
+    }
+
     const tokens = await GoogleSignin.getTokens();
 
     if (!tokens?.accessToken) {
