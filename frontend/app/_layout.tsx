@@ -137,10 +137,10 @@ function useOTAUpdate() {
       setStatus('restarting');
       await Updates.reloadAsync();
     } catch (error) {
-      captureError(
-        error instanceof Error ? error : new Error(String(error)),
-        { context: 'OTA update check' },
-      );
+      const msg = error instanceof Error ? error.message : String(error);
+      if (!msg.includes('Failed to check for update')) {
+        captureError(error instanceof Error ? error : new Error(String(error)), { context: 'OTA update check' });
+      }
       setStatus('idle');
     } finally {
       checkingRef.current = false;
