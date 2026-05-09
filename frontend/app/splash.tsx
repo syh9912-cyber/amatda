@@ -89,7 +89,7 @@ export default function SplashScreen() {
       ]),
       Animated.delay(3000),
       Animated.timing(fadeOut, { toValue: 0, duration: 200, easing: ease, useNativeDriver: true }),
-    ]).start(() => navigate());
+    ]).start(({ finished }: { finished: boolean }) => { if (finished) navigate(); });
   }, [overlayOp, titleOp, titleScale, gap1W, sub1Op, sub1Sc, gap2W, sub2Op, sub2Sc, gap3W, sub3Op, sub3Sc, engOp, footOp, footY, fadeOut, navigate]);
 
   useEffect(() => {
