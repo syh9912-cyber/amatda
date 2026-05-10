@@ -132,15 +132,16 @@ function useOTAUpdate() {
       setProgress(1);
       setStatus('ready');
 
-      // 다운로드 완료 UI 잠깐 보여준 뒤 자동 재시작
+      // 다운로드 완료 UI 잠긄 보여준 뒤 자동 재시작
       await new Promise(r => setTimeout(r, 600));
       setStatus('restarting');
       await Updates.reloadAsync();
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      if (!msg.includes('Failed to check for update')) {
-        captureError(error instanceof Error ? error : new Error(String(error)), { context: 'OTA update check' });
-      }
+      const isOffline = String(error).includes('Failed to check for update') || String(error).includes('Network request failed');
+      if (!isOffline) captureError(
+        error instanceof Error ? error : new Error(String(error)),
+        { context: 'OTA update check' },
+      );
       setStatus('idle');
     } finally {
       checkingRef.current = false;
