@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import * as Updates from 'expo-updates';
+import NetInfo from '@react-native-community/netinfo';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../stores/authStore';
 import { useChildStore } from '../stores/childStore';
@@ -103,6 +104,8 @@ function useOTAUpdate() {
     checkingRef.current = true;
 
     try {
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) { checkingRef.current = false; return; }
       setStatus('checking');
       const update = await Updates.checkForUpdateAsync();
 
@@ -132,13 +135,12 @@ function useOTAUpdate() {
       setProgress(1);
       setStatus('ready');
 
-      // 다운로드 완료 UI 잠긄 보여준 뒤 자동 재시작
+      // 다운로드 완료 UI 잠깐 보여준 뒤 자동 재시작
       await new Promise(r => setTimeout(r, 600));
       setStatus('restarting');
       await Updates.reloadAsync();
     } catch (error) {
-      const isOffline = String(error).includes('Failed to check for update') || String(error).includes('Network request failed');
-      if (!isOffline) captureError(
+      captureError(
         error instanceof Error ? error : new Error(String(error)),
         { context: 'OTA update check' },
       );
