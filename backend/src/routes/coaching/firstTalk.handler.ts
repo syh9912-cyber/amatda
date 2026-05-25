@@ -3,6 +3,14 @@ import { authMiddleware } from '../../middleware/auth';
 import { success, error } from '../../utils/response';
 import { buildChildContext } from '../../services/coaching/context.builder';
 import { isGeminiAvailable, callGeminiJSON } from '../../services/coaching/gemini.client';
+import { logger } from '../../utils/logger';
+import { z } from 'zod';
+import { parseBody } from '../../utils/validate';
+import { shouldRejectAIResponse } from '../../services/coaching/forbidden.filter';
+
+const FirstTalkBodySchema = z.object({
+  childId: z.string().min(1).max(128),
+});
 
 // ─── 연령/기질별 대표 고민 ───
 
@@ -40,11 +48,9 @@ export function registerFirstTalkHandler(router: Router): void {
 
   router.post('/first-talk', authMiddleware, async (req: Request, res: Response) => {
     try {
-      const { childId } = req.body as { childId: string };
-      if (!childId) {
-        error(res, 'childId는 필수입니다');
-        return;
-      }
+      const body = parseBody(req, res, FirstTalkBodySchema);
+      if (!body) return;
+      const { childId } = body;
 
       const child = await buildChildContext(childId, req.userId!);
       if (!child) {
@@ -73,7 +79,6 @@ export function registerFirstTalkHandler(router: Router): void {
           const prompt = `너는 영유아 육아 코치야. 아이가 방금 등록되었어. 부모에게 처음 인사하면서 아이 기질을 짧게 설명하고, 부모가 자유롭게 무엇이든 물어볼 수 있도록 따뜻하게 초대해줘.
 
 아이 정보:
-- 이름: ${child.name}
 - 나이: ${child.ageInfo}
 - 성별: ${child.gender}
 - 기질: ${child.temperament}
@@ -97,11 +102,15 @@ export function registerFirstTalkHandler(router: Router): void {
             temperature: 0.5,
             maxTokens: 300,
           });
+          // 응답 후처리: 사주/오행 등 금지 용어 검출 시 fallback
+          if (shouldRejectAIResponse(greeting, 'firstTalk.handler')) {
+            greeting = getDefaultGreeting('아이', child.ageInfo, child.temperament, topics);
+          }
         } catch {
-          greeting = getDefaultGreeting(child.name, child.ageInfo, child.temperament, topics);
+          greeting = getDefaultGreeting('아이', child.ageInfo, child.temperament, topics);
         }
       } else {
-        greeting = getDefaultGreeting(child.name, child.ageInfo, child.temperament, topics);
+        greeting = getDefaultGreeting('아이', child.ageInfo, child.temperament, topics);
       }
 
       // NOTE: 첫 질문을 conversationSummaries에 저장하던 로직은 제거.
@@ -119,7 +128,8 @@ export function registerFirstTalkHandler(router: Router): void {
         temperament: child.temperament,
         ...greeting,
       });
-    } catch {
+    } catch (err: unknown) {
+      logger.error('route', err);
       error(res, '첫 대화 생성 중 오류가 발생했습니다', 500);
     }
   });

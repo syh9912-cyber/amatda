@@ -3,6 +3,7 @@ import { authMiddleware } from '../../middleware/auth';
 import { success, error } from '../../utils/response';
 import { collections } from '../../services/firestore';
 import { buildChildContext } from '../../services/coaching/context.builder';
+import { logger } from '../../utils/logger';
 
 export function registerFollowupHandler(router: Router): void {
   // ─── POST /api/coaching/followup/:id/respond ───
@@ -49,7 +50,8 @@ export function registerFollowupHandler(router: Router): void {
       });
 
       success(res, { coachingReply });
-    } catch {
+    } catch (err: unknown) {
+      logger.error('route', err);
       error(res, '팔로업 응답 중 오류가 발생했습니다', 500);
     }
   });

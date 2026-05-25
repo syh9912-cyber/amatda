@@ -4,6 +4,9 @@ import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections, db, genId } from '../services/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
+import { logger } from '../utils/logger';
+import { getChildIfAccessible } from '../utils/childAccess';
+import { sendExpoPushToUsers } from '../utils/expoPush';
 import { isGeminiAvailable, callGeminiJSON, callGeminiText } from '../services/coaching/gemini.client';
 import {
   EPDS_QUESTIONS,
@@ -121,8 +124,8 @@ router.post('/records', authMiddleware, async (req: Request, res: Response) => {
     batch.set(collections.albumPhotos.doc(id), albumDoc);
     await batch.commit();
 
-    // 가족피드 공유 — 사용자 명시 선택 시에만 (사진/영상 있는 기록만)
-    if (shareToFamily === true && mediaUri) {
+    // 가족피드 공유 — 사용자 명시 선택 시. 사진 없어도 글만 공유 가능.
+    if (shareToFamily === true) {
       try {
         const userDoc = await collections.users.doc(req.userId!).get();
         const userData = userDoc.exists ? (userDoc.data() as Record<string, unknown>) : undefined;
@@ -131,30 +134,44 @@ router.post('/records', authMiddleware, async (req: Request, res: Response) => {
         const userName = nick || (email ? (email.split('@')[0]?.slice(0, 3) + '***') : '익명');
         const childData = childDoc.data() as Record<string, unknown>;
 
-        const postContent = autoMs
-          ? `${autoMs.emoji} ${autoMs.title}\n임신 ${recordWeek ?? ''}주차 기록`
-          : `${finalTitle}\n임신 ${recordWeek ?? ''}주차 기록`;
-
         const postId = genId();
+        // 마일스톤 정보는 milestone 필드로 분리 — content 에 중복 박지 않음.
+        // (PostCard 가 milestoneEmoji 를 일러스트 아이콘으로 표시하고, 라벨은 안 보여줌)
+        const postMilestone = autoMs ? autoMs.title : (finalTitle || null);
+        const postMilestoneEmoji = autoMs ? autoMs.emoji : (finalEmoji || null);
+        // content 는 사용자가 작성한 메모만 + 가족 피드 컨텍스트 (자녀 주차)
+        const postContent = content
+          ? content
+          : `임신 ${recordWeek ?? ''}주차 기록`;
         await collections.posts.doc(postId).set({
           userId: req.userId!,
           userName,
           childAge: `임신 ${recordWeek ?? ''}주차`,
           childGender: (childData.gender as string) || '',
           dominantType: '',
-          content: content ? `${postContent}\n${content}` : postContent,
-          imageUrl: mediaUri,
+          content: postContent,
+          imageUrl: mediaUri ?? null,
           thumbnailUrl: null,
-          videoUrl: mediaType === 'video' ? mediaUri : null,
-          mediaType: mediaType || 'image',
+          videoUrl: mediaUri && mediaType === 'video' ? mediaUri : null,
+          mediaType: mediaUri ? (mediaType || 'image') : 'none',
           sourceType: 'album',
+          // 마일스톤 정보 — frontend PostCard 가 emoji 일러스트로 변환 표시
+          milestone: postMilestone,
+          milestoneEmoji: postMilestoneEmoji,
+          // 임신앨범 record 역참조 — 삭제 시 cascade 키
+          linkedAlbumId: id,
           likes: 0,
           commentCount: 0,
+          // UGC 모더레이션 필드 (P0-11) — 신규 글에 누락되면 momstagram 모더 흐름과 불일치
+          reportCount: 0,
+          hidden: false,
           createdAt: new Date().toISOString(),
           isPublic: true,
         });
-      } catch {
+        logger.info('pregnancy/createRecord', `가족피드 공유 OK postId=${postId} hasMedia=${!!mediaUri}`);
+      } catch (shareErr) {
         // 가족피드 공유 실패해도 기록 저장은 성공
+        logger.error('pregnancy/createRecord/share', shareErr);
       }
     }
 
@@ -169,6 +186,10 @@ router.get('/records', authMiddleware, async (req: Request, res: Response) => {
   try {
     const childId = req.query.childId as string;
     if (!childId) { error(res, 'childId는 필수입니다'); return; }
+
+    // 소유권/가족 멤버 검증 (BOLA 방어 — 의료정보 유출 차단)
+    const access = await getChildIfAccessible(childId, req.userId, 'viewRecords', res);
+    if (!access) return;
 
     // dual-read: 새 albumPhotos에서 phase='pregnancy'만 읽음
     // 응답 형식은 옛 pregnancyRecords 호환 유지 (mediaUri/type/week 등)
@@ -235,9 +256,83 @@ router.delete('/records/:id', authMiddleware, async (req: Request<{ id: string }
     if (albumDoc.exists) batch.delete(collections.albumPhotos.doc(recordId));
     await batch.commit();
 
+    // cascade: 가족피드(posts)에 공유된 글 정리. linkedAlbumId 로 역참조.
+    // best-effort — 실패해도 본 record 삭제는 완료된 상태로 응답.
+    try {
+      const linkedPosts = await collections.posts
+        .where('linkedAlbumId', '==', recordId)
+        .limit(50)
+        .get();
+      if (!linkedPosts.empty) {
+        const cascadeBatch = db.batch();
+        linkedPosts.docs.forEach((d) => cascadeBatch.delete(d.ref));
+        await cascadeBatch.commit();
+        logger.info('pregnancy/deleteRecord', `cascade posts deleted=${linkedPosts.size} recordId=${recordId}`);
+      }
+    } catch (cascadeErr) {
+      logger.warn(
+        'pregnancy/deleteRecord/cascade',
+        cascadeErr instanceof Error ? cascadeErr.message : String(cascadeErr),
+      );
+    }
+
     success(res, { deleted: true });
   } catch {
     error(res, '기록 삭제 중 오류가 발생했습니다', 500);
+  }
+});
+
+router.patch('/records/:id', authMiddleware, async (req: Request<{ id: string }>, res: Response) => {
+  try {
+    const recordId = req.params.id;
+    const { title, content, milestoneEmoji, uri } = req.body as {
+      title?: string;
+      content?: string;
+      milestoneEmoji?: string;
+      uri?: string; // 이미지 URL 교체
+    };
+
+    const [oldDoc, albumDoc] = await Promise.all([
+      collections.pregnancyRecords.doc(recordId).get(),
+      collections.albumPhotos.doc(recordId).get(),
+    ]);
+
+    const ownerOld = oldDoc.exists ? oldDoc.data()!.userId : null;
+    const ownerAlbum = albumDoc.exists ? albumDoc.data()!.userId : null;
+
+    if (!oldDoc.exists && !albumDoc.exists) {
+      error(res, '기록을 찾을 수 없습니다', 404);
+      return;
+    }
+    if ((ownerOld && ownerOld !== req.userId) || (ownerAlbum && ownerAlbum !== req.userId)) {
+      error(res, '권한이 없습니다', 403);
+      return;
+    }
+
+    // pregnancyRecords: title/content/milestoneEmoji/mediaUri 필드명
+    const oldUpdates: Record<string, unknown> = {};
+    if (title !== undefined) oldUpdates['title'] = title;
+    if (content !== undefined) oldUpdates['content'] = content;
+    if (milestoneEmoji !== undefined) oldUpdates['milestoneEmoji'] = milestoneEmoji;
+    if (uri !== undefined) oldUpdates['mediaUri'] = uri;
+
+    // albumPhotos: title/content/milestoneEmoji/uri 필드명 (pregnancyRecords와 mediaUri↔uri만 다름)
+    const albumUpdates: Record<string, unknown> = { ...oldUpdates };
+    if (uri !== undefined) { delete albumUpdates['mediaUri']; albumUpdates['uri'] = uri; albumUpdates['printUrl'] = uri; }
+
+    if (Object.keys(oldUpdates).length === 0) {
+      success(res, { updated: false });
+      return;
+    }
+
+    const batch = db.batch();
+    if (oldDoc.exists) batch.update(collections.pregnancyRecords.doc(recordId), oldUpdates);
+    if (albumDoc.exists) batch.update(collections.albumPhotos.doc(recordId), albumUpdates);
+    await batch.commit();
+
+    success(res, { updated: true });
+  } catch {
+    error(res, '기록 수정 중 오류가 발생했습니다', 500);
   }
 });
 
@@ -399,6 +494,10 @@ router.get('/mom-health', authMiddleware, async (req: Request, res: Response) =>
     const childId = req.query.childId as string;
     if (!childId) { error(res, 'childId는 필수입니다'); return; }
 
+    // 소유권/가족 멤버 검증 (BOLA 방어 — 산모 증상 메모 유출 차단)
+    const access = await getChildIfAccessible(childId, req.userId, 'viewRecords', res);
+    if (!access) return;
+
     const snap = await collections.momHealthChecks
       .where('childId', '==', childId)
       .limit(50)
@@ -523,6 +622,10 @@ router.get('/kick-session', authMiddleware, async (req: Request, res: Response) 
   try {
     const childId = req.query.childId as string;
     if (!childId) { error(res, 'childId는 필수입니다'); return; }
+
+    // 소유권/가족 멤버 검증 (BOLA 방어)
+    const access = await getChildIfAccessible(childId, req.userId, 'viewRecords', res);
+    if (!access) return;
 
     const snap = await collections.kickSessions
       .where('childId', '==', childId)
@@ -1078,6 +1181,10 @@ router.get('/timeline', authMiddleware, async (req: Request, res: Response) => {
     const childId = req.query.childId as string;
     if (!childId) { error(res, 'childId는 필수입니다'); return; }
 
+    // 소유권/가족 멤버 검증 (BOLA 방어)
+    const access = await getChildIfAccessible(childId, req.userId, 'viewRecords', res);
+    if (!access) return;
+
     // 임신기록 조회 — 새 albumPhotos에서 phase='pregnancy'만 (인덱스 불필요)
     const albumSnap = await collections.albumPhotos
       .where('childId', '==', childId)
@@ -1253,6 +1360,10 @@ router.get('/gdm', authMiddleware, async (req: Request, res: Response) => {
     const days = Math.min(90, Math.max(1, parseInt(req.query.days as string, 10) || 30));
     if (!childId) { error(res, 'childId 필요'); return; }
 
+    // 소유권/가족 멤버 검증 (BOLA 방어 — 의료 정보(혈당) 유출 차단)
+    const access = await getChildIfAccessible(childId, req.userId, 'viewRecords', res);
+    if (!access) return;
+
     const since = new Date();
     since.setDate(since.getDate() - days);
 
@@ -1282,7 +1393,11 @@ router.get('/gdm', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-/** DELETE /api/pregnancy/gdm/:id — 혈당 기록 삭제 */
+/** DELETE /api/pregnancy/gdm/:id — 혈당 기록 삭제 + 연관 식단 로그의 외래키 정리
+ *
+ * gdmFoodLogs 는 별도 사용자 데이터(식단)이므로 삭제하지 않고, linkedGlucoseId 만 null 로
+ * 끊어서 식단은 보존하되 stale 외래키는 제거. (혈당과 매칭됐던 정보가 사라진 것뿐)
+ */
 router.delete('/gdm/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const gdmId = req.params.id as string;
@@ -1291,7 +1406,30 @@ router.delete('/gdm/:id', authMiddleware, async (req: Request, res: Response) =>
       error(res, '기록을 찾을 수 없습니다', 404);
       return;
     }
+
+    // 본 혈당 기록 삭제
     await collections.gdmRecords.doc(gdmId).delete();
+
+    // cascade: linkedGlucoseId == gdmId 인 식단 로그의 외래키 정리 (best-effort)
+    try {
+      const linkedFoodLogs = await collections.gdmFoodLogs
+        .where('linkedGlucoseId', '==', gdmId)
+        .limit(500)
+        .get();
+      if (!linkedFoodLogs.empty) {
+        const db = collections.gdmFoodLogs.firestore;
+        const batch = db.batch();
+        linkedFoodLogs.docs.forEach((d) => batch.update(d.ref, { linkedGlucoseId: null }));
+        await batch.commit();
+        logger.info('pregnancy/gdm/delete', `cleared linkedGlucoseId on ${linkedFoodLogs.size} food logs`);
+      }
+    } catch (cascadeErr) {
+      logger.warn(
+        'pregnancy/gdm/delete/cascade',
+        cascadeErr instanceof Error ? cascadeErr.message : String(cascadeErr),
+      );
+    }
+
     success(res, { id: gdmId, message: '삭제되었습니다' });
   } catch {
     error(res, '삭제 중 오류가 발생했습니다', 500);
@@ -1405,6 +1543,10 @@ router.get('/gdm/food', authMiddleware, async (req: Request, res: Response) => {
     const childId = req.query.childId as string;
     const days = Math.min(90, Math.max(1, parseInt(req.query.days as string, 10) || 30));
     if (!childId) { error(res, 'childId 필요'); return; }
+
+    // 소유권/가족 멤버 검증 (BOLA 방어)
+    const access = await getChildIfAccessible(childId, req.userId, 'viewRecords', res);
+    if (!access) return;
 
     const since = new Date();
     since.setDate(since.getDate() - days);
@@ -1810,7 +1952,9 @@ router.post('/mental-check', authMiddleware, async (req: Request, res: Response)
       nextRecommendedAt,
     });
 
-    // shareWithPartner=true 시 familyMembers 에서 accepted 멤버에게 pushSchedules 등록
+    // shareWithPartner=true 시 가족 멤버에게 즉시 Expo Push 발송 (2026-05-08 fix)
+    //   기존: pushSchedules 큐에 문서만 등록하고 디스패처가 없어 실제 푸시 미발송 (dead end)
+    //   변경: 등록 + 즉시 sendExpoPushToUsers 호출
     let notifiedFamily = 0;
     if (shareWithPartner === true) {
       try {
@@ -1819,30 +1963,44 @@ router.post('/mental-check', authMiddleware, async (req: Request, res: Response)
           .where('status', '==', 'accepted')
           .get();
 
-        const batch = db.batch();
-        let hasPush = false;
-
+        const memberIds: string[] = [];
         for (const doc of membersSnap.docs) {
           const member = doc.data();
           const memberId = (member.inviteeUserId ?? member.userId) as string | null;
           if (!memberId || memberId === req.userId) continue;
-
-          const scheduleId = genId();
-          batch.set(collections.pushSchedules.doc(scheduleId), {
-            userId: memberId,
-            type: 'mental_check_share',
-            title: '엄마 마음 건강 체크인',
-            body: partnerPushBody(riskLevel),
-            data: { childId, riskLevel },
-            scheduledAt: FieldValue.serverTimestamp(),
-            status: 'pending',
-          });
-          notifiedFamily++;
-          hasPush = true;
+          memberIds.push(memberId);
         }
 
-        if (hasPush) await batch.commit();
-      } catch { /* 가족 알림 실패해도 본 기록은 유지 */ }
+        if (memberIds.length > 0) {
+          // 1) 발송 이력 기록 (감사용)
+          const batch = db.batch();
+          for (const memberId of memberIds) {
+            batch.set(collections.pushSchedules.doc(genId()), {
+              userId: memberId,
+              type: 'mental_check_share',
+              title: '엄마 마음 건강 체크인',
+              body: partnerPushBody(riskLevel),
+              data: { childId, riskLevel },
+              scheduledAt: FieldValue.serverTimestamp(),
+              status: 'sent',
+            });
+          }
+          await batch.commit();
+
+          // 2) 즉시 Expo Push 발송 (fire-and-forget)
+          const result = await sendExpoPushToUsers(memberIds, childId, {
+            title: '엄마 마음 건강 체크인',
+            body: partnerPushBody(riskLevel),
+            data: { childId, riskLevel, type: 'mental_check_share' },
+          });
+          notifiedFamily = result.sentCount;
+          logger.info('pregnancy/mental-check-share',
+            `가족 공유 푸시 sent=${result.sentCount} skipped=${result.skippedCount}`);
+        }
+      } catch (shareErr) {
+        logger.error('pregnancy/mental-check-share', shareErr);
+        /* 가족 알림 실패해도 본 기록은 유지 */
+      }
     }
 
     success(res, {

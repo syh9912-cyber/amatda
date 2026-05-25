@@ -77,6 +77,17 @@ export default function ChildEditScreen() {
     );
   }
 
+  // 숫자 입력 안전 파싱 — "abc" 같은 비숫자 입력 → null. NaN Firestore 저장 방지.
+  const safeParseNum = (raw: string, label: string): number | null | 'INVALID' => {
+    if (!raw.trim()) return null;
+    const n = parseFloat(raw.replace(/,/g, '.'));
+    if (!Number.isFinite(n) || n <= 0) {
+      Alert.alert('알림', `${label}이(가) 올바른 숫자가 아니에요. 다시 입력해 주세요.`);
+      return 'INVALID';
+    }
+    return n;
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('알림', '이름을 입력해주세요');
@@ -89,14 +100,22 @@ export default function ChildEditScreen() {
       if (isPregnant) {
         if (dueDate.trim()) payload.dueDate = dueDate.trim();
         if (pregnancyNotes.trim()) payload.pregnancyNotes = pregnancyNotes.trim();
-        payload.momHeight = momHeight.trim() ? parseFloat(momHeight) : null;
-        payload.momWeight = momWeight.trim() ? parseFloat(momWeight) : null;
+        const mh = safeParseNum(momHeight, '엄마 키');
+        if (mh === 'INVALID') { setLoading(false); return; }
+        payload.momHeight = mh;
+        const mw = safeParseNum(momWeight, '엄마 몸무게');
+        if (mw === 'INVALID') { setLoading(false); return; }
+        payload.momWeight = mw;
         payload.momBloodType = momBloodType || null;
         payload.momSpecialNotes = momSpecialNotes.trim() || null;
         payload.isHighRiskPregnancy = isHighRiskPregnancy;
       } else {
-        payload.height = height.trim() ? parseFloat(height) : null;
-        payload.weight = weight.trim() ? parseFloat(weight) : null;
+        const h = safeParseNum(height, '아이 키');
+        if (h === 'INVALID') { setLoading(false); return; }
+        payload.height = h;
+        const w = safeParseNum(weight, '아이 몸무게');
+        if (w === 'INVALID') { setLoading(false); return; }
+        payload.weight = w;
         payload.bloodType = bloodType || null;
         payload.specialNotes = specialNotes.trim() || null;
       }
@@ -195,6 +214,9 @@ export default function ChildEditScreen() {
               key={g}
               style={[styles.chip, gender === g && styles.chipActive]}
               onPress={() => setGender(g)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: gender === g }}
+              accessibilityLabel={g === 'F' ? '여아' : '남아'}
             >
               <Text style={[styles.chipText, gender === g && styles.chipTextActive]}>
                 {g === 'F' ? '여아' : '남아'}
@@ -205,6 +227,9 @@ export default function ChildEditScreen() {
             <TouchableOpacity
               style={[styles.chip, gender === 'U' && styles.chipActive]}
               onPress={() => setGender('U')}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: gender === 'U' }}
+              accessibilityLabel="성별 모름"
             >
               <Text style={[styles.chipText, gender === 'U' && styles.chipTextActive]}>모름</Text>
             </TouchableOpacity>
@@ -362,12 +387,21 @@ export default function ChildEditScreen() {
           style={[styles.saveBtn, loading && styles.saveBtnDisabled]}
           onPress={handleSave}
           disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel={loading ? '저장 중' : '정보 저장'}
+          accessibilityState={{ disabled: loading, busy: loading }}
         >
           <Text style={styles.saveBtnText}>{loading ? '저장 중...' : '정보 저장'}</Text>
         </TouchableOpacity>
 
         {/* 삭제 버튼 */}
-        <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete}>
+        <TouchableOpacity
+          style={styles.deleteBtn}
+          onPress={handleDelete}
+          accessibilityRole="button"
+          accessibilityLabel="아이 정보 삭제"
+          accessibilityHint="이 아이의 모든 기록이 삭제됩니다"
+        >
           <Text style={styles.deleteBtnText}>
             {isPregnant ? '임신 정보 삭제' : '아이 정보 삭제'}
           </Text>

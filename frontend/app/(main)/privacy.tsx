@@ -18,7 +18,7 @@ export default function PrivacyPolicyScreen() {
 
       <Text style={styles.heading}>개인정보 처리방침</Text>
       <Text style={styles.meta}>
-        시행일: 2026년 4월 5일{'\n'}
+        시행일: 2026년 5월 25일{'\n'}
         회사명: SY Labs{'\n'}
         서비스명: 아맞다 (아이맞춤다이어리)
       </Text>

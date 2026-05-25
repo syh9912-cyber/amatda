@@ -151,6 +151,11 @@ router.get('/schedule', authMiddleware, async (req: Request, res: Response) => {
     if (!childDoc.exists) { error(res, '아이를 찾을 수 없습니다', 404); return; }
 
     const childData = childDoc.data()!;
+    // 소유권 검증 (BOLA 방어) — 임의 childId 로 출생일/접종 이력 조회 차단
+    if (childData.userId !== req.userId) {
+      error(res, '아이를 찾을 수 없습니다', 404);
+      return;
+    }
     const birthDate = childData.birthDate as string | null;
     if (!birthDate) {
       error(res, '출생일이 등록되지 않은 아이입니다 (임신 중에는 사용 불가)');
@@ -286,6 +291,11 @@ router.post('/schedule-alerts', authMiddleware, async (req: Request, res: Respon
     if (!childDoc.exists) { error(res, '아이를 찾을 수 없습니다', 404); return; }
 
     const childData = childDoc.data()!;
+    // 소유권 검증 (BOLA 방어)
+    if (childData.userId !== req.userId) {
+      error(res, '아이를 찾을 수 없습니다', 404);
+      return;
+    }
     const birthDate = childData.birthDate as string | null;
     if (!birthDate) { error(res, '출생일이 등록되지 않은 아이입니다'); return; }
 

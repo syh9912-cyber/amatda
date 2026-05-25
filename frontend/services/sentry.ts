@@ -72,7 +72,7 @@ export function initSentry(): void {
     tracesSampleRate: 0.2,
     enableAutoSessionTracking: true,
     sessionTrackingIntervalMillis: 30000,
-    attachScreenshot: true,
+    attachScreenshot: false,
     enableNativeFramesTracking: true,
     integrations: [navigationIntegration],
     // PII 보호 — IP/사용자 헤더 등 자동 첨부 끔

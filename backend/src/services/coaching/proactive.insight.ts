@@ -241,7 +241,7 @@ async function generateEncouragement(
 async function generatePregnancyInsights(child: ChildProfile): Promise<ProactiveInsight[]> {
   try {
     const week = child.pregnancyWeeks ?? 0;
-    console.log(`[PregnancyInsights] week=${week}, name=${child.name}`);
+    logger.info('proactive.insight', `PregnancyInsights week=${week}`);
     const insights: ProactiveInsight[] = [];
 
     // 1. 주수별 맞춤 팁
@@ -258,7 +258,7 @@ async function generatePregnancyInsights(child: ChildProfile): Promise<Proactive
     const encouragement = await generatePregnancyEncouragement(child, week);
     insights.push(encouragement);
 
-    console.log(`[PregnancyInsights] generated ${insights.length} insights`);
+    logger.info('proactive.insight', `PregnancyInsights generated ${insights.length} insights`);
     insights.sort((a, b) => b.priority - a.priority);
     return insights.slice(0, 3);
   } catch (err) {

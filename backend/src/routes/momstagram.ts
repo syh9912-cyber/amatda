@@ -4,6 +4,33 @@ import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '../utils/logger';
+import { z } from 'zod';
+import { parseBody } from '../utils/validate';
+
+const MAX_POST_CONTENT = 2000;
+const MAX_COMMENT_CONTENT = 500;
+
+const PostBodySchema = z.object({
+  content: z.string().min(1, '필수입니다').max(MAX_POST_CONTENT, `최대 ${MAX_POST_CONTENT}자`),
+  imageUrl: z.string().url().max(2048).nullable().optional(),
+  thumbnailUrl: z.string().url().max(2048).nullable().optional(),
+  videoUrl: z.string().url().max(2048).nullable().optional(),
+  mediaType: z.enum(['image', 'video', 'none']).optional(),
+  sourceType: z.enum(['album', 'diary', 'manual']),
+  childAge: z.string().max(64).optional(),
+  childGender: z.enum(['', 'M', 'F', 'U']).optional(),
+  dominantType: z.enum(['', '활동형', '탐구형', '조화형', '분석형', '감성형']).optional(),
+  // 마일스톤 정보 — 가족 피드 카드에 일러스트로 표시 (앞에 '🌿' 같은 emoji + 라벨)
+  milestone: z.string().max(100).optional(),
+  milestoneEmoji: z.string().max(8).optional(),
+  // 가족피드 글이 임신앨범/성장앨범의 어떤 record 에서 공유된 건지 역참조용 (cascade delete).
+  // album/pregnancy 에서 record 삭제 시 posts.where('linkedAlbumId', '==', recordId) 로 정리.
+  linkedAlbumId: z.string().min(1).max(128).optional(),
+});
+
+const CommentBodySchema = z.object({
+  content: z.string().min(1, '필수입니다').max(MAX_COMMENT_CONTENT, `최대 ${MAX_COMMENT_CONTENT}자`),
+});
 
 const router = Router();
 
@@ -25,16 +52,9 @@ function getDisplayName(userData: Record<string, unknown> | undefined): string {
 router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { content, imageUrl, thumbnailUrl, videoUrl, mediaType, sourceType, childAge, childGender, dominantType } = req.body;
-
-    if (!content) {
-      error(res, '내용을 입력해주세요');
-      return;
-    }
-    if (!sourceType || !['album', 'diary', 'manual'].includes(sourceType)) {
-      error(res, '올바른 sourceType을 입력해주세요 (album, diary, manual)');
-      return;
-    }
+    const body = parseBody(req, res, PostBodySchema);
+    if (!body) return;
+    const { content, imageUrl, thumbnailUrl, videoUrl, mediaType, sourceType, childAge, childGender, dominantType, milestone, milestoneEmoji, linkedAlbumId } = body;
 
     const userDoc = await collections.users.doc(userId).get();
     const userName = getDisplayName(userDoc.exists ? (userDoc.data() as Record<string, unknown>) : undefined);
@@ -54,15 +74,23 @@ router.post('/posts', authMiddleware, async (req: Request, res: Response) => {
       videoUrl: videoUrl || null,
       mediaType: mediaType || (videoUrl ? 'video' : imageUrl ? 'image' : 'none'),
       sourceType,
+      // 마일스톤 정보 — PostCard 가 emoji 매핑 일러스트로 표시 (한글 텍스트 fallback 방지)
+      milestone: milestone || null,
+      milestoneEmoji: milestoneEmoji || null,
+      // album/pregnancy 원본 record 와의 연결 — record 삭제 시 cascade 정리에 사용
+      linkedAlbumId: linkedAlbumId || null,
       likes: 0,
       commentCount: 0,
+      reportCount: 0,
+      hidden: false,
       createdAt: now,
       isPublic: true,
     };
 
     await collections.posts.doc(id).set(post);
     success(res, { id, ...post }, 201);
-  } catch {
+  } catch (err: unknown) {
+    logger.error('route', err);
     error(res, '게시글 작성 중 오류가 발생했습니다', 500);
   }
 });
@@ -96,18 +124,35 @@ router.get('/feed', authMiddleware, async (req: Request, res: Response) => {
       });
     } catch { /* familyMembers 없어도 본인 게시글은 표시 */ }
 
+    // 차단된 사용자 목록 — 피드에서 해당 글 제외 (UGC 정책)
+    const blockedUserIds = new Set<string>();
+    try {
+      const blockSnap = await collections.userBlocks
+        .where('userId', '==', userId)
+        .get();
+      blockSnap.docs.forEach((d) => {
+        const target = d.data().blockedUserId as string;
+        if (target) blockedUserIds.add(target);
+      });
+    } catch { /* 차단 목록 없어도 진행 */ }
+
     // 가족 멤버의 게시글만 조회 (Firestore 'in' 최대 30)
     const userChunks: string[][] = [];
     for (let i = 0; i < familyUserIds.length; i += 30) {
       userChunks.push(familyUserIds.slice(i, i + 30));
     }
 
+    // 청크당 최대 200건 hard cap — 페이지가 깊어져도 메모리/Firestore 비용 폭증 방지.
+    // page * limit 이 200 을 넘는 영역은 "옛 글" 영역이라 cursor pagination 이 정석이지만
+    // 출시 단계에서는 hard cap 으로 안전하게 제한 (출시 후 cursor 도입 별도 작업).
+    const FEED_PER_CHUNK_HARD_CAP = 200;
+    const fetchPerChunk = Math.min(limit * (page + 1), FEED_PER_CHUNK_HARD_CAP);
     const allDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
     for (const chunk of userChunks) {
       const snap = await collections.posts
         .where('userId', 'in', chunk)
         .orderBy('createdAt', 'desc')
-        .limit(limit * (page + 1))
+        .limit(fetchPerChunk)
         .get();
       allDocs.push(...snap.docs);
     }
@@ -118,7 +163,15 @@ router.get('/feed', authMiddleware, async (req: Request, res: Response) => {
       const bTime = b.data().createdAt as string;
       return bTime.localeCompare(aTime);
     });
-    const paginated = allDocs.slice(page * limit, (page + 1) * limit);
+    // 모더레이션 필터: hidden=true(3회 이상 신고 누적) + 차단된 사용자 제외
+    const visibleDocs = allDocs.filter((d) => {
+      const data = d.data();
+      if (data.hidden === true) return false;
+      const authorId = data.userId as string;
+      if (blockedUserIds.has(authorId)) return false;
+      return true;
+    });
+    const paginated = visibleDocs.slice(page * limit, (page + 1) * limit);
     const posts = paginated.map((d) => ({ id: d.id, ...d.data() }));
 
     // 현재 사용자의 좋아요 여부 확인
@@ -148,7 +201,8 @@ router.get('/feed', authMiddleware, async (req: Request, res: Response) => {
     }));
 
     success(res, { posts: feedPosts, page, limit });
-  } catch {
+  } catch (err: unknown) {
+    logger.error('route', err);
     error(res, '피드 조회 중 오류가 발생했습니다', 500);
   }
 });
@@ -193,7 +247,8 @@ router.post('/posts/:id/like', authMiddleware, async (req: Request, res: Respons
       const currentLikes = (postDoc.data()!.likes as number) || 0;
       success(res, { liked: true, likes: currentLikes + 1 });
     }
-  } catch {
+  } catch (err: unknown) {
+    logger.error('route', err);
     error(res, '좋아요 처리 중 오류가 발생했습니다', 500);
   }
 });
@@ -230,7 +285,8 @@ router.get('/posts/:id/comments', authMiddleware, async (req: Request, res: Resp
       ? (lastDoc.data().createdAt as string | undefined) ?? null
       : null;
     success(res, { comments, page, limit, nextCursor });
-  } catch {
+  } catch (err: unknown) {
+    logger.error('route', err);
     error(res, '댓글 조회 중 오류가 발생했습니다', 500);
   }
 });
@@ -240,12 +296,9 @@ router.post('/posts/:id/comments', authMiddleware, async (req: Request, res: Res
   try {
     const userId = req.userId!;
     const postId = req.params.id as string;
-    const { content } = req.body;
-
-    if (!content) {
-      error(res, '댓글 내용을 입력해주세요');
-      return;
-    }
+    const body = parseBody(req, res, CommentBodySchema);
+    if (!body) return;
+    const { content } = body;
 
     const postRef = collections.posts.doc(postId);
     const postDoc = await postRef.get();
@@ -326,7 +379,8 @@ router.patch('/posts/:id', authMiddleware, async (req: Request, res: Response) =
     await collections.posts.doc(postId).update(updates);
     const updated = await collections.posts.doc(postId).get();
     success(res, { id: postId, ...updated.data() });
-  } catch {
+  } catch (err: unknown) {
+    logger.error('route', err);
     error(res, '게시글 수정 중 오류가 발생했습니다', 500);
   }
 });
@@ -366,7 +420,8 @@ router.delete('/posts/:id', authMiddleware, async (req: Request, res: Response) 
     await collections.posts.doc(postId).delete();
 
     success(res, { id: postId, message: '게시글이 삭제되었습니다' });
-  } catch {
+  } catch (err: unknown) {
+    logger.error('route', err);
     error(res, '게시글 삭제 중 오류가 발생했습니다', 500);
   }
 });
@@ -397,8 +452,117 @@ router.get('/my-posts', authMiddleware, async (req: Request, res: Response) => {
       ? (lastDoc.data().createdAt as string | undefined) ?? null
       : null;
     success(res, { posts, page, limit, nextCursor });
-  } catch {
+  } catch (err: unknown) {
+    logger.error('route', err);
     error(res, '내 게시글 조회 중 오류가 발생했습니다', 500);
+  }
+});
+
+// ─── UGC 모더레이션 (Apple 1.2 / Google UGC 정책) ───
+
+const REPORT_REASONS = ['abuse', 'ad', 'privacy', 'spam', 'sexual', 'other'] as const;
+type ReportReason = typeof REPORT_REASONS[number];
+const ReportBodySchema = z.object({
+  reason: z.enum(REPORT_REASONS).optional(),
+});
+
+/**
+ * POST /posts/:id/report — 게시글 신고
+ * 같은 사용자 1회만, 누적 3회 → hidden=true 자동 처리.
+ */
+router.post('/posts/:id/report', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const postId = req.params.id as string;
+    const body = parseBody(req, res, ReportBodySchema);
+    if (!body) return;
+    const finalReason: ReportReason = body.reason ?? 'other';
+
+    const postRef = collections.posts.doc(postId);
+    const postDoc = await postRef.get();
+    if (!postDoc.exists) {
+      error(res, '게시글을 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const reportRef = postRef.collection('reports').doc(userId);
+    const reportSnap = await reportRef.get();
+    if (reportSnap.exists) {
+      success(res, { alreadyReported: true });
+      return;
+    }
+    await reportRef.set({
+      userId,
+      reason: finalReason,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    await postRef.update({ reportCount: FieldValue.increment(1) });
+
+    const updated = await postRef.get();
+    const count = (updated.data()?.reportCount as number | undefined) ?? 0;
+    if (count >= 3) {
+      await postRef.update({ hidden: true });
+    }
+    success(res, { reported: true, hidden: count >= 3, reason: finalReason });
+  } catch (err) {
+    logger.error('momstagram/report', err);
+    error(res, '신고 처리 중 오류가 발생했습니다', 500);
+  }
+});
+
+/**
+ * POST /users/:uid/block — 특정 사용자 차단 (해당 사용자 글이 피드에서 제외됨)
+ */
+router.post('/users/:uid/block', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const blockedUserId = req.params.uid as string;
+    if (!blockedUserId || blockedUserId === userId) {
+      error(res, '잘못된 요청입니다');
+      return;
+    }
+    const docId = `${userId}_${blockedUserId}`;
+    await collections.userBlocks.doc(docId).set({
+      userId,
+      blockedUserId,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    success(res, { blocked: true, blockedUserId });
+  } catch (err) {
+    logger.error('momstagram/block', err);
+    error(res, '차단 처리 중 오류가 발생했습니다', 500);
+  }
+});
+
+/**
+ * DELETE /users/:uid/block — 차단 해제
+ */
+router.delete('/users/:uid/block', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const blockedUserId = req.params.uid as string;
+    const docId = `${userId}_${blockedUserId}`;
+    await collections.userBlocks.doc(docId).delete();
+    success(res, { unblocked: true, blockedUserId });
+  } catch (err) {
+    logger.error('momstagram/unblock', err);
+    error(res, '차단 해제 중 오류가 발생했습니다', 500);
+  }
+});
+
+/**
+ * GET /users/blocked — 내가 차단한 사용자 목록
+ */
+router.get('/users/blocked', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const snap = await collections.userBlocks.where('userId', '==', userId).get();
+    const blocked = snap.docs.map((d) => d.data().blockedUserId as string).filter(Boolean);
+    success(res, { blocked });
+  } catch (err) {
+    logger.error('momstagram/blocked-list', err);
+    error(res, '차단 목록 조회 중 오류가 발생했습니다', 500);
   }
 });
 

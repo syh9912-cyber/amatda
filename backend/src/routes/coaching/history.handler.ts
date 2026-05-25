@@ -430,7 +430,8 @@ export function registerHistoryHandlers(router: Router): void {
           items: next.items,
         } : null,
       });
-    } catch {
+    } catch (err: unknown) {
+      logger.error('route', err);
       error(res, '마일스톤 조회 중 오류', 500);
     }
   });

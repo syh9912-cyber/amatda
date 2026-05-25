@@ -69,10 +69,14 @@ router.get('/premium/status', authMiddleware, async (req: Request, res: Response
       '광고 포함',
     ] : [];
 
+    // 체험판을 한 번이라도 시작했는지 (재시작 차단용) — trialStartedAt 존재 여부
+    const trialUsed = Boolean(trialStarted);
+
     success(res, {
       tier: effectiveTier,
       trialActive,
       trialDaysLeft,
+      trialUsed,
       showTrialWarning,
       trialWarningMessage: showTrialWarning
         ? `체험판이 ${trialDaysLeft}일 후 종료됩니다. 무료로 전환되면 일부 기능이 제한돼요.`
@@ -109,8 +113,8 @@ router.post('/premium/start-trial', authMiddleware, async (req: Request, res: Re
 
     success(res, {
       trialStartedAt: now,
-      trialDaysLeft: 30,
-      message: '30일 프리미엄 체험이 시작되었습니다!',
+      trialDaysLeft: 7,
+      message: '7일 무료 프리미엄 체험이 시작되었습니다!',
     });
   } catch {
     error(res, '체험판 시작 중 오류', 500);

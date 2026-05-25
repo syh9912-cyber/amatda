@@ -112,6 +112,26 @@ export const collections = {
   //   { jti, familyId, userId, used: boolean, revoked: boolean,
   //     issuedAt: ISO, expiresAt: ISO, replacedBy?: jti, revokedReason?: string }
   refreshTokens: db.collection('refreshTokens'),
+
+  // 사용자 차단 목록 — UGC 정책(Apple 1.2 / Google) 충족용.
+  // 문서 ID: `${userId}_${blockedUserId}`
+  // { userId, blockedUserId, createdAt }
+  userBlocks: db.collection('userBlocks'),
+
+  // ─── baby-tracker 서버 sync (2026-05-08 신규) ───
+  //
+  // 기존 baby-tracker 는 AsyncStorage 만 사용 → 데이터 삭제 / 재설치 시 영구 손실.
+  // PIPA 관점이 아닌 사용자 데이터 보존 관점에서 출시 차단 사항이라 서버 sync 추가.
+  //
+  // babyTrackerDays — day 단위 records 저장
+  //   문서 ID: `${childId}_${YYYY-MM-DD}`
+  //   { userId, childId, date, records: TrackerRecord[], updatedAt }
+  babyTrackerDays: db.collection('babyTrackerDays'),
+
+  // babyTrackerSessions — 진행 중인 sleep/breast 세션 저장 (앱 재시작 시 복구)
+  //   문서 ID: childId
+  //   { userId, childId, sleepSession?: {...} | null, breastSession?: {...} | null, updatedAt }
+  babyTrackerSessions: db.collection('babyTrackerSessions'),
 };
 
 /** 문서 ID 생성 */

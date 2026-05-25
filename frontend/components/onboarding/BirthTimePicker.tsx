@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
 interface BirthTimePickerProps {
@@ -7,64 +6,54 @@ interface BirthTimePickerProps {
   onChangeBirthTime: (time: string) => void;
 }
 
-function toHHMM(date: Date): string {
-  const h = String(date.getHours()).padStart(2, '0');
-  const m = String(date.getMinutes()).padStart(2, '0');
-  return `${h}:${m}`;
+/**
+ * 출생 시각 입력 — 직접 텍스트 입력 (HH:MM).
+ *
+ * 이전엔 native DateTimePicker(아날로그/스피너) 사용했으나
+ * "돌려서 체크하는 시스템 불편" 사용자 피드백으로 직접 입력으로 변경.
+ *
+ * 입력 편의:
+ *  - 숫자만 입력하면 자동으로 HH:MM 포맷 (1430 → 14:30)
+ *  - 24시간제 (00:00 ~ 23:59)
+ *  - 잘못된 값은 시각화 (border 빨강) — 저장은 호환 형식 (HH:MM) 만 허용
+ */
+function formatTimeInput(raw: string): string {
+  // 숫자만 추출, 최대 4자리
+  const digits = raw.replace(/\D/g, '').slice(0, 4);
+  if (digits.length === 0) return '';
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+}
+
+function isValidTime(time: string): boolean {
+  if (!/^\d{2}:\d{2}$/.test(time)) return false;
+  const [h, m] = time.split(':').map(Number);
+  return h >= 0 && h <= 23 && m >= 0 && m <= 59;
 }
 
 export function BirthTimePicker({ birthTime, onChangeBirthTime }: BirthTimePickerProps) {
-  const [show, setShow] = useState(false);
-
-  if (Platform.OS === 'web') {
-    return (
-      <TextInput
-        style={styles.input}
-        placeholder="14:30"
-        placeholderTextColor={COLORS.textLight}
-        value={birthTime}
-        onChangeText={onChangeBirthTime}
-        keyboardType="numbers-and-punctuation"
-      />
-    );
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const DateTimePicker = require('@react-native-community/datetimepicker').default;
-
-  const parseTime = (): Date => {
-    const d = new Date(2020, 0, 1, 12, 0);
-    if (birthTime && /^\d{2}:\d{2}$/.test(birthTime)) {
-      const [h, m] = birthTime.split(':').map(Number);
-      d.setHours(h, m, 0, 0);
-    }
-    return d;
+  const handleChange = (text: string) => {
+    const formatted = formatTimeInput(text);
+    onChangeBirthTime(formatted);
   };
 
-  const currentValue = parseTime();
-
-  const handleChange = (_event: unknown, selectedDate?: Date) => {
-    setShow(Platform.OS === 'ios');
-    if (selectedDate) {
-      onChangeBirthTime(toHHMM(selectedDate));
-    }
-  };
+  const showError = birthTime.length === 5 && !isValidTime(birthTime);
 
   return (
     <View>
-      <TouchableOpacity style={styles.input} onPress={() => setShow(true)}>
-        <Text style={birthTime ? styles.valueText : styles.placeholderText}>
-          {birthTime || '출생 시각을 선택해주세요'}
-        </Text>
-      </TouchableOpacity>
-      {show && (
-        <DateTimePicker
-          value={currentValue}
-          mode="time"
-          is24Hour={true}
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleChange}
-        />
+      <TextInput
+        style={[styles.input, showError && styles.inputError]}
+        placeholder="예: 14:30 (24시간제)"
+        placeholderTextColor={COLORS.textLight}
+        value={birthTime}
+        onChangeText={handleChange}
+        keyboardType="number-pad"
+        maxLength={5}
+      />
+      {showError ? (
+        <Text style={styles.errorText}>00:00 ~ 23:59 사이로 입력해주세요</Text>
+      ) : (
+        <Text style={styles.hintText}>숫자만 입력하면 자동으로 시각 형식이 돼요 (예: 1430 → 14:30)</Text>
       )}
     </View>
   );
@@ -77,13 +66,24 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: RADIUS.md,
     padding: SPACING.md,
-  },
-  valueText: {
     fontSize: FONT_SIZE.md,
     color: COLORS.text,
   },
-  placeholderText: {
-    fontSize: FONT_SIZE.md,
+  inputError: {
+    borderColor: '#E53935',
+    backgroundColor: '#FFEBEE',
+  },
+  hintText: {
+    fontSize: 11,
     color: COLORS.textLight,
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  errorText: {
+    fontSize: 11,
+    color: '#C62828',
+    marginTop: 4,
+    marginLeft: 4,
+    fontWeight: '600',
   },
 });

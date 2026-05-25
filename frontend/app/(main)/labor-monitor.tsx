@@ -51,6 +51,60 @@ export default function LaborMonitorScreen() {
   const [kickSaving, setKickSaving] = useState(false);
   const [kickGuideOpen, setKickGuideOpen] = useState(false);
 
+  // 태동 누적 기록 — 사용자 피드백(2026-05-08): "그동안 몇 번 눌렀는지 기록이 안 보임"
+  type KickHistoryItem = {
+    id: string;
+    count: number;
+    durationSec: number;
+    week?: number;
+    createdAt?: string;
+  };
+  const [kickHistory, setKickHistory] = useState<KickHistoryItem[]>([]);
+
+  // 누적 통계 계산
+  const kickStats = useMemo(() => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const yestStart = new Date(todayStart);
+    yestStart.setDate(yestStart.getDate() - 1);
+    const week7Start = new Date(todayStart);
+    week7Start.setDate(week7Start.getDate() - 6);
+
+    let todayCount = 0;
+    let yestCount = 0;
+    let week7Count = 0;
+    for (const r of kickHistory) {
+      if (!r.createdAt) continue;
+      const t = new Date(r.createdAt).getTime();
+      if (isNaN(t)) continue;
+      if (t >= todayStart.getTime()) {
+        todayCount += r.count;
+      } else if (t >= yestStart.getTime()) {
+        yestCount += r.count;
+      }
+      if (t >= week7Start.getTime()) {
+        week7Count += r.count;
+      }
+    }
+    return { todayCount, yestCount, week7Count, totalSessions: kickHistory.length };
+  }, [kickHistory]);
+
+  const reloadKickHistory = useCallback(async () => {
+    if (!childId) return;
+    try {
+      const res = await pregnancyApi.getKickSessions(childId);
+      const data = (res.data?.data ?? res.data) as KickHistoryItem[] | { sessions?: KickHistoryItem[] };
+      const list = Array.isArray(data) ? data : (data.sessions ?? []);
+      setKickHistory(list);
+    } catch {
+      // 조회 실패는 silent — 화면 자체는 작동 유지
+    }
+  }, [childId]);
+
+  useEffect(() => {
+    reloadKickHistory();
+  }, [reloadKickHistory]);
+
   // 작은 토스트 (기록 완료 알림 — 큰 Alert 대신)
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -134,6 +188,8 @@ export default function LaborMonitorScreen() {
       setToastMsg(`태동 ${kickCount}회 기록 완료했어요 👣`);
       setKickCount(0);
       setKickElapsed(0);
+      // 누적 기록 갱신 (fire-and-forget)
+      reloadKickHistory();
     } catch (e) {
       captureError(e, { ctx: 'labor-monitor/saveKickSession', childId, count: kickCount });
       Alert.alert('오류', '태동 기록 저장에 실패했습니다');
@@ -410,6 +466,30 @@ export default function LaborMonitorScreen() {
                   <Text style={styles.primaryBtnText}>측정 종료 · 저장</Text>
                 )}
               </TouchableOpacity>
+            </View>
+
+            {/* 누적 태동 기록 */}
+            <View style={kickStyles.historyCard}>
+              <Text style={kickStyles.historyTitle}>📊 태동 누적 기록</Text>
+              <View style={kickStyles.historyRow}>
+                <View style={kickStyles.historyItem}>
+                  <Text style={kickStyles.historyLabel}>오늘</Text>
+                  <Text style={kickStyles.historyValue}>{kickStats.todayCount}회</Text>
+                </View>
+                <View style={kickStyles.historyDivider} />
+                <View style={kickStyles.historyItem}>
+                  <Text style={kickStyles.historyLabel}>어제</Text>
+                  <Text style={kickStyles.historyValue}>{kickStats.yestCount}회</Text>
+                </View>
+                <View style={kickStyles.historyDivider} />
+                <View style={kickStyles.historyItem}>
+                  <Text style={kickStyles.historyLabel}>최근 7일</Text>
+                  <Text style={kickStyles.historyValue}>{kickStats.week7Count}회</Text>
+                </View>
+              </View>
+              <Text style={kickStyles.historyFoot}>
+                지금까지 측정한 세션: {kickStats.totalSessions}회
+              </Text>
             </View>
           </>
         ) : (
@@ -860,6 +940,51 @@ export default function LaborMonitorScreen() {
     </View>
   );
 }
+
+const kickStyles = StyleSheet.create({
+  historyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    marginTop: SPACING.lg,
+    ...SHADOWS.soft,
+  },
+  historyTitle: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 12,
+  },
+  historyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingVertical: 8,
+  },
+  historyItem: { alignItems: 'center', flex: 1 },
+  historyDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: '#E5E7EB',
+  },
+  historyLabel: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  historyValue: {
+    fontSize: 20,
+    color: '#FF8C5A',
+    fontWeight: '800',
+  },
+  historyFoot: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 12,
+  },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },

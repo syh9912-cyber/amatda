@@ -33,16 +33,26 @@ function deleteItem(key: string) {
   }
 }
 
-export function saveAuth(data: {
+export async function saveAuth(data: {
   accessToken: string;
   refreshToken: string;
   userId: string;
   email: string;
-}) {
-  setItem(KEYS.ACCESS_TOKEN, data.accessToken);
-  setItem(KEYS.REFRESH_TOKEN, data.refreshToken);
-  setItem(KEYS.USER_ID, data.userId);
-  setItem(KEYS.EMAIL, data.email);
+}): Promise<void> {
+  if (Platform.OS === 'web') {
+    localStorage.setItem(KEYS.ACCESS_TOKEN, data.accessToken);
+    localStorage.setItem(KEYS.REFRESH_TOKEN, data.refreshToken);
+    localStorage.setItem(KEYS.USER_ID, data.userId);
+    localStorage.setItem(KEYS.EMAIL, data.email);
+    return;
+  }
+  // SecureStore 쓰기를 await — OTA reload race condition 방지
+  await Promise.all([
+    SecureStore.setItemAsync(KEYS.ACCESS_TOKEN, data.accessToken),
+    SecureStore.setItemAsync(KEYS.REFRESH_TOKEN, data.refreshToken),
+    SecureStore.setItemAsync(KEYS.USER_ID, data.userId),
+    SecureStore.setItemAsync(KEYS.EMAIL, data.email),
+  ]);
 }
 
 export async function loadAuthAsync(): Promise<{

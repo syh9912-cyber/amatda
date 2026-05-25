@@ -46,6 +46,34 @@ module.exports = ({ config }) => {
   );
   if (!hasSentry) existingPlugins.push(sentryPlugin);
 
+  // AdMob (Google Mobile Ads) — 배너 광고용
+  // App ID 는 EAS env 로 주입 (production 빌드에서만 실제 ID, dev/preview 는 테스트 ID)
+  // 현재 placeholder 는 Google 공식 테스트 App ID — 실제 발급 후 EAS env 로 교체
+  const ADMOB_ANDROID_APP_ID = process.env.ADMOB_ANDROID_APP_ID || 'ca-app-pub-3940256099942544~3347511713';
+  const ADMOB_IOS_APP_ID = process.env.ADMOB_IOS_APP_ID || 'ca-app-pub-3940256099942544~1458002511';
+  const adMobPlugin = [
+    'react-native-google-mobile-ads',
+    {
+      androidAppId: ADMOB_ANDROID_APP_ID,
+      iosAppId: ADMOB_IOS_APP_ID,
+      // iOS: 광고 ID 추적 사용자 동의 안 받으니 SK Ad Network 만 사용 (ATT 프롬프트 X 가능)
+      // user_tracking_usage_description 미설정 시 Apple 심사관이 ATT 안 묻는 앱으로 판단
+    },
+  ];
+  const hasAdMob = existingPlugins.some(
+    (p) => p === 'react-native-google-mobile-ads' ||
+           (Array.isArray(p) && p[0] === 'react-native-google-mobile-ads'),
+  );
+  if (!hasAdMob) existingPlugins.push(adMobPlugin);
+
+  // Firebase (Analytics) — google-services.json 자동 통합 + 네이티브 모듈 링크.
+  // @react-native-firebase/app 이 first plugin. analytics 는 app 위에 동작.
+  const hasFirebase = existingPlugins.some(
+    (p) => p === '@react-native-firebase/app' ||
+           (Array.isArray(p) && p[0] === '@react-native-firebase/app'),
+  );
+  if (!hasFirebase) existingPlugins.push('@react-native-firebase/app');
+
   return {
     ...config,
     android: androidConfig,

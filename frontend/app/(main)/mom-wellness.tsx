@@ -8,13 +8,32 @@ import {
   Alert,
   ActivityIndicator,
   Switch,
+  TextInput,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useChildStore } from '../../stores/childStore';
 import { pregnancyApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
+
+// ─── 빠른 기분 일기 (간단 mood pick + 한 줄 메모) — EPDS 와 별개, AsyncStorage 로컬 저장 ───
+type MoodKey = 'great' | 'good' | 'soso' | 'down' | 'bad';
+const MOOD_OPTIONS: { key: MoodKey; emoji: string; label: string; color: string }[] = [
+  { key: 'great', emoji: '😊', label: '아주 좋음', color: '#43A047' },
+  { key: 'good', emoji: '🙂', label: '좋음', color: '#7CB342' },
+  { key: 'soso', emoji: '😐', label: '보통', color: '#FB8C00' },
+  { key: 'down', emoji: '😔', label: '우울', color: '#FB6F92' },
+  { key: 'bad', emoji: '😢', label: '많이 힘듦', color: '#C62828' },
+];
+const MOOD_STORAGE_PREFIX = 'amatda_mood_diary_';
+interface MoodEntry { date: string; mood: MoodKey; note?: string }
+
+function todayKstStr(): string {
+  const KST = 9 * 60 * 60 * 1000;
+  return new Date(Date.now() + KST).toISOString().slice(0, 10);
+}
 
 interface EpdsQuestion { id: number; text: string }
 interface EpdsRecord {
@@ -112,6 +131,51 @@ export default function MomWellnessScreen() {
   const [showSurvey, setShowSurvey] = useState(false);
   const [analysis, setAnalysis] = useState<EpdsAnalysis | null>(null);
 
+  // 빠른 기분 일기 — 오늘 mood + 한 줄 메모, AsyncStorage 로컬
+  const [todayMood, setTodayMood] = useState<MoodKey | null>(null);
+  const [moodNote, setMoodNote] = useState('');
+  const [recentMoods, setRecentMoods] = useState<MoodEntry[]>([]);
+
+  const loadMoodDiary = useCallback(async () => {
+    try {
+      const today = todayKstStr();
+      const todayRaw = await AsyncStorage.getItem(MOOD_STORAGE_PREFIX + today);
+      if (todayRaw) {
+        const parsed = JSON.parse(todayRaw) as MoodEntry;
+        setTodayMood(parsed.mood);
+        setMoodNote(parsed.note ?? '');
+      } else {
+        setTodayMood(null);
+        setMoodNote('');
+      }
+      // 최근 7일 조회
+      const recent: MoodEntry[] = [];
+      const now = new Date(today);
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().slice(0, 10);
+        const raw = await AsyncStorage.getItem(MOOD_STORAGE_PREFIX + dateStr);
+        if (raw) {
+          try { recent.push(JSON.parse(raw) as MoodEntry); } catch { /* skip */ }
+        }
+      }
+      setRecentMoods(recent);
+    } catch { /* silent */ }
+  }, []);
+
+  const saveMood = useCallback(async (mood: MoodKey, note?: string) => {
+    try {
+      const today = todayKstStr();
+      const entry: MoodEntry = { date: today, mood, note: note?.trim() || undefined };
+      await AsyncStorage.setItem(MOOD_STORAGE_PREFIX + today, JSON.stringify(entry));
+      setTodayMood(mood);
+      if (note !== undefined) setMoodNote(note);
+      // 최근 목록 갱신
+      loadMoodDiary();
+    } catch { /* silent */ }
+  }, [loadMoodDiary]);
+
   const loadQuestions = useCallback(async () => {
     setLoadingQuestions(true);
     setLoadError(null);
@@ -151,6 +215,7 @@ export default function MomWellnessScreen() {
   }, [childId]);
 
   useEffect(() => { loadHistoryAndAnalysis(); }, [loadHistoryAndAnalysis]);
+  useEffect(() => { loadMoodDiary(); }, [loadMoodDiary]);
 
   const startSurvey = () => {
     setAnswers({});
@@ -207,7 +272,7 @@ export default function MomWellnessScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}><Text style={styles.backBtn}>{'< 뒤로'}</Text></TouchableOpacity>
-          <Text style={styles.headerTitle}>맘 체크인</Text>
+          <Text style={styles.headerTitle}>마음 진단</Text>
           <View style={{ width: 60 }} />
         </View>
         <View style={styles.emptyCenter}><Text style={styles.emptyText}>아이를 선택해주세요</Text></View>
@@ -221,11 +286,61 @@ export default function MomWellnessScreen() {
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}><Text style={styles.backBtn}>{'< 뒤로'}</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>맘 체크인</Text>
+        <Text style={styles.headerTitle}>마음 진단</Text>
         <View style={{ width: 60 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* ─── 빠른 기분 일기 ─── */}
+        {!showSurvey && !result && (
+          <View style={styles.moodCard}>
+            <Text style={styles.moodTitle}>💝 오늘 내 기분</Text>
+            <Text style={styles.moodHint}>이모지를 눌러 기록해두세요. EPDS 와 별개로 매일 가볍게 남길 수 있어요.</Text>
+            <View style={styles.moodRow}>
+              {MOOD_OPTIONS.map((opt) => {
+                const selected = todayMood === opt.key;
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    style={[styles.moodBtn, selected && { borderColor: opt.color, backgroundColor: opt.color + '22' }]}
+                    onPress={() => saveMood(opt.key, moodNote)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.moodEmoji}>{opt.emoji}</Text>
+                    <Text style={[styles.moodLabel, selected && { color: opt.color, fontWeight: '700' }]}>{opt.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {todayMood && (
+              <>
+                <TextInput
+                  style={styles.moodNoteInput}
+                  placeholder="한 줄 메모 (선택) — 오늘 어땠어요?"
+                  placeholderTextColor={COLORS.textLight}
+                  value={moodNote}
+                  onChangeText={setMoodNote}
+                  onBlur={() => { if (todayMood) saveMood(todayMood, moodNote); }}
+                  maxLength={120}
+                  multiline
+                />
+                <Text style={styles.moodSavedHint}>✓ 저장됨 (기기에만 보관)</Text>
+              </>
+            )}
+            {recentMoods.length > 1 && (
+              <View style={styles.moodHistoryRow}>
+                <Text style={styles.moodHistoryLabel}>지난 7일</Text>
+                <View style={{ flexDirection: 'row', gap: 4 }}>
+                  {recentMoods.slice(0, 7).reverse().map((m, i) => {
+                    const opt = MOOD_OPTIONS.find((o) => o.key === m.mood);
+                    return <Text key={i} style={styles.moodHistoryEmoji}>{opt?.emoji ?? '·'}</Text>;
+                  })}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* 소개 + 시작 버튼 */}
         {!showSurvey && !result && (
           <View style={styles.introCard}>
@@ -237,6 +352,10 @@ export default function MomWellnessScreen() {
               세계적으로 표준인 10문항 자가진단이에요. 지난 7일 기준으로 답해주세요.
               {'\n'}30점 만점 · ≥10 주의, ≥13 상담 권장
               {'\n'}현재 단계에 맞춘 보조 문항도 함께 나와요.
+            </Text>
+            <Text style={styles.introDisclaimer}>
+              ⚠️ 이 검사는 참고용 자가 체크이며 전문의의 진단이나 처방을 대체하지 않습니다.
+              점수가 높거나 걱정이 된다면 반드시 의료 전문가 또는 아래 위기상담 전화에 연락하세요.
             </Text>
             <TouchableOpacity style={styles.startBtn} onPress={startSurvey}>
               <Text style={styles.startBtnText}>📝 지금 체크 시작하기</Text>
@@ -474,6 +593,60 @@ const styles = StyleSheet.create({
 
   scrollContent: { padding: SPACING.md, paddingBottom: SPACING.xl * 2 },
 
+  // ─── 빠른 기분 일기 ───
+  moodCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#FFE0EC',
+  },
+  moodTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: '#880E4F', marginBottom: 4 },
+  moodHint: { fontSize: 11, color: COLORS.textSecondary, lineHeight: 16, marginBottom: SPACING.sm },
+  moodRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 6,
+    marginBottom: SPACING.sm,
+  },
+  moodBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+  },
+  moodEmoji: { fontSize: 26, marginBottom: 2 },
+  moodLabel: { fontSize: 10, color: COLORS.textSecondary },
+  moodNoteInput: {
+    marginTop: 4,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm,
+    padding: SPACING.sm,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text,
+    minHeight: 40,
+    maxHeight: 80,
+    textAlignVertical: 'top',
+  },
+  moodSavedHint: { fontSize: 11, color: '#43A047', marginTop: 4, marginLeft: 2 },
+  moodHistoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: SPACING.sm,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  moodHistoryLabel: { fontSize: 11, color: COLORS.textSecondary, fontWeight: '600' },
+  moodHistoryEmoji: { fontSize: 18 },
+
   introCard: {
     backgroundColor: '#FCE4EC',
     borderRadius: RADIUS.md,
@@ -482,6 +655,7 @@ const styles = StyleSheet.create({
   },
   introTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: '#880E4F', marginBottom: 6 },
   introDesc: { fontSize: FONT_SIZE.sm, color: '#AD1457', lineHeight: 20 },
+  introDisclaimer: { fontSize: 11, color: '#888', lineHeight: 16, marginTop: 10, marginBottom: 4, backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10 },
 
   resultCard: {
     borderRadius: RADIUS.md,

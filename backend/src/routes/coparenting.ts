@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
-import { collections, genId } from '../services/firestore';
+import { collections, db, genId } from '../services/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -90,7 +91,8 @@ router.post('/invite', authMiddleware, async (req: Request, res: Response) => {
     });
 
     success(res, { id, inviteCode, permissions: perms }, 201);
-  } catch {
+  } catch (err: unknown) {
+    logger.error('route', err);
     error(res, '초대 중 오류가 발생했습니다', 500);
   }
 });
@@ -107,38 +109,55 @@ router.post('/accept', authMiddleware, async (req: Request, res: Response) => {
       return;
     }
 
-    const snap = await collections.familyMembers
-      .where('inviteCode', '==', inviteCode.toUpperCase())
-      .where('status', '==', 'pending')
-      .limit(1)
-      .get();
-
-    if (snap.empty) {
-      error(res, '유효하지 않은 초대 코드입니다', 404);
-      return;
-    }
-
-    const doc = snap.docs[0];
-
-    // 자기 자신 초대 방지
-    if (doc.data().invitedBy === req.userId) {
-      error(res, '자신을 초대할 수 없습니다');
-      return;
-    }
-
-    await doc.ref.update({
-      inviteeUserId: req.userId,
-      status: 'accepted',
-      acceptedAt: FieldValue.serverTimestamp(),
+    // race-safe transaction: 초대 코드 SNS 유출 시 동시 수락으로 inviteeUserId 가
+    // 마지막 한 명에게만 기록되고 나머지는 권한 없는 유령 상태가 되는 문제 방지.
+    // 트랜잭션 안에서 read+update 원자화하여 1회용 코드 보장.
+    const result = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(
+        collections.familyMembers
+          .where('inviteCode', '==', inviteCode.toUpperCase())
+          .where('status', '==', 'pending')
+          .limit(1),
+      );
+      if (snap.empty) {
+        return { ok: false as const, reason: 'not-found' };
+      }
+      const doc = snap.docs[0];
+      const data = doc.data();
+      if (data.invitedBy === req.userId) {
+        return { ok: false as const, reason: 'self-invite' };
+      }
+      tx.update(doc.ref, {
+        inviteeUserId: req.userId,
+        status: 'accepted',
+        acceptedAt: FieldValue.serverTimestamp(),
+      });
+      return {
+        ok: true as const,
+        id: doc.id,
+        childId: data.childId as string,
+        role: data.role as string,
+        permissions: data.permissions as string[],
+      };
     });
+
+    if (!result.ok) {
+      if (result.reason === 'self-invite') {
+        error(res, '자신을 초대할 수 없습니다');
+      } else {
+        error(res, '유효하지 않은 초대 코드입니다', 404);
+      }
+      return;
+    }
 
     success(res, {
-      id: doc.id,
-      childId: doc.data().childId,
-      role: doc.data().role,
-      permissions: doc.data().permissions,
+      id: result.id,
+      childId: result.childId,
+      role: result.role,
+      permissions: result.permissions,
     });
-  } catch {
+  } catch (err: unknown) {
+    logger.error('route', err);
     error(res, '초대 수락 중 오류가 발생했습니다', 500);
   }
 });
@@ -180,7 +199,8 @@ router.get('/members/:childId', authMiddleware, async (req: Request, res: Respon
     }));
 
     success(res, { members, isOwner });
-  } catch {
+  } catch (err: unknown) {
+    logger.error('route', err);
     error(res, '구성원 조회 중 오류가 발생했습니다', 500);
   }
 });
@@ -216,7 +236,8 @@ router.put('/permissions/:memberId', authMiddleware, async (req: Request, res: R
     await memberDoc.ref.update({ permissions: validPerms });
 
     success(res, { id: memberId, permissions: validPerms });
-  } catch {
+  } catch (err: unknown) {
+    logger.error('route', err);
     error(res, '권한 수정 중 오류가 발생했습니다', 500);
   }
 });
@@ -248,7 +269,8 @@ router.delete('/members/:memberId', authMiddleware, async (req: Request, res: Re
 
     await memberDoc.ref.delete();
     success(res, { id: memberId, message: '삭제되었습니다' });
-  } catch {
+  } catch (err: unknown) {
+    logger.error('route', err);
     error(res, '구성원 삭제 중 오류가 발생했습니다', 500);
   }
 });
@@ -287,7 +309,8 @@ router.get('/my-permissions/:childId', authMiddleware, async (req: Request, res:
       permissions: member.permissions ?? [],
       nickname: member.nickname,
     });
-  } catch {
+  } catch (err: unknown) {
+    logger.error('route', err);
     error(res, '권한 조회 중 오류가 발생했습니다', 500);
   }
 });

@@ -102,6 +102,39 @@ const ALL_ICONS = [
   // Badge icons
   { name: 'badge-ai', bg1: '#E1BEE7', bg2: '#6A1B9A', emoji: '🤖', label: 'AI' },
   { name: 'badge-db', bg1: '#B3E5FC', bg2: '#01579B', emoji: '📚', label: 'DB' },
+
+  // Lullaby / Sound icons — 백색소음
+  { name: 'sound-womb',      bg1: '#EDE7F6', bg2: '#6A1B9A', emoji: '👶', label: '' },
+  { name: 'sound-vacuum',    bg1: '#ECEFF1', bg2: '#546E7A', emoji: '🌀', label: '' },
+  { name: 'sound-hairdryer', bg1: '#FFF8E1', bg2: '#EF6C00', emoji: '💨', label: '' },
+  { name: 'sound-fan',       bg1: '#E3F2FD', bg2: '#1565C0', emoji: '🌬', label: '' },
+  // 자연의 소리
+  { name: 'sound-rain',      bg1: '#E1F5FE', bg2: '#01579B', emoji: '🌧', label: '' },
+  { name: 'sound-wave',      bg1: '#E0F7FA', bg2: '#00695C', emoji: '🌊', label: '' },
+  { name: 'sound-forest',    bg1: '#E8F5E9', bg2: '#2E7D32', emoji: '🌲', label: '' },
+  { name: 'sound-stream',    bg1: '#E3F2FD', bg2: '#0277BD', emoji: '💧', label: '' },
+  // 자장가
+  { name: 'sound-twinkle',   bg1: '#FFF9C4', bg2: '#F9A825', emoji: '⭐', label: '' },
+  { name: 'sound-brahms',    bg1: '#F3E5F5', bg2: '#7B1FA2', emoji: '🎵', label: '' },
+  { name: 'sound-mozart',    bg1: '#EDE7F6', bg2: '#5E35B1', emoji: '🎶', label: '' },
+  { name: 'sound-orgel',     bg1: '#FCE4EC', bg2: '#C2185B', emoji: '🎼', label: '' },
+
+  // Prenatal music icons — 클래식
+  { name: 'p-mozart',        bg1: '#EDE7F6', bg2: '#5E35B1', emoji: '🎼', label: '' },
+  { name: 'p-vivaldi',       bg1: '#FCE4EC', bg2: '#AD1457', emoji: '🌸', label: '' },
+  { name: 'p-bach',          bg1: '#E8EAF6', bg2: '#3949AB', emoji: '🎻', label: '' },
+  { name: 'p-pachelbel',     bg1: '#E1F5FE', bg2: '#0288D1', emoji: '🎵', label: '' },
+  { name: 'p-debussy',       bg1: '#E8F5E9', bg2: '#2E7D32', emoji: '🌙', label: '' },
+  // 자궁·심장박동
+  { name: 'p-womb-heart',    bg1: '#FCE4EC', bg2: '#C2185B', emoji: '💗', label: '' },
+  { name: 'p-mom-heart',     bg1: '#FFEBEE', bg2: '#E53935', emoji: '❤️', label: '' },
+  // 자연
+  { name: 'p-ocean',         bg1: '#E0F7FA', bg2: '#006064', emoji: '🌊', label: '' },
+  { name: 'p-rain',          bg1: '#E3F2FD', bg2: '#1976D2', emoji: '🌧', label: '' },
+  { name: 'p-forest',        bg1: '#E8F5E9', bg2: '#388E3C', emoji: '🌳', label: '' },
+  // 명상
+  { name: 'p-meditation',    bg1: '#EDE7F6', bg2: '#7E57C2', emoji: '🧘', label: '' },
+  { name: 'p-singing-bowl',  bg1: '#FFF8E1', bg2: '#F9A825', emoji: '🔔', label: '' },
 ];
 
 async function generate() {

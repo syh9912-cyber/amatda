@@ -18,6 +18,11 @@ function resolveApiUrl(envValue: string | undefined, name: string): string {
 export const API_URL = resolveApiUrl(process.env.EXPO_PUBLIC_API_URL, 'EXPO_PUBLIC_API_URL');
 export const COACHING_API_URL = process.env.EXPO_PUBLIC_COACHING_API_URL || API_URL;
 
+// ─── Refresh 뮤텍스 ─────────────────────────────────────────
+// 동시 401 → 동시 refresh 시도 → 토큰 재사용 감지(reuse detection) → 패밀리 전체 revoke 방지.
+// 첫 번째 요청만 refresh 실행, 나머지는 같은 Promise를 대기(같은 새 토큰 사용).
+let _refreshPromise: Promise<string> | null = null;
+
 // ─── 공통 인터셉터 세터 ─────────────────────────────────────
 function applyInterceptors(instance: AxiosInstance): void {
   // 토큰 자동 주입
@@ -40,12 +45,24 @@ function applyInterceptors(instance: AxiosInstance): void {
         const refreshToken = useAuthStore.getState().refreshToken;
         if (refreshToken) {
           try {
-            const res = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
-            const { accessToken, refreshToken: newRefresh } = res.data.data;
-            useAuthStore.getState().setTokens(accessToken, newRefresh);
-            original.headers.Authorization = `Bearer ${accessToken}`;
+            // 뮤텍스: 이미 refresh 중이면 같은 Promise 대기 → 토큰 재사용 방지
+            if (!_refreshPromise) {
+              _refreshPromise = (async () => {
+                try {
+                  const res = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
+                  const { accessToken, refreshToken: newRefresh } = res.data.data;
+                  await useAuthStore.getState().setTokens(accessToken, newRefresh);
+                  return accessToken as string;
+                } finally {
+                  _refreshPromise = null;
+                }
+              })();
+            }
+            const newAccessToken = await _refreshPromise;
+            original.headers.Authorization = `Bearer ${newAccessToken}`;
             return instance(original);
           } catch {
+            _refreshPromise = null;
             useAuthStore.getState().logout(); // 레이아웃이 로그인 화면으로 보냄
           }
         } else {
@@ -91,12 +108,31 @@ applyInterceptors(coachingAxios);
 export const authApi = {
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
-  register: (email: string, password: string, parentRole?: string) =>
-    api.post('/auth/register', { email, password, parentRole }),
+  register: (
+    email: string,
+    password: string,
+    parentRole?: string,
+    consent?: {
+      terms: boolean;
+      privacy: boolean;
+      ageOver14: boolean;
+      marketing: boolean;
+      version: string;
+    },
+  ) =>
+    api.post('/auth/register', { email, password, parentRole, consent }),
   socialLogin: (provider: string, accessToken: string) =>
     api.post('/auth/social', { provider, accessToken }),
   socialLoginWithCode: (provider: string, code: string, redirectUri: string) =>
     api.post('/auth/social-code', { provider, code, redirectUri }),
+  // 약관 동의 저장 (소셜 가입 신규 사용자 전용 — PIPA 15·22조)
+  saveConsent: (consent: {
+    terms: boolean;
+    privacy: boolean;
+    ageOver14: boolean;
+    marketing: boolean;
+    version: string;
+  }) => api.put('/auth/consent', consent),
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post('/auth/change-password', { currentPassword, newPassword }),
   setPassword: (newPassword: string) =>
@@ -174,6 +210,8 @@ export const momstagramApi = {
     dominantType?: string;
     milestone?: string;
     milestoneEmoji?: string;
+    /** 임신/성장앨범 record id — record 삭제 시 cascade 정리에 사용 */
+    linkedAlbumId?: string;
   }) => api.post('/momstagram/posts', data),
   toggleLike: (postId: string) =>
     api.post(`/momstagram/posts/${postId}/like`),
@@ -189,6 +227,15 @@ export const momstagramApi = {
   ) => api.patch(`/momstagram/posts/${postId}`, data),
   getMyPosts: (page = 0, limit = 20) =>
     api.get('/momstagram/my-posts', { params: { page: String(page), limit: String(limit) } }),
+  // UGC 모더레이션 (Apple 1.2 / Google UGC 정책)
+  reportPost: (postId: string, reason: 'abuse' | 'ad' | 'privacy' | 'spam' | 'sexual' | 'other') =>
+    api.post(`/momstagram/posts/${postId}/report`, { reason }),
+  blockUser: (userId: string) =>
+    api.post(`/momstagram/users/${userId}/block`),
+  unblockUser: (userId: string) =>
+    api.delete(`/momstagram/users/${userId}/block`),
+  getBlockedUsers: () =>
+    api.get('/momstagram/users/blocked'),
 };
 
 // Memories
@@ -357,7 +404,10 @@ export const uploadApi = {
     const mimeType = mimeMap[ext] || 'image/jpeg';
     const isImage = mimeType.startsWith('image/');
 
-    // 이미지면 EXIF 제거를 위해 ImageManipulator로 재인코딩 (JPEG 출력)
+    // 이미지면 리사이즈(1280px) + 압축(85%) + EXIF 제거 한 번에 처리.
+    //   - 폰 카메라 원본(보통 4–8MB) → 약 200–400KB 로 감소 (속도 5–20× 빠름)
+    //   - Storage 비용 95% 절감 (월 17,000장+ 무료 한도 가능)
+    //   - EXIF (위치/디바이스/촬영시각) 자동 제거
     let uploadUri = fileUri;
     let uploadFilename = filename;
     let uploadMimeType = mimeType;
@@ -366,15 +416,15 @@ export const uploadApi = {
         const ImageManipulator = await import('expo-image-manipulator');
         const result = await ImageManipulator.manipulateAsync(
           fileUri,
-          [], // 변환 없이 재인코딩만 → EXIF 제거 + 동일 크기
-          { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG },
+          [{ resize: { width: 1280 } }], // 비율 유지하며 가로 1280px 로 다운샘플
+          { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
         );
         uploadUri = result.uri;
         uploadFilename = filename.replace(/\.[^.]+$/, '.jpg');
         uploadMimeType = 'image/jpeg';
       } catch (e) {
         // 재인코딩 실패 시 원본 업로드 (예: HEIC 디코딩 미지원 디바이스)
-        console.warn('[uploadApi] EXIF strip failed, using original:', e);
+        console.warn('[uploadApi] resize/compress failed, using original:', e);
       }
     }
 
@@ -420,6 +470,8 @@ export const albumApi = {
   }) => api.post('/album/photos', data),
   list: (childId: string) => api.get(`/album/photos/${childId}`),
   remove: (id: string) => api.delete(`/album/photos/${id}`),
+  update: (id: string, data: { memo?: string; milestone?: string; milestoneEmoji?: string; uri?: string; printUrl?: string }) =>
+    api.patch(`/album/photos/${id}`, data),
 
   // ─── 앨범 PDF 생성 ───────────────────────────────────────────
   /**
@@ -461,6 +513,8 @@ export const pregnancyApi = {
     api.get('/pregnancy/records', { params: { childId } }),
   deleteRecord: (id: string) =>
     api.delete(`/pregnancy/records/${id}`),
+  updateRecord: (id: string, data: { title?: string; content?: string; milestoneEmoji?: string; uri?: string }) =>
+    api.patch(`/pregnancy/records/${id}`, data),
   getSymptomPresets: () =>
     api.get('/pregnancy/mom-symptoms/presets'),
   saveMomHealth: (data: {
@@ -676,9 +730,36 @@ export const vaccinationApi = {
 };
 
 // Tracker (음성 기록 + 엑셀 가져오기)
+/**
+ * Baby-tracker 서버 sync API (2026-05-08).
+ * AsyncStorage 만 쓰던 기존 구조에서 server-as-source-of-truth + 로컬 캐시 패턴으로 전환.
+ */
+export const babyTrackerApi = {
+  // 단일 날짜 records 조회
+  getDay: (childId: string, date: string) =>
+    api.get(`/baby-tracker/${childId}/days/${date}`),
+  // 범위 조회 — 마운트 시 최근 N일 일괄 fetch
+  getDaysRange: (childId: string, from: string, to: string) =>
+    api.get(`/baby-tracker/${childId}/days`, { params: { from, to } }),
+  // 단일 날짜 records 덮어쓰기 (last-write-wins)
+  putDay: (childId: string, date: string, records: unknown[]) =>
+    api.put(`/baby-tracker/${childId}/days/${date}`, { records }),
+  // 진행 중 sleep/breast 세션 조회 + 저장
+  getSessions: (childId: string) =>
+    api.get(`/baby-tracker/${childId}/sessions`),
+  putSessions: (
+    childId: string,
+    body: { sleepSession?: unknown; breastSession?: unknown },
+  ) => api.put(`/baby-tracker/${childId}/sessions`, body),
+};
+
 export const trackerApi = {
-  voiceParse: (text: string) =>
-    api.post('/tracker/voice-parse', { text }),
+  voiceParse: (text: string) => {
+    // 서버(UTC) 시각 오류 방지 — 클라이언트 로컬 시각 전송
+    const now = new Date();
+    const clientTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    return api.post('/tracker/voice-parse', { text, clientTime });
+  },
   importExcel: async (fileUri: string) => {
     const token = useAuthStore.getState().accessToken;
     const filename = fileUri.split('/').pop() || 'data.xlsx';

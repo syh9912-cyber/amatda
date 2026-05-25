@@ -19,6 +19,7 @@ import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sosApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
+import { useLocationStore } from '../../stores/locationStore';
 import { pickDeliveryPhone, getHospital, type HospitalInfo } from '../../services/deliveryHospital';
 import { HospitalRegisterModal } from '../../components/pregnancy/HospitalRegisterModal';
 import { captureError } from '../../services/sentry';
@@ -449,13 +450,30 @@ export default function SOSScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild, selectedSymptoms, temperature]);
 
-  /* -- Open hospital map -- */
+  /* -- Open hospital map --
+   * 2026-05-08: 사용자 피드백 — 기존 '산부인과+응급'/'소아과+응급' 키워드는 카카오맵에서
+   *   결과가 거의 안 나옴. 대학병원 응급실은 산부인과 MFICU·소아응급의료센터 모두 갖추고
+   *   있어 가장 안전. 사용자 위치(시/구) 와 결합해 가까운 곳 우선 정렬.
+   */
+  const regionName = useLocationStore((s) => s.regionName);
+  const requestLocation = useLocationStore((s) => s.requestLocation);
+
+  // 첫 진입 시 위치 요청 (best-effort, 권한 거부되어도 기본 키워드로 작동)
+  useEffect(() => {
+    requestLocation().catch(() => {});
+  }, [requestLocation]);
+
   const openHospitalMap = useCallback(() => {
-    const query = isPregnant ? '산부인과+응급' : '소아과+응급';
-    Linking.openURL(`https://map.kakao.com/link/search/${query}`).catch(() => {
+    // 권한 거부 시 regionName 이 DEFAULT_REGION('남악') 일 수 있음 — 키워드만 사용
+    const trimmedRegion = (regionName ?? '').trim();
+    const isDefaultRegion = trimmedRegion === '' || trimmedRegion === '남악';
+    const query = isDefaultRegion
+      ? '대학병원 응급실'
+      : `${trimmedRegion} 대학병원 응급실`;
+    Linking.openURL(`https://map.kakao.com/link/search/${encodeURIComponent(query)}`).catch(() => {
       Alert.alert('오류', '지도 앱을 열 수 없습니다.');
     });
-  }, [isPregnant]);
+  }, [regionName]);
 
   /* -- Render -- */
   return (
@@ -749,7 +767,7 @@ function ResultCard({
 /* Emergency Guide Modal (이미지 중심)                                  */
 /* ------------------------------------------------------------------ */
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; onClose: () => void }) {
   const [pageIdx, setPageIdx] = useState(0);
@@ -765,6 +783,11 @@ function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; o
     guideKey === 'heimlich' ? HEIMLICH_BY_AGE.infant.warning
     : guideKey === 'cpr'    ? CPR_BY_AGE.infant.warning
     : GUIDE_CONTENT[guideKey]?.warning ?? '';
+  // 각 단계 설명 (이미지 인덱스에 대응)
+  const stepDescriptions: string[] =
+    guideKey === 'heimlich' ? HEIMLICH_BY_AGE.infant.quickSteps
+    : guideKey === 'cpr'    ? CPR_BY_AGE.infant.quickSteps
+    : GUIDE_CONTENT[guideKey]?.quickSteps ?? [];
 
   if (!stepImages) return null;
 
@@ -798,6 +821,13 @@ function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; o
           </Text>
         </View>
 
+        {/* 의료 disclaimer — 응급처치 가이드는 일반 참고용임을 항상 표시 */}
+        <View style={guideStyles.disclaimerBar}>
+          <Text style={guideStyles.disclaimerBarText}>
+            ⓘ 일반 응급처치 참고용 · 의료 행위 대체 아님 · 위급 시 즉시 119
+          </Text>
+        </View>
+
         {/* 가로 스크롤 카드 페이저 */}
         <ScrollView
           horizontal
@@ -807,18 +837,24 @@ function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; o
           scrollEventThrottle={32}
           style={guideStyles.pager}
         >
-          {/* Page 0..3 — 4 패널 이미지 (텍스트가 이미지에 포함됨) */}
+          {/* Page 0..3 — 4 패널 이미지 + 한국어 단계 설명 */}
           {stepImages.map((src, idx) => {
-            const imageAspect = STEP_IMAGE_ASPECTS[guideKey]?.[idx] ?? 941 / 440;
+            const stepText = stepDescriptions[idx];
             return (
               <View key={`panel-${idx}`} style={[guideStyles.panelPage, { width: SCREEN_WIDTH }]}>
                 <View style={guideStyles.panelImageWrap}>
                   <Image
                     source={src}
-                    style={[guideStyles.panelImage, { aspectRatio: imageAspect }]}
+                    style={guideStyles.panelImage}
                     resizeMode="contain"
                   />
                 </View>
+                {stepText ? (
+                  <View style={guideStyles.stepDescBox}>
+                    <Text style={guideStyles.stepDescNum}>{`STEP ${idx + 1}`}</Text>
+                    <Text style={guideStyles.stepDescText}>{stepText}</Text>
+                  </View>
+                ) : null}
                 {idx === 0 ? (
                   <Text style={guideStyles.swipeHint}>옆으로 넘기면 다음 단계</Text>
                 ) : null}
@@ -999,22 +1035,37 @@ const guideStyles = StyleSheet.create({
     fontWeight: '700',
     color: 'rgba(255,255,255,0.85)',
   },
+  // 응급처치 가이드 disclaimer — 의료기기성 위험 회피 (App Store 심사 대비)
+  disclaimerBar: {
+    backgroundColor: '#FFF8E1',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFE082',
+  },
+  disclaimerBarText: {
+    fontSize: 11,
+    color: '#5D4037',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
   panelPage: {
     paddingTop: 12,
-    paddingBottom: 110,
+    paddingBottom: 90,
     paddingHorizontal: 12,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   panelImageWrap: {
     width: SCREEN_WIDTH - 24,
+    height: SCREEN_HEIGHT * 0.55,
     alignItems: 'center',
     justifyContent: 'center',
-    // aspectRatio 제거 — Image 자체가 자기 비율로 결정 (letterbox 방지)
+    overflow: 'hidden',
   },
   panelImage: {
     width: '100%',
-    // height / aspectRatio 는 사용처에서 STEP_IMAGE_ASPECTS 로 동적 적용
+    height: '100%',
   },
   bigImageWrap: {
     width: SCREEN_WIDTH - 40,
@@ -1030,10 +1081,33 @@ const guideStyles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  stepDescBox: {
+    width: SCREEN_WIDTH - 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  stepDescNum: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#D32F2F',
+    letterSpacing: 1,
+    marginBottom: 3,
+  },
+  stepDescText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1C1C1E',
+    lineHeight: 20,
+  },
   swipeHint: {
     fontSize: 14,
     color: '#888',
-    marginTop: 12,
+    marginTop: 8,
     fontWeight: '600',
   },
   stepBigImageWrap: {
@@ -1317,7 +1391,8 @@ const styles = StyleSheet.create({
   guideBtn: {
     width: '48%',
     borderRadius: 16,
-    paddingVertical: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -1327,17 +1402,19 @@ const styles = StyleSheet.create({
     fontSize: 36,
     marginBottom: 8,
   },
+  // 카드 안에 들어가는 일러스트 — 이전 64×64 는 너무 작고, '100%'+aspectRatio 는 native에서
+  // 의도와 다르게 동작해 카드를 폭주시킴. 고정 크기 + resizeMode contain 으로 안전하게.
   guideBtnIconImg: {
-    width: 64,
-    height: 64,
-    marginBottom: 6,
+    width: 130,
+    height: 80,
+    marginBottom: 8,
   },
   guideBtnLabel: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
   },
   guideBtnSublabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
     marginTop: 2,
     opacity: 0.85,

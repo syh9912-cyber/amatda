@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { createHash } from 'crypto';
 import { authMiddleware } from '../middleware/auth';
+import { requireAdmin } from '../middleware/requireAdmin';
 import { success, error } from '../utils/response';
 import { collections, db, genId } from '../services/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -693,14 +694,55 @@ router.put('/posts/:id', authMiddleware, async (req: Request, res: Response) => 
   }
 });
 
-/** DELETE /api/mom-group/posts/:id — 본인 글 삭제 */
+/** DELETE /api/mom-group/posts/:id — 본인 글 삭제 + 연관 데이터 cascade
+ *
+ * 정리 대상:
+ *  - momGroupComments where postId == id  (댓글)
+ *  - momGroupBookmarks where postId == id  (북마크)
+ *  - 서브컬렉션 momGroupPosts/{id}/likes  (좋아요 — Firestore 자동 삭제 안 됨)
+ *  - 서브컬렉션 momGroupPosts/{id}/reports (신고 — 동일)
+ *  - momGroupPosts/{id} 본 doc
+ *
+ * 비고: 한 게시글당 좋아요/댓글이 보통 ~수십 건이라 batch 한 번에 처리 가능.
+ *       극단적으로 많은 경우 .limit(500) 으로 안전하게 잘라 처리.
+ */
 router.delete('/posts/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
-    const doc = await collections.momGroupPosts.doc(id).get();
+    const postRef = collections.momGroupPosts.doc(id);
+    const doc = await postRef.get();
     if (!doc.exists) { error(res, '게시글을 찾을 수 없습니다', 404); return; }
     if (doc.data()?.userId !== req.userId) { error(res, '권한이 없습니다', 403); return; }
-    await collections.momGroupPosts.doc(id).delete();
+
+    // cascade: 댓글 / 북마크 / 서브컬렉션(likes, reports) 모두 정리
+    const db = collections.momGroupPosts.firestore;
+    const [commentsSnap, bookmarksSnap, likesSnap, reportsSnap] = await Promise.all([
+      collections.momGroupComments.where('postId', '==', id).limit(500).get(),
+      collections.momGroupBookmarks.where('postId', '==', id).limit(500).get(),
+      postRef.collection('likes').limit(500).get(),
+      postRef.collection('reports').limit(500).get(),
+    ]);
+
+    const refs: FirebaseFirestore.DocumentReference[] = [];
+    commentsSnap.docs.forEach((d) => refs.push(d.ref));
+    bookmarksSnap.docs.forEach((d) => refs.push(d.ref));
+    likesSnap.docs.forEach((d) => refs.push(d.ref));
+    reportsSnap.docs.forEach((d) => refs.push(d.ref));
+    refs.push(postRef);
+
+    // Firestore batch 최대 500 — 청크 분할
+    const BATCH_LIMIT = 500;
+    for (let i = 0; i < refs.length; i += BATCH_LIMIT) {
+      const chunk = refs.slice(i, i + BATCH_LIMIT);
+      const batch = db.batch();
+      chunk.forEach((r) => batch.delete(r));
+      await batch.commit();
+    }
+
+    logger.info(
+      'mom-group:deletePost',
+      `cascade postId=${id} comments=${commentsSnap.size} bookmarks=${bookmarksSnap.size} likes=${likesSnap.size} reports=${reportsSnap.size}`,
+    );
     success(res, { deleted: true });
   } catch (err) {
     logger.error('mom-group:deletePost', err, { userId: req.userId, postId: req.params.id });
@@ -1065,7 +1107,7 @@ router.get('/posts/radius/counts', authMiddleware, async (req: Request, res: Res
  * 안전장치: 모든 삭제 대상의 groupKey가 'region:' 으로 시작하는 것만 처리.
  * 삭제 결과 (count)만 반환. 실데이터 손상 방지 위해 dry-run 옵션 지원.
  */
-router.post('/admin/delete-region-posts', authMiddleware, async (req: Request, res: Response) => {
+router.post('/admin/delete-region-posts', authMiddleware, requireAdmin, async (req: Request, res: Response) => {
   try {
     const dryRun = req.body?.dryRun === true || req.query.dryRun === 'true';
 

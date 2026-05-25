@@ -80,7 +80,7 @@ export default function EditProfileScreen() {
     setSaving(true);
     try {
       await apiInstance.put('/auth/nickname', { nickname: trimmed, parentRole });
-      setUser(userId ?? '', trimmed);
+      await setUser(userId ?? '', trimmed);
       Alert.alert('완료', '별명이 변경되었습니다');
       // Reload profile to reflect change
       if (profile) setProfile({ ...profile, nickname: trimmed });

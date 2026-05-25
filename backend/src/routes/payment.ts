@@ -25,6 +25,7 @@ import { logger } from '../utils/logger';
 import * as portone from '../services/payment/portone.client';
 import * as googlePlay from '../services/payment/google-play.client';
 import * as appleIap from '../services/payment/apple-iap.client';
+import * as appleJws from '../services/payment/apple-jws-verifier';
 import {
   env,
   isPortOneAvailable,
@@ -105,14 +106,27 @@ function sanitizePortOneRaw(p: unknown): Record<string, unknown> {
 }
 
 function sanitizeGoogleRaw(p: unknown): Record<string, unknown> {
-  const r = (p ?? {}) as Record<string, unknown>;
-  return {
-    state: r.state,
-    expiryTime: r.expiryTime,
-    autoRenewing: r.autoRenewing,
-    productId: r.productId,
-    // 명시적 제외: emailAddress / orderId / linkedPurchaseToken / acknowledgementState 등
+  // Subscriptions V2 응답 구조:
+  //   { subscriptionState, lineItems: [{ productId, expiryTime, autoRenewingPlan: { autoRenewEnabled } }] }
+  // V1 (구버전) 응답은 { state, expiryTime, autoRenewing, productId } 였음 — 코드가 V1 가정으로 작성되어
+  // V2 호출 결과를 받으면 모든 필드 undefined → Firestore 거부 (raw.state undefined) 에러.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = (p ?? {}) as any;
+  const lineItem = (r.lineItems?.[0] ?? {}) as Record<string, unknown> & {
+    autoRenewingPlan?: { autoRenewEnabled?: boolean };
   };
+  const result: Record<string, unknown> = {
+    subscriptionState: r.subscriptionState,
+    expiryTime: lineItem.expiryTime,
+    autoRenewing: lineItem.autoRenewingPlan?.autoRenewEnabled,
+    productId: lineItem.productId,
+    // 명시적 제외: regionCode, latestOrderId, linkedPurchaseToken, acknowledgementState, externalAccountIdentifiers 등
+  };
+  // Firestore 는 undefined 값 거부 — sanitize 단계에서 제거.
+  for (const k of Object.keys(result)) {
+    if (result[k] === undefined) delete result[k];
+  }
+  return result;
 }
 
 function sanitizeAppleRaw(p: unknown): Record<string, unknown> {
@@ -336,6 +350,37 @@ router.post('/iap/verify', authMiddleware, async (req: Request, res: Response) =
     if (!product) return;
 
     const now = new Date();
+
+    // 이중 결제 방지 (안전망) — 이미 활성 구독 중인데 다른 SKU 결제 시 거부.
+    //   frontend 가 1차 차단하지만 race condition / 악의적 호출 대비.
+    //   같은 SKU 는 paymentDocIdFor 멱등성으로 처리 (같은 receiptKey → 같은 doc).
+    //   다른 SKU 는 cross-grade 처리 미구현 → 409 거부.
+    try {
+      const userSnap = await collections.users.doc(req.userId!).get();
+      const userData = userSnap.data() ?? {};
+      const currentTier = userData.subscriptionTier as string | undefined;
+      const currentExpiresAtStr = userData.premiumExpiresAt as string | undefined;
+      const currentProductId = userData.premiumPlanId as string | undefined;
+      if (currentTier === 'PAID' && currentExpiresAtStr) {
+        const expiresAt = new Date(currentExpiresAtStr);
+        if (expiresAt > now && currentProductId && currentProductId !== productId) {
+          logger.warn(
+            'payment.iap.verify',
+            `이중 결제 차단 userId=${req.userId} current=${currentProductId} attempted=${productId}`,
+          );
+          error(
+            res,
+            '이미 다른 플랜을 이용 중이에요. 플랜 변경은 Google Play 정기 결제 관리에서 가능해요.',
+            409,
+          );
+          return;
+        }
+      }
+    } catch (e) {
+      // 사용자 조회 실패는 진행 차단하지 않음 (verify 단계에서 다시 검증됨)
+      logger.warn('payment.iap.verify', `pre-check user lookup failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
     let expiresAt: Date;
     let autoRenew = false;
     let receiptKey: string;
@@ -352,6 +397,11 @@ router.post('/iap/verify', authMiddleware, async (req: Request, res: Response) =
       }
       const v = await googlePlay.verifyGooglePurchase(purchaseToken, productId);
       if (!v.ok || !v.sub) {
+        // 디버깅: 검증 실패 시 reason + sub state 로그 (영수증 토큰은 prefix 만)
+        logger.warn(
+          'payment.iap.verify',
+          `google verify FAILED reason=${v.reason ?? 'unknown'} tokenPrefix=${purchaseToken.substring(0, 12)}... productId=${productId} subState=${v.sub?.state ?? 'none'} subProductId=${v.sub?.productId ?? 'none'}`,
+        );
         error(res, '영수증 검증 실패: ' + (v.reason ?? 'unknown'), 400);
         return;
       }
@@ -642,35 +692,49 @@ router.post('/webhook/google', async (req: Request, res: Response) => {
     logger.info('payment.webhook.google', `${eventType} token=${sub.purchaseToken.substring(0, 10)}...`);
 
     // 영수증 재조회 후 payments + users 업데이트
-    try {
-      const verify = await googlePlay.verifyGooglePurchase(sub.purchaseToken, sub.subscriptionId);
-      if (verify.ok && verify.sub) {
-        // 해당 paymentToken으로 저장된 payment 문서 찾기
-        const snap = await collections.payments
-          .where('purchaseToken', '==', sub.purchaseToken)
-          .limit(1)
-          .get();
-        if (!snap.empty) {
-          const doc = snap.docs[0];
-          await doc.ref.update({
-            status: verify.sub.state.includes('ACTIVE') ? 'PAID' : 'CANCELLED',
-            expiresAt: verify.sub.expiryTime,
-            webhookVerifiedAt: new Date().toISOString(),
-            raw: sanitizeGoogleRaw(verify.sub.raw),
-            updatedAt: new Date().toISOString(),
-          });
-          // 사용자 만료일 갱신
-          const userId = doc.data().userId as string | undefined;
-          if (userId && verify.sub.expiryTime) {
-            await collections.users.doc(userId).update({
-              premiumExpiresAt: verify.sub.expiryTime,
-              subscriptionAutoRenew: verify.sub.autoRenewing ?? false,
-            });
+    // 실패 시 500 반환 → Pub/Sub 이 재시도하여 결제 유실 방지
+    const verify = await googlePlay.verifyGooglePurchase(sub.purchaseToken, sub.subscriptionId);
+    if (verify.ok && verify.sub) {
+      const snap = await collections.payments
+        .where('purchaseToken', '==', sub.purchaseToken)
+        .limit(1)
+        .get();
+      if (!snap.empty) {
+        const doc = snap.docs[0];
+        const state = verify.sub.state;
+        const isActive = state.includes('ACTIVE') || state.includes('GRACE');
+        // RTDN notificationType: 12 = SUBSCRIPTION_REVOKED (환불/즉시회수), 13 = SUBSCRIPTION_EXPIRED
+        const isRevoked = sub.notificationType === 12;
+
+        await doc.ref.update({
+          status: isActive ? 'PAID' : 'CANCELLED',
+          expiresAt: verify.sub.expiryTime,
+          webhookVerifiedAt: new Date().toISOString(),
+          raw: sanitizeGoogleRaw(verify.sub.raw),
+          updatedAt: new Date().toISOString(),
+        });
+
+        const userId = doc.data().userId as string | undefined;
+        if (userId) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const userUpdate: Record<string, any> = {
+            subscriptionAutoRenew: verify.sub.autoRenewing ?? false,
+          };
+          if (isRevoked) {
+            // 환불 → 즉시 권한 회수
+            userUpdate.subscriptionTier = 'FREE';
+            userUpdate.premiumExpiresAt = new Date().toISOString();
+          } else if (!isActive) {
+            // 만료 / 취소 (잔여 기간 종료) → FREE
+            userUpdate.subscriptionTier = 'FREE';
+            if (verify.sub.expiryTime) userUpdate.premiumExpiresAt = verify.sub.expiryTime;
+          } else if (verify.sub.expiryTime) {
+            // ACTIVE/GRACE: 만료일 갱신만
+            userUpdate.premiumExpiresAt = verify.sub.expiryTime;
           }
+          await collections.users.doc(userId).update(userUpdate);
         }
       }
-    } catch (e) {
-      logger.warn('payment.webhook.google', '재조회 실패: ' + String(e));
     }
 
     res.status(200).send('ok');
@@ -717,6 +781,19 @@ router.post('/webhook/apple', async (req: Request, res: Response) => {
       res.status(400).send('bad-jws');
       return;
     }
+
+    // JWS 서명 검증 (Apple 공식 정석) — 검증 실패 시 401.
+    // 라이브러리 init 실패 시 verified=false 로 통과 (기존 API 재조회 폴백).
+    const jwsResult = await appleJws.verifyAppleNotificationPayload(signedPayload);
+    if (!jwsResult.ok) {
+      logger.warn('payment.webhook.apple', `JWS 검증 실패 reason=${jwsResult.reason}`);
+      res.status(401).send('jws-invalid');
+      return;
+    }
+    if (!jwsResult.verified) {
+      logger.info('payment.webhook.apple', `JWS unverified (lib unavailable) — fallback to API recheck`);
+    }
+
     const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as {
       notificationType?: string;
       subtype?: string;

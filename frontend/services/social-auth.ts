@@ -86,9 +86,17 @@ async function kakaoWebLogin(): Promise<SocialLoginResult | null> {
 }
 
 /**
- * 네이버 로그인 — 네이티브 SDK (Android/iOS)
- * 네이버 앱/브라우저 → 즉시 accessToken 반환
- * 웹은 AuthSession 방식 유지
+ * 네이버 로그인 — 네이티브 SDK 패턴 (한국 앱 표준).
+ *
+ * 2026-05-08 결정: 백엔드 OAuth callback 패턴에서 SDK 패턴으로 되돌림.
+ *   배경: 네이버는 RFC 의 client_secret 보호 모델보다 콘솔 화이트리스트(패키지명/Bundle ID)
+ *   기반 모델을 표준으로 채택. 한국 앱 대부분이 SDK 패턴 사용. UX 우수.
+ *   secret 노출에 대한 실질적 위험은 콘솔 화이트리스트로 mitigated.
+ *
+ * 흐름:
+ *   - 네이버 앱 설치 → 즉시 토큰 반환
+ *   - 미설치 → SDK 가 in-app browser 열기 → 로그인 → 토큰 반환
+ *   - 백엔드 /auth/social → 토큰 verify → user 생성/매칭 → JWT 발급
  */
 async function naverLogin(): Promise<SocialLoginResult | null> {
   if (Platform.OS === 'web') {
@@ -117,7 +125,6 @@ async function naverLogin(): Promise<SocialLoginResult | null> {
     });
 
     const result = await NaverLogin.login();
-    // SDK v3+: { successResponse, failureResponse }
     const accessToken =
       result?.successResponse?.accessToken ??
       result?.accessToken ??
@@ -200,9 +207,17 @@ async function googleLogin(): Promise<SocialLoginResult | null> {
 }
 
 /**
- * 네이버 웹 전용 — AuthSession 방식 (모바일은 네이티브 SDK 경유)
+ * AuthSession 기반 OAuth 2.0 authorization code grant.
+ *   - GOOGLE: 모바일은 native SDK 사용, web 만 이 함수 사용
+ *   - NAVER: 모든 플랫폼이 이 함수 사용 (2026-05-08 client_secret 보안 fix)
+ *
+ * 네이버 콘솔에 등록할 Callback URL 은 첫 호출 시 콘솔에 찍히는 REDIRECT_URI 값.
+ * Expo dev client / preview / production 빌드별로 값이 다를 수 있어 빌드 후 확인 필수.
  */
 async function authSessionLogin(provider: SocialProvider): Promise<SocialLoginResult | null> {
+  // 콘솔에 redirect URI 출력 — 네이버 개발자 콘솔 등록 시 정확한 값 확인용
+  console.log(`[social-auth] ${provider} REDIRECT_URI:`, REDIRECT_URI);
+
   const configs: Record<string, { clientId: string; authEndpoint: string; tokenEndpoint: string; scopes: string[] }> = {
     GOOGLE: {
       clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
@@ -220,6 +235,9 @@ async function authSessionLogin(provider: SocialProvider): Promise<SocialLoginRe
 
   const config = configs[provider];
   if (!config || !config.clientId) {
+    if (!__DEV__) {
+      throw new Error(`[social-auth] ${provider} clientId 미설정 — 프로덕션에서 mock 토큰 불가`);
+    }
     return { provider, accessToken: `mock_token_${provider}_${Date.now()}` };
   }
 
@@ -292,7 +310,7 @@ export async function clearAllSocialSessions(): Promise<void> {
     /* SDK 미설치 또는 미로그인 — 무시 */
   }
 
-  // 네이버 — logout만
+  // 네이버 — logout만 (unlink는 위험: 백엔드가 이미 unlink 처리)
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const NaverMod = require('@react-native-seoul/naver-login');

@@ -1,5 +1,1446 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-05-05 (세션 2) — mental-check 가족 푸시 + AI 권고 + APK 빌드 dep 정리 + Firestore 인덱스 4개 콘솔 삭제
+> 최종 업데이트: 2026-05-25 — 출시 전 종합 점검 (P0/P1/P2 + 결제 + UX + 정책)
+
+---
+
+## 2026-05-25 — 출시 전 종합 점검 (오후 작업)
+
+### 1. 결제 흐름 정상화 (Google Play IAP)
+- **expo-iap 4.x API** 적용 (`requestPurchase({request:{apple,google},type:'subs'}`)
+- **ensureIAPInitialized** lazy init — `Billing client not ready` 에러 방지
+- **sanitizeGoogleRaw V2** — undefined 필드 Firestore 거부 fix
+- **이중 결제 방지** — frontend `subscription.tsx` `status.tier === 'PAID'` 시 Play 정기결제 페이지 안내 + backend `/iap/verify` 409 안전망
+- **환불 시 즉시 권한 회수** — webhook RTDN `notificationType=12 (REVOKED)` → user.tier='FREE' + premiumExpiresAt=now
+
+### 2. 결제 정책 + UX
+- 약관 **제11조 (유료 서비스)**, **제12조 (구독 취소 및 환불)** 추가
+- 한국 전자상거래법 + Apple/Google 정책 준수
+- 환불 비율 (7일 100% / 7~14일 일할 / 14일+ 거절)
+- 구독 화면 **"구독 취소 / 환불 요청"** 버튼 + 환불 정책 요약 4줄
+- 약관/개인정보 **시행일 통일** = 2026-05-25 (consent PRIVACY_VERSION, terms/privacy 시행일)
+
+### 3. 체험 종료 24h 전 알림 (Apple/Google 정책 + 전자상거래법)
+- backend `utils/trialEndingSweep.ts` — 매시간 cron
+- 체험 시작 6일 23h ~ 7일 전 + 미발송 + tier='PAID' + premiumPlanId 없음 사용자 검색
+- Expo Push 발송 — "✨ 7일 무료 체험이 곧 끝나요"
+- 딥링크: `amatda://subscription`
+- 중복 방지: `trialEndingNotifiedAt` 필드
+
+### 4. dominantType 별 그라디언트 + ConicDisc (분석 리포트)
+- **다크 모드 + 타입별 hue** 적용 (warm amber / crimson / forest / navy / plum)
+- `TYPE_GRADIENT` (export) — 5개 타입 그라디언트 3색
+- `TYPE_DISC_COLORS` — ConicDisc halo/star 액센트 색 분기
+- `TYPE_PRIMARY_COLOR` — 텍스트 밝은 액센트
+- **compact prop** — 광고 활성 시 ConicDisc 150→130 축소 (statBox 값 잘림 방지)
+- statBox `minHeight: 50` 보장
+- 광고 OFF 시 원래 큰 사이즈 유지 (`useShowAds()` 분기)
+
+### 5. 공유 캡처 영역 확장
+- captureRef 대상 = coverWrap → flexBody 전체 (cover + bottomActions 포함)
+- 캡처 검은 fallback 방지 — flexBody 안에 `<LinearGradient absoluteFill>` 깔기
+
+### 6. 접근성 라벨 (P0)
+- **29개** `accessibilityRole/Label/Hint/State` 추가 (핵심 동선)
+- subscription.tsx (5), register.tsx (6), login.tsx + SocialLoginButtons (3), chatbot.tsx + CoachingInput (5), child-edit.tsx (5), profile.tsx + ProfileFooter (5)
+- Google Play 접근성 정책 + Apple HIG 부분 준수
+- 나머지 962개는 v2.10+ 단계적
+
+### 7. P1 강화
+- `register.tsx` — 이메일 형식 정규식 검증 (`/^[^\s@]+@[^\s@]+\.[^\s@]+$/`)
+- `child-edit.tsx` — `safeParseNum` (키/몸무게 NaN/0 차단 + 사용자 알림)
+- `pushNotifications.ts` — iOS in-app primer (Apple 심사 안전, undetermined 상태일 때만)
+- `baby-tracker.tsx` — `RefreshControl` 추가
+
+### 8. Firebase Analytics 통합 (운영 KPI)
+- `@react-native-firebase/app + analytics` 설치
+- app.config.js plugin 추가
+- `services/analytics.ts` 헬퍼 (PII-safe, fire-and-forget, dynamic require)
+- 이벤트: `login`, `sign_up`, `trial_start`, `begin_checkout`, `purchase`, `refund`, `coaching_message_sent`, `child_registered`
+- 통합: login (email/social), register (email), trial start, purchase (서버 검증 성공 후)
+- ⚠️ 네이티브 모듈 — OTA 동작 X, 출시 빌드 시점부터 활성
+
+### 9. Apple JWS 검증 (정석, 결제 webhook 보안)
+- `@apple/app-store-server-library` 설치
+- Apple Root CA 3개 다운로드 (G3 / G2 / AppleComputer) — `src/services/payment/apple-root-cas/*.cer`
+- `apple-jws-verifier.ts` — `verifyAppleNotificationPayload`, `verifyAppleSignedTransaction`
+- webhook/apple 라우트 통합 — 검증 실패 시 401 거부, init 실패 시 기존 API 재조회 폴백
+- `scripts/copy-assets.js` — 빌드 시 .cer dist/ 복사 (`npm run build` 자동)
+
+### 검증
+- backend `npx tsc --noEmit` → EXIT=0 (전 단계)
+- frontend `npx tsc --noEmit` → EXIT=0 (전 단계)
+- backend Firebase Functions 배포 — 다수 revision (api / coachingApi / trialEndingSweep)
+- frontend EAS update — production branch 다수 OTA (runtime 2.9.1)
+
+### 결제 검증 (실 디바이스)
+- ✅ Google Play SKU 등록 (`premium_monthly`, `premium_yearly`)
+- ✅ 라이선스 테스터 등록 (`syh9912@gmail.com`, `sy3523485@gmail.com`)
+- ✅ Pub/Sub Topic + Service Account + Firebase Secret 모두 설정
+- ✅ Android Publisher API 활성화 + Play Console 앱 권한 부여
+- ✅ 결제 → 검증 → 프리미엄 활성 흐름 작동 확인
+- ✅ 환불 처리 (2건 자격 삭제 포함)
+
+### 출시 차단 잔여 0건 (Android)
+
+### 출시 후 가능
+- iOS App Store Connect 구독 등록 (현재 Android 우선)
+- PortOne 코드 제거 (사용 안 함 결정)
+- 나머지 962개 접근성 라벨 단계적 추가 (v2.10+)
+- Firebase Analytics 활성화 (출시 빌드 시점)
+- 환영 팝업 (체험 자동 추천) — A/B 테스트 후 결정
+
+---
+
+## 2026-05-25 — Google Play 결제 인프라 구축
+
+### 배경
+출시 전 결제 테스트 가능하도록 Google Play Console 구독 등록 + RTDN webhook 인프라 전체 구성.
+
+### Play Console 등록 변경
+- **구독 SKU 2개**: `premium_monthly` (₩3,900/월), `premium_yearly` (₩33,900/년) — 코드 SKU 와 정확히 매칭
+- **기존 버그 복구**: `monthly-auto` (매주 청구 — 출시 시 사용자 4배 청구 위험) → 비활성화, 새 `monthly-auto-v2` (매월 청구) 활성
+- 무료 체험: 7일 (intro offer)
+- **라이선스 테스터** 추가: `syh9912@gmail.com` (기존 `sy3523485@gmail.com`, `syh9912@naver.com` 유지)
+
+### RTDN (Real-Time Developer Notifications) 인프라
+- **Pub/Sub Topic**: `projects/amatda-parenting/topics/play-billing-rtdn` 생성
+- **Topic 권한**: `google-play-developer-notifications@system.gserviceaccount.com` → `roles/pubsub.publisher`
+- **Push Subscription**: `play-billing-rtdn-push`
+  - Endpoint: `https://api-usglfifguq-uc.a.run.app/api/payment/webhook/google`
+  - OIDC 인증: SA `play-iap-verifier@amatda-parenting.iam.gserviceaccount.com`
+  - Audience: 동일 URL
+- **Pub/Sub Service Agent** (`service-712169890278@gcp-sa-pubsub.iam`)에 `serviceAccountTokenCreator` 부여
+- **Play Console RTDN 활성화**: 토픽 이름 입력 + 활성 체크 완료
+
+### Service Account 발급 + Firebase Secret
+- **신규 SA**: `play-iap-verifier@amatda-parenting.iam.gserviceaccount.com`
+- **Play Console 권한**: "재무 데이터 보기" (영수증 검증 + 구독 조회용, 환불 권한 없음)
+- **JSON 키 발급 + Firebase Secret 등록** 후 로컬 파일 즉시 삭제
+- **신규 Firebase Secrets**:
+  - `GOOGLE_PUBSUB_AUDIENCE` = webhook URL (OIDC 검증용)
+  - `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` = SA JSON (Android Publisher API 인증)
+
+### 코드 변경
+- `backend/src/index.ts` — `REGISTERED_SECRETS` 에 두 신규 secret 추가
+- Functions 재배포 2회 (api / coachingApi 함수)
+
+### 검증
+- backend tsc → EXIT=0
+- Functions 배포 → 성공 (revision api-00242-sif)
+- backend code: webhook/google 핸들러 OIDC 검증 + Apple API 재조회 패턴 그대로 사용
+
+### 다음 단계 (출시 전 결제 테스트)
+- [ ] 실 디바이스에 internal test 트랙 빌드 설치 (`sy3523485@gmail.com` 또는 `syh9912@gmail.com` 로그인)
+- [ ] 구독 화면 진입 → SKU fetch 성공 확인 (가격 표시)
+- [ ] 테스트 결제 → 프리미엄 활성화 확인
+- [ ] Firestore `payments` 컬렉션 도큐먼트 + `users.{uid}.premiumExpiresAt` 업데이트 확인
+- [ ] RTDN webhook 수신 확인 (Functions 로그)
+- [ ] 갱신 / 취소 / 환불 시나리오 (Play Console 에서 강제 취소)
+
+### 미적용 (별도 PR)
+- PortOne 코드 제거 (사용 안 함 결정)
+- Apple JWS 서명 검증 라이브러리 도입 (현재 Apple API 재조회로 ground truth 검증 중)
+- Apple App Store Connect 구독 등록 (iOS 결제 활성화 시)
+
+---
+
+## 2026-05-24 — 출시 전 보안 감사 fix (4건)
+
+### 배경
+출시 전 전체 보안 감사 수행. 차단급 0건 확인 후, 출시 후 hotfix 가능 항목 중 4건을 출시 전 선반영. (#4 Apple JWS 검증은 결제 sandbox 테스트 후 별도 PR, #5 AdMob production ID는 EAS Secret 빌드 직전 주입)
+
+### 수정 파일
+
+#### 2. babel-plugin-transform-remove-console (production 빌드 console 제거)
+- `frontend/babel.config.js` (신규) — babel-preset-expo + production 시 transform-remove-console 플러그인
+- `frontend/package.json` — devDependency 추가
+- 목적: release 번들에서 console.* 호출 제거 → logcat 노출 + Sentry breadcrumb PII 누출 방어 (Sentry PII scrubber 와 다층 방어)
+
+#### 3. Android allowBackup=false
+- `frontend/app.json` — android 블록에 `"allowBackup": false`
+- 목적: adb backup 으로 앱 데이터(SecureStore 외 AsyncStorage 등) 추출 차단
+
+#### 6. chatbot 자동 전송 실패 사용자 안내
+- `frontend/app/(main)/chatbot.tsx` — Alert import + firstMessage 자동 전송 catch 블록에서 Alert 호출
+- 동작: 자동 전송 실패 시 "재시도/취소" 다이얼로그, 재시도 실패 시 입력창에 메시지 채워 사용자 직접 전송 가능
+- 원칙: CLAUDE.md "에러를 조용히 삼키지 말 것"
+
+#### 7. passport-view HMAC + TTL
+- `backend/src/routes/memories.ts`
+  - 기존: `createHash('sha256', childId+salt).slice(0,16)` — 영구 유효, 64-bit entropy
+  - 신규: `createHmac('sha256', salt).update(childId+'|'+exp).digest('hex').slice(0,32)` — 7일 TTL, 128-bit entropy
+  - URL: `/passport-view/:childId?key=X&exp=Y`
+  - 검증: 만료 체크(410 응답) + `timingSafeEqual` constant-time 비교
+- 기존 베타 단계 공유 링크는 깨짐 (수 적음, 재발급 가능)
+
+### 검증
+- `cd backend && npx tsc --noEmit` → EXIT=0
+- `cd frontend && npx tsc --noEmit` → EXIT=0
+- `cd frontend && npx expo lint` → 0 errors (기존 warning 무관)
+
+### 출시 차단급 / 별도 PR
+- 🔴 **결제 미테스트** — Apple sandbox + Google Play internal test 트랙 결제 흐름 전체 테스트 필수 (출시 차단)
+- 🟠 **#4 Apple JWS 서명 검증** — `@apple/app-store-server-library` + Apple Root CA 4개 인증서 번들. 결제 sandbox 테스트 안정화 후 별도 PR
+- 🟠 **#5 AdMob production ID** — EAS Secret 으로 출시 빌드 직전 주입
+- 🟢 **PortOne 코드 제거** — 사용 안 함 결정. 결제 테스트 완료 후 별도 PR
+
+---
+
+## 2026-05-22 — v2.9.1 (5) 내부 테스트 출시 + 다수 UX/회귀 fix
+
+### 배경
+v2.9.0 internal test 베타에서 발견된 회귀/UX 이슈 일괄 fix. production 출시 준비. AdMob 앱 등록은 internal test 트랙이 Play Store 색인 안 되어 production 출시 후 진행 예정.
+
+### 수정 파일
+- `frontend/app/(main)/fever.tsx` — 해열제 보수값 (12.5→10mg/kg acet, 7.5→5mg/kg ibu), 챔프 ER (48mg/ml) 토글 추가, 의료 면책 안내
+- `backend/src/routes/sos.ts` — 동일 보수값 + warning 강화 ("일반 가이드용 보수값, 의료 진단 대체 아님")
+- `frontend/app/(main)/subscription.tsx` — trialUsed 시 무료체험 버튼 비활성 + "이미 체험하셨습니다" 표시
+- `backend/src/routes/subscription.ts` — `/premium/status` 응답에 `trialUsed: Boolean(trialStarted)` 추가
+- `frontend/stores/premiumStore.ts` — PremiumStatus 인터페이스 + fetchStatus 에 trialUsed 매핑
+- `frontend/components/report/EditorialCover.tsx` — fullScreen paddingBottom 24→8, statsRow margin 12/18→6/4, statBox paddingVertical 12→8 (광고 50pt 활성 시 stats 잘림 방지)
+- `frontend/components/ads/AdSlot.tsx` — native SDK 정적 import 제거 (OTA 안전), production 채널 placeholder (return null)
+- `frontend/app/(main)/coparenting.tsx` — APP_STORE_LINK `amatda.app/download` → Play Store URL
+- `frontend/components/home/DenseStatsRow.tsx` — 메인 stats 권장량 비교 메시지 (분유/수면/대변)
+- `frontend/app/(main)/baby-tracker.tsx` — "수유 텀" → "식사 텀" 라벨
+- `backend/scripts/grant-premium.cjs` (신규) — 이메일로 N개월 프리미엄 수동 부여 스크립트
+- `backend/src/index.ts` — keepWarm Cloud Scheduler (5분마다 ping, 256MiB) — 콜드스타트 해결
+- `frontend/app.json` — version 2.9.0→2.9.1, versionCode 4→5, iOS buildNumber 3→4
+
+### 빌드 & 배포
+- EAS build ID: `59aaf171-156f-4053-a66d-095e0d97ca71`
+- AAB URL: https://expo.dev/artifacts/eas/c5d5trKmHvMcVqwHsB8NaF.aab
+- Play Console 내부 테스트 트랙 출시 (2026-05-22 22:55)
+- 출시명: 2.9.1 (5)
+
+### 검증
+- `cd backend && npx tsc --noEmit` — 통과
+- `cd frontend && npx tsc --noEmit` — 통과
+- Play Console 미리보기 경고 1건 (난독화 mapping 미연동 — 비차단, v2.9.0 동일)
+
+### 남은 이슈 / 다음 단계
+- 1~2일 내부테스트 안정성 확인 후 → production track promote
+- production 출시 후 AdMob 앱 등록 + v2.9.2 광고 ON 빌드
+- 네이버 검수 재신청 (production 출시 후)
+- Play Store 마케팅 자산 (Feature Graphic 1024×500 + 프로모 영상 + 스크린샷 슬라이드) 작업 중
+- 테스트 계정 syh9912@gmail.com → 2027-05-22 까지 PAID 부여 (grant-premium.cjs 실행)
+
+---
+
+## 2026-05-09 — 출시 검토 P0+P1+P2 일괄 fix (App Store/Play Store 심사 대비)
+
+### 배경
+오늘 작업분 전체를 출시 관점에서 재검토. 의료 정보 disclaimer 부족, 약관 시행일 미갱신, 데이터 다운로드 권리 가시성 부족 등 발견. 사용자 결정으로 P0+P1+P2 모두 처리.
+
+### ✅ P0 — 의료기기성 위험 회피
+1. **`growth-stats.tsx` 주수별 발달 화면 상단 disclaimer 카드** — "이 정보는 일반 참고용이며 의료 진단·처방을 대체하지 않습니다" + 응급 신호 시 즉시 병원 안내. 노란 배경 + 좌측 주황 라인으로 가시성 확보.
+
+### ✅ P1 — 약관/법적 컴플라이언스
+2. **`public/privacy.html` 시행일 2026-04-05 → 2026-05-09 (개정)** + 10절에 [개정 이력] 섹션 추가 (휴면 정책 신설, 기기 내 로컬 저장 항목 명시 등 변경 사실 기록)
+3. **`PRIVACY_VERSION` 갱신** (`consent.tsx`, `register.tsx`) `2026-04-05` → `2026-05-09`
+4. **`privacy.html` 1절에 기기 내 로컬 저장 항목 추가** — 마음 진단 mood diary 가 AsyncStorage 만 사용하고 서버 미전송임을 명시
+5. **`DataRetentionCard.tsx` 데이터 다운로드 요청 버튼** — 마이페이지에 "📥 내 데이터 사본 받기 (이메일 요청)" 버튼 추가. 클릭 시 mailto 링크로 사전 작성된 양식 열림. PIPA 35조 / GDPR 20조 준수.
+
+### ✅ P2 — UX 강화
+6. **SOS 응급 가이드 모달 disclaimer bar** — 모달 상단 타이틀 아래에 노란 띠로 "일반 응급처치 참고용 · 의료 행위 대체 아님 · 위급 시 즉시 119" 항상 표시. 응급 처치 안내가 의료 행위로 오인되는 것 방지.
+
+### 🔍 검증
+- `cd backend && npx tsc --noEmit` — 통과 (변경 없음)
+- `cd frontend && npx tsc --noEmit` — 통과
+- `cd frontend && npx expo lint` — **0 errors** (155 warnings, 모두 pre-existing)
+
+### App Store / Play Store 심사 대비 체크리스트
+- [x] 의료 정보 disclaimer (주수별 발달 + SOS 모달)
+- [x] 14세 미만 아동 보호 (이미 있음 — consent 화면)
+- [x] 위치 정보 사용 동의 (이미 있음)
+- [x] 푸시 알림 권한 (이미 있음)
+- [x] 개인정보 다운로드 권리 (PIPA 35조)
+- [x] 개인정보 삭제 권리 (이미 있음 — 계정 삭제)
+- [x] 휴면 자동 파기 정책 약관 명시
+- [x] 기기 내 로컬 저장 항목 약관 명시
+- [x] 약관 개정 이력 기록
+- [x] BOLA/IDOR 가드 (어제 fix)
+- [x] cascade-delete (어제 fix)
+
+---
+
+## 2026-05-09 — 권한/안정성 audit P0+P1+P2 일괄 fix (사용자 승인)
+
+### 배경
+cascade-delete audit 후 다른 관점(권한/소유권 + race/quota)으로 추가 audit. 17건 발견 — P0 3건(BOLA/IDOR), P1 3건(race/quota), P2 5건(unbounded). 사용자 결정으로 **전체 일괄 fix**.
+
+### ✅ P0 — 보안 직격 (BOLA/IDOR 방어)
+
+**1. `sos.ts:564` `notify-family`** — 자녀 소유권/가족 멤버 검증 추가. 임의 childId 로 가족 푸시 스팸 차단.
+
+**2. `vaccination.ts` GET schedule + schedule-alerts** — `childData.userId !== req.userId` 가드. 다른 사용자 자녀 출생일·접종 이력 유출 차단.
+
+**3. `pregnancy.ts` GET 핸들러 6건** (`getChildIfAccessible` helper 적용)
+- `/records`, `/mom-health`, `/kick-session`, `/timeline`, `/gdm`, `/gdm/food`
+- `mental-check`, `daily-mission/today` 는 이미 ownership 체크 있어서 skip
+- **의료 민감정보(혈당/EPDS/태동/식단/증상) 유출 차단** — PIPA + 의료법 직접 위반 위험 해소
+
+### ✅ P1 — 데이터 일관성/할당량
+
+**4. `coparenting.ts:104` `/accept`** — `db.runTransaction` 으로 read+update 원자화. 초대 코드 SNS 유출 시 동시 수락으로 권한 충돌 방지.
+
+**5. `analyzeMedia.handler.ts:349`** — 자녀 컨텍스트 검증을 quota 차감 *이전* 으로 이동. 잘못된 childId 호출 시 quota 헛으로 소모되는 것 방지.
+
+**6. `tracker.ts:348` `/import`** — `checkAndIncrementDailyLimit` 적용 (사용자당 일 20회). 10MB Excel 파싱이 비싼 작업이라 무제한 호출 → CPU 폭주 방지.
+
+### ✅ P2 — 운영 비용 (기본 hard cap)
+
+**7. `momstagram.ts:99` `/feed`** — 청크당 fetch 200 건 hard cap. 페이지가 깊어져도 메모리/Firestore 비용 폭증 방지. (cursor pagination 은 출시 후 별도 작업)
+
+**8. `child.ts:553` daily-trait** — 매 저장마다 dailyTraits 전량 fetch 하던 패턴 → child doc 의 atomic counter (`dailyTraitCount`) 사용 + 최근 7건만 limit fetch. 1년 누적 시 매 저장 365건 풀 스캔 → 1건 doc + 7건 limit 으로 개선.
+
+### ⏭ 출시 후 별도 작업으로 보류 (회귀 위험)
+
+- **#6 mom-group `/posts`** — `.orderBy('createdAt')` 추가하려면 복합 인덱스 필요. 인덱스 없는 상태에서 추가하면 runtime error. 현 규모(500 cap) 에서는 문제 없음.
+- **#11 pregnancy /gdm/weekly-report** — 이미 ownership + tier rate limit 적용되어 있음.
+- **LOW 항목 4건** (#14~#17) — 코드 품질 개선 영역. 현 규모에서 영향 미미.
+
+### 🔍 검증
+- `cd backend && npx tsc --noEmit` — 통과
+- `cd frontend && npx tsc --noEmit` — 통과
+- 각 fix 마다 단계별 typecheck — 0 회귀
+- 모든 추가 코드 try/catch + best-effort 로직
+
+### 영향 받는 라우트 (총 11개)
+- `POST /api/sos/notify-family`
+- `GET /api/vaccination/schedule`, `POST /api/vaccination/schedule-alerts`
+- `GET /api/pregnancy/{records,mom-health,kick-session,timeline,gdm,gdm/food}`
+- `POST /api/coparenting/accept`
+- `POST /api/coaching/analyze-media`
+- `POST /api/tracker/import`
+- `GET /api/momstagram/feed`
+- `POST /api/children/:id/daily-trait`
+
+---
+
+## 2026-05-09 — Cross-collection cascade-delete 누락 7건 일괄 fix (Option A)
+
+### 배경
+임신앨범 글 삭제 시 가족피드(posts) cascade fix 후, 비슷한 패턴이 있는지 정적 audit 진행. 컬렉션이 시간 따라 추가됐는데 cascade 리스트가 업데이트 안 된 케이스 다수 발견 — 7건 (HIGH 5, MEDIUM 1, LOW 1).
+
+### ✅ Fix
+
+#### 1. `cascadeDelete.ts` — 회원 탈퇴 시 누락 컬렉션 일괄 추가
+PIPA 21조(보유 목적 달성 후 즉시 파기) 위반 위험 해소:
+
+**자녀 단위 (childId 기반) 추가**
+- `milestonePhotos` (legacy dual-write 짝)
+- `growthAlbums` (성장 PDF — Storage 비용 잔존)
+- `gdmFoodLogs` (임당 식단)
+- `kickSessions` (태동)
+- `momMentalChecks` (EPDS 마음진단)
+- `dailyMissions` (일일 미션)
+- `babyTrackerDays / babyTrackerSessions` (2026-05-08 신규 컬렉션)
+
+**사용자 단위 (userId 기반) 추가**
+- `momGroupPosts / momGroupComments / momGroupBookmarks` (맘스톡 발화 데이터)
+- `userBlocks` 양방향 (`userId` + `blockedUserId` 모두)
+- `billingKeys` (자동결제 토큰 — 탈퇴 후 결제 시도 차단)
+
+**의도적 제외**
+- `payments` (전자상거래법 21조 5년 보관 의무 — 향후 PII 익명화 별도 정책으로 처리)
+
+#### 2. `child.ts:300` — 자녀 삭제 cascade 보강
+- `kickSessions / momMentalChecks / dailyMissions` 추가 (이전 누락)
+- `babyTrackerDays / babyTrackerSessions` 추가 (신규 컬렉션)
+
+#### 3. `mom-group.ts:698` — 게시글 삭제 시 연관 데이터 cascade
+이전: `momGroupPosts.doc(id).delete()` 한 줄 (서브컬렉션/댓글/북마크 모두 잔존)
+
+이후:
+- `momGroupComments where postId == id` 삭제
+- `momGroupBookmarks where postId == id` 삭제
+- 서브컬렉션 `posts/{id}/likes` 삭제 (Firestore 자동 삭제 안 됨)
+- 서브컬렉션 `posts/{id}/reports` 삭제
+- batch 분할 처리 (500개 한도 대응)
+- 로그: `cascade postId=X comments=N bookmarks=N likes=N reports=N`
+
+#### 4. `pregnancy.ts:1376` — gdmRecords 삭제 시 식단 로그 외래키 정리
+- `gdmFoodLogs.where(linkedGlucoseId == gdmId)` 조회 → `linkedGlucoseId: null` 로 batch update
+- 식단 자체는 보존 (사용자 데이터) + stale 외래키만 제거
+
+### 🔍 검증
+- `cd backend && npx tsc --noEmit` — 통과
+- 모든 cascade 는 `try/catch + best-effort` — 실패해도 본 삭제 완료 보장
+- Firestore 인덱스 신규 필요 없음 (단일 필드 equality query)
+
+### 향후 누락 방지
+`cascadeDelete.ts` 가 utility 로 추출돼 한 곳만 보면 되는 구조로 정리됨. 새 컬렉션 추가 시 `firestore.ts` 와 `cascadeDelete.ts` 두 파일만 동기화하면 누락 위험 최소화.
+
+### Audit 결과 (참고)
+이전 보안 audit (16건, 14건) 들은 **JWT/OAuth/암호화/prompt injection 등 보안 영역**만 검토했고 **컬렉션 간 cascade 일관성은 한 번도 점검 X**. 이번이 첫 cross-collection audit.
+
+---
+
+## 2026-05-08 — 휴면 사용자 자동 파기 시스템 (C안 Phase 1, 사용자 승인)
+
+### 배경
+출시 전 보안 점검에서 "회원 탈퇴 시 즉시 파기" 만 구현되었고, 시간 기반 자동 파기는 없었음. PIPA 21조(보유 목적 달성 후 즉시 파기) + 정보통신망법 시행령 16조(휴면 1년) 충족이 누락된 상태. 사용자가 "사진 영원히 둘 수 없자나 몇년만 저장하고 지우자" 제안 → C안(혼합) 승인.
+
+### 정책 (C안 — 사용자 승인)
+- **활성 유저** (1년 내 접속): 사진 보관 유지
+- **휴면 유저** (1년 미접속): 30일 전 푸시 알림 → 미응답 시 계정 + Storage 전체 cascade 삭제
+- **회복 케이스**: 사용자가 다시 로그인하면 lastActiveAt 갱신 + 휴면 경고/삭제 예정 자동 클리어
+
+### ✅ Phase 1 — 백엔드 인프라
+
+#### 신규 파일
+- **`backend/src/utils/cascadeDelete.ts`** — `cascadeDeleteUserData(userId, opts)` — Firestore 모든 컬렉션 + 자녀 cascade + Storage 전체 삭제. 회원 탈퇴 + 휴면 자동 삭제 양쪽이 공유. 멱등성 보장.
+- **`backend/src/utils/userActivity.ts`** — `touchUserActive(userId)` — lastActiveAt 갱신 + 휴면 경고/삭제 예정 클리어. fire-and-forget 패턴.
+- **`backend/src/utils/dormantUserSweep.ts`** — Stage A(경고) + Stage B(삭제) 두 단계, 한 회차 최대 100명 처리, 멱등성 보장.
+
+#### 수정 파일
+- **`backend/src/routes/auth.ts`**:
+  - `generateTokens()` 에서 `touchUserActive(userId)` 자동 호출 → register/login/refresh/social/kakao/naver 모든 인증 경로 자동 갱신
+  - `DELETE /api/auth/account` 핸들러 — 120 라인 cascade 로직을 `cascadeDeleteUserData()` 단일 호출로 교체 (로직은 utility 로 이동)
+  - 사용 안 하는 import 정리 (`unlinkSocialAccount`, `decryptToken`, `deleteUserStorageFiles`)
+- **`backend/src/index.ts`**:
+  - `dormantUserSweep` Cloud Scheduler 함수 export
+  - 스케줄: `30 3 * * *` (매일 03:30 KST), region `us-central1`, memory 512MiB, timeout 9분
+- **`public/privacy.html`** — 3절 "보관 기간 및 파기" 에 휴면 정책 섹션 추가 (정보통신망법 시행령 16조 명시)
+
+#### Firestore 스키마 추가 (users 컬렉션)
+- `lastActiveAt: Timestamp` — 매 토큰 발급 시 갱신
+- `dormantWarnedAt: Timestamp | null` — 1차 경고 발송 시각
+- `scheduledDeleteAt: Timestamp | null` — 삭제 예정 시각 (warnedAt + 30일)
+
+#### Sweep 동작
+```
+Stage B (먼저) — scheduledDeleteAt <= now → cascadeDeleteUserData(tryUnlink: true)
+Stage A — lastActiveAt < now-365일 + dormantWarnedAt 미설정
+       → 푸시 발송 + dormantWarnedAt/scheduledDeleteAt 마킹
+```
+
+#### 회귀 안전 장치
+- legacy 유저(lastActiveAt 미존재)는 sweep 범위에서 자동 제외 — 출시 직후 모든 기존 사용자 휴면 처리되는 사고 방지
+- 한 회차 최대 100명 처리 — 갑작스런 대량 삭제 방지
+- Stage B 먼저 실행 후 Stage A — 같은 회차에서 새로 경고된 유저가 즉시 삭제되는 race 방지
+
+### 🔍 검증
+- `cd backend && npx tsc --noEmit` — 통과
+- `cd frontend && npx tsc --noEmit` — 통과
+- 함수 export 추가 확인 (firebase-functions v7 v2/scheduler API 사용)
+
+### 📌 배포 절차 (Phase 1 배포 시)
+1. `firebase deploy --only functions:dormantUserSweep` — 스케줄러 함수 등록
+2. 또는 전체 함수 재배포 — `firebase deploy --only functions`
+3. Cloud Scheduler API + Pub/Sub API 자동 활성화 (firebase deploy 시)
+4. 첫 실행은 다음 새벽 03:30 KST
+
+### ✅ Phase 2 — 프론트 UI
+
+#### 신규 파일
+- **`frontend/components/profile/DataRetentionCard.tsx`** — 마이페이지 카드:
+  - 활성 상태: "마지막 접속 / 다음 자동 안내" 표시 + 정책 설명
+  - 휴면 경고 상태: 큰 빨간 날짜 + "앱 사용 시 자동 연장" 강조 톤
+
+#### 수정 파일
+- **`backend/src/routes/auth.ts`**:
+  - `GET /api/auth/me` 응답에 `lastActiveAt / dormantWarnedAt / scheduledDeleteAt` 추가 (UI 표시용)
+- **`frontend/app/(main)/profile.tsx`** — `<DataRetentionCard />` 통합
+- **`frontend/app/onboarding/consent.tsx`** — 약관 박스에 휴면 정책 한 줄 노트 추가
+- **`frontend/app/(auth)/register.tsx`** — 동일한 휴면 정책 한 줄 노트 추가
+- **`frontend/app/(main)/trait-detail.tsx`** — 부수 fix: useState/useRef 가 early return 이후 호출되던 Rules of Hooks 위반 (이전 작업 잔류 버그) — hooks 를 함수 상단으로 이동
+
+### 🔍 최종 검증
+- `cd backend && npx tsc --noEmit` — 통과
+- `cd frontend && npx tsc --noEmit` — 통과
+- `cd frontend && npx expo lint` — **0 errors**, warnings 만 (pre-existing)
+
+---
+
+## 2026-05-08 — 이미지 업로드 압축 (속도 + Storage 비용)
+
+### 배경
+사용자 보고: "이미지 하나 올리는데 시간 오래 걸리고 서버 데이터 많이 쓰이는 거 아니야?" 원본 사진(4–8MB) 그대로 업로드 → 무료 한도 5GB ÷ 평균 4MB = 1,250장 한계.
+
+### ✅ Fix
+**`frontend/services/api.ts`** — `uploadApi.upload()` 에 expo-image-manipulator 압축 추가:
+- 가로 1280px 리사이즈 (비율 유지)
+- JPEG 85% 품질
+- EXIF 자동 제거 (위치/디바이스 정보 노출 방지)
+
+### 효과
+- **업로드 속도**: 5–20× 빠름 (4–8MB → 200–400KB)
+- **Storage 비용**: 95% 절감 → 무료 한도 5GB 로 약 17,000장 가능 (사용자 1명당 50장 → 약 340명까지 무료)
+- **개인정보**: EXIF 메타데이터 자동 제거
+
+### 🔍 검증
+- `cd frontend && npx tsc --noEmit` — 통과
+- OTA 배포 완료 (Update group `ca28d656`, runtime 2.8.1)
+
+---
+
+## 2026-05-08 — dominantType 결정성 보장 (AI 비결정성 차단)
+
+### 배경
+사용자 보고: "답변 바꾸면 기질 라벨이 바뀐다". 코드 추적 결과 답변 → dominantType 직접 경로는 0건. 진짜 원인은 **`saju.interpreter.ts` 의 Gemini (temperature 0.4) 가 dominantType 자체를 결정** + 자녀 정보 수정 시 `calculateSajuWithAI` 재호출로 매번 흔들림.
+
+### ✅ Fix
+**dominantType 은 룰 기반 결정적, AI 는 detail 텍스트만 생성**.
+
+#### 변경 흐름 (Before → After)
+- **Before**: 룰이 fiveElements 계산 → AI 가 dominantType + label + detail 모두 생성 → AI 결과로 룰 dominantType 덮어쓰기
+- **After**: 룰이 fiveElements 계산 + dominantType 결정 (max 매핑) → AI 는 fixedDominantType 입력받아 그 분류에 맞춰 label/personality/strengths 등 detail 만 생성 → dominantType 절대 변경 X
+
+#### 코드 변경 ([saju.interpreter.ts](backend/src/services/saju.interpreter.ts))
+- **`InterpreterInput`** 에 `fixedDominantType: string` 추가
+- **`buildPrompt`** — 사전 결정 분류를 prompt 에 명시 ("dominantType 은 ${fixedDominantType} 으로 확정. 절대 변경 불가")
+- **`validate(raw, fixedDominantType)`** — AI 응답의 dominantType 값 무시하고 fixedDominantType 강제 사용
+- **`calculateSajuWithAI`** — 룰의 ruleResult.dominantType 을 fixedDominantType 으로 전달 + AI 결과로 dominantType 안 덮어씀
+
+#### 효과
+- **같은 사주(생년월일·시간·성별) = 항상 같은 dominantType 보장**
+- 자녀 재생성 / 정보 수정 시 dominantType 흔들림 0
+- AI 비결정성은 detail 텍스트(personality, strengths 등) 다양성에만 반영 — 분류 자체는 안정
+- 부수 효과: AI 응답이 사주용어 검출돼서 retry 되어도 dominantType 안 흔들림
+
+### 🔍 검증
+- backend tsc --noEmit: 0 errors
+- functions deploy: api + coachingApi 모두 update 완료
+
+### ⚠️ 마이그레이션 주의
+기존 사용자의 `child.innateData.dominantType` 은 그대로 유지됨 (DB 저장값은 변경 없음).
+- 기존 사용자가 자녀 정보 수정해서 birthDate/birthTime 재입력하면 새 흐름으로 재계산되며 룰 기반 결정값으로 갱신.
+- 그 시점부터는 영원히 같은 값 유지.
+
+---
+
+## 2026-05-08 — P0-2 Naver: SDK 패턴 유지 결정 (P0 분류 재평가)
+
+### 배경 (재평가)
+초기 보안 감사에서 `consumerSecret` 클라이언트 임베드를 P0(출시 차단) 로 분류했으나, 한국 OAuth 생태계 + Naver 공식 가이드 + 실질 위험도 재평가 후 **P1~P2 수준**이 더 정확한 분류였다고 판단.
+
+#### 재평가 근거
+- **한국 앱 사실상 표준**: 카카오/네이버/토스/배민/쿠팡 등 대부분이 native SDK + secret 임베드 사용
+- **네이버 공식 가이드** 자체가 SDK 에 secret 임베드를 권장
+- **실질 보안 경계는 Naver 콘솔 화이트리스트** (패키지명/Bundle ID) — secret 만으로는 임의 토큰 발급 불가
+- **UX 우월**: 네이버 앱 설치 시 즉시 토큰, 자동 로그인 가능
+- **출시 일정 (5/15)** 대비 백엔드 callback 패턴 안정화 시간 비효율
+
+### 결정: SDK 패턴 유지 (revert)
+중간에 백엔드 callback 패턴(`/auth/naver/callback` + `/auth/naver/check/:state`) 시도했으나 in-app browser 의 deep link 캐치 안정화 어려움 + 한국 표준 부합으로 SDK 패턴으로 원복.
+
+### ✅ 원복 작업
+- **frontend `social-auth.ts`** — `naverLogin()` 을 `@react-native-seoul/naver-login` SDK 사용 패턴으로 복구
+- **frontend `social-auth.ts`** — `clearAllSocialSessions` 의 `NaverLogin.logout()` 호출 복구
+- **frontend `app.json`** — plugins 에 `@react-native-seoul/naver-login` 재등록
+- **frontend `package.json`** — `@react-native-seoul/naver-login@^4.2.4` 의존성 재추가 + `npm install`
+- **frontend `eas.json`** — `EXPO_PUBLIC_NAVER_URL_SCHEME=naverlogin` 복구 (preview/production)
+- **frontend `services/api.ts`** — 사용 안 되는 `authApi.naverCheck` 제거
+
+### 🟡 backend dead code (향후 정리)
+다음 라우트는 사용 안 함 — 향후 PKCE 지원 또는 다른 OAuth 흐름 재사용 시 활용 가능:
+- `routes/auth.ts` `GET /auth/naver/callback`
+- `routes/auth.ts` `GET /auth/naver/check/:state`
+- `NAVER_STATE_COLLECTION` 정의
+
+제거하지 않은 이유: 외부 노출 GET 라우트지만 적법한 OAuth 흐름이고 호출자 없음. 보안 표면은 작고 향후 재사용 여지 있어 P3 기술부채로 등록.
+
+### 🔍 검증
+- frontend tsc --noEmit: 0 errors
+- npm install: 1 package added (naver-login 복구)
+
+### 📦 배포
+- OTA: Update group `1e68ee19-1e52-483d-b459-9a5115e4a11c` (preview branch)
+- backend: 변경 없음 (dead code 라우트만 잔존)
+
+### ⚠️ 향후 mitigation (출시 후 P2)
+- consumerSecret 노출 자체는 RFC 관점에서 비표준. 향후 Naver 가 PKCE 지원 시 전환 검토
+- 현재는 콘솔 화이트리스트로 1차 방어 충분
+
+---
+
+## 2026-05-08 — P0-2 Naver client_secret 백엔드 이전 시도 (revert 됨)
+
+### 배경
+어제 P0 보안 감사에서 식별된 마지막 출시 차단 항목. `@react-native-seoul/naver-login` SDK 가 `consumerSecret` 을 클라이언트 번들에 임베드하는 모델이라 APK 디컴파일 시 노출 위험. 출시 전 OAuth 2.0 authorization code grant 흐름으로 전환.
+
+### ✅ 완료
+
+#### Backend (이미 구현돼 있어 변경 없음)
+- `services/social.auth.ts` — `exchangeCodeAndVerify('NAVER', code, redirectUri)` 가 이미 NAVER 케이스 처리
+- `routes/auth.ts` — `POST /auth/social-code` 가 KAKAO + NAVER 모두 지원
+- 백엔드는 환경변수 `NAVER_CLIENT_ID` + `NAVER_CLIENT_SECRET` 으로 token 교환만 수행, 클라에 secret 노출 없음
+
+#### Frontend
+- **services/social-auth.ts**:
+  - `naverLogin()` 을 모든 플랫폼에서 `authSessionLogin('NAVER')` 위임 (기존 web 전용에서 통합)
+  - `consumerSecret`, `EXPO_PUBLIC_NAVER_CLIENT_SECRET` 사용 코드 전부 제거
+  - `clearAllSocialSessions()` 의 NaverLogin.logout 부분 제거 (AuthSession 은 디바이스 캐시 없음)
+  - REDIRECT_URI 콘솔 출력 추가 — 네이버 콘솔 Callback URL 등록 시 정확한 값 확인용
+- **package.json** — `@react-native-seoul/naver-login` 의존성 제거 (npm install 로 정리)
+- **app.json** — plugins 에서 `@react-native-seoul/naver-login` block 제거
+- **eas.json** — `EXPO_PUBLIC_NAVER_URL_SCHEME` 제거 (모든 환경)
+
+#### 흐름 변경 요약
+**Before**: 앱 → NaverLogin SDK (consumerSecret 임베드) → 네이버 → accessToken 즉시 → 백엔드 verify
+**After**: 앱 → AuthSession.promptAsync (Naver authorize URL) → 네이버 → code 받음 → 백엔드 `/auth/social-code` (서버에서 client_secret 으로 token 교환) → user 정보 + JWT 발급
+
+### 🔍 검증
+- backend tsc --noEmit: 0 errors
+- frontend tsc --noEmit: 0 errors
+- npm install: 1 package removed (naver-login)
+
+### 📌 흐름 변경 v2 (2026-05-08 후속) — 백엔드 callback 패턴
+
+initial fix 시 expo-auth-session 의 `amatda://...` custom scheme redirect 채택했으나, 네이버는 redirect_uri 에 https:// 만 허용 (custom scheme 거부). 카카오와 동일한 백엔드 callback 패턴으로 전환.
+
+#### 추가 변경
+- **backend `routes/auth.ts`**:
+  - `NAVER_STATE_COLLECTION = 'naverOAuthState'` 신규 (5분 TTL)
+  - `GET /auth/naver/check/:state` — 폴링용 (1회 소비 후 doc 삭제)
+  - `GET /auth/naver/callback` — 네이버 OAuth callback (kakao 패턴 복제, code → token → user → state doc → deep link redirect)
+- **frontend `services/social-auth.ts`**:
+  - `naverLogin()` 을 백엔드 callback 패턴으로 재작성 (kakaoWebLogin 과 동일 구조)
+  - `WebBrowser.openAuthSessionAsync(authorize_url, 'amatda://auth/callback')` → state polling → directLogin 반환
+  - `NAVER_CALLBACK_URL = 'https://api-usglfifguq-uc.a.run.app/api/auth/naver/callback'` 하드코딩
+- **frontend `services/api.ts`** — `authApi.naverCheck(state)` 추가
+
+#### 흐름 (최종)
+1. 앱 → `https://nid.naver.com/oauth2.0/authorize?...&state=&redirect_uri=https://api-...run.app/api/auth/naver/callback`
+2. 사용자 동의 → 네이버가 백엔드 callback 으로 code 전달
+3. 백엔드: code → token 교환 → user 생성/매칭 → JWT 발급 → state doc 에 저장 → `amatda://auth/callback?state=XXX&provider=naver` deep link redirect
+4. 앱: WebBrowser close 감지 → state 추출 → `/auth/naver/check/:state` 폴링 (1초 간격, 최대 30회) → directLogin 결과 수신
+
+토큰은 deep link 쿼리에 절대 안 담음 (브라우저 history/Referer 누출 방어).
+
+### ⚠️ 출시 전 운영 작업 (사용자 직접)
+
+1. **네이버 개발자 콘솔 설정**:
+   - https://developers.naver.com/apps → 내 애플리케이션 → "API 설정"
+   - **PC 웹 환경** 추가/수정 → Callback URL:
+     ```
+     https://api-usglfifguq-uc.a.run.app/api/auth/naver/callback
+     ```
+   - 추가/수정 후 약 5분 뒤 적용
+
+2. **새 빌드 필수**:
+   - 네이티브 SDK 의존성 제거가 빌드에 반영되려면 새 EAS build 필요
+   - `eas build -p android --profile preview`
+   - 보안 측면: 옛 빌드는 consumerSecret 이 APK 안에 박혀 있음 → 새 빌드 후에야 P0-2 fix 가 진짜 효과
+
+3. **백엔드 .env 확인**:
+   - `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` 정상 설정 확인 (이미 사용 중이라 유지)
+
+### 배포 상태 (2026-05-08)
+- backend: Functions 재배포 완료 (`api`, `coachingApi`)
+- OTA: Update group `5ea158cc-7f2a-4ced-84bd-e50d4871a782` (preview branch)
+
+### 출시 차단 P0 12건 정리 완료 ✅
+1. PASSPORT_SALT 하드코딩 제거 ✓
+2. Naver client_secret 백엔드 이전 ✓ (이번 작업)
+3. google-services.json git 정리 ✓
+4. analyzeMedia race condition ✓
+5. ask.handler 카운터 트랜잭션화 ✓
+6. 입력 검증 zod ✓
+7. Prompt injection + 응답 필터 ✓
+8. 미디어 파일 검증 ✓
+9. 약관/개인정보 동의 UI ✓
+10. Storage cascade delete ✓
+11. momstagram UGC 모더레이션 ✓
+12. AD_ID/광고 ENV 정합성 ✓
+
+추가: baby-tracker 서버 sync (데이터 손실 차단), 어제 OTA 회귀 hotfix.
+
+---
+
+## 2026-05-08 — baby-tracker 서버 sync (데이터 손실 차단)
+
+### 배경
+긴급 OTA fix 후 사용자가 앱 데이터 삭제로 회복했는데 baby-tracker 기록이 다 사라짐.
+원인: storage.ts 가 AsyncStorage 만 사용, 서버 sync 함수가 아예 없었음. 다른 데이터(자녀/앨범/코칭/voice 입력)는 모두 Firestore 라 살아있는데 baby-tracker 수동 입력만 로컬 only 구조.
+출시 직후 동일 시나리오 발생 시 사용자 데이터 영구 손실 → 출시 차단 신규 P0 로 식별, 즉시 fix.
+
+### ✅ 완료
+
+#### 신규 컬렉션
+- **babyTrackerDays** — doc id `{childId}_{date}`, `{ userId, childId, date, records[], updatedAt }`
+- **babyTrackerSessions** — doc id `childId`, `{ userId, childId, sleepSession, breastSession, updatedAt }`
+- Firestore 복합 인덱스 추가: `babyTrackerDays(childId ASC, date ASC)`
+
+#### 신규 라우트 (backend/src/routes/babyTracker.ts)
+- `GET /api/baby-tracker/:childId/days/:date` — 단일 날짜 조회
+- `GET /api/baby-tracker/:childId/days?from=&to=` — 범위 조회 (최대 100일)
+- `PUT /api/baby-tracker/:childId/days/:date` — day records 덮어쓰기 (last-write-wins)
+- `GET /api/baby-tracker/:childId/sessions` — 진행 중 sleep/breast 세션 조회
+- `PUT /api/baby-tracker/:childId/sessions` — 진행 세션 저장
+- 모든 엔드포인트: `getChildIfAccessible` 권한 검증 (`viewRecords`/`editRecords`)
+- zod 스키마 검증 (TrackerRecord, date YYYY-MM-DD, time HH:MM, records 최대 500개)
+
+#### Frontend sync (offline-first)
+- **services/api.ts** `babyTrackerApi` 추가 — getDay/getDaysRange/putDay/getSessions/putSessions
+- **features/baby-tracker/storage.ts**:
+  - `saveRecords` → 로컬 setItem + 서버 PUT fire-and-forget (실패해도 로컬 보존)
+  - `saveSleepSession`/`saveBreastSession` → 동일 패턴
+  - 신규: `syncDayFromServer`, `syncRangeFromServer`, `syncSessionsFromServer`
+- **app/(main)/baby-tracker.tsx**:
+  - childId 진입 시 1회 `syncRangeFromServer(14일)` + `syncSessionsFromServer` 호출
+  - sync 완료 후 `loadData()` 재호출 → 데이터 삭제/재설치 후 첫 진입에 자동 복구
+
+#### 동작 시나리오
+1. **정상 사용**: 모든 write 가 로컬 + 서버 양쪽에 즉시 반영
+2. **오프라인**: 로컬에만 저장, 다음 온라인 write 시 그 시점 records 가 서버 PUT 됨 (자동 재시도 효과)
+3. **앱 데이터 삭제 / 재설치**: 첫 진입에 14일 records + 세션 자동 fetch → 로컬 캐시 복원
+4. **다중 기기 (가족 공유 시나리오)**: last-write-wins, 새 기기에서 진행 중 세션도 복구
+
+### 🔍 검증
+- backend tsc --noEmit: 0 errors
+- frontend tsc --noEmit: 0 errors
+
+### ⚠️ 운영 주의
+- Firestore 인덱스 `babyTrackerDays(childId, date)` 빌드 완료 확인 후 OTA 배포
+- 한 번 잃은 데이터는 복구 못 함 (이번 fix 는 앞으로의 손실만 방지)
+- Android Auto Backup 활용해 잃어버린 데이터 복구 시도 가능 (앱 삭제 → 재설치)
+
+---
+
+## 2026-05-08 — 긴급 OTA hotfix (어제 OTA 회귀)
+
+### 🚨 증상
+- preview APK 일부 사용자에서 부팅 시 흰 화면 (어제 밤부터)
+- Sentry 이슈:
+  - REACT-NATIVE-9 — `Invalid hook call` (handled, 6 events)
+  - REACT-NATIVE-A — `Attempted to navigate before mounting the Root Layout` (fatal)
+
+### 🔬 원인
+어제 세션 16 OTA에서 _layout.tsx 의 OTA 타임아웃 흐름을 추가하면서 모듈 로드 순서가 바뀜 → Pretendard 폰트 패치 IIFE (`Text.render` / `TextInput.render` mutation) 가 React 19.1 + RN 0.81.5 + Hermes 조합에서 invalid hook call 트리거 → _layout 마운트 깨짐 → 콜드스타트 푸시 처리의 `router.push` 가 마운트 전에 호출 → fatal → 흰 화면 stuck.
+
+### ✅ Fix
+- **[_layout.tsx:20-58](frontend/app/_layout.tsx:20)** Pretendard 패치 fail-safe
+  - 외부 try-catch — 패치 실패 시 시스템 기본 폰트로 폴백, 앱 부팅 절대 막지 않음
+  - 내부 try-catch — render 후처리 실패 시 원본 결과 그대로 반환
+  - `__amatdaPretendardPatched` 플래그 — Fast Refresh / OTA reload 이중 patch 방지
+- **[_layout.tsx:160-178](frontend/app/_layout.tsx:160)** 콜드스타트 푸시 처리
+  - `getLastNotificationResponseAsync().then(router.push)` → setTimeout 300ms 지연
+  - expo-router navigation tree mount 완료 보장
+
+### 🔄 복구 절차
+1. `eas update --branch preview` 발행
+2. 흰 화면 사용자: 앱 데이터 삭제 → embedded 번들 부팅 → 새 fix OTA 자동 수신
+
+### 검증
+- frontend tsc --noEmit: 0 errors
+- 사용자 기기 OTA 적용 후 정상 부팅 확인
+
+---
+
+## 2026-05-08 — 출시 전 P0 보안 감사 11건 일괄 fix
+
+### 배경
+출시 차단 요소를 도메인별(시크릿/인증/백엔드/개인정보/스토어) 5개 병렬 감사로 발굴 → P0 12건 식별 → 11건 완료, 1건 출시 후 P1 격하.
+
+### ✅ 완료 (11건)
+
+#### P0-1 — PASSPORT_SALT 하드코딩 제거
+- [memories.ts:12](backend/src/routes/memories.ts:12) `'amatda-passport-2024'` 하드코딩 제거
+- env 의 `getPassportSalt()` 사용 (env 미설정 시 fail-closed throw)
+- 여권 PNG `Cache-Control: public, max-age=3600` → `private, no-store` (PII 노출 방지)
+- **위험**: 누구나 childId만 알면 아이 이름·생년월일·기질이 인쇄된 PNG 무인증 다운로드 가능했음
+
+#### P0-3 — google-services.json git 추적 정리
+- `.gitignore` 에 패턴 있는데 추적 중인 불일치 정리
+- Firestore/Storage rules 가 보안 경계라 식별자 노출 자체는 OK — 의도적 추적으로 일관화
+- iOS GoogleService-Info.plist 는 EAS Secret 주입 유지
+
+#### P0-4 — analyzeMedia race condition (Gemini 비용 폭주 차단)
+- [analyzeMedia.handler.ts:38-72](backend/src/routes/coaching/analyzeMedia.handler.ts:38) `checkAndIncrementUsage` 트랜잭션화
+- read+check+write 분리 → `db.runTransaction` 으로 원자화
+- 동시 클릭 시 무료 3회 한도 우회로 Gemini billable 폭주하던 이슈 차단
+
+#### P0-5 — ask.handler 일일 카운터 트랜잭션화
+- [rateLimit.ts](backend/src/utils/rateLimit.ts) `checkAndIncrementDailyLimit` 신규 — 트랜잭션 + fail-closed
+- ask.handler 에서 `getTodaySessionCount`(컬렉션 풀스캔) 제거 → 단일 카운터 문서 트랜잭션으로 전환
+- emergency/urgent redFlag 만 한도 면제 정책 유지
+
+#### P0-6 — 입력 검증 zod 도입
+- [validate.ts](backend/src/utils/validate.ts) 공통 헬퍼 — `parseBody/parseQuery/parseParams`
+- 적용 라우트:
+  - coaching/ask, coaching/daily-diary, coaching/first-talk, coaching/analyze-media
+  - momstagram (POST /posts, /comments)
+  - album (POST /photos)
+  - tracker (/voice-parse)
+- 길이 cap, MIME 화이트리스트, ENUM 검증
+
+#### P0-7 — Prompt injection 방어 + 응답 후처리 필터
+- [forbidden.filter.ts](backend/src/services/coaching/forbidden.filter.ts) 신규
+  - `containsForbiddenTerms` — 사주/오행/천간/지지/일주~시주/갑목~계수 정규식 매칭
+  - `shouldRejectAIResponse` — 객체 재귀 탐색
+- ask.handler / firstTalk / analyzeMedia 응답에 적용 — 검출 시 mock fallback
+- dailyDiary: 이전 세션 텍스트(`s.message/s.answer`) sanitize, AI 응답 검출 시 mock
+- tracker: 사용자 입력을 `<<<USER>>>...<<<END_USER>>>` fence + sanitize
+- ask.handler: 메시지 2000자 cap
+
+#### P0-8 — 미디어 파일 검증
+- [analyzeMedia.handler.ts](backend/src/routes/coaching/analyzeMedia.handler.ts) `validateMedia` 신규
+  - MIME 화이트리스트 (image: jpeg/png/webp, audio: mpeg/wav/m4a/aac/ogg/webm)
+  - 매직넘버 검증 (이미지)
+  - 5MB 디코드 사이즈 cap
+
+#### P0-10 — Storage 파일 cascade delete (PIPA 21조 파기 의무)
+- [storageCleanup.ts](backend/src/utils/storageCleanup.ts) 신규
+  - `deleteUserStorageFiles` — 7개 prefix(`pregnancy/`, `profiles/`, `momstagram/`, `diary/`, `album/`, `lullaby/`, `growth_albums/`) 일괄 삭제
+  - `deleteStorageFilesFromUrls` — Firebase URL/gs://path/bare path 파싱 후 개별 삭제
+- auth.ts deleteAccount: Firestore 삭제 후 `deleteUserStorageFiles(userId)` 호출
+- child.ts delete: albumPhotos/milestonePhotos/growthAlbums의 uri/printUrl/imageUrl/thumbnailUrl/pdfUrl/photoUrl 수집 후 `deleteStorageFilesFromUrls`
+- 기존: privacy.html "탈퇴 시 즉시 삭제" 명시인데 실제 Storage 파일 잔존 → 허위 고지 위반 상태였음
+
+#### P0-11 — momstagram UGC 모더레이션 (Apple 1.2 / Google UGC 정책)
+- 백엔드:
+  - `userBlocks` 컬렉션 신규
+  - `POST /momstagram/posts/:id/report` (사유: abuse/ad/privacy/spam/sexual/other) — `posts/{id}/reports/{userId}` 서브컬렉션 + reportCount 증분 + 3회 누적 시 hidden=true 자동
+  - `POST/DELETE /momstagram/users/:uid/block`
+  - `GET /momstagram/users/blocked`
+  - 피드 필터링: hidden=true 제외 + 차단 사용자 제외
+- 프론트:
+  - api.ts: `reportPost/blockUser/unblockUser/getBlockedUsers`
+  - PostCard: `onMore` 가 isMine 무관하게 항상 호출되도록 변경
+  - momstagram.tsx: handleMore에 본인=수정/삭제, 타인=신고/차단 분기
+
+#### P0-12 — 광고 ENV 정합성
+- eas.json preview/production 모두 `EXPO_PUBLIC_ADS_ENABLED=false` 통일
+- AdMob SDK 미통합 상태와 ENV 일치 — 데이터 안전성 신고 시 "광고 ID 미사용" 정합
+
+#### P0-9 — 약관/개인정보 동의 UI (PIPA 15·22조, 정보통신망법 22조)
+- 백엔드:
+  - `auth.ts /register` 핸들러에 consent 검증 추가 — 약관/개인정보/14세이상 미동의 시 400
+  - 사용자 문서에 `consent: { terms, privacy, ageOver14, marketing, version, acceptedAt }` 저장
+- 프론트:
+  - api.ts `register` signature 에 consent 파라미터 추가
+  - register.tsx 에 4개 분리 체크박스 + 전체 동의 + 본문 링크(WebBrowser)
+  - 필수 미동의 시 가입 버튼 비활성
+  - PRIVACY_VERSION = '2026-04-05'
+
+### ⏸️ 출시 후 P1 격하 (1건)
+
+#### P0-2 — Naver client_secret 백엔드 이전
+- 현 구조: `@react-native-seoul/naver-login` SDK 가 `consumerSecret` 을 initialize 시점에 받음 (모바일 SDK 설계)
+- 정석 fix: SDK 제거 + expo-auth-session 코드 grant 흐름 + 백엔드 `/auth/social/naver-code` 라우트
+- 작업 규모: 1~2일 + 새 빌드 사이클 + 네이버 콘솔 Web 클라이언트 등록
+- 출시 5/15 일정상 위험 — 출시 후 hotfix 로 격하 (Naver 콘솔 패키지/Bundle ID 화이트리스트가 1차 보안 경계로 동작 중)
+
+### 🔍 검증
+- backend tsc --noEmit: 0 errors
+- frontend tsc --noEmit: 0 errors
+- expo lint: 0 errors
+
+### 📦 신규 파일
+- backend/src/utils/validate.ts
+- backend/src/utils/storageCleanup.ts
+- backend/src/services/coaching/forbidden.filter.ts
+
+### 📝 신규 의존성
+- backend: `zod ^4.4.3`
+
+### 📝 신규 컬렉션
+- `userBlocks` — { userId, blockedUserId, createdAt }
+
+### ⚠️ 운영 주의
+- privacy.html 시행일이 2026-04-05 — `consent.version` 동기화 유지
+- 약관 본문 URL: `https://amatda-parenting.firebaseapp.com/{terms,privacy}.html` — Firebase Hosting 배포 상태 확인 필요
+
+---
+
+## 2026-05-07 (세션 16) — 자장가/태교음악 UI 전면 리뉴얼 + 버그 수정 2건
+
+### ✅ 완료 항목
+
+#### L2 — 자장가/태교음악 아이콘 DALL-E 3로 교체
+- **목적**: 기존 SVG 프로그래밍 방식 아이콘이 앱 마스코트(3D 클레이 스타일)와 전혀 다른 문제 해결
+- **방법**: `scripts/generate-sound-icons-dalle.js` 신규 작성 — OpenAI DALL-E 3 API 호출
+  - 1024×1024 생성 → sharp로 192×192 리사이즈
+  - BASE_STYLE: "3D clay toy style, matte clay texture, soft pastel colors, kawaii aesthetic"
+  - 24개 아이콘 생성: `sound-*.png` (12개) + `p-*.png` (12개)
+  - `START_FROM` 환경변수로 중간 재시작 지원
+- **부수 이슈**: `generate-all-icons.js` 실수로 실행 → cat-*, icon-*, quick-*, badge-*, academy-* 덮어씀
+  - `git checkout -- frontend/assets/[파일들]` 로 복구
+- **파일**: `scripts/generate-sound-icons-dalle.js`, `frontend/assets/sound-*.png`, `frontend/assets/p-*.png`
+
+#### L3 — 자장가 MP3 파일 lullaby.tsx 연결
+- **연결된 파일** (7개): womb.mp3, vacuum.mp3, fan.mp3, wave.mp3, forest.mp3, stream.mp3, rain.mp3
+- **아직 WAV 사용** (5개): hairdryer.wav, twinkle.wav, brahms.wav, mozart.wav, orgel.wav
+- **태교음악**: 전체 12개 `source: null` (음원 미확보) — pendingFile 명시
+- **미확보 음원 출처 안내**:
+  - 클래식: Musopen.org (저작권 해제 연주 녹음)
+  - 자연음/심장박동: Freesound.org (CC0 필터)
+  - 명상음: Pixabay Music
+- **파일**: `frontend/app/(main)/lullaby.tsx`
+
+#### L4 — 자장가/태교음악 화면 파스텔 라이트 테마 전환
+- **변경 전**: `bg: '#1A1230'` 짙은 다크 퍼플 테마
+- **1차 변경**: `bg: '#F4F0FF'` 라벤더 (사용자 피드백으로 재변경)
+- **최종**: 앱 표준 테마 통일
+  ```ts
+  bg: '#F2F2F7'       // 홈/코파렌팅과 동일한 iOS 표준 배경
+  card: '#FFFFFF'
+  cardActive: '#FFF0E6'
+  accent: '#FF8C5A'   // 앱 통일 코랄 포인트
+  text: '#1C1C1E'
+  textSub: '#636366'
+  ```
+- **파일**: `frontend/app/(main)/lullaby.tsx`
+
+#### L5 — 사운드 카드 퀵메뉴 스타일 3D 입체화
+- **목적**: 사운드 카드 버튼을 홈 퀵메뉴 아이콘과 동일한 3D 입체 느낌으로 통일
+- **적용 패턴** (홈 `quickCircle`과 동일):
+  ```ts
+  borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)',   // 흰색 하이라이트 테두리
+  shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.13, shadowRadius: 8,
+  elevation: 5,
+  ```
+- **재생 중 활성 카드**: 포인트 컬러 섀도 추가 (`shadowColor: COLOR.accent`)
+- **같은 처리 적용 범위**: 사운드 카드, 타이머 칩, 울음감지 카드, 녹음 버튼, nowPlayingCircle
+- **파일**: `frontend/app/(main)/lullaby.tsx`
+
+#### B1 — 홈 수면 위젯 "기록 없음" 오표시 버그 수정
+- **증상**: 수면 10h 표시되는데 아래에 "기록 없음" 표시
+- **원인**: `valueSub`가 낮잠(`nap`) 카운트만 체크 → 밤잠(`night`) 기록만 있으면 nap=0 → "기록 없음"
+  - `SleepSubType = 'nap' | 'night'` 인데 nights 계산 누락
+- **해결**: `nights` 카운트 별도 추가, 상황별 분기 표시
+  ```ts
+  낮잠+밤잠 → '낮 2·밤 1회'
+  낮잠만   → '낮잠 2회'
+  밤잠만   → '밤잠 1회'
+  기타 수면 → '수면 기록됨'  (totalH > 0 fallback)
+  없음     → '기록 없음'
+  ```
+- **파일**: `frontend/components/home/DenseStatsRow.tsx`
+
+#### B2 — OTA 업데이트 무한 대기 버그 수정
+- **증상**: OTA 다운로드 화면에서 진행률이 90%대에서 멈추고 앱이 frozen 상태
+- **원인**: `fetchUpdateAsync()`에 타임아웃 없음 → 네트워크 느릴 때 무한 대기, 건너뛸 방법 없음
+- **해결**:
+  1. **45초 타임아웃** — `Promise.race`로 제한, 초과 시 idle로 복귀 (기존 버전 사용)
+  2. **15초 후 건너뛰기 버튼** — 다운로드 15초 경과 시 화면 하단에 "건너뛰기 (현재 버전 사용)" 버튼 노출
+  3. 타임아웃 에러는 Sentry 미전송 (네트워크 이슈, 실제 버그 아님)
+- **파일**: `frontend/app/_layout.tsx`
+
+### 🔍 검증
+- `cd frontend && npx tsc --noEmit`: 0 errors
+- `cd frontend && npx expo lint`: 0 errors, 141 warnings (모두 기존)
+- OTA 배포 완료 (preview branch, runtime 2.8.1)
+
+### ⏳ 남은 작업
+- **자장가 WAV → MP3 교체 필요**: hairdryer, twinkle, brahms, mozart, orgel (5개)
+- **태교음악 음원 전체 미확보**: 12개 전부 `source: null` 상태
+  - Musopen.org에서 클래식 5곡, Freesound.org에서 자연/명상 7곡 다운로드 후 연결 필요
+  - 받은 후 Audacity로 15~30초 루프 트리밍 필요
+
+
+
+---
+
+## 2026-05-07 (세션 14) — 로그인 refresh 뮤텍스 + voice.tsx 준비중 stuck 해결
+
+### ✅ 완료 항목
+
+#### L1 — Refresh Token 동시 요청 뮤텍스 (api.ts) — 로그인 반복 현상 해결
+- **증상**: 아침에 앱 킬 때 로딩만 되다가 로그인 화면으로 돌아가는 현상
+- **원인**: 앱 시작 시 여러 API 호출이 동시에 401을 받으면 → 인터셉터가 각각 refresh 요청 → 첫 번째 refresh 후 토큰 `used: true` 마킹 → 두 번째 refresh가 이미 사용된 토큰으로 재요청 → 서버의 reuse detection 발동 → 전체 토큰 패밀리 revoke → 강제 로그아웃
+- **해결**: `_refreshPromise` 뮤텍스 추가 — 첫 번째 요청만 실제 refresh 진행, 나머지는 같은 Promise 대기
+  ```typescript
+  let _refreshPromise: Promise<string> | null = null;
+  // 401 인터셉터: if (!_refreshPromise) { _refreshPromise = (...) }
+  // finally: _refreshPromise = null;
+  ```
+- **파일**: `frontend/services/api.ts`
+
+#### V4 — voice.tsx 준비중 stuck 해결 (addListener 전환)
+- **증상**: 음성 기록 화면 진입 시 "준비 중..." 에서 영원히 멈춤
+- **원인**: `setupSpeechEvents` 가 `mod.useSpeechRecognitionEvent` 를 `useCallback` 내부에서 호출 → Rules of Hooks 위반 → 리스너 미등록 → events 미발생 → phase 전환 안 됨
+  - 추가: `requestPermissionsAsync()` 타임아웃 없음 → 권한 다이얼로그 미표시 시 무한 대기
+- **해결**:
+  1. `useSpeechRecognitionEvent` 제거 → `ExpoSpeechRecognitionModule.addListener()` (EventEmitter API) 전환
+  2. `requestPermissionsAsync()` 에 5초 `Promise.race` 타임아웃 추가
+  3. `subscriptionsRef.current` 로 구독 추적 → unmount 시 `.remove()` 정리
+  4. `recognizedTextRef` 로 stale closure 방지
+- **파일**: `frontend/app/voice.tsx`
+- **OTA**: Update group `d373bde5` (preview branch)
+
+#### V5 — voice.tsx 아이 이름 미인식 + 시간 9시간 오류 수정
+- **증상**: 아이 이름 처음엔 잘 인식되다 이후 계속 인식 못함, 시간이 9시간 전으로 기록됨
+- **원인 1 — 시간 (9시간 오차)**:
+  - 백엔드(Cloud Run/Firebase Functions)는 UTC 기준으로 실행됨
+  - `new Date().getHours()` → UTC 시각 → 한국(UTC+9) 대비 9시간 차이
+  - Gemini 프롬프트에 UTC `currentTime` 전달 → "방금 = 현재시각(UTC)" 로 파싱
+- **원인 2 — 이름 미인식 (stale closure 근본 원인)**:
+  - `processVoice`는 컴포넌트 클로저에서 `children`, `selectedChild`를 캡처
+  - `initSpeechRecognition`의 이벤트 리스너가 등록될 때의 렌더 시점 값이 고정됨
+  - 그 이후 store가 업데이트돼도 리스너는 stale한 children(빈 배열 가능)을 계속 참조
+  - 처음엔 store가 이미 채워진 상태에서 등록되면 정상, 이후에는 stale 문제 발생
+- **해결 1 — 시간**: 프론트에서 `clientTime` (HH:MM) 전송 → 백엔드에서 `clientTime` 우선 사용
+  - fallback: `new Date()` UTC+9 보정으로 KST 계산
+- **해결 2 — 이름**: `processVoice` 내에서 `useChildStore.getState()`로 항상 최신 store 직접 조회
+  - 이벤트 핸들러/비동기 함수에서의 Zustand 표준 패턴
+  - 추가: 음성 텍스트에 이름이 직접 포함되는지 확인(AI 추출보다 신뢰도 높음)
+- **파일**: `frontend/app/voice.tsx`, `frontend/services/api.ts`, `backend/src/routes/tracker.ts`
+- **OTA**: Update group `4714515d` (preview branch) + 백엔드 Functions 배포 완료
+
+### 🔍 검증
+- `npx tsc --noEmit` (backend + frontend): 0 errors
+- `npx expo lint`: 0 errors, 138 warnings (모두 기존)
+- OTA 배포 완료
+
+### ⏳ 사용자 테스트 필요
+- 앱 재시작 시 로그인 반복 현상 해소 확인
+- 음성 기록 화면에서 "준비 중..." 이후 음성 인식 시작 확인
+- 아이 이름 연속 인식 확인
+- "방금" → 현재 KST 시각으로 기록 확인
+
+---
+
+## 2026-05-07 (세션 15) — 연속 음성 기록 + 음성설정 Google 카드 레이아웃 + baby-tracker 헤더
+
+### ✅ 완료 항목
+
+#### V6 — voice.tsx 연속 기록 모드 (Continuous Loop)
+- **목적**: 수유 중 한 손 사용자가 음성 기록 화면에서 완료 버튼 누를 때까지 계속 기록
+- **구현**:
+  - 기록 성공 후 1.5초 대기 → `recognizedTextRef` / `hasProcessed` ref 초기화 → `startListening()` 재시작
+  - Siri Case1(딥링크) 분기도 동일하게 `initSpeechRecognition()` + `loadSpeechModule()` 재실행
+  - `lastRecord` state: 마지막 기록 요약 (초록 배지, 다음 기록 중 표시 유지)
+  - "완료" 버튼: 오른쪽 상단 고정 (`position: 'absolute', top: 56, right: 24`), 탭 시 `baby-tracker`로 이동 + `voiceToast` 파라미터 전달
+  - `handleClose` useCallback 으로 안전하게 종료 처리
+- **파일**: `frontend/app/voice.tsx`
+- **OTA**: Update group `4ea3ff99` (preview branch)
+
+#### V7 — voice-settings.tsx Google 카드 레이아웃 수정
+- **증상**: Google Assistant 카드에 큰 빈 공백 발생, "갤럭시 사용자" 라벨 없음
+- **원인**:
+  - `assistantCard`가 `flexDirection: 'row'`인데 `assistantTriggerBox`에 maxWidth 미설정
+  - Google 트리거 텍스트가 길어서(`"OK Google, 아맞다 음성 기록해줘" → 바로 녹음 시작`) 가로 공간 과다 점유
+- **해결**:
+  - `assistantCard` → `alignItems: 'flex-start'`
+  - `assistantDot` → `marginTop: 4` (세로 정렬)
+  - `assistantInfo` 내부에 `assistantNameRow` (name + chevron) + subtitle + triggerBox 를 세로 column 으로 배치
+  - `assistantTriggerBox` → `alignSelf: 'flex-start'` (텍스트 길이만큼만 너비 차지)
+  - `platformLabel: '갤럭시/안드로이드 사용자'` GOOGLE_GUIDE에 추가 (이전 세션에서 추가됨)
+- **파일**: `frontend/app/(main)/voice-settings.tsx`
+- **OTA**: Update group `4a8da0fb` (preview branch)
+
+#### V8 — voice 절대 시각 파싱 개선 ("10시에 똥쌌어" 등)
+- **증상**: "10시에 똥쌌어"처럼 정확한 시각을 말해도 시간 인식 실패
+- **원인**: 프롬프트 시간 파싱 규칙이 `"1시에" = "01:00" 또는 "13:00" (문맥으로 판단)` 한 줄뿐 → Gemini가 모든 시각에 AM/PM 판단 불능으로 null 반환
+- **해결**: 절대 시각 파싱 섹션을 명시적 규칙 + 예시로 전면 재작성
+  - 6~12 → 오전 우선 (10시에 → 10:00, 8시에 → 08:00)
+  - 13~23 → 그대로 사용
+  - 1~5 → 현재 시각 기준 더 가까운 쪽
+  - 오전/오후 명시 케이스 예시 추가
+  - 분 포함 케이스 추가 ("10시 30분" → "10:30")
+- **파일**: `backend/src/routes/tracker.ts`
+- **배포**: Firebase Functions 배포 완료
+
+#### H1 — baby-tracker.tsx 헤더 간격/글씨 크기 조정
+- **증상**: 뒤로가기 버튼, 날짜 네비, 분유값설정/음성설정 버튼이 너무 붙어 있고 겹침
+- **해결**:
+  - `content.paddingTop`: `72` → `84` (Samsung One UI 높은 네비게이션 바 대응)
+  - `dateText.fontSize`: `18` → `15`
+  - `dateArrow`: `36×36` → `32×32`, `borderRadius: 16`
+  - `dateArrowText.fontSize`: `22` → `18`, `marginTop: -2` → `-1`
+  - `dateNav`: `gap: 4`, `paddingHorizontal: 0`
+  - `dateCenter.gap`: `8` → `6`, `paddingHorizontal: 2`
+  - `todayBadge.paddingHorizontal`: `10` → `8`
+  - `voiceBtn`: `flexShrink: 0` 추가
+- **파일**: `frontend/app/(main)/baby-tracker.tsx`
+- **OTA**: Update group `ec521924` (preview branch)
+
+### 🔍 검증
+- `npx tsc --noEmit` (frontend): 0 errors
+- `npx expo lint`: 0 errors, 141 warnings (모두 기존 파일)
+- OTA 배포 완료
+
+---
+
+## 2026-05-07 (세션 13) — Android App Shortcuts + Google App Actions
+
+### ✅ 완료 항목
+
+#### A1 — Android App Shortcuts + Google App Actions (네이티브 빌드 필요)
+- **목적**: 갤럭시/안드로이드 사용자 양손 핸즈프리 음성 기록 지원
+- **구현 내용**:
+  1. `plugins/withAndroidShortcuts.js` 생성 — Expo config plugin
+     - `shortcuts.xml` 생성 (`android/app/src/main/res/xml/shortcuts.xml`)
+     - `AndroidManifest.xml` MainActivity에 `<meta-data android:name="android.app.shortcuts">` 추가
+  2. `app.json` → plugins에 `"./plugins/withAndroidShortcuts"` 추가
+  3. shortcuts.xml 내용:
+     - **Static App Shortcut**: 아이콘 길게 누르기 → "음성으로 기록하기" → `amatda://voice`
+     - **Google App Actions** (`actions.intent.OPEN_APP_FEATURE`): "OK Google, 아맞다 음성 기록해줘" → `amatda://voice`
+- **검증**: `npx expo prebuild` 로 shortcuts.xml 생성 + AndroidManifest.xml meta-data 추가 확인
+- **딥링크**: `amatda://voice` → `voice.tsx` → 음성 인식 자동 시작 (기존 구현 활용)
+- **EAS 빌드**: `6b073918-b72f-4e4e-b39d-be937631de58` (빌드 중)
+
+#### V3 — 음성 설정 가이드 빅스비 제거 + 구글 가이드 현실화 (OTA)
+- **이유**: 빅스비로는 `amatda://voice` 딥링크 자동 실행 불가 (핸즈프리 안 됨)
+- **수정**:
+  - `AssistantKey` 타입에서 `'bixby'` 제거
+  - `BIXBY_GUIDE` 상수 삭제
+  - `guides` 배열: `[SIRI_GUIDE, GOOGLE_GUIDE]`로 변경
+  - `GOOGLE_GUIDE`: 3가지 방법으로 재구성
+    - 방법①: 아이콘 길게 누르기 → "음성으로 기록하기"
+    - 방법②: "OK Google, 아맞다 음성 기록해줘" (App Actions)
+    - 방법③: Google Home 루틴으로 커스텀 명령어 설정
+- **OTA**: Update group `a653ea86`
+- **파일**: `app/(main)/voice-settings.tsx`
+
+### 🔍 검증
+- `npx tsc --noEmit`: 0 errors
+- `npx expo lint`: 0 errors
+- `npx expo prebuild`: shortcuts.xml + AndroidManifest.xml 정상 생성 확인
+
+### 🔍 빌드 이력
+- 1차 빌드 `6b073918` 실패 — AAPT 오류: shortcutShortLabel/shortcutLongLabel 인라인 문자열 불가, @string/ 참조 필요
+- 수정: `withStringsXml`로 strings.xml에 리소스 추가 + shortcuts.xml에서 @string/ 참조
+- 2차 빌드 `1fc21192` 성공 ✅
+- APK: https://expo.dev/accounts/song9912/projects/amatda/builds/1fc21192-2e3f-45ce-8904-ee35e49ab444
+
+### ⏳ 사용자 테스트 필요
+- 아이콘 길게 누르기 → "음성으로 기록하기" 메뉴 표시 확인
+- "OK Google, 아맞다 음성 기록해줘" → voice.tsx 열림 확인
+
+---
+
+## 2026-05-07 (세션 12) — 음성 가이드 공식문서 기반 전면 재작성 + 앨범 표지 미세 조정
+
+### ✅ 완료 항목
+
+#### V2 — 음성 설정 가이드 3플랫폼 공식문서 기반 전면 재작성 (voice-settings.tsx)
+- **발견된 오류들**:
+  1. `BIXBY_GUIDE`: "하이 빅스비 말하기" 조건 — 이 조건은 구 Bixby Routines (Android 12 이하)에만 있었고 현재 "모드 및 루틴"에는 존재하지 않음
+  2. `BIXBY_GUIDE`: "단축 명령어(Quick Commands)" — 삼성이 2024년 12월 One UI 7 / Bixby 3.0 업데이트로 공식 삭제
+  3. `GOOGLE_GUIDE`: 루틴 설정 경로가 Google 앱이 아닌 Google Home 앱 기준이어야 함
+  4. `SIRI_GUIDE`: 변수 연결 설명 부정확 — "Magic Variable" 방식: URL 입력란 탭 → 키보드 위 파란 변수 바에서 "받아쓰기 텍스트" 토큰 탭
+- **수정 내용**:
+  - `SIRI_GUIDE`: Apple 공식 단축어 문서 기반 — 받아쓰기 동작 + URL 열기 동작 + Magic Variable(파란 토큰) 연결 단계 명확화
+  - `GOOGLE_GUIDE`: 별도 설정 없이 "OK Google, 아맞다 열어줘" 즉시 사용 가능 안내 (step 1) + Google Home 앱 루틴으로 커스텀 "육아" 명령 등록 (step 2~7)
+  - `BIXBY_GUIDE`: 방법① 음성 즉시 실행 ("하이 빅스비, 아맞다 열어줘") + 방법② 모드 및 루틴 → 빅스비에게 묻기(Ask Bixby) 동작 — 삼성 공식 Quick Commands 삭제 공지 명시
+- **파일**: `app/(main)/voice-settings.tsx`
+
+#### C3 — 앨범/임신 표지 텍스트 최종 위치 확정 (album.tsx + pregnancy.tsx)
+- **최종값**:
+  - `.cover-name-natural`: `top: 23%`, `font-size: 33px`, `right: 7mm`, `width: 130mm`
+  - `.cover-period-natural`: `top: 62%`, `font-size: 18px`, `right: 5mm`, `width: 130mm`
+- **파일**: `app/(main)/album.tsx`, `app/(main)/pregnancy.tsx`
+
+### 🔍 검증
+- `npx tsc --noEmit`: 0 errors
+- `npx expo lint`: 0 errors (warnings만, 기존과 동일)
+- OTA preview 브랜치 배포:
+  - Update group `247e4d3a` — voice guides 3플랫폼 전면 재작성 + 표지 최종 위치
+
+---
+
+## 2026-05-07 (세션 11) — setTokens hydrate race fix + 앨범 표지 재조정 + 음성 가이드 상세화
+
+### ✅ 완료 항목
+
+#### L2 — setTokens hydrate race condition 수정 (authStore.ts)
+- **근본 원인**: `setTokens`의 `if (state.userId && state.email)` 가드 — 앱 재시작 직후 refresh interceptor가 `hydrate()` 완료 전에 실행되면 state에 userId/email이 null → `saveAuth` 스킵 → 토큰 미저장 → 다음 OTA reload 후 구 토큰 로드 → 서버 거부 → 강제 logout
+- **수정**: null일 경우 `loadAuthAsync()`로 SecureStore에서 직접 읽어 보완 후 `saveAuth` 호출 보장
+- **파일**: `stores/authStore.ts`
+- **검증**: `npx tsc --noEmit` 0 errors
+
+#### C2 — 앨범 표지 텍스트 위치 최종 조정 (album.tsx + pregnancy.tsx)
+- **증상**: top:14% → 오벌 크라운 장식 위에 이름이 겹침; top:62% date가 "Precious Memories" 텍스트 위에 표시
+- **수정**:
+  - `.cover-name-natural`: `top: 14%` → `top: 25%`, `font-size: 24px` → `28px` (Baby Growth 바로 위)
+  - `.cover-period-natural`: `top: 62%` → `top: 67%`, `right: 12mm` → `right: 5mm`, `font-size: 13px` → `15px`
+- **파일**: `app/(main)/album.tsx`, `app/(main)/pregnancy.tsx`
+
+#### V1 — 음성 설정 가이드 단계별 설명 상세화 (voice-settings.tsx)
+- **요청**: "설명이 조금씩 다른거 같아 실제 앱하고" → 실제 UI와 일치하는 상세 가이드로 업데이트
+- **수정**:
+  - `SIRI_GUIDE.steps`: 단축어 앱 설치 방법, "+" 버튼 위치, "텍스트 받아쓰기" 동작 찾는 법, URL 변수 연결 방법 상세화
+  - `GOOGLE_GUIDE.steps`: Google 앱 프로필 아이콘 경로, 어시스턴트 설정 > 루틴 찾는 법, 앱 열기 동작 추가 경로 상세화
+  - `BIXBY_GUIDE.steps`: 갤럭시 설정 > 모드 및 루틴 경로, "하이 빅스비 말하기" 조건 설정, "앱 열기" 동작 추가, 루틴 이름 저장까지 One UI 6/7 기준 상세화
+- **파일**: `app/(main)/voice-settings.tsx`
+
+### 🔍 검증
+- `npx tsc --noEmit`: 0 errors
+- OTA preview 브랜치 2회 배포:
+  - `438f7e35` — setTokens fix + 표지 위치 수정
+  - `39584886` — 음성 가이드 상세화
+
+---
+
+## 2026-05-07 (세션 10) — 로그인 유지 fix + 앨범 표지 텍스트 위치 fix
+
+### ✅ 완료 항목
+
+#### L1 — 로그인 풀림 (logout race condition) 수정
+- **근본 원인**: `saveAuth()` fire-and-forget → OTA `reloadAsync()` 가 SecureStore 쓰기 완료 전에 실행 → `hydrate()` 가 이전 토큰 읽음 → 서버에서 만료된 refresh token 거부 → 강제 logout
+- **수정 파일**:
+  - `services/storage.ts`: `saveAuth` async + `Promise.all(await SecureStore.setItemAsync × 4)` — 이전 세션에서 이미 완료
+  - `stores/authStore.ts`: `setAuth`, `setTokens`, `setUser` → `async` + `await saveAuth(...)` (interface도 `Promise<void>` 로 변경)
+  - `services/api.ts`: `setTokens(...)` → `await setTokens(...)` (interceptor)
+  - `hooks/useLoginHandlers.ts`: `setAuth(...)` → `await setAuth(...)` (3군데)
+  - `app/(auth)/register.tsx`: `setAuth(...)` → `await setAuth(...)`
+  - `app/onboarding/set-nickname.tsx`: `setUser(...)` → `await setUser(...)`
+  - `app/(main)/edit-profile.tsx`: `setUser(...)` → `await setUser(...)`
+- **효과**: SecureStore 쓰기 완료 보장 후 라우팅/OTA reload 진행
+
+#### C1 — 앨범 표지 텍스트 위치 수정 (pregnancy.tsx + album.tsx)
+- **증상**: `top: 31%` 로 이름이 "Baby Growth" 텍스트 위에 겹침 ("Bab똘똘rowth")
+- **수정**:
+  - `pregnancy.tsx`: `.cover-name-natural` `top: 31%` → `top: 19%`, `.cover-period-natural` `top: 66%` → `top: 60%`, date `font-size: 13px` → `17px`
+  - `album.tsx`: `cover-overlay` 박스 완전 제거 → `cover-name-natural` / `cover-period-natural` 자연스러운 배치 (동일 CSS)
+- OTA: release 브랜치 `916e9904`
+
+### 🔍 검증
+- `npx tsc --noEmit`: 0 errors
+- `npx expo lint`: 0 errors (기존 warnings only)
+- OTA: preview 브랜치 (update group `64469ab6-f780-427a-a699-fbd52ba98c52`)
+- ⚠️ `release` 브랜치는 어떤 채널과도 미연결 → 반드시 `--branch preview` 로 배포
+
+---
+
+## 2026-05-07 (세션 9) — 임신앨범 PDF 성장앨범과 동일한 구조로 재작성
+
+### ✅ 완료 항목
+
+#### G1 — 임신앨범 PDF generatePregnancyAlbumHTML 전면 재작성 (pregnancy.tsx)
+- **원인 1 (2×2 안 나옴)**: `photo-cell`에 `min-height: 0` 없어 grid overflow 미처리, `photo-img`가 `relative` position → 사진 영역이 grid 밖으로 침범
+- **원인 2 (구조 미일치)**: 단순 flex 카드 구조 vs 성장앨범의 폴라로이드 grid 구조
+- **수정**: 성장앨범 `generateAlbumHTML`과 동일한 CSS 프레임워크 적용 (핑크 임신 테마 유지)
+  - `photo-cell`: `display: grid; grid-template-rows: 1fr auto; min-height: 0` (폴라로이드)
+  - `photo-grid`: `min-height: 0` 추가 (critical fix)
+  - `photo-img`: `position: absolute` (contain letterbox)
+  - `photo-img-bg`: blur 배경 (blur letterbox fill)
+  - 폴라로이드 미세 회전 (`nth-child` rotate)
+  - 워시테이프 `::before` (핑크 색상)
+  - `photo-title-row` → `ms-row / ms-label` 구조 (title을 ❤ + 텍스트로 표시)
+  - `photo-memo`: `Single Day` 손글씨 폰트 + text-shadow
+  - 구글 폰트: Gaegu, Single Day, Black Han Sans 추가
+  - 월 디바이더 폰트 52pt → 180px (Black Han Sans)
+  - 엔딩 페이지: Single Day 64px, gradient rule
+
+### 🔍 검증
+- `npx tsc --noEmit`: 0 errors
+- `npx expo lint`: 0 errors (기존 warnings only)
+- OTA: preview 브랜치 (update group 3fae50c5)
+
+---
+
+## 2026-05-07 (세션 8) — 수정저장 버그 fix + 이모지 이미지 + 이미지 수정 기능
+
+### ✅ 완료 항목
+
+#### F1 — 수정 저장 안 되는 버그 수정 (backend/album.ts PATCH)
+- **근본 원인**: `albumPhotos` 컬렉션은 `content`/`title` 필드를 사용하지만, PATCH 엔드포인트가 `memo`/`milestone`으로 업데이트 → 필드명 불일치로 GET이 읽지 못함
+- **수정**: albumPhotos는 `content`/`title`로, milestonePhotos는 `memo`/`milestone`으로 각각 별도 업데이트 객체 사용
+- 백엔드 배포: Firebase Functions 재배포 완료
+
+#### F2 — 임신 타임라인 엄마기분 이모지 → 3D 클레이 이미지 표시 (album.tsx PregnancyTimeline)
+- **원인**: `{item.emoji || '📌'}` 텍스트로 렌더링 (이미지 매핑 없음)
+- **수정**: `PREG_EMOJI_IMGS` 매핑 추가 (pregnancy.tsx와 동일한 36개 이모지 → 이미지 파일)
+- `pStyles.cardEmojiImg` 스타일 추가
+
+#### F3 — 수정 시 이미지도 변경 가능 (pregnancy.tsx, album.tsx)
+- 수정 모달에 현재 이미지 미리보기 + "📷 사진 변경/추가" 버튼
+- 새 이미지 선택 시 `uploadApi.upload()` → 업로드 후 URL을 PATCH에 포함
+- Backend PATCH에 `uri` 파라미터 지원 추가 (album.ts + pregnancy.ts)
+- `api.ts` 타입 시그니처 업데이트
+
+### 🔍 검증
+- `npx tsc --noEmit`: 0 errors (frontend + backend 둘 다)
+- `npx expo lint`: 0 errors
+- 백엔드 배포: Firebase Functions deploy complete
+- OTA: preview 브랜치 (update group 89e6c824)
+
+---
+
+## 2026-05-07 (세션 8 일부) — 수정/삭제 모달 + 임신앨범 기본값 + 엄마기분 이모지
+
+### ✅ 완료 항목
+
+#### E1 — 길게 누르면 "수정 + 삭제" 선택지 표시 (pregnancy.tsx, album.tsx)
+- **원인**: 기존 long-press Alert에 "삭제" 버튼만 있었음
+- **수정**: "수정" + "삭제" 양쪽 표시. 수정 선택 시 메모 편집 모달 오픈
+- `PregnancyTimeline` (album.tsx): 로컬 `editItem` state + `handleEditSavePT` + 모달 → `PATCH /pregnancy/records/:id`
+- `BabyAlbum` (album.tsx): 로컬 `editState` state + `handleEditSave` + 모달 → `PATCH /album/photos/:id`
+- `pregnancy.tsx` (`handleLongPress`): 수정/삭제 Alert → `PATCH /pregnancy/records/:id`
+- 백엔드: `PATCH /pregnancy/records/:id`, `PATCH /album/photos/:id` 신규 추가 (dual-collection atomic batch)
+
+#### E2 — 엄마기분 마일스톤 이미지 표시 수정 (pregnancy.tsx)
+- **원인**: `createRecord` 시 `milestoneEmoji` 미전달 → Firestore에 null 저장 → 이모지 없음
+- **수정 (신규)**: `composeSymptomChip.emoji` 를 `milestoneEmoji`로 전달
+- **수정 (기존 데이터)**: 클라이언트에서 `symptomPresets.find(s => s.label === item.title)?.emoji` 로 폴백
+- `api.ts`: `pregnancyApi.updateRecord`, `albumApi.update` 신규 추가
+
+#### E3 — 임신앨범 "새 앨범" 기본값 자동 설정 (pregnancy.tsx)
+- **원인**: 성장앨범과 달리 임신앨범은 기본값 없이 빈 폼 오픈
+- **수정**: 버튼 클릭 시 timeline 최초 기록 월 → `albumDateFrom`, 이번 달 → `albumDateTo`, `${childName} 임신앨범` → `albumTitle` 자동 설정
+- 기본 표지 이미지(`album-cover.png`) + "기본 표지 · 탭하여 변경" 오버레이 표시
+
+### 🔍 검증
+- `npx tsc --noEmit`: 통과 (0 errors)
+- `npx expo lint`: 0 errors (warnings only, pre-existing)
+
+---
+
+## 2026-05-06 (세션 7) — 임신앨범 PDF 생성 + SOS 설명 + 버그 수정
+
+### ✅ 완료 항목
+
+#### B1 — 임신앨범 마일스톤+엄마기분 동시 선택 + 사진 표시 (pregnancy.tsx)
+- **원인**: `composeChip` 단일 상태가 한 번에 하나만 선택 가능 → 두 개 독립 상태 분리
+- **수정**: `composeMilestoneChip` + `composeSymptomChip` 별도 state
+- `handleSaveUnified`: 마일스톤 우선, 엄마기분 노트로 포함, 항상 1 record (`createRecord`)
+- 사진: 모든 경로에서 `mediaUri: composePhoto` 전달
+
+#### B2 — 임신앨범 피드: 유저 업로드만 표시 (pregnancy.tsx)
+- `source !== 'development'` 필터 + 날짜 내림차순 flat list
+- 주차 그룹 헤더 제거 (성장앨범과 동일한 카드 피드)
+
+#### B3 — SOS 이미지 잘림 수정 (sos.tsx)
+- `panelImageWrap`: 고정 높이 `SCREEN_HEIGHT * 0.55` + `overflow: hidden`
+- `panelImage`: `width/height: 100%`, `resizeMode="contain"`
+- 동적 `aspectRatio` 제거 (충돌 원인)
+
+#### B4 — SOS 이미지 하단 여백에 단계 설명 텍스트 추가 (sos.tsx)
+- 각 이미지 패널 아래 `stepDescBox` 카드: "STEP N" + 한국어 설명
+- 데이터: `HEIMLICH_BY_AGE.infant.quickSteps`, `CPR_BY_AGE.infant.quickSteps`, `GUIDE_CONTENT[key].quickSteps`
+
+#### B5 — 임신앨범 PDF 생성 기능 추가 (pregnancy.tsx)
+- 성장앨범(`album.tsx`)과 동일한 2×2 그리드 PDF 출력 (`expo-print` + `expo-sharing`)
+- 사진이 있는 기록만 포함 (`mediaUri && mediaType !== 'video'`)
+- 폼: 앨범 제목(선택), 시작/종료 월(YYYY-MM), 표지 이미지(선택)
+- 핑크 임신 테마 HTML (`generatePregnancyAlbumHTML`)
+- 이미지 → base64 변환 (`pregUriToDataUri`)
+- 표지 이미지 선택 (`pickCoverImage`)
+
+### 🔍 검증
+- `npx tsc --noEmit`: 통과 (0 errors)
+- `npx expo lint`: 0 errors (warnings only, pre-existing)
+
+### 🚀 배포
+- OTA: `eas update --branch preview` (ebaf60d3) — 배포 완료
+
+---
+
+## 2026-05-06 (세션 6) — 앱스토어/플레이스토어 등록 전 최종 감사
+
+### ✅ 완료 항목
+
+#### S1 — 위치 권한 설명 수정 (`app.json`)
+- `NSLocationWhenInUseUsageDescription` / `locationWhenInUsePermission`: "학원 추천" → "주변 소아과 찾기 및 맘스톡 지역 그룹 매칭"
+- **원인**: 학원(academy) 화면은 dead code 정리로 제거됐으나 권한 설명이 갱신 안 됨
+- 앱스토어/플레이스토어 심사 시 권한 목적 불일치로 거절 위험
+
+#### S2 — console.log → logger.info (`proactive.insight.ts` L261)
+- `console.log('[PregnancyInsights] generated ...')` → `logger.info(...)`
+- Cloud Functions 프로덕션 로그 일관성
+
+#### S3 — 체험판 일수 오표기 수정 (`subscription.ts`)
+- start-trial 응답: `trialDaysLeft: 30` / "30일" → `7` / "7일"
+- **원인**: 실제 로직은 7일 계산인데 응답 메시지만 30일로 방치됨
+- 사용자/심사자 혼란 방지
+
+### 🔍 검증
+- `npx tsc --noEmit`: 통과 (backend + frontend 모두)
+
+### 🚀 배포
+- backend: `firebase deploy --only functions:api` — 배포 완료 (S2, S3 반영)
+- frontend OTA: `eas update --branch preview` (86fb3738) — 배포 완료
+  - 구매 복원 버튼 (Apple 필수)
+  - 자동갱신 법적 고지 5개 항목
+  - iOS PortOne 완전 차단
+
+#### S4 — privacy.html 이메일 + 위치 항목 수정
+- 개인정보보호 책임자 이메일: `syh9912@naver.com` → `privacy@sylabs.kr`
+- 수집 항목: "주변 학원 추천" → "주변 소아과 찾기 및 맘스톡 지역 그룹 매칭"
+
+#### S5 — refund.html 이메일 수정
+- 문의처 이메일: `syh9912@naver.com` → `support@sylabs.kr`
+
+#### S6 — IAP finishTransaction 누락 수정 (`payment.ts`)
+- **원인**: 서버 검증 실패 시 `finishTransaction`이 호출되지 않아 Apple이 트랜잭션을 보류 상태로 유지 → 재구매 불가 버그
+- **수정**: 서버 검증 성공/실패 양쪽 경로 모두 `finishTransaction` 호출하도록 분기 변경
+- Apple 심사 시 IAP 흐름 검증에서 잡힐 수 있는 이슈
+
+### 🚀 배포
+- hosting: 배포 완료 (privacy.html, refund.html 수정)
+- frontend OTA: `eas update --branch preview` (b4b1ab9f) — IAP finishTransaction fix
+
+### 📋 남은 이슈 (사용자 직접 처리)
+- [ ] 새 EAS 빌드 필요 (app.json 위치 권한 변경은 OTA 불가, 네이티브 레이어)
+- [ ] App Store Connect + Google Play Console: IAP 상품 등록 (premium_monthly 3,900원, premium_yearly 33,900원)
+- [ ] 데이터 세이프티 폼 (Google Play) / 개인정보 레이블 (App Store) 작성
+- [ ] 심사용 테스트 계정 준비 (test@amatda.com / test1234)
+- [ ] 연령 등급 설정 (App Store: 4+, Google Play: All Ages)
+- [ ] 구독 체험 기간 스토어에도 등록 (Introductory Offer — 7일 무료)
+
+---
+
+---
+
+## 2026-05-05 (세션 5) — 전체 보안/버그 감사 + 자동 수정
+
+### ✅ 완료 항목
+
+#### C1 — 아이 실명 마스킹 갭 수정 (analyzeMedia, dailyDiary, firstTalk handlers)
+- Gemini 프롬프트에 `child.name` 직접 노출 → `'아이'`로 교체
+- mock 빌더 호출부도 동일하게 수정 (`buildMockCryAnalysis(child.name,` → `'아이'`)
+
+#### C2 — 어드민 라우트 미보호 수정 (`mom-group.ts`)
+- `POST /admin/delete-region-posts` 에 `requireAdmin` 미들웨어 누락 → 추가
+- authMiddleware만 있어도 아무 인증 유저가 호출 가능했던 취약점
+
+#### C3 — 소셜 로그인 mock 토큰 프로덕션 유출 차단 (`social-auth.ts`)
+- `authSessionLogin`: clientId 미설정 시 조건 없이 mock 토큰 반환 → `__DEV__` 가드 추가
+- 프로덕션에서 clientId 누락 시 throw로 변경
+
+#### C4 — Gemini fetch 타임아웃 추가 (`gemini.client.ts`)
+- 무제한 대기 가능했던 fetch → `AbortController` + 30초 타임아웃
+- `try/finally`로 타이머 누수 방지
+
+#### C5 — Google Play 결제 검증 예외 삼키기 수정 (`payment.ts`)
+- inner try/catch가 `verifyGooglePurchase` 실패를 삼켜서 Pub/Sub 재시도 불가
+- inner try/catch 제거 → outer catch로 500 반환 → 재시도 작동
+
+#### H1 — 인증 rate-limit 사용자별 분리 (`security.ts`)
+- `/api/upload` rate-limit에 `keyGenerator: rateLimitUserKey` 추가
+- 한국 CG-NAT 환경에서 IP 충돌로 false rate-limit 방지
+
+#### H2 — `logger.error()` 범위 확장 (6개 파일, 17개 catch 블록)
+- payment.ts, coaching/followup, coaching/history, coparenting.ts, momstagram.ts, child.ts
+- logger import 4곳 추가 (analyzeMedia, firstTalk, followup, coparenting)
+
+#### M1 — catch 블록 에러 로깅 완성
+- TypeScript 통과 확인
+
+#### M2 — 입력 검증 강화
+- `child.ts` GET `/:id/daily-tracking`: `days` 상한 90으로 cap (이전: 무제한)
+- `child.ts` POST / + PUT /:id: `bloodType` 허용값 A/B/AB/O 외 null 처리
+- `momstagram.ts` POST /posts: `childGender` (M/F/U), `dominantType` (5가지 기질) enum 검증
+
+### 🔍 검증
+- `npx tsc --noEmit`: 통과 (에러 0)
+
+### 🚀 배포 현황
+- backend: 배포 필요 (보안 수정 사항 미반영)
+
+---
+
+## 2026-05-05 (세션 3) — 아기시간 편집 모달 날짜 변경
+
+### ✅ 완료 항목
+
+#### 아기시간 기록 편집 시 날짜 변경 지원 (`baby-tracker.tsx`)
+- 편집 모달에 날짜 선택 UI 추가 (◀ 날짜 ▶ 이동 버튼)
+- 오늘 이후 미래 날짜는 선택 불가 처리
+- 날짜 변경 시: 원본 날짜에서 삭제 → 대상 날짜에 추가 (atomically)
+- `handleEditSave` async 전환 + cross-date move 로직
+- `adjustEditDate` 헬퍼, `editDate` state 추가
+- 진행 중 수면(__active_sleep__)은 날짜 변경 비노출 (세션 기반이라 날짜 개념 없음)
+
+### 🔍 검증
+- `npx tsc --noEmit`: 통과 (에러 0)
+- `npx expo lint`: 통과 (에러 0, 기존 경고만)
 
 ---
 

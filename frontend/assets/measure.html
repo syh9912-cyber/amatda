@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body { margin: 0; background: #333; }
+.wrap { position: relative; display: inline-block; }
+img { display: block; width: 800px; height: 600px; }
+.ruler { position: absolute; left: 0; right: 0; border-top: 1px solid rgba(255,0,0,0.7); }
+.label { position: absolute; left: 2px; font: bold 10px monospace; color: red; background: rgba(0,0,0,0.5); padding: 0 2px; }
+/* name position lines */
+.blue { border-top-color: blue !important; }
+.blue-lbl { color: cyan; }
+.green { border-top-color: lime !important; }
+.green-lbl { color: lime; }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <img src="album-cover.png" />
+</div>
+<script>
+const wrap = document.getElementById('wrap');
+const H = 600;
+
+// 빨간선: 5%마다 (10% 단위 강조)
+for (let p = 5; p <= 95; p += 5) {
+  const y = H * p / 100;
+  const r = document.createElement('div');
+  r.className = 'ruler';
+  r.style.top = y + 'px';
+  if (p % 10 === 0) r.style.borderTopWidth = '2px';
+  const l = document.createElement('span');
+  l.className = 'label';
+  l.style.top = (y + 1) + 'px';
+  l.textContent = p + '%';
+  wrap.appendChild(r);
+  wrap.appendChild(l);
+}
+
+// 클릭하면 좌표 출력
+wrap.addEventListener('click', e => {
+  const rect = wrap.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const pctY = (y / H * 100).toFixed(1);
+  const pctX = (x / 800 * 100).toFixed(1);
+  console.log(`x=${x.toFixed(0)}px (${pctX}%), y=${y.toFixed(0)}px (${pctY}%)`);
+  // 커버 DIV 기준 top% 계산 (object-fit:cover 크롭 보정)
+  // 800x600 이미지를 297:210 비율 div에 cover → 세로 크롭
+  const divRatio = 297 / 210;
+  const imgRatio = 800 / 600;
+  let divTopPct;
+  if (imgRatio < divRatio) {
+    // 가로 기준 스케일 → 세로 크롭됨
+    const scaledH = 600 * (297 / 800) * (210 / 297); // normalized
+    const clipTop = (scaledH - 1) / 2; // clip ratio
+    // simpler: visibleStart = (1 - 210/scaledImgHeightInMM) / 2
+    const scaledImgH_mm = 600 / 800 * 297; // = 222.75mm
+    const clipMM = (scaledImgH_mm - 210) / 2; // = 6.375mm each side
+    const visibleStartImg = clipMM / scaledImgH_mm * 600; // = 17.1px
+    const visibleEndImg = 600 - visibleStartImg;
+    if (y >= visibleStartImg && y <= visibleEndImg) {
+      const relY = y - visibleStartImg;
+      const visibleH = visibleEndImg - visibleStartImg;
+      divTopPct = (relY / visibleH * 100).toFixed(1);
+      console.log(`  → CSS top%: ${divTopPct}%`);
+    } else {
+      console.log('  → outside visible area (clipped by object-fit:cover)');
+    }
+  }
+
+  // 점 표시
+  const dot = document.createElement('div');
+  dot.style.cssText = `position:absolute;left:${x-3}px;top:${y-3}px;width:6px;height:6px;background:yellow;border-radius:50%;pointer-events:none;`;
+  const tag = document.createElement('span');
+  tag.style.cssText = `position:absolute;left:${x+4}px;top:${y-8}px;font:bold 9px monospace;color:yellow;background:rgba(0,0,0,0.7);padding:0 2px;pointer-events:none;`;
+  tag.textContent = `(${pctX}%,${divTopPct||pctY+'%img'})`;
+  wrap.appendChild(dot);
+  wrap.appendChild(tag);
+});
+</script>
+</body>
+</html>

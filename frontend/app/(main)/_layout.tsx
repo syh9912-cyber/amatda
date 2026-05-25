@@ -1,8 +1,10 @@
 import { Tabs, Redirect } from 'expo-router';
+import { useEffect } from 'react';
 import { Image, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../stores/authStore';
 import { useChildStore } from '../../stores/childStore';
+import { usePremiumStore } from '../../stores/premiumStore';
 
 const ACTIVE_COLOR = '#FF8C5A';
 const INACTIVE_COLOR = '#8E8E93';
@@ -53,6 +55,18 @@ export default function MainLayout() {
   const bottomPad = Math.max(insets.bottom, 16);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const selectedChild = useChildStore((s) => s.selectedChild);
+  const fetchPremiumStatus = usePremiumStore((s) => s.fetchStatus);
+  const resetPremium = usePremiumStore((s) => s.reset);
+
+  // 로그인 직후 프리미엄 상태 선제 로드 (광고 결정을 위한 캐시 워밍)
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchPremiumStatus();
+    } else {
+      // 로그아웃 시 캐시 초기화
+      resetPremium();
+    }
+  }, [isAuthenticated, fetchPremiumStatus, resetPremium]);
 
   const ageGroup = selectedChild?.ageInfo?.group;
   const isElementary = ageGroup === 'elementary';

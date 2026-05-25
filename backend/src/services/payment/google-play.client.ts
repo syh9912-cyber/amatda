@@ -113,7 +113,15 @@ export async function getSubscriptionV2(
   });
   const text = await res.text();
   if (!res.ok) {
-    logger.warn('google-play.client', `subscriptionsv2 ${res.status}: ${text.substring(0, 300)}`);
+    // 디버깅: 전체 응답 body + SA email + package name + token 만료 시각 로깅
+    const saEmail = _serviceAccount?.client_email ?? 'unknown';
+    const cachedExp = _tokenCache?.expiresAt
+      ? new Date(_tokenCache.expiresAt).toISOString()
+      : 'no-cache';
+    logger.warn(
+      'google-play.client',
+      `subscriptionsv2 ${res.status} url=${url.replace(purchaseToken, 'TOKEN')} sa=${saEmail} tokenExp=${cachedExp} body=${text.substring(0, 1000)}`,
+    );
     throw new Error('Google subscription 조회 실패: ' + res.status);
   }
   const data = JSON.parse(text) as {

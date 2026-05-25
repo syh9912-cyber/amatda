@@ -7,7 +7,6 @@ import { success, error } from '../utils/response';
 import {
   verifySocialToken,
   exchangeCodeAndVerify,
-  unlinkSocialAccount,
   SocialProvider,
 } from '../services/social.auth';
 import { collections, genId, db } from '../services/firestore';
@@ -15,7 +14,9 @@ import { findOrCreateSocialUser } from '../services/socialUser.service';
 import { authMiddleware } from '../middleware/auth';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { logger } from '../utils/logger';
-import { encryptToken, decryptToken } from '../utils/crypto';
+import { encryptToken } from '../utils/crypto';
+import { touchUserActive } from '../utils/userActivity';
+import { cascadeDeleteUserData } from '../utils/cascadeDelete';
 
 const router = Router();
 
@@ -81,6 +82,11 @@ async function generateTokens(userId: string, familyId?: string) {
     env.JWT_REFRESH_SECRET,
     { algorithm: JWT_ALGO, expiresIn: `${REFRESH_EXPIRES_DAYS}d`, issuer: JWT_ISSUER, audience: JWT_AUDIENCE, jwtid: refreshJti },
   );
+
+  // 휴면 정책: 토큰 발급(=활성 사용 신호) 시점마다 lastActiveAt 갱신.
+  // fire-and-forget — 실패해도 로그인 흐름 막지 않음. 다음 활동 시 자연 회복.
+  touchUserActive(userId).catch(() => { /* logged inside */ });
+
   return { accessToken, refreshToken, refreshJti, familyId: fam };
 }
 
@@ -101,20 +107,47 @@ async function revokeRefreshTokenFamily(familyId: string, reason: string): Promi
 // POST /api/auth/register
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { email, password, parentRole } = req.body;
+    const { email, password, parentRole, consent } = req.body as {
+      email?: string;
+      password?: string;
+      parentRole?: string;
+      consent?: {
+        terms?: boolean;
+        privacy?: boolean;
+        ageOver14?: boolean;
+        marketing?: boolean;
+        version?: string;
+      };
+    };
     if (!email || !password) { error(res, '이메일과 비밀번호를 입력해주세요'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { error(res, '올바른 이메일 형식을 입력해주세요'); return; }
     if (password.length < 8) { error(res, '비밀번호는 8자 이상이어야 합니다'); return; }
+
+    // 약관/개인정보처리방침/14세이상 동의 필수 (PIPA 15·22조, 정보통신망법 22조).
+    // 미동의 가입은 법적으로 불가 — 거부.
+    if (!consent || consent.terms !== true || consent.privacy !== true || consent.ageOver14 !== true) {
+      error(res, '필수 약관에 동의해주세요', 400);
+      return;
+    }
 
     const existing = await collections.users.where('email', '==', email).limit(1).get();
     if (!existing.empty) { error(res, '이미 가입된 이메일입니다', 409); return; }
 
     const id = genId();
     const passwordHash = await bcrypt.hash(password, 12);
+    const now = new Date().toISOString();
     await collections.users.doc(id).set({
       email, passwordHash, authProvider: 'LOCAL', socialId: null,
       subscriptionTier: 'FREE', createdAt: FieldValue.serverTimestamp(),
       parentRole: parentRole || '',
+      consent: {
+        terms: true,
+        privacy: true,
+        ageOver14: true,
+        marketing: consent.marketing === true,
+        version: typeof consent.version === 'string' ? consent.version : '2026-04-05',
+        acceptedAt: now,
+      },
     });
 
     const tokens = await generateTokens(id);
@@ -427,6 +460,109 @@ router.get('/kakao/callback', async (req: Request, res: Response) => {
   }
 });
 
+// ─── NAVER OAuth — 카카오와 동일 패턴 (2026-05-08 client_secret 보안 fix) ───
+//
+// 네이버는 OAuth redirect URI 에 https:// 만 허용 (custom scheme 거부).
+// 따라서 카카오와 동일하게 백엔드 callback URL 을 redirect_uri 로 사용.
+//
+// 흐름:
+//   1) 앱이 https://nid.naver.com/oauth2.0/authorize?... 를 in-app browser 로 오픈
+//      redirect_uri = https://api-...run.app/api/auth/naver/callback
+//      state = 클라이언트가 만든 nonce (32+ 자리)
+//   2) 사용자 동의 후 네이버가 redirect_uri 로 code 전달
+//   3) /naver/callback 가 code → token 교환 → 사용자 생성/매칭 → 결과를 state doc 에 저장
+//   4) deep link `amatda://auth/callback?state=XXX` 로 redirect (앱 진입)
+//   5) 앱이 /naver/check/:state 로 polling 해서 결과 가져감
+//
+// 토큰을 deep link 쿼리에 담지 않음 — 브라우저 history / Referer 누출 방어.
+
+const NAVER_STATE_COLLECTION = 'naverOAuthState';
+const NAVER_STATE_TTL_MS = 5 * 60 * 1000;
+
+// GET /api/auth/naver/check/:state — 앱에서 폴링으로 결과 확인
+router.get('/naver/check/:state', async (req: Request, res: Response) => {
+  try {
+    const stateKey = req.params.state as string;
+    const docRef = db.collection(NAVER_STATE_COLLECTION).doc(stateKey);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      success(res, { status: 'pending' });
+      return;
+    }
+    const data = doc.data()!;
+    if (Date.now() > (data.expires as number)) {
+      await docRef.delete().catch(() => {});
+      success(res, { status: 'pending' });
+      return;
+    }
+    await docRef.delete().catch((err) => {
+      logger.warn('auth/naver/check', `result doc delete failed: ${err instanceof Error ? err.message : String(err)}`);
+    });
+    success(res, { status: 'done', ...data.result as Record<string, unknown> });
+  } catch (err) {
+    logger.warn('auth/naver/check', `polling failed, returning pending: ${err instanceof Error ? err.message : String(err)}`);
+    success(res, { status: 'pending' });
+  }
+});
+
+// GET /api/auth/naver/callback — 네이버 OAuth callback
+router.get('/naver/callback', async (req: Request, res: Response) => {
+  const { code, state, error: naverError, error_description } = req.query;
+  const statePreview = typeof state === 'string' && state.length > 8 ? `${state.slice(0, 8)}…` : '(none)';
+  logger.info('auth/naver/callback', `hit state=${statePreview} hasCode=${!!code} error=${naverError || 'none'}`);
+
+  if (naverError || !code) {
+    const rawMsg = String(error_description || naverError || 'no_code');
+    res.type('html').send(simpleHtml('로그인 실패', rawMsg + ' — 앱으로 돌아가주세요.'));
+    return;
+  }
+
+  const stateKey = String(state || '');
+
+  try {
+    const redirectUri = 'https://api-usglfifguq-uc.a.run.app/api/auth/naver/callback';
+    const socialUser = await exchangeCodeAndVerify('NAVER', String(code), redirectUri);
+
+    const { userId, email: userEmail, nickname, isNewUser } =
+      await findOrCreateSocialUser('NAVER', socialUser);
+
+    // 마지막 네이버 access_token 저장 (탈퇴 시 unlink REST 호출용)
+    await collections.users.doc(userId).update({
+      lastSocialAccessToken: encryptToken(socialUser.accessToken),
+      lastSocialAccessTokenAt: FieldValue.serverTimestamp(),
+    });
+
+    const { accessToken, refreshToken } = await generateTokens(userId);
+
+    if (!stateKey) {
+      logger.warn('auth/naver/callback', 'state 누락 — CSRF 방어 차단');
+      res.status(400).type('html').send(simpleHtml('로그인 실패', 'state 파라미터가 누락되었어요. 앱에서 다시 시도해주세요.'));
+      return;
+    }
+    const expiresMs = Date.now() + NAVER_STATE_TTL_MS;
+    await db.collection(NAVER_STATE_COLLECTION).doc(stateKey).set({
+      result: {
+        user: { id: userId, email: userEmail, nickname },
+        accessToken, refreshToken, isNewUser,
+      },
+      expires: expiresMs,
+      expiresAt: Timestamp.fromMillis(expiresMs),
+    });
+
+    const safeStateKey = encodeURIComponent(stateKey);
+    const deepLink = `amatda://auth/callback?state=${safeStateKey}&provider=naver`;
+    // HTTP 302 + meta refresh 동시 — in-app browser 가 deep link 더 잘 잡도록
+    res.set('Location', deepLink);
+    res.status(302).type('html').send(simpleRedirectHtml(deepLink));
+  } catch (err) {
+    logger.error('auth/naver/callback', err);
+    const safeStateKey = encodeURIComponent(stateKey);
+    const errorDeep = `amatda://auth/callback?state=${safeStateKey}&provider=naver&error=1`;
+    res.set('Location', errorDeep);
+    res.status(302).type('html').send(simpleRedirectHtml(errorDeep));
+  }
+});
+
 /** 카카오 callback 의 안전한 redirect HTML — meta refresh 만 (script 보간 X). */
 function simpleRedirectHtml(deepLink: string): string {
   // deepLink 는 우리가 만든 URL 이라 안전하지만 추가 방어로 quotation 만 escape.
@@ -458,12 +594,59 @@ router.put('/nickname', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+// PUT /api/auth/consent — 약관/개인정보 동의 저장 (소셜 가입 신규 사용자 전용 흐름)
+//   PIPA 15·22조, 정보통신망법 22조 — 미동의 가입은 법적 불가.
+//   register.tsx 흐름은 가입 시 한 번에 처리하지만, 소셜 가입은 backend 가 먼저 사용자
+//   문서를 만든 후 frontend 가 별도 동의를 받아 이 라우트로 저장.
+router.put('/consent', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { terms, privacy, ageOver14, marketing, version } = req.body as {
+      terms?: boolean;
+      privacy?: boolean;
+      ageOver14?: boolean;
+      marketing?: boolean;
+      version?: string;
+    };
+    if (terms !== true || privacy !== true || ageOver14 !== true) {
+      error(res, '필수 약관에 동의해주세요', 400);
+      return;
+    }
+    await collections.users.doc(req.userId!).update({
+      consent: {
+        terms: true,
+        privacy: true,
+        ageOver14: true,
+        marketing: marketing === true,
+        version: typeof version === 'string' ? version : '2026-04-05',
+        acceptedAt: new Date().toISOString(),
+      },
+    });
+    success(res, { saved: true });
+  } catch (e) {
+    logger.error('auth/consent', e);
+    error(res, '약관 동의 저장 중 오류', 500);
+  }
+});
+
 // GET /api/auth/me — 현재 유저 정보 조회
 router.get('/me', authMiddleware, async (req: Request, res: Response) => {
   try {
     const doc = await collections.users.doc(req.userId!).get();
     if (!doc.exists) { error(res, '계정이 존재하지 않습니다 (재로그인 필요)', 401); return; }
     const data = doc.data() as Record<string, unknown>;
+
+    // 휴면 정책(C안): 마이페이지 보관 기한 표시 + 휴면 경고 배너용 메타 노출.
+    // Timestamp → ISO 변환. 미설정이면 null.
+    const lastActiveAt = data.lastActiveAt instanceof Timestamp
+      ? data.lastActiveAt.toDate().toISOString()
+      : null;
+    const dormantWarnedAt = data.dormantWarnedAt instanceof Timestamp
+      ? data.dormantWarnedAt.toDate().toISOString()
+      : null;
+    const scheduledDeleteAt = data.scheduledDeleteAt instanceof Timestamp
+      ? data.scheduledDeleteAt.toDate().toISOString()
+      : null;
+
     success(res, {
       id: doc.id,
       email: data.email,
@@ -471,6 +654,9 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
       authProvider: data.authProvider,
       parentRole: data.parentRole ?? '',
       isOfficial: data.isOfficial === true,
+      lastActiveAt,
+      dormantWarnedAt,
+      scheduledDeleteAt,
     });
   } catch (e) {
     logger.error('auth/me', e);
@@ -534,108 +720,17 @@ router.post('/set-password', authMiddleware, async (req: Request, res: Response)
 // (기존 /me 엔드포인트가 위에 있으므로 여기서는 추가하지 않음)
 
 // DELETE /api/auth/account — required by Google Play & Apple App Store
+//
+// 실제 cascade 로직은 utils/cascadeDelete.ts 에 통합 — 휴면 자동 삭제(dormantUserSweep)
+// 와 코드 공유. 본 라우트는 인증/권한 + 응답만 담당.
 router.delete('/account', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-
-    // 사용자 정보 사전 조회 — unlink 와 socialIdIndex 삭제에 모두 필요
-    const userDocBeforeDelete = await collections.users.doc(userId).get();
-    const userData = userDocBeforeDelete.data() as Record<string, unknown> | undefined;
-    const provider = userData?.authProvider as SocialProvider | undefined;
-    const socialId = userData?.socialId as string | undefined;
-
-    // 0. 소셜 계정 연결 끊기 (탈퇴 후 재가입 시 동의 화면부터 다시 시작되도록)
-    //    실패해도 user 데이터 삭제는 진행한다.
-    try {
-      const storedToken = userData?.lastSocialAccessToken as string | undefined;
-      // 저장된 토큰이 'gcm:' prefix면 복호화. 평문(legacy)이면 그대로 사용.
-      let lastToken: string | null = null;
-      if (storedToken) {
-        try {
-          lastToken = decryptToken(storedToken);
-        } catch (decErr) {
-          // 키가 회전됐거나 형식 불일치 — unlink 는 admin key fallback 으로 시도
-          logger.warn('auth/deleteAccount/decrypt', decErr instanceof Error ? decErr.message : String(decErr));
-        }
-      }
-      if (provider && socialId) {
-        await unlinkSocialAccount(provider, socialId, lastToken);
-        logger.info('auth/deleteAccount', `unlink OK (${provider})`);
-      }
-    } catch (e) {
-      logger.error('auth/deleteAccount/unlink', e);
-    }
-
-    // Firestore batch는 500건 한도 — 모든 삭제 대상을 모아서 분할 커밋.
-    // 각 컬렉션 쿼리에는 안전 상한(.limit) 적용 — 아주 큰 사용자는 잔여분이
-    // 다음 호출에서 처리되도록 (idempotent retry 가능).
-    const refs: FirebaseFirestore.DocumentReference[] = [];
-    const COLLECTION_FETCH_LIMIT = 5000; // 컬렉션당 최대 5000건 한 번에
-
-    // 1. Find all children for this user
-    const childrenSnap = await collections.children.where('userId', '==', userId).limit(100).get();
-    const childIds = childrenSnap.docs.map((d) => d.id);
-    childrenSnap.docs.forEach((d) => refs.push(d.ref));
-
-    // 2. Delete ALL related data for each child (GDPR/앱스토어 컴플라이언스)
-    for (const childId of childIds) {
-      const childSnaps = await Promise.all([
-        collections.observations.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.dailyTracking.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.subscriptions.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.coachingSessions.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.followups.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.learnedKnowledge.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.pregnancyRecords.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.albumPhotos.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.momHealthChecks.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.gdmRecords.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.vaccinations.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.dailyTraits.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.milestoneChecks.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.sleepPredictions.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.autoDiaries.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.recommendationCache.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-        collections.analysisUsage.where('childId', '==', childId).limit(COLLECTION_FETCH_LIMIT).get(),
-      ]);
-      for (const snap of childSnaps) {
-        snap.docs.forEach((d) => refs.push(d.ref));
-      }
-    }
-
-    // 3. Delete user-level data (userId 기반)
-    const userSnaps = await Promise.all([
-      collections.chatLogs.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
-      collections.posts.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
-      collections.postLikes.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
-      collections.postComments.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
-      collections.pushSchedules.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
-      collections.familyMembers.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
-      collections.conversationSummaries.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
-      collections.clinicReviews.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
-      // #5 보안: 계정 삭제 시 모든 refresh token revoke — stale token 으로 다시 들어올 수 없게
-      collections.refreshTokens.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
-    ]);
-    for (const snap of userSnaps) {
-      snap.docs.forEach((d) => refs.push(d.ref));
-    }
-
-    // 4. Delete the user document itself + socialIdIndex (재가입 시 깨끗한 상태)
-    refs.push(collections.users.doc(userId));
-    if (provider && socialId) {
-      refs.push(collections.socialIdIndex.doc(`${provider}_${socialId}`));
-    }
-
-    // 5. 500건씩 나눠서 batch commit
-    const BATCH_LIMIT = 500;
-    for (let i = 0; i < refs.length; i += BATCH_LIMIT) {
-      const chunk = refs.slice(i, i + BATCH_LIMIT);
-      const batch = db.batch();
-      chunk.forEach((ref) => batch.delete(ref));
-      await batch.commit();
-    }
-
-    logger.info('auth/deleteAccount', `userId=${userId} deletedRefs=${refs.length}`);
+    const result = await cascadeDeleteUserData(userId, {
+      tryUnlink: true,
+      reason: 'user-request',
+    });
+    logger.info('auth/deleteAccount', `userId=${userId} deletedRefs=${result.deletedRefs}`);
     success(res, { message: '계정과 모든 관련 데이터가 삭제되었습니다' });
   } catch (err) {
     logger.error('auth/deleteAccount', err);

@@ -48,7 +48,7 @@ const PREGNANCY_ITEMS: MenuItem[] = [
   },
   {
     icon: require('../../assets/quick-parent-level.png'),
-    label: '맘 체크인',
+    label: '마음 진단',
     description: '오늘의 컨디션과 기분 기록',
     route: '/(main)/mom-wellness',
   },

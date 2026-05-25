@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-assets.js",
     "start": "node dist/index.js",
     "deploy": "npm run build && cd .. && firebase deploy --only functions",
     "seed:firestore": "ts-node prisma/seed-firestore.ts"
@@ -17,6 +17,7 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
+    "@apple/app-store-server-library": "^3.1.0",
     "@napi-rs/canvas": "^0.1.97",
     "@prisma/client": "^6.5.0",
     "@sentry/node": "^10.51.0",
@@ -37,7 +38,8 @@
     "korean-lunar-calendar": "^0.3.6",
     "pdfkit": "^0.18.0",
     "uuid": "^14.0.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

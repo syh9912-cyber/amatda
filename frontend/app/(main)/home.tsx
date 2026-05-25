@@ -41,6 +41,7 @@ import {
 } from '../../components/coaching/ProactivePopup';
 import { getCharacteristicForChild } from '../../constants/monthlyCharacteristics';
 import { OnboardingGuide } from '../../components/common/OnboardingGuide';
+import { AdSlot } from '../../components/ads/AdSlot';
 import { AgeGroupKey } from '../../constants/ageGroups';
 import { CenterModal } from '../../components/ui/CenterModal';
 
@@ -100,7 +101,7 @@ const ALL_ACTIONS: QuickAction[] = [
   { icon: require('../../assets/quick-baby.png'), label: '주수별 발달', route: '/(main)/growth-stats', bg: '#F3E5F5', ages: ['pregnant'] },
   { icon: require('../../assets/quick-blood.png'), label: '임당 관리', route: '/(main)/gdm', bg: '#FCE4EC', ages: ['pregnant'] },
   { icon: require('../../assets/quick-sleep.png'), label: '태동 체크', route: '/(main)/labor-monitor?tab=kick', bg: '#FCE4EC', ages: ['pregnant'] },
-  { icon: require('../../assets/quick-parent-level.png'), label: '맘 체크인', route: '/(main)/mom-wellness', bg: '#F8BBD0', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-parent-level.png'), label: '마음 진단', route: '/(main)/mom-wellness', bg: '#F8BBD0', ages: ['pregnant'] },
   { icon: require('../../assets/quick-lullaby.png'), label: '태교음악', route: '/(main)/lullaby?mode=prenatal', bg: '#EDE7F6', ages: ['pregnant'] },
 
   // 영아·유아 순서 (사용자 요청 순서): 아기시간 → 성장앨범 → 열나 → 성장통계 → 접종달력 → 자장가 → 맘스톡 → 가족육아
@@ -400,19 +401,25 @@ export default function HomeScreen() {
     const picked = await pickImageFromLibrary({ quality: 0.8 });
     if (!picked) return;
     const localUri = picked.uri;
+    const previousPhotoUri = selectedChild.photoUri;
     // 즉시 로컬 프리뷰 반영
-    const updated = { ...selectedChild, photoUri: localUri };
-    updateChild(updated);
+    updateChild({ ...selectedChild, photoUri: localUri });
     try {
-      // Firebase Storage에 업로드 후 클라우드 URL 저장
+      // Firebase Storage에 업로드 후 클라우드 URL 저장 — 업로드와 backend update 둘 다 성공해야 함
       const uploaded = await uploadApi.upload(localUri, 'profiles');
       await childApi.update(selectedChild.id, {
         photoUri: uploaded.url,
       } as Record<string, unknown>);
-      // 로컬 상태도 클라우드 URL로 갱신
+      // 로컬 상태도 클라우드 URL로 갱신 (다음 fetch 에서도 유지됨)
       updateChild({ ...selectedChild, photoUri: uploaded.url });
     } catch {
-      Alert.alert('알림', '사진 업로드에 실패했습니다. 다시 시도해주세요.');
+      // 업로드 또는 backend update 실패 → store 롤백 (file:// URL 이 다음 fetch 에서
+      // 사라져 사진이 없어진 것처럼 보이는 회귀 방지). 사용자에게 명확히 안내.
+      updateChild({ ...selectedChild, photoUri: previousPhotoUri ?? null });
+      Alert.alert(
+        '사진 업로드 실패',
+        '네트워크 또는 서버 문제로 사진을 저장하지 못했어요. 잠시 후 다시 시도해주세요.',
+      );
     }
   };
 
@@ -790,6 +797,9 @@ export default function HomeScreen() {
             </TouchableOpacity>
       </CenterModal>
     </ScrollView>
+
+    {/* 화면 하단 배너 광고 — FREE 사용자만, 프리미엄/체험 사용자는 자동 숨김 (useShowAds) */}
+    <AdSlot />
 
     {/* Floating SOS Button — 모달/오버레이 활성 시 숨김 (선택지를 가리지 않게) */}
     {overlayCount === 0 && (

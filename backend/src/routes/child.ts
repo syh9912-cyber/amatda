@@ -5,9 +5,11 @@ import { calculateAge } from '../services/age.calculator';
 import { generateChildReport, monthsToAgeGroup } from '../services/child.report';
 import { success, error } from '../utils/response';
 import { collections, db, genId, toISO } from '../services/firestore';
+import { FieldValue } from 'firebase-admin/firestore';
 import { parseInnateData, parseInnateDataFull, safeParse } from '../utils/parse';
 import { getChildIfAccessible, getAccessibleChildIds } from '../utils/childAccess';
 import { logger } from '../utils/logger';
+import { deleteStorageFilesFromUrls } from '../utils/storageCleanup';
 
 const router = Router();
 
@@ -92,7 +94,9 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
     const heightVal = typeof req.body.height === 'number' ? req.body.height : null;
     const weightVal = typeof req.body.weight === 'number' ? req.body.weight : null;
     const photoUri = typeof req.body.photoUri === 'string' ? req.body.photoUri : null;
-    const bloodType = typeof req.body.bloodType === 'string' ? req.body.bloodType : null;
+    const VALID_BLOOD_TYPES = ['A', 'B', 'AB', 'O'];
+    const bloodTypeRaw = typeof req.body.bloodType === 'string' ? req.body.bloodType : '';
+    const bloodType = VALID_BLOOD_TYPES.includes(bloodTypeRaw) ? bloodTypeRaw : null;
     const specialNotes = typeof req.body.specialNotes === 'string' ? req.body.specialNotes : null;
     const data: Record<string, unknown> = {
       userId: req.userId!, name, gender, birthDate, birthTime,
@@ -226,7 +230,7 @@ router.post('/:id/birth', authMiddleware, async (req: Request, res: Response) =>
       message: '축하합니다! 아이가 태어났어요. 이제부터 육아 코칭이 시작됩니다.',
       innateData: parseInnateData(JSON.stringify(innateData)),
     });
-  } catch { error(res, '출산 전환 중 오류가 발생했습니다', 500); }
+  } catch (err) { logger.error('child/born', err); error(res, '출산 전환 중 오류가 발생했습니다', 500); }
 });
 
 router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
@@ -262,7 +266,10 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
     // 건강 정보 필드
     if (req.body.height !== undefined) updates.height = typeof req.body.height === 'number' ? req.body.height : null;
     if (req.body.weight !== undefined) updates.weight = typeof req.body.weight === 'number' ? req.body.weight : null;
-    if (req.body.bloodType !== undefined) updates.bloodType = req.body.bloodType || null;
+    if (req.body.bloodType !== undefined) {
+      const VALID_BLOOD_TYPES = ['A', 'B', 'AB', 'O'];
+      updates.bloodType = VALID_BLOOD_TYPES.includes(req.body.bloodType as string) ? req.body.bloodType : null;
+    }
     if (req.body.specialNotes !== undefined) updates.specialNotes = req.body.specialNotes || null;
     // 임산부 건강 정보
     if (req.body.momHeight !== undefined) updates.momHeight = typeof req.body.momHeight === 'number' ? req.body.momHeight : null;
@@ -278,7 +285,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
     await collections.children.doc(req.params.id as string).update(updates);
     const updated = await collections.children.doc(req.params.id as string).get();
     success(res, formatChild(updated.id, updated.data()!));
-  } catch { error(res, '자녀 수정 중 오류가 발생했습니다', 500); }
+  } catch (err) { logger.error('child/update', err); error(res, '자녀 수정 중 오류가 발생했습니다', 500); }
 });
 
 router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
@@ -322,6 +329,13 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
       collections.momHealthChecks.where('childId', '==', childId).get(),
       collections.gdmRecords.where('childId', '==', childId).get(),
       collections.gdmFoodLogs.where('childId', '==', childId).get(),
+      // 태동 / EPDS 마음진단 / 일일 미션 (이전 누락 — 2026-05-09 보강)
+      collections.kickSessions.where('childId', '==', childId).get(),
+      collections.momMentalChecks.where('childId', '==', childId).get(),
+      collections.dailyMissions.where('childId', '==', childId).get(),
+      // baby-tracker 서버 sync (2026-05-08 신규 컬렉션 — cascade 보강)
+      collections.babyTrackerDays.where('childId', '==', childId).get(),
+      collections.babyTrackerSessions.where('childId', '==', childId).get(),
     ]);
 
     // Firestore batch 최대 500개 → 청크 분할 삭제
@@ -334,11 +348,34 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     // pushSchedules는 docId 패턴 `{userId}_{childId}` 사용 → 직접 ref로 삭제
     // (where 쿼리 불가능, ID 기반이라 Promise.all로 묶지 않음)
     allRefs.push(collections.pushSchedules.doc(`${req.userId}_${childId}`));
+
+    // Storage 파일 삭제 대상 URL 수집 — albumPhotos / milestonePhotos / growthAlbums.
+    // Storage prefix 가 자녀별로 격리돼 있지 않아 doc 의 url 필드를 역추적해 개별 삭제.
+    const storageUrls: Array<string | null | undefined> = [];
+    for (const snap of relatedQueries) {
+      for (const d of snap.docs) {
+        const data = d.data() as Record<string, unknown>;
+        if (typeof data.uri === 'string') storageUrls.push(data.uri);
+        if (typeof data.printUrl === 'string') storageUrls.push(data.printUrl);
+        if (typeof data.imageUrl === 'string') storageUrls.push(data.imageUrl);
+        if (typeof data.thumbnailUrl === 'string') storageUrls.push(data.thumbnailUrl);
+        if (typeof data.pdfUrl === 'string') storageUrls.push(data.pdfUrl);
+        if (typeof data.photoUrl === 'string') storageUrls.push(data.photoUrl);
+      }
+    }
+
     const BATCH_LIMIT = 450;
     for (let i = 0; i < allRefs.length; i += BATCH_LIMIT) {
       const batch = db.batch();
       allRefs.slice(i, i + BATCH_LIMIT).forEach((ref) => batch.delete(ref));
       await batch.commit();
+    }
+
+    // Storage 정리는 Firestore 삭제 후 best-effort 로 — 실패해도 자녀 삭제는 성공 처리.
+    try {
+      await deleteStorageFilesFromUrls(storageUrls);
+    } catch (storageErr) {
+      logger.error('child/delete/storage', storageErr);
     }
 
     success(res, { id: childId, message: '삭제되었습니다' });
@@ -414,7 +451,7 @@ router.get('/:id/daily-tracking', authMiddleware, async (req: Request, res: Resp
   try {
     const access = await getChildIfAccessible(req.params.id as string, req.userId, 'viewRecords', res);
     if (!access) return;
-    const days = parseInt(req.query.days as string) || 7;
+    const days = Math.min(90, Math.max(1, parseInt(req.query.days as string, 10) || 7));
     const since = new Date();
     since.setDate(since.getDate() - days);
     const sinceStr = since.toISOString().split('T')[0];
@@ -513,17 +550,25 @@ router.post('/:id/daily-trait', authMiddleware, async (req: Request, res: Respon
     };
     await collections.dailyTraits.doc(docId).set(traitData);
 
-    // Check if 7+ responses accumulated — auto-generate insight
-    const allSnap = await collections.dailyTraits
-      .where('childId', '==', req.params.id)
-      .orderBy('date', 'desc')
-      .get();
+    // 누적 응답 카운터 — child doc 의 atomic counter 로 관리.
+    // (이전 구현은 매 저장마다 dailyTraits 전체 fetch → 1년 누적 시 365건씩 풀 스캔.
+    //  카운터 + 최근 7건 limit fetch 패턴으로 변경.)
+    const childRef = collections.children.doc(req.params.id as string);
+    await childRef.update({
+      dailyTraitCount: FieldValue.increment(1),
+    });
+    const childSnapAfter = await childRef.get();
+    const totalResponses = (childSnapAfter.data()?.dailyTraitCount as number) ?? 0;
 
-    const totalResponses = allSnap.docs.length;
     let newInsight: DailyTraitInsight | null = null;
-
     if (totalResponses > 0 && totalResponses % 7 === 0) {
-      const recent7 = allSnap.docs.slice(0, 7).map((d) => d.data() as { question: string; answer: string; date: string });
+      // 최근 7건만 fetch (전량 스캔 X)
+      const recentSnap = await collections.dailyTraits
+        .where('childId', '==', req.params.id)
+        .orderBy('date', 'desc')
+        .limit(7)
+        .get();
+      const recent7 = recentSnap.docs.map((d) => d.data() as { question: string; answer: string; date: string });
       const innate = parseInnateDataFull(access.data.innateData) as { dominantType: string };
 
       newInsight = generateTraitInsight(recent7, innate.dominantType as string);
@@ -535,7 +580,7 @@ router.post('/:id/daily-trait', authMiddleware, async (req: Request, res: Respon
             : access.data.traitInsights) as DailyTraitInsight[]
         : [];
       existingInsights.push(newInsight);
-      await collections.children.doc(req.params.id as string).update({
+      await childRef.update({
         traitInsights: JSON.stringify(existingInsights),
       });
     }

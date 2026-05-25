@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { createHash } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections } from '../services/firestore';
@@ -8,8 +8,7 @@ import { safeParse } from '../utils/parse';
 import { getChildIfAccessible } from '../utils/childAccess';
 import { generatePassportPng } from '../services/passportImage';
 import { logger } from '../utils/logger';
-
-const PASSPORT_SALT = 'amatda-passport-2024';
+import { getPassportSalt } from '../config/env';
 
 const router = Router();
 
@@ -26,6 +25,42 @@ const TEMPERAMENT_EMOJI: Record<string, string> = {
 function getTemperamentEmoji(dominantType: string): string {
   return TEMPERAMENT_EMOJI[dominantType] ?? '✨';
 }
+
+// ─── Passport 공유 링크 HMAC + TTL ───
+//
+// 기존: sha256(childId + salt).slice(0,16) — childId 만 알면
+//   재계산 가능했고, 한 번 발급된 링크가 영구 유효해 SNS 공유 시 무기한 노출.
+// 신규: HMAC-SHA256(salt 키, "childId|exp") 32자 hex (128-bit) + exp 쿼리.
+//   - salt 가 키로 들어가 정석 HMAC (이전 코드는 단순 hash + concat 으로 length-extension 등에 약함)
+//   - exp 만료 시각으로 영구 노출 차단
+//   - timingSafeEqual 로 비교 (constant-time)
+const PASSPORT_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7일
+
+function buildPassportLinkParams(childId: string): { key: string; exp: number } {
+  const exp = Date.now() + PASSPORT_LINK_TTL_MS;
+  const key = createHmac('sha256', getPassportSalt())
+    .update(`${childId}|${exp}`)
+    .digest('hex')
+    .slice(0, 32);
+  return { key, exp };
+}
+
+function verifyPassportLink(childId: string, key: string, exp: number): boolean {
+  if (!Number.isFinite(exp) || Date.now() > exp) return false;
+  const expected = createHmac('sha256', getPassportSalt())
+    .update(`${childId}|${exp}`)
+    .digest('hex')
+    .slice(0, 32);
+  const a = Buffer.from(key, 'utf8');
+  const b = Buffer.from(expected, 'utf8');
+  if (a.length !== b.length) return false;
+  try {
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
 
 // ─── Helper: 공유 코드 생성 (8자 영숫자) ───
 
@@ -199,14 +234,11 @@ router.get('/child-card/:childId', authMiddleware, async (req: Request, res: Res
       : [];
     const specialNote = parentingTips.length > 0 ? parentingTips[0] : '';
 
-    // 공개 공유 키 생성 (childId 기반 결정적 해시)
-    const shareKey = createHash('sha256')
-      .update(childId + PASSPORT_SALT)
-      .digest('hex')
-      .slice(0, 16);
+    // 공개 공유 키 생성 — HMAC-SHA256 + 7일 만료 (영구 노출 차단)
+    const { key: shareKey, exp: shareExp } = buildPassportLinkParams(childId);
 
     const baseUrl = `${req.protocol}://${req.get('host') ?? 'localhost'}`;
-    const shareImageUrl = `${baseUrl}/api/memories/passport-view/${childId}?key=${shareKey}`;
+    const shareImageUrl = `${baseUrl}/api/memories/passport-view/${childId}?key=${shareKey}&exp=${shareExp}`;
 
     // 성장 데이터 (키/몸무게)
     const heightVal = childData.height as number | null ?? null;
@@ -302,15 +334,17 @@ router.get('/passport-view/:childId', async (req: Request, res: Response) => {
   try {
     const childId = req.params.childId as string;
     const key = req.query.key as string;
+    const expRaw = req.query.exp as string | undefined;
+    const exp = Number.parseInt(expRaw ?? '', 10);
 
-    // 키 검증
-    const expectedKey = createHash('sha256')
-      .update(childId + PASSPORT_SALT)
-      .digest('hex')
-      .slice(0, 16);
-
-    if (!key || key !== expectedKey) {
-      error(res, '유효하지 않은 링크입니다', 403);
+    // HMAC + 만료 검증 (constant-time)
+    if (!key || !exp || !verifyPassportLink(childId, key, exp)) {
+      // 만료 vs 위조를 구분해 사용자 친화 메시지
+      if (exp && Number.isFinite(exp) && Date.now() > exp) {
+        error(res, '만료된 링크입니다. 새 링크를 발급받아 주세요.', 410);
+      } else {
+        error(res, '유효하지 않은 링크입니다', 403);
+      }
       return;
     }
 
@@ -347,7 +381,7 @@ router.get('/passport-view/:childId', async (req: Request, res: Response) => {
 
     res.set('Content-Type', 'image/png');
     res.set('Content-Length', String(pngBuffer.length));
-    res.set('Cache-Control', 'public, max-age=3600');
+    res.set('Cache-Control', 'private, no-store');
     res.send(pngBuffer);
   } catch (err: unknown) {
     logger.error('memories/passport-view', err);

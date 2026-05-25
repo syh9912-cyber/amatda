@@ -4,7 +4,10 @@ initSentry();
 
 import express, { Request } from 'express';
 import * as functions from 'firebase-functions';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { env } from './config/env';
+import { runDormantUserSweep } from './utils/dormantUserSweep';
+import { runTrialEndingSweep } from './utils/trialEndingSweep';
 import { setupSecurity } from './middleware/security';
 import authRoutes from './routes/auth';
 import childRoutes from './routes/child';
@@ -28,6 +31,7 @@ import vaccinationRoutes from './routes/vaccination';
 import uploadRoutes from './routes/upload';
 import albumRoutes from './routes/album';
 import trackerRoutes from './routes/tracker';
+import babyTrackerRoutes from './routes/babyTracker';
 import momGroupRoutes from './routes/mom-group';
 import momLocationRoutes from './routes/mom-location';
 import birthbagShareRoutes from './routes/birthbag-share';
@@ -83,6 +87,7 @@ app.use('/api/vaccination', vaccinationRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/album', albumRoutes);
 app.use('/api/tracker', trackerRoutes);
+app.use('/api/baby-tracker', babyTrackerRoutes);
 app.use('/api/mom-group', momGroupRoutes);
 app.use('/api/mom-location', momLocationRoutes);
 app.use('/api/birthbag-share', birthbagShareRoutes);
@@ -170,6 +175,10 @@ const REGISTERED_SECRETS: string[] = [
   'NAVER_CLIENT_SECRET',
   'GOOGLE_CLIENT_ID',
   'GOOGLE_CLIENT_SECRET',
+  // 결제 — Google Play RTDN (Pub/Sub) webhook 인증
+  'GOOGLE_PUBSUB_AUDIENCE',
+  // 결제 — Google Play 영수증 검증 service account (Android Publisher API)
+  'GOOGLE_PLAY_SERVICE_ACCOUNT_JSON',
 ];
 
 // memory: 512MiB — 비코칭 라우트는 가벼운 CRUD가 다수
@@ -198,6 +207,100 @@ export const coachingApi = functions.https.onRequest(
     secrets: REGISTERED_SECRETS,
   },
   coachingApp
+);
+
+/* ─── Cloud Scheduler — 휴면 사용자 자동 정리 ───
+ *
+ * PIPA 21조(보유 목적 달성 후 즉시 파기) + 정보통신망법 시행령 16조(휴면 1년) 충족.
+ *
+ * 정책:
+ *   - 1년 이상 미접속 → 30일 전 푸시 경고 + scheduledDeleteAt 마킹
+ *   - scheduledDeleteAt 도래 → 계정 + Storage 전체 cascade 삭제
+ *   - 사용자가 다시 로그인하면 touchUserActive() 가 자동으로 회복
+ *
+ * 일정: 매일 03:30 KST (= 18:30 UTC).
+ * 메모리: 512MiB — Firestore 쿼리 + 푸시 발송 위주, 대용량 처리 없음.
+ * 타임아웃: 9분 — 한 번에 최대 100명 처리, 충분한 여유.
+ */
+export const dormantUserSweep = onSchedule(
+  {
+    schedule: '30 3 * * *',
+    timeZone: 'Asia/Seoul',
+    memory: '256MiB',
+    timeoutSeconds: 540,
+    // env.ts 가 모듈 로드 시점에 JWT_SECRET 등을 검증함 — api/coachingApi 와 동일하게
+    // 모든 시크릿을 주입해야 모듈 로드 성공. sweep 자체는 Firestore 만 쓰지만, 같은
+    // 코드베이스가 로드되므로 검증 통과를 위해 동일 secrets 필요.
+    secrets: REGISTERED_SECRETS,
+  },
+  async () => {
+    await runDormantUserSweep();
+  },
+);
+
+/**
+ * 체험 종료 24시간 전 푸시 알림 (Apple/Google 정책 + 한국 전자상거래법 준수).
+ * 매시간 실행 — 정확한 24h 윈도우 안에서 한 번만 발송 (trialEndingNotifiedAt 으로 중복 차단).
+ */
+export const trialEndingSweep = onSchedule(
+  {
+    schedule: 'every 1 hours',
+    timeZone: 'Asia/Seoul',
+    memory: '256MiB',
+    timeoutSeconds: 540,
+    secrets: REGISTERED_SECRETS,
+  },
+  async () => {
+    await runTrialEndingSweep();
+  },
+);
+
+/* ─── Cloud Scheduler — 콜드 스타트 방지 ping ───
+ *
+ * 5분마다 api / coachingApi 의 /api/health 엔드포인트를 호출해 컨테이너를 웜 상태로 유지.
+ * 콜드 스타트(첫 호출 시 5-15초 대기) 가 사라져 사용자 첫 로그인 응답 속도가 개선됨.
+ *
+ * 비용: Cloud Functions 무료 한도(월 200만 호출)의 0.4% 만 사용 → 사실상 무료.
+ *       각 ping 은 단순 200 응답 (DB 호출 없음 / 100ms 이내).
+ *
+ * 효과:
+ *   - 콜드 스타트 발생 빈도 90%+ 감소 (5분 윈도우 내 사용자 진입 시 항상 웜)
+ *   - 백엔드 부하 무시 가능 (시간당 12회, 사용자 트래픽과 무관)
+ */
+export const keepWarm = onSchedule(
+  {
+    schedule: 'every 5 minutes',
+    timeZone: 'Asia/Seoul',
+    memory: '256MiB',
+    timeoutSeconds: 60,
+    // env.ts JWT_SECRET 검증 통과 위해 동일 secrets 주입 (실제 사용 X)
+    secrets: REGISTERED_SECRETS,
+  },
+  async () => {
+    const urls = [
+      'https://api-usglfifguq-uc.a.run.app/api/health',
+      'https://coachingapi-usglfifguq-uc.a.run.app/api/health',
+    ];
+    const started = Date.now();
+    const results = await Promise.allSettled(
+      urls.map(async (u) => {
+        const res = await fetch(u, { method: 'GET' });
+        return `${u} → ${res.status}`;
+      }),
+    );
+    const ok = results.filter((r) => r.status === 'fulfilled').length;
+    const fail = results.length - ok;
+    console.log(
+      `[keepWarm] pinged=${results.length} ok=${ok} fail=${fail} elapsedMs=${Date.now() - started}`,
+    );
+    if (fail > 0) {
+      results.forEach((r) => {
+        if (r.status === 'rejected') {
+          console.warn(`[keepWarm] error: ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`);
+        }
+      });
+    }
+  },
 );
 
 // 로컬 개발용 (firebase deploy 시에는 실행하지 않음)

@@ -28,6 +28,9 @@ export function SocialLoginButtons({
           onPress={() => onPress(btn.provider)}
           disabled={loadingProvider !== null}
           activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel={`${btn.label}으로 로그인`}
+          accessibilityState={{ disabled: loadingProvider !== null, busy: loadingProvider === btn.provider }}
         >
           <View
             style={[styles.letterCircle, { backgroundColor: btn.letterBg }]}

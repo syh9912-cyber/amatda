@@ -5,6 +5,71 @@ import { success, error } from '../../utils/response';
 import { collections } from '../../services/firestore';
 import { buildChildContext } from '../../services/coaching/context.builder';
 import { isGeminiAvailable, callGeminiJSON } from '../../services/coaching/gemini.client';
+import { logger } from '../../utils/logger';
+import { z } from 'zod';
+import { parseBody } from '../../utils/validate';
+import { shouldRejectAIResponse } from '../../services/coaching/forbidden.filter';
+
+// ─── 미디어 입력 검증 ───
+const MAX_MEDIA_BYTES = 5 * 1024 * 1024; // 5MB (base64 디코드 후 기준)
+const ALLOWED_IMAGE_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const ALLOWED_AUDIO_MIMES = new Set([
+  'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav',
+  'audio/m4a', 'audio/x-m4a', 'audio/mp4', 'audio/aac',
+  'audio/ogg', 'audio/webm',
+]);
+
+const AnalyzeMediaBodySchema = z.object({
+  childId: z.string().min(1).max(128),
+  type: z.enum(['cry', 'poop']),
+  description: z.string().max(1000).optional(),
+  mediaBase64: z.string().max(8 * 1024 * 1024).optional(), // ~6MB raw → 5MB base64-decoded cap
+  mediaMimeType: z.string().max(64).optional(),
+});
+
+/**
+ * base64 데이터 + MIME 검증.
+ * 1) MIME 화이트리스트
+ * 2) 디코드 후 사이즈 cap
+ * 3) 매직넘버 — JPEG/PNG/WEBP 만 빠르게 검증, 그 외(audio)는 MIME 만 신뢰
+ *    (audio 컨테이너는 종류가 많아 헤더 검증이 까다로움. 사이즈+MIME 가드만으로도 충분.)
+ */
+function validateMedia(
+  base64: string,
+  mimeType: string,
+  kind: 'image' | 'audio',
+): { ok: true; buffer: Buffer } | { ok: false; reason: string } {
+  const allowed = kind === 'image' ? ALLOWED_IMAGE_MIMES : ALLOWED_AUDIO_MIMES;
+  if (!allowed.has(mimeType.toLowerCase())) {
+    return { ok: false, reason: `허용되지 않는 미디어 형식입니다 (${mimeType})` };
+  }
+
+  let buf: Buffer;
+  try {
+    buf = Buffer.from(base64, 'base64');
+  } catch {
+    return { ok: false, reason: '미디어 데이터를 디코딩할 수 없습니다' };
+  }
+
+  if (buf.length === 0) return { ok: false, reason: '빈 미디어 데이터입니다' };
+  if (buf.length > MAX_MEDIA_BYTES) {
+    return { ok: false, reason: `미디어 크기가 너무 큽니다 (최대 ${MAX_MEDIA_BYTES / 1024 / 1024}MB)` };
+  }
+
+  if (kind === 'image') {
+    // 매직넘버 검증
+    const isJPEG = buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+    const isPNG = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+    const isWEBP = buf.length > 12
+      && buf.toString('ascii', 0, 4) === 'RIFF'
+      && buf.toString('ascii', 8, 12) === 'WEBP';
+    if (!isJPEG && !isPNG && !isWEBP) {
+      return { ok: false, reason: '이미지 형식이 올바르지 않습니다 (JPEG/PNG/WebP 만 허용)' };
+    }
+  }
+
+  return { ok: true, buffer: buf };
+}
 
 // ─── 분석 횟수 제한 ───
 
@@ -34,6 +99,11 @@ function getMonthKey(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
+/**
+ * 분석 횟수 한도 검사 + 증분 (원자적).
+ * Firestore 트랜잭션으로 read+write 를 묶어 동시 호출에서도 한도가 정확히 지켜지도록 한다.
+ * (이전 분리 구현은 동시 클릭 시 한도 우회 → Gemini billable 비용 폭주 위험.)
+ */
 async function checkAndIncrementUsage(
   userId: string, tier: 'free' | 'paid',
 ): Promise<{ allowed: boolean; used: number; limit: number; remaining: number }> {
@@ -41,23 +111,26 @@ async function checkAndIncrementUsage(
   const monthKey = getMonthKey();
   const docId = `${userId}_${monthKey}`;
   const ref = collections.analysisUsage.doc(docId);
+  const db = admin.firestore();
 
-  const doc = await ref.get();
-  const used = doc.exists ? ((doc.data() as Record<string, unknown>).count as number ?? 0) : 0;
+  return db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    const used = doc.exists ? ((doc.data() as Record<string, unknown>).count as number ?? 0) : 0;
 
-  if (used >= limit) {
-    return { allowed: false, used, limit, remaining: 0 };
-  }
+    if (used >= limit) {
+      return { allowed: false, used, limit, remaining: 0 };
+    }
 
-  await ref.set({
-    count: admin.firestore.FieldValue.increment(1),
-    userId,
-    month: monthKey,
-    tier,
-    lastUsedAt: admin.firestore.FieldValue.serverTimestamp(),
-  }, { merge: true });
+    tx.set(ref, {
+      count: used + 1,
+      userId,
+      month: monthKey,
+      tier,
+      lastUsedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
 
-  return { allowed: true, used: used + 1, limit, remaining: limit - used - 1 };
+    return { allowed: true, used: used + 1, limit, remaining: limit - used - 1 };
+  });
 }
 
 // ─── 프롬프트 빌더 ───
@@ -67,7 +140,6 @@ function buildCryPrompt(child: { name: string; ageInfo: string; gender: string; 
 ${hasAudio ? '첨부된 녹음파일의 울음소리를 청각적으로 분석해주세요. 울음의 톤, 강도, 리듬, 주파수 패턴, 호흡 간격을 면밀히 분석하세요.' : '부모가 설명한 울음 특성을 전문적으로 분석해주세요.'}
 
 [아이 정보]
-- 이름: ${child.name}
 - 연령/성별: ${child.ageInfo}, ${child.gender}
 - 기질 유형: ${child.temperament}
 
@@ -93,7 +165,7 @@ ${hasAudio ? '첨부된 녹음파일의 울음소리를 청각적으로 분석�
 
 반드시 아래 JSON 형식만 출력하세요:
 {
-  "analysis": "울음 분석 종합 소견 (4~6문장, ${child.name}의 월령과 기질을 반영한 구체적 분석)",
+  "analysis": "울음 분석 종합 소견 (4~6문장, 아이의 월령과 기질을 반영한 구체적 분석)",
   "possibilities": [
     {"label": "원인1", "likelihood": "높음/보통/낮음"},
     {"label": "원인2", "likelihood": "높음/보통/낮음"},
@@ -120,7 +192,6 @@ function buildPoopPrompt(child: { name: string; ageInfo: string; gender: string;
 ${hasImage ? '첨부된 대변 사진을 의학적 관점에서 분석해주세요. 색상(RGB 계열), 형태(브리스톨 대변 척도 기준), 점도, 내용물(미소화물, 점액, 거품 등), 냄새 추정을 면밀히 분석하세요.' : '부모가 설명한 대변 특성을 전문적으로 분석해주세요.'}
 
 [아이 정보]
-- 이름: ${child.name}
 - 연령/성별: ${child.ageInfo}, ${child.gender}
 - 기질 유형: ${child.temperament}
 
@@ -154,7 +225,7 @@ ${hasImage ? '첨부된 대변 사진을 의학적 관점에서 분석해주세�
 
 반드시 아래 JSON 형식만 출력하세요:
 {
-  "analysis": "대변 분석 종합 소견 (4~6문장, ${child.name}의 월령과 식이 단계를 고려한 구체적 분석. 색상, 형태, 점도, 특이사항을 각각 언급)",
+  "analysis": "대변 분석 종합 소견 (4~6문장, 아이의 월령과 식이 단계를 고려한 구체적 분석. 색상, 형태, 점도, 특이사항을 각각 언급)",
   "possibilities": [
     {"label": "원인/상태 1", "likelihood": "높음/보통/낮음"},
     {"label": "원인/상태 2", "likelihood": "높음/보통/낮음"},
@@ -189,7 +260,7 @@ function buildMockCryAnalysis(
   return {
     childName: name,
     type: 'cry',
-    analysis: `${name}의 울음소리를 분석했습니다. ${hasPain ? '갑작스럽고 강한 울음 패턴이 감지되었으며, 통증이나 불편감의 가능성이 있습니다. 체온과 기저귀 상태를 먼저 확인해 주세요.' : hasHunger ? '규칙적이고 점점 강해지는 울음 패턴으로, 배고픔 신호일 가능성이 높습니다. 마지막 수유 시간을 확인해 주세요.' : hasSleepy ? '짜증이 섞인 불규칙한 울음으로 피로/졸림의 신호일 수 있습니다. 수면 환경을 편안하게 만들어 주세요.' : '아이의 울음을 종합적으로 분석한 결과, 여러 가능성이 있습니다. 아래 체크리스트를 순서대로 확인해 보세요.'}`,
+    analysis: `아이의 울음소리를 분석했습니다. ${hasPain ? '갑작스럽고 강한 울음 패턴이 감지되었으며, 통증이나 불편감의 가능성이 있습니다. 체온과 기저귀 상태를 먼저 확인해 주세요.' : hasHunger ? '규칙적이고 점점 강해지는 울음 패턴으로, 배고픔 신호일 가능성이 높습니다. 마지막 수유 시간을 확인해 주세요.' : hasSleepy ? '짜증이 섞인 불규칙한 울음으로 피로/졸림의 신호일 수 있습니다. 수면 환경을 편안하게 만들어 주세요.' : '아이의 울음을 종합적으로 분석한 결과, 여러 가능성이 있습니다. 아래 체크리스트를 순서대로 확인해 보세요.'}`,
     possibilities: [
       { label: '배고픔', likelihood: hasHunger ? '높음' : '보통' },
       { label: '졸림/피로', likelihood: hasSleepy ? '높음' : '보통' },
@@ -219,7 +290,7 @@ function buildMockPoopAnalysis(
   return {
     childName: name,
     type: 'poop',
-    analysis: `${name}의 대변을 분석했습니다. ${needsDoctor ? '주의가 필요한 징후가 확인되었습니다. 혈변이나 백색변은 소화기 문제를 나타낼 수 있으므로 소아과 방문을 권장합니다. 대변 사진을 보존하여 의사에게 보여주세요.' : hasWatery ? '무른 변 또는 묽은 형태가 관찰됩니다. 일시적인 식이 변화나 장 운동 변화로 인한 것일 수 있으나, 탈수 징후(입술 건조, 소변량 감소)를 주의 깊게 관찰해 주세요.' : '현재 대변 상태는 해당 월령의 정상 범위에 해당합니다. 색상과 형태가 양호하며, 특별한 이상 징후는 보이지 않습니다.'}`,
+    analysis: `아이의 대변을 분석했습니다. ${needsDoctor ? '주의가 필요한 징후가 확인되었습니다. 혈변이나 백색변은 소화기 문제를 나타낼 수 있으므로 소아과 방문을 권장합니다. 대변 사진을 보존하여 의사에게 보여주세요.' : hasWatery ? '무른 변 또는 묽은 형태가 관찰됩니다. 일시적인 식이 변화나 장 운동 변화로 인한 것일 수 있으나, 탈수 징후(입술 건조, 소변량 감소)를 주의 깊게 관찰해 주세요.' : '현재 대변 상태는 해당 월령의 정상 범위에 해당합니다. 색상과 형태가 양호하며, 특별한 이상 징후는 보이지 않습니다.'}`,
     possibilities: [
       { label: '정상 범위', likelihood: needsDoctor ? '낮음' : '높음' },
       { label: '식이 영향', likelihood: hasWatery ? '높음' : '보통' },
@@ -251,28 +322,35 @@ export function registerAnalyzeMediaHandler(router: Router): void {
 
   router.post('/analyze-media', authMiddleware, async (req: Request, res: Response) => {
     try {
-      const { childId, type, description, mediaBase64, mediaMimeType } = req.body as {
-        childId: string;
-        type: 'cry' | 'poop';
-        description?: string;
-        mediaBase64?: string;
-        mediaMimeType?: string;
-      };
+      const body = parseBody(req, res, AnalyzeMediaBodySchema);
+      if (!body) return;
+      const { childId, type, description, mediaBase64, mediaMimeType } = body;
 
-      if (!childId || !type) {
-        error(res, 'childId, type은 필수입니다');
-        return;
-      }
-      if (type !== 'cry' && type !== 'poop') {
-        error(res, "type은 'cry' 또는 'poop'만 가능합니다");
-        return;
-      }
       if (!mediaBase64 && !description) {
         error(res, '미디어 파일 또는 설명이 필요합니다');
         return;
       }
 
-      // 횟수 제한 체크
+      // 미디어 화이트리스트 + 매직넘버 + 사이즈 검증
+      if (mediaBase64) {
+        if (!mediaMimeType) {
+          error(res, '미디어 형식(mimeType)이 필요합니다');
+          return;
+        }
+        const kind: 'image' | 'audio' = type === 'poop' ? 'image' : 'audio';
+        const v = validateMedia(mediaBase64, mediaMimeType, kind);
+        if (!v.ok) {
+          error(res, v.reason, 400);
+          return;
+        }
+      }
+
+      // 자녀 소유권 / 컨텍스트 검증을 quota 차감 *이전* 에 수행 — 잘못된 childId 로
+      // 호출 시 사용자 quota 가 헛으로 소모되는 것 방지 (P1 audit fix).
+      const child = await buildChildContext(childId, req.userId!);
+      if (!child) { error(res, '자녀 정보 없음', 404); return; }
+
+      // 횟수 제한 체크 (검증 통과 후에만 차감)
       const tier = await getUserTier(req.userId!);
       const usage = await checkAndIncrementUsage(req.userId!, tier);
       if (!usage.allowed) {
@@ -286,15 +364,12 @@ export function registerAnalyzeMediaHandler(router: Router): void {
         return;
       }
 
-      const child = await buildChildContext(childId, req.userId!);
-      if (!child) { error(res, '자녀 정보 없음', 404); return; }
-
       const fallbackDesc = description || (type === 'poop' ? '사진 분석 요청' : '녹음 분석 요청');
 
       if (!isGeminiAvailable()) {
         const mockData = type === 'cry'
-          ? buildMockCryAnalysis(child.name, fallbackDesc)
-          : buildMockPoopAnalysis(child.name, fallbackDesc);
+          ? buildMockCryAnalysis('아이', fallbackDesc)
+          : buildMockPoopAnalysis('아이', fallbackDesc);
         success(res, { ...mockData, usage: { used: usage.used, limit: usage.limit, remaining: usage.remaining } });
         return;
       }
@@ -318,6 +393,15 @@ export function registerAnalyzeMediaHandler(router: Router): void {
             : undefined,
         });
 
+        // 응답 후처리: 사주/오행 등 금지 용어 검출 시 mock fallback
+        if (shouldRejectAIResponse(parsed, 'analyzeMedia.handler')) {
+          const mockData = type === 'cry'
+            ? buildMockCryAnalysis('아이', fallbackDesc)
+            : buildMockPoopAnalysis('아이', fallbackDesc);
+          success(res, { ...mockData, usage: { used: usage.used, limit: usage.limit, remaining: usage.remaining } });
+          return;
+        }
+
         success(res, {
           childName: child.name,
           type,
@@ -329,11 +413,12 @@ export function registerAnalyzeMediaHandler(router: Router): void {
         });
       } catch {
         const mockData = type === 'cry'
-          ? buildMockCryAnalysis(child.name, fallbackDesc)
-          : buildMockPoopAnalysis(child.name, fallbackDesc);
+          ? buildMockCryAnalysis('아이', fallbackDesc)
+          : buildMockPoopAnalysis('아이', fallbackDesc);
         success(res, { ...mockData, usage: { used: usage.used, limit: usage.limit, remaining: usage.remaining } });
       }
-    } catch {
+    } catch (err: unknown) {
+      logger.error('route', err);
       error(res, '미디어 분석 중 오류', 500);
     }
   });

@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loadRecords } from '../../features/baby-tracker/storage';
 import { computeSummary } from '../../features/baby-tracker/utils/summary';
 import { useTrackerStore } from '../../stores/trackerStore';
+import { getDailyReference } from '../../constants/dailyReference';
 import {
   getNextCheckup,
   daysUntil,
@@ -101,7 +102,7 @@ export function DenseStatsRow({ child, onTapCheckup }: Props) {
    ════════════════════════════════════════════════════════════ */
 function BabyStats({ child }: { child: Child }) {
   const [feeding, setFeeding] = useState<{ count: number; ml: number }>({ count: 0, ml: 0 });
-  const [sleep, setSleep] = useState<{ totalH: number; naps: number }>({ totalH: 0, naps: 0 });
+  const [sleep, setSleep] = useState<{ totalH: number; naps: number; nights: number }>({ totalH: 0, naps: 0, nights: 0 });
   const [diaper, setDiaper] = useState<{ poop: number }>({ poop: 0 });
   // baby-tracker에서 기록 추가/수정 시 bump → 자동 재fetch
   const trackerVer = useTrackerStore((s) => s.version);
@@ -128,9 +129,13 @@ function BabyStats({ child }: { child: Child }) {
           const obj = r as unknown as Record<string, unknown>;
           return obj.type === 'sleep' && obj.subType === 'nap';
         }).length;
+        const nightCount = recs.filter((r) => {
+          const obj = r as unknown as Record<string, unknown>;
+          return obj.type === 'sleep' && obj.subType === 'night';
+        }).length;
         if (!cancelled) {
           setFeeding({ count: feedCount, ml: feedMl });
-          setSleep({ totalH: sleepMin / 60, naps: napCount });
+          setSleep({ totalH: sleepMin / 60, naps: napCount, nights: nightCount });
           setDiaper({ poop: poopCount });
         }
       } catch {
@@ -143,24 +148,60 @@ function BabyStats({ child }: { child: Child }) {
   // 키·체중 percentile (단순 계산: 실데이터 없으면 placeholder)
   const percentile = computePercentile(child);
 
+  // 개월수·몸무게 기준 권장량 (사용자 피드백 — 부족/충분/많음 메시지 표시)
+  const ageMonths = child.ageInfo?.months ?? 0;
+  const ref = getDailyReference(ageMonths, child.weight);
+
+  // 분유 비교 메시지
+  const formulaSub = (() => {
+    if (feeding.ml <= 0) return '기록 없음';
+    if (ref.formulaMlMax === 0) return `${feeding.ml}ml`; // 일반식 (24개월+)
+    if (feeding.ml < ref.formulaMlMin) return `${ref.formulaMlMin - feeding.ml}ml 부족`;
+    if (feeding.ml > ref.formulaMlMax) return `${feeding.ml - ref.formulaMlMax}ml 초과`;
+    return '충분';
+  })();
+
+  // 수면 비교 메시지
+  const sleepSub = (() => {
+    if (sleep.totalH <= 0) return '기록 없음';
+    if (sleep.totalH < ref.sleepHrMin) {
+      const gap = ref.sleepHrMin - sleep.totalH;
+      return `${gap.toFixed(1)}h 부족`;
+    }
+    if (sleep.totalH > ref.sleepHrMax) {
+      const over = sleep.totalH - ref.sleepHrMax;
+      return `${over.toFixed(1)}h 초과`;
+    }
+    return '충분';
+  })();
+
+  // 대변 메시지 — 개월수와 무관한 일반 가이드:
+  //   0회 = 변비 주의 (24h 미배변), 1-3회 정상, 4+회 묽은 변 주의
+  //   세부 가이드는 baby-tracker 메인 진입 시 확인 가능
+  const poopSub = (() => {
+    if (diaper.poop === 0) return '변비 주의';
+    if (diaper.poop >= 4) return '묽은 변';
+    return '정상';
+  })();
+
   return (
     <View style={styles.row}>
       <StatCard
         icon={ASSETS.bottle}
         valueBig={feeding.count > 0 ? `${feeding.count}회` : '0회'}
-        valueSub={feeding.ml > 0 ? `${feeding.ml}ml` : '기록 없음'}
+        valueSub={formulaSub}
       />
       <View style={styles.divider} />
       <StatCard
         icon={ASSETS.sleep}
         valueBig={sleep.totalH > 0 ? `${sleep.totalH.toFixed(0)}h` : '0h'}
-        valueSub={sleep.naps > 0 ? `낮 ${sleep.naps}회` : '기록 없음'}
+        valueSub={sleepSub}
       />
       <View style={styles.divider} />
       <StatCard
         icon={ASSETS.poop}
         valueBig={`${diaper.poop}회`}
-        valueSub={diaper.poop > 0 ? '정상' : '기록 없음'}
+        valueSub={poopSub}
       />
       <View style={styles.divider} />
       <StatCard
@@ -244,8 +285,8 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
   const [checkupDate, setCheckupDate] = useState<string | null>(null);
   const checkupVer = useCheckupStore((s) => s.version);
 
-  // "탭해서 기록" 캡션 자동 숨김 — 누적 기록 횟수 ≥ 3 이면 학습됐다고 보고 숨김
-  const [tapHintHidden, setTapHintHidden] = useState(false);
+  // 안내문 자동 숨김은 2026-05-08 제거 — 사용자가 학습 전에 사라진다는 피드백.
+  // 관련 state/카운터/임계값은 dead code 화 됨 (storage 키는 유지: 잔존 데이터 영향 없음).
 
   // 오늘자 AsyncStorage 로드
   const reload = useCallback(async () => {
@@ -254,11 +295,9 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
       const w = await AsyncStorage.getItem(WATER_KEY(child.id, ymd));
       const s = await AsyncStorage.getItem(SUPPLEMENT_KEY(child.id, ymd));
       const m = await AsyncStorage.getItem(MOOD_KEY(child.id, ymd));
-      const c = await AsyncStorage.getItem(TAP_HINT_COUNTER_KEY(child.id));
       setWaterCount(w ? Math.max(0, Math.min(WATER_GOAL, parseInt(w, 10) || 0)) : 0);
       setSupplementDone(s === '1');
       setMood((m as MoodKey) ?? null);
-      setTapHintHidden(c ? (parseInt(c, 10) || 0) >= TAP_HINT_HIDE_THRESHOLD : false);
     } catch { /* ignore */ }
   }, [child.id]);
 
@@ -266,16 +305,14 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
     reload();
   }, [reload]);
 
-  /** 사용자가 카드를 탭/롱프레스로 한 번 사용할 때마다 카운터 +1 — 임계 도달 시 가이드 숨김 */
+  /** 사용자 카드 인터랙션 카운터 — 자동 숨김 제거됐지만 다른 분석/학습용도에 활용 가능 */
   const bumpTapHint = useCallback(async () => {
-    if (tapHintHidden) return;
     try {
       const raw = await AsyncStorage.getItem(TAP_HINT_COUNTER_KEY(child.id));
       const next = (raw ? parseInt(raw, 10) || 0 : 0) + 1;
       await AsyncStorage.setItem(TAP_HINT_COUNTER_KEY(child.id), String(next));
-      if (next >= TAP_HINT_HIDE_THRESHOLD) setTapHintHidden(true);
     } catch { /* ignore */ }
-  }, [child.id, tapHintHidden]);
+  }, [child.id]);
 
   // 다음 검진 로드 (checkupVer 트리거)
   useEffect(() => {
@@ -371,13 +408,12 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
           tappable
         />
       </View>
-      {/* 학습 후 자동 숨김 — 누적 3회 기록하면 사라짐 (TAP_HINT_HIDE_THRESHOLD) */}
-      {!tapHintHidden && (
-        <Text style={styles.tapHint}>
-          {'탭해서 기록 · '}
-          <Text style={styles.tapHintAccent}>길게 누르면 가이드</Text>
-        </Text>
-      )}
+      {/* 안내문 — 항상 표시 (자동 숨김 제거 2026-05-08: 너무 빨리 사라져서 사용자가
+          길게 누르는 동작을 발견하지 못한다는 피드백) */}
+      <Text style={styles.tapHint}>
+        {'탭하면 카운트 · '}
+        <Text style={styles.tapHintAccent}>길게 누르면 설명</Text>
+      </Text>
 
       {/* 물/영양제 long-press 시 의학적 의미 + 가이드 */}
       <MissionInfoModal

@@ -21,6 +21,19 @@ import {
   getMilestoneImageBuffer,
   AlbumPhoto,
 } from '../services/album.pdf.service';
+import { z } from 'zod';
+import { parseBody } from '../utils/validate';
+
+const PhotoBodySchema = z.object({
+  childId: z.string().min(1).max(128),
+  uri: z.string().url().max(2048),
+  printUrl: z.string().url().max(2048).optional(),
+  milestone: z.string().max(100).optional(),
+  milestoneEmoji: z.string().max(8).optional(),
+  milestoneColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  memo: z.string().max(500).optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD 형식이어야 합니다').optional(),
+});
 
 const router = Router();
 
@@ -47,21 +60,9 @@ function param(p: string | string[]): string {
 router.post('/photos', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { childId, uri, printUrl, milestone, milestoneEmoji, milestoneColor, memo, date } = req.body as {
-      childId: string;
-      uri: string;        // thumbUrl (표시용)
-      printUrl?: string;  // 1800px 인쇄용 (없으면 uri 사용)
-      milestone?: string;
-      milestoneEmoji?: string;
-      milestoneColor?: string; // 카테고리 색상 (#RRGGBB)
-      memo?: string;
-      date?: string;
-    };
-
-    if (!childId || !uri) {
-      error(res, 'childId와 uri는 필수입니다');
-      return;
-    }
+    const body = parseBody(req, res, PhotoBodySchema);
+    if (!body) return;
+    const { childId, uri, printUrl, milestone, milestoneEmoji, milestoneColor, memo, date } = body;
 
     if (!await verifyChildOwnership(childId, userId)) {
       error(res, '자녀를 찾을 수 없습니다', 404);
@@ -216,10 +217,87 @@ router.delete('/photos/:id', authMiddleware, async (req: Request, res: Response)
     if (oldDoc.exists) batch.delete(collections.milestonePhotos.doc(photoId));
     await batch.commit();
 
+    // cascade: 가족피드(posts)에 공유된 글 정리. linkedAlbumId 로 역참조.
+    // best-effort — 실패해도 본 사진 삭제는 완료된 상태로 응답.
+    try {
+      const linkedPosts = await collections.posts
+        .where('linkedAlbumId', '==', photoId)
+        .limit(50)
+        .get();
+      if (!linkedPosts.empty) {
+        const cascadeBatch = collections.children.firestore.batch();
+        linkedPosts.docs.forEach((d) => cascadeBatch.delete(d.ref));
+        await cascadeBatch.commit();
+        logger.info('album/deletePhoto', `cascade posts deleted=${linkedPosts.size} photoId=${photoId}`);
+      }
+    } catch (cascadeErr) {
+      logger.warn(
+        'album/deletePhoto/cascade',
+        cascadeErr instanceof Error ? cascadeErr.message : String(cascadeErr),
+      );
+    }
+
     success(res, { deleted: true });
   } catch (err) {
     logger.error('album', err);
     error(res, '사진 삭제 중 오류가 발생했습니다', 500);
+  }
+});
+
+router.patch('/photos/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const photoId = param(req.params.id);
+    const { memo, milestone, milestoneEmoji, uri, printUrl } = req.body as {
+      memo?: string;
+      milestone?: string;
+      milestoneEmoji?: string;
+      uri?: string;       // 이미지 URL 교체
+      printUrl?: string;  // 고화질 URL 교체 (없으면 uri로 대체)
+    };
+
+    const albumDoc = await collections.albumPhotos.doc(photoId).get();
+    const oldDoc = await collections.milestonePhotos.doc(photoId).get();
+
+    if (!albumDoc.exists && !oldDoc.exists) {
+      error(res, '사진을 찾을 수 없습니다', 404);
+      return;
+    }
+    const ownerInAlbum = albumDoc.exists ? (albumDoc.data() as Record<string, unknown>).userId : null;
+    const ownerInOld = oldDoc.exists ? (oldDoc.data() as Record<string, unknown>).userId : null;
+    if ((ownerInAlbum && ownerInAlbum !== userId) || (ownerInOld && ownerInOld !== userId)) {
+      error(res, '권한이 없습니다', 403);
+      return;
+    }
+
+    // albumPhotos는 content/title 필드명 사용 (milestonePhotos와 다름)
+    const albumUpdates: Record<string, unknown> = {};
+    if (memo !== undefined) albumUpdates['content'] = memo;
+    if (milestone !== undefined) albumUpdates['title'] = milestone;
+    if (milestoneEmoji !== undefined) albumUpdates['milestoneEmoji'] = milestoneEmoji;
+    if (uri !== undefined) { albumUpdates['uri'] = uri; albumUpdates['printUrl'] = printUrl ?? uri; }
+
+    // milestonePhotos (구 컬렉션)는 memo/milestone 필드명 사용
+    const oldUpdates: Record<string, unknown> = {};
+    if (memo !== undefined) oldUpdates['memo'] = memo;
+    if (milestone !== undefined) oldUpdates['milestone'] = milestone;
+    if (milestoneEmoji !== undefined) oldUpdates['milestoneEmoji'] = milestoneEmoji;
+    if (uri !== undefined) { oldUpdates['uri'] = uri; oldUpdates['printUrl'] = printUrl ?? uri; }
+
+    if (Object.keys(albumUpdates).length === 0) {
+      success(res, { updated: false });
+      return;
+    }
+
+    const batch = collections.children.firestore.batch();
+    if (albumDoc.exists) batch.update(collections.albumPhotos.doc(photoId), albumUpdates);
+    if (oldDoc.exists && Object.keys(oldUpdates).length > 0) batch.update(collections.milestonePhotos.doc(photoId), oldUpdates);
+    await batch.commit();
+
+    success(res, { updated: true });
+  } catch (err) {
+    logger.error('album', err);
+    error(res, '사진 수정 중 오류가 발생했습니다', 500);
   }
 });
 

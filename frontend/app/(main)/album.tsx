@@ -10,6 +10,9 @@ import {
   Switch,
   ActivityIndicator,
   RefreshControl,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -646,19 +649,12 @@ function generateAlbumHTML(
   // 표지 이미지가 명시되지 않았으면 첫 사진을 자동 표지로 사용
   const effectiveCoverUri = coverImageUri ?? (sorted[0]?.uri ?? null);
 
-  // ─── 표지 (이미지 위에 아이 이름 + 날짜 오버레이) ─────
+  // ─── 표지 (이미지 위에 아이 이름 + 날짜 자연스럽게 배치) ─────
   const coverHTML = effectiveCoverUri
     ? `<div class="cover cover-img">` +
       `<img src="${effectiveCoverUri}" alt="" width="1123" height="794" class="cover-bg-img" />` +
-      `<div class="cover-overlay">` +
-      `<div class="cover-label">Our Precious</div>` +
-      `<div class="cover-name">${escapeHtml(childName)}</div>` +
-      `<div class="cover-ornament">&#10047;</div>` + // ✿
-      `<div class="cover-period">` +
-      `${escapeHtml(dateFrom)}<br/>~ ${escapeHtml(dateTo)}` +
-      `</div>` +
-      `<div class="cover-sign">&#128155; Family Album</div>` +
-      `</div>` +
+      `<div class="cover-name-natural">${escapeHtml(childName)}</div>` +
+      `<div class="cover-period-natural">${escapeHtml(dateFrom)} ~ ${escapeHtml(dateTo)}</div>` +
       `</div>`
     : `<div class="cover cover-gradient">` +
       `<div class="cover-star">&#128247;</div>` +
@@ -803,62 +799,8 @@ function generateAlbumHTML(
       object-fit: cover;
       -o-object-fit: cover;
     }
-    /* 사진 위에 부드러운 어두움을 더해 텍스트 가독성 향상 — 단일 linear-gradient (Android WebView 호환) */
-    .cover-vignette {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.45) 100%);
-      z-index: 1;
-      pointer-events: none;
-    }
-    .cover-overlay {
-      position: absolute;
-      bottom: 14mm; left: 50%;
-      transform: translateX(-50%);
-      width: 78%;
-      text-align: center;
-      padding: 10mm 12mm;
-      z-index: 2;
-      background: rgba(255, 248, 235, 0.92);
-      border-radius: 8px;
-      border: 1.5px solid rgba(200, 155, 122, 0.45);
-      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
-    }
-    .cover-label {
-      font-family: 'Gaegu', 'Jua', cursive;
-      font-size: 22px;
-      color: #8B6F55;
-      letter-spacing: 6px;
-      margin-bottom: 6mm;
-      text-transform: uppercase;
-    }
-    .cover-name {
-      font-family: 'Single Day', 'Gaegu', cursive;
-      font-size: 96px;
-      color: #4A3526;
-      line-height: 1.05;
-      text-shadow: 0.6px 0 0 currentColor, -0.6px 0 0 currentColor;
-      margin-bottom: 5mm;
-    }
-    .cover-ornament {
-      font-size: 20px;
-      color: #C89B7A;
-      margin: 2mm 0 3mm;
-    }
-    .cover-period {
-      font-family: 'Gaegu', 'Jua', cursive;
-      font-size: 15px;
-      color: #6B5340;
-      line-height: 1.4;
-      margin-bottom: 3mm;
-    }
-    .cover-sign {
-      font-family: 'Gaegu', 'Jua', cursive;
-      font-size: 13px;
-      color: #A07858;
-      letter-spacing: 1.5px;
-    }
+    .cover-name-natural { position: absolute; right: 7mm; width: 130mm; top: 23%; text-align: center; font-family: 'Single Day', 'Gaegu', cursive; font-size: 33px; color: #3A2018; letter-spacing: 3px; }
+    .cover-period-natural { position: absolute; right: 5mm; width: 130mm; top: 62%; text-align: center; font-family: 'Gaegu', cursive; font-size: 18px; color: #6B4030; letter-spacing: 1px; }
     /* 기본 그라데이션 표지 (fallback) */
     .cover-gradient {
       background:
@@ -1145,6 +1087,45 @@ interface PregnancyTimelineWeek {
   }[];
 }
 
+/** 임신 타임라인 카드에서 이모지 → 3D clay 일러스트 이미지로 교체 (pregnancy.tsx와 동일 매핑) */
+const PREG_EMOJI_IMGS: Record<string, ImageSourcePropType> = {
+  '🤰': require('../../assets/preg-test.png'),
+  '💊': require('../../assets/quick-pill.png'),
+  '🏥': require('../../assets/preg-stethoscope.png'),
+  '📸': require('../../assets/preg-ultrasound.png'),
+  '💓': require('../../assets/icon-heart.png'),
+  '🔬': require('../../assets/preg-ultrasound.png'),
+  '🌿': require('../../assets/preg-leaf.png'),
+  '🌱': require('../../assets/preg-leaf.png'),
+  '🧪': require('../../assets/preg-ultrasound.png'),
+  '🎀': require('../../assets/preg-ribbon.png'),
+  '🦶': require('../../assets/preg-foot.png'),
+  '📋': require('../../assets/preg-ultrasound.png'),
+  '🩸': require('../../assets/quick-blood.png'),
+  '🧳': require('../../assets/preg-bag.png'),
+  '📷': require('../../assets/icon-camera.png'),
+  '👶': require('../../assets/quick-baby.png'),
+  '🤢': require('../../assets/preg-mood-nausea.png'),
+  '😴': require('../../assets/preg-mood-tired.png'),
+  '🦴': require('../../assets/preg-mood-pain.png'),
+  '🤕': require('../../assets/preg-mood-pain.png'),
+  '🌙': require('../../assets/preg-mood-tired.png'),
+  '🔥': require('../../assets/preg-mood-pain.png'),
+  '😣': require('../../assets/preg-mood-pain.png'),
+  '🦵': require('../../assets/preg-mood-pain.png'),
+  '😢': require('../../assets/preg-mood-tired.png'),
+  '🚽': require('../../assets/preg-mood-tired.png'),
+  '😊': require('../../assets/preg-mood-good.png'),
+  '🫠': require('../../assets/preg-mood-pain.png'),
+  '😖': require('../../assets/preg-mood-pain.png'),
+  '💩': require('../../assets/preg-mood-pain.png'),
+  '📚': require('../../assets/preg-bag.png'),
+  '📝': require('../../assets/child-diary.png'),
+  '🎉': require('../../assets/preg-ribbon.png'),
+  '🏠': require('../../assets/mascot-happy.png'),
+  '⭐': require('../../assets/preg-ribbon.png'),
+};
+
 function PregnancyTimeline() {
   const child = useChildStore((s) => s.selectedChild);
   const childId = child?.id ?? '';
@@ -1157,6 +1138,11 @@ function PregnancyTimeline() {
   const [diaryText, setDiaryText] = useState<string | null>(null);
   const [diaryLoading, setDiaryLoading] = useState(false);
   const [diaryDate, setDiaryDate] = useState<string | null>(null);
+
+  /* 수정 모달 */
+  const [editItem, setEditItem] = useState<{ id: string; label: string; value: string; imageUri?: string } | null>(null);
+  const [editItemSaving, setEditItemSaving] = useState(false);
+  const [editItemNewImage, setEditItemNewImage] = useState<string | null>(null);
 
   const loadTimeline = useCallback(async () => {
     if (!childId) return;
@@ -1180,20 +1166,62 @@ function PregnancyTimeline() {
     setRefreshing(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (id.startsWith('dev-')) return;
-    Alert.alert('삭제', '이 기록을 삭제할까요?', [
+  const pickEditImagePT = useCallback(async () => {
+    try {
+      const ImagePicker = await import('expo-image-picker');
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') { Alert.alert('권한 필요', '갤러리 접근 권한을 허용해주세요'); return; }
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [4, 3] });
+      if (!result.canceled && result.assets[0]) setEditItemNewImage(result.assets[0].uri);
+    } catch { Alert.alert('오류', '사진을 불러오지 못했습니다'); }
+  }, []);
+
+  const handleEditSavePT = useCallback(async () => {
+    if (!editItem) return;
+    setEditItemSaving(true);
+    try {
+      let newUri: string | undefined;
+      if (editItemNewImage) {
+        const { uploadApi } = await import('../../services/api');
+        const uploaded = await uploadApi.upload(editItemNewImage, 'pregnancy');
+        newUri = uploaded.url;
+        setEditItemNewImage(null);
+      }
+      await pregnancyApi.updateRecord(editItem.id, {
+        content: editItem.value.trim() || undefined,
+        uri: newUri,
+      });
+      setEditItem(null);
+      loadTimeline();
+    } catch {
+      Alert.alert('오류', '수정에 실패했습니다');
+    } finally {
+      setEditItemSaving(false);
+    }
+  }, [editItem, editItemNewImage, loadTimeline]);
+
+  const handleDelete = (item: { id: string; title: string; content?: string; mediaUri?: string }) => {
+    if (item.id.startsWith('dev-')) return;
+    const buttons: Parameters<typeof Alert.alert>[2] = [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제', style: 'destructive',
         onPress: async () => {
           try {
-            await pregnancyApi.deleteRecord(id);
+            await pregnancyApi.deleteRecord(item.id);
             loadTimeline();
           } catch { Alert.alert('오류', '삭제에 실패했습니다'); }
         },
       },
-    ]);
+    ];
+    buttons.unshift({
+      text: '수정',
+      onPress: () => {
+        setEditItemNewImage(null);
+        setEditItem({ id: item.id, label: item.title, value: item.content ?? '', imageUri: item.mediaUri });
+      },
+    });
+    Alert.alert('기록 관리', item.title, buttons);
   };
 
   /* -- AI Diary -- */
@@ -1278,30 +1306,36 @@ function PregnancyTimeline() {
               <View style={pStyles.weekLine} />
             </View>
 
-            {weekGroup.items.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[
-                  pStyles.card,
-                  item.source === 'development' && pStyles.cardDev,
-                  item.source === 'health' && pStyles.cardHealth,
-                ]}
-                onLongPress={() => handleDelete(item.id)}
-                activeOpacity={0.7}
-              >
-                <Text style={pStyles.cardEmoji}>{item.emoji || '📌'}</Text>
-                <View style={pStyles.cardBody}>
-                  <Text style={pStyles.cardTitle}>{item.title}</Text>
-                  {item.content ? <Text style={pStyles.cardContent} numberOfLines={3}>{item.content}</Text> : null}
-                  {item.mediaUri ? (
-                    <Image source={{ uri: item.mediaUri }} style={pStyles.cardImage} contentFit="cover" />
-                  ) : null}
-                  {item.createdAt ? (
-                    <Text style={pStyles.cardDate}>{new Date(item.createdAt).toLocaleDateString('ko-KR')}</Text>
-                  ) : null}
-                </View>
-              </TouchableOpacity>
-            ))}
+            {weekGroup.items.map((item) => {
+              const emojiImg = item.emoji ? PREG_EMOJI_IMGS[item.emoji] : undefined;
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[
+                    pStyles.card,
+                    item.source === 'development' && pStyles.cardDev,
+                    item.source === 'health' && pStyles.cardHealth,
+                  ]}
+                  onLongPress={() => item.source !== 'development' && handleDelete({ ...item, mediaUri: item.mediaUri })}
+                  activeOpacity={0.7}
+                >
+                  {emojiImg
+                    ? <Image source={emojiImg} style={pStyles.cardEmojiImg} contentFit="contain" />
+                    : <Text style={pStyles.cardEmoji}>{item.emoji || '📌'}</Text>
+                  }
+                  <View style={pStyles.cardBody}>
+                    <Text style={pStyles.cardTitle}>{item.title}</Text>
+                    {item.content ? <Text style={pStyles.cardContent} numberOfLines={3}>{item.content}</Text> : null}
+                    {item.mediaUri ? (
+                      <Image source={{ uri: item.mediaUri }} style={pStyles.cardImage} contentFit="cover" />
+                    ) : null}
+                    {item.createdAt ? (
+                      <Text style={pStyles.cardDate}>{new Date(item.createdAt).toLocaleDateString('ko-KR')}</Text>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         ))}
 
@@ -1317,6 +1351,49 @@ function PregnancyTimeline() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* ── 수정 모달 ── */}
+      <Modal visible={!!editItem} animationType="slide" transparent onRequestClose={() => setEditItem(null)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.editOverlay}>
+            <View style={styles.editCard}>
+              <View style={styles.editHeader}>
+                <TouchableOpacity onPress={() => setEditItem(null)}>
+                  <Text style={styles.editCancel}>취소</Text>
+                </TouchableOpacity>
+                <Text style={styles.editTitle}>메모 수정</Text>
+                <TouchableOpacity onPress={handleEditSavePT} disabled={editItemSaving}>
+                  {editItemSaving
+                    ? <ActivityIndicator color={COLORS.primary} size="small" />
+                    : <Text style={styles.editDone}>저장</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+              {editItem && <Text style={styles.editLabel}>{editItem.label}</Text>}
+              {/* 현재 이미지 / 새 이미지 미리보기 */}
+              {(editItemNewImage ?? editItem?.imageUri) ? (
+                <Image
+                  source={{ uri: editItemNewImage ?? editItem!.imageUri }}
+                  style={pStyles.editPreviewImg}
+                  contentFit="cover"
+                />
+              ) : null}
+              <TouchableOpacity style={pStyles.editImgBtn} onPress={pickEditImagePT}>
+                <Text style={pStyles.editImgBtnText}>{(editItemNewImage ?? editItem?.imageUri) ? '📷 사진 변경' : '📷 사진 추가'}</Text>
+              </TouchableOpacity>
+              <TextInput
+                style={styles.editInput}
+                placeholder="메모를 입력하세요"
+                placeholderTextColor={COLORS.textLight}
+                value={editItem?.value ?? ''}
+                onChangeText={(v) => setEditItem((s) => s ? { ...s, value: v } : s)}
+                multiline
+                autoFocus
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -1345,11 +1422,15 @@ const pStyles = StyleSheet.create({
   cardDev: { backgroundColor: '#FFF3E0', borderLeftWidth: 3, borderLeftColor: '#FF9800' },
   cardHealth: { backgroundColor: '#FCE4EC', borderLeftWidth: 3, borderLeftColor: '#E91E63' },
   cardEmoji: { fontSize: 24, marginRight: SPACING.sm },
+  cardEmojiImg: { width: 32, height: 32, marginRight: SPACING.sm },
   cardBody: { flex: 1 },
   cardTitle: { fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.text },
   cardContent: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 4, lineHeight: 20, fontWeight: '600' },
   cardDate: { fontSize: FONT_SIZE.xs, color: COLORS.textLight, marginTop: 4, fontWeight: '600' },
   cardImage: { width: '100%', height: 160, borderRadius: RADIUS.sm, marginTop: SPACING.sm, backgroundColor: COLORS.surfaceLight },
+  editPreviewImg: { width: '100%', height: 160, borderRadius: RADIUS.md, marginBottom: SPACING.sm },
+  editImgBtn: { alignSelf: 'flex-start', paddingHorizontal: SPACING.md, paddingVertical: 8, backgroundColor: COLORS.surfaceLight, borderRadius: RADIUS.md, marginBottom: SPACING.sm },
+  editImgBtnText: { fontSize: FONT_SIZE.sm, color: COLORS.primary, fontWeight: '700' },
 });
 
 /* ------------------------------------------------------------------ */
@@ -1497,6 +1578,16 @@ function BabyAlbum() {
   const [albumTitle, setAlbumTitle] = useState('');
   const [albumCoverUri, setAlbumCoverUri] = useState<string | null>(null); // 표지 이미지
   const [showAlbumForm, setShowAlbumForm] = useState(false);
+
+  // 수정 모달
+  const [editState, setEditState] = useState<{
+    id: string;
+    label: string;
+    value: string;
+    imageUri?: string; // 현재 이미지 URI
+  } | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editNewImage, setEditNewImage] = useState<string | null>(null);
 
   /* AI Diary */
   const [diaryText, setDiaryText] = useState<string | null>(null);
@@ -1680,6 +1771,9 @@ function BabyAlbum() {
           dominantType: selectedChild.innateData?.dominantType ?? undefined,
           milestone: selectedMilestone?.label,
           milestoneEmoji: selectedMilestone?.emoji,
+          // 앨범 사진 삭제 시 가족피드 글도 같이 cascade delete 되도록 역참조 저장.
+          // newPhoto.id 는 위에서 albumApi.save 응답으로 갱신된 서버측 ID.
+          linkedAlbumId: newPhoto.id,
         });
         const data = res.data;
         const apiPost = data.data ?? data.post ?? data;
@@ -1800,24 +1894,65 @@ function BabyAlbum() {
     }
   }, [selectedChild, albumDateFrom, albumDateTo, albumTitle, albumCoverUri, photos]);
 
+  const pickEditImage = useCallback(async () => {
+    try {
+      const ImagePicker = await import('expo-image-picker');
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') { Alert.alert('권한 필요', '갤러리 접근 권한을 허용해주세요'); return; }
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [4, 3] });
+      if (!result.canceled && result.assets[0]) setEditNewImage(result.assets[0].uri);
+    } catch { Alert.alert('오류', '사진을 불러오지 못했습니다'); }
+  }, []);
+
   /* -- Delete entry -- */
   const deleteEntry = useCallback((idx: number) => {
     const photo = photos[idx];
-    Alert.alert('삭제', '이 기록을 삭제할까요?', [
+    Alert.alert('기록 관리', photo.milestone ?? photo.memo ?? '사진', [
       { text: '취소', style: 'cancel' },
+      {
+        text: '수정',
+        onPress: () => {
+          if (photo.id) {
+            setEditNewImage(null);
+            setEditState({ id: photo.id, label: photo.milestone ?? '사진', value: photo.memo ?? '', imageUri: photo.uri });
+          }
+        },
+      },
       {
         text: '삭제', style: 'destructive',
         onPress: async () => {
           if (photo.id) {
-            try {
-              await albumApi.remove(photo.id);
-            } catch { /* 서버 삭제 실패해도 로컬 제거 */ }
+            try { await albumApi.remove(photo.id); } catch { /* 서버 삭제 실패해도 로컬 제거 */ }
           }
           setPhotos((prev) => prev.filter((_, i) => i !== idx));
         },
       },
     ]);
   }, [photos]);
+
+  const handleEditSave = useCallback(async () => {
+    if (!editState) return;
+    setEditSaving(true);
+    try {
+      let newUri: string | undefined;
+      if (editNewImage) {
+        const { uploadApi } = await import('../../services/api');
+        const uploaded = await uploadApi.upload(editNewImage, 'album');
+        newUri = uploaded.url;
+        setEditNewImage(null);
+      }
+      const trimmedMemo = editState.value.trim() || undefined;
+      await albumApi.update(editState.id, { memo: trimmedMemo, uri: newUri, printUrl: newUri });
+      setPhotos((prev) =>
+        prev.map((p) => (p.id === editState.id ? { ...p, memo: trimmedMemo, ...(newUri ? { uri: newUri } : {}) } : p))
+      );
+      setEditState(null);
+    } catch {
+      Alert.alert('오류', '수정에 실패했습니다');
+    } finally {
+      setEditSaving(false);
+    }
+  }, [editState, editNewImage]);
 
   const viewerPhoto = viewerIndex !== null ? photos[viewerIndex] : null;
 
@@ -2175,6 +2310,56 @@ function BabyAlbum() {
         />
       )}
 
+      {/* ── 수정 모달 ── */}
+      <Modal
+        visible={!!editState}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEditState(null)}
+      >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.editOverlay}>
+            <View style={styles.editCard}>
+              <View style={styles.editHeader}>
+                <TouchableOpacity onPress={() => setEditState(null)}>
+                  <Text style={styles.editCancel}>취소</Text>
+                </TouchableOpacity>
+                <Text style={styles.editTitle}>메모 수정</Text>
+                <TouchableOpacity onPress={handleEditSave} disabled={editSaving}>
+                  {editSaving
+                    ? <ActivityIndicator color={COLORS.primary} size="small" />
+                    : <Text style={styles.editDone}>저장</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+              {editState && (
+                <Text style={styles.editLabel}>{editState.label}</Text>
+              )}
+              {/* 현재 이미지 / 새 이미지 미리보기 */}
+              {(editNewImage ?? editState?.imageUri) ? (
+                <Image
+                  source={{ uri: editNewImage ?? editState!.imageUri }}
+                  style={pStyles.editPreviewImg}
+                  contentFit="cover"
+                />
+              ) : null}
+              <TouchableOpacity style={pStyles.editImgBtn} onPress={pickEditImage}>
+                <Text style={pStyles.editImgBtnText}>{(editNewImage ?? editState?.imageUri) ? '📷 사진 변경' : '📷 사진 추가'}</Text>
+              </TouchableOpacity>
+              <TextInput
+                style={styles.editInput}
+                placeholder="메모를 입력하세요"
+                placeholderTextColor={COLORS.textLight}
+                value={editState?.value ?? ''}
+                onChangeText={(v) => setEditState((s) => s ? { ...s, value: v } : s)}
+                multiline
+                autoFocus
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       <AdSlot />
     </View>
   );
@@ -2401,5 +2586,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.30)', paddingVertical: 5, alignItems: 'center',
   },
   albumCoverDefaultText: { color: '#FFF', fontSize: FONT_SIZE.xs, fontWeight: '700' },
+
+  editOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  editCard: { backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: SPACING.lg, paddingBottom: 32 },
+  editHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.md },
+  editCancel: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, fontWeight: '600' },
+  editTitle: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text },
+  editDone: { fontSize: FONT_SIZE.md, color: COLORS.primary, fontWeight: '700' },
+  editLabel: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, fontWeight: '600', marginBottom: SPACING.sm },
+  editInput: { borderWidth: 1, borderColor: COLORS.border, borderRadius: RADIUS.md, padding: SPACING.md, minHeight: 100, fontSize: FONT_SIZE.md, color: COLORS.text, textAlignVertical: 'top' },
 
 });

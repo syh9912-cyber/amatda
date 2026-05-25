@@ -75,7 +75,8 @@ const COLOR = {
   dangerBg: '#FFEBEE',
 };
 
-const APP_STORE_LINK = 'https://amatda.app/download';
+// 정식 출시 후 Play Store URL 로 자동 작동. iOS 출시 후엔 OS 분기 랜딩 페이지로 교체 예정.
+const APP_STORE_LINK = 'https://play.google.com/store/apps/details?id=com.sylabs.amatda';
 
 /* ------------------------------------------------------------------ */
 /* Component                                                           */

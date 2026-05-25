@@ -178,9 +178,8 @@ export default function QuestionsScreen() {
             ).map((opt) => {
               const meta = TRAIT_META[opt.trait];
               const selected = currentPicked === opt.trait;
-              // 메인: 시나리오 행동 / 서브: 기질 태그 (예: 관찰형 · 신중함)
+              // 시나리오 행동 텍스트만 표시 — 기질 라벨(관찰형/신중함 등)은 사용자 혼란 유발해 제거 (2026-05-08)
               const mainText = opt.behavior || meta.main;
-              const subText = opt.behavior ? `${meta.main} · ${meta.sub}` : meta.sub;
               return (
                 <TouchableOpacity
                   key={opt.trait}
@@ -192,8 +191,7 @@ export default function QuestionsScreen() {
                     <Image source={meta.icon} style={styles.optionIcon} resizeMode="contain" />
                   </View>
                   <View style={styles.optionTextCol}>
-                    <Text style={styles.optionMain} numberOfLines={2}>{mainText}</Text>
-                    <Text style={styles.optionSub}>{subText}</Text>
+                    <Text style={styles.optionMain} numberOfLines={3}>{mainText}</Text>
                   </View>
                   <View style={[styles.optionCheck, selected && styles.optionCheckSelected]}>
                     {selected ? <Text style={styles.optionCheckMark}>{'✓'}</Text> : null}

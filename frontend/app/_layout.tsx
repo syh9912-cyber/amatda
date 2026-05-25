@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
 import React from 'react';
-import { View, ActivityIndicator, Text, TextInput, Image, Animated, Easing, StyleSheet, Dimensions, AppState, AppStateStatus } from 'react-native';
+import { View, ActivityIndicator, Text, TextInput, Image, Animated, Easing, StyleSheet, Dimensions, AppState, AppStateStatus, TouchableOpacity } from 'react-native';
 import { useFonts } from 'expo-font';
 
 /**
@@ -17,28 +17,47 @@ function pretendardFamilyForWeight(weight: string | number | undefined): string 
   return 'Pretendard-Regular';
 }
 
+// ⚠️ 2026-05-08 긴급 fix: 이 IIFE 가 React 19 + RN 0.81 + Hermes 에서 모듈 로드 시점에
+// throw → "Invalid hook call" + "Attempted to navigate before mounting Root Layout" 연쇄로
+// 부팅 자체가 깨지는 회귀 발생 (Sentry REACT-NATIVE-9 / REACT-NATIVE-A).
+// fail-safe 로 감싸 패치 실패 시 시스템 기본 폰트로 폴백 — 앱 부팅이 우선.
 (function applyPretendardDefault() {
-  const patch = (Comp: { render?: (...args: unknown[]) => React.ReactElement | null }) => {
-    if (!Comp || !Comp.render) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const orig = Comp.render as any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    Comp.render = function (...args: any[]) {
-      const elem = orig.apply(this, args);
-      if (!elem) return elem;
+  try {
+    const patch = (Comp: { render?: (...args: unknown[]) => React.ReactElement | null }) => {
+      if (!Comp || typeof Comp.render !== 'function') return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const flat = StyleSheet.flatten((elem as any).props?.style) as Record<string, unknown> | null;
-      const family = pretendardFamilyForWeight(flat?.fontWeight as string | number | undefined);
-      return React.cloneElement(elem, {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        style: [{ fontFamily: family }, (elem as any).props?.style],
-      });
+      const orig = Comp.render as any;
+      // 이중 patch 방지 — OTA reload / Fast Refresh 시 같은 함수가 두 번 감싸지면 무한 재귀
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((orig as any).__amatdaPretendardPatched) return;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const wrapped = function (this: unknown, ...args: any[]) {
+        try {
+          const elem = orig.apply(this, args);
+          if (!elem) return elem;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const flat = StyleSheet.flatten((elem as any).props?.style) as Record<string, unknown> | null;
+          const family = pretendardFamilyForWeight(flat?.fontWeight as string | number | undefined);
+          return React.cloneElement(elem, {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            style: [{ fontFamily: family }, (elem as any).props?.style],
+          });
+        } catch {
+          // render 후처리 실패 시 원본 결과 그대로 반환 — 폰트만 기본값으로 폴백
+          return orig.apply(this, args);
+        }
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (wrapped as any).__amatdaPretendardPatched = true;
+      Comp.render = wrapped;
     };
-  };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  patch(Text as any);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  patch(TextInput as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    patch(Text as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    patch(TextInput as any);
+  } catch {
+    // 패치 자체가 실패해도 앱 부팅은 절대 막지 말 것 — 시스템 기본 폰트로 폴백.
+  }
 })();
 import { Stack, router, useNavigationContainerRef } from 'expo-router';
 import * as Sentry from '@sentry/react-native';
@@ -139,6 +158,9 @@ function useNotificationSetup() {
     );
 
     // 콜드 스타트 (앱 종료 상태에서 푸시 클릭) 시 마지막 응답 처리
+    // ⚠️ 2026-05-08 fix: expo-router 의 navigation tree 가 mount 완료되기 전에 router.push
+    // 호출하면 "Attempted to navigate before mounting Root Layout" fatal (Sentry REACT-NATIVE-A).
+    // 다음 tick 으로 미뤄 mount 완료 후 호출 보장.
     Notifications.getLastNotificationResponseAsync()
       .then((response) => {
         if (!response) return;
@@ -147,7 +169,10 @@ function useNotificationSetup() {
           | undefined;
         const screen = typeof data?.screen === 'string' ? data.screen : null;
         if (screen && ALLOWED_PUSH_SCREENS.has(screen)) {
-          router.push(`/(main)/${screen}` as never);
+          setTimeout(() => {
+            try { router.push(`/(main)/${screen}` as never); }
+            catch { /* router 미준비 시 silent */ }
+          }, 300);
         }
       })
       .catch(() => {});
@@ -164,15 +189,29 @@ function useNotificationSetup() {
 
 type UpdateStatus = 'idle' | 'checking' | 'downloading' | 'ready' | 'restarting';
 
+// 45초 안에 다운로드 안 되면 포기하고 기존 버전으로 진행
+const FETCH_TIMEOUT_MS = 45_000;
+// 15초 이상 다운로드 중이면 건너뛰기 버튼 노출
+const SKIP_SHOW_MS = 15_000;
+
 function useOTAUpdate() {
   const [status, setStatus] = useState<UpdateStatus>('idle');
   const [progress, setProgress] = useState(0);
+  const [canSkip, setCanSkip] = useState(false);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const checkingRef = useRef(false);
+  const skipRef = useRef(false);
+
+  const skip = useCallback(() => {
+    skipRef.current = true;
+    setStatus('idle');
+    setCanSkip(false);
+  }, []);
 
   const checkAndApply = useCallback(async () => {
     if (__DEV__ || checkingRef.current) return;
     checkingRef.current = true;
+    skipRef.current = false;
 
     try {
       setStatus('checking');
@@ -187,20 +226,34 @@ function useOTAUpdate() {
       // 다운로드 시작 — 실제 진행률 시뮬레이션
       setStatus('downloading');
       setProgress(0);
+      setCanSkip(false);
 
       const startTime = Date.now();
       const progressTimer = setInterval(() => {
+        if (skipRef.current) { clearInterval(progressTimer); return; }
         const elapsed = Date.now() - startTime;
         // 0~3초: 0→70%, 3~6초: 70→90% (점점 느려지는 느낌)
         const p = elapsed < 3000
           ? (elapsed / 3000) * 0.7
           : 0.7 + Math.min((elapsed - 3000) / 6000, 1) * 0.2;
         setProgress(Math.min(p, 0.9));
+        // 15초 경과 시 건너뛰기 버튼 노출
+        if (elapsed >= SKIP_SHOW_MS) setCanSkip(true);
       }, 100);
 
-      await Updates.fetchUpdateAsync();
+      // 45초 타임아웃: 초과 시 에러로 처리 → catch 에서 idle로 복귀
+      await Promise.race([
+        Updates.fetchUpdateAsync(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('ota_timeout')), FETCH_TIMEOUT_MS)
+        ),
+      ]);
 
       clearInterval(progressTimer);
+
+      // 건너뛰기 눌린 경우 여기서 중단
+      if (skipRef.current) return;
+
       setProgress(1);
       setStatus('ready');
 
@@ -209,11 +262,16 @@ function useOTAUpdate() {
       setStatus('restarting');
       await Updates.reloadAsync();
     } catch (error) {
-      captureError(
-        error instanceof Error ? error : new Error(String(error)),
-        { context: 'OTA update check' },
-      );
+      const msg = error instanceof Error ? error.message : String(error);
+      // 타임아웃은 조용히 처리 (사용자가 건너뛰기로 처리하므로 Sentry 불필요)
+      if (msg !== 'ota_timeout') {
+        captureError(
+          error instanceof Error ? error : new Error(msg),
+          { context: 'OTA update check' },
+        );
+      }
       setStatus('idle');
+      setCanSkip(false);
     } finally {
       checkingRef.current = false;
     }
@@ -236,7 +294,7 @@ function useOTAUpdate() {
     return () => { clearTimeout(delayedCheck); sub.remove(); };
   }, [checkAndApply]);
 
-  return { status, progress };
+  return { status, progress, canSkip, skip };
 }
 
 function useLocationSetup() {
@@ -268,7 +326,12 @@ const STATUS_TEXT: Record<UpdateStatus, string> = {
   restarting: '새 버전을 적용하고 있어요',
 };
 
-function UpdateScreen({ status, progress }: { status: UpdateStatus; progress: number }) {
+function UpdateScreen({ status, progress, canSkip, onSkip }: {
+  status: UpdateStatus;
+  progress: number;
+  canSkip: boolean;
+  onSkip: () => void;
+}) {
   const bounce = useRef(new Animated.Value(0)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
   const checkScale = useRef(new Animated.Value(0)).current;
@@ -351,6 +414,13 @@ function UpdateScreen({ status, progress }: { status: UpdateStatus; progress: nu
         <Text style={upS.footer}>
           {isComplete ? '잠시 후 자동으로 시작됩니다' : '잠시만 기다려주세요'}
         </Text>
+
+        {/* 15초 이상 대기 시 건너뛰기 버튼 노출 */}
+        {canSkip && !isComplete && (
+          <TouchableOpacity style={upS.skipBtn} onPress={onSkip} activeOpacity={0.7}>
+            <Text style={upS.skipText}>건너뛰기 (현재 버전 사용)</Text>
+          </TouchableOpacity>
+        )}
       </Animated.View>
     </View>
   );
@@ -377,12 +447,17 @@ const upS = StyleSheet.create({
   progressFill: { height: 8, borderRadius: 4 },
   statusText: { fontSize: 16, fontWeight: '600', color: '#1C1C1E', marginBottom: 6 },
   footer: { fontSize: 13, color: '#ABABAB', fontWeight: '400' },
+  skipBtn: {
+    marginTop: 28, paddingHorizontal: 24, paddingVertical: 10,
+    borderRadius: 20, borderWidth: 1, borderColor: '#E5E5EA',
+  },
+  skipText: { fontSize: 13, color: '#ABABAB', fontWeight: '500' },
 });
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const hydrate = useAuthStore((s) => s.hydrate);
-  const { status, progress } = useOTAUpdate();
+  const { status, progress, canSkip, skip } = useOTAUpdate();
 
   // Pretendard 폰트 로드 — 로드 완료 전엔 ActivityIndicator 표시
   // (앱 번들에 임베드되어 있어도 RN은 명시적 로드 권장)
@@ -406,7 +481,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   // 업데이트 다운로드/적용 중이면 업데이트 화면 표시
   if (status === 'downloading' || status === 'ready' || status === 'restarting') {
-    return <UpdateScreen status={status} progress={progress} />;
+    return <UpdateScreen status={status} progress={progress} canSkip={canSkip} onSkip={skip} />;
   }
 
   if (!ready || !fontsLoaded) {

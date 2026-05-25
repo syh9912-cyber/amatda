@@ -8,6 +8,8 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Linking,
+  Platform,
 } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 
@@ -26,9 +28,11 @@ import {
   buildPortOneCheckoutParams,
   getPaymentMethodOptions,
   purchaseIAP,
+  restoreIAP,
   type PaymentMethod,
   type ProductId,
 } from '../../services/payment';
+import { analytics } from '../../services/analytics';
 
 interface PremiumPlan {
   id: string;
@@ -44,6 +48,7 @@ interface PremiumPlan {
 interface PremiumStatus {
   tier: 'FREE' | 'PAID';
   trialDaysLeft?: number;
+  trialUsed?: boolean;
   currentPlanId?: string;
   expiresAt?: string;
 }
@@ -62,8 +67,6 @@ const FALLBACK_PLANS: PremiumPlan[] = [
       '울음 분석 월 300회',
       'AI 수면 예측 무제한',
       '육아 패턴 분석 무제한',
-      '임당 식단 사진분석 하루 10회',
-      '타임라인 AI 자동기록',
       '광고 제거',
     ],
   },
@@ -89,8 +92,7 @@ const FREE_FEATURES = [
   { label: '울음 분석', free: '하루 2회', premium: '월 300회' },
   { label: 'AI 수면 예측', free: '하루 3회', premium: '무제한' },
   { label: '육아 패턴 분석', free: '하루 3회', premium: '무제한' },
-  { label: '임당 식단 사진분석', free: '하루 1회', premium: '하루 10회' },
-  { label: 'AI 자동기록', free: '-', premium: 'O' },
+  { label: 'AI 자동기록', free: 'O', premium: 'O' },
   { label: '대화 맥락', free: '7일', premium: '7일' },
   { label: '광고', free: '있음', premium: '없음' },
 ];
@@ -102,10 +104,10 @@ interface FeatureGuide {
 }
 
 const FEATURE_GUIDES: FeatureGuide[] = [
+  { emoji: '🚫', title: '광고 제거', desc: '앱 내 모든 광고가 사라져서 쾌적하게 이용할 수 있어요.' },
   { emoji: '💬', title: '상담이모', desc: '아이 기질에 맞는 맞춤 육아 답변을 받아보세요. 수면, 식사, 행동 등 모든 고민을 상담할 수 있어요.' },
   { emoji: '😢', title: '울음/대변 분석', desc: '상담이모 탭에서 아이 울음소리를 녹음하거나 대변 사진을 찍으면 분석해드려요.' },
   { emoji: '📝', title: '자동기록', desc: '타임라인에서 "오늘 하루 정리" 버튼을 누르면 수유, 수면, 상담 기록을 일기로 만들어줘요.' },
-  { emoji: '🚫', title: '광고 제거', desc: '앱 내 모든 광고가 사라져서 쾌적하게 이용할 수 있어요.' },
 ];
 
 // 결제 수단은 services/payment.ts의 getPaymentMethodOptions()로 동적 결정
@@ -155,12 +157,41 @@ export default function SubscriptionScreen() {
     if (!selectedPlan || !paymentMethod) return;
     const productId = planToProductId(selectedPlan);
 
+    // 0) 이중 결제 방지 — 이미 활성 구독 중이면 차단.
+    //    Google Play 의 별도 SKU 구조에서는 자동 cross-grade 가 안 됨 (월간+연간 동시 결제 가능).
+    //    플랜 변경은 사용자가 Google Play 정기 결제 관리 페이지에서 직접 변경해야 함.
+    if (status?.tier === 'PAID') {
+      const expiresAt = status.expiresAt ? new Date(status.expiresAt) : null;
+      const stillActive = expiresAt ? expiresAt > new Date() : true;
+      if (stillActive) {
+        Alert.alert(
+          '이미 구독 중이에요',
+          '현재 프리미엄을 이용 중이세요. 플랜 변경은 Google Play 정기 결제 관리에서 가능해요.',
+          [
+            { text: '취소', style: 'cancel' },
+            {
+              text: '구독 관리 열기',
+              onPress: () => {
+                Linking.openURL('https://play.google.com/store/account/subscriptions').catch(() => {
+                  Alert.alert('오류', '정기 결제 관리 페이지를 열 수 없어요.');
+                });
+              },
+            },
+          ],
+        );
+        return;
+      }
+    }
+
     // 1) IAP 분기 — Google Play / Apple
     if (paymentMethod === 'iap') {
       setSubscribing(true);
+      analytics.logSubscriptionStart(selectedPlan === 'yearly' ? 'yearly' : 'monthly', 'iap');
       try {
         const res = await purchaseIAP(productId);
         if (res.ok) {
+          const priceKRW = productId === 'premium_yearly' ? 33900 : 3900;
+          analytics.logPurchase(productId === 'premium_yearly' ? 'yearly' : 'monthly', priceKRW);
           Alert.alert('구독 완료', res.message ?? '프리미엄 기능을 이용해보세요!');
           loadData();
         } else {
@@ -231,10 +262,26 @@ export default function SubscriptionScreen() {
     setSubscribing(true);
     try {
       await premiumApi.startTrial();
+      analytics.logTrialStart();
       Alert.alert('체험 시작', '7일간 프리미엄 기능을 무료로 이용해보세요!');
       loadData();
     } catch {
       Alert.alert('오류', '체험 시작에 실패했습니다.');
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    setSubscribing(true);
+    try {
+      const res = await restoreIAP();
+      if (res.ok) {
+        Alert.alert('복원 완료', res.message ?? '구독이 복원되었습니다.');
+        loadData();
+      } else {
+        Alert.alert('복원 실패', res.message ?? '복원할 구매 내역이 없습니다.');
+      }
     } finally {
       setSubscribing(false);
     }
@@ -371,6 +418,9 @@ export default function SubscriptionScreen() {
             style={[styles.subscribeBtn, subscribing && styles.subscribeBtnDisabled]}
             onPress={handleSubscribe}
             disabled={subscribing}
+            accessibilityRole="button"
+            accessibilityLabel="구독 시작"
+            accessibilityHint="선택한 플랜으로 결제를 시작합니다"
           >
             {subscribing ? (
               <ActivityIndicator color="#FFF" />
@@ -379,16 +429,81 @@ export default function SubscriptionScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Free trial */}
-          {!status?.trialDaysLeft && (
+          {/* Free trial — trialUsed 면 비활성 + 안내 텍스트 (재시작 차단) */}
+          {status?.trialUsed ? (
+            <View style={[styles.trialBtn, styles.trialBtnDisabled]}>
+              <Text style={[styles.trialBtnText, styles.trialBtnTextDisabled]}>
+                이미 체험하셨습니다
+              </Text>
+            </View>
+          ) : !status?.trialDaysLeft ? (
             <TouchableOpacity
               style={styles.trialBtn}
               onPress={handleStartTrial}
               disabled={subscribing}
+              accessibilityRole="button"
+              accessibilityLabel="7일 무료 체험 시작"
             >
               <Text style={styles.trialBtnText}>7일 무료 체험 시작</Text>
             </TouchableOpacity>
-          )}
+          ) : null}
+
+          {/* 자동갱신 / 체험 고지 — Apple/Google 정책 필수 표기 */}
+          <Text style={styles.legalNotice}>
+            {'• 구독은 선택한 기간(월간/연간)으로 자동 갱신됩니다.\n' +
+            '• 7일 무료 체험 종료 후 선택한 플랜 요금이 자동 청구됩니다.\n' +
+            '• 갱신 24시간 전까지 구독을 취소하지 않으면 자동 결제됩니다.\n' +
+            '• 구독 취소: 설정 앱 → Apple ID(또는 Google Play 구독) → 구독 관리\n' +
+            '• 구독 기간 중 취소해도 만료일까지 이용 가능합니다.'}
+          </Text>
+
+          {/* 구매 복원 — Apple 필수 제공 */}
+          <TouchableOpacity
+            style={styles.restoreBtn}
+            onPress={handleRestorePurchases}
+            disabled={subscribing}
+            accessibilityRole="button"
+            accessibilityLabel="구매 복원"
+            accessibilityHint="이전에 구입한 구독을 복원합니다"
+          >
+            <Text style={styles.restoreBtnText}>구매 복원</Text>
+          </TouchableOpacity>
+
+          {/* 구독 관리 / 환불 안내 — Google/Apple 정책 + 한국 전자상거래법 준수 */}
+          <TouchableOpacity
+            style={styles.manageBtn}
+            onPress={() => {
+              const url = Platform.OS === 'ios'
+                ? 'https://apps.apple.com/account/subscriptions'
+                : 'https://play.google.com/store/account/subscriptions';
+              Linking.openURL(url).catch(() => {
+                Alert.alert('오류', '정기 결제 관리 페이지를 열 수 없어요.');
+              });
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="구독 취소 또는 환불 요청"
+          >
+            <Text style={styles.manageBtnText}>구독 취소 / 환불 요청</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.refundNotice}>
+            {'환불 정책:\n' +
+            '• 결제 후 7일 이내 미사용: 100% 환불\n' +
+            '• 결제 후 7일 이내 사용 이력 있음: 사용 일수 차감 후 환불\n' +
+            '• 결제 후 14일 초과: 회사 귀책 사유 없으면 환불 불가\n' +
+            '• 자세한 내용은 [이용약관 > 제12조] 참조'}
+          </Text>
+
+          {/* 약관 링크 — Apple 결제 화면 권장 */}
+          <View style={styles.policyRow}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://amatda-parenting.web.app/terms')}>
+              <Text style={styles.policyLink}>이용약관</Text>
+            </TouchableOpacity>
+            <Text style={styles.policySep}> · </Text>
+            <TouchableOpacity onPress={() => Linking.openURL('https://amatda-parenting.web.app/privacy')}>
+              <Text style={styles.policyLink}>개인정보처리방침</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Comparison table */}
           <Text style={styles.sectionTitle}>무료 vs 프리미엄</Text>
@@ -659,6 +774,77 @@ const styles = StyleSheet.create({
     color: COLORS.secondary,
     fontWeight: '700',
     fontSize: FONT_SIZE.md,
+  },
+  // 체험 사용 완료 — disabled 톤
+  trialBtnDisabled: {
+    borderColor: COLORS.border,
+    backgroundColor: '#F5F5F5',
+  },
+  trialBtnTextDisabled: {
+    color: COLORS.textLight,
+    fontWeight: '600',
+  },
+
+  // Legal notice (자동갱신 고지 — Apple/Google 정책)
+  legalNotice: {
+    fontSize: 11,
+    color: COLORS.textLight,
+    lineHeight: 17,
+    marginBottom: SPACING.md,
+    paddingHorizontal: SPACING.xs,
+  },
+
+  // Policy links (약관·개인정보 — Apple 결제 화면 권장)
+  policyRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  policyLink: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    textDecorationLine: 'underline',
+  },
+  policySep: {
+    fontSize: 11,
+    color: COLORS.textLight,
+  },
+
+  // Restore purchases (Apple 필수)
+  restoreBtn: {
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  restoreBtnText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    textDecorationLine: 'underline',
+  },
+
+  // 구독 관리 / 환불 안내
+  manageBtn: {
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.sm,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border ?? '#E0E0E0',
+  },
+  manageBtnText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  refundNotice: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+    paddingHorizontal: SPACING.sm,
+    marginBottom: SPACING.lg,
   },
 
   // Feature guide

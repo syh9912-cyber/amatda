@@ -25,6 +25,30 @@ function loadIAP(): any | null {
   }
 }
 
+// Google Play Billing client 는 initConnection() 호출 후 ready 상태가 됨.
+// 미호출 시 "Billing client not ready" 에러. 호출 누락 방지 위해 lazy 보장.
+let _iapInitialized = false;
+let _iapInitPromise: Promise<void> | null = null;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function ensureIAPInitialized(IAP: any): Promise<void> {
+  if (_iapInitialized) return;
+  if (!_iapInitPromise) {
+    _iapInitPromise = (async () => {
+      try {
+        if (typeof IAP.initConnection === 'function') {
+          await IAP.initConnection();
+        }
+        _iapInitialized = true;
+      } catch (e) {
+        _iapInitPromise = null; // 다음 호출에 재시도
+        throw e;
+      }
+    })();
+  }
+  await _iapInitPromise;
+}
+
 // ─── 상품 정의 (백엔드 PRODUCTS와 동일) ───
 export type ProductId = 'premium_monthly' | 'premium_yearly';
 
@@ -76,7 +100,8 @@ export interface PaymentMethodOption {
 
 export function getPaymentMethodOptions(): PaymentMethodOption[] {
   const env = getPortOneEnv();
-  const portOneAvailable = !!env.storeId;
+  // iOS는 Apple 정책상 IAP 외 외부결제 금지 — PortOne 옵션 완전 차단
+  const portOneAvailable = Platform.OS !== 'ios' && !!env.storeId;
   const iapLabel = Platform.OS === 'ios' ? 'Apple App Store' : 'Google Play';
   return [
     { id: 'iap', label: iapLabel, available: true, description: '플랫폼 자동 결제 (권장)' },
@@ -169,12 +194,83 @@ export async function endIAP(): Promise<void> {
   await IAP.endConnection();
 }
 
-/** 구독 상품 조회 (가격 표시용) */
+/** 구독 상품 조회 (가격 표시용). expo-iap 4.x: fetchProducts({skus, type}) */
 export async function fetchIAPSubscriptions(): Promise<unknown[]> {
   const IAP = loadIAP();
   if (!IAP) return [];
   const skus = ['premium_monthly', 'premium_yearly'];
-  return (await IAP.getSubscriptions(skus)) as unknown[];
+  try {
+    await ensureIAPInitialized(IAP);
+    if (typeof IAP.fetchProducts === 'function') {
+      return (await IAP.fetchProducts({ skus, type: 'subs' })) as unknown[];
+    }
+    // legacy fallback (expo-iap <4.x)
+    if (typeof IAP.getSubscriptions === 'function') {
+      return (await IAP.getSubscriptions({ skus })) as unknown[];
+    }
+  } catch {
+    /* swallow — empty list 반환 */
+  }
+  return [];
+}
+
+/**
+ * Android Google Play Billing v5+: subscription 구매 시 offerToken 필수.
+ * fetchProducts 결과에서 첫 번째 base plan offer 의 token 추출.
+ */
+function extractGoogleOfferToken(sub: unknown, productId: string): string | null {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const s = sub as any;
+  const offers =
+    s?.subscriptionOfferDetailsAndroid ??
+    s?.subscriptionOfferDetails ??
+    [];
+  if (!Array.isArray(offers) || offers.length === 0) return null;
+  // 첫 번째 offer (보통 base plan)의 token 반환
+  // 향후 무료 체험 offer 우선순위 분기 가능
+  const offer = offers[0];
+  return offer?.offerToken ?? null;
+}
+
+/**
+ * IAP 구매 복원 (Apple/Google 기기 변경 or 재설치 후 사용)
+ * — 과거 구매 목록을 조회해 서버 재검증 → 구독 상태 복원
+ */
+export async function restoreIAP(): Promise<{ ok: boolean; message?: string }> {
+  const IAP = loadIAP();
+  if (!IAP) return { ok: false, message: '인앱결제 기능을 사용할 수 없습니다.' };
+
+  let purchases: unknown[];
+  try {
+    await ensureIAPInitialized(IAP);
+    purchases = (await IAP.getAvailablePurchases()) as unknown[];
+  } catch (e) {
+    return { ok: false, message: '구매 내역을 불러오지 못했습니다: ' + String(e) };
+  }
+
+  if (!purchases || purchases.length === 0) {
+    return { ok: false, message: '복원할 구매 내역이 없습니다.' };
+  }
+
+  // 가장 최근 구독 구매를 서버에 재검증
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const latest = purchases[0] as any;
+  const purchaseToken: string | undefined = latest?.purchaseToken ?? latest?.purchaseTokenAndroid;
+  const originalTransactionId: string | undefined =
+    latest?.originalTransactionIdentifierIOS ?? latest?.originalTransactionId ?? latest?.transactionId;
+  const productId: string | undefined = latest?.productId ?? latest?.productIds?.[0];
+
+  try {
+    await paymentApi.verifyIAP({
+      platform: Platform.OS === 'ios' ? 'apple' : 'google',
+      productId: (productId ?? 'premium_monthly') as ProductId,
+      purchaseToken,
+      originalTransactionId,
+    });
+    return { ok: true, message: '구매가 복원되었습니다.' };
+  } catch {
+    return { ok: false, message: '서버 검증에 실패했습니다. 잠시 후 다시 시도해주세요.' };
+  }
 }
 
 /**
@@ -190,15 +286,66 @@ export async function purchaseIAP(productId: ProductId): Promise<{
   if (!IAP) {
     return { ok: false, message: '인앱결제 기능은 다음 업데이트에서 사용 가능합니다.' };
   }
-  // 1) 결제 요청 (네이티브 결제창 띄움)
+
+  // 0) Billing client connection 보장 (idempotent).
+  //    "Billing client not ready" 에러 방지.
+  try {
+    await ensureIAPInitialized(IAP);
+  } catch (e) {
+    return { ok: false, message: 'IAP 연결 실패: ' + String(e) };
+  }
+
+  // 1) Android Google Play Billing v5+ 는 subscription 구매 시 offerToken 필수.
+  //    먼저 상품 정보를 fetch 해 첫 base plan offer token 추출.
+  //    iOS 는 offerToken 불필요 (Apple StoreKit 모델).
+  let googleOfferToken: string | null = null;
+  if (Platform.OS === 'android') {
+    try {
+      const fetched =
+        typeof IAP.fetchProducts === 'function'
+          ? await IAP.fetchProducts({ skus: [productId], type: 'subs' })
+          : typeof IAP.getSubscriptions === 'function'
+            ? await IAP.getSubscriptions({ skus: [productId] })
+            : [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const arr = (fetched as any[]) || [];
+      const sub = arr.find((s) => s?.id === productId || s?.productId === productId) ?? arr[0];
+      googleOfferToken = extractGoogleOfferToken(sub, productId);
+      if (!googleOfferToken) {
+        return {
+          ok: false,
+          message: '구독 상품 정보를 불러오지 못했습니다. Play Store 등록 상태를 확인해주세요.',
+        };
+      }
+    } catch (e) {
+      return { ok: false, message: '상품 조회 실패: ' + String(e) };
+    }
+  }
+
+  // 2) 결제 요청 (네이티브 결제창 띄움). expo-iap 4.x platform 분기 형식.
   let purchase: unknown;
   try {
-    if (typeof IAP.requestSubscription === 'function') {
-      purchase = await IAP.requestSubscription({ sku: productId });
-    } else if (typeof IAP.requestPurchase === 'function') {
-      purchase = await IAP.requestPurchase({ sku: productId });
-    } else {
+    if (typeof IAP.requestPurchase !== 'function') {
       return { ok: false, message: 'IAP 모듈이 초기화되지 않았습니다.' };
+    }
+    purchase = await IAP.requestPurchase({
+      request: {
+        apple: { sku: productId },
+        google: {
+          skus: [productId],
+          subscriptionOffers: googleOfferToken
+            ? [{ sku: productId, offerToken: googleOfferToken }]
+            : [],
+        },
+      },
+      type: 'subs',
+    });
+    // requestPurchase 가 Purchase[] 를 반환할 수 있음 → 첫 항목만 사용
+    if (Array.isArray(purchase)) {
+      purchase = purchase[0];
+    }
+    if (!purchase) {
+      return { ok: false, message: '결제가 취소되었거나 응답을 받지 못했습니다.' };
     }
   } catch (e) {
     return { ok: false, message: 'IAP 결제 취소 또는 실패: ' + String(e) };
@@ -219,6 +366,8 @@ export async function purchaseIAP(productId: ProductId): Promise<{
   }
 
   // 3) 서버 검증 호출
+  let verifyOk = false;
+  let verifyData: { expiresAt?: string; message?: string } | undefined;
   try {
     const res = await paymentApi.verifyIAP({
       platform: Platform.OS === 'ios' ? 'apple' : 'google',
@@ -226,17 +375,18 @@ export async function purchaseIAP(productId: ProductId): Promise<{
       purchaseToken,
       originalTransactionId,
     });
-    const data = res.data?.data as { expiresAt?: string; message?: string } | undefined;
-
-    // 4) 트랜잭션 finalize
-    try {
-      await IAP.finishTransaction({ purchase, isConsumable: false });
-    } catch {
-      // 무시 (서버는 이미 검증 완료)
-    }
-
-    return { ok: true, expiresAt: data?.expiresAt, message: data?.message };
+    verifyData = res.data?.data as { expiresAt?: string; message?: string } | undefined;
+    verifyOk = true;
   } catch (e) {
+    // 서버 검증 실패 — finishTransaction은 아래서 반드시 호출 (트랜잭션 보류 방지)
+    try { await IAP.finishTransaction({ purchase, isConsumable: false }); } catch { /* 무시 */ }
     return { ok: false, message: '서버 검증 실패: ' + String(e) };
   }
+
+  // 4) 검증 성공 → 트랜잭션 finalize (Apple/Google 모두 필수)
+  if (verifyOk) {
+    try { await IAP.finishTransaction({ purchase, isConsumable: false }); } catch { /* 무시 */ }
+  }
+
+  return { ok: true, expiresAt: verifyData?.expiresAt, message: verifyData?.message };
 }

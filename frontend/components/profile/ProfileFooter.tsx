@@ -32,20 +32,38 @@ export function ProfileFooter({ onLogout, onDeleteAccount }: ProfileFooterProps)
   return (
     <View style={styles.container}>
       <View style={styles.linksRow}>
-        <TouchableOpacity onPress={() => router.push('/(main)/privacy' as never)}>
+        <TouchableOpacity
+          onPress={() => router.push('/(main)/privacy' as never)}
+          accessibilityRole="link"
+          accessibilityLabel="개인정보 처리방침"
+        >
           <Text style={styles.linkText}>개인정보 처리방침</Text>
         </TouchableOpacity>
         <Text style={styles.divider}>|</Text>
-        <TouchableOpacity onPress={() => router.push('/(main)/terms' as never)}>
+        <TouchableOpacity
+          onPress={() => router.push('/(main)/terms' as never)}
+          accessibilityRole="link"
+          accessibilityLabel="이용약관"
+        >
           <Text style={styles.linkText}>이용약관</Text>
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity onPress={onLogout} style={styles.logoutBtn}>
+      <TouchableOpacity
+        onPress={onLogout}
+        style={styles.logoutBtn}
+        accessibilityRole="button"
+        accessibilityLabel="로그아웃"
+      >
         <Text style={styles.logoutText}>로그아웃</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={onDeleteAccount}>
+      <TouchableOpacity
+        onPress={onDeleteAccount}
+        accessibilityRole="button"
+        accessibilityLabel="계정 삭제"
+        accessibilityHint="모든 계정 정보와 자녀 기록이 영구 삭제됩니다"
+      >
         <Text style={styles.deleteText}>계정 삭제</Text>
       </TouchableOpacity>
 

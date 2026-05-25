@@ -79,7 +79,9 @@ export interface DayStat {
   dateLabel: string;
   dateStr: string;
   diaper: number;
-  feeding: number;
-  feedingMl: number;
+  feeding: number; // 횟수
+  feedingMl: number; // 총 수유량 (분유 + 모유 추정) — 하위 호환
+  formulaMl: number; // 분유 (amount 합)
+  breastMl: number; // 모유 추정 (시간 × 20ml/분)
   sleepMin: number;
 }

@@ -223,7 +223,7 @@ export function HospitalRegisterModal({
 
           <Text style={styles.label}>📞 급할 때 바로 연결할 번호 *</Text>
           <Text style={styles.subLabel}>
-            병원 외래든 분만실이든, 가장 빨리 받는 번호 하나만 입력해도 OK
+            낮에는 외래, 밤·휴일엔 분만실 — 가장 빨리 받는 번호 하나만 입력해도 OK
           </Text>
           <TextInput
             style={styles.input}
@@ -254,7 +254,7 @@ export function HospitalRegisterModal({
               <Text style={styles.subLabel}>
                 {tab === 'delivery' && isUniversityHospital
                   ? '대학병원은 고위험산모센터(MFICU) 번호를 등록하면 좋아요'
-                  : '있으면 밤·주말에 우선 연결되는 번호'}
+                  : '밤이나 휴일, 응급 상황 발생 시 분만실로 즉시 연결되는 번호예요'}
               </Text>
               <TextInput
                 style={styles.input}

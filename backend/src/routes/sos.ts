@@ -493,26 +493,27 @@ router.get('/fever-calculator', authMiddleware, async (req: Request, res: Respon
         ? childData.weight
         : estimateWeightFromAge(ageMonths);
 
-    // 아세트아미노펜 (타이레놀): 10-15 mg/kg, 32mg/ml 시럽
-    const acetaminophenDoseMg = Math.round(childWeight * 12.5 * 10) / 10; // 중간값 12.5
+    // 보수값(최소) 적용 — 2026-05-15 사용자 요청.
+    // 아세트아미노펜: 권장 10-15mg/kg → 최소 10mg/kg, 32mg/ml 시럽 (타이레놀/챔프 빨강)
+    const acetaminophenDoseMg = Math.round(childWeight * 10 * 10) / 10;
     const acetaminophenSyrupMl = Math.round((acetaminophenDoseMg / 32) * 10) / 10;
 
-    // 이부프로펜 (부루펜): 5-10 mg/kg, 20mg/ml 시럽
-    const ibuprofenDoseMg = Math.round(childWeight * 7.5 * 10) / 10; // 중간값 7.5
+    // 이부프로펜: 권장 5-10mg/kg → 최소 5mg/kg, 20mg/ml 시럽 (부루펜/맥시부펜/챔프 파랑)
+    const ibuprofenDoseMg = Math.round(childWeight * 5 * 10) / 10;
     const ibuprofenSyrupMl = Math.round((ibuprofenDoseMg / 20) * 10) / 10;
 
     const isUnder6Months = ageMonths < 6;
 
     const acetaminophen: DoseInfo = {
-      doseMg: `${Math.round(childWeight * 10)}-${Math.round(childWeight * 15)}mg (권장 ${acetaminophenDoseMg}mg)`,
-      syrupMl: `${acetaminophenSyrupMl}ml (어린이 타이레놀 시럽 32mg/ml 기준)`,
+      doseMg: `${acetaminophenDoseMg}mg (권장 범위 ${Math.round(childWeight * 10)}-${Math.round(childWeight * 15)}mg)`,
+      syrupMl: `${acetaminophenSyrupMl}ml (32mg/ml 시럽 기준 · ER 시럽은 농도 다름)`,
       interval: '4-6시간 간격',
       maxDaily: '하루 최대 5회',
     };
 
     const ibuprofen: DoseInfo = {
-      doseMg: `${Math.round(childWeight * 5)}-${Math.round(childWeight * 10)}mg (권장 ${ibuprofenDoseMg}mg)`,
-      syrupMl: `${ibuprofenSyrupMl}ml (어린이 부루펜 시럽 20mg/ml 기준)`,
+      doseMg: `${ibuprofenDoseMg}mg (권장 범위 ${Math.round(childWeight * 5)}-${Math.round(childWeight * 10)}mg)`,
+      syrupMl: `${ibuprofenSyrupMl}ml (20mg/ml 시럽 기준 · 고농도 시럽은 농도 다름)`,
       interval: '6-8시간 간격',
       maxDaily: '하루 최대 3회',
       ...(isUnder6Months ? { ageRestriction: '6개월 미만 영아에게는 이부프로펜을 투여하지 마세요' } : {}),
@@ -534,14 +535,14 @@ router.get('/fever-calculator', authMiddleware, async (req: Request, res: Respon
           '이 패턴을 반복 (24시간 이상 지속 시 병원 방문)',
         ];
 
-    let warning = '해열제는 체중 기준으로 용량을 계산합니다. ';
+    let warning = '⚠️ 본 계산은 일반 가이드용 보수값(권장 범위 최소치)이며 의료 진단을 대체하지 않습니다. ';
     if (typeof childData.weight !== 'number' || childData.weight <= 0) {
       warning += '체중이 등록되지 않아 나이 기반 추정치를 사용했습니다. 정확한 용량을 위해 아이 프로필에 체중을 등록해주세요. ';
     }
     if (temperature !== undefined && temperature >= 39) {
       warning += '39도 이상의 고열이면 해열제 투여 후 30분 내 병원 방문을 권장합니다. ';
     }
-    warning += '반드시 제품 설명서를 확인하고, 의사의 지시를 따라주세요.';
+    warning += '반드시 제품 설명서의 농도(예: 32mg/ml, 48mg/ml ER)를 확인하고, 의사·약사 지시를 우선해주세요.';
 
     const result: FeverCalcResult = {
       childWeight,
@@ -574,14 +575,28 @@ router.post('/notify-family', authMiddleware, async (req: Request, res: Response
       return;
     }
 
-    // 아이 정보 조회
+    // 아이 정보 조회 + 소유권/가족 멤버 검증 (BOLA 방어)
+    // 임의 childId 로 다른 사용자 가족에게 긴급 푸시 발송 차단.
     const childDoc = await collections.children.doc(childId).get();
     if (!childDoc.exists) {
       error(res, '아이 정보를 찾을 수 없습니다', 404);
       return;
     }
-
     const childData = childDoc.data()!;
+    const isOwner = childData.userId === req.userId;
+    if (!isOwner) {
+      // 소유자 아니면 가족 멤버(accepted)인지 확인
+      const memberSnap = await collections.familyMembers
+        .where('childId', '==', childId)
+        .where('userId', '==', req.userId)
+        .where('status', '==', 'accepted')
+        .limit(1)
+        .get();
+      if (memberSnap.empty) {
+        error(res, '아이 정보를 찾을 수 없습니다', 404);
+        return;
+      }
+    }
     const childName = childData.name as string;
 
     // 가족 구성원 조회 (accepted 상태만)

@@ -29,7 +29,7 @@ import { PostCard } from '../../components/momstagram/PostCard';
 import { CommentsModal } from '../../components/momstagram/CommentsModal';
 import { StoriesRow } from '../../components/momstagram/StoriesRow';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
-import { uploadApi } from '../../services/api';
+import { uploadApi, momstagramApi } from '../../services/api';
 
 const CATEGORIES: PostCategory[] = ['일상', '학습', '여행', '기념일', '기타'];
 
@@ -82,43 +82,114 @@ export default function MomstagramScreen() {
     Alert.alert('공유', '이 게시물의 링크가 복사되었습니다.');
   }, []);
 
+  const handleReportPost = useCallback((postId: string) => {
+    Alert.alert('이 게시글을 신고하시겠어요?', '사유를 선택해주세요', [
+      { text: '욕설/혐오', onPress: () => sendReport(postId, 'abuse') },
+      { text: '광고/홍보', onPress: () => sendReport(postId, 'ad') },
+      { text: '개인정보 노출', onPress: () => sendReport(postId, 'privacy') },
+      { text: '음란/선정성', onPress: () => sendReport(postId, 'sexual') },
+      { text: '도배/스팸', onPress: () => sendReport(postId, 'spam') },
+      { text: '기타', onPress: () => sendReport(postId, 'other') },
+      { text: '취소', style: 'cancel' },
+    ]);
+  }, []);
+
+  const sendReport = async (
+    postId: string,
+    reason: 'abuse' | 'ad' | 'privacy' | 'spam' | 'sexual' | 'other',
+  ) => {
+    try {
+      await momstagramApi.reportPost(postId, reason);
+      Alert.alert('신고 완료', '신고가 접수되었습니다. 24시간 내 검토합니다.');
+      refresh();
+    } catch {
+      Alert.alert('오류', '신고 처리에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  const handleBlockUser = useCallback((targetUserId: string, userName: string) => {
+    Alert.alert(
+      `${userName}님을 차단하시겠어요?`,
+      '차단한 사용자의 게시글이 피드에 보이지 않습니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '차단',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await momstagramApi.blockUser(targetUserId);
+              Alert.alert('차단 완료', '해당 사용자의 게시글이 더 이상 보이지 않습니다.');
+              refresh();
+            } catch {
+              Alert.alert('오류', '차단 처리에 실패했습니다.');
+            }
+          },
+        },
+      ],
+    );
+  }, [refresh]);
+
   const handleMore = useCallback((postId: string) => {
     const post = allPosts.find((p) => p.id === postId);
     if (!post) return;
-    Alert.alert('게시글 메뉴', undefined, [
-      {
-        text: '수정',
-        onPress: () => {
-          setEditContent(post.content);
-          setEditCategory((post.category as PostCategory) ?? '일상');
-          setEditImage(post.imageUri);
-          setEditImageChanged(false);
-          setEditingPost(post);
+    const isOwner = !!post.isPrivate || (!!currentUserId && post.userId === currentUserId);
+
+    if (isOwner) {
+      // 본인 글 — 수정/삭제
+      Alert.alert('게시글 메뉴', undefined, [
+        {
+          text: '수정',
+          onPress: () => {
+            setEditContent(post.content);
+            setEditCategory((post.category as PostCategory) ?? '일상');
+            setEditImage(post.imageUri);
+            setEditImageChanged(false);
+            setEditingPost(post);
+          },
         },
-      },
-      {
-        text: '삭제',
-        style: 'destructive',
-        onPress: () => {
-          Alert.alert('게시글 삭제', '정말 삭제하시겠습니까?', [
-            { text: '취소', style: 'cancel' },
-            {
-              text: '삭제',
-              style: 'destructive',
-              onPress: async () => {
-                try {
-                  await deletePost(postId);
-                } catch {
-                  Alert.alert('오류', '삭제에 실패했습니다. 다시 시도해주세요.');
-                }
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert('게시글 삭제', '정말 삭제하시겠습니까?', [
+              { text: '취소', style: 'cancel' },
+              {
+                text: '삭제',
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    await deletePost(postId);
+                  } catch {
+                    Alert.alert('오류', '삭제에 실패했습니다. 다시 시도해주세요.');
+                  }
+                },
               },
-            },
-          ]);
+            ]);
+          },
         },
-      },
-      { text: '취소', style: 'cancel' },
-    ]);
-  }, [allPosts, deletePost]);
+        { text: '취소', style: 'cancel' },
+      ]);
+    } else {
+      // 타인 글 — 신고/차단 (UGC 정책)
+      const targetUserId = post.userId;
+      const blockButton = targetUserId
+        ? [{
+            text: `${post.userName}님 차단`,
+            style: 'destructive' as const,
+            onPress: () => handleBlockUser(targetUserId, post.userName),
+          }]
+        : [];
+      Alert.alert('게시글 메뉴', undefined, [
+        {
+          text: '신고하기',
+          onPress: () => handleReportPost(postId),
+        },
+        ...blockButton,
+        { text: '취소', style: 'cancel' },
+      ]);
+    }
+  }, [allPosts, deletePost, currentUserId, handleReportPost, handleBlockUser]);
 
   const handleEditPickImage = useCallback(async () => {
     const picked = await pickImageFromLibrary({ quality: 0.8 });

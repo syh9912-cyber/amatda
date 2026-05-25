@@ -12,8 +12,9 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image, ImageSourcePropType } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Path, RadialGradient, Defs, Stop, Circle } from 'react-native-svg';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -34,7 +35,13 @@ interface Props {
   description?: string;
   /** 풀스크린 레이아웃 (배경/패딩 확장) */
   fullScreen?: boolean;
-  onSeeDetail: () => void;
+  /**
+   * 컴팩트 모드 — ConicDisc/spacing 축소. 광고 활성 시 cover 영역 50pt 축소되어
+   * statsRow value 잘리는 문제 방지용. false(기본)면 원래 사이즈.
+   */
+  compact?: boolean;
+  /** CTA 클릭 핸들러. undefined 면 CTA 자체 숨김 (풀 리포트 안에 표지 삽입 시 사용). */
+  onSeeDetail?: () => void;
 }
 
 /** 기질 표시 매핑 — 내부 fiveElements 키 → 화면용 기질 라벨. 오행 단어 노출 금지. */
@@ -46,15 +53,84 @@ const TRAITS: { key: keyof FiveElements; label: string }[] = [
   { key: 'water', label: '지혜' },
 ];
 
-/** dominantType → 표지 상징 PNG (배경 없는 심볼릭 이미지) */
-const TYPE_ICON: Record<string, ImageSourcePropType> = {
-  탐구형: require('../../assets/quick-sprout.png'),     // 새싹 = 호기심·탐구
-  활동형: require('../../assets/academy-sports.png'),   // 스포츠 = 에너지·활동
-  조화형: require('../../assets/icon-heart.png'),       // 하트 = 따뜻함·조화
-  분석형: require('../../assets/quick-report.png'),     // 차트 = 분석·관찰
-  감성형: require('../../assets/preg-leaf.png'),        // 잎 = 섬세함·감성
-};
-const FALLBACK_ICON: ImageSourcePropType = require('../../assets/icon-heart.png');
+/**
+ * Hero disc — 일식/월식 풍 어두운 구체 + 외곽 골드 코로나 글로우 + 중앙 작은 4점 별.
+ *
+ * 사용자 reference 디자인 매칭:
+ *  - 가운데 어두운 갈색 구체 (radial: 중앙은 살짝 밝은 갈색 → 외곽은 흑색)
+ *  - 구체 외곽에 따뜻한 골드 글로우 (코로나 효과)
+ *  - 정중앙 작은 4-pointed star (황금)
+ *
+ * 캔버스 비율: hero 영역에 글로우까지 포함하려면 size = 2 × disc_radius.
+ */
+function ConicDisc({ size, dominantType }: { size: number; dominantType: string }) {
+  const colors = TYPE_DISC_COLORS[dominantType] ?? DEFAULT_DISC_COLORS;
+  const cx = size / 2;
+  const cy = size / 2;
+  const discR = size * 0.32;        // 검은 구체 반지름
+  const haloR = size * 0.46;        // 글로우 외곽 반지름
+  const starOuter = size * 0.06;
+  const starInner = size * 0.018;
+
+  // 4-pointed star path (정중앙 cx,cy)
+  const sp = (a: number, r: number) => {
+    const rad = (a * Math.PI) / 180;
+    return `${(cx + r * Math.cos(rad)).toFixed(2)} ${(cy + r * Math.sin(rad)).toFixed(2)}`;
+  };
+  // 8 points alternating outer/inner, starting at top (-90deg)
+  const starPoints: string[] = [];
+  for (let i = 0; i < 8; i++) {
+    const a = -90 + i * 45;
+    starPoints.push(sp(a, i % 2 === 0 ? starOuter : starInner));
+  }
+  const starPath = `M ${starPoints.join(' L ')} Z`;
+
+  return (
+    <Svg width={size} height={size}>
+      <Defs>
+        {/* 외곽 코로나 — dominantType 별 액센트 색 글로우 */}
+        <RadialGradient id="halo" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+          <Stop offset="0%" stopColor="#000000" stopOpacity="0" />
+          <Stop offset="55%" stopColor="#000000" stopOpacity="0" />
+          <Stop offset="68%" stopColor={colors.halo[0]} stopOpacity="0.55" />
+          <Stop offset="78%" stopColor={colors.halo[1]} stopOpacity="0.25" />
+          <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
+        </RadialGradient>
+        {/* 검은 구체 본체 — 살짝 위쪽에 하이라이트 (35%, 35%) */}
+        <RadialGradient id="orb" cx="50%" cy="50%" r="50%" fx="35%" fy="35%">
+          <Stop offset="0%" stopColor="#2A1F18" />
+          <Stop offset="55%" stopColor="#150E08" />
+          <Stop offset="100%" stopColor="#080404" />
+        </RadialGradient>
+        {/* 별 — dominantType 액센트 그라데이션 */}
+        <RadialGradient id="star" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor={colors.star[0]} />
+          <Stop offset="60%" stopColor={colors.star[1]} />
+          <Stop offset="100%" stopColor={colors.star[2]} />
+        </RadialGradient>
+      </Defs>
+
+      {/* 1) 외곽 골드 글로우 (코로나) */}
+      <Circle cx={cx} cy={cy} r={haloR} fill="url(#halo)" />
+
+      {/* 2) 검은 구체 */}
+      <Circle cx={cx} cy={cy} r={discR} fill="url(#orb)" />
+
+      {/* 3) 구체 안쪽 림 — 가장자리 골드 라인 */}
+      <Circle
+        cx={cx}
+        cy={cy}
+        r={discR}
+        fill="none"
+        stroke="rgba(230,168,120,0.35)"
+        strokeWidth={1.2}
+      />
+
+      {/* 4) 중앙 4점 별 */}
+      <Path d={starPath} fill="url(#star)" />
+    </Svg>
+  );
+}
 
 /** dominantType → 주성향 한 단어 라벨 */
 const TYPE_PRIMARY_LABEL: Record<string, string> = {
@@ -65,22 +141,40 @@ const TYPE_PRIMARY_LABEL: Record<string, string> = {
   감성형: '지혜',
 };
 
-/** dominantType → 그라디언트 배경 (5가지 성향마다 다른 톤) */
-const TYPE_GRADIENT: Record<string, [string, string, string]> = {
-  탐구형: ['#5A2E1A', '#3A1A0E', '#1A0A05'], // 따뜻한 갈색·주황 톤 (불·열정)
-  활동형: ['#5A1F1F', '#3A0F0F', '#1A0505'], // 빨강·오렌지 (에너지)
-  조화형: ['#1F4A38', '#0F2D24', '#051A12'], // 초록·민트 (안정·자연)
-  분석형: ['#1F2E5A', '#0F1B3A', '#05101A'], // 네이비·블루 (이성)
-  감성형: ['#4A1F50', '#2D0F35', '#1A0520'], // 퍼플·핑크 (감성)
+/**
+ * dominantType 별 다크 모드 그라디언트 — 원래 다크 브라운 베이스 유지 +
+ * type 별 살짝 다른 hue 로 시각 차별화. 어두운 톤이라 차분/고급.
+ */
+export const TYPE_GRADIENT: Record<string, [string, string, string]> = {
+  탐구형: ['#3A2818', '#1F1208', '#0A0604'], // warm amber dark
+  활동형: ['#3A1A18', '#1F0A08', '#0A0404'], // crimson dark
+  조화형: ['#1F2F1F', '#0F1A0F', '#050A05'], // forest dark
+  분석형: ['#1A1F3A', '#0F1224', '#05060A'], // navy dark
+  감성형: ['#2A1A3A', '#1A0F24', '#0A050A'], // plum dark
+};
+const DEFAULT_GRADIENT: [string, string, string] = TYPE_GRADIENT.분석형;
+
+/** primary 텍스트/액센트 색 — 다크 배경 위 밝은 액센트 (가독성) */
+const TYPE_PRIMARY_COLOR: Record<string, string> = {
+  탐구형: '#FCD34D', // amber 300
+  활동형: '#FB7185', // rose 400
+  조화형: '#6EE7B7', // emerald 300
+  분석형: '#93C5FD', // blue 300
+  감성형: '#C4B5FD', // violet 300
 };
 
-const TYPE_PRIMARY_COLOR: Record<string, string> = {
-  탐구형: '#FF8C5A',
-  활동형: '#FF6B6B',
-  조화형: '#5CCB9E',
-  분석형: '#7C9CFF',
-  감성형: '#C490E8',
+/**
+ * dominantType 별 ConicDisc halo/star 액센트 색 — 배경 hue 와 매칭.
+ * halo: [outer, mid] (외곽 글로우), star: [outer, mid, inner] (4점 별 그라디언트).
+ */
+const TYPE_DISC_COLORS: Record<string, { halo: [string, string]; star: [string, string, string] }> = {
+  탐구형: { halo: ['#FCD34D', '#B45309'], star: ['#FEF3C7', '#FCD34D', '#B45309'] },
+  활동형: { halo: ['#FB7185', '#9F1239'], star: ['#FECDD3', '#FB7185', '#9F1239'] },
+  조화형: { halo: ['#6EE7B7', '#047857'], star: ['#D1FAE5', '#6EE7B7', '#047857'] },
+  분석형: { halo: ['#93C5FD', '#1E40AF'], star: ['#DBEAFE', '#93C5FD', '#1E40AF'] },
+  감성형: { halo: ['#C4B5FD', '#6D28D9'], star: ['#EDE9FE', '#C4B5FD', '#6D28D9'] },
 };
+const DEFAULT_DISC_COLORS = TYPE_DISC_COLORS.분석형;
 
 /** dominantType → 5가지 아키타입 짧은 라벨 (예: "탐구형 활동가") */
 const TYPE_ARCHETYPE: Record<string, string> = {
@@ -134,12 +228,13 @@ export function EditorialCover({
   fiveElements,
   description,
   fullScreen,
+  compact,
   onSeeDetail,
 }: Props) {
-  const heroIcon = TYPE_ICON[dominantType] ?? FALLBACK_ICON;
   const primary = TYPE_PRIMARY_LABEL[dominantType] ?? '균형';
-  const primaryColor = TYPE_PRIMARY_COLOR[dominantType] ?? '#FF8C5A';
-  const gradient = TYPE_GRADIENT[dominantType] ?? ['#3A1F18', '#2A1410', '#1A0E0B'];
+  const primaryColor = TYPE_PRIMARY_COLOR[dominantType] ?? '#93C5FD';
+  // dominantType 별 코발트 톤 그라디언트
+  const gradient = TYPE_GRADIENT[dominantType] ?? DEFAULT_GRADIENT;
   // 표지 설명은 항상 짧고 구체적인 fallback 사용 (백엔드 summary는 길고 추상적이라 상세 페이지에서만 표시)
   const desc = TYPE_DESC[dominantType] || '아이만의 고유한 기질이에요.';
   const titleText = shortLabel(label || dominantType, dominantType);
@@ -152,35 +247,47 @@ export function EditorialCover({
     return Math.max(0, Math.min(100, Math.round(v)));
   };
 
+  // fullScreen 모드는 부모(trait-detail) 가 root level 그라디언트를 책임 → 자체 LinearGradient 안 그림 (transparent View)
+  // card 모드(analysis-detail 안)는 자체 그라디언트로 카드 배경 그림
+  const Container = fullScreen ? View : LinearGradient;
+  // compact: 광고 활성 시 cover 영역 50pt 축소 흡수용 패딩 축소.
+  const fullScreenStyle = compact
+    ? [styles.fullScreen, styles.fullScreenCompact]
+    : styles.fullScreen;
+  const containerProps = fullScreen
+    ? { style: fullScreenStyle }
+    : { colors: gradient, start: { x: 0.1, y: 0 }, end: { x: 0.9, y: 1 }, style: styles.card };
+  // ConicDisc + heroWrap 사이즈는 compact 에서만 작게.
+  const heroSize = compact ? 130 : 150;
+  const heroWrapStyle = compact
+    ? [styles.heroWrap, styles.heroWrapCompact]
+    : styles.heroWrap;
+  const descStyle = compact ? [styles.desc, styles.descCompact] : styles.desc;
+
   return (
-    <LinearGradient
-      colors={gradient}
-      start={{ x: 0.1, y: 0 }}
-      end={{ x: 0.9, y: 1 }}
-      style={fullScreen ? styles.fullScreen : styles.card}
-    >
+    <Container {...(containerProps as React.ComponentProps<typeof LinearGradient>)}>
       <View>
-        {/* Top meta */}
+        {/* Top meta — 영문 매거진 톤 */}
         <View style={styles.metaRow}>
-          <Text style={styles.metaLeft}>{'아맞다 · 기질 리포트'}</Text>
+          <Text style={styles.metaLeft}>{'INNATE TEMPERAMENT REPORT'}</Text>
           <Text style={styles.metaRight}>{todayKo()}</Text>
         </View>
 
         {/* Vol */}
         <Text style={styles.vol}>{'VOL. 01'}</Text>
-        <Text style={styles.subject}>{`${childName}, ${ageLabel(ageMonths)}`}</Text>
+        <Text style={styles.subject}>{`${childName} · ${ageLabel(ageMonths)}`}</Text>
       </View>
 
-      {/* Center hero */}
+      {/* Center hero — conic gradient disc, dominantType 별 halo/star 액센트 색 매칭.
+          compact=true (광고 활성) 일 때 ConicDisc/spacing 작게 → statsRow 잘림 방지. */}
       <View style={styles.center}>
-        <View style={styles.heroWrap}>
-          <View style={[styles.heroGlow, { backgroundColor: `${primaryColor}33` }]} />
-          <Image source={heroIcon} style={styles.heroIcon} resizeMode="contain" />
+        <View style={heroWrapStyle}>
+          <ConicDisc size={heroSize} dominantType={dominantType} />
         </View>
 
         <Text style={[styles.primaryLabel, { color: primaryColor }]}>{`주성향 · ${primary}`}</Text>
         <Text style={styles.title}>{titleText}</Text>
-        <Text style={styles.desc}>{desc}</Text>
+        <Text style={descStyle}>{desc}</Text>
       </View>
 
       <View>
@@ -196,22 +303,30 @@ export function EditorialCover({
           </View>
         ) : null}
 
-        {/* CTA */}
-        <TouchableOpacity style={styles.cta} onPress={onSeeDetail} activeOpacity={0.85}>
-          <Text style={styles.ctaText}>{'리포트 자세히 보기'}</Text>
-        </TouchableOpacity>
+        {/* CTA — onSeeDetail 없으면 hide (풀 리포트 안 표지에선 불필요) */}
+        {onSeeDetail && (
+          <TouchableOpacity style={styles.cta} onPress={onSeeDetail} activeOpacity={0.85}>
+            <Text style={styles.ctaText}>{'READ THE FULL REPORT  →'}</Text>
+          </TouchableOpacity>
+        )}
       </View>
-    </LinearGradient>
+    </Container>
   );
 }
 
 const styles = StyleSheet.create({
   fullScreen: {
-    minHeight: SCREEN_HEIGHT,
-    paddingTop: 60,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    // 외부 wrapper 의 flex: 1 안에서 늘어남. 콘텐츠는 위/가운데/아래 균등 배치.
+    flex: 1,
+    paddingTop: 8,
+    paddingHorizontal: 22,
+    paddingBottom: 8,
     justifyContent: 'space-between',
+  },
+  // compact 분기 — 광고 활성 시만 cover 영역 50pt 축소 흡수.
+  fullScreenCompact: {
+    paddingTop: 4,
+    paddingBottom: 4,
   },
   card: {
     borderRadius: 24,
@@ -244,11 +359,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     letterSpacing: 2,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   subject: {
     color: '#F5E6D8',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     marginBottom: 22,
   },
@@ -256,75 +371,77 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroWrap: {
-    width: 140,
-    height: 140,
+    width: 150,
+    height: 150,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+    marginBottom: 12,
   },
-  heroGlow: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    opacity: 0.5,
-  },
-  heroIcon: {
-    width: 100,
-    height: 100,
+  heroWrapCompact: {
+    width: 130,
+    height: 130,
+    marginBottom: 6,
   },
   primaryLabel: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '900',
     letterSpacing: 4,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 36,
+    fontSize: 30,
     fontWeight: '900',
     textAlign: 'center',
-    lineHeight: 44,
-    marginBottom: 18,
+    lineHeight: 38,
+    marginBottom: 12,
   },
   desc: {
     color: '#E8D8C8',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  descCompact: {
+    lineHeight: 19,
+    marginBottom: 4,
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 6,
-    marginBottom: 16,
+    gap: 5,
+    marginTop: 6,
+    marginBottom: 4,
   },
   statBox: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.10)',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.14)',
+    // 광고 활성 시 cover 압축으로 value(점수) 잘림 방지 — 최소 height 보장
+    minHeight: 50,
   },
   statLabel: {
     color: '#D9C5B5',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   statValue: {
     color: '#FFFFFF',
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '900',
   },
   cta: {
     backgroundColor: '#FFFFFF',
-    paddingVertical: 17,
-    borderRadius: 18,
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
   },
   ctaText: {

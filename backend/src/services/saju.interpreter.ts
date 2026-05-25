@@ -28,6 +28,13 @@ export interface InterpreterInput {
   childName: string;
   ageMonths: number;
   gender: string;
+  /**
+   * 룰 기반으로 미리 결정된 dominantType (탐구형 / 활동형 / 조화형 / 분석형 / 감성형).
+   * AI 비결정성 차단을 위해 calculateSajuWithAI 가 fiveElements 최대값으로 결정한 값을
+   * 전달하고, AI 는 이 값에 맞춰 label/personality/strengths 등 디테일만 생성한다.
+   * AI 가 응답으로 다른 dominantType 을 반환해도 무시 (덮어쓰기 X).
+   */
+  fixedDominantType: string;
 }
 
 export interface InterpretedDetail {
@@ -133,11 +140,16 @@ function buildPrompt(input: InterpreterInput, strict = false): string {
 [오행 비율]
 ${elementsLine}
 
+[기질 분류 — 사전 결정됨 / 절대 변경 불가]
+이 아이의 dominantType 은 이미 오행 비율 기반 룰로 "${input.fixedDominantType}" 으로 확정되었다.
+너는 이 분류를 절대 변경할 수 없으며, 이 분류에 맞춰서 personality / strengths / label 등 모든 디테일을 작성해야 한다.
+응답의 dominantType 필드에도 반드시 "${input.fixedDominantType}" 을 그대로 적어라.
+
 [출력 규칙 — 매우 중요]
 1. 머릿속에서는 명리학 전문 지식(일간 강약, 통근, 투간, 용신/희신)을 활용해 깊이 있게 분석해라
 2. 그러나 출력 텍스트에는 사주/오행/천간/지지/일간/재성/관성/인성/식상/비겁/용신/희신/대운 등 명리 용어 절대 금지
 3. "에너지", "기질", "성향" 등 일상 표현으로 번역해서 작성
-4. dominantType은 반드시 다음 5개 중 하나: 탐구형 / 활동형 / 조화형 / 분석형 / 감성형
+4. dominantType 은 반드시 "${input.fixedDominantType}" 으로 고정 — 위 [기질 분류] 항목 참고
 5. personality / strengths / cautions / parentingTips 각 5개 항목, 각 1~2문장
 6. bestActivities / bestFoods 각 3~5개
 7. 안전: 위험 행동 조장 금지, 일반적 육아 조언 범위 내
@@ -179,17 +191,23 @@ function asStringArray(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((s) => typeof s === 'string') : [];
 }
 
-function validate(raw: RawResponse | null | undefined): InterpretedTrait | null {
+/**
+ * AI 응답을 InterpretedTrait 로 변환.
+ * dominantType 은 호출자가 fixedDominantType 으로 강제 — AI 응답값 무시.
+ * personality/strengths 는 최소 3개 이상 있어야 유효.
+ */
+function validate(
+  raw: RawResponse | null | undefined,
+  fixedDominantType: string,
+): InterpretedTrait | null {
   if (!raw) return null;
-  if (!raw.dominantType || !VALID_TYPES.includes(raw.dominantType as typeof VALID_TYPES[number])) {
-    return null;
-  }
   const personality = asStringArray(raw.personality);
   const strengths = asStringArray(raw.strengths);
   if (personality.length < 3 || strengths.length < 3) return null;
 
   return {
-    dominantType: raw.dominantType,
+    // dominantType 은 룰 기반 fixed 값 강제 — AI 비결정성 차단
+    dominantType: fixedDominantType,
     label: typeof raw.label === 'string' ? raw.label : '',
     detail: {
       personality,
@@ -232,7 +250,7 @@ export async function interpretSajuWithAI(
       maxTokens: 4000,
       responseMimeType: 'application/json',
     });
-    trait = validate(raw1);
+    trait = validate(raw1, input.fixedDominantType);
     if (!trait) {
       logger.warn(
         'saju.interpreter',
@@ -262,7 +280,7 @@ export async function interpretSajuWithAI(
         maxTokens: 4000,
         responseMimeType: 'application/json',
       });
-      const retry = validate(raw2);
+      const retry = validate(raw2, input.fixedDominantType);
       if (retry && !containsForbiddenTerms(retry)) {
         trait = retry;
       } else {
@@ -292,6 +310,8 @@ export async function calculateSajuWithAI(
   childName: string,
   gender: string,
 ): Promise<ReturnType<typeof calculateSaju>> {
+  // 룰 기반 결과 — dominantType 은 fiveElements 최대값으로 결정적 매핑되어 있음.
+  // 같은 사주(생년월일·시간·성별) → 항상 같은 dominantType 보장.
   const ruleResult = calculateSaju(birthDate, birthTime);
 
   try {
@@ -301,13 +321,16 @@ export async function calculateSajuWithAI(
       childName,
       ageMonths: ageMonthsBetween(birthDate),
       gender,
+      // 룰 기반 dominantType 을 AI 에 강제 전달 — AI 가 다른 값을 응답해도 무시되어 결정적 결과 보장
+      fixedDominantType: ruleResult.dominantType,
     });
     if (ai) {
-      // AI 해석 성공 — 룰 기반 detail/dominantType/label을 AI 결과로 덮어쓰기
-      // (8글자/오행은 룰 기반 그대로 유지)
+      // AI 해석 성공 — label/detail 만 AI 결과로 갱신.
+      // dominantType 은 ruleResult 그대로 유지 (validate 가 fixedDominantType 으로 강제했지만
+      // 명시적으로 한 번 더 보장).
       return {
         ...ruleResult,
-        dominantType: ai.dominantType,
+        dominantType: ruleResult.dominantType,
         label: ai.label || ruleResult.label,
         detail: ai.detail,
       };

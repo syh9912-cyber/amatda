@@ -9,6 +9,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { coachingApi, memoriesApi } from '../../services/api';
@@ -302,11 +303,30 @@ export default function CoachingScreen() {
     if (!child) return; // child 로드 대기
     firstMessageHandled.current = true;
     setFirstTalkDone(true);
+    const messageToSend = firstMessage;
     const timer = setTimeout(async () => {
       try {
-        await sendMessage(firstMessage);
-      } catch {
-        // 에러 발생해도 크래시 방지
+        await sendMessage(messageToSend);
+      } catch (e) {
+        // 자동 전송 실패 시 사용자에게 명확히 안내 + 재시도 옵션 제공
+        // (CLAUDE.md: 에러를 조용히 삼키지 말 것)
+        const reason = e instanceof Error ? e.message : '알 수 없는 오류';
+        Alert.alert(
+          '메시지 전송 실패',
+          `자동 전송 중 오류가 발생했어요.\n(${reason})`,
+          [
+            { text: '취소', style: 'cancel', onPress: () => firstMessageHandled.current = false },
+            {
+              text: '다시 시도',
+              onPress: () => {
+                sendMessage(messageToSend).catch(() => {
+                  // 두 번째 실패는 입력창에 채워 사용자가 직접 보낼 수 있도록
+                  setInput(messageToSend);
+                });
+              },
+            },
+          ],
+        );
       }
     }, 800);
     return () => clearTimeout(timer);
@@ -346,6 +366,13 @@ export default function CoachingScreen() {
         </View>
       </View>
 
+      {/* 의료 면책 고지 — Apple/Google 헬스 앱 정책 필수 */}
+      <View style={styles.disclaimer}>
+        <Text style={styles.disclaimerText}>
+          ⚠️ 상담이모 답변은 일반 정보 제공용이며 의료 진단·처방을 대체하지 않습니다.
+        </Text>
+      </View>
+
       {/* Category toggle (hidden during first talk) */}
       {!showFirstTalk && (
         <View>
@@ -353,6 +380,9 @@ export default function CoachingScreen() {
             style={styles.categoryToggle}
             onPress={() => setShowCategories((v) => !v)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showCategories }}
+            accessibilityLabel={showCategories ? '카테고리 닫기' : '카테고리 선택'}
           >
             <Text style={styles.categoryToggleText}>
               {showCategories ? '카테고리 닫기' : '카테고리 선택'}
@@ -446,6 +476,8 @@ export default function CoachingScreen() {
           <TouchableOpacity
             style={styles.analyzerPill}
             onPress={() => router.push('/(main)/poop-analyzer')}
+            accessibilityRole="button"
+            accessibilityLabel="대변 분석"
             activeOpacity={0.7}
           >
             <Image source={require('../../assets/trait-analyst-small.png')} style={styles.analyzerPillIcon} resizeMode="contain" />
@@ -454,6 +486,8 @@ export default function CoachingScreen() {
           <TouchableOpacity
             style={styles.analyzerPill}
             onPress={() => router.push('/(main)/cry-analyzer')}
+            accessibilityRole="button"
+            accessibilityLabel="울음 분석"
             activeOpacity={0.7}
           >
             <Image source={require('../../assets/trait-analyst-small.png')} style={styles.analyzerPillIcon} resizeMode="contain" />
@@ -480,6 +514,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COACHING_COLORS.bg,
+  },
+  disclaimer: {
+    backgroundColor: '#FFF8F0',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FFE0C0',
+  },
+  disclaimerText: {
+    fontSize: 10,
+    color: '#B05000',
+    lineHeight: 14,
+    textAlign: 'center',
   },
   /* Header */
   header: {

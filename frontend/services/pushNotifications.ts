@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // --- Types ---
@@ -157,6 +157,23 @@ export async function registerForPushNotifications(): Promise<string | null> {
   let finalStatus = existingStatus;
 
   if (existingStatus !== 'granted') {
+    // Apple 정책: 첫 권한 요청 전 in-app primer 권장.
+    //   "undetermined" 상태일 때만 (= 사용자가 한 번도 결정 안 함) primer 표시.
+    //   "denied" 상태면 시스템 다이얼로그 다시 안 뜨므로 primer 의미 X.
+    if (existingStatus === 'undetermined') {
+      const allowed = await new Promise<boolean>((resolve) => {
+        Alert.alert(
+          '알림으로 코칭 받기',
+          '아이 발달 단계별 팁, 백신/병원 일정, 일일 기록 리마인더를 보내드릴게요.\n\n언제든 설정에서 끌 수 있어요.',
+          [
+            { text: '나중에', onPress: () => resolve(false), style: 'cancel' },
+            { text: '허용', onPress: () => resolve(true) },
+          ],
+          { cancelable: false },
+        );
+      });
+      if (!allowed) return null;
+    }
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }

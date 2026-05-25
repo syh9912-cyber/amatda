@@ -40,8 +40,11 @@ export function CoachingInput({
           style={styles.actionBtn}
           onPress={handlePhoto}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="사진 첨부"
+          accessibilityHint="카메라 또는 갤러리에서 사진을 선택합니다"
         >
-          <Image source={IC_CAMERA} style={styles.actionIcon} resizeMode="contain" />
+          <Image source={IC_CAMERA} style={styles.actionIcon} resizeMode="contain" accessible={false} />
         </TouchableOpacity>
         <TextInput
           style={styles.input}
@@ -59,8 +62,11 @@ export function CoachingInput({
           onPress={onSend}
           disabled={disabled}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="메시지 보내기"
+          accessibilityState={{ disabled }}
         >
-          <Image source={IC_SEND} style={styles.sendIcon} resizeMode="contain" />
+          <Image source={IC_SEND} style={styles.sendIcon} resizeMode="contain" accessible={false} />
         </TouchableOpacity>
       </View>
     </View>

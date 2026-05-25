@@ -123,6 +123,20 @@ export function setupSecurity(app: Express): void {
     })
   );
 
+  // Upload rate limit — 사용자당 1시간 30회 (대용량 파일 남용 방지)
+  app.use(
+    '/api/upload',
+    rateLimit({
+      windowMs: 60 * 60 * 1000,
+      max: 30,
+      keyGenerator: rateLimitUserKey,
+      message: { success: false, error: '업로드 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+      standardHeaders: true,
+      legacyHeaders: false,
+      validate: false,
+    })
+  );
+
   // Stricter rate limit for coaching (Gemini billable). 사용자당 분리.
   // keyGenerator 가 JWT 를 직접 디코드해 userId 추출 (DB 무접근). 한국 모바일
   // CG-NAT 환경에서 IP 충돌로 false rate-limit 되는 문제 방지.

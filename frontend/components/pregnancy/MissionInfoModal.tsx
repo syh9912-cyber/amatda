@@ -78,6 +78,11 @@ export function MissionInfoModal({ kind, water, supplements, onClose }: Props) {
               </>
             )}
 
+            <Text style={styles.disclaimer}>
+              ※ 본 정보는 일반적인 임신·수유 가이드이며 개인 상태에 따라 다를 수 있어요.
+              정확한 권장량과 복용 일정은 담당 산부인과 의사 또는 약사와 상담해 결정하세요.
+            </Text>
+
             <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.85}>
               <Text style={styles.closeBtnText}>알겠어요 💛</Text>
             </TouchableOpacity>
@@ -157,12 +162,20 @@ const styles = StyleSheet.create({
   },
   factTitle: { fontSize: 13, fontWeight: '900', color: '#F57C00', marginBottom: 6 },
   factText: { fontSize: 12.5, color: '#5D4037', lineHeight: 19 },
+  disclaimer: {
+    fontSize: 11,
+    color: '#9E9E9E',
+    lineHeight: 16,
+    textAlign: 'center',
+    marginTop: 16,
+    paddingHorizontal: 4,
+  },
   closeBtn: {
     backgroundColor: '#FF8C5A',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 18,
+    marginTop: 14,
   },
   closeBtnText: { fontSize: 15, fontWeight: '900', color: '#FFFFFF' },
 });

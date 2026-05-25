@@ -92,3 +92,54 @@ export async function checkDailyLimit(
   const used = await getDailyUsage(userId, feature);
   return { allowed: used < freeLimit, tier, used, limit: freeLimit };
 }
+
+/**
+ * 무료 유저 일일 한도 검사 + 증분을 원자적으로 수행.
+ * Firestore 트랜잭션으로 read+write 를 묶어 동시 호출에서도 한도가 정확히 지켜진다.
+ * (분리 호출 시 동시 클릭으로 한도 우회 → Gemini billable 비용 폭주 위험.)
+ *
+ * 유료 유저는 카운트만 best-effort 로 증가시키고 통과.
+ * @returns allowed=true 면 카운터가 이미 +1 된 상태. 호출자는 후속 작업 진행 가능.
+ */
+export async function checkAndIncrementDailyLimit(
+  userId: string,
+  feature: string,
+  freeLimit: number,
+): Promise<{ allowed: boolean; tier: UserTier; used: number; limit: number | null }> {
+  const tier = await getUserTier(userId);
+  if (tier === 'paid') {
+    void incrementDailyUsage(userId, feature);
+    return { allowed: true, tier, used: 0, limit: null };
+  }
+
+  const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+  const todayKst = new Date(Date.now() + KST_OFFSET_MS).toISOString().slice(0, 10);
+  const ref = collections.rateLimits.doc(counterDocId(userId, feature));
+  const db = admin.firestore();
+
+  try {
+    return await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const used = snap.exists ? (((snap.data() as Record<string, unknown>).count as number) ?? 0) : 0;
+      if (used >= freeLimit) {
+        return { allowed: false, tier, used, limit: freeLimit };
+      }
+      tx.set(
+        ref,
+        {
+          count: used + 1,
+          userId,
+          feature,
+          date: todayKst,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+      return { allowed: true, tier, used: used + 1, limit: freeLimit };
+    });
+  } catch (err) {
+    // 트랜잭션 실패 시 fail-closed: 한도 초과로 간주(비용 사고 방지).
+    logger.error('rateLimit/checkAndIncrementDailyLimit', err);
+    return { allowed: false, tier, used: freeLimit, limit: freeLimit };
+  }
+}

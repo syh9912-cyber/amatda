@@ -55,31 +55,38 @@ const PREG_EMOJI_ICON: Record<string, ImageSourcePropType> = {
   '⭐': require('../../assets/preg-ribbon.png'),
 };
 
+// 매핑되지 않은 emoji / 누락된 데이터 fallback — 안드로이드 일부 폰트에서 emoji 가
+// 빈 박스로 렌더되는 케이스 방어. 항상 이미지가 보이도록 default 아이콘 사용.
+const DEFAULT_PREG_ICON = require('../../assets/preg-leaf.png') as ImageSourcePropType;
+
 function EmojiOrIcon({
   emoji,
   size,
-  textStyle,
+  textStyle: _textStyle,
 }: {
   emoji?: string;
   size: number;
   textStyle?: StyleProp<TextStyle>;
 }) {
-  const src = emoji ? PREG_EMOJI_ICON[emoji] : undefined;
-  if (src) {
-    return (
-      <Image
-        source={src}
-        style={{ width: size, height: size }}
-        resizeMode="contain"
-      />
-    );
-  }
-  return <Text style={textStyle}>{emoji ?? '📌'}</Text>;
+  const src = (emoji && PREG_EMOJI_ICON[emoji]) || DEFAULT_PREG_ICON;
+  return (
+    <Image
+      source={src}
+      style={{ width: size, height: size }}
+      resizeMode="contain"
+    />
+  );
 }
-import { Stack, router } from 'expo-router';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import { captureError } from '../../services/sentry';
+import * as FileSystem from 'expo-file-system/legacy';
+import { Stack } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChildStore } from '../../stores/childStore';
-import { pregnancyApi, coachingApi } from '../../services/api';
+
+const DEFAULT_COVER_SOURCE = require('../../assets/album-cover.png') as number;
+import { pregnancyApi, coachingApi, uploadApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { NextCheckupModal } from '../../components/home/NextCheckupModal';
@@ -200,6 +207,251 @@ const FALLBACK_SYMPTOMS: SymptomPreset[] = [
   { id: 'frequent_urination', label: '빈뇨', emoji: '🚽' },
   { id: 'good', label: '컨디션 좋음', emoji: '😊' },
 ];
+
+/* ================================================================== */
+/*  PDF helpers (album.tsx와 동일 패턴)                                */
+/* ================================================================== */
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function detectImageMime(b64: string): string {
+  const h = b64.slice(0, 16);
+  if (h.startsWith('/9j/')) return 'image/jpeg';
+  if (h.startsWith('iVBORw0KG')) return 'image/png';
+  if (h.startsWith('R0lGOD')) return 'image/gif';
+  if (h.startsWith('UklGR')) return 'image/webp';
+  return 'image/jpeg';
+}
+
+async function pregUriToDataUri(uri: string): Promise<string> {
+  try {
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      const cacheUri =
+        FileSystem.cacheDirectory +
+        'preg_img_' +
+        Math.random().toString(36).slice(2) +
+        '.bin';
+      const dl = await FileSystem.downloadAsync(uri, cacheUri);
+      const b64 = await FileSystem.readAsStringAsync(dl.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      return `data:${detectImageMime(b64)};base64,${b64}`;
+    } else {
+      const b64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      return `data:${detectImageMime(b64)};base64,${b64}`;
+    }
+  } catch {
+    return uri;
+  }
+}
+
+interface PregAlbumPhoto {
+  uri: string;
+  date: string;
+  title: string;
+  memo?: string;
+}
+
+function generatePregnancyAlbumHTML(
+  photos: PregAlbumPhoto[],
+  title: string,
+  childName: string,
+  dateFrom: string,
+  dateTo: string,
+  coverUri: string | null,
+): string {
+  const sorted = [...photos].sort((a, b) => a.date.localeCompare(b.date));
+
+  const monthsMap = new Map<string, PregAlbumPhoto[]>();
+  for (const p of sorted) {
+    const ym = p.date.slice(0, 7);
+    if (!monthsMap.has(ym)) monthsMap.set(ym, []);
+    monthsMap.get(ym)!.push(p);
+  }
+  const months = Array.from(monthsMap.entries());
+
+  const totalPhotoPages = months.reduce(
+    (acc, [, ps]) => acc + Math.ceil(ps.length / 4),
+    0,
+  );
+
+  const cornerDeco =
+    `<div class="page-corner tl">&#10084;</div>` +
+    `<div class="page-corner tr">&#127800;</div>` +
+    `<div class="page-corner bl">&#127801;</div>` +
+    `<div class="page-corner br">&#10024;</div>`;
+
+  const effectiveCoverUri = coverUri;
+
+  const coverHTML = effectiveCoverUri
+    ? `<div class="cover cover-img">` +
+      `<img src="${effectiveCoverUri}" alt="" width="1123" height="794" class="cover-bg-img" />` +
+      `<div class="cover-name-natural">${escapeHtml(childName)}</div>` +
+      `<div class="cover-period-natural">${escapeHtml(dateFrom)} ~ ${escapeHtml(dateTo)}</div>` +
+      `</div>`
+    : `<div class="cover cover-gradient">` +
+      `<div class="cover-star">&#10084;</div>` +
+      `<div class="cover-line"></div>` +
+      `<div class="cover-title">${escapeHtml(title)}</div>` +
+      `<div class="cover-period-alt">${escapeHtml(dateFrom)} ~ ${escapeHtml(dateTo)}</div>` +
+      `<div class="cover-line"></div>` +
+      `<div class="cover-count">${sorted.length}장의 소중한 기록</div>` +
+      `</div>`;
+
+  let pageCounter = 0;
+  const allPagesHTML = months
+    .map(([ym, ps]) => {
+      const [y, m] = ym.split('-');
+      const monthNum = parseInt(m, 10);
+
+      const dividerHTML =
+        `<div class="divider-page">` +
+        cornerDeco +
+        `<div class="divider-inner">` +
+        `<div class="divider-deco">&#10047;</div>` +
+        `<div class="divider-year">${y}</div>` +
+        `<div class="divider-month">${monthNum}<span class="divider-month-unit">월</span></div>` +
+        `<div class="divider-rule"></div>` +
+        `<div class="divider-caption">&#10084; 소중한 순간 ${ps.length}장 &#10084;</div>` +
+        `</div></div>`;
+
+      const photoPagesHTML: string[] = [];
+      for (let i = 0; i < ps.length; i += 4) {
+        const chunk = ps.slice(i, i + 4);
+        pageCounter += 1;
+        const cellsHTML = chunk
+          .map((photo) => {
+            const titleHTML = photo.title
+              ? `<div class="ms-row"><span class="ms-label">&#10084; ${escapeHtml(photo.title)}</span></div>`
+              : '';
+            const memoHTML = photo.memo
+              ? `<div class="photo-memo">${escapeHtml(photo.memo)}</div>`
+              : '';
+            // 사진 변환 실패 시 placeholder 박스 — PDF 는 항상 생성, 정보는 모두 보존
+            const imageBlock = photo.uri
+              ? `<div class="photo-img-wrap">` +
+                `<img class="photo-img-bg" src="${photo.uri}" alt="" />` +
+                `<img class="photo-img" src="${photo.uri}" alt="" />` +
+                `</div>`
+              : `<div class="photo-img-wrap photo-img-placeholder">` +
+                `<div class="placeholder-icon">📷</div>` +
+                `<div class="placeholder-text">사진을 불러올 수 없어요</div>` +
+                `</div>`;
+            return (
+              `<div class="photo-cell">` +
+              imageBlock +
+              `<div class="photo-caption">` +
+              `<div class="photo-date">${escapeHtml(photo.date)}</div>` +
+              titleHTML +
+              memoHTML +
+              `</div></div>`
+            );
+          })
+          .join('');
+        const emptyCount = 4 - chunk.length;
+        const emptyCells = Array(emptyCount)
+          .fill('<div class="photo-cell photo-cell-empty"></div>')
+          .join('');
+        photoPagesHTML.push(
+          `<div class="photo-page">` +
+            cornerDeco +
+            `<div class="page-header">${monthNum}월 &middot; ${pageCounter} / ${totalPhotoPages}</div>` +
+            `<div class="photo-grid">${cellsHTML}${emptyCells}</div>` +
+            `</div>`,
+        );
+      }
+      return dividerHTML + photoPagesHTML.join('');
+    })
+    .join('');
+
+  const endingHTML =
+    `<div class="ending-page">` +
+    cornerDeco +
+    `<div class="ending-heart">&#10084;</div>` +
+    `<div class="ending-msg">사랑해,<br/>소중한 ${escapeHtml(childName)}</div>` +
+    `<div class="ending-rule"></div>` +
+    `<div class="ending-sub">너를 기다리는 모든 순간이<br/>우리의 기적이야</div>` +
+    `<div class="ending-period">${escapeHtml(dateFrom)} ~ ${escapeHtml(dateTo)}</div>` +
+    `</div>`;
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@700&family=Do+Hyeon&family=Single+Day&family=Black+Han+Sans&display=swap" rel="stylesheet">
+  <style>
+    @page { size: A4 landscape; margin: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Jua', 'Do Hyeon', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; font-weight: 400; }
+    html, body { background-color: #FFF0F5; }
+    .cover { width: 297mm; height: 210mm; page-break-after: always; overflow: hidden; position: relative; background-color: #FFF0F5; }
+    .cover-img { display: block; background-color: #FFF0F5; }
+    .cover-bg-img { display: block; width: 297mm; height: 210mm; object-fit: cover; -o-object-fit: cover; }
+    .cover-name-natural { position: absolute; right: 7mm; width: 130mm; top: 23%; text-align: center; font-family: 'Single Day', 'Gaegu', cursive; font-size: 33px; color: #3A2018; letter-spacing: 3px; }
+    .cover-period-natural { position: absolute; right: 5mm; width: 130mm; top: 62%; text-align: center; font-family: 'Gaegu', cursive; font-size: 18px; color: #6B4030; letter-spacing: 1px; }
+    .cover-gradient { background: linear-gradient(135deg, #FCE4EC 0%, #F8BBD0 50%, #FFF0F5 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .cover-star { font-size: 64px; margin-bottom: 20px; }
+    .cover-line { width: 70px; height: 3px; background: #E91E63; margin: 16px auto; border-radius: 2px; }
+    .cover-title { font-family: 'Single Day', 'Gaegu', cursive; font-size: 52px; color: #4A1529; text-align: center; padding: 0 30mm; line-height: 1.3; }
+    .cover-period-alt { font-family: 'Gaegu', cursive; font-size: 22px; color: #8B3050; margin-top: 10px; }
+    .cover-count { font-family: 'Gaegu', cursive; font-size: 18px; color: #C2185B; margin-top: 10px; }
+    .page-corner { position: absolute; font-size: 22px; opacity: 0.55; z-index: 3; pointer-events: none; }
+    .page-corner.tl { top: 6mm; left: 7mm; }
+    .page-corner.tr { top: 6mm; right: 7mm; }
+    .page-corner.bl { bottom: 6mm; left: 7mm; }
+    .page-corner.br { bottom: 6mm; right: 7mm; }
+    .divider-page { width: 297mm; height: 210mm; page-break-after: always; position: relative; display: flex; align-items: center; justify-content: center; background-color: #FFF0F5; background-image: linear-gradient(135deg, #FCE4EC 0%, #FFF0F5 40%, #F8BBD0 100%); overflow: hidden; }
+    .divider-inner { text-align: center; }
+    .divider-deco { font-size: 34px; color: #E91E63; margin-bottom: 8mm; }
+    .divider-year { font-family: 'Gaegu', cursive; font-size: 32px; color: #8B3050; letter-spacing: 6px; margin-bottom: 4mm; }
+    .divider-month { font-family: 'Black Han Sans', 'Do Hyeon', sans-serif; font-size: 180px; color: #C2185B; line-height: 1; letter-spacing: -4px; }
+    .divider-month-unit { font-family: 'Jua', sans-serif; font-size: 56px; color: #E91E63; margin-left: 8px; }
+    .divider-rule { width: 90mm; height: 2px; background: linear-gradient(90deg, transparent, #E91E63, transparent); margin: 10mm auto 6mm; }
+    .divider-caption { font-family: 'Gaegu', cursive; font-size: 22px; color: #8B3050; }
+    .photo-page { width: 297mm; height: 210mm; padding: 14mm 14mm 12mm; page-break-after: always; display: flex; flex-direction: column; background-color: #FFF0F5; background-image: linear-gradient(135deg, #FCE4EC 0%, #FFF0F5 30%, #FFF5F8 60%, #FCE4EC 100%); overflow: hidden; position: relative; }
+    .page-header { font-family: 'Gaegu', cursive; font-size: 15px; color: #C2185B; text-align: right; margin-bottom: 5mm; flex-shrink: 0; letter-spacing: 2px; }
+    .photo-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 7mm; flex: 1; min-height: 0; }
+    .photo-cell { background: #FFFFFF; padding: 3mm 3mm 2mm 3mm; box-shadow: 0 3px 10px rgba(180,60,90,0.18), 0 0 0 0.3mm #FCE4EC; display: grid; grid-template-rows: 1fr auto; gap: 2mm; min-height: 0; overflow: hidden; border-radius: 2px; position: relative; }
+    .photo-grid > .photo-cell:nth-child(1) { transform: rotate(-0.8deg); }
+    .photo-grid > .photo-cell:nth-child(2) { transform: rotate(0.7deg); }
+    .photo-grid > .photo-cell:nth-child(3) { transform: rotate(0.6deg); }
+    .photo-grid > .photo-cell:nth-child(4) { transform: rotate(-0.7deg); }
+    .photo-cell::before { content: ''; position: absolute; top: -2mm; left: 50%; transform: translateX(-50%) rotate(-3deg); width: 42mm; height: 7mm; background: linear-gradient(135deg, rgba(255,182,193,0.7), rgba(255,105,135,0.5)); box-shadow: 0 1px 2px rgba(0,0,0,0.08); z-index: 2; pointer-events: none; }
+    .photo-cell-empty { background: transparent !important; box-shadow: none !important; padding: 0 !important; border: none !important; transform: none !important; }
+    .photo-cell-empty::before { display: none !important; }
+    .photo-img-wrap { width: 100%; min-height: 0; background: #F9EEF2; overflow: hidden; position: relative; border-radius: 1px; }
+    .photo-img-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(14px) brightness(0.92); transform: scale(1.1); opacity: 0.55; display: block; }
+    .photo-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; display: block; z-index: 1; }
+    .photo-caption { padding: 0 1mm; display: flex; flex-direction: column; gap: 2mm; min-height: 0; max-height: 22mm; overflow: hidden; }
+    .photo-date { font-family: 'Jua', sans-serif; font-size: 13px; color: #9E7080; letter-spacing: 0.5px; }
+    .ms-row { display: flex; align-items: center; gap: 6px; min-height: 0; }
+    .ms-label { font-family: 'Do Hyeon', 'Jua', sans-serif; font-size: 15px; color: #C2185B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .photo-memo { font-family: 'Single Day', 'Gaegu', 'Jua', cursive; font-size: 18px; color: #3A1525; line-height: 1.25; text-shadow: 0.4px 0 0 currentColor, -0.4px 0 0 currentColor, 0 0.4px 0 currentColor; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .ending-page { width: 297mm; height: 210mm; page-break-after: always; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #FFF0F5; background-image: linear-gradient(135deg, #FCE4EC 0%, #FFF0F5 40%, #F8BBD0 100%); overflow: hidden; }
+    .ending-heart { font-size: 88px; margin-bottom: 10mm; }
+    .ending-msg { font-family: 'Single Day', 'Gaegu', cursive; font-size: 64px; color: #C2185B; text-align: center; line-height: 1.4; text-shadow: 0.5px 0 0 currentColor, -0.5px 0 0 currentColor; }
+    .ending-rule { width: 90mm; height: 2px; background: linear-gradient(90deg, transparent, #E91E63, transparent); margin: 8mm auto; }
+    .ending-sub { font-family: 'Gaegu', 'Jua', cursive; font-size: 24px; color: #8B3050; text-align: center; line-height: 1.6; }
+    .ending-period { font-family: 'Gaegu', cursive; font-size: 16px; color: #9E7080; margin-top: 5mm; }
+  </style>
+</head>
+<body>
+${coverHTML}
+${allPagesHTML}
+${endingHTML}
+</body>
+</html>`;
+}
 
 /* ================================================================== */
 /*  NextCheckupSection — 다음 검진 일정 (AsyncStorage 기반)            */
@@ -340,12 +592,34 @@ export default function PregnancyScreen() {
   // === 인라인 compose (성장앨범 BabyAlbum과 동일한 UX — 한 번 저장 = 한 카드) ===
   const [composePhoto, setComposePhoto] = useState<string | null>(null);
   const [composeMemo, setComposeMemo] = useState('');
-  const [composeChip, setComposeChip] = useState<
-    | { kind: 'milestone'; id: string; label: string; emoji: string }
-    | { kind: 'symptom'; id: string; label: string; emoji: string }
-    | null
+  const [composeMilestoneChip, setComposeMilestoneChip] = useState<
+    { id: string; label: string; emoji: string } | null
+  >(null);
+  const [composeSymptomChip, setComposeSymptomChip] = useState<
+    { id: string; label: string; emoji: string } | null
   >(null);
   const [shareToFamily, setShareToFamily] = useState(false);
+
+  // 임신앨범 PDF 생성 폼
+  const [albumTitle, setAlbumTitle] = useState('');
+  const [albumDateFrom, setAlbumDateFrom] = useState('');
+  const [albumDateTo, setAlbumDateTo] = useState('');
+  const [albumCoverUri, setAlbumCoverUri] = useState<string | null>(null);
+  const [showAlbumForm, setShowAlbumForm] = useState(false);
+  const [albumGenerating, setAlbumGenerating] = useState(false);
+
+  // 기록 수정 모달
+  const [editingItem, setEditingItem] = useState<{
+    id: string;
+    source: string;
+    title: string;
+    content?: string;
+    emoji?: string;
+    mediaUri?: string; // 현재 이미지 URI
+  } | null>(null);
+  const [editMemo, setEditMemo] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editNewImage, setEditNewImage] = useState<string | null>(null);
 
   // AI 일기 (성장앨범과 동일)
   const [diaryText, setDiaryText] = useState<string | null>(null);
@@ -394,6 +668,142 @@ export default function PregnancyScreen() {
     }
   }, [childId]);
 
+  /* ── 앨범 표지 이미지 선택 ── */
+  const pickCoverImage = useCallback(async () => {
+    try {
+      const ImagePicker = await import('expo-image-picker');
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('권한 필요', '갤러리 접근 권한을 허용해주세요');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.85,
+        allowsEditing: true,
+        aspect: [3, 2],
+      });
+      if (!result.canceled && result.assets[0]) {
+        setAlbumCoverUri(result.assets[0].uri);
+      }
+    } catch {
+      Alert.alert('오류', '사진을 불러오지 못했습니다');
+    }
+  }, []);
+
+  /* ── 임신앨범 PDF 생성 ── */
+  const handleGeneratePregnancyAlbum = useCallback(async () => {
+    if (!albumDateFrom || !albumDateTo) return;
+    setAlbumGenerating(true);
+    try {
+      const fromYM = albumDateFrom.slice(0, 7);
+      const toYM = albumDateTo.slice(0, 7);
+
+      // 사진 있는 항목만 필터링 (source !== 'development')
+      const filtered = timeline
+        .flatMap((wg) =>
+          wg.items.filter(
+            (it) =>
+              it.source !== 'development' &&
+              !!it.mediaUri &&
+              it.mediaType !== 'video',
+          ),
+        )
+        .filter((it) => {
+          const ym = it.createdAt.slice(0, 7);
+          return ym >= fromYM && ym <= toYM;
+        })
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+      if (filtered.length === 0) {
+        Alert.alert('사진 없음', '선택한 기간에 사진이 없어요.\n먼저 사진을 추가해주세요.');
+        return;
+      }
+
+      const title =
+        albumTitle.trim() ||
+        `${childName} 임신앨범 ${albumDateFrom}~${albumDateTo}`;
+
+      // 이미지 → base64 변환. 변환 실패 시 PDF 에 빈 이미지로 들어가지 않도록 skip.
+      // 옛 글의 file:// 임시 경로는 시간 지나면 invalid (expo-image-picker 임시 파일 삭제) →
+      // 변환 실패하는 케이스가 다수.
+      // 이미지 변환 — 실패 시 빈 uri 로 placeholder 처리(PDF 는 항상 생성).
+      // 사진을 못 불러와도 제목/날짜/메모는 PDF 에 남기고, 사진 영역은 안내 박스로 표시.
+      let failCount = 0;
+      const photosForPdf: PregAlbumPhoto[] = await Promise.all(
+        filtered.map(async (it): Promise<PregAlbumPhoto> => {
+          const converted = await pregUriToDataUri(it.mediaUri!);
+          const ok = converted.startsWith('data:');
+          if (!ok) failCount += 1;
+          return {
+            uri: ok ? converted : '',
+            date: it.createdAt.slice(0, 10),
+            title: it.title,
+            memo: it.content,
+          };
+        }),
+      );
+
+      let coverDataUri: string | null = null;
+      if (albumCoverUri) {
+        const raw = await pregUriToDataUri(albumCoverUri);
+        if (raw.startsWith('data:')) coverDataUri = raw;
+      } else {
+        // 사용자가 표지를 바꾸지 않은 경우 기본 표지(album-cover.png) 사용
+        try {
+          const { Asset } = await import('expo-asset');
+          const asset = await Asset.fromModule(DEFAULT_COVER_SOURCE).downloadAsync();
+          if (asset.localUri) {
+            const raw = await pregUriToDataUri(asset.localUri);
+            if (raw.startsWith('data:')) coverDataUri = raw;
+          }
+        } catch { /* 변환 실패 시 gradient 표지로 fallback */ }
+      }
+
+      const html = generatePregnancyAlbumHTML(
+        photosForPdf,
+        title,
+        childName,
+        albumDateFrom,
+        albumDateTo,
+        coverDataUri,
+      );
+      const printPromise = Print.printToFileAsync({ html, base64: false });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('PDF 생성이 너무 오래 걸립니다. 잠시 후 다시 시도해주세요.')),
+          90_000,
+        ),
+      );
+      const { uri } = await Promise.race([printPromise, timeoutPromise]);
+
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: '임신앨범 저장',
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        Alert.alert('저장 완료', `임신앨범 PDF가 생성됐어요.\n${uri}`);
+      }
+      if (failCount > 0) {
+        Alert.alert(
+          '일부 사진 누락',
+          `${filtered.length}장 중 ${failCount}장은 사진을 불러올 수 없어 PDF 에 포함되지 않았어요.\n` +
+          `(임시 파일이 삭제됐거나 업로드가 완료되지 않은 사진)`,
+        );
+      }
+      setShowAlbumForm(false);
+      setAlbumTitle('');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      Alert.alert('오류', `앨범 생성에 실패했습니다.\n${msg}`);
+    } finally {
+      setAlbumGenerating(false);
+    }
+  }, [albumDateFrom, albumDateTo, albumTitle, albumCoverUri, timeline, childName]);
+
   /* ── Load data ── */
   const loadTimeline = useCallback(async () => {
     if (!childId) return;
@@ -421,30 +831,74 @@ export default function PregnancyScreen() {
   // 인라인 compose: 한 번 저장 = 한 카드 (성장앨범과 동일)
   const handleSaveUnified = useCallback(async () => {
     if (!childId) return;
-    if (!composePhoto && !composeMemo.trim() && !composeChip) {
+    if (!composePhoto && !composeMemo.trim() && !composeMilestoneChip && !composeSymptomChip) {
       Alert.alert('알림', '사진, 메모, 또는 마일스톤·증상 중 하나는 입력해주세요');
       return;
     }
     setSaving(true);
     try {
-      if (composeChip?.kind === 'symptom') {
-        await pregnancyApi.saveMomHealth({
-          childId,
-          symptoms: [composeChip.id],
-          severity: 3,
-          memo: composeMemo.trim() || undefined,
-        });
-      } else if (composeChip?.kind === 'milestone') {
-        const ms = ALL_MILESTONES.find((m) => m.type === composeChip.id);
+      // 사진은 반드시 Firebase Storage 에 업로드 후 https URL 로 저장 — 영구 보존 보장.
+      // file:// 로컬 URI 폴백 절대 안 함 (시간 지나면 OS 임시 캐시 정리로 invalid → PDF·피드 깨짐).
+      // 업로드 실패 시 retry 3 회 → 그래도 실패하면 사용자에게 명확한 안내 + 글 저장 보류.
+      let uploadedUri: string | undefined;
+      if (composePhoto) {
+        let lastErr: unknown = null;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            const uploaded = await uploadApi.upload(composePhoto, 'pregnancy');
+            uploadedUri = uploaded.url;
+            lastErr = null;
+            break;
+          } catch (err) {
+            lastErr = err;
+            if (attempt < 3) {
+              // 지수 백오프 — 1초, 2초
+              await new Promise((r) => setTimeout(r, attempt * 1000));
+            }
+          }
+        }
+        if (!uploadedUri) {
+          // 3 회 모두 실패 → 글 저장 거부. file:// 폴백 시 시간 지나면 사진 사라짐 → 출시 차단.
+          captureError(lastErr instanceof Error ? lastErr : new Error('upload failed'), {
+            ctx: 'pregnancy/upload-failed-3x',
+            childId,
+          });
+          Alert.alert(
+            '사진 업로드 실패',
+            '네트워크 또는 서버 문제로 사진을 저장할 수 없어요.\n' +
+            '잠시 후 다시 시도해주세요. (Wi-Fi 연결을 확인하시면 도움이 됩니다)',
+          );
+          setSaving(false);
+          return;
+        }
+      }
+
+      // 마일스톤 우선, 없으면 엄마기분, 없으면 doctor_note — 항상 1개만 저장
+      if (composeMilestoneChip) {
+        const ms = ALL_MILESTONES.find((m) => m.type === composeMilestoneChip.id);
+        const symptomNote = composeSymptomChip ? `[엄마기분: ${composeSymptomChip.label}]` : '';
+        const content = [composeMemo.trim(), symptomNote].filter(Boolean).join('\n') || undefined;
         await pregnancyApi.createRecord({
           childId,
           type: 'milestone',
-          milestoneType: composeChip.id,
-          milestoneEmoji: ms?.emoji ?? composeChip.emoji,
-          title: ms?.title ?? composeChip.label,
+          milestoneType: composeMilestoneChip.id,
+          milestoneEmoji: ms?.emoji ?? composeMilestoneChip.emoji,
+          title: ms?.title ?? composeMilestoneChip.label,
+          content,
+          mediaUri: uploadedUri,
+          mediaType: uploadedUri ? 'photo' : undefined,
+          week: currentWeek,
+          shareToFamily,
+        });
+      } else if (composeSymptomChip) {
+        await pregnancyApi.createRecord({
+          childId,
+          type: 'doctor_note',
+          milestoneEmoji: composeSymptomChip.emoji,
+          title: composeSymptomChip.label,
           content: composeMemo.trim() || undefined,
-          mediaUri: composePhoto ?? undefined,
-          mediaType: composePhoto ? 'photo' : undefined,
+          mediaUri: uploadedUri,
+          mediaType: uploadedUri ? 'photo' : undefined,
           week: currentWeek,
           shareToFamily,
         });
@@ -452,17 +906,18 @@ export default function PregnancyScreen() {
         await pregnancyApi.createRecord({
           childId,
           type: 'doctor_note',
-          title: composePhoto ? '초음파/영상' : '진료 기록',
+          title: uploadedUri ? '초음파/영상' : '진료 기록',
           content: composeMemo.trim() || undefined,
-          mediaUri: composePhoto ?? undefined,
-          mediaType: composePhoto ? 'photo' : undefined,
+          mediaUri: uploadedUri,
+          mediaType: uploadedUri ? 'photo' : undefined,
           week: currentWeek,
           shareToFamily,
         });
       }
       setComposePhoto(null);
       setComposeMemo('');
-      setComposeChip(null);
+      setComposeMilestoneChip(null);
+      setComposeSymptomChip(null);
       setShareToFamily(false);
       await Promise.all([loadTimeline(), loadHealth()]);
     } catch {
@@ -470,7 +925,7 @@ export default function PregnancyScreen() {
     } finally {
       setSaving(false);
     }
-  }, [childId, composePhoto, composeMemo, composeChip, currentWeek, loadTimeline, loadHealth]);
+  }, [childId, composePhoto, composeMemo, composeMilestoneChip, composeSymptomChip, currentWeek, loadTimeline, loadHealth, shareToFamily]);
 
   useEffect(() => {
     loadTimeline();
@@ -612,21 +1067,56 @@ export default function PregnancyScreen() {
     setSaving(false);
   };
 
-  /* ── Delete record ── */
-  const handleDeleteRecord = (id: string, source?: string) => {
-    if (id.startsWith('dev-')) return; // 발달 정보는 정적이라 삭제 불가
-    Alert.alert('삭제', '이 기록을 삭제할까요?', [
+  /* ── 수정 저장 ── */
+  const handleEditSave = useCallback(async () => {
+    if (!editingItem) return;
+    setEditSaving(true);
+    try {
+      let newUri: string | undefined;
+      if (editNewImage) {
+        const { uploadApi } = await import('../../services/api');
+        const uploaded = await uploadApi.upload(editNewImage, 'pregnancy');
+        newUri = uploaded.url;
+        setEditNewImage(null);
+      }
+      await pregnancyApi.updateRecord(editingItem.id, {
+        content: editMemo.trim() || undefined,
+        uri: newUri,
+      });
+      setEditingItem(null);
+      loadTimeline();
+    } catch {
+      Alert.alert('오류', '수정에 실패했습니다');
+    } finally {
+      setEditSaving(false);
+    }
+  }, [editingItem, editMemo, editNewImage, loadTimeline]);
+
+  const pickEditImage = useCallback(async () => {
+    try {
+      const ImagePicker = await import('expo-image-picker');
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') { Alert.alert('권한 필요', '갤러리 접근 권한을 허용해주세요'); return; }
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [4, 3] });
+      if (!result.canceled && result.assets[0]) setEditNewImage(result.assets[0].uri);
+    } catch { Alert.alert('오류', '사진을 불러오지 못했습니다'); }
+  }, []);
+
+  /* ── 길게 누르기 → 수정/삭제 ── */
+  const handleLongPress = (item: { id: string; source: string; title: string; content?: string; emoji?: string; mediaUri?: string }) => {
+    if (item.id.startsWith('dev-')) return;
+    const canEdit = item.source !== 'health';
+    const buttons: import('react-native').AlertButton[] = [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
         style: 'destructive',
         onPress: async () => {
           try {
-            // source 별로 다른 컬렉션 → 다른 엔드포인트 호출
-            if (source === 'health') {
-              await pregnancyApi.deleteMomHealth(id);
+            if (item.source === 'health') {
+              await pregnancyApi.deleteMomHealth(item.id);
             } else {
-              await pregnancyApi.deleteRecord(id);
+              await pregnancyApi.deleteRecord(item.id);
             }
             loadTimeline();
           } catch {
@@ -634,7 +1124,18 @@ export default function PregnancyScreen() {
           }
         },
       },
-    ]);
+    ];
+    if (canEdit) {
+      buttons.unshift({
+        text: '수정',
+        onPress: () => {
+          setEditNewImage(null);
+          setEditingItem(item);
+          setEditMemo(item.content ?? '');
+        },
+      });
+    }
+    Alert.alert('기록 관리', item.title, buttons);
   };
 
   const toggleSymptom = (sid: string) => {
@@ -713,14 +1214,14 @@ export default function PregnancyScreen() {
           <Text style={styles.composeChipGroupLabel}>마일스톤</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.composeChipScroll}>
             {availableMilestones.map((ms) => {
-              const isActive = composeChip?.kind === 'milestone' && composeChip.id === ms.type;
+              const isActive = composeMilestoneChip?.id === ms.type;
               return (
                 <TouchableOpacity
                   key={`ms-${ms.type}`}
                   style={[styles.composeChip, isActive && styles.composeChipActive, { borderColor: '#FF8C5A' }]}
                   onPress={() =>
-                    setComposeChip(
-                      isActive ? null : { kind: 'milestone', id: ms.type, label: ms.title, emoji: ms.emoji },
+                    setComposeMilestoneChip(
+                      isActive ? null : { id: ms.type, label: ms.title, emoji: ms.emoji },
                     )
                   }
                   activeOpacity={0.75}
@@ -736,14 +1237,14 @@ export default function PregnancyScreen() {
           <Text style={styles.composeChipGroupLabel}>엄마 기분</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.composeChipScroll}>
             {symptomPresets.map((s) => {
-              const isActive = composeChip?.kind === 'symptom' && composeChip.id === s.id;
+              const isActive = composeSymptomChip?.id === s.id;
               return (
                 <TouchableOpacity
                   key={`sym-${s.id}`}
                   style={[styles.composeChip, isActive && styles.composeChipActive, { borderColor: '#E91E63' }]}
                   onPress={() =>
-                    setComposeChip(
-                      isActive ? null : { kind: 'symptom', id: s.id, label: s.label, emoji: s.emoji },
+                    setComposeSymptomChip(
+                      isActive ? null : { id: s.id, label: s.label, emoji: s.emoji },
                     )
                   }
                   activeOpacity={0.75}
@@ -827,63 +1328,69 @@ export default function PregnancyScreen() {
 
         {loadingTimeline && <ActivityIndicator style={{ marginTop: 20 }} color={COLORS.primary} />}
 
-        {/* ── "{N}장의 기록" — 성장앨범 feedCount와 동일 ── */}
+        {/* ── 성장앨범과 동일한 평면 피드 ── */}
         {(() => {
-          const totalCount = timeline
-            .map((wg) => wg.items.filter((it) => it.source !== 'development'))
-            .reduce((sum, items) => sum + items.length, 0);
-          if (totalCount === 0) return null;
-          return <Text style={styles.feedCount}>{totalCount}장의 기록</Text>;
-        })()}
-
-        {/* ── Timeline (성장앨범 feedCard 스타일) ── */}
-        {timeline
-          .map((weekGroup) => ({
-            ...weekGroup,
-            items: weekGroup.items.filter((it) => it.source !== 'development'),
-          }))
-          .filter((wg) => wg.items.length > 0)
-          .map((weekGroup) => (
-          <View key={weekGroup.week}>
-            <View style={styles.weekHeaderRow}>
-              <View style={[styles.weekBadge, weekGroup.week === currentWeek && styles.weekBadgeCurrent]}>
-                <Text style={styles.weekBadgeText}>임신 {weekGroup.week}주차</Text>
-              </View>
-              <View style={styles.weekLine} />
-            </View>
-
-            {weekGroup.items.map((item) => {
-              const stripColor = item.source === 'health' ? '#E91E63' : '#FF8C5A';
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.feedCard}
-                  onLongPress={() => handleDeleteRecord(item.id, item.source)}
-                  activeOpacity={0.85}
-                >
-                  {item.mediaUri ? (
-                    <Image source={{ uri: item.mediaUri }} style={styles.feedImage} resizeMode="cover" />
-                  ) : null}
-                  <View style={[styles.feedStrip, { backgroundColor: stripColor }]} />
-                  <View style={styles.feedInfo}>
-                    {item.createdAt ? (
-                      <Text style={styles.feedDate}>{new Date(item.createdAt).toLocaleDateString('ko-KR')}</Text>
+          const flatItems = timeline
+            .flatMap((wg) => wg.items.filter((it) => it.source !== 'development'))
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          if (flatItems.length === 0) return null;
+          return (
+            <>
+              <Text style={styles.feedCount}>{flatItems.length}장의 기록</Text>
+              {flatItems.map((item) => {
+                const stripColor = item.type === 'milestone' ? '#FF8C5A' : item.source === 'health' ? '#E91E63' : '#FF8C5A';
+                // 기존 기록 emoji null 보완: 증상 이름으로 역추적
+                const effectiveEmoji =
+                  item.emoji ??
+                  symptomPresets.find((s) => s.label === item.title)?.emoji;
+                // 마일스톤+엄마기분 동시 저장 시 content에 "[엄마기분: X]" 형태로 포함됨 → 파싱
+                const moodMatch = item.content?.match(/\[엄마기분: (.+?)\]/);
+                const moodLabel = moodMatch?.[1];
+                const moodEmoji = moodLabel
+                  ? symptomPresets.find((s) => s.label === moodLabel)?.emoji
+                  : undefined;
+                const memoText = item.content
+                  ?.replace(/\n?\[엄마기분: .+?\]/g, '')
+                  .trim();
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.feedCard}
+                    onLongPress={() => handleLongPress(item)}
+                    activeOpacity={0.85}
+                  >
+                    {item.mediaUri ? (
+                      <Image source={{ uri: item.mediaUri }} style={styles.feedImage} resizeMode="cover" />
                     ) : null}
-                    <View style={[styles.feedBadge, { borderColor: stripColor }]}>
-                      <View style={[styles.feedBadgeCircle, { backgroundColor: stripColor + '22' }]}>
-                        <EmojiOrIcon emoji={item.emoji} size={20} textStyle={{ fontSize: 16 }} />
+                    <View style={[styles.feedStrip, { backgroundColor: stripColor }]} />
+                    <View style={styles.feedInfo}>
+                      {item.createdAt ? (
+                        <Text style={styles.feedDate}>{new Date(item.createdAt).toLocaleDateString('ko-KR')}</Text>
+                      ) : null}
+                      <View style={[styles.feedBadge, { borderColor: stripColor + '66' }]}>
+                        <View style={[styles.feedBadgeCircle, { backgroundColor: stripColor + '22' }]}>
+                          <EmojiOrIcon emoji={effectiveEmoji} size={20} textStyle={{ fontSize: 16 }} />
+                        </View>
+                        <Text style={[styles.feedBadgeText, { color: stripColor }]}>{item.title}</Text>
                       </View>
-                      <Text style={[styles.feedBadgeText, { color: stripColor }]}>{item.title}</Text>
+                      {memoText ? (
+                        <Text style={styles.feedMemo}>{memoText}</Text>
+                      ) : null}
+                      {moodLabel ? (
+                        <View style={[styles.feedBadge, { borderColor: '#E91E6366', marginTop: 4 }]}>
+                          <View style={[styles.feedBadgeCircle, { backgroundColor: '#E91E6322' }]}>
+                            <EmojiOrIcon emoji={moodEmoji} size={20} textStyle={{ fontSize: 16 }} />
+                          </View>
+                          <Text style={[styles.feedBadgeText, { color: '#C2185B' }]}>{moodLabel}</Text>
+                        </View>
+                      ) : null}
                     </View>
-                    {item.content ? (
-                      <Text style={styles.feedMemo}>{item.content}</Text>
-                    ) : null}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        ))}
+                  </TouchableOpacity>
+                );
+              })}
+            </>
+          );
+        })()}
 
         {!loadingTimeline && timeline.length === 0 && (
           <View style={styles.emptyCenter}>
@@ -893,26 +1400,198 @@ export default function PregnancyScreen() {
           </View>
         )}
 
-        {/* ── 임신앨범 만들기 (성장앨범 만들기와 동일 디자인) ── */}
+        {/* ── 임신앨범 만들기 (성장앨범과 동일 구조) ── */}
         <View style={styles.albumSection}>
           <View style={styles.albumSectionHeader}>
             <Text style={styles.albumSectionTitle}>{'임신앨범 만들기'}</Text>
             <TouchableOpacity
-              onPress={() => router.push('/(main)/album' as never)}
+              onPress={() => {
+                setShowAlbumForm((v) => {
+                  if (!v) {
+                    // 폼 열릴 때 기본값 자동 세팅
+                    const now = new Date();
+                    const toYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                    // 타임라인에서 유저 업로드 기록 중 가장 이른 달
+                    const userItems = timeline
+                      .flatMap((wg) => wg.items.filter((it) => it.source !== 'development'))
+                      .map((it) => it.createdAt.slice(0, 7))
+                      .sort();
+                    const fromYM = userItems[0] ?? toYM;
+                    if (!albumDateFrom) setAlbumDateFrom(fromYM);
+                    if (!albumDateTo) setAlbumDateTo(toYM);
+                    if (!albumTitle) setAlbumTitle(`${childName} 임신앨범`);
+                  }
+                  return !v;
+                });
+              }}
               style={styles.albumNewBtn}
               activeOpacity={0.8}
             >
-              <Text style={styles.albumNewBtnText}>+ 새 앨범</Text>
+              <Text style={styles.albumNewBtnText}>{showAlbumForm ? '닫기' : '+ 새 앨범'}</Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.albumSectionDesc}>
-            {'기간을 선택하면 기기에서 바로 PDF를 만들어요.\n진료기록·초음파·엄마상태가 자동으로 포함돼요'}
+            {'기간을 선택하면 기기에서 바로 PDF를 만들어요.\n사진이 있는 기록만 2×2 그리드로 출력돼요'}
           </Text>
+
+          {showAlbumForm && (
+            <View style={styles.albumForm}>
+              <Text style={styles.albumFormLabel}>앨범 제목 (선택)</Text>
+              <TextInput
+                style={styles.albumFormInput}
+                placeholder={`${childName} 임신앨범`}
+                value={albumTitle}
+                onChangeText={setAlbumTitle}
+                maxLength={30}
+                placeholderTextColor={COLORS.textLight}
+              />
+              <View style={styles.albumDateRow}>
+                <View style={styles.albumDateField}>
+                  <Text style={styles.albumFormLabel}>시작 월</Text>
+                  <TextInput
+                    style={styles.albumFormInput}
+                    placeholder="2024-01"
+                    value={albumDateFrom}
+                    onChangeText={setAlbumDateFrom}
+                    maxLength={7}
+                    keyboardType="numbers-and-punctuation"
+                    placeholderTextColor={COLORS.textLight}
+                  />
+                </View>
+                <Text style={styles.albumDateSep}>{'~'}</Text>
+                <View style={styles.albumDateField}>
+                  <Text style={styles.albumFormLabel}>종료 월</Text>
+                  <TextInput
+                    style={styles.albumFormInput}
+                    placeholder="2024-12"
+                    value={albumDateTo}
+                    onChangeText={setAlbumDateTo}
+                    maxLength={7}
+                    keyboardType="numbers-and-punctuation"
+                    placeholderTextColor={COLORS.textLight}
+                  />
+                </View>
+              </View>
+              <Text style={styles.albumFormHint}>
+                {'YYYY-MM 형식 · 사진이 있는 기록만 포함 · 페이지당 4장'}
+              </Text>
+
+              <Text style={styles.albumFormLabel}>표지 이미지 (선택)</Text>
+              <TouchableOpacity
+                style={styles.albumCoverPicker}
+                onPress={pickCoverImage}
+                activeOpacity={0.8}
+              >
+                {albumCoverUri ? (
+                  <>
+                    <Image
+                      source={{ uri: albumCoverUri }}
+                      style={styles.albumCoverPreview}
+                      resizeMode="cover"
+                    />
+                    <TouchableOpacity
+                      style={styles.albumCoverClear}
+                      onPress={() => setAlbumCoverUri(null)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.albumCoverClearText}>{'✕'}</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <Image
+                      source={DEFAULT_COVER_SOURCE}
+                      style={styles.albumCoverPreview}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.albumCoverDefaultOverlay}>
+                      <Text style={styles.albumCoverDefaultText}>{'기본 표지 · 탭하여 변경'}</Text>
+                    </View>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.albumGenerateBtn, albumGenerating && styles.albumGenerateBtnDisabled]}
+                onPress={handleGeneratePregnancyAlbum}
+                disabled={albumGenerating || !albumDateFrom || !albumDateTo}
+                activeOpacity={0.8}
+              >
+                {albumGenerating
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={styles.albumGenerateBtnText}>{'앨범 생성 시작'}</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         <View style={{ height: 40 }} />
       </ScrollView>
       <AdSlot />
+
+      {/* ── 기록 수정 모달 ── */}
+      <Modal
+        visible={!!editingItem}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEditingItem(null)}
+      >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalCard, { paddingBottom: 24 }]}>
+              <View style={styles.modalHeader}>
+                <TouchableOpacity onPress={() => setEditingItem(null)} style={styles.modalBackBtn}>
+                  <Text style={styles.modalBackText}>{'< 취소'}</Text>
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>기록 수정</Text>
+                <View style={{ width: 50 }} />
+              </View>
+              {editingItem && (
+                <Text style={{ fontSize: FONT_SIZE.sm, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 8 }}>
+                  {editingItem.title}
+                </Text>
+              )}
+              {/* 현재 이미지 / 새 이미지 미리보기 */}
+              {(editNewImage ?? editingItem?.mediaUri) ? (
+                <Image
+                  source={{ uri: editNewImage ?? editingItem!.mediaUri }}
+                  style={{ width: '100%', height: 160, borderRadius: RADIUS.md, marginBottom: 8 }}
+                  resizeMode="cover"
+                />
+              ) : null}
+              <TouchableOpacity
+                style={{ alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: COLORS.surfaceLight, borderRadius: RADIUS.md, marginBottom: 10 }}
+                onPress={pickEditImage}
+              >
+                <Text style={{ fontSize: FONT_SIZE.sm, color: COLORS.primary, fontWeight: '700' }}>
+                  {(editNewImage ?? editingItem?.mediaUri) ? '📷 사진 변경' : '📷 사진 추가'}
+                </Text>
+              </TouchableOpacity>
+              <TextInput
+                style={[styles.formInput, { minHeight: 100, textAlignVertical: 'top' }]}
+                placeholder="메모를 입력하세요"
+                placeholderTextColor={COLORS.textLight}
+                value={editMemo}
+                onChangeText={setEditMemo}
+                multiline
+                autoFocus
+              />
+              <TouchableOpacity
+                style={[styles.composeSaveBtn, editSaving && { opacity: 0.6 }]}
+                onPress={handleEditSave}
+                disabled={editSaving}
+                activeOpacity={0.85}
+              >
+                {editSaving
+                  ? <ActivityIndicator color="#FFF" />
+                  : <Text style={styles.composeSaveBtnText}>저장</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* ════════════════════════════════════════════════ */}
       {/*  Unified New Record Modal                        */}
@@ -1350,6 +2029,107 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.sm,
     color: COLORS.textSecondary,
     lineHeight: 20,
+    marginBottom: SPACING.sm,
+  },
+  albumForm: {
+    marginTop: SPACING.sm,
+    gap: 0,
+  },
+  albumFormLabel: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+    marginTop: SPACING.sm,
+  },
+  albumFormInput: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.text,
+    backgroundColor: COLORS.background,
+    marginBottom: 4,
+  },
+  albumDateRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  albumDateField: { flex: 1 },
+  albumDateSep: {
+    fontSize: 18,
+    color: COLORS.textSecondary,
+    marginBottom: 14,
+    alignSelf: 'center',
+  },
+  albumFormHint: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textLight,
+    marginBottom: SPACING.sm,
+    fontWeight: '600',
+  },
+  albumCoverPicker: {
+    width: '100%',
+    height: 100,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    backgroundColor: '#F5F5F5',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.md,
+    position: 'relative',
+  },
+  albumCoverPreview: {
+    width: '100%',
+    height: '100%',
+  },
+  albumCoverEmpty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  albumCoverEmptyText: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textLight,
+    fontWeight: '600',
+  },
+  albumCoverClear: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  albumCoverClearText: { color: '#FFF', fontSize: 12, fontWeight: '700' },
+  albumCoverDefaultOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingVertical: 5,
+    alignItems: 'center',
+  },
+  albumCoverDefaultText: { color: '#FFF', fontSize: FONT_SIZE.xs, fontWeight: '700' },
+  albumGenerateBtn: {
+    backgroundColor: '#C2185B',
+    borderRadius: RADIUS.md,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: SPACING.sm,
+  },
+  albumGenerateBtnDisabled: { opacity: 0.5 },
+  albumGenerateBtnText: {
+    color: '#fff',
+    fontSize: FONT_SIZE.md,
+    fontWeight: '700',
   },
 
   questionCardRow: {

@@ -20,6 +20,7 @@ import type { ImageSourcePropType } from 'react-native';
 import { AdSlot } from '../../components/ads/AdSlot';
 
 const IC_LULLABY = require('../../assets/quick-lullaby.png') as ImageSourcePropType;
+const IC_MIC     = require('../../assets/icon-mic.png') as ImageSourcePropType;
 
 /* ------------------------------------------------------------------ */
 /* Sound definitions                                                   */
@@ -31,17 +32,19 @@ type PrenatalCategory = 'myvoice' | 'classic' | 'womb' | 'nature' | 'meditation'
 interface SoundItem {
   id: string;
   label: string;
-  icon: string;
+  iconImg: ImageSourcePropType;
   category: SoundCategory;
   desc: string;
   source: AVPlaybackSource | null;
   uri?: string;
+  /** 파일이 아직 없으면 안내용 — UI 에서 "준비 중" 배지 표시 */
+  pendingFile?: string;
 }
 
 interface PrenatalSoundItem {
   id: string;
   label: string;
-  icon: string;
+  iconImg: ImageSourcePropType;
   category: PrenatalCategory;
   desc: string;
   source: AVPlaybackSource | null;
@@ -50,18 +53,18 @@ interface PrenatalSoundItem {
 }
 
 const BUILT_IN_SOUNDS: SoundItem[] = [
-  { id: 'womb', label: '자궁 소리', icon: '👶', category: 'white', desc: '엄마 뱃속 소리', source: require('../../assets/sounds/womb.wav') },
-  { id: 'vacuum', label: '청소기', icon: '🧹', category: 'white', desc: '일정한 백색소음', source: require('../../assets/sounds/vacuum.wav') },
-  { id: 'hairdryer', label: '드라이기', icon: '💨', category: 'white', desc: '부드러운 바람소리', source: require('../../assets/sounds/hairdryer.wav') },
-  { id: 'fan', label: '선풍기', icon: '🌬', category: 'white', desc: '시원한 바람소리', source: require('../../assets/sounds/fan.wav') },
-  { id: 'rain', label: '빗소리', icon: '🌧', category: 'nature', desc: '잔잔한 빗소리', source: require('../../assets/sounds/rain.wav') },
-  { id: 'wave', label: '파도소리', icon: '🌊', category: 'nature', desc: '해변의 파도', source: require('../../assets/sounds/wave.wav') },
-  { id: 'forest', label: '숲속', icon: '🌳', category: 'nature', desc: '새소리와 바람', source: require('../../assets/sounds/forest.wav') },
-  { id: 'stream', label: '시냇물', icon: '💧', category: 'nature', desc: '졸졸 흐르는 물', source: require('../../assets/sounds/stream.wav') },
-  { id: 'twinkle', label: '반짝반짝', icon: '⭐', category: 'lullaby', desc: '작은별 멜로디', source: require('../../assets/sounds/twinkle.wav') },
-  { id: 'brahms', label: '브람스', icon: '🎵', category: 'lullaby', desc: '브람스 자장가', source: require('../../assets/sounds/brahms.wav') },
-  { id: 'mozart', label: '모차르트', icon: '🎶', category: 'lullaby', desc: '아이네클라이네', source: require('../../assets/sounds/mozart.wav') },
-  { id: 'orgel', label: '오르골', icon: '🎼', category: 'lullaby', desc: '오르골 멜로디', source: require('../../assets/sounds/orgel.wav') },
+  { id: 'womb',      label: '자궁 소리', iconImg: require('../../assets/sound-womb.png'),      category: 'white',   desc: '엄마 뱃속 소리',   source: require('../../assets/sounds/womb.mp3') },
+  { id: 'vacuum',    label: '청소기',    iconImg: require('../../assets/sound-vacuum.png'),    category: 'white',   desc: '일정한 백색소음',  source: require('../../assets/sounds/vacuum.mp3') },
+  { id: 'hairdryer', label: '드라이기',  iconImg: require('../../assets/sound-hairdryer.png'), category: 'white',   desc: '부드러운 바람소리', source: null, pendingFile: 'hairdryer.mp3' },
+  { id: 'fan',       label: '선풍기',    iconImg: require('../../assets/sound-fan.png'),       category: 'white',   desc: '시원한 바람소리',  source: require('../../assets/sounds/fan.mp3') },
+  { id: 'rain',      label: '빗소리',    iconImg: require('../../assets/sound-rain.png'),      category: 'nature',  desc: '잔잔한 빗소리',    source: require('../../assets/sounds/rain.mp3') },
+  { id: 'wave',      label: '파도소리',  iconImg: require('../../assets/sound-wave.png'),      category: 'nature',  desc: '해변의 파도',      source: require('../../assets/sounds/wave.mp3') },
+  { id: 'forest',    label: '숲속',      iconImg: require('../../assets/sound-forest.png'),    category: 'nature',  desc: '새소리와 바람',    source: require('../../assets/sounds/forest.mp3') },
+  { id: 'stream',    label: '시냇물',    iconImg: require('../../assets/sound-stream.png'),   category: 'nature',  desc: '졸졸 흐르는 물',   source: require('../../assets/sounds/stream.mp3') },
+  { id: 'twinkle',   label: '반짝반짝',  iconImg: require('../../assets/sound-twinkle.png'),   category: 'lullaby', desc: '작은별 멜로디',    source: null, pendingFile: 'twinkle.mp3' },
+  { id: 'brahms',    label: '브람스',    iconImg: require('../../assets/sound-brahms.png'),    category: 'lullaby', desc: '브람스 자장가',    source: require('../../assets/sounds/brahms.mp3') },
+  { id: 'mozart',    label: '모차르트',  iconImg: require('../../assets/sound-mozart.png'),    category: 'lullaby', desc: '아이네클라이네',   source: require('../../assets/sounds/mozart.mp3') },
+  { id: 'orgel',     label: '오르골',    iconImg: require('../../assets/sound-orgel.png'),     category: 'lullaby', desc: '오르골 멜로디',    source: null, pendingFile: 'orgel.mp3' },
 ];
 
 /**
@@ -73,25 +76,24 @@ const BUILT_IN_SOUNDS: SoundItem[] = [
  *   Musopen/IMSLP에서 Public Domain 표기 음원을 받거나, Pixabay/Freesound의 CC0 음원 사용.
  */
 const PRENATAL_SOUNDS: PrenatalSoundItem[] = [
-  // 🎻 클래식 (태교 검증곡) — 작곡 자체는 전부 퍼블릭 도메인
-  { id: 'p_mozart_k448', label: '모차르트 K.448', icon: '🎼', category: 'classic', desc: '두 대의 피아노를 위한 소나타', source: null, pendingFile: 'mozart-sonata.mp3' },
-  { id: 'p_vivaldi_spring', label: '비발디 봄', icon: '🌸', category: 'classic', desc: '사계 중 봄', source: null, pendingFile: 'vivaldi-spring.mp3' },
-  { id: 'p_bach_air', label: '바흐 G선상의 아리아', icon: '🎻', category: 'classic', desc: '관현악 모음곡 3번', source: null, pendingFile: 'bach-air.mp3' },
-  { id: 'p_pachelbel_canon', label: '파헬벨 캐논', icon: '🎵', category: 'classic', desc: 'D장조 캐논', source: null, pendingFile: 'pachelbel-canon.mp3' },
-  { id: 'p_debussy_clair', label: '드뷔시 달빛', icon: '🌙', category: 'classic', desc: '베르가마스크 모음곡', source: null, pendingFile: 'debussy-clair.mp3' },
+  // 클래식 (태교 검증곡) — 작곡 자체는 전부 퍼블릭 도메인. 음원 미확보 → 준비 중 표시.
+  { id: 'p_mozart_k448',    label: '모차르트 K.448',    iconImg: require('../../assets/p-mozart.png'),       category: 'classic',    desc: '두 대의 피아노를 위한 소나타', source: null, pendingFile: 'mozart-sonata.mp3' },
+  { id: 'p_vivaldi_spring', label: '비발디 봄',          iconImg: require('../../assets/p-vivaldi.png'),      category: 'classic',    desc: '사계 중 봄',               source: null, pendingFile: 'vivaldi-spring.mp3' },
+  { id: 'p_bach_air',       label: '바흐 G선상의 아리아', iconImg: require('../../assets/p-bach.png'),         category: 'classic',    desc: '관현악 모음곡 3번',         source: null, pendingFile: 'bach-air.mp3' },
+  { id: 'p_pachelbel_canon',label: '파헬벨 캐논',        iconImg: require('../../assets/p-pachelbel.png'),    category: 'classic',    desc: 'D장조 캐논',               source: null, pendingFile: 'pachelbel-canon.mp3' },
 
-  // 💓 자궁·심장박동 (안정감)
-  { id: 'p_womb_heart', label: '자궁 속 심장박동', icon: '💗', category: 'womb', desc: '60~80bpm, 자궁 내 환경', source: null, pendingFile: 'womb-heartbeat.mp3' },
-  { id: 'p_mom_heart', label: '엄마 심장소리', icon: '❤️', category: 'womb', desc: '아기에게 가장 익숙한 소리', source: null, pendingFile: 'mom-heartbeat.mp3' },
+  // 자궁·심장박동 (안정감) — 자장가 womb.mp3 재사용
+  { id: 'p_womb_heart', label: '자궁 속 심장박동', iconImg: require('../../assets/p-womb-heart.png'),  category: 'womb', desc: '60~80bpm, 자궁 내 환경',       source: require('../../assets/sounds/womb.mp3') },
 
-  // 🌊 자연소리 (저주파 이완)
-  { id: 'p_ocean', label: '잔잔한 파도', icon: '🌊', category: 'nature', desc: '해변의 부드러운 파도', source: null, pendingFile: 'ocean-calm.mp3' },
-  { id: 'p_rain_soft', label: '부드러운 빗소리', icon: '🌧', category: 'nature', desc: '창가의 빗소리', source: null, pendingFile: 'rain-soft.mp3' },
-  { id: 'p_forest_birds', label: '숲속 새소리', icon: '🌳', category: 'nature', desc: '평화로운 아침 숲', source: null, pendingFile: 'forest-birds.mp3' },
+  // 자연소리 (저주파 이완) — 자장가 음원 재사용
+  { id: 'p_ocean',       label: '잔잔한 파도',    iconImg: require('../../assets/p-ocean.png'),        category: 'nature', desc: '해변의 부드러운 파도',  source: require('../../assets/sounds/wave.mp3') },
+  { id: 'p_rain_soft',   label: '부드러운 빗소리', iconImg: require('../../assets/p-rain.png'),         category: 'nature', desc: '창가의 빗소리',         source: require('../../assets/sounds/rain.mp3') },
+  { id: 'p_forest_birds',label: '숲속 새소리',    iconImg: require('../../assets/p-forest.png'),       category: 'nature', desc: '평화로운 아침 숲',      source: require('../../assets/sounds/forest.mp3') },
 
-  // 🧘 명상·힐링
-  { id: 'p_432hz', label: '432Hz 힐링', icon: '🧘', category: 'meditation', desc: '자연 주파수 명상', source: null, pendingFile: 'meditation-432hz.mp3' },
-  { id: 'p_singing_bowl', label: '싱잉볼', icon: '🔔', category: 'meditation', desc: '티베트 명상 볼', source: null, pendingFile: 'singing-bowl.mp3' },
+  // 명상·힐링
+  { id: 'p_432hz',        label: '432Hz 힐링',  iconImg: require('../../assets/p-meditation.png'),   category: 'meditation', desc: '자연 주파수 명상',     source: require('../../assets/sounds/meditation-432hz.mp3') },
+  { id: 'p_sleep_piano',  label: '수면 피아노', iconImg: require('../../assets/p-meditation.png'),   category: 'meditation', desc: '몽환적인 피아노 솔로', source: require('../../assets/sounds/sleeppiano.mp3') },
+  { id: 'p_harp',         label: '하프',        iconImg: require('../../assets/p-meditation.png'),   category: 'meditation', desc: '부드러운 하프 선율',   source: require('../../assets/sounds/harp.mp3') },
 ];
 
 const TIMER_OPTIONS = [
@@ -120,18 +122,19 @@ const PRENATAL_CATEGORIES = [
 const MY_RECORDINGS_KEY = 'amatda_my_recordings';
 
 const COLOR = {
-  bg: '#1A1230',
-  card: '#251D42',
-  cardActive: '#3D2E6B',
-  accent: '#B18AFF',
-  accentSoft: '#7C5CBF',
-  text: '#FFFFFF',
-  textSub: '#A099B8',
-  timer: '#FFD76E',
+  bg: '#F2F2F7',
+  card: '#FFFFFF',
+  cardActive: '#FFF0E6',
+  accent: '#FF8C5A',
+  accentSoft: '#FFB48E',
+  text: '#1C1C1E',
+  textSub: '#636366',
+  textLight: '#ABABAB',
+  timer: '#FF8C5A',
   cryOn: '#FF6B6B',
-  cryOff: '#4A4060',
+  cryOff: '#E5E5EA',
   record: '#FF6B6B',
-  recordBg: '#3D1A1A',
+  recordBg: '#FFF0F0',
 };
 
 interface MyRecording {
@@ -247,6 +250,10 @@ export default function LullabyScreen() {
         source = prenatal.source;
       } else if (myRec) {
         source = { uri: myRec.uri };
+      } else if (builtIn && !builtIn.source) {
+        // 자장가 음원 미확보 — 태교와 동일한 안내
+        Alert.alert('음원 준비 중', `'${builtIn.label}' 음원은 곧 추가될 예정이에요.`);
+        return;
       } else if (prenatal && !prenatal.source) {
         Alert.alert('음원 준비 중', `'${prenatal.label}' 음원은 곧 추가될 예정이에요.`);
         return;
@@ -420,7 +427,7 @@ export default function LullabyScreen() {
     : BUILT_IN_SOUNDS.find((s) => s.id === playing)) ?? (
     myRecordings.find((r) => r.id === playing) ? {
       id: playing!, label: myRecordings.find((r) => r.id === playing)!.label,
-      icon: '🎤', desc: '내 목소리 녹음', category: 'myvoice' as const, source: null,
+      iconImg: IC_MIC, desc: '내 목소리 녹음', category: 'myvoice' as const, source: null,
     } : null
   );
 
@@ -438,7 +445,7 @@ export default function LullabyScreen() {
       {currentSound ? (
         <View style={styles.nowPlaying}>
           <Animated.View style={[styles.nowPlayingCircle, { transform: [{ scale: pulseAnim }] }]}>
-            <Text style={styles.nowPlayingIcon}>{currentSound.icon}</Text>
+            <Image source={currentSound.iconImg} style={styles.nowPlayingIconImg} resizeMode="contain" />
           </Animated.View>
           <Text style={styles.nowPlayingLabel}>{currentSound.label}</Text>
           <Text style={styles.nowPlayingDesc}>{currentSound.desc}</Text>
@@ -565,15 +572,30 @@ export default function LullabyScreen() {
               <View style={styles.soundGrid}>
                 {BUILT_IN_SOUNDS.filter((s) => s.category === cat.key).map((sound) => {
                   const isActive = playing === sound.id;
+                  const isPending = !sound.source;
                   return (
                     <TouchableOpacity
                       key={sound.id}
-                      style={[styles.soundCard, isActive && styles.soundCardActive]}
+                      style={[
+                        styles.soundCard,
+                        isActive && styles.soundCardActive,
+                        isPending && styles.soundCardPending,
+                      ]}
                       onPress={() => handlePlay(sound.id)}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.soundIcon}>{sound.icon}</Text>
-                      <Text style={[styles.soundLabel, isActive && styles.soundLabelActive]}>{sound.label}</Text>
+                      <Image source={sound.iconImg} style={styles.soundIconImg} resizeMode="contain" />
+                      <Text
+                        style={[
+                          styles.soundLabel,
+                          isActive && styles.soundLabelActive,
+                          isPending && styles.soundLabelPending,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {sound.label}
+                      </Text>
+                      {isPending && <Text style={styles.pendingBadge}>준비 중</Text>}
                       {isActive && <View style={styles.playingDot} />}
                     </TouchableOpacity>
                   );
@@ -598,7 +620,7 @@ export default function LullabyScreen() {
                       onPress={() => handlePlay(sound.id)}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.soundIcon}>{sound.icon}</Text>
+                      <Image source={sound.iconImg} style={styles.soundIconImg} resizeMode="contain" />
                       <Text
                         style={[
                           styles.soundLabel,
@@ -637,21 +659,24 @@ const styles = StyleSheet.create({
 
   nowPlaying: { alignItems: 'center', paddingVertical: 16 },
   nowPlayingCircle: {
-    width: 90, height: 90, borderRadius: 45,
+    width: 90, height: 90, borderRadius: 24,
     backgroundColor: COLOR.cardActive, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: COLOR.accent,
+    borderWidth: 2, borderColor: COLOR.accent,
     ...Platform.select({
-      ios: { shadowColor: COLOR.accent, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 20 },
-      android: { elevation: 10 },
+      ios: { shadowColor: COLOR.accent, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.30, shadowRadius: 12 },
+      android: { elevation: 8 },
     }),
   },
   nowPlayingCircleIdle: {
-    width: 90, height: 90, borderRadius: 45,
+    width: 90, height: 90, borderRadius: 24,
     backgroundColor: COLOR.card, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: COLOR.accentSoft,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 10 },
+      android: { elevation: 5 },
+    }),
   },
-  nowPlayingIcon: { fontSize: 38 },
-  nowPlayingIconImg: { width: 48, height: 48 },
+  nowPlayingIconImg: { width: 52, height: 52 },
   nowPlayingLabel: { fontSize: 17, fontWeight: '700', color: COLOR.text, marginTop: 10 },
   nowPlayingDesc: { fontSize: 13, color: COLOR.textSub, marginTop: 2 },
   timerDisplay: { fontSize: 22, fontWeight: '700', color: COLOR.timer, marginTop: 6, fontVariant: ['tabular-nums'] },
@@ -661,7 +686,12 @@ const styles = StyleSheet.create({
   cryRow: {
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: 24, marginBottom: 12,
-    backgroundColor: COLOR.card, borderRadius: 14, padding: 14,
+    backgroundColor: COLOR.card, borderRadius: 16, padding: 14,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.10, shadowRadius: 8 },
+      android: { elevation: 4 },
+    }),
   },
   cryInfo: { flex: 1 },
   cryLabel: { fontSize: 14, fontWeight: '700', color: COLOR.text },
@@ -672,9 +702,19 @@ const styles = StyleSheet.create({
   timerChips: { gap: 8 },
   timerChip: {
     paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20,
-    backgroundColor: COLOR.card, borderWidth: 1, borderColor: 'transparent',
+    backgroundColor: COLOR.card, borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.10, shadowRadius: 6 },
+      android: { elevation: 3 },
+    }),
   },
-  timerChipActive: { backgroundColor: COLOR.cardActive, borderColor: COLOR.accent },
+  timerChipActive: {
+    backgroundColor: COLOR.cardActive, borderColor: COLOR.accent,
+    ...Platform.select({
+      ios: { shadowColor: COLOR.accent, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 5 },
+      android: { elevation: 3 },
+    }),
+  },
   timerChipText: { fontSize: 13, fontWeight: '600', color: COLOR.textSub },
   timerChipTextActive: { color: COLOR.accent },
 
@@ -700,28 +740,38 @@ const styles = StyleSheet.create({
   soundList: { flex: 1, paddingHorizontal: 24 },
   categorySection: { marginBottom: 16 },
   categoryTitle: { fontSize: 15, fontWeight: '700', color: COLOR.text, marginBottom: 10 },
-  soundGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  soundGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingVertical: 4, paddingHorizontal: 2 },
   soundCard: {
     width: '22%', aspectRatio: 1,
-    backgroundColor: COLOR.card, borderRadius: 16,
+    backgroundColor: COLOR.card, borderRadius: 18,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: 'transparent',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.13, shadowRadius: 8 },
+      android: { elevation: 5 },
+    }),
   },
-  soundCardActive: { backgroundColor: COLOR.cardActive, borderColor: COLOR.accent },
-  soundIcon: { fontSize: 26, marginBottom: 2 },
-  soundIconImg: { width: 30, height: 30, marginBottom: 2 },
+  soundCardActive: {
+    backgroundColor: COLOR.cardActive,
+    borderColor: COLOR.accent,
+    ...Platform.select({
+      ios: { shadowColor: COLOR.accent, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.30, shadowRadius: 7 },
+      android: { elevation: 4 },
+    }),
+  },
+  soundIconImg: { width: 40, height: 40, marginBottom: 2 },
   soundLabel: { fontSize: 10, fontWeight: '600', color: COLOR.textSub },
   soundLabelActive: { color: COLOR.accent },
-  soundCardPending: { opacity: 0.55, borderStyle: 'dashed', borderColor: COLOR.textSub },
-  soundLabelPending: { color: COLOR.textSub },
+  soundCardPending: { opacity: 0.5 },
+  soundLabelPending: { color: COLOR.textLight },
   pendingBadge: {
     position: 'absolute', top: 4, right: 4,
     fontSize: 8, fontWeight: '700', color: COLOR.textSub,
-    backgroundColor: 'rgba(0,0,0,0.25)', paddingHorizontal: 4, paddingVertical: 1,
+    backgroundColor: '#E5E5EA', paddingHorizontal: 4, paddingVertical: 1,
     borderRadius: 4, overflow: 'hidden',
   },
   playingDot: {
-    width: 6, height: 6, borderRadius: 3,
+    width: 7, height: 7, borderRadius: 4,
     backgroundColor: COLOR.accent, position: 'absolute', top: 6, right: 6,
   },
 
@@ -729,8 +779,12 @@ const styles = StyleSheet.create({
   myVoiceSection: { marginBottom: 8 },
   recordBtn: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLOR.card, borderRadius: 14, padding: 16,
-    borderWidth: 1.5, borderColor: COLOR.accentSoft,
+    backgroundColor: COLOR.card, borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.10, shadowRadius: 8 },
+      android: { elevation: 4 },
+    }),
   },
   recordBtnActive: { backgroundColor: COLOR.recordBg, borderColor: COLOR.record },
   recordDot: {

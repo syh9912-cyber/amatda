@@ -5,6 +5,27 @@ import { collections } from '../../services/firestore';
 import { buildChildContext } from '../../services/coaching/context.builder';
 import { isGeminiAvailable, callGeminiText } from '../../services/coaching/gemini.client';
 import { logger } from '../../utils/logger';
+import { z } from 'zod';
+import { parseBody } from '../../utils/validate';
+import { containsForbiddenTerms } from '../../services/coaching/forbidden.filter';
+
+const DiaryBodySchema = z.object({
+  childId: z.string().min(1).max(128),
+});
+
+/**
+ * 사용자 입력이 prompt 의 일부로 들어가는 경우(e.g. 이전 세션 메시지),
+ * instruction-style markers 를 제거해 prompt injection 방어.
+ */
+function sanitizeForPrompt(raw: unknown): string {
+  if (typeof raw !== 'string') return '';
+  let s = raw.slice(0, 200);
+  s = s.replace(/\[\/?INST\]/gi, '');
+  s = s.replace(/<\/?(system|assistant|user)>/gi, '');
+  s = s.replace(/<\|[^|>]*\|>/g, '');
+  s = s.replace(/(^|\n)\s*(BEGIN|END)\s+(SYSTEM|USER|PROMPT)/gi, '');
+  return s.trim();
+}
 
 function buildTrackingText(data: Record<string, unknown>): string {
   const parts: string[] = [];
@@ -28,8 +49,9 @@ export function registerDailyDiaryHandler(router: Router): void {
 
   router.post('/daily-diary', authMiddleware, async (req: Request, res: Response) => {
     try {
-      const { childId } = req.body as { childId: string };
-      if (!childId) { error(res, 'childId 필수'); return; }
+      const body = parseBody(req, res, DiaryBodySchema);
+      if (!body) return;
+      const { childId } = body;
 
       const child = await buildChildContext(childId, req.userId!);
       if (!child) { error(res, '자녀 정보 없음', 404); return; }
@@ -67,10 +89,13 @@ export function registerDailyDiaryHandler(router: Router): void {
         return;
       }
 
-      // 세션 요약 텍스트
-      const sessionTexts = sessions.slice(0, 8).map((s) =>
-        `[${s.category}] Q: ${(s.message as string)?.slice(0, 40)} / A: ${(s.answer as string)?.slice(0, 60)}`
-      ).join('\n');
+      // 세션 요약 텍스트 — sanitize 로 prompt injection 차단 (#9 보안)
+      const sessionTexts = sessions.slice(0, 8).map((s) => {
+        const cat = sanitizeForPrompt(s.category).slice(0, 16);
+        const q = sanitizeForPrompt(s.message).slice(0, 40);
+        const a = sanitizeForPrompt(s.answer).slice(0, 60);
+        return `[${cat}] Q: ${q} / A: ${a}`;
+      }).join('\n');
 
       // 추적 데이터 요약
       const trackingSummaryText = trackingData
@@ -81,7 +106,7 @@ export function registerDailyDiaryHandler(router: Router): void {
         success(res, {
           childName: child.name,
           date: todayStr,
-          diary: buildMockDiary(child.name, child.temperament, sessions.length),
+          diary: buildMockDiary('아이', child.temperament, sessions.length),
         });
         return;
       }
@@ -89,7 +114,7 @@ export function registerDailyDiaryHandler(router: Router): void {
       try {
         const prompt = `너는 따뜻한 육아일기 작가야. 오늘 하루 부모가 아이와 보낸 기록을 바탕으로 감성적이고 개인적인 육아일기를 한국어로 2~3문단 작성해.
 
-아이: ${child.name} (${child.ageInfo}, ${child.gender}, ${child.temperament})
+아이: 아이 (${child.ageInfo}, ${child.gender}, ${child.temperament})
 날짜: ${todayStr}
 
 오늘 상담 내역:
@@ -110,16 +135,21 @@ ${trackingSummaryText}
           maxTokens: 500,
         });
 
+        // 응답 후처리: 사주/오행 등 금지 용어 검출 시 fallback
+        const safeText = containsForbiddenTerms(aiText)
+          ? buildMockDiary('아이', child.temperament, sessions.length)
+          : aiText.trim();
+
         success(res, {
           childName: child.name,
           date: todayStr,
-          diary: aiText.trim() || buildMockDiary(child.name, child.temperament, sessions.length),
+          diary: safeText || buildMockDiary('아이', child.temperament, sessions.length),
         });
       } catch {
         success(res, {
           childName: child.name,
           date: todayStr,
-          diary: buildMockDiary(child.name, child.temperament, sessions.length),
+          diary: buildMockDiary('아이', child.temperament, sessions.length),
         });
       }
     } catch (err: unknown) {

@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import * as Sharing from 'expo-sharing';
+import * as Print from 'expo-print';
+import { buildFullReportHtml } from '../../utils/traitReportHtml';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useChildStore, AnalysisReport, ReportReasons } from '../../stores/childStore';
 import { childApi, coachingApi } from '../../services/api';
@@ -7,6 +10,7 @@ import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { DetailSection } from '../../components/report/DetailSection';
 import { TextTipSection } from '../../components/report/TextTipSection';
 import { SimpleListSection } from '../../components/report/SimpleListSection';
+import { EditorialCover } from '../../components/report/EditorialCover';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const IC_SEND = require('../../assets/icon-send.png') as number;
@@ -97,6 +101,45 @@ export default function AnalysisDetailScreen() {
   const [firstTalkLoading, setFirstTalkLoading] = useState(false);
   const [answer, setAnswer] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [sharing, setSharing] = useState(false);
+
+  // 풀 리포트 PDF 생성 → 공유.
+  // 이전 view-shot snapshotContentContainer 방식은 KeyboardAvoidingView+ScrollView 조합에서
+  // 콘텐츠 일부만 캡쳐되고 나머지가 검은 빈 공간으로 출력되는 RN 버그가 있어 PDF 로 전환.
+  // 카톡 PDF 첨부도 정상 미리보기되며, 풀 리포트는 다 페이지에 안전하게 분할됨.
+  const handleShareFull = async () => {
+    if (sharing) return;
+    if (!child || !report) return;
+    setSharing(true);
+    try {
+      const analysisDate = child.birthDate ? child.birthDate.replace(/-/g, '.') : '';
+      const html = buildFullReportHtml({
+        childName: safeString(child.name),
+        ageMonths: child.ageInfo?.months ?? 0,
+        analysisDate,
+        dominantType: safeString(child.innateData?.dominantType),
+        label: safeString(child.innateData?.label),
+        fiveElements: child.innateData?.fiveElements ?? null,
+        report,
+      });
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: `${safeString(child.name)}의 기질 리포트`,
+          UTI: 'com.adobe.pdf',
+        });
+      } else {
+        Alert.alert('저장 완료', `리포트 PDF 가 생성됐어요.\n${uri}`);
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '리포트 생성에 실패했습니다';
+      Alert.alert('오류', msg);
+    } finally {
+      setSharing(false);
+    }
+  };
 
   const report = storeReport ?? localReport;
 
@@ -205,7 +248,7 @@ export default function AnalysisDetailScreen() {
     >
       <Stack.Screen options={{ title: '리포트 상세', headerShown: false }} />
 
-      {/* 상단 네비 바 (뒤로 + 타이틀) */}
+      {/* 상단 네비 바 (뒤로 + 타이틀 + 공유) */}
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.backBtn}
@@ -216,18 +259,33 @@ export default function AnalysisDetailScreen() {
           <Text style={styles.backArrow}>{'‹'}</Text>
         </TouchableOpacity>
         <Text style={styles.topTitle} numberOfLines={1}>{headerTitle}</Text>
-        <View style={styles.backBtn} />
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={handleShareFull}
+          disabled={sharing}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+        >
+          {sharing ? (
+            <ActivityIndicator size="small" color="#FF8C5A" />
+          ) : (
+            <Text style={styles.shareTopBtn}>{'공유'}</Text>
+          )}
+        </TouchableOpacity>
       </View>
 
-      {/* 아이 이름·기질 헤더 (개월수 표기 X — 상세에선 라벨만) */}
-      <View style={styles.header}>
-        <Text style={styles.headerSubtitle}>{`${safeString(child.name)}의 종합 리포트`}</Text>
-        <Text style={styles.headerTitle}>{headerTitle}</Text>
-      </View>
-
-      {/* Summary card */}
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryText}>{stripAgePrefix(safeString(report.summary))}</Text>
+      {/* Editorial 표지 — 풀 리포트 위에 배치. 공유 시 ScrollView 전체 캡쳐로 표지+본문 함께 포함. */}
+      <View style={styles.coverWrap}>
+        <EditorialCover
+          childName={safeString(child.name)}
+          ageMonths={child.ageInfo?.months ?? 0}
+          dominantType={safeString(child.innateData?.dominantType)}
+          label={safeString(child.innateData?.label)}
+          fiveElements={child.innateData?.fiveElements ?? null}
+          description={safeString(report.summary)}
+          fullScreen={false}
+          // CTA 숨김 — 이미 풀 리포트 화면이라 "READ THE FULL REPORT" 버튼 불필요
+        />
       </View>
 
       {/* Sections */}
@@ -431,6 +489,13 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5EA',
   },
   backArrow: { fontSize: 20, color: COLORS.text, fontWeight: '700' },
+  shareTopBtn: { fontSize: 12, color: '#FF8C5A', fontWeight: '700' },
+  coverWrap: {
+    marginHorizontal: -SPACING.md,
+    marginBottom: SPACING.lg,
+    borderRadius: 0,
+    overflow: 'hidden',
+  },
   topTitle: {
     flex: 1,
     textAlign: 'center',

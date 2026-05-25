@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { authApi } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
 import { socialLogin, SocialProvider } from '../services/social-auth';
+import { analytics } from '../services/analytics';
 
 export function useLoginHandlers() {
   const [email, setEmail] = useState('');
@@ -23,7 +24,9 @@ export function useLoginHandlers() {
     try {
       const res = await authApi.login(email, password);
       const { user, accessToken, refreshToken } = res.data.data;
-      setAuth({ accessToken, refreshToken, userId: user.id, email: user.email });
+      await setAuth({ accessToken, refreshToken, userId: user.id, email: user.email });
+      analytics.setUserId(user.id);
+      analytics.logLogin('email');
       router.replace('/(main)/home');
     } catch (e: unknown) {
       const msg =
@@ -49,9 +52,15 @@ export function useLoginHandlers() {
       if (result.directLogin) {
         const dl = result.directLogin;
         const displayName = dl.nickname || dl.email || `${provider} 유저`;
-        setAuth({ accessToken: dl.accessToken, refreshToken: dl.refreshToken, userId: dl.userId, email: displayName });
+        await setAuth({ accessToken: dl.accessToken, refreshToken: dl.refreshToken, userId: dl.userId, email: displayName });
+        analytics.setUserId(dl.userId);
+        if (dl.isNewUser) analytics.logSignUp(provider);
+        else analytics.logLogin(provider);
 
-        if (dl.isNewUser || !dl.nickname) {
+        if (dl.isNewUser) {
+          // 신규 가입자 — 약관 동의 먼저 (PIPA 15·22조)
+          router.replace('/onboarding/consent');
+        } else if (!dl.nickname) {
           router.replace('/onboarding/set-nickname');
         } else {
           router.replace('/(main)/home');
@@ -81,9 +90,12 @@ export function useLoginHandlers() {
       console.log('[SocialLogin] backend response:', JSON.stringify({
         isNewUser, hasNickname: !!user.nickname, userId: user.id,
       }));
-      setAuth({ accessToken, refreshToken, userId: user.id, email: user.email ?? `${provider} 유저` });
-      // 신규 가입자 OR 닉네임 미설정 → 별명 화면. 그 외 → 홈
-      if (isNewUser || !user.nickname) {
+      await setAuth({ accessToken, refreshToken, userId: user.id, email: user.email ?? `${provider} 유저` });
+      // 신규 가입자 → 약관 동의 (PIPA 15·22조), 닉네임 미설정 → 별명 화면, 그 외 → 홈
+      if (isNewUser) {
+        console.log('[SocialLogin] → consent');
+        router.replace('/onboarding/consent');
+      } else if (!user.nickname) {
         console.log('[SocialLogin] → set-nickname');
         router.replace('/onboarding/set-nickname');
       } else {

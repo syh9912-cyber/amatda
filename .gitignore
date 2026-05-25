@@ -27,7 +27,10 @@ LOCAL-CONFIG.md
 *Secret*.txt
 *secret*.txt
 *키스토어*.txt
-google-services.json
+# Android google-services.json 은 Firebase 공식 가이드상 클라이언트 동봉 전제 파일
+# (API 키는 식별자일 뿐 보안 경계 아님 — Firestore/Storage rules 가 진짜 보호막).
+# .gitignore 와 추적 상태 불일치 정리: 의도적으로 추적한다.
+# iOS GoogleService-Info.plist 는 EAS 빌드 시점 주입(EAS Secret) — 계속 ignore.
 GoogleService-Info.plist
 # Firebase Admin SDK service account (마이그레이션용 일회성 키)
 service-account.json

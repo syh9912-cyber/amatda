@@ -27,7 +27,7 @@ import {
 } from '../../services/pushNotifications';
 import { useChildStore } from '../../stores/childStore';
 import { useFeverStore } from '../../stores/feverStore';
-import { AdSlot } from '../../components/ads/AdSlot';
+// 열 관리는 긴급 관련 페이지 — 광고 없음 (VIP 여부 무관)
 
 const IC_THERMOMETER = require('../../assets/quick-thermometer.png') as ImageSourcePropType;
 const IC_PILL = require('../../assets/quick-pill.png') as ImageSourcePropType;
@@ -1077,8 +1077,17 @@ export default function FeverScreen() {
               <Text style={styles.sectionTitle}>해열제 복용량</Text>
             </View>
             <Text style={styles.sectionDesc}>
-              아이 체중 기준 계산된 복용량입니다
+              아이 체중 기준 보수값(권장 최소치)으로 계산된 복용량입니다
             </Text>
+
+            {/* 의료 disclaimer — 약 농도 / 처방 우선 안내 (App Store 심사 + 안전성) */}
+            <View style={styles.medDisclaimer}>
+              <Text style={styles.medDisclaimerText}>
+                ⚠️ 본 계산은 일반 가이드용 보수값(권장 범위 최소치)이며 의료 진단을 대체하지 않습니다.{'\n'}
+                약마다 농도가 다르니 제품 라벨의 농도(예: 타이레놀 32mg/ml, 챔프 ER 48mg/ml)를 반드시 확인하세요.{'\n'}
+                실제 처방·교차 복용은 약사·소아과 안내를 우선해주세요.
+              </Text>
+            </View>
 
             {medicineLoading ? (
               <ActivityIndicator
@@ -1386,7 +1395,6 @@ export default function FeverScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      <AdSlot />
     </View>
   );
 }
@@ -1397,16 +1405,27 @@ export default function FeverScreen() {
 
 /**
  * 입력 몸무게 기준 시럽 용량 재계산 (실시간 표시 전용)
- * - 표준 공식 (소아과 가이드):
- *   · 타이레놀 시럽(32mg/ml): 10~15mg/kg → 평균 12.5mg/kg → ml = w * 12.5 / 32
- *   · 부루펜 시럽(20mg/ml): 5~10mg/kg → 평균 7.5mg/kg → ml = w * 7.5 / 20
- * - 기존 dose 객체의 interval / maxDaily / ageRestriction은 그대로 유지
+ *
+ * 보수적(최소) 용량 적용 — 2026-05-15 사용자 요청
+ *   · 아세트아미노펜: 권장 10~15mg/kg → 보수값 **10mg/kg**
+ *   · 이부프로펜: 권장 5~10mg/kg → 보수값 **5mg/kg**
+ *
+ * 시럽 농도 (한국 시판약 라벨 기준):
+ *   · 타이레놀/챔프(빨강): 32mg/ml (160mg/5ml)
+ *   · 챔프 ER (고농도): 48mg/ml (240mg/5ml)
+ *   · 부루펜/맥시부펜/챔프(파랑): 20mg/ml (100mg/5ml)
+ *   · 이지엔6 등 고농도 이부프로펜: 40mg/ml (200mg/5ml)
+ *
+ * 참고: 본 계산은 일반 가이드용이며, 실제 처방 용량은 약사·소아과의 안내를 우선해주세요.
  */
-function recalcSyrup(weight: number) {
-  const acetaminophenMg = +(weight * 12.5).toFixed(0);
-  const acetaminophenMl = +(weight * 12.5 / 32).toFixed(1);
-  const ibuprofenMg = +(weight * 7.5).toFixed(0);
-  const ibuprofenMl = +(weight * 7.5 / 20).toFixed(1);
+const ACET_MG_PER_KG = 10; // 보수값 (10~15 권장 중 최저)
+const IBU_MG_PER_KG = 5;   // 보수값 (5~10 권장 중 최저)
+
+function recalcSyrup(weight: number, acetConcMgPerMl = 32, ibuConcMgPerMl = 20) {
+  const acetaminophenMg = +(weight * ACET_MG_PER_KG).toFixed(0);
+  const acetaminophenMl = +(weight * ACET_MG_PER_KG / acetConcMgPerMl).toFixed(1);
+  const ibuprofenMg = +(weight * IBU_MG_PER_KG).toFixed(0);
+  const ibuprofenMl = +(weight * IBU_MG_PER_KG / ibuConcMgPerMl).toFixed(1);
   return {
     acetaminophen: { doseMg: `${acetaminophenMg}mg`, syrupMl: `시럽 약 ${acetaminophenMl}ml` },
     ibuprofen: { doseMg: `${ibuprofenMg}mg`, syrupMl: `시럽 약 ${ibuprofenMl}ml` },
@@ -1430,6 +1449,9 @@ function MedicineSection({
 }) {
   const parsedWeight = parseFloat(inputWeight);
   const useInput = !isNaN(parsedWeight) && parsedWeight > 0 && parsedWeight < 100;
+  // 농도 결정 — 챔프 ER 선택 시 48mg/ml, 그 외 32mg/ml. 이부는 고정 20mg/ml.
+  // selectedBrand / champType 는 아래에서 정의되지만 hooks 순서상 이 시점엔 stale 가능 →
+  // 안전하게 useInput 시점에 일반(32/20)으로 일단 계산하고 hook 이후 override.
   const recalc = useInput ? recalcSyrup(parsedWeight) : null;
 
   // 부드러운 fade 애니메이션 (수치 변화 시 깜빡임 → 인지)
@@ -1468,10 +1490,11 @@ function MedicineSection({
   })();
 
   // 4-약 그리드 — 사용자가 직접 브랜드 선택
-  // - 타이레놀, 챔프(빨강) → acetaminophen
-  // - 부루펜, 맥시부펜, 챔프(파랑) → ibuprofen
+  // - 타이레놀, 챔프(빨강) → acetaminophen (32mg/ml)
+  // - 챔프 ER (빨강 고농도) → acetaminophen (48mg/ml)
+  // - 부루펜, 맥시부펜, 챔프(파랑) → ibuprofen (20mg/ml)
   type BrandKey = 'tylenol' | 'champ' | 'brufen' | 'maxibupen';
-  type ChampType = 'red' | 'blue'; // 빨강=아세트, 파랑=이부
+  type ChampType = 'red' | 'blue' | 'red_er'; // 빨강=아세트 32, 빨강ER=아세트 48, 파랑=이부 20
 
   // 추천 약(아세트/이부)에 따라 디폴트 브랜드 결정
   const defaultBrand: BrandKey = recommendation.type === 'ibuprofen' ? 'brufen' : 'tylenol';
@@ -1486,21 +1509,29 @@ function MedicineSection({
   }, [recommendation.type]);
 
   // 선택된 브랜드 → 약 종류(acetaminophen/ibuprofen) 매핑
+  // 챔프 빨강·빨강ER 모두 아세트아미노펜 / 파랑만 이부프로펜
   const selectedType: MedicineType =
     selectedBrand === 'tylenol' ? 'acetaminophen'
     : selectedBrand === 'brufen' ? 'ibuprofen'
     : selectedBrand === 'maxibupen' ? 'ibuprofen'
-    : champType === 'red' ? 'acetaminophen' : 'ibuprofen';
+    : champType === 'blue' ? 'ibuprofen' : 'acetaminophen';
 
   const isAcet = selectedType === 'acetaminophen';
   const selectedDoseMg = isAcet ? acetaminophenDoseMg : ibuprofenDoseMg;
-  const selectedSyrupText = isAcet ? acetaminophenSyrup : ibuprofenSyrup;
+  // 챔프 ER (48mg/ml 고농도) — selectedSyrupText 의 ml 재계산
+  const isChampER = selectedBrand === 'champ' && champType === 'red_er';
+  let selectedSyrupText = isAcet ? acetaminophenSyrup : ibuprofenSyrup;
+  if (isChampER && useInput) {
+    const acetMl = +(parsedWeight * ACET_MG_PER_KG / 48).toFixed(1);
+    selectedSyrupText = `시럽 약 ${acetMl}ml`;
+  }
   const mlMatch = selectedSyrupText.match(/(\d+(?:\.\d+)?)\s*ml/);
   const mlNumber = mlMatch ? mlMatch[1] : selectedSyrupText;
   const brandLabel = (() => {
     if (selectedBrand === 'tylenol') return '타이레놀';
     if (selectedBrand === 'brufen') return '부루펜';
     if (selectedBrand === 'maxibupen') return '맥시부펜';
+    if (champType === 'red_er') return '챔프 ER';
     return champType === 'red' ? '챔프(빨강)' : '챔프(파랑)';
   })();
   const drugColor = isAcet ? TYLENOL_COLOR : BRUFEN_COLOR;
@@ -1593,10 +1624,10 @@ function MedicineSection({
         })}
       </View>
 
-      {/* === 챔프 빨강/파랑 토글 (오복용 방지) === */}
+      {/* === 챔프 종류 토글 — 농도별 (오복용 방지) === */}
       {selectedBrand === 'champ' && (
         <View style={styles.champRow}>
-          <Text style={styles.champLabel}>챔프 종류 선택</Text>
+          <Text style={styles.champLabel}>챔프 종류 (농도 확인)</Text>
           <View style={styles.champToggle}>
             <TouchableOpacity
               style={[
@@ -1608,7 +1639,20 @@ function MedicineSection({
             >
               <View style={[styles.champDot, { backgroundColor: '#E53935' }]} />
               <Text style={[styles.champBtnText, champType === 'red' && { color: TYLENOL_COLOR, fontWeight: '900' }]}>
-                빨강 (아세트)
+                빨강 (아세트 32mg/ml)
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.champBtn,
+                champType === 'red_er' && { backgroundColor: TYLENOL_COLOR + '20', borderColor: TYLENOL_COLOR },
+              ]}
+              onPress={() => setChampType('red_er')}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.champDot, { backgroundColor: '#B71C1C' }]} />
+              <Text style={[styles.champBtnText, champType === 'red_er' && { color: TYLENOL_COLOR, fontWeight: '900' }]}>
+                ER 고농도 (48mg/ml)
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -1621,7 +1665,7 @@ function MedicineSection({
             >
               <View style={[styles.champDot, { backgroundColor: '#1E88E5' }]} />
               <Text style={[styles.champBtnText, champType === 'blue' && { color: BRUFEN_COLOR, fontWeight: '900' }]}>
-                파랑 (이부)
+                파랑 (이부 20mg/ml)
               </Text>
             </TouchableOpacity>
           </View>
@@ -1939,6 +1983,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLOR.textSub,
     marginBottom: 10,
+  },
+
+  /* 의료 disclaimer (해열제 섹션) */
+  medDisclaimer: {
+    backgroundColor: '#FFF8E1',
+    borderLeftWidth: 3,
+    borderLeftColor: '#F57C00',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+  },
+  medDisclaimerText: {
+    fontSize: 11,
+    color: '#5D4037',
+    lineHeight: 16,
   },
 
   /* Big temperature input */

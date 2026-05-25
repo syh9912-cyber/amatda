@@ -21,6 +21,19 @@ import { detectParentEmotion } from '../../services/coaching/emotion.detector';
 import { getTimeContext } from '../../services/coaching/time.awareness';
 import { getMilestoneContext } from '../../services/coaching/milestone.detector';
 import { parseTrackingFromMessage, ParsedTracking } from '../../services/coaching/tracker.parser';
+import { checkAndIncrementDailyLimit } from '../../utils/rateLimit';
+import { z } from 'zod';
+import { parseBody } from '../../utils/validate';
+import { shouldRejectAIResponse } from '../../services/coaching/forbidden.filter';
+
+// 입력 스키마. message 2000자 cap 은 prompt injection 완화 + Gemini token 폭주 방지.
+const AskBodySchema = z.object({
+  childId: z.string().min(1, '필수입니다').max(128),
+  message: z.string().min(1, '필수입니다').max(2000, '메시지가 너무 깁니다 (최대 2000자)'),
+  category: z.string().max(32).optional(),
+  photoUrl: z.string().url().max(2048).optional(),
+  audioUrl: z.string().url().max(2048).optional(),
+});
 
 // ─── 카테고리 매핑 ───
 
@@ -58,27 +71,7 @@ async function getUserTier(userId: string): Promise<UserTier> {
   }
 }
 
-async function getTodaySessionCount(userId: string): Promise<number> {
-  // ⚠️ 'Today' = KST 자정 기준 (사용자가 한국 거주 가정).
-  // 서버가 UTC 라서 setHours(0,0,0,0) 만 쓰면 UTC 자정 = KST 9시 → 새벽 1~9시 사용자가 잘못 분류됨.
-  const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
-  const kstNowDateStr = new Date(Date.now() + KST_OFFSET_MS).toISOString().slice(0, 10); // YYYY-MM-DD in KST
-  const kstMidnight = new Date(kstNowDateStr + 'T00:00:00+09:00'); // KST 자정 (UTC 로 보면 전날 15시)
-  try {
-    const snap = await collections.coachingSessions
-      .where('userId', '==', userId)
-      .where('createdAt', '>=', kstMidnight.toISOString())
-      .get();
-    // filter/limit 소스는 AI 비용 없으므로 제외
-    return snap.docs.filter((d) => {
-      const src = (d.data() as Record<string, unknown>).source as string;
-      return src !== 'filter' && src !== 'limit';
-    }).length;
-  } catch (err) {
-    logger.error('ask.handler/getTodaySessionCount', err);
-    return 0;
-  }
-}
+// (구) getTodaySessionCount 는 read+save 분리로 race 위험 → checkAndIncrementDailyLimit 으로 대체.
 
 // ─── Gemini AI 호출 (callGeminiJSON 래퍼) ───
 
@@ -154,18 +147,9 @@ function getMockResponse(temperament: string, category: string): CoachingAIRespo
 export function registerAskHandler(router: Router): void {
   router.post('/ask', authMiddleware, async (req: Request, res: Response) => {
     try {
-      const { childId, message, category, photoUrl, audioUrl } = req.body as {
-        childId: string;
-        message: string;
-        category?: string;
-        photoUrl?: string;
-        audioUrl?: string;
-      };
-
-      if (!childId || !message) {
-        error(res, 'childId와 message는 필수입니다');
-        return;
-      }
+      const body = parseBody(req, res, AskBodySchema);
+      if (!body) return;
+      const { childId, message, category, photoUrl, audioUrl } = body;
 
       // ─── Step 1: 카테고리 확인 ───
       const categoryKo = category ? (CATEGORY_KO[category] ?? category) : '기타';
@@ -214,15 +198,18 @@ export function registerAskHandler(router: Router): void {
       const tier = await getUserTier(req.userId!);
       const config = TIER_CONFIGS[tier];
 
-      // ─── Step 6: 하루 상담 횟수 체크 (무료) ───
+      // ─── Step 6: 하루 상담 횟수 체크 (무료) — 트랜잭션 원자화 ───
       // 보안 점검 (2026-05-04): redFlag 제외 시 비용 폭주 — monitor 키워드(예: "37.5도")만
       // 넣으면 무료 사용자가 무제한 Gemini 호출 가능. emergency/urgent 만 limit 면제.
+      // 보안 점검 (2026-05-07): 기존 read→check→save 분리 호출은 동시 클릭 시 race 로
+      //   둘 다 통과되어 한도 우회 가능 → Gemini billable 비용 폭주. 트랜잭션으로 원자화.
       const allowBypass = redFlag.detected &&
         (redFlag.urgency === 'emergency' || redFlag.urgency === 'urgent');
-      if (tier === 'free' && !allowBypass) {
-        const todayCount = await getTodaySessionCount(req.userId!);
-
-        if (todayCount >= FREE_DAILY_LIMIT) {
+      if (!allowBypass) {
+        const limitCheck = await checkAndIncrementDailyLimit(
+          req.userId!, 'coaching', FREE_DAILY_LIMIT
+        );
+        if (!limitCheck.allowed) {
           success(res, {
             sessionId: null,
             answer: `오늘 상담 횟수(${FREE_DAILY_LIMIT}회)를 모두 사용했어요. 내일 다시 만나요!`,
@@ -308,6 +295,11 @@ export function registerAskHandler(router: Router): void {
           aiResponse = await callGemini(systemPrompt, runtimePrompt, config.maxOutputTokens);
         } catch (err) {
           logger.error('ask.handler/gemini', err);
+          aiResponse = getMockResponse(child.temperament, categoryKo);
+        }
+        // 응답 후처리 (CLAUDE.md): 사주/오행/천간/지지 등 금지 용어가 응답에 새어나오면
+        // hallucination 또는 prompt injection 의심 — fallback 으로 교체.
+        if (shouldRejectAIResponse(aiResponse, 'ask.handler')) {
           aiResponse = getMockResponse(child.temperament, categoryKo);
         }
         // 레드플래그(emergency 외)가 있으면 AI 응답에 medical 추가

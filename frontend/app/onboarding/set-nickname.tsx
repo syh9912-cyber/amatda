@@ -29,7 +29,7 @@ export default function OnboardingSetNicknameScreen() {
     setLoading(true);
     try {
       await apiInstance.put('/auth/nickname', { nickname: trimmed, parentRole });
-      setUser(userId ?? '', trimmed);
+      await setUser(userId ?? '', trimmed);
       router.replace('/onboarding/child-info');
     } catch {
       Alert.alert('오류', '별명 설정에 실패했습니다. 다시 시도해주세요.');

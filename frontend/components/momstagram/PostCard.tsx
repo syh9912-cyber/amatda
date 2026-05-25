@@ -10,9 +10,34 @@ import {
 } from 'react-native';
 import { FONT_SIZE, SPACING } from '../../constants/theme';
 import { MomstagramPost } from '../../stores/momstagramStore';
+import { EmojiIcon } from '../common/EmojiIcon';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CONTENT_COLLAPSE = 100;
+
+// 엄마 기분 라벨 → emoji 매핑 (backend MOM_SYMPTOM_PRESETS + frontend FALLBACK_SYMPTOMS 합집합).
+// content 안에 "[엄마기분: 허리/골반통]" 형태로 들어 있는 텍스트를 emoji 일러스트로 변환.
+const SYMPTOM_LABEL_TO_EMOJI: Record<string, string> = {
+  '입덧': '🤢',
+  '입덧/메스꺼움': '🤢',
+  '피로감': '😴',
+  '심한 피로': '😴',
+  '허리/골반 통증': '🦴',
+  '허리/골반통': '🦴',
+  '부종': '🦶',
+  '가려움': '😣',
+  '두통': '🤕',
+  '속쓰림': '🫠',
+  '불면': '🌙',
+  '변비': '💩',
+  '다리 쥐남': '🦵',
+  '배 뭉침/경련': '😖',
+  '감정 기복': '😢',
+  '감정기복': '😢',
+  '빈뇨': '🚽',
+  '컨디션 좋음': '😊',
+  '출혈/분비물': '🩸',
+};
 
 const AVATAR_COLORS: string[] = [
   '#FFB088', '#FF9B9B', '#A8D8EA', '#FFD3B6',
@@ -51,12 +76,20 @@ function timeAgo(iso: string): string {
 export function PostCard({ post, onLike, onComment, onShare, onMore, isMine }: PostCardProps) {
   const [expanded, setExpanded] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const isLong = post.content.length > CONTENT_COLLAPSE;
 
+  // content 안의 [엄마기분: 라벨] 추출 + content 에서 제거 (라벨은 이미지로만 표시)
+  const moodMatch = post.content.match(/\[엄마기분:\s*(.+?)\]/);
+  const moodLabel = moodMatch?.[1]?.trim();
+  const moodEmoji = moodLabel ? SYMPTOM_LABEL_TO_EMOJI[moodLabel] : undefined;
+  const cleanedContent = post.content
+    .replace(/\n?\[엄마기분:\s*.+?\]/g, '')
+    .trim();
+
+  const isLong = cleanedContent.length > CONTENT_COLLAPSE;
   const displayContent =
     isLong && !expanded
-      ? post.content.slice(0, CONTENT_COLLAPSE) + '...'
-      : post.content;
+      ? cleanedContent.slice(0, CONTENT_COLLAPSE) + '...'
+      : cleanedContent;
 
   const handleLike = useCallback(() => {
     Animated.sequence([
@@ -101,13 +134,15 @@ export function PostCard({ post, onLike, onComment, onShare, onMore, isMine }: P
         </View>
         <TouchableOpacity
           onPress={() => {
-            if (isMine && onMore) onMore(post.id);
+            // UGC 정책(Apple 1.2 / Google): 타인 글에도 신고/차단 메뉴 노출 필수.
+            // isMine 분기는 onMore 핸들러 내부에서 본인=수정/삭제, 타인=신고/차단 으로 처리.
+            if (onMore) onMore(post.id);
             else onShare(post.id);
           }}
           activeOpacity={0.7}
           style={styles.moreBtn}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          accessibilityLabel={isMine ? '게시글 메뉴' : '공유하기'}
+          accessibilityLabel="게시글 메뉴"
           accessibilityRole="button"
         >
           <Text style={styles.moreIcon}>{'···'}</Text>
@@ -172,12 +207,19 @@ export function PostCard({ post, onLike, onComment, onShare, onMore, isMine }: P
         </Text>
       )}
 
-      {/* Milestone badge */}
-      {post.milestone && (
-        <View style={styles.milestoneBadge}>
-          <Text style={styles.milestoneText}>
-            {post.milestoneEmoji ? `${post.milestoneEmoji} ` : ''}{post.milestone}
-          </Text>
+      {/* Milestone & Mood — 한글 라벨 없이 일러스트 아이콘만 (인스타그램 풍 미니멀) */}
+      {(post.milestoneEmoji || post.milestone || moodEmoji) && (
+        <View style={styles.milestoneRow}>
+          {(post.milestoneEmoji || post.milestone) && (
+            <View style={styles.milestoneIcon}>
+              <EmojiIcon emoji={post.milestoneEmoji ?? null} size={14} />
+            </View>
+          )}
+          {moodEmoji && (
+            <View style={styles.milestoneIcon}>
+              <EmojiIcon emoji={moodEmoji} size={14} />
+            </View>
+          )}
         </View>
       )}
 
@@ -329,13 +371,14 @@ const styles = StyleSheet.create({
   actionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 14,
   },
   actionBtn: {
     padding: 2,
   },
   actionIcon: {
-    fontSize: 24,
+    // 인스타그램 풍 슬림 — 24 → 18 (작고 세련된 느낌)
+    fontSize: 18,
   },
   /* Like count */
   likeCount: {
@@ -345,22 +388,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md - 2,
     marginBottom: 4,
   },
-  /* Milestone badge */
-  milestoneBadge: {
+  /* Milestone + Mood row — 작은 일러스트 아이콘만, 인스타 풍 미니멀 */
+  milestoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginHorizontal: SPACING.md - 2,
     marginBottom: 6,
-    alignSelf: 'flex-start',
-    backgroundColor: '#FFF5F0',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: '#FFD5C0',
   },
-  milestoneText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#E8713A',
+  milestoneIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#FFF5F0',
+    borderWidth: 1,
+    borderColor: '#FFE0D0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   /* Caption */
   captionWrap: {

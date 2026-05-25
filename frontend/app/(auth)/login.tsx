@@ -71,6 +71,9 @@ export default function LoginScreen() {
             onPress={h.handleLogin}
             disabled={h.loading}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={h.loading ? '로그인 중' : '로그인'}
+            accessibilityState={{ disabled: h.loading, busy: h.loading }}
           >
             {h.loading ? (
               <View style={styles.buttonRow}>
@@ -97,6 +100,8 @@ export default function LoginScreen() {
           <TouchableOpacity
             style={styles.registerLink}
             onPress={() => router.push('/(auth)/register')}
+            accessibilityRole="link"
+            accessibilityLabel="계정이 없으신가요? 회원가입"
           >
             <Text style={styles.registerText}>
               {'계정이 없으신가요? '}

@@ -3,7 +3,7 @@
     "name": "아맞다",
     "slug": "amatda",
     "scheme": "amatda",
-    "version": "2.8.1",
+    "version": "2.9.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -19,16 +19,17 @@
       "infoPlist": {
         "NSCameraUsageDescription": "아이 사진을 촬영하여 프로필과 성장앨범에 사용합니다",
         "NSPhotoLibraryUsageDescription": "갤러리에서 아이 사진을 선택하여 프로필과 성장앨범에 사용합니다",
-        "NSLocationWhenInUseUsageDescription": "주변 학원을 추천하기 위해 위치 정보를 사용합니다",
+        "NSLocationWhenInUseUsageDescription": "주변 소아과 찾기 및 맘스톡 지역 그룹 매칭을 위해 위치 정보를 사용합니다",
         "NSMicrophoneUsageDescription": "음성으로 육아 기록을 남기기 위해 마이크를 사용합니다",
         "NSSpeechRecognitionUsageDescription": "음성을 텍스트로 변환하여 육아 기록을 자동으로 남깁니다",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "2"
+      "buildNumber": "4"
     },
     "android": {
       "package": "com.sylabs.amatda",
-      "versionCode": 3,
+      "versionCode": 5,
+      "allowBackup": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFF5EC"
@@ -75,7 +76,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "주변 학원을 추천하기 위해 위치 정보를 사용합니다"
+          "locationWhenInUsePermission": "주변 소아과 찾기 및 맘스톡 지역 그룹 매칭을 위해 위치 정보를 사용합니다"
         }
       ],
       [
@@ -89,6 +90,7 @@
         }
       ],
       "expo-iap",
+      "./plugins/withAndroidShortcuts",
       [
         "expo-speech-recognition",
         {
