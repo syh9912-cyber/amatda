@@ -9,7 +9,11 @@
  *   - native 모듈 dynamic require — Expo Go 등에서 크래시 방지
  *   - Google 공식 테스트 광고 ID 사용 (계정 정지 위험 차단)
  *   - 모듈 또는 unit ID 부재 시 silent null 반환
+ *
+ * 2026-05-26: minHeight 보장 + mobileAds().initialize() 호출 추가.
+ *   광고 로드 전에 영역이 0×0 으로 안 보이던 문제 / 초기화 누락으로 광고 안 뜨던 문제 수정.
  */
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useShowAds } from '../../hooks/useShowAds';
 
@@ -31,8 +35,37 @@ function loadAdMob(): any | null {
   return _adModule;
 }
 
+// 한 번만 초기화 — 첫 번째 AdSlot 렌더 시 실행.
+let _initialized = false;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function initAdMob(mod: any): Promise<void> {
+  if (_initialized) return;
+  _initialized = true;
+  try {
+    const defaultExport = mod.default;
+    if (typeof defaultExport === 'function') {
+      await defaultExport().initialize();
+    }
+  } catch {
+    // init 실패해도 BannerAd 가 자체 재시도 함 — silent
+  }
+}
+
 export function AdSlot() {
   const show = useShowAds();
+  const [adReady, setAdReady] = useState(false);
+  const initStartedRef = useRef(false);
+
+  // 모듈 로드 + 초기화 (실제 빌드, !ADS_MOCK 경로에서만)
+  useEffect(() => {
+    if (!show || ADS_MOCK) return;
+    if (initStartedRef.current) return;
+    initStartedRef.current = true;
+    const mod = loadAdMob();
+    if (!mod) return;
+    initAdMob(mod).finally(() => setAdReady(true));
+  }, [show]);
+
   if (!show) return null;
 
   if (ADS_MOCK) {
@@ -44,10 +77,24 @@ export function AdSlot() {
   }
 
   const unitId = Platform.OS === 'ios' ? UNIT_ID_IOS : UNIT_ID_ANDROID;
-  if (!unitId) return null;
+  if (!unitId) {
+    // 디버그 — 환경변수 누락 시 시각적으로 알림
+    return (
+      <View style={styles.banner}>
+        <Text style={styles.label}>광고 unit ID 미설정</Text>
+      </View>
+    );
+  }
 
   const mod = loadAdMob();
-  if (!mod?.BannerAd) return null;
+  if (!mod?.BannerAd) {
+    // native 모듈 누락 — 옛 APK 거나 autolink 실패
+    return (
+      <View style={styles.banner}>
+        <Text style={styles.label}>광고 모듈 미로딩 (APK 재설치 필요)</Text>
+      </View>
+    );
+  }
 
   const BannerAd = mod.BannerAd;
   const sizes = mod.BannerAdSize ?? {};
@@ -56,6 +103,9 @@ export function AdSlot() {
 
   return (
     <View style={styles.bannerContainer}>
+      {!adReady && (
+        <Text style={styles.loadingLabel}>광고 로딩 중...</Text>
+      )}
       <BannerAd
         unitId={unitId}
         size={size}
@@ -80,7 +130,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: 0.3,
   },
+  loadingLabel: {
+    fontSize: 10,
+    color: '#BBB',
+    position: 'absolute',
+  },
   bannerContainer: {
+    minHeight: 50,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',

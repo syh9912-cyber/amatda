@@ -267,28 +267,32 @@ export default function VoiceSettingsScreen() {
     setPinning(true);
     try {
       const result = await requestPinVoiceShortcut();
+      // 진단 정보를 항상 표시 (사용자가 정확한 원인 알 수 있도록)
+      const supportInfo = pinSupported ? 'pinSupported=true' : 'pinSupported=false';
       if (result.ok) {
-        // 시스템 다이얼로그가 곧 표시됨. 사용자가 "추가" 누르면 홈에 아이콘 생성.
         Alert.alert(
-          '확인 다이얼로그',
-          '안드로이드 시스템에서 "바로가기 추가" 확인 창이 떠요. "추가"를 눌러주세요.',
+          '시스템 다이얼로그 호출됨',
+          '안드로이드 "바로가기 추가" 확인 창이 떠야 해요. 뜨면 "추가" 탭. 안 뜨면 런처가 차단한 거예요(One UI 일부 / Nova / MIUI 등) — 방법 ① 사용하세요.',
         );
       } else if (result.reason === 'LAUNCHER_UNSUPPORTED') {
         Alert.alert(
           '미지원 런처',
-          '현재 사용 중인 홈 런처가 단축 아이콘 고정을 지원하지 않아요. 대신 앱 아이콘을 길게 눌러서 "음성 기록" 항목을 끌어 홈에 놓으세요.',
+          `홈 런처가 단축 아이콘 고정을 지원하지 않아요 (${supportInfo}). 앱 아이콘 길게 누르기로 "음성 기록"을 홈에 끌어 놓으세요.`,
         );
       } else if (result.reason === 'UNSUPPORTED_ANDROID_VERSION') {
-        Alert.alert('미지원', 'Android 8.0 이상에서만 가능해요.');
+        Alert.alert('미지원 OS', 'Android 8.0 이상 필요.');
       } else if (result.reason === 'NATIVE_MODULE_UNAVAILABLE') {
-        Alert.alert('빌드 필요', '이 기능은 최신 빌드에서만 작동해요. 앱을 업데이트해주세요.');
+        Alert.alert(
+          'APK 재설치 필요',
+          'native 단축 모듈이 현재 빌드에 포함돼 있지 않아요. 새 APK 설치해야 작동.\n\n임시 해결: 앱 아이콘 길게 누르기 → "음성 기록" → 홈으로 드래그.',
+        );
       } else {
-        Alert.alert('실패', '단축 아이콘 추가에 실패했어요. 다시 시도해주세요.');
+        Alert.alert('실패', `사유: ${result.reason ?? 'UNKNOWN'} (${supportInfo})`);
       }
     } finally {
       setPinning(false);
     }
-  }, [pinning]);
+  }, [pinning, pinSupported]);
 
   const loadDefaults = async () => {
     const storage = await getStorage();
@@ -325,8 +329,8 @@ export default function VoiceSettingsScreen() {
     }
   };
 
-  /* 항상 모두 표시 — Siri(iOS) / 빅스비(갤럭시) / Google(공통) */
-  const guides: AssistantGuide[] = [SIRI_GUIDE, BIXBY_GUIDE, GOOGLE_GUIDE];
+  /* Siri 가이드 — 안드로이드 사용자도 참고용으로 항상 표시 */
+  const guides: AssistantGuide[] = [SIRI_GUIDE];
 
   return (
     <View style={s.container}>
@@ -407,64 +411,95 @@ export default function VoiceSettingsScreen() {
           </View>
         </View>
 
-        {/* ── Section 3.5: 홈 화면 음성 단축 아이콘 (Android only) ── */}
+        {/* ── Section 3.5: 안드로이드 음성 기록 호출 — 작동하는 2가지 방법 ── */}
         {Platform.OS === 'android' && (
           <View style={s.card}>
-            <Text style={s.cardTitle}>{'홈 화면 음성 아이콘'}</Text>
+            <Text style={s.cardTitle}>{'안드로이드에서 음성 기록 호출'}</Text>
             <Text style={s.cardDesc}>
-              {'홈 화면에 별도 "음성 기록" 아이콘을 만들면 1탭으로 즉시 녹음 시작. 음성 비서 설정 없이 가장 빠른 방법이에요.'}
+              {'아래 2가지 방법만 안정적으로 작동해요. 둘 다 1탭으로 음성 인식 즉시 시작.'}
             </Text>
 
-            <TouchableOpacity
-              style={[s.saveBtn, !pinSupported && s.disabledBtn]}
-              onPress={handlePinShortcut}
-              disabled={!pinSupported || pinning}
-              accessibilityRole="button"
-              accessibilityLabel="홈 화면에 음성 단축 아이콘 추가"
-            >
-              <Text style={s.saveBtnText}>
-                {pinning ? '추가 중...' : '＋ 홈 화면에 추가'}
+            {/* 방법 ① 길게 누르기 */}
+            <View style={s.methodBox}>
+              <Text style={s.methodTitle}>{'① 앱 아이콘 길게 누르기'}</Text>
+              <Text style={s.methodDesc}>
+                {'홈 화면에서 아맞다 아이콘을 0.5초 이상 꾹 누르면 "음성 기록" 메뉴가 떠요. 탭하면 즉시 녹음 시작.'}
               </Text>
-            </TouchableOpacity>
+            </View>
 
-            {!pinSupported && (
-              <Text style={s.childHint}>
-                {'* 사용 중인 런처가 미지원이거나 Android 8.0 미만이에요. 앱 아이콘을 길게 누른 뒤 "음성 기록"을 홈으로 끌어 놓으세요.'}
+            {/* 방법 ② 홈 단축 아이콘 */}
+            <View style={s.methodBox}>
+              <Text style={s.methodTitle}>{'② 홈 화면에 음성 단축 아이콘 추가'}</Text>
+              <Text style={s.methodDesc}>
+                {'아래 버튼 → 시스템에서 "바로가기 추가" 다이얼로그 → "추가"를 누르면 홈에 별도 아이콘 생성. 이후 1탭이면 끝.'}
               </Text>
-            )}
+              <TouchableOpacity
+                style={s.saveBtn}
+                onPress={handlePinShortcut}
+                disabled={pinning}
+                accessibilityRole="button"
+                accessibilityLabel="홈 화면에 음성 단축 아이콘 추가"
+              >
+                <Text style={s.saveBtnText}>
+                  {pinning ? '추가 중...' : '＋ 홈 화면에 추가'}
+                </Text>
+              </TouchableOpacity>
+              <Text style={s.childHint}>
+                {pinSupported
+                  ? '* 버튼 후 시스템 다이얼로그가 안 뜨면 일부 런처(MIUI/Nova 등)가 막은 거예요. 방법 ①(아이콘 길게 누르기)이 항상 작동합니다.'
+                  : '* 이 빌드에선 동작이 제한될 수 있어요. 안 되면 방법 ①(아이콘 길게 누르기) 사용.'}
+              </Text>
+            </View>
           </View>
         )}
 
-        {/* ── Section 4: 음성 비서 설정 카드 ── */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>{'음성 비서 연결하기'}</Text>
-          <Text style={s.cardDesc}>{'원하는 음성 비서를 선택해서 설정 방법을 확인하세요'}</Text>
+        {/* ── Section 4: iOS Siri 가이드 (참고용 — 안드로이드에서도 표시) ── */}
+        {guides.length > 0 && (
+          <View style={s.card}>
+            <Text style={s.cardTitle}>{'iOS Siri 단축어 (아이폰 사용자)'}</Text>
+            <Text style={s.cardDesc}>{'아이폰에선 "시리야, 육아" 한마디로 음성 기록 실행 가능. 안드로이드는 위 방법 ①/② 사용.'}</Text>
 
-          {guides.map((guide) => (
-            <View key={guide.key}>
-              {guide.platformLabel && (
-                <Text style={s.platformLabel}>{guide.platformLabel}</Text>
-              )}
-              <TouchableOpacity
-                style={s.assistantCard}
-                onPress={() => { setCopied(false); setOpenGuide(guide); }}
-                activeOpacity={0.7}
-              >
-                <View style={[s.assistantDot, { backgroundColor: guide.color }]} />
-                <View style={s.assistantInfo}>
-                  <View style={s.assistantNameRow}>
-                    <Text style={s.assistantName}>{guide.name}</Text>
-                    <Text style={s.chevron}>{'>'}</Text>
+            {guides.filter((g) => g.key === 'siri').map((guide) => (
+              <View key={guide.key}>
+                <TouchableOpacity
+                  style={s.assistantCard}
+                  onPress={() => { setCopied(false); setOpenGuide(guide); }}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Siri 단축어 설정 방법 보기"
+                >
+                  <View style={[s.assistantDot, { backgroundColor: guide.color }]} />
+                  <View style={s.assistantInfo}>
+                    <View style={s.assistantNameRow}>
+                      <Text style={s.assistantName}>{guide.name}</Text>
+                      <Text style={s.chevron}>{'>'}</Text>
+                    </View>
+                    <Text style={s.assistantSub}>{guide.subtitle}</Text>
+                    <View style={s.assistantTriggerBox}>
+                      <Text style={s.assistantTrigger}>{guide.trigger}</Text>
+                    </View>
                   </View>
-                  <Text style={s.assistantSub}>{guide.subtitle}</Text>
-                  <View style={s.assistantTriggerBox}>
-                    <Text style={s.assistantTrigger}>{guide.trigger}</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* ── Section 4-Android: 음성 비서 직접 호출 불가 안내 ── */}
+        {Platform.OS === 'android' && (
+          <View style={s.card}>
+            <Text style={s.cardTitle}>{'안드로이드 음성 비서로는 안 되나요?'}</Text>
+            <Text style={s.cardDesc}>
+              {'"하이 빅스비, 아맞다 켜줘" / "OK 구글, 아맞다 열어줘" 같은 음성 비서 직접 호출은 안 됩니다.'}
+            </Text>
+            <View style={s.tipBox}>
+              <Text style={s.tipTitle}>{'이유'}</Text>
+              <Text style={s.tipText}>
+                {'· 빅스비: 2024년 12월 "빠른 명령어" 기능이 삭제됐고, 갤럭시 S25+/One UI 7부터는 새 빅스비(Perplexity 기반)로 교체 — 사용자 단축어 등록 불가.\n· Google 어시스턴트: 2026년 Gemini로 전환되면서 "루틴 → 맞춤 작업" 메뉴가 한국어 빌드에서 사라짐.\n· 한국어 앱 이름 인식이 약해 직접 명령("아맞다 실행")도 실패율 높음.\n\n→ 현실적으로 안드로이드에선 위 두 방법(앱 아이콘 길게 / 홈 단축 아이콘)만 안정적으로 작동.'}
+              </Text>
             </View>
-          ))}
-        </View>
+          </View>
+        )}
 
         {/* Mascot footer */}
         <View style={s.footer}>
@@ -606,6 +641,26 @@ const s = StyleSheet.create({
   saveBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center', marginTop: SPACING.md },
   saveBtnText: { fontSize: FONT_SIZE.md, fontWeight: '700', color: '#FFFFFF' },
   disabledBtn: { backgroundColor: '#C4B5A5', opacity: 0.6 },
+  methodBox: {
+    backgroundColor: '#FFF9F5',
+    borderRadius: RADIUS.sm,
+    padding: 14,
+    marginTop: SPACING.sm,
+    borderWidth: 1,
+    borderColor: '#F0E5D8',
+  },
+  methodTitle: {
+    fontSize: FONT_SIZE.md,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 6,
+  },
+  methodDesc: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
 
   /* Children list */
   childRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F5EDE4' },
