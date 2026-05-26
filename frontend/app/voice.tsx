@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useRootNavigationState } from 'expo-router';
 import { useAuthStore } from '../stores/authStore';
 import { useChildStore } from '../stores/childStore';
 import { trackerApi } from '../services/api';
@@ -87,6 +87,8 @@ export default function VoiceScreen() {
   const [phase, setPhase] = useState<'init' | 'listening' | 'processing' | 'done' | 'error'>('init');
   const [recognizedText, setRecognizedText] = useState('');
   const [speechAvailable, setSpeechAvailable] = useState(false);
+
+  const rootNavigationState = useRootNavigationState();
 
   const speechModuleRef = useRef<SpeechModule | null>(null);
   const hasProcessed = useRef(false);
@@ -189,6 +191,7 @@ export default function VoiceScreen() {
 
   // ── Main flow ──
   useEffect(() => {
+    if (!rootNavigationState?.key) return; // router not ready yet (deep link cold start)
     if (!isAuthenticated) {
       router.replace('/(auth)/login');
       return;
@@ -206,7 +209,7 @@ export default function VoiceScreen() {
     // Case 2: no text → try speech recognition (Google/Bixby opened app)
     initSpeechRecognition();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, isAuthenticated]);
+  }, [text, isAuthenticated, rootNavigationState?.key]);
 
   async function initSpeechRecognition() {
     const mod = await loadSpeechModule();
