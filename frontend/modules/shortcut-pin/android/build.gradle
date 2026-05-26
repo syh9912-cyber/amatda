@@ -1,0 +1,27 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+group = 'expo.modules.shortcutpin'
+version = '1.0.0'
+
+def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+useExpoPublishing()
+
+android {
+  namespace 'expo.modules.shortcutpin'
+  defaultConfig {
+    minSdkVersion safeExtGet("minSdkVersion", 24)
+    compileSdkVersion safeExtGet("compileSdkVersion", 35)
+    targetSdkVersion safeExtGet("targetSdkVersion", 35)
+    versionCode 1
+    versionName "1.0.0"
+  }
+  sourceSets {
+    main {
+      java.srcDirs = ['src/main/java']
+    }
+  }
+}

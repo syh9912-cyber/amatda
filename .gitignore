@@ -10,6 +10,9 @@ dist/
 .expo/
 ios/
 android/
+# 로컬 Expo 모듈의 android/ 폴더는 빌드에 필요 — 예외 처리
+!frontend/modules/*/android/
+!frontend/modules/*/android/**
 *.tsbuildinfo
 .turbo/
 coverage/

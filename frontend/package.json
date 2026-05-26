@@ -74,7 +74,6 @@
   "private": true,
   "expo": {
     "autolinking": {
-      "searchPaths": ["modules"],
       "nativeModulesDir": "./modules"
     }
   }

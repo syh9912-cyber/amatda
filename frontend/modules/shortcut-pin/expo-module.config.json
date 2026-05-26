@@ -1,5 +1,6 @@
 {
   "platforms": ["android"],
+  "name": "shortcut-pin",
   "android": {
     "modules": ["expo.modules.shortcutpin.ShortcutPinModule"]
   }

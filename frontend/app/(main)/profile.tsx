@@ -17,6 +17,7 @@ import { ProfileFooter } from '../../components/profile/ProfileFooter';
 import { PasswordModal } from '../../components/profile/PasswordModal';
 import { DataRetentionCard } from '../../components/profile/DataRetentionCard';
 import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { AdSlot } from '../../components/ads/AdSlot';
 
 export default function ProfileScreen() {
   const selectedChild = useChildStore((s) => s.selectedChild);
@@ -162,6 +163,9 @@ export default function ProfileScreen() {
         onLogout={handleLogout}
         onDeleteAccount={handleDeleteAccount}
       />
+
+      {/* 마이탭 하단 광고 (FREE 유저만) */}
+      <AdSlot />
 
       {showPasswordModal && (
         <PasswordModal onClose={() => setShowPasswordModal(false)} />

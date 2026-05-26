@@ -15,6 +15,7 @@ import { useChildStore } from '../stores/childStore';
 import { trackerApi } from '../services/api';
 import { loadRecords, saveRecords } from '../features/baby-tracker/storage';
 import type { TrackerRecord } from '../features/baby-tracker/types';
+import { AdSlot } from '../components/ads/AdSlot';
 
 const IC_MASCOT = require('../assets/mascot-happy.png') as number;
 const IC_MIC = require('../assets/icon-mic.png') as number;
@@ -540,6 +541,11 @@ export default function VoiceScreen() {
           </TouchableOpacity>
         </>
       )}
+
+      {/* 하단 광고 — MEDIUM_RECTANGLE (300×250) 무음 배너 */}
+      <View style={s.adWrap} pointerEvents="box-none">
+        <AdSlot variant="medium" />
+      </View>
     </View>
   );
 }
@@ -553,8 +559,20 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF9F5',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
+    // 마이크/안내 위로 올려서 하단 광고(300×250) 공간 확보
+    justifyContent: 'flex-start',
+    paddingTop: 80,
+    paddingHorizontal: 32,
+    paddingBottom: 0,
+  },
+
+  /* MEDIUM_RECTANGLE 광고 wrap — 하단 고정 (300×250) */
+  adWrap: {
+    position: 'absolute',
+    bottom: 24,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
 
   /* Mascot */

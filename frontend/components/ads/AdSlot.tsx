@@ -51,7 +51,18 @@ async function initAdMob(mod: any): Promise<void> {
   }
 }
 
-export function AdSlot() {
+/**
+ * Ad size variants:
+ * - 'banner' (default): 320×50, 화면 하단 고정용
+ * - 'medium': 300×250 사각형, 빈 공간 채우기용 (예: 음성기록 화면)
+ */
+export type AdSize = 'banner' | 'medium';
+
+interface AdSlotProps {
+  variant?: AdSize;
+}
+
+export function AdSlot({ variant = 'banner' }: AdSlotProps) {
   const show = useShowAds();
   const [adReady, setAdReady] = useState(false);
   const initStartedRef = useRef(false);
@@ -68,19 +79,23 @@ export function AdSlot() {
 
   if (!show) return null;
 
+  const isMedium = variant === 'medium';
+  const placeholderStyle = isMedium ? styles.mediumBox : styles.banner;
+  const mediumLabel = '광고 영역 (테스트 — 300×250)';
+  const bannerLabel = '광고 영역 (테스트 — 50pt)';
+
   if (ADS_MOCK) {
     return (
-      <View style={styles.banner}>
-        <Text style={styles.label}>광고 영역 (테스트 — 50pt)</Text>
+      <View style={placeholderStyle}>
+        <Text style={styles.label}>{isMedium ? mediumLabel : bannerLabel}</Text>
       </View>
     );
   }
 
   const unitId = Platform.OS === 'ios' ? UNIT_ID_IOS : UNIT_ID_ANDROID;
   if (!unitId) {
-    // 디버그 — 환경변수 누락 시 시각적으로 알림
     return (
-      <View style={styles.banner}>
+      <View style={placeholderStyle}>
         <Text style={styles.label}>광고 unit ID 미설정</Text>
       </View>
     );
@@ -88,9 +103,8 @@ export function AdSlot() {
 
   const mod = loadAdMob();
   if (!mod?.BannerAd) {
-    // native 모듈 누락 — 옛 APK 거나 autolink 실패
     return (
-      <View style={styles.banner}>
+      <View style={placeholderStyle}>
         <Text style={styles.label}>광고 모듈 미로딩 (APK 재설치 필요)</Text>
       </View>
     );
@@ -98,11 +112,13 @@ export function AdSlot() {
 
   const BannerAd = mod.BannerAd;
   const sizes = mod.BannerAdSize ?? {};
-  // ANCHORED_ADAPTIVE_BANNER 우선 (최신), 없으면 BANNER (320x50 표준)
-  const size = sizes.ANCHORED_ADAPTIVE_BANNER ?? sizes.BANNER ?? 'BANNER';
+  // medium → 300×250, banner → ANCHORED_ADAPTIVE 우선
+  const size = isMedium
+    ? (sizes.MEDIUM_RECTANGLE ?? 'MEDIUM_RECTANGLE')
+    : (sizes.ANCHORED_ADAPTIVE_BANNER ?? sizes.BANNER ?? 'BANNER');
 
   return (
-    <View style={styles.bannerContainer}>
+    <View style={isMedium ? styles.mediumContainer : styles.bannerContainer}>
       {!adReady && (
         <Text style={styles.loadingLabel}>광고 로딩 중...</Text>
       )}
@@ -142,5 +158,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E5E5E5',
+  },
+  /* MEDIUM_RECTANGLE — 300×250 빈공간 채움용 */
+  mediumBox: {
+    width: 300,
+    height: 250,
+    backgroundColor: '#E8E8E8',
+    borderWidth: 1,
+    borderColor: '#D0D0D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  mediumContainer: {
+    minHeight: 250,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
 });

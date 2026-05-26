@@ -251,7 +251,6 @@ function TimePicker({ value, onChange, label }: TimePickerProps) {
             </TouchableOpacity>
           ))}
         </ScrollView>
-        <AdSlot />
       </View>
     </View>
   );
@@ -2673,17 +2672,14 @@ function BabyTrackerInner() {
             {weekStats.length > 0 && (
               <WeeklySummaryTable stats={weekStats} periodDays={chartPeriod} />
             )}
+            {/* 기간 요약 열렸을 때만 광고 노출 (메인 기록 흐름은 깨끗하게 유지) */}
+            <AdSlot />
           </>
         )}
 
-        {/* Bottom spacer for bottom action bar + fixed ad */}
+        {/* Bottom spacer for bottom action bar */}
         <View style={{ height: 200 }} />
       </ScrollView>
-
-      {/* ---- Fixed Ad (above bottom action bar) ---- */}
-      <View style={styles.fixedAd} pointerEvents="box-none">
-        <AdSlot />
-      </View>
 
       {/* ---- Bottom Action Bar ---- */}
       <BottomActionBar
