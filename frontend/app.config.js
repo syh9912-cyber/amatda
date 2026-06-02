@@ -12,6 +12,14 @@ module.exports = ({ config }) => {
     androidConfig.googleServicesFile = './google-services.json';
   }
 
+  // iOS Firebase 설정 — @react-native-firebase 가 GoogleService-Info.plist 요구.
+  const iosConfig = { ...(config.ios || {}) };
+  if (process.env.GOOGLE_SERVICES_PLIST) {
+    iosConfig.googleServicesFile = process.env.GOOGLE_SERVICES_PLIST;
+  } else {
+    iosConfig.googleServicesFile = './GoogleService-Info.plist';
+  }
+
   // expo-font 플러그인 + Pretendard 폰트 임베드
   const existingPlugins = Array.isArray(config.plugins) ? [...config.plugins] : [];
   const fontsPlugin = [
@@ -77,6 +85,7 @@ module.exports = ({ config }) => {
   return {
     ...config,
     android: androidConfig,
+    ios: iosConfig,
     plugins: existingPlugins,
   };
 };
