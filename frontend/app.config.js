@@ -74,6 +74,21 @@ module.exports = ({ config }) => {
   );
   if (!hasAdMob) existingPlugins.push(adMobPlugin);
 
+  // 네이티브 빌드 속성 — iOS 최소 배포 타겟 상향.
+  // @react-native-firebase v24(firebase-ios-sdk 12.9) 등 일부 pod 이 기본(15.1)보다
+  // 높은 deployment target 을 요구 → 16.0 으로 통일 (CocoaPods 설치 실패 해결).
+  const buildPropsPlugin = [
+    'expo-build-properties',
+    {
+      ios: { deploymentTarget: '16.0' },
+    },
+  ];
+  const hasBuildProps = existingPlugins.some(
+    (p) => p === 'expo-build-properties' ||
+           (Array.isArray(p) && p[0] === 'expo-build-properties'),
+  );
+  if (!hasBuildProps) existingPlugins.push(buildPropsPlugin);
+
   // Firebase (Analytics) — google-services.json 자동 통합 + 네이티브 모듈 링크.
   // @react-native-firebase/app 이 first plugin. analytics 는 app 위에 동작.
   const hasFirebase = existingPlugins.some(
