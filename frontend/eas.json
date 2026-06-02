@@ -1,7 +1,7 @@
 {
   "cli": {
     "version": ">= 18.0.0",
-    "appVersionSource": "local"
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -35,6 +35,7 @@
     },
     "production": {
       "channel": "production",
+      "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
       },
@@ -46,8 +47,10 @@
         "EXPO_PUBLIC_ADS_ENABLED": "true",
         "EXPO_PUBLIC_ADS_FORCE_SHOW": "false",
         "EXPO_PUBLIC_ADS_MOCK": "false",
-        "EXPO_PUBLIC_ADMOB_BANNER_ANDROID": "ca-app-pub-3940256099942544/6300978111",
+        "EXPO_PUBLIC_ADMOB_BANNER_ANDROID": "ca-app-pub-1736147235986434/7345771039",
         "EXPO_PUBLIC_ADMOB_BANNER_IOS": "ca-app-pub-3940256099942544/2934735716",
+        "EXPO_PUBLIC_ADMOB_MEDIUM_ANDROID": "ca-app-pub-1736147235986434/7650847192",
+        "EXPO_PUBLIC_ADMOB_MEDIUM_IOS": "ca-app-pub-3940256099942544/2934735716",
         "EXPO_PUBLIC_SENTRY_DSN": "https://dd7124a12d7082892c04cee84ecc0aac@o4511325473865728.ingest.us.sentry.io/4511325488873472"
       }
     }

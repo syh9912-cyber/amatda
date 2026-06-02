@@ -74,6 +74,14 @@
         }
       ],
       [
+        "expo-media-library",
+        {
+          "photosPermission": "성장앨범에 추가할 최근 사진을 갤러리에서 불러옵니다",
+          "savePhotosPermission": "성장앨범 사진을 갤러리에 저장합니다",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "주변 소아과 찾기 및 맘스톡 지역 그룹 매칭을 위해 위치 정보를 사용합니다"
@@ -97,6 +105,14 @@
           "microphonePermission": "음성으로 육아 기록을 남기기 위해 마이크를 사용합니다",
           "speechRecognitionPermission": "음성을 텍스트로 변환하여 육아 기록을 자동으로 남깁니다",
           "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-1736147235986434~1355077756",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "userTrackingUsageDescription": "사용자 맞춤형 광고를 제공하기 위해 기기 식별자를 사용합니다"
         }
       ]
     ],

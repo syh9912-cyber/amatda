@@ -20,10 +20,13 @@ import { useShowAds } from '../../hooks/useShowAds';
 const ADS_MOCK = process.env.EXPO_PUBLIC_ADS_MOCK === 'true';
 const UNIT_ID_ANDROID = process.env.EXPO_PUBLIC_ADMOB_BANNER_ANDROID;
 const UNIT_ID_IOS = process.env.EXPO_PUBLIC_ADMOB_BANNER_IOS;
+// 300×250(medium) 전용 단위 — 음성기록 화면 큰 광고. 미설정 시 배너 단위로 폴백.
+const MEDIUM_ID_ANDROID = process.env.EXPO_PUBLIC_ADMOB_MEDIUM_ANDROID;
+const MEDIUM_ID_IOS = process.env.EXPO_PUBLIC_ADMOB_MEDIUM_IOS;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 let _adModule: any | null | undefined;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 function loadAdMob(): any | null {
   if (_adModule !== undefined) return _adModule;
   try {
@@ -37,7 +40,7 @@ function loadAdMob(): any | null {
 
 // 한 번만 초기화 — 첫 번째 AdSlot 렌더 시 실행.
 let _initialized = false;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 async function initAdMob(mod: any): Promise<void> {
   if (_initialized) return;
   _initialized = true;
@@ -92,7 +95,10 @@ export function AdSlot({ variant = 'banner' }: AdSlotProps) {
     );
   }
 
-  const unitId = Platform.OS === 'ios' ? UNIT_ID_IOS : UNIT_ID_ANDROID;
+  // medium(300×250)은 전용 단위 우선, 없으면 배너 단위로 폴백
+  const unitId = isMedium
+    ? (Platform.OS === 'ios' ? (MEDIUM_ID_IOS ?? UNIT_ID_IOS) : (MEDIUM_ID_ANDROID ?? UNIT_ID_ANDROID))
+    : (Platform.OS === 'ios' ? UNIT_ID_IOS : UNIT_ID_ANDROID);
   if (!unitId) {
     return (
       <View style={placeholderStyle}>
