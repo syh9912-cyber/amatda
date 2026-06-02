@@ -16,6 +16,7 @@ import {
   formatRecentTurns,
 } from '../../services/coaching/conversation.summarizer';
 import { buildPrompt } from '../../services/coaching/prompt.builder';
+import { backfillFollowups } from '../../services/coaching/followup.templates';
 import { callGeminiJSON } from '../../services/coaching/gemini.client';
 import { detectParentEmotion } from '../../services/coaching/emotion.detector';
 import { getTimeContext } from '../../services/coaching/time.awareness';
@@ -75,6 +76,21 @@ async function getUserTier(userId: string): Promise<UserTier> {
 
 // ─── Gemini AI 호출 (callGeminiJSON 래퍼) ───
 
+/**
+ * 인터뷰식(코치가 부모에게 되묻는) 후속질문 차단.
+ * followupQuestions 는 "부모가 코치에게 물을 질문"이어야 하는데, 모델이 가끔
+ * "언제부터 시작됐나요?"처럼 정보수집 질문을 흘린다 → 코드로 거른다(프롬프트 fail-safe).
+ * 과거/평소/상태를 캐묻는 고정밀 마커만 차단 — 조언요청형('~하나요/할까요')은 보존.
+ */
+const INTERVIEW_FOLLOWUP_MARKERS = [
+  '언제부터', '시작됐', '시작되었', '시작했', '시작된',
+  '평소', '보통', '주로', '며칠', '얼마나 자주', '몇 번',
+  '반응은', '반응이', '어떤가요', '어땠나요', '있었나요',
+];
+function isInterviewFollowup(q: string): boolean {
+  return INTERVIEW_FOLLOWUP_MARKERS.some((m) => q.includes(m));
+}
+
 async function callGemini(
   systemPrompt: string,
   runtimePrompt: string,
@@ -86,13 +102,25 @@ async function callGemini(
     maxTokens,
   });
 
+  // followupQuestions(3개 배열) 우선, 없으면 구버전 단일 followupQuestion fallback.
+  const followupQuestions = (Array.isArray(parsed.followupQuestions)
+    ? (parsed.followupQuestions as unknown[])
+    : [])
+    .filter((q): q is string => typeof q === 'string' && q.trim().length > 0)
+    .map((q) => q.trim())
+    .filter((q) => !isInterviewFollowup(q)) // 인터뷰식 되묻기 제거 (fail-safe)
+    .slice(0, 3);
+  const singleFollowup =
+    followupQuestions[0] || (parsed.followupQuestion as string) || undefined;
+
   return {
     judgement: (parsed.judgement as string) || '아이 상황을 확인해보겠습니다.',
     reasons: Array.isArray(parsed.reasons) ? parsed.reasons as string[] : [],
     actions: Array.isArray(parsed.actions) ? parsed.actions as string[] : [],
     medical: (parsed.medical as string) || undefined,
     personalNote: (parsed.personalNote as string) || '',
-    followupQuestion: (parsed.followupQuestion as string) || undefined,
+    followupQuestion: singleFollowup,
+    followupQuestions,
   };
 }
 
@@ -139,6 +167,11 @@ function getMockResponse(temperament: string, category: string): CoachingAIRespo
     actions: tips.actions,
     personalNote: `${intro} 부모님의 따뜻한 관심이 가장 큰 도움이 됩니다.`,
     followupQuestion: '내일 상태가 어떤지 알려주세요.',
+    followupQuestions: [
+      '왜 이런 걸까요?',
+      '집에서 어떻게 도와줄까요?',
+      '병원에 가봐야 할까요?',
+    ],
   };
 }
 
@@ -308,6 +341,14 @@ export function registerAskHandler(router: Router): void {
         }
       }
 
+      // 팔로업 하이브리드: AI 결과(인터뷰식 필터됨)가 3개 미만이면 카테고리 템플릿으로 채워
+      // 항상 3개 + 100% "부모가 코치에게 묻는" 시점 보장.
+      aiResponse.followupQuestions = backfillFollowups(
+        aiResponse.followupQuestions ?? [],
+        categoryKo,
+      );
+      aiResponse.followupQuestion = aiResponse.followupQuestions[0] ?? aiResponse.followupQuestion;
+
       // ─── Step 10: 응답 포맷 + 저장 ───
       const sessionId = genId();
 
@@ -353,6 +394,7 @@ export function registerAskHandler(router: Router): void {
         personalNote: aiResponse.personalNote,
         followupDays: followup ? 1 : null,
         followupQuestion: aiResponse.followupQuestion ?? null,
+        followupQuestions: aiResponse.followupQuestions ?? [],
         photoUrl: photoUrl ?? null,
         audioUrl: audioUrl ?? null,
         dbCandidatesUsed: dbCandidates.map((c) => c.id),
@@ -401,6 +443,7 @@ export function registerAskHandler(router: Router): void {
         reasons: aiResponse.reasons,
         medical: aiResponse.medical ?? null,
         followup,
+        followups: aiResponse.followupQuestions ?? [],
         trackerAutoSaved,
       });
     } catch (err) {

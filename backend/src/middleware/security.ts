@@ -110,16 +110,20 @@ export function setupSecurity(app: Express): void {
     })
   );
 
-  // Stricter rate limit for auth endpoints
+  // Auth rate limit — CG-NAT(한국 모바일 통신사) 환경에서 같은 외부 IP 다수 사용자 공유.
+  //   기존 30/15분 → 다중 사용자 빠르게 폭주 + /me 빈도 호출도 카운트되어 정상 사용 차단.
+  //   완화책: 200/15분 + /me 제외(자체 빈도 제한 자료 없음).
   app.use(
     '/api/auth',
     rateLimit({
       windowMs: 15 * 60 * 1000,
-      max: 30,
+      max: 200,
       message: { success: false, error: '인증 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
       standardHeaders: true,
       legacyHeaders: false,
       validate: false,
+      // /me 는 화면 전환마다 호출되는 idempotent GET — rate limit 카운트 제외.
+      skip: (req) => req.path === '/me' || req.path.startsWith('/me/'),
     })
   );
 

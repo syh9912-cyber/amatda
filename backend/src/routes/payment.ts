@@ -133,7 +133,7 @@ function sanitizeAppleRaw(p: unknown): Record<string, unknown> {
   const r = (p ?? {}) as Record<string, unknown>;
   const tx = (r.txInfo ?? {}) as Record<string, unknown>;
   const renew = (r.renewInfo ?? {}) as Record<string, unknown>;
-  return {
+  const result: Record<string, unknown> = {
     productId: tx.productId,
     transactionType: tx.type,
     expiresDate: tx.expiresDate,
@@ -142,6 +142,11 @@ function sanitizeAppleRaw(p: unknown): Record<string, unknown> {
     environment: tx.environment,
     // 명시적 제외: appAccountToken / originalTransactionId / signedDate / deviceVerification
   };
+  // Firestore 는 undefined 값 거부 — sanitizeGoogleRaw 와 동일하게 제거 (애플 응답 필드 누락 대비).
+  for (const k of Object.keys(result)) {
+    if (result[k] === undefined) delete result[k];
+  }
+  return result;
 }
 
 async function activateUserSubscription(

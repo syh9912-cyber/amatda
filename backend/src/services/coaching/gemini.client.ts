@@ -10,6 +10,12 @@ interface GeminiResponse {
     safetyRatings?: unknown;
   }[];
   promptFeedback?: { blockReason?: string; safetyRatings?: unknown };
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+    cachedContentTokenCount?: number; // implicit cache hit token 수
+  };
   error?: { message?: string };
 }
 
@@ -86,6 +92,16 @@ export async function callGeminiText(
   if (data.error) {
     logger.error('gemini/api', new Error('Gemini API error: ' + data.error.message));
     throw new Error('Gemini API error: ' + data.error.message);
+  }
+
+  // ★ implicit cache hit 모니터링 — Gemini 2.5 자동 cache 효율 측정
+  // promptTokenCount 중 cachedContentTokenCount 비율이 cache hit ratio
+  const usage = data.usageMetadata;
+  if (usage?.promptTokenCount && usage.promptTokenCount > 0) {
+    const cached = usage.cachedContentTokenCount ?? 0;
+    const total = usage.promptTokenCount;
+    const ratio = total > 0 ? Math.round((cached / total) * 100) : 0;
+    logger.info('gemini/usage', `prompt=${total} cached=${cached} (${ratio}%) output=${usage.candidatesTokenCount ?? 0}`);
   }
 
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';

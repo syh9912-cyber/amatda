@@ -8,6 +8,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { env } from './config/env';
 import { runDormantUserSweep } from './utils/dormantUserSweep';
 import { runTrialEndingSweep } from './utils/trialEndingSweep';
+import { runNeighborGroupSweep } from './utils/neighborGroupSweep';
 import { setupSecurity } from './middleware/security';
 import authRoutes from './routes/auth';
 import childRoutes from './routes/child';
@@ -35,6 +36,7 @@ import babyTrackerRoutes from './routes/babyTracker';
 import momGroupRoutes from './routes/mom-group';
 import momLocationRoutes from './routes/mom-location';
 import birthbagShareRoutes from './routes/birthbag-share';
+import kakaoRoutes from './routes/kakao';
 
 /* ------------------------------------------------------------------ */
 /* 🚀 함수 분리 아키텍처 (claude-progress.md 2026-04-16 의도)          */
@@ -91,6 +93,8 @@ app.use('/api/baby-tracker', babyTrackerRoutes);
 app.use('/api/mom-group', momGroupRoutes);
 app.use('/api/mom-location', momLocationRoutes);
 app.use('/api/birthbag-share', birthbagShareRoutes);
+// 카카오 i 오픈빌더 챗봇 skill 서버 — 외부 webhook, 인증 불필요 (URL 비밀로 유지)
+app.use('/api/kakao', kakaoRoutes);
 
 /* ─── /api/coaching 안전망 마운트 ───
  *
@@ -252,6 +256,25 @@ export const trialEndingSweep = onSchedule(
   },
   async () => {
     await runTrialEndingSweep();
+  },
+);
+
+/**
+ * 동네 또래맘 커뮤니티(맘그룹) 참여 유도 푸시 — 화·금 19:00 KST (주 2회).
+ * 위치를 등록한 사용자에게 "OO구 N개월 또래맘 모임" 형태로 발송 → 탭 시 맘그룹 화면.
+ * 저녁 시간대(부모가 앱을 여는 시간) 발송. Expo 무료 푸시.
+ */
+export const neighborGroupNudge = onSchedule(
+  {
+    schedule: '0 19 * * 2,5',
+    timeZone: 'Asia/Seoul',
+    memory: '256MiB',
+    timeoutSeconds: 540,
+    // env.ts 시크릿 검증 통과 위해 동일 secrets 주입 (sweep 자체는 Firestore/Expo 만 사용)
+    secrets: REGISTERED_SECRETS,
+  },
+  async () => {
+    await runNeighborGroupSweep();
   },
 );
 

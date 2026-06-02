@@ -114,8 +114,11 @@ router.post('/register', async (req: Request, res: Response) => {
       consent?: {
         terms?: boolean;
         privacy?: boolean;
+        community?: boolean;
         ageOver14?: boolean;
         marketing?: boolean;
+        marketingDataUse?: boolean;
+        nightAd?: boolean;
         version?: string;
       };
     };
@@ -123,9 +126,16 @@ router.post('/register', async (req: Request, res: Response) => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { error(res, '올바른 이메일 형식을 입력해주세요'); return; }
     if (password.length < 8) { error(res, '비밀번호는 8자 이상이어야 합니다'); return; }
 
-    // 약관/개인정보처리방침/14세이상 동의 필수 (PIPA 15·22조, 정보통신망법 22조).
-    // 미동의 가입은 법적으로 불가 — 거부.
-    if (!consent || consent.terms !== true || consent.privacy !== true || consent.ageOver14 !== true) {
+    // 약관/개인정보처리방침/커뮤니티 약관/14세이상 동의 필수
+    //   PIPA 15·22조, 정보통신망법 22조 — 미동의 가입은 법적으로 불가 → 거부.
+    //   가족피드·맘스타그램 등 사용자 콘텐츠 공유 기능 운영 → 커뮤니티 약관 필수.
+    if (
+      !consent ||
+      consent.terms !== true ||
+      consent.privacy !== true ||
+      consent.community !== true ||
+      consent.ageOver14 !== true
+    ) {
       error(res, '필수 약관에 동의해주세요', 400);
       return;
     }
@@ -143,8 +153,11 @@ router.post('/register', async (req: Request, res: Response) => {
       consent: {
         terms: true,
         privacy: true,
+        community: true,
         ageOver14: true,
         marketing: consent.marketing === true,
+        marketingDataUse: consent.marketingDataUse === true,
+        nightAd: consent.nightAd === true,
         version: typeof consent.version === 'string' ? consent.version : '2026-04-05',
         acceptedAt: now,
       },
@@ -308,6 +321,14 @@ router.post('/social', async (req: Request, res: Response) => {
       needsOnboarding: childSnap.empty,  // 자녀 등록 필요 여부 (별개 정보)
     });
   } catch (e) {
+    // statusCode 마커가 있는 케이스 = 사용자 오류 (409 등). server 로그는 warn 레벨.
+    const status = (e as { statusCode?: number } | null)?.statusCode;
+    if (status && status >= 400 && status < 500) {
+      logger.warn('auth/social', e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : '소셜 로그인 처리 중 오류가 발생했습니다';
+      error(res, msg, status);
+      return;
+    }
     logger.error('auth/social', e);
     const msg = e instanceof Error ? e.message : '소셜 로그인 처리 중 오류가 발생했습니다';
     error(res, msg, 500);
@@ -600,14 +621,20 @@ router.put('/nickname', authMiddleware, async (req: Request, res: Response) => {
 //   문서를 만든 후 frontend 가 별도 동의를 받아 이 라우트로 저장.
 router.put('/consent', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { terms, privacy, ageOver14, marketing, version } = req.body as {
+    const {
+      terms, privacy, community, ageOver14,
+      marketing, marketingDataUse, nightAd, version,
+    } = req.body as {
       terms?: boolean;
       privacy?: boolean;
+      community?: boolean;
       ageOver14?: boolean;
       marketing?: boolean;
+      marketingDataUse?: boolean;
+      nightAd?: boolean;
       version?: string;
     };
-    if (terms !== true || privacy !== true || ageOver14 !== true) {
+    if (terms !== true || privacy !== true || community !== true || ageOver14 !== true) {
       error(res, '필수 약관에 동의해주세요', 400);
       return;
     }
@@ -615,8 +642,11 @@ router.put('/consent', authMiddleware, async (req: Request, res: Response) => {
       consent: {
         terms: true,
         privacy: true,
+        community: true,
         ageOver14: true,
         marketing: marketing === true,
+        marketingDataUse: marketingDataUse === true,
+        nightAd: nightAd === true,
         version: typeof version === 'string' ? version : '2026-04-05',
         acceptedAt: new Date().toISOString(),
       },
@@ -647,6 +677,21 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
       ? data.scheduledDeleteAt.toDate().toISOString()
       : null;
 
+    // consent 메타 노출 — 프론트가 약관 버전 게이트 판단에 사용
+    //   community / marketingDataUse / nightAd 등 신규 필수·선택 항목 누락 시 재동의 화면 강제 라우팅.
+    const rawConsent = (data.consent ?? null) as Record<string, unknown> | null;
+    const consent = rawConsent ? {
+      terms: rawConsent.terms === true,
+      privacy: rawConsent.privacy === true,
+      community: rawConsent.community === true,
+      ageOver14: rawConsent.ageOver14 === true,
+      marketing: rawConsent.marketing === true,
+      marketingDataUse: rawConsent.marketingDataUse === true,
+      nightAd: rawConsent.nightAd === true,
+      version: typeof rawConsent.version === 'string' ? rawConsent.version : null,
+      acceptedAt: typeof rawConsent.acceptedAt === 'string' ? rawConsent.acceptedAt : null,
+    } : null;
+
     success(res, {
       id: doc.id,
       email: data.email,
@@ -657,6 +702,7 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
       lastActiveAt,
       dormantWarnedAt,
       scheduledDeleteAt,
+      consent,
     });
   } catch (e) {
     logger.error('auth/me', e);

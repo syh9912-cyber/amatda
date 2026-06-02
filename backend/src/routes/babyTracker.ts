@@ -27,13 +27,16 @@ const router = Router();
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
+// cross-day sleep: "M/D HH:MM" (예: "5/27 07:00") — 다음날 기상 표시용
+// 프론트 voice.tsx 가 자정 넘는 sleep 의 endTime 에 prefix 를 붙임
+const END_TIME_RE = /^(\d{2}:\d{2}|\d{1,2}\/\d{1,2}\s\d{2}:\d{2})$/;
 
 const TrackerRecordSchema = z.object({
   id: z.string().min(1).max(64),
   type: z.enum(['diaper', 'feeding', 'sleep', 'medication', 'custom']),
   subType: z.string().max(32),
   time: z.string().regex(TIME_RE),
-  endTime: z.string().regex(TIME_RE).optional(),
+  endTime: z.string().regex(END_TIME_RE).optional(),
   amount: z.number().min(0).max(10000).optional(),
   duration: z.number().min(0).max(24 * 60).optional(),
   note: z.string().max(500).optional(),

@@ -30,6 +30,16 @@
       "collectionGroup": "momGroupPosts",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "hidden", "order": "ASCENDING" },
+        { "fieldPath": "babyBirthYear", "order": "ASCENDING" },
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "lat", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "momGroupPosts",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "isOfficial", "order": "ASCENDING" },
         { "fieldPath": "hidden", "order": "ASCENDING" }
       ]

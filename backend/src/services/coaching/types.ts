@@ -7,7 +7,10 @@ export interface CoachingAIResponse {
   actions: string[];
   medical?: string;
   personalNote: string;
+  /** 모닝 푸시 + 하위호환용 단일 팔로업 (= followupQuestions[0]) */
   followupQuestion?: string;
+  /** in-chat 추천 질문 칩 (최대 3개). 사용자가 탭하면 바로 이어 질문. */
+  followupQuestions?: string[];
 }
 
 // ─── 프롬프트 컨텍스트 ───
@@ -126,6 +129,8 @@ export interface TierConfig {
 
 export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
   free: {
+    // prompt 가이드 "200~400자" 가 실제 길이 제어. maxOutputTokens 은 폭주 방지 안전망.
+    // 한국어 400자 ≈ 500 tok + JSON overhead 150 tok = 650. 안전 마진 250 → 900.
     maxOutputTokens: 900,
     dbCandidateCount: 4,      // 무료도 DB 전체 참고 (유료 전환을 위해 무료 경험 강화)
     summaryLines: 5,
@@ -133,6 +138,7 @@ export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
     dailyLimit: 10,            // 레벨업으로 증가 가능
   },
   paid: {
+    // 유료는 더 여유. 모델이 살짝 길게 써도 안 잘림.
     maxOutputTokens: 1200,
     dbCandidateCount: 4,
     summaryLines: 8,

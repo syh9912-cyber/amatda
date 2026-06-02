@@ -44,9 +44,10 @@ export function responseContainsForbiddenTerms(obj: unknown): boolean {
  */
 export function shouldRejectAIResponse(response: unknown, context: string): boolean {
   if (responseContainsForbiddenTerms(response)) {
-    logger.error(
+    // 정상 동작(안전필터가 의도대로 차단)이므로 warn 으로 기록 — Sentry 에러 노이즈 방지.
+    logger.warn(
       'forbidden.filter/ai-response-rejected',
-      new Error(`AI 응답에 금지 용어 포함 — fallback 으로 교체 (context: ${context})`),
+      `AI 응답에 금지 용어 포함 — fallback 으로 교체 (context: ${context})`,
     );
     return true;
   }

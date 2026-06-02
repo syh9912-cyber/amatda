@@ -133,10 +133,13 @@ export async function findOrCreateSocialUser(
           };
         }
         // 다른 provider (LOCAL 또는 다른 소셜) 와는 자동 연결 차단
-        throw new Error(
+        const conflictErr = new Error(
           `이미 ${existingProvider === 'LOCAL' ? '이메일/비밀번호' : existingProvider} 로 가입된 이메일이에요. ` +
           `해당 방법으로 로그인 후 설정에서 ${provider} 계정을 연결해주세요.`,
         );
+        // 사용자 오류 (409) — 라우트에서 500 분류 방지 마커
+        (conflictErr as Error & { statusCode?: number }).statusCode = 409;
+        throw conflictErr;
       }
     }
 

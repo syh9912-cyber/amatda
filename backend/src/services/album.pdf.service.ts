@@ -113,6 +113,12 @@ export function getMilestoneImageBuffer(label: string): Buffer | null {
     }
   }
 
+  // 3차 fallback: 미지의 라벨 → 기본 추억 아이콘 반환 (PDF 에 X 박스 안 뜨게)
+  const defaultFile = '0m-추억.png';
+  if (files.has(defaultFile)) {
+    try { return fs.readFileSync(path.join(dir, defaultFile)); } catch { /* ignore */ }
+  }
+
   return null;
 }
 
