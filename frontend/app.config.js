@@ -80,7 +80,13 @@ module.exports = ({ config }) => {
   const buildPropsPlugin = [
     'expo-build-properties',
     {
-      ios: { deploymentTarget: '16.0' },
+      ios: {
+        deploymentTarget: '16.0',
+        // @react-native-firebase 공식 요구사항: firebase-ios-sdk 는 use_frameworks 필요.
+        // useFrameworks 'static' + 사용 중인 RNFB 모듈 전부 forceStaticLinking 명시.
+        useFrameworks: 'static',
+        forceStaticLinking: ['RNFBApp', 'RNFBAnalytics'],
+      },
     },
   ];
   const hasBuildProps = existingPlugins.some(
