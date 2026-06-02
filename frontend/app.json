@@ -111,7 +111,7 @@
         "react-native-google-mobile-ads",
         {
           "androidAppId": "ca-app-pub-1736147235986434~1355077756",
-          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "iosAppId": "ca-app-pub-1736147235986434~8088841219",
           "userTrackingUsageDescription": "사용자 맞춤형 광고를 제공하기 위해 기기 식별자를 사용합니다"
         }
       ]
