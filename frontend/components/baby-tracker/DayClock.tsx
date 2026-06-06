@@ -10,7 +10,7 @@
  *
  * react-native-svg 기반(프로젝트에 이미 사용 중: VaccinationDonut).
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
 import type { TrackerRecord } from '../../features/baby-tracker/types';
@@ -126,6 +126,7 @@ interface Props {
 
 export function DayClock({ records, dateLabel, onPrevDay, onNextDay, canGoNext = true }: Props) {
   const showNav = !!(onPrevDay && onNextDay);
+  const [markerStyle, setMarkerStyle] = useState<'dot' | 'bar'>('dot');
   const wedges = useMemo(() => buildWedges(records), [records]);
   const hasData = wedges.length > 0;
 
@@ -157,7 +158,19 @@ export function DayClock({ records, dateLabel, onPrevDay, onNextDay, canGoNext =
 
   return (
     <View style={s.card}>
-      <Text style={s.title}>하루 패턴 · 24시간</Text>
+      <View style={s.titleRow}>
+        <Text style={s.title}>하루 패턴 · 24시간</Text>
+        <View style={s.styleToggle}>
+          <Text
+            onPress={() => setMarkerStyle('dot')}
+            style={[s.styleChip, markerStyle === 'dot' && s.styleChipOn]}
+          >{'● 점'}</Text>
+          <Text
+            onPress={() => setMarkerStyle('bar')}
+            style={[s.styleChip, markerStyle === 'bar' && s.styleChipOn]}
+          >{'▎막대'}</Text>
+        </View>
+      </View>
 
       {showNav && (
         <View style={s.dateNav}>
@@ -184,15 +197,23 @@ export function DayClock({ records, dateLabel, onPrevDay, onNextDay, canGoNext =
             stroke={C.track} strokeWidth={R_OUT - R_IN} fill="none"
           />
 
-          {/* 기록 wedge */}
-          {wedges.map((w, i) => (
-            <Path
-              key={`w${i}`}
-              d={wedgePath(w.start, w.sweep, R_IN, R_OUT)}
-              fill={w.color}
-              opacity={w.z === 0 ? 0.9 : 1}
-            />
+          {/* 수면 띠 (배경 레이어) */}
+          {wedges.filter((w) => w.z === 0).map((w, i) => (
+            <Path key={`s${i}`} d={wedgePath(w.start, w.sweep, R_IN, R_OUT)} fill={w.color} opacity={0.9} />
           ))}
+
+          {/* 이벤트 마커 — 점(dot) 또는 굵은 막대(bar) */}
+          {wedges.filter((w) => w.z === 1).map((w, i) => {
+            if (markerStyle === 'bar') {
+              const [x0, y0] = polarDeg(angleDeg(w.start), R_IN + 1);
+              const [x1, y1] = polarDeg(angleDeg(w.start), R_OUT - 1);
+              return (
+                <Line key={`e${i}`} x1={x0} y1={y0} x2={x1} y2={y1} stroke={w.color} strokeWidth={9} strokeLinecap="round" />
+              );
+            }
+            const [cx, cy] = polarDeg(angleDeg(w.start), (R_IN + R_OUT) / 2);
+            return <Circle key={`e${i}`} cx={cx} cy={cy} r={7} fill={w.color} stroke="#FFFFFF" strokeWidth={2} />;
+          })}
 
           {/* 시간 눈금 (바깥) */}
           {ticks.map((h) => {
@@ -273,7 +294,15 @@ const s = StyleSheet.create({
     marginBottom: 8, alignItems: 'center',
     shadowColor: '#000', shadowOpacity: 0.06, shadowOffset: { width: 0, height: 2 }, shadowRadius: 6, elevation: 2,
   },
-  title: { alignSelf: 'flex-start', fontSize: 12, fontWeight: '700', color: C.text, marginBottom: 6, marginLeft: 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 6 },
+  title: { fontSize: 12, fontWeight: '700', color: C.text, marginLeft: 2 },
+  styleToggle: { flexDirection: 'row', gap: 4 },
+  styleChip: {
+    fontSize: 11, fontWeight: '700', color: C.textSub,
+    borderWidth: 1, borderColor: '#E5E5EA', borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 3, overflow: 'hidden',
+  },
+  styleChipOn: { color: '#FFFFFF', backgroundColor: C.sleepLeg, borderColor: C.sleepLeg },
   dateNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, marginBottom: 2 },
   dateNavBtn: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
   dateNavArrow: { fontSize: 24, fontWeight: '800', color: C.sleepLeg },
