@@ -11,7 +11,7 @@
  * react-native-svg 기반(프로젝트에 이미 사용 중: VaccinationDonut).
  */
 import { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
 import type { TrackerRecord } from '../../features/baby-tracker/types';
 
@@ -117,9 +117,15 @@ function buildWedges(records: TrackerRecord[]): Wedge[] {
 interface Props {
   records: TrackerRecord[];
   dateLabel: string;
+  /** 날짜 이동 (이전/다음 날). 둘 다 주면 카드 상단에 날짜 네비 표시 */
+  onPrevDay?: () => void;
+  onNextDay?: () => void;
+  /** 다음 날로 이동 가능 여부 (오늘이면 false → 미래 이동 막음) */
+  canGoNext?: boolean;
 }
 
-export function DayClock({ records, dateLabel }: Props) {
+export function DayClock({ records, dateLabel, onPrevDay, onNextDay, canGoNext = true }: Props) {
+  const showNav = !!(onPrevDay && onNextDay);
   const wedges = useMemo(() => buildWedges(records), [records]);
   const hasData = wedges.length > 0;
 
@@ -152,6 +158,23 @@ export function DayClock({ records, dateLabel }: Props) {
   return (
     <View style={s.card}>
       <Text style={s.title}>하루 패턴 · 24시간</Text>
+
+      {showNav && (
+        <View style={s.dateNav}>
+          <TouchableOpacity onPress={onPrevDay} style={s.dateNavBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Text style={s.dateNavArrow}>{'‹'}</Text>
+          </TouchableOpacity>
+          <Text style={s.dateNavLabel}>{dateLabel}</Text>
+          <TouchableOpacity
+            onPress={onNextDay}
+            disabled={!canGoNext}
+            style={s.dateNavBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={[s.dateNavArrow, !canGoNext && s.dateNavArrowOff]}>{'›'}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={s.clockWrap}>
         <Svg width={SIZE} height={SIZE}>
@@ -207,7 +230,7 @@ export function DayClock({ records, dateLabel }: Props) {
 
         {/* 가운데 라벨 (구멍) */}
         <View style={s.center} pointerEvents="none">
-          <Text style={s.centerDate}>{dateLabel}</Text>
+          {!showNav && <Text style={s.centerDate}>{dateLabel}</Text>}
           {hasData ? (
             <Text style={s.centerSub}>
               {feedingCount > 0 ? `수유 ${feedingCount}` : ''}
@@ -251,6 +274,11 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.06, shadowOffset: { width: 0, height: 2 }, shadowRadius: 6, elevation: 2,
   },
   title: { alignSelf: 'flex-start', fontSize: 12, fontWeight: '700', color: C.text, marginBottom: 6, marginLeft: 2 },
+  dateNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, marginBottom: 2 },
+  dateNavBtn: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  dateNavArrow: { fontSize: 24, fontWeight: '800', color: C.sleepLeg },
+  dateNavArrowOff: { color: '#D9D9E0' },
+  dateNavLabel: { fontSize: 15, fontWeight: '800', color: C.text, minWidth: 120, textAlign: 'center' },
   clockWrap: { width: SIZE, height: SIZE, alignItems: 'center', justifyContent: 'center' },
   center: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   centerDate: { fontSize: 17, fontWeight: '800', color: C.text },

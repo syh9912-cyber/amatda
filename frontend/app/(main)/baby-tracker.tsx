@@ -2849,6 +2849,9 @@ function BabyTrackerInner() {
           <DayClock
             records={allRecordsSorted}
             dateLabel={isToday(currentDate) ? '오늘' : formatDateKorean(currentDate)}
+            onPrevDay={() => goDay(-1)}
+            onNextDay={() => goDay(1)}
+            canGoNext={!isToday(currentDate)}
           />
         )}
 
