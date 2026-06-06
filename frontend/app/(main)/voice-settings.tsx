@@ -265,7 +265,7 @@ export default function VoiceSettingsScreen() {
       if (result.ok) {
         Alert.alert(
           '시스템 다이얼로그 호출됨',
-          '안드로이드 "바로가기 추가" 확인 창이 떠야 해요. 뜨면 "추가" 탭. 안 뜨면 런처가 차단한 거예요(One UI 일부 / Nova / MIUI 등) — 방법 ① 사용하세요.',
+          '안드로이드 "바로가기 추가" 확인 창이 떠야 해요. 뜨면 "추가" 탭.\n\n"홈 화면 구성이 잠겨 있다"고 뜨면 → 홈 화면 빈 곳 길게 누르기 → 설정 → "홈 화면 레이아웃 잠금"을 끄고 다시 시도하세요.\n\n그래도 안 되면 방법 ①(앱 아이콘 길게 눌러 끌어다 놓기)을 사용하세요.',
         );
       } else if (result.reason === 'LAUNCHER_UNSUPPORTED') {
         Alert.alert(
