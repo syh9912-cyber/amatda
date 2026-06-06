@@ -1629,6 +1629,8 @@ function BabyAlbum() {
   const [diaryText, setDiaryText] = useState<string | null>(null);
   const [diaryLoading, setDiaryLoading] = useState(false);
   const [diaryDate, setDiaryDate] = useState<string | null>(null);
+  // 저장 모달 "하고 싶은 이야기" 메모란에 AI 오늘 일기 채우기용 로딩
+  const [memoDiaryLoading, setMemoDiaryLoading] = useState(false);
 
   const childMonths = selectedChild?.birthDate
     ? Math.floor((Date.now() - new Date(selectedChild.birthDate).getTime()) / (1000 * 60 * 60 * 24 * 30.44))
@@ -1719,6 +1721,28 @@ function BabyAlbum() {
       setDiaryLoading(false);
     }
   }, [selectedChild]);
+
+  /* -- "하고 싶은 이야기" 메모란에 AI 오늘 일기 채우기 --
+     그날의 아기시간 기록·상담 내용으로 일기를 생성해 메모에 삽입.
+     기존 메모가 있으면 아래에 이어 붙이고, 저장 시 앨범 기록의 memo로 영구 저장됨. */
+  const fillMemoWithDiary = useCallback(async () => {
+    if (!selectedChild || memoDiaryLoading) return;
+    setMemoDiaryLoading(true);
+    try {
+      const res = await coachingApi.dailyDiary(selectedChild.id);
+      const data = res.data?.data as { diary?: string } | undefined;
+      const diary = data?.diary?.trim();
+      if (diary) {
+        setMemo((prev) => (prev.trim() ? `${prev.trim()}\n\n${diary}` : diary));
+      } else {
+        Alert.alert('알림', '오늘은 아직 기록이 없어서 일기를 만들 수 없어요. 아기시간을 먼저 기록해보세요.');
+      }
+    } catch {
+      Alert.alert('오류', 'AI 일기 생성에 실패했습니다.');
+    } finally {
+      setMemoDiaryLoading(false);
+    }
+  }, [selectedChild, memoDiaryLoading]);
 
   /* -- Save entry (thumb 400px + print 1800px 두 버전 저장) -- */
   const saveEntry = useCallback(async () => {
@@ -2274,10 +2298,27 @@ function BabyAlbum() {
             })}
           </ScrollView>
 
+          {/* AI 오늘 일기 → 메모에 채우기 */}
+          <TouchableOpacity
+            style={styles.composeDiaryBtn}
+            onPress={fillMemoWithDiary}
+            disabled={memoDiaryLoading}
+            activeOpacity={0.7}
+          >
+            {memoDiaryLoading ? (
+              <ActivityIndicator color={COLORS.primary} size="small" />
+            ) : (
+              <>
+                <Image source={IC_DIARY} style={styles.composeDiaryIcon} contentFit="contain" />
+                <Text style={styles.composeDiaryText}>AI 오늘 일기 불러오기</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
           {/* Memo input */}
           <TextInput
             style={styles.composeInput}
-            placeholder="하고싶은 이야기를 적으세요..."
+            placeholder="하고싶은 이야기를 적으세요... (AI 오늘 일기로 채울 수도 있어요)"
             placeholderTextColor={COLORS.textLight}
             value={memo}
             onChangeText={setMemo}
@@ -2652,11 +2693,20 @@ const styles = StyleSheet.create({
 
   /* Compose input */
   composeInput: {
-    height: 50, borderRadius: RADIUS.sm, backgroundColor: COLORS.surfaceLight,
+    minHeight: 50, borderRadius: RADIUS.sm, backgroundColor: COLORS.surfaceLight,
     paddingHorizontal: 12, paddingVertical: 8, fontSize: FONT_SIZE.sm, color: '#5C3D1E',
     textAlignVertical: 'top', marginBottom: SPACING.sm,
     fontFamily: 'serif', fontStyle: 'italic', fontWeight: '700',
   },
+  composeDiaryBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    alignSelf: 'flex-start',
+    borderRadius: RADIUS.sm, borderWidth: 1, borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
+    paddingHorizontal: 12, paddingVertical: 7, marginBottom: SPACING.sm, minHeight: 34,
+  },
+  composeDiaryIcon: { width: 18, height: 18 },
+  composeDiaryText: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: COLORS.primary },
 
   /* Compose bottom row */
   composeBottom: {
