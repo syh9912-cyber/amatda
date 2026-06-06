@@ -1,10 +1,11 @@
 /**
- * DayClock — 하루 24시간 원형 패턴 차트 (베이비빌리 '패턴' 개선판).
+ * DayClock — 하루 24시간 원형 패턴 차트 (베이비빌리 스타일 방사형 wedge).
  *
- * - 0시 정상(12시 방향), 시계방향. 2시간 간격 눈금 + 0/6/12/18 강조 라벨.
- * - 수면: 시작~종료 구간을 '호(arc)'로 채워 한눈에 보임.
- * - 수유·배변·투약 등 단발 기록: 링 바깥에 색점(dot)으로 표시.
- * - 가운데: 날짜 + 핵심 요약(수유/수면). 범례로 색 의미 안내.
+ * - 0시 정상(12시 방향), 시계방향. 0~22시 2시간 간격 눈금/라벨(원 바깥).
+ * - 도넛 띠(안쪽 구멍 ~ 바깥 림)에 각 기록을 "시각 위치의 방사형 부채꼴(wedge)"로 채움.
+ *   · 수면: 지속시간만큼 넓은 wedge.
+ *   · 수유·배변·투약 등 단발 기록: 얇은 wedge(시각 표시).
+ * - 가운데 구멍: 날짜 + 핵심 요약(수유/수면). 범례로 색 의미 안내.
  * - 기록 0건이면 빈 시계 + 안내 문구.
  *
  * react-native-svg 기반(프로젝트에 이미 사용 중: VaccinationDonut).
@@ -16,28 +17,33 @@ import type { TrackerRecord } from '../../features/baby-tracker/types';
 
 /* 아기시간 표준 색상 (TRACKER_COLORS와 동일 톤) */
 const C = {
-  diaper: '#A0D2DB', diaperDark: '#6AAFBB',
-  feeding: '#FFD76E', feedingDark: '#E6B84D',
-  sleep: '#B8A0D2', sleepDark: '#8F73B5',
-  medication: '#7CB342', medicationDark: '#558B2F',
-  custom: '#9575CD', customDark: '#5E35B1',
-  track: '#F0F0F4', tick: '#D9D9E0', tickStrong: '#B9B9C4',
+  diaper: '#7FC0CC', diaperLeg: '#6AAFBB',
+  feeding: '#FFCE5C', feedingLeg: '#E6B84D',
+  sleep: '#B8A0D2', sleepLeg: '#8F73B5',
+  medication: '#8BC34A', medicationLeg: '#558B2F',
+  custom: '#9575CD',
+  track: '#F1F1F6', tick: '#DADAE2', tickStrong: '#B9B9C4',
   text: '#1C1C1E', textSub: '#8A8A90',
 };
 
-const SIZE = 236;
+const SIZE = 250;
 const CX = SIZE / 2;
 const CY = SIZE / 2;
-const R_RING = 92;      // 수면 호가 그려지는 메인 링
-const RING_STROKE = 11;
-const R_DOT = 92 + RING_STROKE / 2 + 7; // 단발 기록 점 (링 바깥)
-const R_TICK_OUT = 92 - RING_STROKE / 2 - 2;
-const R_TICK_IN = R_TICK_OUT - 6;
-const R_LABEL = R_TICK_IN - 11;
+const R_OUT = 95;        // 도넛 바깥 반지름 (wedge 끝)
+const R_IN = 55;         // 도넛 안쪽 반지름 (가운데 구멍)
+const R_TICK_OUT = R_OUT + 5;
+const R_TICK_IN = R_OUT + 1;
+const R_LABEL = R_OUT + 15;
+
+/** 단발 기록(수유/배변/투약)이 차지하는 최소 각도(분 환산) — 얇은 wedge 가시성 확보 */
+const MIN_EVENT_SWEEP = 14; // ≈ 3.5°
+const MIN_SLEEP_SWEEP = 10;
 
 function minutesOfDay(t?: string): number | null {
   if (!t) return null;
-  const m = /(\d{1,2}):(\d{2})/.exec(t);
+  // cross-day prefix("M/D HH:MM") 가 있으면 HH:MM 만 사용
+  const hhmm = t.includes(' ') ? t.split(' ').pop() ?? t : t;
+  const m = /(\d{1,2}):(\d{2})/.exec(hhmm);
   if (!m) return null;
   return (Number(m[1]) % 24) * 60 + Number(m[2]);
 }
@@ -46,50 +52,56 @@ function minutesOfDay(t?: string): number | null {
 function angleDeg(min: number): number {
   return (min / 1440) * 360 - 90;
 }
-function polar(min: number, r: number): [number, number] {
-  const a = (angleDeg(min) * Math.PI) / 180;
-  return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
-}
 function polarDeg(deg: number, r: number): [number, number] {
   const a = (deg * Math.PI) / 180;
   return [CX + r * Math.cos(a), CY + r * Math.sin(a)];
 }
 
-/** 수면 등 구간 호 path (시작분 → 길이분, 시계방향). */
-function arcPath(startMin: number, sweepMin: number, r: number): string {
-  const sweep = Math.max(2, Math.min(1439, sweepMin)); // 0/한바퀴 방지
-  const [x0, y0] = polarDeg(angleDeg(startMin), r);
-  const [x1, y1] = polarDeg(angleDeg(startMin + sweep), r);
-  const largeArc = sweep > 720 ? 1 : 0;
-  return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+/** 도넛 부채꼴(annular sector) path — 시각(startMin)에서 sweepMin 만큼, 안쪽 rIn ~ 바깥 rOut. */
+function wedgePath(startMin: number, sweepMin: number, rIn: number, rOut: number): string {
+  const sweep = Math.max(2, Math.min(1439, sweepMin));
+  const a0 = angleDeg(startMin);
+  const a1 = angleDeg(startMin + sweep);
+  const [ox0, oy0] = polarDeg(a0, rOut);
+  const [ox1, oy1] = polarDeg(a1, rOut);
+  const [ix1, iy1] = polarDeg(a1, rIn);
+  const [ix0, iy0] = polarDeg(a0, rIn);
+  const large = sweep > 720 ? 1 : 0;
+  return (
+    `M ${ox0.toFixed(2)} ${oy0.toFixed(2)} ` +
+    `A ${rOut} ${rOut} 0 ${large} 1 ${ox1.toFixed(2)} ${oy1.toFixed(2)} ` +
+    `L ${ix1.toFixed(2)} ${iy1.toFixed(2)} ` +
+    `A ${rIn} ${rIn} 0 ${large} 0 ${ix0.toFixed(2)} ${iy0.toFixed(2)} Z`
+  );
 }
 
-interface Mark { kind: 'arc' | 'dot'; start: number; sweep?: number; color: string; }
+interface Wedge { start: number; sweep: number; color: string; z: number; }
 
-function buildMarks(records: TrackerRecord[]): Mark[] {
-  const marks: Mark[] = [];
+function buildWedges(records: TrackerRecord[]): Wedge[] {
+  const wedges: Wedge[] = [];
   for (const r of records) {
     const start = minutesOfDay(r.time);
     if (start == null) continue;
     if (r.type === 'sleep') {
-      let sweep = 0;
+      let sweep = MIN_SLEEP_SWEEP;
       if (typeof r.duration === 'number' && r.duration > 0) sweep = r.duration;
       else {
         const end = minutesOfDay(r.endTime);
-        if (end != null) sweep = (end - start + 1440) % 1440;
+        if (end != null) sweep = (end - start + 1440) % 1440 || MIN_SLEEP_SWEEP;
       }
-      if (sweep > 0) marks.push({ kind: 'arc', start, sweep, color: C.sleep });
-      else marks.push({ kind: 'dot', start, color: C.sleepDark }); // 진행중(종료 미정)
+      // z=0: 수면은 넓으니 배경 레이어로 먼저
+      wedges.push({ start, sweep, color: C.sleep, z: 0 });
     } else {
       const color =
-        r.type === 'diaper' ? C.diaperDark
-          : r.type === 'feeding' ? C.feedingDark
-            : r.type === 'medication' ? C.medicationDark
-              : C.customDark;
-      marks.push({ kind: 'dot', start, color });
+        r.type === 'diaper' ? C.diaper
+          : r.type === 'feeding' ? C.feeding
+            : r.type === 'medication' ? C.medication
+              : C.custom;
+      wedges.push({ start, sweep: MIN_EVENT_SWEEP, color, z: 1 });
     }
   }
-  return marks;
+  // 수면(배경) 먼저, 단발 기록을 위에 그림
+  return wedges.sort((a, b) => a.z - b.z);
 }
 
 interface Props {
@@ -98,8 +110,8 @@ interface Props {
 }
 
 export function DayClock({ records, dateLabel }: Props) {
-  const marks = useMemo(() => buildMarks(records), [records]);
-  const hasData = marks.length > 0;
+  const wedges = useMemo(() => buildWedges(records), [records]);
+  const hasData = wedges.length > 0;
 
   // records 기반 핵심 요약 (수유 횟수 / 수면 시간)
   const { feedingCount, sleepHours } = useMemo(() => {
@@ -119,7 +131,7 @@ export function DayClock({ records, dateLabel }: Props) {
     return { feedingCount: fc, sleepHours: sleepMin / 60 };
   }, [records]);
 
-  // 2시간 간격 눈금
+  // 2시간 간격 눈금/라벨
   const ticks = Array.from({ length: 12 }, (_, i) => i * 2); // 0,2,...,22
 
   return (
@@ -128,10 +140,23 @@ export function DayClock({ records, dateLabel }: Props) {
 
       <View style={s.clockWrap}>
         <Svg width={SIZE} height={SIZE}>
-          {/* 배경 링 */}
-          <Circle cx={CX} cy={CY} r={R_RING} stroke={C.track} strokeWidth={RING_STROKE} fill="none" />
+          {/* 배경 도넛 띠 */}
+          <Circle
+            cx={CX} cy={CY} r={(R_OUT + R_IN) / 2}
+            stroke={C.track} strokeWidth={R_OUT - R_IN} fill="none"
+          />
 
-          {/* 시간 눈금 */}
+          {/* 기록 wedge */}
+          {wedges.map((w, i) => (
+            <Path
+              key={`w${i}`}
+              d={wedgePath(w.start, w.sweep, R_IN, R_OUT)}
+              fill={w.color}
+              opacity={w.z === 0 ? 0.9 : 1}
+            />
+          ))}
+
+          {/* 시간 눈금 (바깥) */}
           {ticks.map((h) => {
             const deg = angleDeg(h * 60);
             const strong = h % 6 === 0;
@@ -146,42 +171,26 @@ export function DayClock({ records, dateLabel }: Props) {
               />
             );
           })}
-          {/* 0/6/12/18 라벨 */}
-          {[0, 6, 12, 18].map((h) => {
+          {/* 0,2,...,22 라벨 (원 바깥) */}
+          {ticks.map((h) => {
             const [lx, ly] = polarDeg(angleDeg(h * 60), R_LABEL);
+            const strong = h % 6 === 0;
             return (
               <SvgText
                 key={`l${h}`}
-                x={lx} y={ly + 3.5}
-                fontSize={10.5} fontWeight="700" fill={C.textSub}
+                x={lx} y={ly + 3.4}
+                fontSize={strong ? 10.5 : 9}
+                fontWeight={strong ? '800' : '600'}
+                fill={strong ? C.text : C.textSub}
                 textAnchor="middle"
               >
                 {h}
               </SvgText>
             );
           })}
-
-          {/* 수면 호 */}
-          {marks.filter((m) => m.kind === 'arc').map((m, i) => (
-            <Path
-              key={`a${i}`}
-              d={arcPath(m.start, m.sweep ?? 0, R_RING)}
-              stroke={m.color}
-              strokeWidth={RING_STROKE}
-              strokeLinecap="round"
-              fill="none"
-              opacity={0.92}
-            />
-          ))}
-
-          {/* 단발 기록 점 (링 바깥) */}
-          {marks.filter((m) => m.kind === 'dot').map((m, i) => {
-            const [x, y] = polar(m.start, R_DOT);
-            return <Circle key={`d${i}`} cx={x} cy={y} r={4.4} fill={m.color} stroke="#FFFFFF" strokeWidth={1.3} />;
-          })}
         </Svg>
 
-        {/* 가운데 라벨 */}
+        {/* 가운데 라벨 (구멍) */}
         <View style={s.center} pointerEvents="none">
           <Text style={s.centerDate}>{dateLabel}</Text>
           {hasData ? (
@@ -198,10 +207,10 @@ export function DayClock({ records, dateLabel }: Props) {
 
       {/* 범례 */}
       <View style={s.legend}>
-        <Legend color={C.feedingDark} label="수유·식사" />
-        <Legend color={C.diaperDark} label="배변" />
-        <Legend color={C.sleep} label="수면" arc />
-        <Legend color={C.medicationDark} label="투약" />
+        <Legend color={C.feeding} label="수유·식사" />
+        <Legend color={C.diaper} label="배변" />
+        <Legend color={C.sleep} label="수면" />
+        <Legend color={C.medication} label="투약" />
       </View>
 
       {!hasData && (
@@ -211,10 +220,10 @@ export function DayClock({ records, dateLabel }: Props) {
   );
 }
 
-function Legend({ color, label, arc }: { color: string; label: string; arc?: boolean }) {
+function Legend({ color, label }: { color: string; label: string }) {
   return (
     <View style={s.legendItem}>
-      <View style={[arc ? s.legendBar : s.legendDot, { backgroundColor: color }]} />
+      <View style={[s.legendDot, { backgroundColor: color }]} />
       <Text style={s.legendText}>{label}</Text>
     </View>
   );
@@ -235,7 +244,6 @@ const s = StyleSheet.create({
   legend: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12, marginTop: 10 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 9, height: 9, borderRadius: 5 },
-  legendBar: { width: 14, height: 6, borderRadius: 3 },
   legendText: { fontSize: 11, fontWeight: '600', color: C.textSub },
   hint: { fontSize: 11.5, color: C.textSub, textAlign: 'center', marginTop: 10, fontWeight: '600' },
 });

@@ -3861,15 +3861,24 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete, onL
   // 수면 기록 → 시작/종료 분리 + 진행중 수면 가상 엔트리 추가
   const expanded = useMemo(() => {
     const out: TrackerRecord[] = [];
+    // 렌더 중인 날짜의 "M/D " 프리픽스 (zero-pad 없음 — endTime 프리픽스와 동일 포맷)
+    const [, mmStr, ddStr] = dateStr.split('-');
+    const thisDayPrefix = `${parseInt(mmStr, 10)}/${parseInt(ddStr, 10)} `;
     for (const r of records) {
       if (r.type === 'sleep' && r.endTime) {
         // 자정을 넘긴 sleep 의 endTime 은 "M/D HH:MM" 형식 (예: "5/4 08:30").
         // wake 가상 entry 의 time 은 정렬 시 다른 HH:MM 보다 위에 와야 하므로
         // (cross-day wake 는 어제 sleep → 오늘 새벽이라 가장 빠른 기록) HH:MM 만 추출.
         // 사용자 보고 2026-05-04: "기상 누른 후 다른 기록이 기상 위로 올라가는" 버그 fix.
-        const wakeTime = r.endTime.includes(' ') ? r.endTime.split(' ').pop() ?? r.endTime : r.endTime;
+        const hasDatePrefix = r.endTime.includes(' ');
+        // ★ 기상이 다른 날(자정 넘김)이면 그 날 타임라인(crossDayWakes)에서만 표시 →
+        //   잠든 날에는 기상 엔트리를 만들지 않는다 (사용자 보고 2026-06-07: 기상이 잠든 날·깬 날 양쪽에 중복 표시되고, 한쪽 삭제 시 둘 다 사라지는 버그 fix).
+        const wakeOnOtherDay = hasDatePrefix && !r.endTime.startsWith(thisDayPrefix);
+        const wakeTime = hasDatePrefix ? (r.endTime.split(' ').pop() ?? r.endTime) : r.endTime;
         out.push({ ...r, id: `${r.id}__start`, subType: 'sleep_start', endTime: undefined, duration: undefined });
-        out.push({ ...r, id: `${r.id}__wake`, subType: 'sleep_end', time: wakeTime, endTime: undefined, duration: r.duration });
+        if (!wakeOnOtherDay) {
+          out.push({ ...r, id: `${r.id}__wake`, subType: 'sleep_end', time: wakeTime, endTime: undefined, duration: r.duration });
+        }
       } else {
         out.push(r);
       }

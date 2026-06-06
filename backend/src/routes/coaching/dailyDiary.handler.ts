@@ -28,6 +28,38 @@ function sanitizeForPrompt(raw: unknown): string {
 }
 
 function buildTrackingText(data: Record<string, unknown>): string {
+  // 실제 아기시간 기록은 babyTrackerDays 의 records 배열 형식 (type/subType/time/duration ...)
+  const records = Array.isArray(data.records) ? (data.records as Array<Record<string, unknown>>) : null;
+  if (records) {
+    let feeding = 0, sleepMin = 0, poop = 0, pee = 0, med = 0;
+    const feed: Record<string, number> = { breast: 0, formula: 0, baby_food: 0, snack: 0 };
+    for (const r of records) {
+      const type = r.type as string;
+      const sub = r.subType as string;
+      if (type === 'feeding') { feeding++; if (sub in feed) feed[sub]++; }
+      else if (type === 'sleep') { sleepMin += typeof r.duration === 'number' ? r.duration : 0; }
+      else if (type === 'diaper') {
+        if (sub === 'poop' || sub === 'both') poop++;
+        if (sub === 'pee' || sub === 'both') pee++;
+      } else if (type === 'medication') { med++; }
+    }
+    const parts: string[] = [];
+    if (feeding) {
+      const detail = [
+        feed.breast ? `모유 ${feed.breast}` : '',
+        feed.formula ? `분유 ${feed.formula}` : '',
+        feed.baby_food ? `이유식 ${feed.baby_food}` : '',
+        feed.snack ? `간식 ${feed.snack}` : '',
+      ].filter(Boolean).join('·');
+      parts.push(`수유/식사 ${feeding}회${detail ? ` (${detail})` : ''}`);
+    }
+    if (sleepMin > 0) parts.push(`수면 ${Math.floor(sleepMin / 60)}시간 ${sleepMin % 60}분`);
+    if (poop) parts.push(`대변 ${poop}회`);
+    if (pee) parts.push(`소변 ${pee}회`);
+    if (med) parts.push(`투약 ${med}회`);
+    return parts.length > 0 ? parts.join(', ') : '기록 없음';
+  }
+  // legacy dailyTracking 형식 하위호환
   const parts: string[] = [];
   if (data.sleepHours) parts.push(`수면 ${data.sleepHours}시간`);
   if (data.meals) parts.push(`식사 ${data.meals}회`);
@@ -71,14 +103,16 @@ export function registerDailyDiaryHandler(router: Router): void {
         .map((d) => d.data() as Record<string, unknown>)
         .filter((s) => s.source !== 'filter' && s.source !== 'limit');
 
-      // 오늘 추적 데이터 조회
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const trackingSnap = await collections.dailyTracking
-        .where('childId', '==', childId)
-        .where('date', '==', todayStr)
-        .limit(1)
-        .get();
-      const trackingData = trackingSnap.docs[0]?.data() as Record<string, unknown> | undefined;
+      // 오늘 추적 데이터 조회 — 실제 아기시간 기록은 babyTrackerDays/{childId}_{date} 에 저장됨
+      // (이전엔 미사용 컬렉션 dailyTracking 을 조회해 항상 '기록 없음' 으로 떴던 버그 수정)
+      // 날짜는 KST 기준 — 자정 근처 UTC 오프셋 오류 방지.
+      const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+      const todayStr = `${kstNow.getUTCFullYear()}-${String(kstNow.getUTCMonth() + 1).padStart(2, '0')}-${String(kstNow.getUTCDate()).padStart(2, '0')}`;
+      const dayDoc = await collections.babyTrackerDays.doc(`${childId}_${todayStr}`).get();
+      const dayRecords = dayDoc.exists
+        ? ((dayDoc.data()?.records as unknown[] | undefined) ?? [])
+        : [];
+      const trackingData = dayRecords.length > 0 ? { records: dayRecords } : undefined;
 
       if (sessions.length === 0 && !trackingData) {
         success(res, {
