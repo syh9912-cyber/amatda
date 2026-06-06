@@ -516,6 +516,19 @@ router.post('/photo-parse', authMiddleware, async (req: Request, res: Response) 
         if (n.includes('왼') || n.includes('좌') || n.includes('left')) r.note = '왼쪽';
         else if (n.includes('오른') || n.includes('우') || n.includes('right')) r.note = '오른쪽';
       }
+      // 수면인데 endTime 없고 note 에 기상 시각이 있으면 추출 (예: "어제 밤10시에 자고 오늘 아침 7시에 일어남")
+      // — 모델이 기상 시각을 endTime 필드에 못 넣고 note 에만 적는 케이스 보강. 마지막 시각 = 기상 시각.
+      if (r.type === 'sleep' && !r.endTime && r.note && /(일어|기상|깸|깼)/.test(r.note)) {
+        const times = Array.from(r.note.matchAll(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/g));
+        if (times.length > 0) {
+          const last = times[times.length - 1];
+          const eh = parseInt(last[1], 10);
+          const em = last[2] ? parseInt(last[2], 10) : 0;
+          if (!isNaN(eh) && eh <= 23) {
+            r.endTime = `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`;
+          }
+        }
+      }
       // endTime + duration 자동 계산
       if (r.time && r.endTime && r.duration == null) {
         const [sh, sm] = r.time.split(':').map((v) => parseInt(v, 10));
