@@ -22,7 +22,7 @@ const C = {
   feeding: '#FFCB5C', feedingLeg: '#E8B14A',
   sleep: '#B6A3DE', sleepLeg: '#9784C9',
   medication: '#86C764', medicationLeg: '#6BAE4E',
-  track: '#F4F3F8', tick: '#E0DFE8', tickStrong: '#C2C1CD',
+  track: '#F6F5FA', tick: '#E4E3EC', tickStrong: '#C6C5D1',
   text: '#1C1C1E', textSub: '#8A8A90',
 };
 
@@ -30,13 +30,13 @@ const SIZE = 250;
 const CX = SIZE / 2;
 const CY = SIZE / 2;
 const R_OUT = 96;        // 광선 끝(바깥)
-const R_IN = 50;         // 가운데 구멍
+const R_IN = 56;         // 가운데 구멍 (여백 ↑)
 const R_TICK_OUT = R_OUT + 5;
 const R_TICK_IN = R_OUT + 1;
 const R_LABEL = R_OUT + 15;
 
-const MIN_EVENT_SWEEP = 11; // 단발 기록 가는 광선 (~2.75°)
-const MIN_SLEEP_SWEEP = 10;
+const MIN_EVENT_SWEEP = 19; // 단발 기록 광선 굵기 (~4.8°) — 또렷하게
+const MIN_SLEEP_SWEEP = 12;
 
 function catColor(cat: Cat): string {
   return cat === 'diaper' ? C.diaper : cat === 'feeding' ? C.feeding : cat === 'medication' ? C.medication : C.sleep;
@@ -188,15 +188,21 @@ export function DayClock({ records, dateLabel, onPrevDay, onNextDay, canGoNext =
           {/* 배경 도넛 띠 */}
           <Circle cx={CX} cy={CY} r={(R_OUT + R_IN) / 2} stroke={C.track} strokeWidth={R_OUT - R_IN} fill="none" />
 
-          {/* 기록 광선 (수면 먼저, 단발 위에) */}
-          {shown.map((w, i) => (
-            <Path
-              key={`w${i}`}
-              d={wedgePath(w.start, w.sweep, R_IN, R_OUT)}
-              fill={catColor(w.cat)}
-              opacity={w.cat === 'sleep' ? 0.85 : 1}
-            />
-          ))}
+          {/* 기록 광선 (수면 먼저, 단발 위에). stroke+round join 으로 모서리를 둥글려 세련되게. */}
+          {shown.map((w, i) => {
+            const col = catColor(w.cat);
+            return (
+              <Path
+                key={`w${i}`}
+                d={wedgePath(w.start, w.sweep, R_IN, R_OUT)}
+                fill={col}
+                stroke={col}
+                strokeWidth={3}
+                strokeLinejoin="round"
+                opacity={w.cat === 'sleep' ? 0.82 : 1}
+              />
+            );
+          })}
 
           {/* 시간 눈금 (바깥) */}
           {ticks.map((h) => {
