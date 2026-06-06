@@ -31,9 +31,7 @@ const CX = SIZE / 2;
 const CY = SIZE / 2;
 const R_OUT = 96;        // 광선 끝(바깥)
 const R_IN = 56;         // 가운데 구멍 (여백 ↑)
-const R_TICK_OUT = R_OUT + 5;
-const R_TICK_IN = R_OUT + 1;
-const R_LABEL = R_OUT + 15;
+const R_LABEL = R_OUT + 16;
 
 const MIN_EVENT_SWEEP = 19; // 단발 기록 광선 굵기 (~4.8°) — 또렷하게
 const MIN_SLEEP_SWEEP = 12;
@@ -151,7 +149,7 @@ export function DayClock({ records, dateLabel, onPrevDay, onNextDay, canGoNext =
     return { feedingCount: fc, sleepHours: sleepMin / 60 };
   }, [records]);
 
-  const ticks = Array.from({ length: 12 }, (_, i) => i * 2); // 0,2,...,22
+  const hours = Array.from({ length: 24 }, (_, i) => i); // 0,1,...,23 (1시간 간격)
 
   return (
     <View style={s.card}>
@@ -204,20 +202,28 @@ export function DayClock({ records, dateLabel, onPrevDay, onNextDay, canGoNext =
             );
           })}
 
-          {/* 시간 눈금 (바깥) */}
-          {ticks.map((h) => {
+          {/* 시간 눈금 (1시간 간격 24개, 바깥) — 0/6/12/18 강조 */}
+          {hours.map((h) => {
             const deg = angleDeg(h * 60);
-            const strong = h % 6 === 0;
-            const [ix, iy] = polarDeg(deg, R_TICK_IN);
-            const [ox, oy] = polarDeg(deg, R_TICK_OUT);
-            return <Line key={`t${h}`} x1={ix} y1={iy} x2={ox} y2={oy} stroke={strong ? C.tickStrong : C.tick} strokeWidth={strong ? 2 : 1} />;
+            const major = h % 6 === 0;
+            const len = major ? 7 : 4;
+            const [ix, iy] = polarDeg(deg, R_OUT + 1);
+            const [ox, oy] = polarDeg(deg, R_OUT + 1 + len);
+            return <Line key={`t${h}`} x1={ix} y1={iy} x2={ox} y2={oy} stroke={major ? C.tickStrong : C.tick} strokeWidth={major ? 2 : 1} />;
           })}
-          {/* 0,2,...,22 라벨 (원 바깥) */}
-          {ticks.map((h) => {
+          {/* 시각 라벨 (1시간 간격, 원 바깥) — 0/6/12/18 크게, 나머지는 작고 옅게 */}
+          {hours.map((h) => {
             const [lx, ly] = polarDeg(angleDeg(h * 60), R_LABEL);
-            const strong = h % 6 === 0;
+            const major = h % 6 === 0;
             return (
-              <SvgText key={`l${h}`} x={lx} y={ly + 3.4} fontSize={strong ? 10.5 : 9} fontWeight={strong ? '800' : '600'} fill={strong ? C.text : C.textSub} textAnchor="middle">
+              <SvgText
+                key={`l${h}`}
+                x={lx} y={ly + (major ? 3.6 : 3)}
+                fontSize={major ? 10.5 : 7.5}
+                fontWeight={major ? '800' : '600'}
+                fill={major ? C.text : C.textSub}
+                textAnchor="middle"
+              >
                 {h}
               </SvgText>
             );
