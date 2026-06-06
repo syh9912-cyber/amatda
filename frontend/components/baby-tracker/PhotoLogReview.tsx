@@ -136,15 +136,21 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
   const setItemTime = useCallback((id: string, time: string) => {
     setItems((prev) => prev.map((it) => (it._id === id ? { ...it, time } : it)));
   }, []);
+  // 기록별 날짜 변경 (어제/오늘) — 사진 1장이 이틀에 걸칠 때(어제 밤~오늘) 기록마다 정확히 지정
+  const setItemDate = useCallback((id: string, date: string) => {
+    setItems((prev) => prev.map((it) => (it._id === id ? { ...it, date } : it)));
+  }, []);
+
+  const ymdOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const todayStr = ymdOf(new Date());
+  const yesterdayStr = ymdOf(new Date(Date.now() - 86400000));
 
   // 사진 1장 = 보통 하루 → 날짜는 상단에서 한 번에 전체 적용
   const setAllDates = useCallback((date: string) => {
     setItems((prev) => prev.map((it) => ({ ...it, date })));
   }, []);
   const setAllToday = useCallback(() => {
-    const now = new Date();
-    const t = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    setAllDates(t);
+    setAllDates(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`);
   }, [setAllDates]);
 
   const handleSave = useCallback(async () => {
@@ -160,12 +166,32 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
       const byDate: Record<string, TrackerRecord[]> = {};
       chosen.forEach((r, i) => {
         const date = r.date && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : todayStr;
+        const startT = normTime(r.time, now);
+        // 자정 넘는 수면: 깬 시각이 잠든 시각보다 이르면 endTime 에 "(선택 날짜+1) M/D" 표식 →
+        // 기상이 깬 날에만 표시되도록(선택한 날짜 기준으로 정확히 재계산).
+        let endT = r.endTime || undefined;
+        if (r.type === 'sleep' && endT) {
+          const plain = endT.includes(' ') ? (endT.split(' ').pop() ?? endT) : endT;
+          const em = /(\d{1,2}):(\d{2})/.exec(plain);
+          const sm = /(\d{1,2}):(\d{2})/.exec(startT);
+          if (em && sm) {
+            const eMin = Number(em[1]) * 60 + Number(em[2]);
+            const sMin = Number(sm[1]) * 60 + Number(sm[2]);
+            if (eMin < sMin) {
+              const [yy, mm, dd] = date.split('-').map(Number);
+              const w = new Date(yy, mm - 1, dd + 1);
+              endT = `${w.getMonth() + 1}/${w.getDate()} ${plain}`;
+            } else {
+              endT = plain;
+            }
+          }
+        }
         const rec: TrackerRecord = stampAuthor({
           id: `${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
           type: r.type as TrackerRecord['type'],
           subType: r.subType,
-          time: normTime(r.time, now),
-          endTime: r.endTime || undefined,
+          time: startT,
+          endTime: endT,
           amount: r.amount ?? undefined,
           duration: r.duration ?? undefined,
           note: r.note || undefined,
@@ -279,7 +305,16 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
                         keyboardType="numbers-and-punctuation"
                         editable={it.include && phase !== 'saving'}
                       />
-                      {it.date ? <Text style={styles.rowDate}>{it.date}</Text> : null}
+                      <View style={styles.dateToggle}>
+                        <Text
+                          onPress={() => { if (it.include && phase !== 'saving') setItemDate(it._id, yesterdayStr); }}
+                          style={[styles.dateChip, it.date === yesterdayStr && styles.dateChipOn]}
+                        >어제</Text>
+                        <Text
+                          onPress={() => { if (it.include && phase !== 'saving') setItemDate(it._id, todayStr); }}
+                          style={[styles.dateChip, (it.date === todayStr || !it.date) && styles.dateChipOn]}
+                        >오늘</Text>
+                      </View>
                     </View>
                   </View>
                   <Text style={[styles.toggleMark, it.include ? { color: COLOR.accent } : { color: '#C7C7CC' }]}>
@@ -353,6 +388,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 3, minWidth: 64, textAlign: 'center',
   },
   rowDate: { fontSize: 11.5, color: COLOR.sub, marginLeft: 4 },
+  dateToggle: { flexDirection: 'row', gap: 4, marginLeft: 4 },
+  dateChip: {
+    fontSize: 11.5, fontWeight: '700', color: COLOR.sub,
+    borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 3, overflow: 'hidden',
+  },
+  dateChipOn: { color: '#FFFFFF', backgroundColor: COLOR.accent, borderColor: COLOR.accent },
   rowTextOff: { color: '#C7C7CC', textDecorationLine: 'line-through' },
   toggleMark: { fontSize: 13, fontWeight: '700' },
   footer: { padding: 16, borderTopWidth: 0.5, borderTopColor: COLOR.border },
