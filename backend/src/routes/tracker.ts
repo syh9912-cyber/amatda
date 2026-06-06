@@ -41,6 +41,8 @@ interface ParsedRecord {
   subType: string;
   /** YYYY-MM-DD — 어제/오늘 등 상대 날짜 해석 결과. 없으면 오늘 */
   date?: string;
+  /** 상대 날짜 분류(모델이 계산 대신 분류만): today|yesterday|dayBefore|tomorrow. 백엔드가 date 로 환산 */
+  dayRef?: string;
   time?: string;
   endTime?: string;
   amount?: number;
@@ -459,13 +461,14 @@ router.post('/photo-parse', authMiddleware, async (req: Request, res: Response) 
 - 알림장/메모에 날짜가 보이면 그 날짜를 YYYY-MM-DD 로.
 
 ### 상대 날짜 (손글씨 메모에 자주 나옴 — 매우 중요)
-- "오늘" / 날짜 표현 없음 → date: "${currentDate}"
-- "어제" / "어젯밤" → date: "${yesterday}"
-- "그저께" / "이틀 전" → date: "${dayBeforeYesterday}"
-- "내일" → date: "${tomorrow}"
-- "오늘 아침" / "오늘 저녁" → date: "${currentDate}" (시각은 time 으로)
-- ★ 자정 넘는 수면: "어제 밤10시에 자고 오늘 아침 7시에 일어났어" → sleep 1개 record 로, date="${yesterday}"(잠들기 시작한 날 기준), time="22:00", endTime="07:00", duration 자동
+★★ 날짜는 직접 계산하지 말고, 각 record 의 "dayRef" 로만 분류해라. (date 는 비워도 됨 — 백엔드가 dayRef 로 환산)
+- "오늘" / 날짜 표현 없음 → dayRef: "today"
+- "어제" / "어젯밤" / "간밤" → dayRef: "yesterday"
+- "그저께" / "이틀 전" → dayRef: "dayBefore"
+- "내일" → dayRef: "tomorrow"
+- ★ 자정 넘는 수면("어제 밤10시에 자고 오늘 아침 7시에 일어났어")은 **잠들기 시작한 날 기준** → dayRef: "yesterday", time: "22:00", endTime: "07:00" (sleep 1개 record). 깬 시각(오늘)이 아니라 잠든 날로 분류!
 - ★ "어제 N시" 가 자기 시작이면 저녁/밤 우세(예: 어제 10시에 잤어 → 22:00), "일어났어/먹었어" 면 오전/오후 우세
+- 알림장에 명시 날짜가 있으면 그 날짜를 date(YYYY-MM-DD)로, dayRef 는 비움
 
 ## ★ 시각이 안 적힌 알림장 (한국 알림장은 대부분 이래 — 매우 중요)
 알림장은 보통 시각 없이 "점심 잘 먹고 낮잠 자고 똥 쌌어요" 식 서술형이야.
@@ -477,7 +480,7 @@ router.post('/photo-parse', authMiddleware, async (req: Request, res: Response) 
 (null 은 백엔드가 현재시각 ${currentTime} 로 채움. 끼니/낮잠은 위 추정값을 꼭 넣어라.)
 
 ## 응답 (JSON 만, 설명/마크다운 금지)
-{ "records": [ { "type":"...", "subType":"...", "date":"YYYY-MM-DD"|null, "time":"HH:MM"|null, "endTime":"HH:MM"|null, "amount":숫자|null, "duration":숫자|null, "note":"메모"|null }, ... ] }
+{ "records": [ { "type":"...", "subType":"...", "dayRef":"today|yesterday|dayBefore|tomorrow", "date":"YYYY-MM-DD"|null, "time":"HH:MM"|null, "endTime":"HH:MM"|null, "amount":숫자|null, "duration":숫자|null, "note":"메모"|null }, ... ] }
 사진에서 기록을 못 읽으면 { "records": [] } 만 반환.`;
 
     const parsed = await callGeminiJSON<ParsedMulti>(
@@ -524,6 +527,15 @@ router.post('/photo-parse', authMiddleware, async (req: Request, res: Response) 
         }
       }
       if (!r.time) r.time = currentTime;
+      // dayRef(모델 분류) → 실제 날짜 환산 (date 직접 계산보다 신뢰도 높음)
+      if (typeof r.dayRef === 'string') {
+        const key = r.dayRef.toLowerCase().replace(/[^a-z]/g, '');
+        const map: Record<string, string> = {
+          today: currentDate, yesterday, daybefore: dayBeforeYesterday,
+          daybeforeyesterday: dayBeforeYesterday, tomorrow,
+        };
+        if (map[key]) r.date = map[key];
+      }
       if (!r.date || !/^\d{4}-\d{2}-\d{2}$/.test(r.date)) r.date = currentDate;
 
       // 결정적 날짜 보정 — note 에 상대 날짜가 있는데 모델이 오늘로 넣은 경우 교정
