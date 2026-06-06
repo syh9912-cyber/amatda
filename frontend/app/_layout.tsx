@@ -400,7 +400,7 @@ function UpdateScreen({ status, progress, canSkip, onSkip }: {
           <Animated.View
             style={[
               upS.progressFill,
-              { width: barWidth, backgroundColor: isComplete ? '#4CAF50' : '#FF8C5A' },
+              { width: barWidth, backgroundColor: isComplete ? '#4CAF50' : '#8E8E93' },
             ]}
           />
         </View>
@@ -428,10 +428,10 @@ const upS = StyleSheet.create({
   root: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
   mascotGlow: {
     position: 'absolute', top: 10, left: 10, right: 10, bottom: 10,
-    borderRadius: 60, backgroundColor: 'rgba(255,140,90,0.08)',
+    borderRadius: 60, backgroundColor: 'rgba(0,0,0,0.04)',
   },
   mascot: { width: 120, height: 120, borderRadius: 60 },
-  pctText: { fontSize: 36, fontWeight: '800', color: '#FF8C5A', marginBottom: 16 },
+  pctText: { fontSize: 36, fontWeight: '800', color: '#333333', marginBottom: 16 },
   checkCircle: {
     width: 52, height: 52, borderRadius: 26,
     backgroundColor: '#4CAF50', alignItems: 'center', justifyContent: 'center',
@@ -440,7 +440,7 @@ const upS = StyleSheet.create({
   checkMark: { fontSize: 28, color: '#FFF', fontWeight: '700' },
   progressTrack: {
     width: PROGRESS_BAR_W, height: 8, borderRadius: 4,
-    backgroundColor: 'rgba(255,140,90,0.12)', overflow: 'hidden', marginBottom: 20,
+    backgroundColor: '#EEEEF0', overflow: 'hidden', marginBottom: 20,
   },
   progressFill: { height: 8, borderRadius: 4 },
   statusText: { fontSize: 16, fontWeight: '600', color: '#1C1C1E', marginBottom: 6 },
