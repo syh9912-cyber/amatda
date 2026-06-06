@@ -46,7 +46,7 @@ const PRODUCTS: Record<string, { id: string; name: string; price: number; period
   premium_yearly: {
     id: 'premium_yearly',
     name: '아맞다 VIP 연간',
-    price: 33900,
+    price: 39900,
     periodMs: 365 * 24 * 60 * 60 * 1000,
   },
 };

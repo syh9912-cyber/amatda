@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>아맞다 가족 초대</title>
+  <style>
+    :root { --accent:#FF8C5A; --text:#1C1C1E; --sub:#6B6B70; --bg:#FFF5EC; }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body {
+      margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+      display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+    .card {
+      width:100%; max-width:380px; background:#fff; border-radius:24px;
+      padding:32px 24px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.08);
+    }
+    .emoji { font-size:52px; margin-bottom:8px; }
+    h1 { font-size:21px; font-weight:800; margin:6px 0 6px; }
+    p { font-size:14px; color:var(--sub); line-height:1.55; margin:6px 0; }
+    .btn {
+      display:block; width:100%; text-decoration:none; border:none; cursor:pointer;
+      border-radius:14px; padding:15px; font-size:15px; font-weight:700; margin-top:12px;
+    }
+    .btn-primary { background:var(--accent); color:#fff; }
+    .btn-store { background:#FFF0E6; color:var(--accent); border:1px solid #FFD2B3; }
+    .hint { background:#F7F4F1; border-radius:12px; padding:12px; margin-top:18px; font-size:13px; color:var(--text); }
+    .hint b { color:var(--accent); }
+    .code { margin-top:18px; font-size:13px; color:var(--sub); }
+    .code b { color:var(--text); letter-spacing:2px; font-size:16px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="emoji">👨‍👩‍👧</div>
+    <h1>아맞다 가족 초대</h1>
+    <p>가족 육아 초대를 받았어요!<br/>아래 버튼으로 앱에서 바로 참여하세요.</p>
+
+    <a id="openApp" class="btn btn-primary" href="#">앱에서 바로 참여하기</a>
+
+    <div class="hint">
+      앱이 아직 없다면 먼저 설치한 뒤,<br/><b>이 초대 링크를 다시 한 번 눌러주세요.</b><br/>그러면 자동으로 가족에 연결돼요.
+    </div>
+
+    <a id="iosStore" class="btn btn-store" href="https://apps.apple.com/app/id6775913119">📱 App Store에서 설치 (아이폰)</a>
+    <a id="aosStore" class="btn btn-store" href="https://play.google.com/store/apps/details?id=com.sylabs.amatda">🤖 Google Play에서 설치 (안드로이드)</a>
+
+    <p class="code">초대 코드: <b id="codeText">-</b><br/><span style="font-size:11px">(앱에서 직접 입력도 가능)</span></p>
+  </div>
+
+  <script>
+    (function () {
+      var params = new URLSearchParams(location.search);
+      var code = (params.get('code') || '').trim().toUpperCase();
+      document.getElementById('codeText').textContent = code || '-';
+
+      var deepLink = 'amatda://coparenting?inviteCode=' + encodeURIComponent(code);
+      var openBtn = document.getElementById('openApp');
+      openBtn.setAttribute('href', deepLink);
+
+      function tryOpenApp() {
+        if (!code) return;
+        window.location.href = deepLink;
+      }
+
+      // 버튼 클릭 → 앱 열기 시도
+      openBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        tryOpenApp();
+      });
+
+      // 페이지 진입 시 자동으로 한 번 시도 (앱 설치돼 있으면 바로 열림)
+      setTimeout(tryOpenApp, 500);
+
+      // 플랫폼에 맞는 스토어만 노출
+      var ua = navigator.userAgent || '';
+      if (/iPhone|iPad|iPod/i.test(ua)) {
+        document.getElementById('aosStore').style.display = 'none';
+      } else if (/Android/i.test(ua)) {
+        document.getElementById('iosStore').style.display = 'none';
+      }
+    })();
+  </script>
+</body>
+</html>

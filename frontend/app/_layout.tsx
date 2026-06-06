@@ -1,64 +1,8 @@
-import { useEffect, useRef, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
-import React from 'react';
+import React, { useEffect, useRef, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
+import { useSiriVoiceLaunch } from '../hooks/useSiriVoiceLaunch';
+
 import { View, ActivityIndicator, Text, TextInput, Image, Animated, Easing, StyleSheet, Dimensions, AppState, AppStateStatus, TouchableOpacity } from 'react-native';
 import { useFonts } from 'expo-font';
-
-/**
- * Pretendard 폰트 전역 적용 — Text/TextInput.render를 가로채서
- * fontWeight에 따라 자동으로 Pretendard 변형(Regular/Medium/SemiBold/Bold)을 매핑.
- *
- * 한 번만 실행 (모듈 로드 시).
- */
-function pretendardFamilyForWeight(weight: string | number | undefined): string {
-  const w = String(weight ?? '400');
-  if (w === '700' || w === '800' || w === '900' || w === 'bold') return 'Pretendard-Bold';
-  if (w === '600' || w === 'semibold') return 'Pretendard-SemiBold';
-  if (w === '500' || w === 'medium') return 'Pretendard-Medium';
-  return 'Pretendard-Regular';
-}
-
-// ⚠️ 2026-05-08 긴급 fix: 이 IIFE 가 React 19 + RN 0.81 + Hermes 에서 모듈 로드 시점에
-// throw → "Invalid hook call" + "Attempted to navigate before mounting Root Layout" 연쇄로
-// 부팅 자체가 깨지는 회귀 발생 (Sentry REACT-NATIVE-9 / REACT-NATIVE-A).
-// fail-safe 로 감싸 패치 실패 시 시스템 기본 폰트로 폴백 — 앱 부팅이 우선.
-(function applyPretendardDefault() {
-  try {
-    const patch = (Comp: { render?: (...args: unknown[]) => React.ReactElement | null }) => {
-      if (!Comp || typeof Comp.render !== 'function') return;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const orig = Comp.render as any;
-      // 이중 patch 방지 — OTA reload / Fast Refresh 시 같은 함수가 두 번 감싸지면 무한 재귀
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if ((orig as any).__amatdaPretendardPatched) return;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const wrapped = function (this: unknown, ...args: any[]) {
-        try {
-          const elem = orig.apply(this, args);
-          if (!elem) return elem;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const flat = StyleSheet.flatten((elem as any).props?.style) as Record<string, unknown> | null;
-          const family = pretendardFamilyForWeight(flat?.fontWeight as string | number | undefined);
-          return React.cloneElement(elem, {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            style: [{ fontFamily: family }, (elem as any).props?.style],
-          });
-        } catch {
-          // render 후처리 실패 시 원본 결과 그대로 반환 — 폰트만 기본값으로 폴백
-          return orig.apply(this, args);
-        }
-      };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (wrapped as any).__amatdaPretendardPatched = true;
-      Comp.render = wrapped;
-    };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    patch(Text as any);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    patch(TextInput as any);
-  } catch {
-    // 패치 자체가 실패해도 앱 부팅은 절대 막지 말 것 — 시스템 기본 폰트로 폴백.
-  }
-})();
 import { Stack, router, useNavigationContainerRef } from 'expo-router';
 import * as Sentry from '@sentry/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -66,7 +10,6 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import * as Updates from 'expo-updates';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../stores/authStore';
 import { useChildStore } from '../stores/childStore';
 import { useLocationStore } from '../stores/locationStore';
@@ -82,6 +25,65 @@ import {
   runOneTimeOrphanCleanup,
 } from '../services/pushNotifications';
 import { COLORS } from '../constants/theme';
+
+/**
+ * Pretendard 폰트 전역 적용 — Text/TextInput.render를 가로채서
+ * fontWeight에 따라 자동으로 Pretendard 변형(Regular/Medium/SemiBold/Bold)을 매핑.
+ *
+ * 한 번만 실행 (모듈 로드 시).
+ */
+// weight 전역 2단계 다운시프트 — 베빌 톤 매칭.
+//   변경 후: 900/bold→SemiBold, 700/800→Medium, 500/600→Regular
+function pretendardFamilyForWeight(weight: string | number | undefined): string {
+  const w = String(weight ?? '400');
+  if (w === '900' || w === 'bold') return 'Pretendard-SemiBold';
+  if (w === '700' || w === '800' || w === 'semibold') return 'Pretendard-Medium';
+  if (w === '500' || w === '600' || w === 'medium') return 'Pretendard-Regular';
+  return 'Pretendard-Regular';
+}
+
+// ⚠️ 2026-05-08 긴급 fix: 이 IIFE 가 React 19 + RN 0.81 + Hermes 에서 모듈 로드 시점에
+// throw → "Invalid hook call" + "Attempted to navigate before mounting Root Layout" 연쇄로
+// 부팅 자체가 깨지는 회귀 발생 (Sentry REACT-NATIVE-9 / REACT-NATIVE-A).
+// fail-safe 로 감싸 패치 실패 시 시스템 기본 폰트로 폴백 — 앱 부팅이 우선.
+(function applyPretendardDefault() {
+  try {
+    const patch = (Comp: { render?: (...args: unknown[]) => React.ReactElement | null }) => {
+      if (!Comp || typeof Comp.render !== 'function') return;
+       
+      const orig = Comp.render as any;
+      // 이중 patch 방지 — OTA reload / Fast Refresh 시 같은 함수가 두 번 감싸지면 무한 재귀
+       
+      if ((orig as any).__amatdaPretendardPatched) return;
+       
+      const wrapped = function (this: unknown, ...args: any[]) {
+        try {
+          const elem = orig.apply(this, args);
+          if (!elem) return elem;
+           
+          const flat = StyleSheet.flatten((elem as any).props?.style) as Record<string, unknown> | null;
+          const family = pretendardFamilyForWeight(flat?.fontWeight as string | number | undefined);
+          return React.cloneElement(elem, {
+             
+            style: [{ fontFamily: family }, (elem as any).props?.style],
+          });
+        } catch {
+          // render 후처리 실패 시 원본 결과 그대로 반환 — 폰트만 기본값으로 폴백
+          return orig.apply(this, args);
+        }
+      };
+       
+      (wrapped as any).__amatdaPretendardPatched = true;
+      Comp.render = wrapped;
+    };
+     
+    patch(Text as any);
+     
+    patch(TextInput as any);
+  } catch {
+    // 패치 자체가 실패해도 앱 부팅은 절대 막지 말 것 — 시스템 기본 폰트로 폴백.
+  }
+})();
 
  
 const MASCOT_HAPPY = require('../assets/mascot-happy.png') as number;
@@ -143,7 +145,7 @@ function useNotificationSetup() {
       'gdm', 'lullaby', 'cry-analyzer', 'poop-analyzer', 'album', 'growth-stats',
       'play-learning', 'monthly-characteristic', 'subscription',
       'notification-settings', 'clinic', 'coparenting',
-      'ai-analysis', 'recommendation-list', 'mom-location-setup',
+      'ai-analysis', 'recommendation-list', 'mom-location-setup', 'mom-group',
     ]);
     responseListener.current = Notifications.addNotificationResponseReceivedListener(
       (response) => {
@@ -375,11 +377,7 @@ function UpdateScreen({ status, progress, canSkip, onSkip }: {
 
   return (
     <View style={upS.root}>
-      <LinearGradient
-        colors={['#FFF8F2', '#FFF0E4', '#FFE8D6']}
-        locations={[0, 0.5, 1]}
-        style={StyleSheet.absoluteFill}
-      />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#FFFFFF' }]} />
 
       <Animated.View style={{ opacity: fadeIn, alignItems: 'center' }}>
         {/* 마스코트 */}
@@ -427,7 +425,7 @@ function UpdateScreen({ status, progress, canSkip, onSkip }: {
 }
 
 const upS = StyleSheet.create({
-  root: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF8F2' },
+  root: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
   mascotGlow: {
     position: 'absolute', top: 10, left: 10, right: 10, bottom: 10,
     borderRadius: 60, backgroundColor: 'rgba(255,140,90,0.08)',
@@ -539,6 +537,9 @@ function RootLayout() {
     }
   }, [navigationRef]);
 
+  // iOS Siri App Shortcut("아맞다 육아") 진입 → /voice 이동 + 녹음 시작
+  useSiriVoiceLaunch();
+
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
@@ -546,7 +547,7 @@ function RootLayout() {
           <StatusBar style="dark" />
           <OfflineBanner />
           <AuthGate>
-            <Stack screenOptions={{ headerShown: false }} />
+            <Stack screenOptions={{ headerShown: false, headerTitleAlign: 'center' }} />
           </AuthGate>
         </QueryClientProvider>
       </SafeAreaProvider>

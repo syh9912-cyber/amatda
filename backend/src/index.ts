@@ -9,6 +9,7 @@ import { env } from './config/env';
 import { runDormantUserSweep } from './utils/dormantUserSweep';
 import { runTrialEndingSweep } from './utils/trialEndingSweep';
 import { runNeighborGroupSweep } from './utils/neighborGroupSweep';
+import { logger } from './utils/logger';
 import { setupSecurity } from './middleware/security';
 import authRoutes from './routes/auth';
 import childRoutes from './routes/child';
@@ -25,7 +26,7 @@ import memoriesRoutes from './routes/memories';
 import retentionRoutes from './routes/retention';
 import recommendationRoutes from './routes/recommendations';
 import growthRoutes from './routes/growth';
-import coparentingRoutes from './routes/coparenting';
+import coparentingRoutes, { sweepExpiredInvites } from './routes/coparenting';
 import sosRoutes from './routes/sos';
 import pregnancyRoutes from './routes/pregnancy';
 import vaccinationRoutes from './routes/vaccination';
@@ -239,6 +240,12 @@ export const dormantUserSweep = onSchedule(
   },
   async () => {
     await runDormantUserSweep();
+    // 만료된 미사용 공동육아 초대 정리 (best-effort — 실패해도 휴면 sweep 은 완료)
+    try {
+      await sweepExpiredInvites();
+    } catch (err) {
+      logger.error('inviteSweep', err);
+    }
   },
 );
 

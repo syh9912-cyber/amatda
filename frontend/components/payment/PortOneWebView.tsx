@@ -26,7 +26,7 @@ import {
 
 // react-native-webview는 새 EAS 빌드에서만 사용 가능 (네이티브 모듈).
 // OTA로 배포된 기존 앱에서 이 파일이 로드돼도 크래시 안 나도록 동적 require.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 let WebViewLib: any = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -34,7 +34,7 @@ try {
 } catch {
   WebViewLib = null;
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 type WebViewMessageEvent = any;
 
 const CHECKOUT_BASE = 'https://amatda-parenting.web.app/checkout.html';
@@ -84,7 +84,7 @@ function buildUrl(p: PortOneCheckoutParams): string {
 }
 
 export function PortOneWebView({ visible, params, onResult, onClose }: Props) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const webRef = useRef<any>(null);
 
   function handleMessage(e: WebViewMessageEvent) {

@@ -13,7 +13,6 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path, RadialGradient, Defs, Stop, Circle } from 'react-native-svg';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -247,16 +246,17 @@ export function EditorialCover({
     return Math.max(0, Math.min(100, Math.round(v)));
   };
 
-  // fullScreen 모드는 부모(trait-detail) 가 root level 그라디언트를 책임 → 자체 LinearGradient 안 그림 (transparent View)
-  // card 모드(analysis-detail 안)는 자체 그라디언트로 카드 배경 그림
-  const Container = fullScreen ? View : LinearGradient;
+  // LinearGradient 제거 — 평평한 단색. fullScreen / card 둘 다 View.
+  const Container = View;
   // compact: 광고 활성 시 cover 영역 50pt 축소 흡수용 패딩 축소.
   const fullScreenStyle = compact
     ? [styles.fullScreen, styles.fullScreenCompact]
     : styles.fullScreen;
+  // gradient 배열 첫 색을 단색 배경으로 사용
+  const cardBg = Array.isArray(gradient) && gradient.length > 0 ? gradient[0] : '#FFF4EE';
   const containerProps = fullScreen
     ? { style: fullScreenStyle }
-    : { colors: gradient, start: { x: 0.1, y: 0 }, end: { x: 0.9, y: 1 }, style: styles.card };
+    : { style: [styles.card, { backgroundColor: cardBg }] };
   // ConicDisc + heroWrap 사이즈는 compact 에서만 작게.
   const heroSize = compact ? 130 : 150;
   const heroWrapStyle = compact
@@ -265,7 +265,7 @@ export function EditorialCover({
   const descStyle = compact ? [styles.desc, styles.descCompact] : styles.desc;
 
   return (
-    <Container {...(containerProps as React.ComponentProps<typeof LinearGradient>)}>
+    <Container {...(containerProps as React.ComponentProps<typeof View>)}>
       <View>
         {/* Top meta — 영문 매거진 톤 */}
         <View style={styles.metaRow}>
@@ -316,12 +316,11 @@ export function EditorialCover({
 
 const styles = StyleSheet.create({
   fullScreen: {
-    // 외부 wrapper 의 flex: 1 안에서 늘어남. 콘텐츠는 위/가운데/아래 균등 배치.
-    flex: 1,
-    paddingTop: 8,
+    // 스크롤형: 자연 높이로 위에서부터 쌓임 (flex:1 fit / space-between 제거 →
+    // 광고·작은 화면에서도 점수/버튼이 안 잘리고, 넘치면 스크롤됨).
+    paddingTop: 20,
     paddingHorizontal: 22,
-    paddingBottom: 8,
-    justifyContent: 'space-between',
+    paddingBottom: 12,
   },
   // compact 분기 — 광고 활성 시만 cover 영역 50pt 축소 흡수.
   fullScreenCompact: {

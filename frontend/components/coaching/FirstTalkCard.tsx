@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { COACHING_COLORS } from './types';
 import { coachingApi } from '../../services/api';
 
@@ -77,28 +76,18 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
 
   if (loading) {
     return (
-      <LinearGradient
-        colors={['#FFB088', '#FF8C5A']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.card}
-      >
+      <View style={styles.card}>
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="small" color="#FFFFFF" />
           <Text style={styles.loadingText}>상담이모가 준비 중이에요...</Text>
         </View>
-      </LinearGradient>
+      </View>
     );
   }
 
   if (error || !data) {
     return (
-      <LinearGradient
-        colors={['#FFB088', '#FF8C5A']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.card}
-      >
+      <View style={styles.card}>
         <View style={styles.avatarRow}>
           <Image source={IC_COACH} style={styles.avatarImg} resizeMode="cover" />
           <Text style={styles.coachLabel}>상담이모</Text>
@@ -126,17 +115,12 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
             <Image source={IC_SEND} style={styles.sendIcon} resizeMode="contain" />
           </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </View>
     );
   }
 
   return (
-    <LinearGradient
-      colors={['#FFB088', '#FF8C5A']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.card}
-    >
+    <View style={styles.card}>
       {/* Coach avatar */}
       <View style={styles.avatarRow}>
         <Image source={IC_COACH} style={styles.avatarImg} resizeMode="cover" />
@@ -205,12 +189,13 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
           )}
         </TouchableOpacity>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    backgroundColor: '#F4A98C',
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,

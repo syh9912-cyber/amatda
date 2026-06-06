@@ -11,12 +11,15 @@ import {
   Platform,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useChildStore } from '../../stores/childStore';
+import { canDo } from '../../features/coparenting/permissions';
 import { coachingApi } from '../../services/api';
 import { isScreenAvailable } from '../../constants/ageFeatures';
 import { UpsellModal } from '../../components/common/UpsellModal';
 import { saveAnalysisHistory } from '../../utils/analysisHistory';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 import type { ImageSourcePropType } from 'react-native';
 
 const IC_LULLABY = require('../../assets/quick-lullaby.png') as ImageSourcePropType;
@@ -64,6 +67,7 @@ const LIKELIHOOD_CONFIG: Record<string, { color: string; bg: string }> = {
 
 export default function CryAnalyzerScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const selectedChild = useChildStore((s) => s.selectedChild);
 
   // 연령 제한: 영아(0-24개월)만 접근 가능 (임신부 모드는 조용히 뒤로)
@@ -126,6 +130,11 @@ export default function CryAnalyzerScreen() {
   /* ── 분석 ── */
   const handleAnalyze = useCallback(async () => {
     if (!fileUri || !selectedChild) return;
+    // 공동육아: AI 분석은 useCoaching 권한 필요 (열람 전용 멤버 차단)
+    if (!(await canDo(selectedChild.id, 'useCoaching'))) {
+      Alert.alert('열람 전용', '분석 기능 사용 권한이 없어요.\n보호자에게 "상담이모 사용" 권한을 요청해주세요.');
+      return;
+    }
     setAnalyzing(true);
     try {
       const base64 = await FileSystem.readAsStringAsync(fileUri, {
@@ -190,21 +199,9 @@ export default function CryAnalyzerScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로"
-        >
-          <Text style={styles.backBtn}>{'<'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{'울음소리 분석기'}</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="울음소리 분석기" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {result ? (

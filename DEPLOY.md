@@ -6,8 +6,11 @@
 
 ## 버전 관리 원칙
 - `app.json`의 `version`: 기능 변경 시 올림 (예: 2.1.0 → 2.2.0)
-- `runtimeVersion`: **"1.0.0" 고정** — 절대 변경 금지
-  - 변경하면 기존 APK가 OTA 업데이트를 받지 못함
+- `runtimeVersion`: **`{ "policy": "appVersion" }`** — `version` 값과 자동 연동 (현재 2.9.1)
+  - ⚠️ `version`을 올리면 `runtimeVersion`도 함께 올라간다.
+  - OTA는 **동일 runtimeVersion 빌드에만** 적용되므로, `version`을 올린 뒤 OTA를 쏘면 그 전 버전 APK는 해당 OTA를 못 받는다.
+  - 따라서 OTA만으로 배포할 변경이면 `version`을 유지하고, version을 올렸다면 신규 APK/AAB 빌드도 함께 배포할 것.
+- `eas.json`: `appVersionSource: "remote"` (버전 소스는 EAS 원격 관리)
 - 회사명: SY Labs
 
 ---
@@ -20,8 +23,10 @@
 | `production` | Play Store 배포 | AAB | production |
 | `development` | 로컬 개발 | APK (dev client) | - |
 
-> ⚠️ OTA는 **반드시 `--branch preview`** 로만 배포한다.
-> `--branch production`으로 배포하면 APK에서 업데이트가 적용되지 않는다.
+> ℹ️ OTA 배포 채널 정책 (2026-06-06 업데이트 — 실제 운영 기준):
+> - 정식 사용자 대상 OTA는 **`--branch production`** 으로 배포한다.
+> - `preview` 브랜치는 내부 테스트용으로 필요 시 선택적으로 함께 배포한다.
+> - OTA는 **동일 `runtimeVersion` 빌드에만** 도달한다. runtime이 다른 빌드에는 적용되지 않으므로 배포 후 발행된 runtimeVersion을 확인할 것.
 
 ---
 
@@ -44,6 +49,10 @@ firebase deploy --only functions
 
 ### OTA 업데이트 (코드 변경, 환경변수 변경 없을 때)
 ```bash
+# 정식 배포 (Play Store 사용자 대상)
+cd frontend && npx eas update --branch production --message '변경 내용'
+
+# 내부 테스트 배포 (선택)
 cd frontend && npx eas update --branch preview --message '변경 내용'
 ```
 

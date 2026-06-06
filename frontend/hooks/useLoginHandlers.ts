@@ -103,10 +103,14 @@ export function useLoginHandlers() {
         router.replace('/(main)/home');
       }
     } catch (e: unknown) {
-      const rawMsg = e instanceof Error ? e.message : '알 수 없는 오류가 발생했습니다';
+      // 서버가 준 안내 메시지(e.response.data.error)를 우선 사용 — axios e.message 는
+      // "Request failed with status code 409" 처럼 무의미해서 409 충돌 안내가 가려졌었음.
+      const axErr = e as { response?: { status?: number; data?: { error?: string } } };
+      const serverMsg = axErr?.response?.data?.error;
+      const rawMsg = serverMsg ?? (e instanceof Error ? e.message : '알 수 없는 오류가 발생했습니다');
       console.error(`[SocialLogin] ${provider} error:`, rawMsg);
 
-      // 사용자 친화적 메시지
+      // 사용자 친화적 메시지 (서버 안내 메시지가 있으면 그대로 노출)
       let friendlyMsg = rawMsg;
       if (rawMsg.includes('cancel') || rawMsg.includes('Cancel') || rawMsg.includes('RNKakaoLogins')) {
         friendlyMsg = '로그인을 취소했습니다.';

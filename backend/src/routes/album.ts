@@ -14,6 +14,7 @@ import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
 import { logger } from '../utils/logger';
+import { getChildIfAccessible } from '../utils/childAccess';
 import {
   generateGrowthAlbumPDF,
   uploadAlbumPDF,
@@ -37,13 +38,6 @@ const PhotoBodySchema = z.object({
 
 const router = Router();
 
-// ─── 소유권 확인 헬퍼 ────────────────────────────────────────────
-async function verifyChildOwnership(childId: string, userId: string): Promise<boolean> {
-  if (!childId || typeof childId !== 'string') return false;
-  const doc = await collections.children.doc(childId).get();
-  return doc.exists && (doc.data() as Record<string, unknown>).userId === userId;
-}
-
 function param(p: string | string[]): string {
   return Array.isArray(p) ? p[0] : p;
 }
@@ -64,10 +58,8 @@ router.post('/photos', authMiddleware, async (req: Request, res: Response) => {
     if (!body) return;
     const { childId, uri, printUrl, milestone, milestoneEmoji, milestoneColor, memo, date } = body;
 
-    if (!await verifyChildOwnership(childId, userId)) {
-      error(res, '자녀를 찾을 수 없습니다', 404);
-      return;
-    }
+    // 공동육아: 소유자 OR editTimeline 권한 멤버 (공유 멤버도 사진 추가 가능)
+    if (!await getChildIfAccessible(childId, userId, 'editTimeline', res)) return;
 
     const id = genId();
     const now = new Date().toISOString();
@@ -131,10 +123,8 @@ router.get('/photos/:childId', authMiddleware, async (req: Request, res: Respons
     const userId = req.userId!;
     const childId = param(req.params.childId);
 
-    if (!await verifyChildOwnership(childId, userId)) {
-      error(res, '자녀를 찾을 수 없습니다', 404);
-      return;
-    }
+    // 공동육아: 소유자 OR viewTimeline 권한 멤버
+    if (!await getChildIfAccessible(childId, userId, 'viewTimeline', res)) return;
 
     // orderBy 없이 childId 단일 필드 인덱스만 사용 → JS에서 정렬
     // (복합 인덱스 의존 시 빌드 중 에러로 사진 목록이 비어 보이는 문제 방지)
@@ -329,10 +319,8 @@ router.post('/generate', authMiddleware, async (req: Request, res: Response) => 
       return;
     }
 
-    if (!await verifyChildOwnership(childId, userId)) {
-      error(res, '자녀를 찾을 수 없습니다', 404);
-      return;
-    }
+    // 공동육아: 소유자 OR viewTimeline 권한 멤버
+    if (!await getChildIfAccessible(childId, userId, 'viewTimeline', res)) return;
 
     // 날짜 범위 검증
     // 최대 84개월(7년, 초등 입학 전까지) — 사진은 최대 400장으로 제한하므로 PDF 크기 안전
@@ -507,10 +495,8 @@ router.get('/albums/:childId', authMiddleware, async (req: Request, res: Respons
     const userId = req.userId!;
     const childId = param(req.params.childId);
 
-    if (!await verifyChildOwnership(childId, userId)) {
-      error(res, '자녀를 찾을 수 없습니다', 404);
-      return;
-    }
+    // 공동육아: 소유자 OR viewTimeline 권한 멤버
+    if (!await getChildIfAccessible(childId, userId, 'viewTimeline', res)) return;
 
     // orderBy 없이 JS 정렬 (복합 인덱스 의존 방지)
     const snap = await collections.growthAlbums

@@ -3,6 +3,7 @@ import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
+import { getChildIfAccessible } from '../utils/childAccess';
 
 const router = Router();
 
@@ -431,14 +432,10 @@ router.post('/check-symptom', authMiddleware, async (req: Request, res: Response
       return;
     }
 
-    // 아이 정보 조회
-    const childDoc = await collections.children.doc(childId).get();
-    if (!childDoc.exists) {
-      error(res, '아이 정보를 찾을 수 없습니다', 404);
-      return;
-    }
-
-    const childData = childDoc.data()!;
+    // 공동육아: 소유자 OR 가족 멤버 (응급 도구 — 권한 세분화 없이 접근만 확인)
+    const access = await getChildIfAccessible(childId, req.userId, null, res);
+    if (!access) return;
+    const childData = access.data;
     const isPregnant = childData.isPregnant === true;
 
     // 임산부: 전용 판정 로직 사용
@@ -475,14 +472,10 @@ router.get('/fever-calculator', authMiddleware, async (req: Request, res: Respon
 
     const temperature = temperatureStr ? parseFloat(temperatureStr) : undefined;
 
-    // 아이 정보 조회
-    const childDoc = await collections.children.doc(childId).get();
-    if (!childDoc.exists) {
-      error(res, '아이 정보를 찾을 수 없습니다', 404);
-      return;
-    }
-
-    const childData = childDoc.data()!;
+    // 공동육아: 소유자 OR 가족 멤버 (응급 도구 — 접근만 확인)
+    const access = await getChildIfAccessible(childId, req.userId, null, res);
+    if (!access) return;
+    const childData = access.data;
     const ageMonths = childData.birthDate
       ? calcAgeMonths(childData.birthDate as string)
       : 999;
@@ -588,7 +581,7 @@ router.post('/notify-family', authMiddleware, async (req: Request, res: Response
       // 소유자 아니면 가족 멤버(accepted)인지 확인
       const memberSnap = await collections.familyMembers
         .where('childId', '==', childId)
-        .where('userId', '==', req.userId)
+        .where('inviteeUserId', '==', req.userId)
         .where('status', '==', 'accepted')
         .limit(1)
         .get();

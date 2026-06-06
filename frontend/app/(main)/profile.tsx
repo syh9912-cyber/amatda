@@ -1,4 +1,4 @@
-import { Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
+import { Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, View } from 'react-native';
 import { useState } from 'react';
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
@@ -16,7 +16,7 @@ import { ProfileMenuList } from '../../components/profile/ProfileMenuList';
 import { ProfileFooter } from '../../components/profile/ProfileFooter';
 import { PasswordModal } from '../../components/profile/PasswordModal';
 import { DataRetentionCard } from '../../components/profile/DataRetentionCard';
-import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { AdSlot } from '../../components/ads/AdSlot';
 
 export default function ProfileScreen() {
@@ -136,12 +136,13 @@ export default function ProfileScreen() {
   };
 
   return (
+    <View style={{ flex: 1 }}>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <ScreenHeader
         title="마이페이지"
-        rightAction={
+        right={
           <TouchableOpacity
             onPress={() => router.push('/(main)/edit-profile')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -166,11 +167,14 @@ export default function ProfileScreen() {
 
       {/* 마이탭 하단 광고 (FREE 유저만) */}
       <AdSlot />
+    </ScrollView>
 
+      {/* PasswordModal 은 ScrollView 밖(화면 루트)에 둔다.
+          전체화면 절대배치 오버레이라 ScrollView 안이면 스크롤 콘텐츠 기준으로 배치돼 화면을 못 덮음 (iOS). */}
       {showPasswordModal && (
         <PasswordModal onClose={() => setShowPasswordModal(false)} />
       )}
-    </ScrollView>
+    </View>
   );
 }
 

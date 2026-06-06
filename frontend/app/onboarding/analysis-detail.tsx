@@ -11,7 +11,6 @@ import { DetailSection } from '../../components/report/DetailSection';
 import { TextTipSection } from '../../components/report/TextTipSection';
 import { SimpleListSection } from '../../components/report/SimpleListSection';
 import { EditorialCover } from '../../components/report/EditorialCover';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const IC_SEND = require('../../assets/icon-send.png') as number;
 
@@ -385,24 +384,14 @@ export default function AnalysisDetailScreen() {
       </View>
 
       {firstTalkLoading ? (
-        <LinearGradient
-          colors={['#FFB088', '#FF8C5A']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.firstTalkCard}
-        >
+        <View style={[styles.firstTalkCard, { backgroundColor: '#F4A98C' }]}>
           <View style={styles.ftLoadingWrap}>
             <ActivityIndicator size="small" color="#FFFFFF" />
             <Text style={styles.ftLoadingText}>상담이모가 준비 중이에요...</Text>
           </View>
-        </LinearGradient>
+        </View>
       ) : firstTalk ? (
-        <LinearGradient
-          colors={['#FFB088', '#FF8C5A']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.firstTalkCard}
-        >
+        <View style={[styles.firstTalkCard, { backgroundColor: '#F4A98C' }]}>
           <View style={styles.ftAvatarRow}>
             <View style={styles.ftAvatar}>
               <Text style={styles.ftAvatarEmoji}>{'🤖'}</Text>
@@ -447,7 +436,7 @@ export default function AnalysisDetailScreen() {
             </TouchableOpacity>
           </View>
           <Text style={styles.ftHint}>첫 질문에 답변하시면 맞춤 코칭이 시작됩니다</Text>
-        </LinearGradient>
+        </View>
       ) : null}
 
       <View style={styles.bottomSpacer} />

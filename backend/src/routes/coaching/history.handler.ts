@@ -408,7 +408,8 @@ export function registerHistoryHandlers(router: Router): void {
   router.get('/milestones/:childId', authMiddleware, async (req: Request, res: Response) => {
     try {
       const childId = req.params.childId as string;
-      const child = await buildChildContext(childId, req.userId!);
+      // 마일스톤은 열람 기능 — 코칭 생성(useCoaching)이 아니라 viewProfile 권한으로 허용
+      const child = await buildChildContext(childId, req.userId!, 'viewProfile');
       if (!child) { error(res, '자녀 정보 없음', 404); return; }
 
       // 현재 월령에 해당하는 마일스톤 + 다음 마일스톤

@@ -2,8 +2,13 @@ import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, TextInput,
 import { LineChart } from 'react-native-chart-kit';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Stack, router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { GuideButton } from '../../components/common/GuideButton';
+import { GROWTH_GUIDE } from '../../features/guide/growthGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useChildStore } from '../../stores/childStore';
+import { canDo } from '../../features/coparenting/permissions';
 import { childApi, coachingApi, growthApi, pregnancyApi } from '../../services/api';
 import { getQuestionByProgress, getQuestionCount } from '../../constants/dailyQuestions';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
@@ -213,23 +218,18 @@ export default function GrowthStatsScreen() {
   const selectedChild = useChildStore((s) => s.selectedChild);
   const isPregnant = selectedChild?.isPregnant === true;
 
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => {
+    if (!isPregnant) shouldAutoShowGuide('growth').then((sh) => { if (sh) setGuideVisible(true); });
+  }, [isPregnant]);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen('growth'); };
+
   if (isPregnant) {
     return (
       <View style={{ flex: 1 }}>
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
           <Stack.Screen options={{ headerShown: false }} />
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="뒤로"
-            >
-              <Text style={styles.backArrow}>{'<'}</Text>
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>주수별 발달</Text>
-            <View style={styles.headerSpacer} />
-          </View>
+          <ScreenHeader title="주수별 발달" />
           <PregnancyWeeklyDevelopment />
         </ScrollView>
         <AdSlot />
@@ -248,29 +248,19 @@ export default function GrowthStatsScreen() {
       >
         <Stack.Screen options={{ headerShown: false }} />
 
-        <GrowthHeader />
+        <GrowthHeader onGuide={() => setGuideVisible(true)} />
 
         <PhysicalTab childName={selectedChild?.name ?? '아이'} />
       </ScrollView>
       <AdSlot />
+      <GuideCarousel visible={guideVisible} pages={GROWTH_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#7CA46E" />
     </KeyboardAvoidingView>
   );
 }
 
-function GrowthHeader() {
+function GrowthHeader({ onGuide }: { onGuide?: () => void }) {
   return (
-    <View style={styles.header}>
-      <TouchableOpacity
-        onPress={() => router.back()}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        accessibilityRole="button"
-        accessibilityLabel="뒤로"
-      >
-        <Text style={styles.backArrow}>{'<'}</Text>
-      </TouchableOpacity>
-      <Text style={styles.headerTitle}>성장 기록 & 변화</Text>
-      <View style={styles.headerSpacer} />
-    </View>
+    <ScreenHeader title="성장 기록 & 변화" right={onGuide ? <GuideButton onPress={onGuide} /> : undefined} />
   );
 }
 
@@ -698,12 +688,7 @@ function PregnancyWeeklyDevelopment() {
 
       {/* Current Week Summary Card */}
       {currentWeek > 0 && currentDev && (
-        <LinearGradient
-          colors={['#FF8C94', '#FFAAA5']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={pwStyles.currentCard}
-        >
+        <View style={[pwStyles.currentCard, { backgroundColor: '#FF8C94' }]}>
           <Text style={pwStyles.currentLabel}>현재 임신</Text>
           <Text style={pwStyles.currentWeekText}>{currentWeek}주차</Text>
           <Text style={pwStyles.currentSize}>
@@ -712,7 +697,7 @@ function PregnancyWeeklyDevelopment() {
           <Text style={pwStyles.currentMeasure}>
             {currentDev.length} / {currentDev.weight}
           </Text>
-        </LinearGradient>
+        </View>
       )}
 
       {/* D-Day 카드 */}
@@ -1494,15 +1479,10 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
         onPress={handleAnalyze}
         activeOpacity={0.8}
       >
-        <LinearGradient
-          colors={['#4ECDC4', '#2BA89E']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={gaStyles.analyzeBtnGradient}
-        >
+        <View style={[gaStyles.analyzeBtnGradient, { backgroundColor: '#4ECDC4' }]}>
           <Image source={require('../../assets/quick-report.png')} style={gaStyles.analyzeBtnImg} resizeMode="contain" />
           <Text style={gaStyles.analyzeBtnText}>성장 분석하기</Text>
-        </LinearGradient>
+        </View>
       </TouchableOpacity>
 
       {/* Analysis Modal */}
@@ -1578,18 +1558,13 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
             {!loading && !error && result && (
               <View>
                 {/* Overall Summary */}
-                <LinearGradient
-                  colors={['#FF8C5A', '#FFB88C']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={gaStyles.summaryCard}
-                >
+                <View style={[gaStyles.summaryCard, { backgroundColor: '#F4A98C' }]}>
                   {result.ageLabel ? (
                     <Text style={gaStyles.summaryAge}>{result.ageLabel}</Text>
                   ) : null}
                   <Text style={gaStyles.summaryTitle}>종합 분석</Text>
                   <Text style={gaStyles.summaryText}>{result.overallSummary}</Text>
-                </LinearGradient>
+                </View>
 
                 {/* Metrics */}
                 {allMetrics.length > 0 && (
@@ -1909,6 +1884,11 @@ function PhysicalTab({ childName }: { childName: string }) {
       return;
     }
     if (!selectedChild) return;
+    // 공동육아: 성장 기록 저장은 editProfile 권한 필요 (열람 전용 멤버 차단)
+    if (!(await canDo(selectedChild.id, 'editProfile'))) {
+      Alert.alert('열람 전용', '성장 기록 저장 권한이 없어요.\n보호자에게 "아이 프로필 수정" 권한을 요청해주세요.');
+      return;
+    }
     setSaving(true);
     try {
       const parsedHeight = height ? parseFloat(height) : undefined;
@@ -2716,12 +2696,7 @@ function MilestonesTab() {
   return (
     <View>
       {/* Current Milestone Card */}
-      <LinearGradient
-        colors={['#FF8C5A', '#FFB88C']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={msStyles.gradientCard}
-      >
+      <View style={[msStyles.gradientCard, { backgroundColor: '#F4A98C' }]}>
         <Text style={msStyles.gradientTitle}>
           {milestones.ageLabel} 발달 체크
         </Text>
@@ -2742,7 +2717,7 @@ function MilestonesTab() {
             ? '순조롭게 발달하고 있어요!'
             : '천천히 아이 속도에 맞춰주세요'}
         </Text>
-      </LinearGradient>
+      </View>
 
       {/* 영역별 발달 현황 */}
       {domainSummary.length > 0 && (
@@ -2843,12 +2818,7 @@ function MilestonesTab() {
       </View>
 
       {/* Next Milestone */}
-      <LinearGradient
-        colors={['#7DD3B8', '#A8E6CF']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={msStyles.nextCard}
-      >
+      <View style={[msStyles.nextCard, { backgroundColor: '#7DD3B8' }]}>
         <Text style={msStyles.nextLabel}>다음 목표</Text>
         <Text style={msStyles.nextTitle}>{milestones.nextMilestone}</Text>
         <View style={msStyles.ddayBadge}>
@@ -2856,7 +2826,7 @@ function MilestonesTab() {
             D-{milestones.daysUntilNext}
           </Text>
         </View>
-      </LinearGradient>
+      </View>
     </View>
   );
 }

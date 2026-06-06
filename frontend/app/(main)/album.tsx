@@ -15,14 +15,18 @@ import {
   Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Image as RNImage } from 'react-native';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Asset } from 'expo-asset';
 import { Stack } from 'expo-router';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
+import { BatchPhotoReview, type BatchSelection } from '../../components/album/BatchPhotoReview';
+import { RecentPhotosGrid } from '../../components/album/RecentPhotosGrid';
 import { useChildStore } from '../../stores/childStore';
+import { canDo } from '../../features/coparenting/permissions';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { momstagramApi, coachingApi, pregnancyApi, uploadApi, albumApi, API_URL } from '../../services/api';
 import { readCache, writeCache } from '../../utils/simpleCache';
@@ -30,6 +34,11 @@ import { uploadGrowthPhoto } from '../../services/imageUpload';
 import { useMomstagramStore } from '../../stores/momstagramStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { PhotoViewer } from '../../components/album/PhotoViewer';
+import { BackButton } from '../../components/common/BackButton';
+import { GuideButton } from '../../components/common/GuideButton';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { ALBUM_GUIDE } from '../../features/guide/albumGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import type { ImageSourcePropType } from 'react-native';
 
 const IC_PREG_TEST = require('../../assets/preg-test.png') as ImageSourcePropType;
@@ -508,6 +517,40 @@ async function uriToDataUri(uri: string): Promise<string> {
   }
 }
 
+/** 이미지 가로폭만 헤더로 측정 (full decode X — OOM 방지) */
+function getImageWidth(uri: string): Promise<number> {
+  return new Promise((resolve) => {
+    RNImage.getSize(uri, (w) => resolve(w || 0), () => resolve(0));
+  });
+}
+
+/**
+ * PDF 삽입용 — 큰 이미지는 maxW 로 다운스케일 후 base64 (OOM 방지).
+ * 작은 이미지는 업스케일하지 않음(메모리 보호). 원격은 캐시로 받은 뒤 처리.
+ * 실패 시 기존 uriToDataUri 로 폴백.
+ */
+async function uriToResizedDataUri(uri: string, maxW: number): Promise<string> {
+  try {
+    let localUri = uri;
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      const cacheUri = FileSystem.cacheDirectory + 'album_rs_' + Math.random().toString(36).slice(2) + '.jpg';
+      const dl = await FileSystem.downloadAsync(uri, cacheUri);
+      localUri = dl.uri;
+    }
+    const w = await getImageWidth(localUri);
+    const targetW = w > 0 ? Math.min(w, maxW) : maxW; // 업스케일 금지
+    const manip = await ImageManipulator.manipulateAsync(
+      localUri,
+      [{ resize: { width: targetW } }],
+      { compress: 0.72, base64: true, format: ImageManipulator.SaveFormat.JPEG },
+    );
+    if (manip.base64) return `data:image/jpeg;base64,${manip.base64}`;
+  } catch (e) {
+    console.warn('[uriToResizedDataUri] resize 실패 → 원본 변환 폴백', e instanceof Error ? e.message : String(e));
+  }
+  return uriToDataUri(uri);
+}
+
 /**
  * 기본 표지 이미지(album-cover.png) → base64 data URI (PDF 삽입용)
  * Image.resolveAssetSource로 번들 URI 획득 → uriToDataUri로 base64 변환
@@ -574,14 +617,9 @@ function MilestoneBadgeIcon({
   // 실패 시에만 이모지 폴백
   if (status === 'error') {
     return (
-      <LinearGradient
-        colors={[color, color + 'CC']}
-        style={styles.feedBadgeCircle}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
+      <View style={[styles.feedBadgeCircle, { backgroundColor: color }]}>
         <Text style={styles.feedBadgeEmojiInner}>{emoji}</Text>
-      </LinearGradient>
+      </View>
     );
   }
 
@@ -596,14 +634,9 @@ function MilestoneBadgeIcon({
         onError={onError}
       />
       {status === 'loading' && (
-        <LinearGradient
-          colors={[color, color + 'CC']}
-          style={[styles.feedBadgeCircle, { position: 'absolute', top: 0, left: 0 }]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
+        <View style={[styles.feedBadgeCircle, { position: 'absolute', top: 0, left: 0, backgroundColor: color }]}>
           <Text style={styles.feedBadgeEmojiInner}>{emoji}</Text>
-        </LinearGradient>
+        </View>
       )}
     </View>
   );
@@ -1246,7 +1279,7 @@ function PregnancyTimeline() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: `${child?.name ?? '아가'} 임신 성장앨범`, headerShown: true }} />
+      <Stack.Screen options={{ title: `${child?.name ?? '아가'} 임신 성장앨범`, headerShown: true, headerLeft: () => <BackButton /> }} />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -1561,6 +1594,9 @@ export default function AlbumScreen() {
 
 function BabyAlbum() {
   const [photos, setPhotos] = useState<MilestonePhoto[]>([]);
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => { shouldAutoShowGuide('album').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen('album'); };
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [pendingUri, setPendingUri] = useState<string | null>(null);
   const [selectedMilestone, setSelectedMilestone] = useState<MilestoneItem | null>(null);
@@ -1687,6 +1723,11 @@ function BabyAlbum() {
   /* -- Save entry (thumb 400px + print 1800px 두 버전 저장) -- */
   const saveEntry = useCallback(async () => {
     if (!pendingUri || !selectedChild) return;
+    // 공동육아: 사진 추가는 editTimeline 권한 필요 (열람 전용 멤버 차단)
+    if (!(await canDo(selectedChild.id, 'editTimeline'))) {
+      Alert.alert('열람 전용', '사진 추가 권한이 없어요.\n보호자에게 "타임라인 사진 추가" 권한을 요청해주세요.');
+      return;
+    }
     setSaving(true);
 
     // 1. 두 버전으로 리사이즈 후 Firebase Storage 업로드
@@ -1761,10 +1802,15 @@ function BabyAlbum() {
         try {
           const uploaded = await uploadApi.upload(pendingUri, 'momstagram');
           cloudUrl = uploaded.url;
-        } catch { /* 업로드 실패 시 로컬 URI 폴백 */ }
+        } catch { /* 업로드 실패 — 아래 가드에서 처리 */ }
+        // 유효한 클라우드(https) 이미지가 없으면 게시 금지 — 로컬 URI 게시 시
+        // 다른 기기/재시작에서 빈 카드로 표시되는 버그 방지.
+        if (!cloudUrl || !/^https?:\/\//.test(cloudUrl)) {
+          throw new Error('feed_image_upload_failed');
+        }
         const res = await momstagramApi.createPost({
           content,
-          imageUrl: cloudUrl ?? pendingUri,
+          imageUrl: cloudUrl,
           sourceType: 'album',
           childAge: childAge || undefined,
           childGender: selectedChild.gender ?? undefined,
@@ -1783,7 +1829,7 @@ function BabyAlbum() {
           childGender: (selectedChild.gender ?? 'M') as 'M' | 'F',
           childAge,
           dominantType: selectedChild.innateData?.dominantType ?? '',
-          imageUri: apiPost?.imageUrl ?? pendingUri,
+          imageUri: apiPost?.imageUrl ?? cloudUrl,
           videoUrl: null,
           mediaType: 'image',
           content,
@@ -1797,10 +1843,140 @@ function BabyAlbum() {
         });
         Alert.alert('공유 완료', '가족피드에도 게시되었습니다.');
       } catch {
-        Alert.alert('알림', '성장앨범은 저장되었지만 가족피드 공유에 실패했습니다.');
+        Alert.alert('알림', '성장앨범은 저장되었지만, 사진 업로드 실패로 가족피드 공유가 되지 않았어요. 잠시 후 다시 시도해주세요.');
       }
     }
   }, [pendingUri, selectedMilestone, memo, shareToMomstagram, selectedChild, addPost]);
+
+  /* -- 여러 장 일괄 추가 (갤러리 다중선택 → 확인 화면 → 일괄 저장) -- */
+  const [batchUris, setBatchUris] = useState<string[]>([]);
+  const [batchVisible, setBatchVisible] = useState(false);
+  const [batchSaving, setBatchSaving] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
+  const [gridVisible, setGridVisible] = useState(false);
+
+  // 인앱 "최근 사진 그리드" 열기 (media-library 없으면 그리드 내부에서 OS 피커로 자동 폴백)
+  const openBatchPicker = useCallback(() => {
+    setGridVisible(true);
+  }, []);
+
+  const handleGridPicked = useCallback((uris: string[]) => {
+    setGridVisible(false);
+    if (uris.length === 0) return;
+    setBatchUris(uris);
+    setBatchVisible(true);
+  }, []);
+
+  const handleBatchConfirm = useCallback(async (selections: BatchSelection[]) => {
+    if (!selectedChild) return;
+    // 공동육아: 사진 추가는 editTimeline 권한 필요 (열람 전용 멤버 차단)
+    if (!(await canDo(selectedChild.id, 'editTimeline'))) {
+      Alert.alert('열람 전용', '사진 추가 권한이 없어요.\n보호자에게 "타임라인 사진 추가" 권한을 요청해주세요.');
+      return;
+    }
+    setBatchSaving(true);
+    setBatchProgress({ done: 0, total: selections.length });
+    const dateStr = formatDate(new Date());
+    const childAge = selectedChild.ageInfo?.months ? `${selectedChild.ageInfo.months}개월` : '';
+    let feedFailCount = 0; // 피드 공유 토글했지만 사진 업로드 실패로 게시 못한 수
+
+    for (let i = 0; i < selections.length; i++) {
+      const sel = selections[i];
+      // 1) thumb(400) + print(1800) 업로드 — 실패 시 단일 버전 폴백 (saveEntry와 동일)
+      let thumbUrl = sel.uri;
+      let printUrl = sel.uri;
+      let cloudThumb: string | null = null; // 클라우드 업로드 성공 시의 https URL (피드 공유 재사용)
+      try {
+        const up = await uploadGrowthPhoto(sel.uri, selectedChild.id);
+        thumbUrl = up.thumbUrl;
+        printUrl = up.printUrl;
+        cloudThumb = up.thumbUrl;
+      } catch {
+        try {
+          const fb = await uploadApi.upload(sel.uri, 'album');
+          thumbUrl = fb.url;
+          printUrl = fb.url;
+          cloudThumb = fb.url;
+        } catch { /* 로컬 URI 유지 — 클라우드 URL 없음 */ }
+      }
+      const newPhoto: MilestonePhoto = { uri: thumbUrl, date: dateStr, memo: sel.memo.trim() || undefined };
+
+      // 2) 성장앨범(Firestore) 저장
+      try {
+        const res = await albumApi.save({
+          childId: selectedChild.id,
+          uri: thumbUrl,
+          printUrl,
+          memo: sel.memo.trim() || undefined,
+          date: dateStr,
+        });
+        const saved = res.data?.data;
+        if (saved?.id) newPhoto.id = saved.id as string;
+      } catch { /* 로컬 표시 폴백 */ }
+      setPhotos((prev) => [newPhoto, ...prev]);
+
+      // 3) 가족피드 공유 — 토글된 사진만 (linkedAlbumId 로 cascade delete 연동)
+      if (sel.share) {
+        const content = sel.memo.trim() ? sel.memo.trim() : `${selectedChild.name}의 성장앨범`;
+        // 클라우드 이미지 확보: step1 성공분 재사용, 없으면 1회 재시도
+        let feedImageUrl: string | null = cloudThumb;
+        if (!feedImageUrl) {
+          try { const up = await uploadApi.upload(sel.uri, 'momstagram'); feedImageUrl = up.url; } catch { /* */ }
+        }
+        // 유효한 https 이미지가 있을 때만 게시 — 로컬 URI 게시로 인한 빈 카드 방지
+        if (feedImageUrl && /^https?:\/\//.test(feedImageUrl)) {
+          try {
+            const res = await momstagramApi.createPost({
+              content,
+              imageUrl: feedImageUrl,
+              sourceType: 'album',
+              childAge: childAge || undefined,
+              childGender: selectedChild.gender ?? undefined,
+              dominantType: selectedChild.innateData?.dominantType ?? undefined,
+              linkedAlbumId: newPhoto.id,
+            });
+            const data = res.data;
+            const apiPost = data.data ?? data.post ?? data;
+            addPost({
+              id: apiPost?.id ?? `${Date.now().toString(36)}_${i}`,
+              userName: apiPost?.userName ?? '나',
+              childGender: (selectedChild.gender ?? 'M') as 'M' | 'F',
+              childAge,
+              dominantType: selectedChild.innateData?.dominantType ?? '',
+              imageUri: apiPost?.imageUrl ?? feedImageUrl,
+              videoUrl: null,
+              mediaType: 'image',
+              content,
+              likes: 0,
+              liked: false,
+              comments: [],
+              createdAt: apiPost?.createdAt ?? new Date().toISOString(),
+              isPrivate: false,
+            });
+          } catch { feedFailCount += 1; }
+        } else {
+          // 클라우드 업로드 실패 → 빈 게시물 만들지 않고 실패 카운트
+          feedFailCount += 1;
+        }
+      }
+      setBatchProgress({ done: i + 1, total: selections.length });
+    }
+
+    setBatchSaving(false);
+    setBatchProgress(null);
+    setBatchVisible(false);
+    setBatchUris([]);
+    const sharedN = selections.filter((s) => s.share).length;
+    const sharedOk = sharedN - feedFailCount;
+    Alert.alert(
+      '완료',
+      `${selections.length}장 저장 완료`
+        + (sharedN > 0 ? ` · ${sharedOk}장 가족피드 공유` : '')
+        + (feedFailCount > 0
+          ? `\n\n${feedFailCount}장은 사진 업로드 실패로 공유되지 않았어요. 네트워크 확인 후 다시 시도해주세요.`
+          : ''),
+    );
+  }, [selectedChild, addPost]);
 
   // ─── 앨범 생성 핸들러 (expo-print 기기 내 생성) ─────────────
   const handleGenerateAlbum = useCallback(async () => {
@@ -1822,6 +1998,22 @@ function BabyAlbum() {
         return;
       }
 
+      // 한 번에 너무 많으면(적응형 화질로도 한계) 안내 — 절대 상한
+      const MAX_PDF_PHOTOS = 200;
+      if (filtered.length > MAX_PDF_PHOTOS) {
+        Alert.alert(
+          '사진이 많아요',
+          `이 기간에 사진이 ${filtered.length}장이에요.\n한 번에 ${MAX_PDF_PHOTOS}장까지 권장돼요. 기간을 나눠서 만들어주세요.`,
+        );
+        return;
+      }
+
+      // 적응형 화질 — 장수 많을수록 더 작게 줄여 메모리 일정하게 유지 (사진 빼지 않아도 됨)
+      const pdfMaxW =
+        filtered.length <= 50 ? 1100 :
+        filtered.length <= 100 ? 800 :
+        filtered.length <= 160 ? 620 : 520;
+
       const title =
         albumTitle.trim() ||
         `${selectedChild.name} 성장앨범 ${albumDateFrom}~${albumDateTo}`;
@@ -1831,7 +2023,7 @@ function BabyAlbum() {
       let convertFailCount = 0;
       const photosForPdf = await Promise.all(
         filtered.map(async (p, idx) => {
-          const converted = await uriToDataUri(p.uri);
+          const converted = await uriToResizedDataUri(p.uri, pdfMaxW);
           const ok = converted.startsWith('data:');
           if (!ok) convertFailCount += 1;
           console.log(`[album] 사진 ${idx + 1}/${filtered.length} ${ok ? '✓' : '✗'} (${p.date})`);
@@ -1841,7 +2033,7 @@ function BabyAlbum() {
       console.log(`[album] 📊 변환 결과: 성공 ${filtered.length - convertFailCount} / 실패 ${convertFailCount}`);
 
       const rawCoverDataUri = albumCoverUri
-        ? await uriToDataUri(albumCoverUri)
+        ? await uriToResizedDataUri(albumCoverUri, 1400)
         : await getDefaultCoverDataUri();
       const coverDataUri = rawCoverDataUri && rawCoverDataUri.startsWith('data:') ? rawCoverDataUri : null;
       console.log('[album] 표지:', coverDataUri ? '✓ data URI' : '✗ fallback/null');
@@ -1921,6 +2113,10 @@ function BabyAlbum() {
       {
         text: '삭제', style: 'destructive',
         onPress: async () => {
+          if (selectedChild && !(await canDo(selectedChild.id, 'editTimeline'))) {
+            Alert.alert('열람 전용', '사진 삭제 권한이 없어요.');
+            return;
+          }
           if (photo.id) {
             try { await albumApi.remove(photo.id); } catch { /* 서버 삭제 실패해도 로컬 제거 */ }
           }
@@ -1932,6 +2128,10 @@ function BabyAlbum() {
 
   const handleEditSave = useCallback(async () => {
     if (!editState) return;
+    if (selectedChild && !(await canDo(selectedChild.id, 'editTimeline'))) {
+      Alert.alert('열람 전용', '사진 수정 권한이 없어요.');
+      return;
+    }
     setEditSaving(true);
     try {
       let newUri: string | undefined;
@@ -1958,7 +2158,7 @@ function BabyAlbum() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: '성장앨범', headerShown: true }} />
+      <Stack.Screen options={{ title: '성장앨범', headerShown: true, headerLeft: () => <BackButton />, headerRight: () => <View style={{ marginRight: 14 }}><GuideButton onPress={() => setGuideVisible(true)} /></View> }} />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -1991,6 +2191,40 @@ function BabyAlbum() {
             </TouchableOpacity>
           )}
 
+          {/* 여러 장 한꺼번에 추가 (갤러리 다중선택 → 확인 → 일괄 저장) */}
+          <TouchableOpacity
+            style={{
+              marginTop: 10,
+              backgroundColor: '#FFF0E6',
+              borderWidth: 1,
+              borderColor: '#FFD2B3',
+              borderRadius: 12,
+              paddingVertical: 12,
+              alignItems: 'center',
+            }}
+            onPress={openBatchPicker}
+            activeOpacity={0.8}
+          >
+            <Text style={{ color: '#FF8C5A', fontSize: 14, fontWeight: '700' }}>
+              📷 여러 장 한꺼번에 추가
+            </Text>
+          </TouchableOpacity>
+
+          <RecentPhotosGrid
+            visible={gridVisible}
+            onClose={() => setGridVisible(false)}
+            onPicked={handleGridPicked}
+          />
+
+          <BatchPhotoReview
+            visible={batchVisible}
+            uris={batchUris}
+            saving={batchSaving}
+            progress={batchProgress}
+            onCancel={() => { if (!batchSaving) { setBatchVisible(false); setBatchUris([]); } }}
+            onConfirm={handleBatchConfirm}
+          />
+
           {/* Compact month navigation */}
           <View style={styles.monthNav}>
             <TouchableOpacity
@@ -2020,15 +2254,10 @@ function BabyAlbum() {
                   onPress={() => setSelectedMilestone(isActive ? null : ms)}
                   activeOpacity={0.75}
                 >
-                  <LinearGradient
-                    colors={isActive
-                      ? [catColor, catColor + 'CC']
-                      : [catColor + '35', catColor + '20']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+                  <View
                     style={[
                       styles.composeChip,
-                      { borderColor: catColor },
+                      { borderColor: catColor, backgroundColor: isActive ? catColor : catColor + '25' },
                       isActive && styles.composeChipActive,
                     ]}
                   >
@@ -2039,7 +2268,7 @@ function BabyAlbum() {
                     ]}>
                       {ms.label}
                     </Text>
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -2361,6 +2590,7 @@ function BabyAlbum() {
       </Modal>
 
       <AdSlot />
+      <GuideCarousel visible={guideVisible} pages={ALBUM_GUIDE} onClose={closeGuide} onComplete={closeGuide} />
     </View>
   );
 }

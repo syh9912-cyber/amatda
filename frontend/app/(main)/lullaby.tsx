@@ -10,12 +10,13 @@ import {
   Alert,
   Platform,
   TextInput,
-} from 'react-native';
+ Image } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
+import { BackButton } from '../../components/common/BackButton';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Audio, AVPlaybackSource } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Image } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 import { AdSlot } from '../../components/ads/AdSlot';
 
@@ -436,8 +437,8 @@ export default function LullabyScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{headerTitle}</Text>
+      <ScreenHeader title={headerTitle} />
+      <View style={[styles.header, { alignItems: 'center' }]}>
         <Text style={styles.headerSub}>{headerSub}</Text>
       </View>
 
@@ -654,7 +655,7 @@ export default function LullabyScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLOR.bg },
   header: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 4 },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: COLOR.text },
+  headerTitle: { fontSize: 28, fontWeight: '600', color: COLOR.text },
   headerSub: { fontSize: 14, color: COLOR.textSub, marginTop: 4 },
 
   nowPlaying: { alignItems: 'center', paddingVertical: 16 },

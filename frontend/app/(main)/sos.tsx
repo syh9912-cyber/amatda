@@ -16,6 +16,12 @@ import {
   ImageSourcePropType,
 } from 'react-native';
 import { Stack } from 'expo-router';
+import { BackButton } from '../../components/common/BackButton';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { GuideButton } from '../../components/common/GuideButton';
+import { SOS_GUIDE } from '../../features/guide/sosGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sosApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
@@ -341,6 +347,10 @@ export default function SOSScreen() {
   const [deliveryHospital, setDeliveryHospital] = useState<HospitalInfo | null>(null);
   const [hospitalModalOpen, setHospitalModalOpen] = useState(false);
 
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => { shouldAutoShowGuide('sos').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen('sos'); };
+
   const reloadDeliveryHospital = useCallback(async () => {
     if (!selectedChild?.id) {
       setDeliveryHospital(null);
@@ -479,15 +489,15 @@ export default function SOSScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
+      <ScreenHeader title="SOS" right={<GuideButton onPress={() => setGuideVisible(true)} color="#DB6A5F" />} />
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* == Title Bar == */}
-        <View style={styles.titleBar}>
-          <Text style={styles.screenTitle}>SOS</Text>
+        {/* == Subtitle (child / 응급 도우미) == */}
+        <View style={[styles.titleBar, { justifyContent: 'center' }]}>
           <Text style={styles.screenSubtitle}>
             {selectedChild ? (isPregnant ? `${selectedChild.name} 엄마` : selectedChild.name) : '응급 도우미'}
           </Text>
@@ -696,6 +706,8 @@ export default function SOSScreen() {
           onSaved={reloadDeliveryHospital}
         />
       ) : null}
+
+      <GuideCarousel visible={guideVisible} pages={SOS_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#DB6A5F" />
     </View>
   );
 }
@@ -729,6 +741,7 @@ function ResultCard({
 
       {result.actions.length > 0 && (
         <View style={styles.resultActions}>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: config.textColor, marginBottom: 4 }}>{'👉 지금 할 일'}</Text>
           {result.actions.map((action, idx) => (
             <View key={`action-${idx}`} style={styles.resultActionRow}>
               <Text style={[styles.resultBullet, { color: config.border }]}>
@@ -919,7 +932,7 @@ const guideStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  closeBtnText: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
+  closeBtnText: { fontSize: 18, fontWeight: '600', color: '#FFFFFF' },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 20 },
   titleBar: {
@@ -929,7 +942,7 @@ const guideStyles = StyleSheet.create({
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
-  titleText: { fontSize: 22, fontWeight: '800', color: '#FFFFFF', marginBottom: 4 },
+  titleText: { fontSize: 22, fontWeight: '600', color: '#FFFFFF', marginBottom: 4 },
   subtitleText: { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.85)' },
   imageWrap: {
     backgroundColor: '#FFFFFF',
@@ -969,7 +982,7 @@ const guideStyles = StyleSheet.create({
     marginRight: 10,
     marginTop: 1,
   },
-  stepDotText: { fontSize: 12, fontWeight: '800', color: '#FFFFFF' },
+  stepDotText: { fontSize: 12, fontWeight: '600', color: '#FFFFFF' },
   stepText: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1C1C1E', lineHeight: 21 },
   warningCard: {
     flexDirection: 'row',
@@ -1004,7 +1017,7 @@ const guideStyles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 2,
   },
-  call119Text: { fontSize: 22, fontWeight: '900', color: '#FFFFFF' },
+  call119Text: { fontSize: 22, fontWeight: '700', color: '#FFFFFF' },
 
   /* === 가로 스크롤 카드뷰 (P-SOS 리뉴얼) === */
   pager: { flex: 1 },
@@ -1027,7 +1040,7 @@ const guideStyles = StyleSheet.create({
   },
   simpleTopText: {
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   simplePageText: {
@@ -1093,7 +1106,7 @@ const guideStyles = StyleSheet.create({
   },
   stepDescNum: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#D32F2F',
     letterSpacing: 1,
     marginBottom: 3,
@@ -1129,7 +1142,7 @@ const guideStyles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 12,
   },
-  stepNumberText: { fontSize: 28, fontWeight: '900', color: '#FFFFFF' },
+  stepNumberText: { fontSize: 28, fontWeight: '700', color: '#FFFFFF' },
   stepBigText: {
     fontSize: 22,
     lineHeight: 32,
@@ -1153,7 +1166,7 @@ const guideStyles = StyleSheet.create({
   warningIconImg: { width: 64, height: 64, marginBottom: 12 },
   warningTitleLarge: {
     fontSize: 24,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#C62828',
     marginBottom: 12,
   },
@@ -1214,7 +1227,7 @@ const agePickerStyles = StyleSheet.create({
   cardLeft: { flex: 1 },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#1C1C1E',
     marginBottom: 4,
   },
@@ -1265,7 +1278,7 @@ const styles = StyleSheet.create({
   },
   screenTitle: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: '600',
     color: EMERGENCY_RED,
   },
   screenSubtitle: {
@@ -1290,7 +1303,7 @@ const styles = StyleSheet.create({
   },
   priorityTitle: {
     fontSize: 19,
-    fontWeight: '900',
+    fontWeight: '700',
     color: EMERGENCY_RED,
     textAlign: 'center',
     marginBottom: 14,
@@ -1329,7 +1342,7 @@ const styles = StyleSheet.create({
   },
   priorityBtnText: {
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
     lineHeight: 16,
@@ -1522,7 +1535,7 @@ const styles = StyleSheet.create({
   },
   resultTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '600',
     marginBottom: 8,
   },
   resultMessage: {
@@ -1583,7 +1596,7 @@ const styles = StyleSheet.create({
   },
   megaCallIcon: { fontSize: 44 },
   megaCallIconImg: { width: 44, height: 44 },
-  megaCallText: { fontSize: 22, fontWeight: '900', color: '#FFFFFF', lineHeight: 28 },
+  megaCallText: { fontSize: 22, fontWeight: '700', color: '#FFFFFF', lineHeight: 28 },
   megaCallSub: { fontSize: 13, color: '#FFE4D2', marginTop: 4, fontWeight: '600' },
 
   /* 임신부 전용 — 가족 알림 거대 버튼 */
@@ -1605,7 +1618,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   megaFamilyIcon: { fontSize: 40 },
-  megaFamilyText: { fontSize: 20, fontWeight: '900', color: '#FFFFFF', lineHeight: 26 },
+  megaFamilyText: { fontSize: 20, fontWeight: '700', color: '#FFFFFF', lineHeight: 26 },
   megaFamilySub: { fontSize: 12, color: '#E1D9FA', marginTop: 4, fontWeight: '600' },
 
   /* 병원 정보 수정 링크 */

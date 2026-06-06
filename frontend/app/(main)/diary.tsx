@@ -14,11 +14,13 @@ import {
 import { Stack, router } from 'expo-router';
 import { observationApi, uploadApi, coachingApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
+import { canDo } from '../../features/coparenting/permissions';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { WriteArea } from '../../components/diary/WriteArea';
 import { ObservationCard } from '../../components/diary/ObservationCard';
 import { getTodayQuestion } from '../../constants/dailyQuestions';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { BackButton } from '../../components/common/BackButton';
 
 interface ObservationItem {
   id: string;
@@ -70,6 +72,11 @@ export default function DiaryScreen() {
 
   const handleGenerateAiDiary = async () => {
     if (!selectedChild) return;
+    // 공동육아: AI 일기 생성은 useCoaching 권한 필요
+    if (!(await canDo(selectedChild.id, 'useCoaching'))) {
+      Alert.alert('열람 전용', 'AI 일기 생성 권한이 없어요.\n보호자에게 "상담이모 사용" 권한을 요청해주세요.');
+      return;
+    }
     setAiDiaryLoading(true);
     try {
       const res = await coachingApi.dailyDiary(selectedChild.id);
@@ -93,6 +100,11 @@ export default function DiaryScreen() {
     }
     if (!selectedChild) {
       Alert.alert('알림', '선택된 자녀가 없습니다');
+      return;
+    }
+    // 공동육아: 관찰 일기 작성은 editRecords 권한 필요 (열람 전용 멤버 차단)
+    if (!(await canDo(selectedChild.id, 'editRecords'))) {
+      Alert.alert('열람 전용', '기록 작성 권한이 없어요.\n보호자에게 "육아 기록 작성/수정" 권한을 요청해주세요.');
       return;
     }
     setLoading(true);
@@ -130,7 +142,7 @@ export default function DiaryScreen() {
         keyboardShouldPersistTaps="handled"
         bounces={false}
       >
-        <Stack.Screen options={{ title: '관찰 일기', headerShown: true }} />
+        <Stack.Screen options={{ title: '관찰 일기', headerShown: true, headerLeft: () => <BackButton /> }} />
 
         {selectedChild && (
           <Text style={styles.childLabel}>

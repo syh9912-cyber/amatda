@@ -2,6 +2,8 @@ import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'rea
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { BackButton } from '../../components/common/BackButton';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
 
 interface CategoryItem {
@@ -145,17 +147,8 @@ export default function RecommendationsScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로"
-        >
-          <Text style={styles.backArrow}>{'<'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{'맞춤 추천'}</Text>
-        <View style={{ width: 24 }} />
+      <View style={styles.headerWrap}>
+        <ScreenHeader title="맞춤 추천" />
       </View>
 
       {/* 소개 카드 */}
@@ -203,6 +196,9 @@ export default function RecommendationsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { paddingHorizontal: SPACING.lg, paddingTop: 56, paddingBottom: 120 },
+  headerWrap: {
+    marginBottom: SPACING.lg,
+  },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: SPACING.lg,

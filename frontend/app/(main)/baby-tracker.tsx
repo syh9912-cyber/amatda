@@ -15,22 +15,8 @@ import {
   KeyboardAvoidingView,
   ActivityIndicator,
   RefreshControl,
-} from 'react-native';
-
-/* eslint-disable @typescript-eslint/no-require-imports */
-const IC_POOP = require('../../assets/cat-poop.png') as number;
-const IC_FEED = require('../../assets/cat-eating.png') as number;
-const IC_SLEEP = require('../../assets/cat-sleep.png') as number;
-const IC_SUNNY = require('../../assets/weather-sunny.png') as number;
-const IC_NIGHT = require('../../assets/weather-night.png') as number;
-const IC_EMPTY = require('../../assets/empty-diary.png') as number;
-const IC_MASCOT_EAT = require('../../assets/mascot-eating.png') as number;
-const IC_MIC = require('../../assets/icon-mic.png') as number;
-const IC_ANALYZING = require('../../assets/analyzing.png') as number;
-const IC_BADGE_AI = require('../../assets/badge-ai.png') as number;
-const IC_MEDICATION = require('../../assets/icon-hospital.png') as number;
-const IC_CUSTOM = require('../../assets/icon-mic.png') as number;  // 임시 — 커스텀 라벨용
-/* eslint-enable @typescript-eslint/no-require-imports */
+} from 'react-native';  // 임시 — 커스텀 라벨용
+ 
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
 // useTrackerStore는 storage.ts의 saveRecords에서 자동 호출 — 여기 import 불필요
@@ -41,6 +27,7 @@ import { getTrackerTabs, getFeedingTypes } from '../../constants/ageFeatures';
 import type { AgeGroupKey } from '../../constants/ageGroups';
 import PregnancyScreen from './pregnancy';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { BackButton } from '../../components/common/BackButton';
 import { saveAnalysisHistory } from '../../utils/analysisHistory';
 import type {
   BreastSession,
@@ -66,6 +53,11 @@ import {
   formatMinutes,
 } from '../../features/baby-tracker/utils/time';
 import { computeSummary, getBreastMlPerMin, estimateBreastMl } from '../../features/baby-tracker/utils/summary';
+import { PhotoLogReview } from '../../components/baby-tracker/PhotoLogReview';
+import { BabyTrackerGuide } from '../../components/baby-tracker/BabyTrackerGuide';
+import { DayClock } from '../../components/baby-tracker/DayClock';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { requestPinVoiceShortcut } from '../../modules/shortcut-pin/src';
 import {
   loadRecords,
   saveRecords,
@@ -81,12 +73,71 @@ import {
   syncRangeFromServer,
   syncSessionsFromServer,
 } from '../../features/baby-tracker/storage';
+import { resolveAuthorMeta, resolveCanEditRecords, stampAuthor, type AuthorMeta } from '../../features/baby-tracker/author';
+
+ 
+const IC_POOP = require('../../assets/cat-poop.png') as number;
+const IC_FEED = require('../../assets/cat-eating.png') as number;
+const IC_SLEEP = require('../../assets/cat-sleep.png') as number;
+const IC_SUNNY = require('../../assets/weather-sunny.png') as number;
+const IC_NIGHT = require('../../assets/weather-night.png') as number;
+const IC_EMPTY = require('../../assets/empty-diary.png') as number;
+const IC_MASCOT_EAT = require('../../assets/mascot-eating.png') as number;
+const IC_MIC = require('../../assets/icon-mic.png') as number;
+const IC_ANALYZING = require('../../assets/analyzing.png') as number;
+const IC_BADGE_AI = require('../../assets/badge-ai.png') as number;
+const IC_MEDICATION = require('../../assets/icon-hospital.png') as number;
+const IC_CUSTOM = require('../../assets/icon-mic.png') as number;
 
 /* ================================================================== */
 /*  Constants                                                          */
 /* ================================================================== */
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// 아기시간 첫 진입 가이드 표시 여부 플래그
+const BABY_GUIDE_SHOWN_KEY = 'amatda_baby_tracker_guide_shown';
+// 홈 화면 음성입력 아이콘 추가 프롬프트 1회 표시 플래그
+const VOICE_PIN_PROMPTED_KEY = 'amatda_voice_pin_prompted';
+
+/**
+ * 첫 실행(아기시간 가이드 완료) 직후 1회만:
+ * 홈 화면에 "음성 기록" 단축 아이콘을 추가할지 동의 프롬프트.
+ * - 안드로이드 전용 (iOS는 애플 정책상 홈 아이콘 추가 불가)
+ * - 지원 안 하는 런처/OS는 조용히 패스 (플래그는 세팅해 재차 묻지 않음)
+ */
+async function promptVoicePinOnce(force = false): Promise<void> {
+  try {
+    if (Platform.OS !== 'android') return;
+    const already = await AsyncStorage.getItem(VOICE_PIN_PROMPTED_KEY);
+    if (already && !force) return; // force(가이드 '?' 재열람 완료)면 다시 물어봄
+    Alert.alert(
+      '음성입력 아이콘 추가',
+      '홈 화면에 "음성 기록" 아이콘을 추가하면, 아이콘 한 번으로 바로 말해서 기록할 수 있어요. 추가할까요?',
+      [
+        {
+          text: '나중에',
+          style: 'cancel',
+          onPress: () => { AsyncStorage.setItem(VOICE_PIN_PROMPTED_KEY, '1').catch(() => {}); },
+        },
+        {
+          text: '추가',
+          onPress: async () => {
+            AsyncStorage.setItem(VOICE_PIN_PROMPTED_KEY, '1').catch(() => {});
+            const result = await requestPinVoiceShortcut();
+            // 자동 핀을 막는 런처(One UI 일부/Nova 등) → 수동 방법 안내
+            if (!result.ok) {
+              Alert.alert(
+                '홈에 추가하기',
+                '홈 런처가 자동 추가를 막았어요. 앱 아이콘을 길게 눌러 "음성 기록"을 홈 화면으로 끌어다 놓으면 돼요.',
+              );
+            }
+          },
+        },
+      ],
+    );
+  } catch { /* ignore */ }
+}
 
 const TRACKER_COLORS = {
   bg: '#F2F2F7',
@@ -346,7 +397,7 @@ const badgeStyles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   iconImg: { width: 24, height: 24, marginBottom: 2, borderRadius: 6 },
-  value: { fontSize: FONT_SIZE.md, fontWeight: '800' },
+  value: { fontSize: FONT_SIZE.md, fontWeight: '600' },
   subValue: { fontSize: 9, fontWeight: '600', marginTop: 1 },
   label: {
     fontSize: FONT_SIZE.xs,
@@ -657,7 +708,7 @@ const summaryStyles = StyleSheet.create({
   },
   todayText: {
     color: '#FF8C5A',
-    fontWeight: '800',
+    fontWeight: '600',
   },
   periodRow: {
     flexDirection: 'row',
@@ -697,6 +748,21 @@ const summaryStyles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: '#6E5BC4',
+  },
+  // 인앱 음성입력 진입 버튼 (액센트 — 가장 눈에 띄게, iOS 포함 모든 기기 동작)
+  voiceInputBtn: {
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 14,
+    backgroundColor: TRACKER_COLORS.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  voiceInputText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
 });
 
@@ -765,7 +831,7 @@ const daySumStyles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 10,
   },
-  cellValue: { fontSize: 13, fontWeight: '900' },
+  cellValue: { fontSize: 13, fontWeight: '700' },
   cellLabel: { fontSize: 11, fontWeight: '700', opacity: 0.85 },
   cellSub: { fontSize: 10, fontWeight: '600', opacity: 0.7 },
 });
@@ -840,6 +906,7 @@ function DailyReferenceCard({
     : compactMin(minutesSinceLastFeed);
 
   return (
+    <View>
     <View style={dailyRefStyles.card}>
       {showFeedRow && (
         <View style={dailyRefStyles.col}>
@@ -929,6 +996,10 @@ function DailyReferenceCard({
         </View>
       )}
     </View>
+    <Text style={{ fontSize: 11, color: '#9A9AA0', textAlign: 'center', marginTop: 6, fontWeight: '600' }}>
+      {'ⓘ 권장치는 우리 아이 월령·몸무게에 맞춰 자동 계산돼요'}
+    </Text>
+    </View>
   );
 }
 
@@ -950,7 +1021,7 @@ const customModalStyles = StyleSheet.create({
   },
   title: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#1C1C1E',
     marginBottom: 4,
   },
@@ -1014,7 +1085,7 @@ const customModalStyles = StyleSheet.create({
   btnCancel: { backgroundColor: '#F2F2F7' },
   btnSave: { backgroundColor: TRACKER_COLORS.customDark },
   btnCancelText: { fontSize: 14, fontWeight: '700', color: '#636366' },
-  btnSaveText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
+  btnSaveText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
 });
 
 // Phase 3 (2026-04-28): 기간 요약 접기/펴기 토글 스타일
@@ -1066,7 +1137,7 @@ const dailyRefStyles = StyleSheet.create({
   },
   colValue: {
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '700',
     color: TRACKER_COLORS.text,
   },
   colHint: {
@@ -1227,7 +1298,7 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
           {/* 잠금 모드: 헤더 타이틀 표시 */}
           {lockSubType && lockTitle ? (
             <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: '#1C1C1E' }}>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: '#1C1C1E' }}>
                 {lockTitle}
               </Text>
             </View>
@@ -1516,6 +1587,7 @@ function BabyTrackerInner() {
   // Phase 3 (2026-04-28): 7/14/31일 요약 접기/펴기 (사용자 요청)
   // 기본은 접힘 상태 — 타임라인을 더 잘 보이게
   const [periodSectionOpen, setPeriodSectionOpen] = useState(false);
+  const [clockSectionOpen, setClockSectionOpen] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<TrackerAnalysisResult | null>(null);
   const [analysisExpanded, setAnalysisExpanded] = useState(true);
@@ -1548,6 +1620,25 @@ function BabyTrackerInner() {
   const [timedActionAmount, setTimedActionAmount] = useState<string>('');
   const [defaultFormulaAmount, setDefaultFormulaAmount] = useState<number>(0);
   const [formulaSettingVisible, setFormulaSettingVisible] = useState(false);
+
+  // 첫 진입 1회 기능 가이드 (코드 목업형) — 헤더 '?' 로 언제든 재열람
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem(BABY_GUIDE_SHOWN_KEY)
+      .then((v) => { if (!v) setGuideVisible(true); })
+      .catch(() => {});
+  }, []);
+  // 건너뛰기/닫기: 그냥 닫기
+  const closeGuide = useCallback(() => {
+    setGuideVisible(false);
+    AsyncStorage.setItem(BABY_GUIDE_SHOWN_KEY, '1').catch(() => {});
+  }, []);
+  // 마지막 '시작하기': 닫고 홈 음성 아이콘 추가 프롬프트(1회, 모달 닫힘 후 지연)
+  const completeGuide = useCallback(() => {
+    setGuideVisible(false);
+    AsyncStorage.setItem(BABY_GUIDE_SHOWN_KEY, '1').catch(() => {});
+    setTimeout(() => { promptVoicePinOnce(true); }, 400);
+  }, []);
   const [formulaSettingInput, setFormulaSettingInput] = useState('');
   // 타임라인 entry 길게 누르기 → 액션 시트 + 편집 모달
   const [entryActionId, setEntryActionId] = useState<string | null>(null);
@@ -1572,10 +1663,36 @@ function BabyTrackerInner() {
     loadFormulaDefault(childId).then(setDefaultFormulaAmount).catch(() => {});
   }, [childId]);
 
+  // 공동육아 작성자 메타 — 초대받은 가족이면 신규 기록에 "엄마/아빠" 라벨 주입.
+  // 소유자/비공동육아면 null → 라벨 미표시 (요구사항).
+  const [authorMeta, setAuthorMeta] = useState<AuthorMeta | null>(null);
+  useEffect(() => {
+    let alive = true;
+    resolveAuthorMeta(childId).then((m) => { if (alive) setAuthorMeta(m); }).catch(() => {});
+    return () => { alive = false; };
+  }, [childId]);
+
+  // 공동육아 편집 권한 — 열람 전용 멤버(예: 조부모)는 기록 입력/수정/삭제 차단.
+  // 소유자/조회실패는 true(기존 동작). 서버도 editRecords 로 최종 차단하지만,
+  // 프론트에서 막아 "로컬엔 저장되는데 공유 안 되는" 혼란을 방지한다.
+  const [canEditRecords, setCanEditRecords] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    resolveCanEditRecords(childId).then((c) => { if (alive) setCanEditRecords(c); }).catch(() => {});
+    return () => { alive = false; };
+  }, [childId]);
+
+  function ensureCanEdit(): boolean {
+    if (canEditRecords) return true;
+    Alert.alert('열람 전용', '이 아이의 기록을 편집할 권한이 없어요.\n보호자에게 편집 권한을 요청해주세요.');
+    return false;
+  }
+
   /* ---- Load records ---- */
   // Cross-day 수면 가상 기상 엔트리 (어제 시작 → 오늘 새벽 기상)
   // (사용자 보고 2026-04-29: '어제 11시 수면 → 오늘 12시 기상이 오늘에 안 보임')
   const [crossDayWakes, setCrossDayWakes] = useState<TrackerRecord[]>([]);
+  const [photoLogVisible, setPhotoLogVisible] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -1656,10 +1773,12 @@ function BabyTrackerInner() {
   }
 
   function handleAddRecord(record: TrackerRecord) {
+    // 공동육아: 초대받은 가족 기록이면 작성자 라벨 주입 (소유자/legacy 는 no-op)
+    const stamped = stampAuthor(record, authorMeta);
     // functional setState — 빠르게 연속 누를 때 stale closure 의 records 를 사용하지 않도록.
     // (사용자 보고: 같은 분에 기상+소변 빠르게 누르면 정렬 순서가 뒤바뀜 — race condition fix)
     setRecords((prev) => {
-      const updated = [...prev, record];
+      const updated = [...prev, stamped];
       saveRecords(childId, dateStr, updated);
       return updated;
     });
@@ -1691,6 +1810,7 @@ function BabyTrackerInner() {
 
   // 액션 버튼 길게 누르기 → 시간 피커로 과거 시각 입력 (모든 액션 유형 지원)
   function handleTimedActionRequest(action: BottomAction) {
+    if (!ensureCanEdit()) return;
     if (hintRemaining > 0) {
       decrementHint().then(setHintRemaining).catch(() => {});
     }
@@ -1794,7 +1914,7 @@ function BabyTrackerInner() {
         : timedActionTime;
       // 수면 시작 시 메모 + 기상 시 메모 합치기
       const combinedNote = [sleepSession.note, note].filter(Boolean).join(' / ');
-      const record: TrackerRecord = {
+      const record: TrackerRecord = stampAuthor({
         id: generateId(),
         type: 'sleep',
         subType: 'sleep_start',
@@ -1803,7 +1923,7 @@ function BabyTrackerInner() {
         duration,
         createdAt: sleepSession.startTime,  // 수면 시작 누른 시점 기준 정렬
         ...(combinedNote ? { note: combinedNote } : {}),
-      };
+      }, authorMeta);
       const existing = await loadRecords(childId, sleepSession.startDate);
       const updated = [...existing, record];
       await saveRecords(childId, sleepSession.startDate, updated);
@@ -1942,6 +2062,7 @@ function BabyTrackerInner() {
   }
 
   async function handleEditSave() {
+    if (!ensureCanEdit()) return;
     if (!editRecord) return;
     // 검증: HH:MM 형식
     const timeOk = /^\d{1,2}:\d{2}$/.test(editTime);
@@ -2107,7 +2228,7 @@ function BabyTrackerInner() {
 
     const sideLabel = breastSession.side === 'left' ? '왼쪽' : '오른쪽';
     const combinedNote = breastSession.note ? `${sideLabel} · ${breastSession.note}` : sideLabel;
-    const record: TrackerRecord = {
+    const record: TrackerRecord = stampAuthor({
       id: generateId(),
       type: 'feeding',
       subType: 'breast',
@@ -2116,7 +2237,7 @@ function BabyTrackerInner() {
       duration: diff,
       createdAt: breastSession.startTime,  // 수유 시작 시점 기준 정렬
       note: combinedNote,
-    };
+    }, authorMeta);
     const existing = await loadRecords(childId, breastSession.startDate);
     const updated = [...existing, record];
     await saveRecords(childId, breastSession.startDate, updated);
@@ -2189,7 +2310,7 @@ function BabyTrackerInner() {
       ? `${end.getMonth() + 1}/${end.getDate()} ${endHHMM}`
       : endHHMM;
 
-    const record: TrackerRecord = {
+    const record: TrackerRecord = stampAuthor({
       id: generateId(),
       type: 'sleep',
       subType: 'sleep_start',
@@ -2200,7 +2321,7 @@ function BabyTrackerInner() {
       // (records 배열엔 wake 누른 시점에 추가되지만 사용자는 start 시점을 시작점으로 인식)
       createdAt: sleepSession.startTime,
       ...(sleepSession.note ? { note: sleepSession.note } : {}),
-    };
+    }, authorMeta);
 
     // 시작 날짜의 records에 저장.
     // 같은 날 종료: storage(loadRecords)가 아닌 functional setState 의 prev 를 진실의 출처로
@@ -2225,6 +2346,7 @@ function BabyTrackerInner() {
   }
 
   function handleDeleteRecord(id: string) {
+    if (!ensureCanEdit()) return;
     // 진행중 수면 — record가 아니라 sleepSession 취소
     if (id === '__active_sleep__') {
       Alert.alert('진행중 수면 취소', '시작한 수면 기록을 취소할까요?', [
@@ -2258,6 +2380,7 @@ function BabyTrackerInner() {
 
   /* ---- Bottom bar action dispatcher ---- */
   function handleBottomAction(action: BottomAction) {
+    if (!ensureCanEdit()) return;
     if (action.kind === 'modal' && action.subType === 'formula' && defaultFormulaAmount > 0) {
       // 기본 분유량 설정 시 원터치 기록
       const record: TrackerRecord = {
@@ -2326,13 +2449,13 @@ function BabyTrackerInner() {
     }
     const now = new Date();
     const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    const newRecord: TrackerRecord = {
+    const newRecord: TrackerRecord = stampAuthor({
       id: `custom_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       type: 'custom',
       subType: name,           // 라벨로 그대로 사용
       time,
       note: detail || undefined,
-    };
+    }, authorMeta);
     const updated = [...records, newRecord];
     await saveRecords(childId, dateStr, updated);
     setRecords(updated);
@@ -2437,20 +2560,22 @@ function BabyTrackerInner() {
           title: '',
           headerShown: true,
           headerTransparent: true,
-          headerLeft: () => (
+          headerLeft: () => <BackButton />,
+          headerRight: () => (
             <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.headerBack}
+              onPress={() => setGuideVisible(true)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={styles.guideBtn}
             >
-              <Text style={styles.headerBackText}>{'\u{2190}'}</Text>
+              <Text style={styles.guideBtnText}>?</Text>
             </TouchableOpacity>
           ),
-          headerRight: () => null,
           headerStyle: { backgroundColor: 'transparent' },
           headerShadowVisible: false,
         }}
       />
+
+      <BabyTrackerGuide visible={guideVisible} onClose={closeGuide} onComplete={completeGuide} />
 
       <ScrollView
         style={styles.container}
@@ -2477,14 +2602,12 @@ function BabyTrackerInner() {
             style={styles.dateCenter}
             onPress={() => setCurrentDate(new Date())}
           >
-            <Text style={styles.dateText}>
+            <Text
+              style={[styles.dateText, isToday(currentDate) && styles.dateTextToday]}
+              numberOfLines={1}
+            >
               {formatDateKorean(currentDate)}
             </Text>
-            {isToday(currentDate) && (
-              <View style={styles.todayBadge}>
-                <Text style={styles.todayBadgeText}>오늘</Text>
-              </View>
-            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -2501,16 +2624,36 @@ function BabyTrackerInner() {
               {'\u{203A}'}
             </Text>
           </TouchableOpacity>
+        </View>
 
-          <TouchableOpacity
-            style={summaryStyles.voiceBtn}
-            onPress={() => {
-              setFormulaSettingInput(defaultFormulaAmount > 0 ? String(defaultFormulaAmount) : '');
-              setFormulaSettingVisible(true);
+        {/* 공동육아 열람 전용 안내 — 편집 권한 없는 멤버(예: 조부모) */}
+        {!canEditRecords && (
+          <View
+            style={{
+              marginHorizontal: 16,
+              marginBottom: 8,
+              paddingVertical: 10,
+              paddingHorizontal: 14,
+              backgroundColor: 'rgba(255,176,32,0.12)',
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: 'rgba(255,176,32,0.35)',
             }}
+          >
+            <Text style={{ color: '#9A6B00', fontSize: 13, fontWeight: '600', textAlign: 'center' }}>
+              {'\u{1F440}'} 열람 전용 — 기록 편집 권한이 없어요. 보호자에게 권한을 요청하세요.
+            </Text>
+          </View>
+        )}
+
+        {/* ---- 액션 칩 (날짜 아래 별도 줄 — 날짜 가림 방지) ---- */}
+        <View style={styles.chipRow}>
+          <TouchableOpacity
+            style={summaryStyles.voiceInputBtn}
+            onPress={() => router.push('/voice' as never)}
             activeOpacity={0.85}
           >
-            <Text style={summaryStyles.voiceBtnText}>분유값설정</Text>
+            <Text style={summaryStyles.voiceInputText}>🎤 음성입력</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={summaryStyles.voiceBtn}
@@ -2519,7 +2662,21 @@ function BabyTrackerInner() {
           >
             <Text style={summaryStyles.voiceBtnText}>음성설정</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={summaryStyles.voiceBtn}
+            onPress={() => setPhotoLogVisible(true)}
+            activeOpacity={0.85}
+          >
+            <Text style={summaryStyles.voiceBtnText}>📷 사진기록</Text>
+          </TouchableOpacity>
         </View>
+
+        <PhotoLogReview
+          visible={photoLogVisible}
+          childId={childId}
+          onClose={() => setPhotoLogVisible(false)}
+          onSaved={() => { setPhotoLogVisible(false); loadData(); }}
+        />
 
         {/* ---- Breast-feeding timer banner (only when active) ---- */}
         {breastSession && (
@@ -2633,14 +2790,14 @@ function BabyTrackerInner() {
           )}
         </View>
 
-        {/* ---- Period Selector + Weekly Summary (접기/펴기) ---- */}
+        {/* ---- 기간 분석 (표 — 접기/펴기) ---- */}
         <TouchableOpacity
           style={periodToggleStyles.header}
           onPress={() => setPeriodSectionOpen((v) => !v)}
           activeOpacity={0.7}
         >
           <Text style={periodToggleStyles.headerTitle}>
-            {'기간 요약 ('}{PERIOD_LABELS[chartPeriod]}{')'}
+            {'기간 분석 ('}{PERIOD_LABELS[chartPeriod]}{')'}
           </Text>
           <Text style={periodToggleStyles.headerArrow}>
             {periodSectionOpen ? '▲' : '▼'}
@@ -2672,10 +2829,31 @@ function BabyTrackerInner() {
             {weekStats.length > 0 && (
               <WeeklySummaryTable stats={weekStats} periodDays={chartPeriod} />
             )}
-            {/* 기간 요약 열렸을 때만 광고 노출 (메인 기록 흐름은 깨끗하게 유지) */}
-            <AdSlot />
           </>
         )}
+
+        {/* ---- 하루 패턴 (원형 그래프 — 접기/펴기) ---- */}
+        <TouchableOpacity
+          style={periodToggleStyles.header}
+          onPress={() => setClockSectionOpen((v) => !v)}
+          activeOpacity={0.7}
+        >
+          <Text style={periodToggleStyles.headerTitle}>
+            {'하루 패턴 · 24시간'}
+          </Text>
+          <Text style={periodToggleStyles.headerArrow}>
+            {clockSectionOpen ? '▲' : '▼'}
+          </Text>
+        </TouchableOpacity>
+        {clockSectionOpen && (
+          <DayClock
+            records={allRecordsSorted}
+            dateLabel={isToday(currentDate) ? '오늘' : formatDateKorean(currentDate)}
+          />
+        )}
+
+        {/* 분석 섹션 중 하나라도 열렸을 때만 광고 노출 */}
+        {(periodSectionOpen || clockSectionOpen) && <AdSlot />}
 
         {/* Bottom spacer for bottom action bar */}
         <View style={{ height: 200 }} />
@@ -3249,6 +3427,21 @@ function BabyTrackerInner() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: TRACKER_COLORS.bg },
+  guideBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: TRACKER_COLORS.accentLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
+  },
+  guideBtnText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: TRACKER_COLORS.accent,
+    marginTop: -1,
+  },
   fixedAd: {
     position: 'absolute',
     left: 0,
@@ -3284,11 +3477,20 @@ const styles = StyleSheet.create({
   dateNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginBottom: SPACING.sm,
     paddingHorizontal: 0,
     paddingVertical: 2,
-    gap: 4,
+    gap: 8,
+  },
+  // 액션 칩 행 (날짜 아래 별도 줄, 가운데 정렬) — 음성입력/분유값설정/음성설정/사진기록
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: SPACING.sm,
   },
   dateArrow: {
     width: 32,
@@ -3303,7 +3505,6 @@ const styles = StyleSheet.create({
   dateArrowText: { fontSize: 18, fontWeight: '300', color: TRACKER_COLORS.text, marginTop: -1 },
   dateArrowTextDisabled: { color: TRACKER_COLORS.textLight },
   dateCenter: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -3311,9 +3512,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   dateText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
     color: TRACKER_COLORS.text,
+  },
+  dateTextToday: {
+    color: TRACKER_COLORS.accent,
   },
   todayBadge: {
     backgroundColor: TRACKER_COLORS.accent,
@@ -3517,7 +3721,7 @@ const sleepSessionStyles = StyleSheet.create({
   idleSub: { fontSize: FONT_SIZE.xs, color: TRACKER_COLORS.textSub, marginTop: 2 },
   activeHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
   activeTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: TRACKER_COLORS.sleepDark },
-  activeDuration: { fontSize: 32, fontWeight: '800', color: TRACKER_COLORS.text, marginBottom: 2 },
+  activeDuration: { fontSize: 32, fontWeight: '600', color: TRACKER_COLORS.text, marginBottom: 2 },
   activeStartedAt: { fontSize: FONT_SIZE.xs, color: TRACKER_COLORS.textSub, marginBottom: SPACING.md },
   wakeBtn: {
     backgroundColor: TRACKER_COLORS.sleepDark,
@@ -3802,7 +4006,7 @@ const hourTlStyles = StyleSheet.create({
   hourNumCurrent: {
     color: '#FF8C5A',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   nowBadge: {
     marginTop: 4,
@@ -3813,7 +4017,7 @@ const hourTlStyles = StyleSheet.create({
   },
   nowBadgeText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
   activityDot: {
@@ -3911,6 +4115,12 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete, onLongAction, 
           <Text style={[timelineRowStyles.label, { color: typeDark }]} numberOfLines={1}>
             {label}
           </Text>
+          {/* 공동육아: 초대받은 가족이 남긴 기록이면 작성자 표시 (소유자/옛 기록은 미표시) */}
+          {record.authorLabel ? (
+            <Text style={timelineRowStyles.author} numberOfLines={1}>
+              {`${record.authorLabel}가 기록함`}
+            </Text>
+          ) : null}
           {subInfo ? (
             <Text style={timelineRowStyles.detail} numberOfLines={1}>
               {subInfo}
@@ -3990,13 +4200,19 @@ const timelineRowStyles = StyleSheet.create({
   textCol: { flex: 1 },
   label: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
     marginBottom: 0,
   },
   detail: {
     fontSize: 10,
     color: TRACKER_COLORS.textSub,
     fontWeight: '600',
+  },
+  author: {
+    fontSize: 9.5,
+    color: TRACKER_COLORS.feedingDark,
+    fontWeight: '700',
+    marginTop: 1,
   },
   memo: {
     fontSize: 10,
@@ -4019,7 +4235,7 @@ const timelineRowStyles = StyleSheet.create({
   },
   liveText: {
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.5,
   },
@@ -4052,7 +4268,7 @@ const timelineStyles = StyleSheet.create({
   timeCell: {
     width: 56,                  // 46 → 56 (시간 16:30 안 잘리게)
     fontSize: 16,               // 11 → 16 (시간 ↑↑)
-    fontWeight: '800',          // 700 → 800
+    fontWeight: '600',          // 700 → 800
     color: TRACKER_COLORS.text,
   },
   iconCell: {
@@ -4467,7 +4683,7 @@ const breastStyles = StyleSheet.create({
   rightCol: { alignItems: 'flex-end', minWidth: 72 },
   timer: {
     fontSize: FONT_SIZE.lg,
-    fontWeight: '800',
+    fontWeight: '600',
     color: TRACKER_COLORS.feedingDark,
     fontVariant: ['tabular-nums'],
   },

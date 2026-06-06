@@ -11,7 +11,7 @@ const router = Router();
 
 const PLANS = {
   monthly: { id: 'premium_monthly', name: 'VIP 월간', price: 3900, period: 'month' },
-  yearly: { id: 'premium_yearly', name: 'VIP 연간', price: 33900, monthlyPrice: 2825, period: 'year' },
+  yearly: { id: 'premium_yearly', name: 'VIP 연간', price: 39900, monthlyPrice: 3325, period: 'year' },
 };
 
 const PAYMENT_METHODS = [
@@ -137,11 +137,11 @@ router.get('/premium/plans', async (_req: Request, res: Response) => {
       },
       {
         ...PLANS.yearly,
-        badge: '28% 할인',
+        badge: '15% 할인',
         features: [
           '월간 플랜의 모든 기능',
-          '연간 결제 시 28% 할인',
-          '월 2,825원꼴',
+          '연간 결제 시 15% 할인',
+          '월 3,325원꼴',
         ],
       },
     ],

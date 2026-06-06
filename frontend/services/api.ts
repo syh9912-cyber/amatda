@@ -115,8 +115,11 @@ export const authApi = {
     consent?: {
       terms: boolean;
       privacy: boolean;
+      community: boolean;
       ageOver14: boolean;
       marketing: boolean;
+      marketingDataUse: boolean;
+      nightAd: boolean;
       version: string;
     },
   ) =>
@@ -125,12 +128,15 @@ export const authApi = {
     api.post('/auth/social', { provider, accessToken }),
   socialLoginWithCode: (provider: string, code: string, redirectUri: string) =>
     api.post('/auth/social-code', { provider, code, redirectUri }),
-  // 약관 동의 저장 (소셜 가입 신규 사용자 전용 — PIPA 15·22조)
+  // 약관 동의 저장 (소셜 가입 신규 사용자 전용 — PIPA 15·22조, 정보통신망법 50조)
   saveConsent: (consent: {
     terms: boolean;
     privacy: boolean;
+    community: boolean;
     ageOver14: boolean;
     marketing: boolean;
+    marketingDataUse: boolean;
+    nightAd: boolean;
     version: string;
   }) => api.put('/auth/consent', consent),
   changePassword: (currentPassword: string, newPassword: string) =>
@@ -428,21 +434,44 @@ export const uploadApi = {
       }
     }
 
-    const formData = new FormData();
-    formData.append('file', {
-      uri: uploadUri,
-      name: uploadFilename,
-      type: uploadMimeType,
-    } as unknown as Blob);
-    formData.append('folder', folder);
-
-    const res = await fetch(`${API_URL}/upload`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    // 전송: 일시적 네트워크/5xx 실패에 지수 백오프 재시도 (모바일 플레이키 네트워크 대응).
+    // FormData 는 시도마다 새로 구성 (RN 에서 body 재사용 안전성 확보).
+    const buildBody = (): FormData => {
+      const fd = new FormData();
+      fd.append('file', {
+        uri: uploadUri,
+        name: uploadFilename,
+        type: uploadMimeType,
+      } as unknown as Blob);
+      fd.append('folder', folder);
+      return fd;
+    };
+    const UPLOAD_ATTEMPTS = 3;
+    let res: Awaited<ReturnType<typeof fetch>> | null = null;
+    let lastErr: unknown = null;
+    for (let attempt = 0; attempt < UPLOAD_ATTEMPTS; attempt++) {
+      try {
+        res = await fetch(`${API_URL}/upload`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: buildBody(),
+        });
+        // 5xx(일시적 서버 오류)는 재시도, 4xx(인증/검증 실패)는 즉시 중단(재시도 무의미)
+        if (res.status >= 500 && attempt < UPLOAD_ATTEMPTS - 1) {
+          await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+          continue;
+        }
+        break;
+      } catch (e) {
+        lastErr = e; // 네트워크 예외 → 백오프 후 재시도
+        if (attempt < UPLOAD_ATTEMPTS - 1) {
+          await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+          continue;
+        }
+        throw e;
+      }
+    }
+    if (!res) throw lastErr instanceof Error ? lastErr : new Error('업로드 실패');
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
@@ -755,10 +784,19 @@ export const babyTrackerApi = {
 
 export const trackerApi = {
   voiceParse: (text: string) => {
-    // 서버(UTC) 시각 오류 방지 — 클라이언트 로컬 시각 전송
+    // 서버(UTC) 시각 오류 방지 — 클라이언트 로컬 시각 + 날짜 전송
+    // 날짜는 '어제/오늘/그저께' 상대 표현 정확 해석에 필수
     const now = new Date();
     const clientTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    return api.post('/tracker/voice-parse', { text, clientTime });
+    const clientDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return api.post('/tracker/voice-parse', { text, clientTime, clientDate });
+  },
+  // 어린이집 알림장/기록지 사진 → 기록 추출 (Gemini 비전)
+  photoParse: (imageBase64: string, mimeType?: string) => {
+    const now = new Date();
+    const clientTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const clientDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return api.post('/tracker/photo-parse', { imageBase64, mimeType, clientTime, clientDate });
   },
   importExcel: async (fileUri: string) => {
     const token = useAuthStore.getState().accessToken;

@@ -19,6 +19,7 @@ import {
 } from '../../services/pushNotifications';
 import { captureError } from '../../services/sentry';
 import { useChildStore, Child } from '../../stores/childStore';
+import { BackButton } from '../../components/common/BackButton';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
 export default function ChildEditScreen() {
@@ -71,7 +72,7 @@ export default function ChildEditScreen() {
   if (!selectedChild) {
     return (
       <View style={styles.container}>
-        <Stack.Screen options={{ title: '정보 관리' }} />
+        <Stack.Screen options={{ title: '정보 관리', headerShown: true, headerLeft: () => <BackButton /> }} />
         <Text style={styles.emptyText}>선택된 아이가 없습니다</Text>
       </View>
     );
@@ -193,7 +194,7 @@ export default function ChildEditScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Stack.Screen options={{ title: screenTitle }} />
+        <Stack.Screen options={{ title: screenTitle, headerShown: true, headerLeft: () => <BackButton /> }} />
 
         {/* 기본 정보 */}
         <Text style={styles.sectionTitle}>기본 정보</Text>
@@ -502,7 +503,7 @@ const styles = StyleSheet.create({
     borderColor: '#E8847C',
     backgroundColor: '#E8847C',
   },
-  checkMark: { color: '#FFF', fontSize: 14, fontWeight: '900', lineHeight: 16 },
+  checkMark: { color: '#FFF', fontSize: 14, fontWeight: '700', lineHeight: 16 },
   checkTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text },
   checkSub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4, lineHeight: 17 },
   highRiskInfo: {

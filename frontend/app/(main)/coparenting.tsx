@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,16 @@ import {
   Switch,
   ActivityIndicator,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { BackButton } from '../../components/common/BackButton';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { GuideButton } from '../../components/common/GuideButton';
+import { COPARENTING_GUIDE } from '../../features/guide/coparentingGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChildStore } from '../../stores/childStore';
+import { useAuthStore } from '../../stores/authStore';
 import { coparentingApi } from '../../services/api';
 import { AdSlot } from '../../components/ads/AdSlot';
 
@@ -76,7 +83,8 @@ const COLOR = {
 };
 
 // 정식 출시 후 Play Store URL 로 자동 작동. iOS 출시 후엔 OS 분기 랜딩 페이지로 교체 예정.
-const APP_STORE_LINK = 'https://play.google.com/store/apps/details?id=com.sylabs.amatda';
+// 가족 초대 링크 랜딩(Firebase Hosting): 앱 있으면 자동 열기, 없으면 스토어+재탭 안내
+const INVITE_LINK_BASE = 'https://amatda-parenting.web.app/invite';
 
 /* ------------------------------------------------------------------ */
 /* Component                                                           */
@@ -85,6 +93,7 @@ const APP_STORE_LINK = 'https://play.google.com/store/apps/details?id=com.sylabs
 export default function CoparentingScreen() {
   const insets = useSafeAreaInsets();
   const selectedChild = useChildStore((s) => s.selectedChild);
+  const authUserId = useAuthStore((s) => s.userId);
 
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,6 +116,10 @@ export default function CoparentingScreen() {
   const [acceptVisible, setAcceptVisible] = useState(false);
   const [acceptCode, setAcceptCode] = useState('');
 
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => { shouldAutoShowGuide('coparenting').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen('coparenting'); };
+
   const loadMembers = useCallback(async () => {
     if (!selectedChild) return;
     try {
@@ -123,6 +136,28 @@ export default function CoparentingScreen() {
   }, [selectedChild?.id]);
 
   useEffect(() => { loadMembers(); }, [loadMembers]);
+
+  // 초대 링크(amatda://coparenting?inviteCode=XXX)로 진입 시 자동 수락.
+  // (랜딩페이지가 앱을 이 딥링크로 열어줌 → 코드 손입력 없이 바로 가족 연결)
+  const inviteParams = useLocalSearchParams<{ inviteCode?: string }>();
+  const handledInviteRef = useRef(false);
+  useEffect(() => {
+    const code = typeof inviteParams.inviteCode === 'string'
+      ? inviteParams.inviteCode.trim().toUpperCase() : '';
+    if (!code || handledInviteRef.current) return;
+    handledInviteRef.current = true;
+    (async () => {
+      try {
+        await coparentingApi.accept(code);
+        Alert.alert('완료', '가족으로 연결되었습니다! 👨‍👩‍👧');
+        loadMembers();
+      } catch {
+        // 자동 수락 실패 → 코드 채워서 수동 시도 가능하게
+        setAcceptCode(code);
+        setAcceptVisible(true);
+      }
+    })();
+  }, [inviteParams.inviteCode, loadMembers]);
 
   // Role change -> update preset permissions
   const handleRoleChange = (role: string) => {
@@ -168,7 +203,8 @@ export default function CoparentingScreen() {
 
       // SMS or share invite code
       const childName = selectedChild.name;
-      const message = `${childName}의 육아에 함께해요!\n초대 코드: ${code}\n앱 다운로드: ${APP_STORE_LINK}`;
+      const inviteUrl = `${INVITE_LINK_BASE}?code=${code}`;
+      const message = `${childName}의 육아에 함께해요! 👶\n아래 링크를 누르면 앱에서 바로 참여돼요:\n${inviteUrl}\n\n(앱이 없으면 설치 후 이 링크를 다시 눌러주세요)\n초대 코드: ${code}`;
 
       Alert.alert(
         '초대 완료',
@@ -267,13 +303,23 @@ export default function CoparentingScreen() {
   const roleLabel = (role: string) =>
     ROLE_OPTIONS.find((r) => r.key === role)?.label ?? role;
 
+  // invitee(소유자 아님) 본인의 연결 정보 — members 목록에서 내 userId로 식별
+  const myMembership = members.find((m) => m.inviteeUserId === authUserId) ?? null;
+  const myRole = myMembership?.role ?? 'viewer';
+  const myPerms = myMembership?.permissions ?? [];
+  const myNickname = myMembership?.nickname ?? '';
+  // 나를 제외한, 함께 연결된 다른 가족(읽기 전용 표시용)
+  const otherMembers = members.filter(
+    (m) => m.status === 'accepted' && m.inviteeUserId !== authUserId,
+  );
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
+      <ScreenHeader title="공동육아" right={<GuideButton onPress={() => setGuideVisible(true)} />} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <Text style={styles.title}>공동육아</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.subtitle, { textAlign: 'center' }]}>
           가족과 함께 {selectedChild?.name ?? '아이'}의 성장을 기록하세요
         </Text>
 
@@ -281,66 +327,135 @@ export default function CoparentingScreen() {
           <ActivityIndicator size="large" color={COLOR.accent} style={{ marginTop: 40 }} />
         ) : (
           <>
-            {/* Owner: me */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>나</Text>
-              <View style={styles.memberCard}>
-                <View style={styles.memberAvatar}>
-                  <Text style={styles.memberIcon}>{'★'}</Text>
-                </View>
-                <View style={styles.memberInfo}>
-                  <Text style={styles.memberName}>나 (소유자)</Text>
-                  <Text style={styles.memberPerm}>모든 권한</Text>
-                </View>
-                <View style={[styles.statusBadge, styles.statusOwner]}>
-                  <Text style={styles.statusOwnerText}>소유자</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Connected members */}
-            {members.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  연결된 가족 ({members.filter((m) => m.status === 'accepted').length})
-                </Text>
-                {members.map((m) => (
-                  <View key={m.id} style={styles.memberCard}>
+            {isOwner ? (
+              <>
+                {/* Owner: me */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>나</Text>
+                  <View style={styles.memberCard}>
                     <View style={styles.memberAvatar}>
-                      <Text style={styles.memberIcon}>{roleIcon(m.role)}</Text>
+                      <Text style={styles.memberIcon}>{'★'}</Text>
                     </View>
                     <View style={styles.memberInfo}>
-                      <Text style={styles.memberName}>{m.nickname}</Text>
-                      <Text style={styles.memberRole}>
-                        {roleLabel(m.role)} ({m.permissions.length}개 권한)
-                      </Text>
+                      <Text style={styles.memberName}>나 (소유자)</Text>
+                      <Text style={styles.memberPerm}>모든 권한</Text>
                     </View>
-                    <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                      <View style={[
-                        styles.statusBadge,
-                        m.status === 'accepted' ? styles.statusAccepted : styles.statusPending,
-                      ]}>
-                        <Text style={[
-                          styles.statusText,
-                          m.status === 'accepted' ? styles.statusAcceptedText : styles.statusPendingText,
-                        ]}>
-                          {m.status === 'accepted' ? '연결됨' : '대기중'}
-                        </Text>
-                      </View>
-                      {isOwner && (
-                        <View style={styles.memberActions}>
-                          <TouchableOpacity onPress={() => openEditPerms(m)}>
-                            <Text style={styles.actionEdit}>권한수정</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity onPress={() => handleRemove(m)}>
-                            <Text style={styles.actionRemove}>삭제</Text>
-                          </TouchableOpacity>
-                        </View>
-                      )}
+                    <View style={[styles.statusBadge, styles.statusOwner]}>
+                      <Text style={styles.statusOwnerText}>소유자</Text>
                     </View>
                   </View>
-                ))}
-              </View>
+                </View>
+
+                {/* Connected members */}
+                {members.length > 0 && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>
+                      연결된 가족 ({members.filter((m) => m.status === 'accepted').length})
+                    </Text>
+                    {members.map((m) => (
+                      <View key={m.id} style={styles.memberCard}>
+                        <View style={styles.memberAvatar}>
+                          <Text style={styles.memberIcon}>{roleIcon(m.role)}</Text>
+                        </View>
+                        <View style={styles.memberInfo}>
+                          <Text style={styles.memberName}>{m.nickname}</Text>
+                          <Text style={styles.memberRole}>
+                            {roleLabel(m.role)} ({m.permissions.length}개 권한)
+                          </Text>
+                        </View>
+                        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                          <View style={[
+                            styles.statusBadge,
+                            m.status === 'accepted' ? styles.statusAccepted : styles.statusPending,
+                          ]}>
+                            <Text style={[
+                              styles.statusText,
+                              m.status === 'accepted' ? styles.statusAcceptedText : styles.statusPendingText,
+                            ]}>
+                              {m.status === 'accepted' ? '연결됨' : '대기중'}
+                            </Text>
+                          </View>
+                          <View style={styles.memberActions}>
+                            <TouchableOpacity onPress={() => openEditPerms(m)}>
+                              <Text style={styles.actionEdit}>권한수정</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={() => handleRemove(m)}>
+                              <Text style={styles.actionRemove}>삭제</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Invitee: 내 연결 상태 */}
+                <View style={styles.connCard}>
+                  <View style={styles.connAvatar}>
+                    <Text style={styles.connAvatarIcon}>{roleIcon(myRole)}</Text>
+                  </View>
+                  <Text style={styles.connTitle}>
+                    당신은 {selectedChild?.name ?? '아이'}의 공동육아에{'\n'}
+                    <Text style={styles.connRole}>{roleLabel(myRole)}</Text>
+                    {'(으)로 연결되어 있어요'}
+                  </Text>
+                  {myNickname ? (
+                    <Text style={styles.connNick}>표시 이름: {myNickname}</Text>
+                  ) : null}
+                  <View style={styles.connBadge}>
+                    <Text style={styles.connBadgeText}>{'연결됨'}</Text>
+                  </View>
+                </View>
+
+                {/* Invitee: 내 권한 */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>내 권한 ({myPerms.length}개)</Text>
+                  <Text style={styles.fieldHint}>
+                    소유자가 부여한 권한이에요. 변경은 소유자에게 요청하세요.
+                  </Text>
+                  {PERMISSION_LIST.map((p) => {
+                    const on = myPerms.includes(p.key);
+                    return (
+                      <View
+                        key={p.key}
+                        style={[styles.permStatusRow, !on && styles.permStatusRowOff]}
+                      >
+                        <Text style={[styles.permIcon, !on && styles.permDimmed]}>{p.icon}</Text>
+                        <View style={styles.permInfo}>
+                          <Text style={[styles.permLabel, !on && styles.permDimmed]}>{p.label}</Text>
+                          <Text style={styles.permDesc}>{p.desc}</Text>
+                        </View>
+                        <Text style={on ? styles.permOn : styles.permOff}>
+                          {on ? '✓ 허용' : '제한'}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+
+                {/* Invitee: 함께하는 다른 가족 (읽기 전용) */}
+                {otherMembers.length > 0 && (
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>함께하는 가족 ({otherMembers.length})</Text>
+                    {otherMembers.map((m) => (
+                      <View key={m.id} style={styles.memberCard}>
+                        <View style={styles.memberAvatar}>
+                          <Text style={styles.memberIcon}>{roleIcon(m.role)}</Text>
+                        </View>
+                        <View style={styles.memberInfo}>
+                          <Text style={styles.memberName}>{m.nickname}</Text>
+                          <Text style={styles.memberRole}>{roleLabel(m.role)}</Text>
+                        </View>
+                        <View style={[styles.statusBadge, styles.statusAccepted]}>
+                          <Text style={[styles.statusText, styles.statusAcceptedText]}>연결됨</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </>
             )}
 
             {/* Actions */}
@@ -553,6 +668,8 @@ export default function CoparentingScreen() {
           </View>
         </View>
       </Modal>
+
+      <GuideCarousel visible={guideVisible} pages={COPARENTING_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#9D8CC6" />
     </View>
   );
 }
@@ -564,7 +681,7 @@ export default function CoparentingScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLOR.bg },
   scroll: { paddingHorizontal: 20, paddingTop: 16 },
-  title: { fontSize: 28, fontWeight: '800', color: COLOR.text },
+  title: { fontSize: 28, fontWeight: '600', color: COLOR.text },
   subtitle: { fontSize: 14, color: COLOR.textSub, marginTop: 4, marginBottom: 24 },
 
   section: { marginBottom: 20 },
@@ -614,13 +731,48 @@ const styles = StyleSheet.create({
   benefitTitle: { fontSize: 16, fontWeight: '700', color: COLOR.text, marginBottom: 12 },
   benefitItem: { fontSize: 13, color: '#5A4F45', lineHeight: 22 },
 
+  /* Invitee connection card */
+  connCard: {
+    backgroundColor: COLOR.card, borderRadius: 16, padding: 24,
+    alignItems: 'center', marginBottom: 20,
+    borderWidth: 1, borderColor: COLOR.accentLight,
+  },
+  connAvatar: {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: COLOR.accentLight, alignItems: 'center', justifyContent: 'center',
+    marginBottom: 14,
+  },
+  connAvatarIcon: { fontSize: 34 },
+  connTitle: {
+    fontSize: 16, fontWeight: '600', color: COLOR.text,
+    textAlign: 'center', lineHeight: 24,
+  },
+  connRole: { color: COLOR.accent, fontWeight: '700' },
+  connNick: { fontSize: 13, color: COLOR.textSub, marginTop: 8 },
+  connBadge: {
+    marginTop: 14, paddingHorizontal: 14, paddingVertical: 5,
+    borderRadius: 12, backgroundColor: COLOR.mintBg,
+  },
+  connBadgeText: { fontSize: 12, fontWeight: '700', color: COLOR.mint },
+
+  /* Invitee permission status rows */
+  permStatusRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: COLOR.card, borderRadius: 12, padding: 14,
+    marginBottom: 8, borderWidth: 1, borderColor: '#F0F0F0',
+  },
+  permStatusRowOff: { backgroundColor: '#FAFAFA', opacity: 0.7 },
+  permDimmed: { color: COLOR.textLight },
+  permOn: { fontSize: 12, fontWeight: '700', color: COLOR.mint },
+  permOff: { fontSize: 12, fontWeight: '600', color: COLOR.textLight },
+
   /* Modal */
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: {
     backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 24, maxHeight: '85%',
   },
-  modalTitle: { fontSize: 22, fontWeight: '800', color: COLOR.text, marginBottom: 8 },
+  modalTitle: { fontSize: 22, fontWeight: '600', color: COLOR.text, marginBottom: 8 },
   modalBtns: { flexDirection: 'row', gap: 12, marginTop: 20, marginBottom: 10 },
   modalBtnCancel: {
     flex: 1, paddingVertical: 14, borderRadius: 14,

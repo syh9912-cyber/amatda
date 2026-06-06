@@ -4,6 +4,8 @@ import {
 } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { useChildStore } from '../../stores/childStore';
 import { AdSlot } from '../../components/ads/AdSlot';
 
@@ -50,6 +52,7 @@ const DOMAIN_CONFIG = [
 
 export default function MonthlyCharacteristicScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const [data, setData] = useState<CharacteristicData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,22 +85,11 @@ export default function MonthlyCharacteristicScreen() {
   const childName = selectedChild?.name ?? '아이';
 
   return (
-    <View style={s.screen}>
+    <View style={[s.screen, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={s.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={s.backBtn}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로"
-        >
-          <Text style={s.backArrow}>{'<'}</Text>
-        </TouchableOpacity>
-        <Text style={s.headerTitle}>개월별 발달 특징</Text>
-        <View style={s.headerSpacer} />
-      </View>
+      <ScreenHeader title="개월별 발달 특징" />
+
 
       {loading ? (
         <View style={s.loadingWrap}>
@@ -198,7 +190,7 @@ const s = StyleSheet.create({
   ageCard: {
     backgroundColor: COLOR.accent, borderRadius: 20, padding: 24, marginBottom: 16, alignItems: 'center',
   },
-  ageLabel: { fontSize: 28, fontWeight: '800', color: '#FFFFFF' },
+  ageLabel: { fontSize: 28, fontWeight: '600', color: '#FFFFFF' },
   ageTitle: { fontSize: 16, fontWeight: '600', color: 'rgba(255,255,255,0.9)', marginTop: 4 },
   ageName: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 8 },
 

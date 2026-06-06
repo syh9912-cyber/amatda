@@ -12,11 +12,8 @@ import {
   Platform,
 } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
-
-const IC_PREMIUM = require('../../assets/premium-badge.png') as ImageSourcePropType;
-const IC_CLOCK = require('../../assets/contraction-clock.png') as ImageSourcePropType;
-const IC_RIBBON = require('../../assets/preg-ribbon.png') as ImageSourcePropType;
 import { Stack } from 'expo-router';
+import { BackButton } from '../../components/common/BackButton';
 import { premiumApi, paymentApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import {
@@ -33,6 +30,10 @@ import {
   type ProductId,
 } from '../../services/payment';
 import { analytics } from '../../services/analytics';
+
+const IC_PREMIUM = require('../../assets/premium-badge.png') as ImageSourcePropType;
+const IC_CLOCK = require('../../assets/contraction-clock.png') as ImageSourcePropType;
+const IC_RIBBON = require('../../assets/preg-ribbon.png') as ImageSourcePropType;
 
 interface PremiumPlan {
   id: string;
@@ -73,14 +74,14 @@ const FALLBACK_PLANS: PremiumPlan[] = [
   {
     id: 'yearly',
     name: 'VIP 연간',
-    price: 33900,
-    priceLabel: '33,900원/년',
+    price: 39900,
+    priceLabel: '39,900원/년',
     period: 'yearly',
     badge: 'BEST',
-    discount: '28% 할인',
+    discount: '15% 할인',
     features: [
       'VIP 월간의 모든 기능',
-      '월 2,825원꼴',
+      '월 3,325원꼴',
     ],
   },
 ];
@@ -190,7 +191,7 @@ export default function SubscriptionScreen() {
       try {
         const res = await purchaseIAP(productId);
         if (res.ok) {
-          const priceKRW = productId === 'premium_yearly' ? 33900 : 3900;
+          const priceKRW = productId === 'premium_yearly' ? 39900 : 3900;
           analytics.logPurchase(productId === 'premium_yearly' ? 'yearly' : 'monthly', priceKRW);
           Alert.alert('구독 완료', res.message ?? '프리미엄 기능을 이용해보세요!');
           loadData();
@@ -290,7 +291,7 @@ export default function SubscriptionScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Stack.Screen options={{ title: '프리미엄 플랜', headerShown: true }} />
+        <Stack.Screen options={{ title: '프리미엄 플랜', headerShown: true, headerLeft: () => <BackButton /> }} />
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
@@ -300,7 +301,7 @@ export default function SubscriptionScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: '프리미엄 플랜', headerShown: true }} />
+      <Stack.Screen options={{ title: '프리미엄 플랜', headerShown: true, headerLeft: () => <BackButton /> }} />
 
       {/* Header */}
       <View style={styles.header}>

@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 
 WebBrowser.maybeCompleteAuthSession();
 
-export type SocialProvider = 'GOOGLE' | 'KAKAO' | 'NAVER';
+export type SocialProvider = 'GOOGLE' | 'KAKAO' | 'NAVER' | 'APPLE';
 
 export interface SocialLoginResult {
   provider: SocialProvider;
@@ -271,10 +271,52 @@ async function authSessionLogin(provider: SocialProvider): Promise<SocialLoginRe
   return { provider, authCode: code, redirectUri: REDIRECT_URI };
 }
 
+/**
+ * Apple 로그인 — iOS 네이티브 (expo-apple-authentication).
+ * App Store 정책 4.8: 타사 소셜로그인 제공 시 iOS 에 Apple 로그인 필수.
+ * identityToken(JWT)을 백엔드 /auth/social (provider=APPLE)에서 서명 검증.
+ * 네이티브 모듈 동적 require + fallback (정적 import 금지 규칙).
+ */
+async function appleLogin(): Promise<SocialLoginResult | null> {
+  if (Platform.OS !== 'ios') {
+    throw new Error('Apple 로그인은 iOS에서만 지원됩니다.');
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const AppleAuthentication = require('expo-apple-authentication');
+    const available = await AppleAuthentication.isAvailableAsync();
+    if (!available) {
+      throw new Error('이 기기에서는 Apple 로그인을 사용할 수 없습니다.');
+    }
+    const credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
+    if (!credential?.identityToken) {
+      throw new Error('Apple identityToken 을 받지 못했습니다.');
+    }
+    console.log('[AppleLogin] native success');
+    return {
+      provider: 'APPLE',
+      accessToken: credential.identityToken, // 백엔드에서 검증
+    };
+  } catch (err: unknown) {
+    const code = (err as { code?: string } | null)?.code;
+    // 사용자가 시트를 취소 → null (에러 아님)
+    if (code === 'ERR_REQUEST_CANCELED' || code === 'ERR_CANCELED') return null;
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[AppleLogin] error:', msg);
+    throw new Error(`Apple 로그인: ${msg}`);
+  }
+}
+
 export async function socialLogin(provider: SocialProvider): Promise<SocialLoginResult | null> {
   if (provider === 'KAKAO') return kakaoLogin();
   if (provider === 'NAVER') return naverLogin();
   if (provider === 'GOOGLE') return googleLogin();
+  if (provider === 'APPLE') return appleLogin();
   return authSessionLogin(provider);
 }
 

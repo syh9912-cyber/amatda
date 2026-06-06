@@ -12,8 +12,9 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '../stores/authStore';
 import { useChildStore } from '../stores/childStore';
-import { trackerApi } from '../services/api';
+import { trackerApi, childApi } from '../services/api';
 import { loadRecords, saveRecords } from '../features/baby-tracker/storage';
+import { resolveAuthorMeta, stampAuthor } from '../features/baby-tracker/author';
 import type { TrackerRecord } from '../features/baby-tracker/types';
 import { AdSlot } from '../components/ads/AdSlot';
 
@@ -23,12 +24,17 @@ const IC_MIC = require('../assets/icon-mic.png') as number;
 interface ParsedRecord {
   type: 'diaper' | 'feeding' | 'sleep' | 'medication';
   subType: string;
+  date?: string;
   time?: string;
   endTime?: string;
   amount?: number;
   duration?: number;
   note?: string;
   childName?: string;
+}
+
+interface ParsedMulti {
+  records: ParsedRecord[];
 }
 
 const SUBTYPE_LABELS: Record<string, string> = {
@@ -101,8 +107,12 @@ export default function VoiceScreen() {
   const hasProcessed = useRef(false);
   // 최신 recognizedText 를 이벤트 핸들러 클로저에서 접근하기 위한 ref
   const recognizedTextRef = useRef('');
+  // 디바운스 타이머 — 말 중간 무음에서 자동 종료 방지
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // EventEmitter 구독 — unmount 시 정리
   const subscriptionsRef = useRef<SpeechSubscription[]>([]);
+  // 첫 입력 전 빈 재시작 횟수 — Siri 핸드오프 직후 오디오 충돌/무음 조기종료 시 자동 종료 대신 재시도
+  const restartCountRef = useRef(0);
 
   // Animations
   const bounce = useRef(new Animated.Value(0)).current;
@@ -157,7 +167,14 @@ export default function VoiceScreen() {
       mod.ExpoSpeechRecognitionModule.start({
         lang: 'ko-KR',
         interimResults: true,
-      });
+        continuous: true, // 무음 후에도 계속 듣기 (디바운스 + end 이벤트로 종료)
+        // Android: 무음 종료 threshold 늘림 — 말 중간 숨고르기 도중 자동 종료 방지
+        androidIntentOptions: {
+          EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 3000, // 완전 무음 3초까지 기다림
+          EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 2500, // 약한 무음 2.5초
+          EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 5000, // 최소 5초 발화 허용
+        },
+      } as Parameters<typeof mod.ExpoSpeechRecognitionModule.start>[0]);
       setPhase('listening');
       setStatus('말씀하세요...');
       setRecognizedText('');
@@ -193,11 +210,15 @@ export default function VoiceScreen() {
     // Case 2: no text → try speech recognition (App Shortcut / Google Assistant)
     initSpeechRecognition();
 
-    // unmount 시 EventEmitter 구독 정리
+    // unmount 시 EventEmitter 구독 + 디바운스 타이머 정리
     return () => {
       mounted = false;
       subscriptionsRef.current.forEach((sub) => { try { sub.remove(); } catch { /* ignore */ } });
       subscriptionsRef.current = [];
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text, isAuthenticated]);
@@ -250,35 +271,58 @@ export default function VoiceScreen() {
     // ── 이벤트 리스너 등록 (EventEmitter addListener — React hook 이 아님) ──
     // useSpeechRecognitionEvent(React hook)는 useCallback 콜백 내에서 호출 불가.
     // addListener 는 일반 EventEmitter API 로 어디서든 호출 가능.
+    //
+    // ★ 디바운스 — 말 중간 숨고르기로 isFinal 가 떨어져도 즉시 process X.
+    // 2초 안에 새 result 안 들어오면 그때 process. 새 result 들어오면 timer reset.
+    const SILENCE_DEBOUNCE_MS = 2000;
     const resultSub = mod.ExpoSpeechRecognitionModule.addListener('result', (ev: unknown) => {
       const event = ev as { results?: { transcript: string; isFinal: boolean }[] };
       if (event.results && event.results.length > 0) {
         const result = event.results[0];
         setRecognizedText(result.transcript);
-        if (result.isFinal && result.transcript.trim().length >= 2) {
-          setPhase('processing');
-          setStatus('AI가 분석 중...');
-          if (!hasProcessed.current) {
-            hasProcessed.current = true;
-            processVoice(result.transcript.trim());
-          }
+        if (result.transcript.trim().length >= 2) {
+          restartCountRef.current = 0; // 실제 입력 들어옴 — 빈 재시작 카운터 리셋
+          setStatus('듣는 중...');
+          if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+          debounceTimerRef.current = setTimeout(() => {
+            if (!hasProcessed.current) {
+              hasProcessed.current = true;
+              setPhase('processing');
+              setStatus('AI가 분석 중...');
+              processVoice(result.transcript.trim());
+              try { mod.ExpoSpeechRecognitionModule.stop(); } catch { /* ignore */ }
+            }
+          }, SILENCE_DEBOUNCE_MS);
         }
       }
     });
 
+    const MAX_EMPTY_RESTARTS = 15;
     const errorSub = mod.ExpoSpeechRecognitionModule.addListener('error', (ev: unknown) => {
+      if (hasProcessed.current) return;
       const event = ev as { error?: string; message?: string };
       const errorMsg = event.message || event.error || '';
+      const hasText = recognizedTextRef.current.trim().length >= 2;
+      // 첫 입력 전(텍스트 없음)에는 자동 종료 금지 — Siri 핸드오프 직후 오디오 충돌/무음 등을 재시작으로 흡수.
+      // 사용자는 상단 "완료" 버튼으로만 화면을 빠져나간다.
+      if (!hasText && restartCountRef.current < MAX_EMPTY_RESTARTS) {
+        restartCountRef.current += 1;
+        setStatus('말씀하세요...');
+        setTimeout(() => { if (!hasProcessed.current) startListening(mod); }, 500);
+        return;
+      }
       if (errorMsg.includes('no-speech') || errorMsg.includes('No speech')) {
         startListening(mod);
         return;
       }
-      setError('음성 인식에 실패했습니다. 다시 시도해주세요.');
+      // 재시도 소진 — 에러 화면(재시도/완료 버튼). 자동 이탈하지 않음.
+      setError('음성 인식이 시작되지 않았어요. 다시 시도를 눌러주세요.');
       setPhase('error');
-      setTimeout(() => router.replace('/(main)/baby-tracker'), 2000);
     });
 
     const endSub = mod.ExpoSpeechRecognitionModule.addListener('end', () => {
+      // 디바운스 진행 중이면 우선권 줘서 그 timer 가 처리 — end 는 백업
+      if (debounceTimerRef.current) return;
       // recognizedTextRef 로 최신 텍스트 접근 (stale closure 방지)
       const currentText = recognizedTextRef.current;
       if (!hasProcessed.current && currentText.trim().length >= 2) {
@@ -286,13 +330,22 @@ export default function VoiceScreen() {
         setPhase('processing');
         setStatus('AI가 분석 중...');
         processVoice(currentText.trim());
+        return;
+      }
+      // 텍스트 없이 인식이 끝남(첫 입력 전 무음 종료) → 자동 종료 대신 계속 듣기.
+      // 사용자가 상단 "완료" 버튼을 누르기 전까지 대기한다.
+      if (!hasProcessed.current && restartCountRef.current < MAX_EMPTY_RESTARTS) {
+        restartCountRef.current += 1;
+        setTimeout(() => { if (!hasProcessed.current) startListening(mod); }, 400);
       }
     });
 
     subscriptionsRef.current = [resultSub, errorSub, endSub];
 
     setSpeechAvailable(true);
-    startListening(mod);
+    // Siri 핸드오프 직후 오디오 세션이 풀릴 시간 확보 — 즉시 시작하면 오디오 충돌로 조기 종료됨.
+    restartCountRef.current = 0;
+    setTimeout(() => { if (!hasProcessed.current) startListening(mod); }, 800);
   }
 
   // ── Process voice text ──
@@ -307,14 +360,22 @@ export default function VoiceScreen() {
       } catch { /* no defaults */ }
 
       const res = await trackerApi.voiceParse(voiceText);
-      const parsed = res.data?.data as ParsedRecord | undefined;
+      const parsedData = res.data?.data as ParsedMulti | ParsedRecord | undefined;
+      // 백워드 호환 — 옛 응답(단일 객체) / 새 응답({records:[]}) 모두 처리
+      const records: ParsedRecord[] = Array.isArray((parsedData as ParsedMulti)?.records)
+        ? (parsedData as ParsedMulti).records
+        : (parsedData && (parsedData as ParsedRecord).type
+          ? [parsedData as ParsedRecord]
+          : []);
 
-      if (!parsed || !parsed.type) {
+      if (records.length === 0) {
         setError('기록을 파악할 수 없습니다');
         setPhase('error');
         setTimeout(() => router.replace('/(main)/baby-tracker'), 1500);
         return;
       }
+      // 단일 사건 처리는 기존 로직, 다중 사건은 첫 record 기준으로 child 매칭 후 일괄 저장
+      const parsed = records[0];
 
       // ── 아이 이름 매칭 ──
       // 클로저 stale 방지: useChildStore.getState()로 항상 최신 store 직접 조회
@@ -339,78 +400,137 @@ export default function VoiceScreen() {
         }
       }
 
+      // 최종 fallback 1: store children 비어있으면 서버 fetch (단축 아이콘으로 home 안 거치고 진입한 케이스)
+      let availableChildren = storeChildren;
+      if (availableChildren.length === 0) {
+        try {
+          const res = await childApi.list();
+          const fetched = (res.data?.data ?? []) as typeof storeChildren;
+          if (fetched.length > 0) {
+            useChildStore.getState().setChildren(fetched);
+            availableChildren = useChildStore.getState().children;
+          }
+        } catch (e) {
+          console.error('voice: childApi.list failed', e);
+        }
+      }
+
+      // 최종 fallback 2: 등록된 아이가 1명이라도 있으면 첫 번째 자동 선택
+      if (!targetChildId && availableChildren.length > 0) {
+        targetChildId = availableChildren[0].id;
+        storeSelectChild(availableChildren[0].id);
+      }
+
       if (!targetChildId) {
-        setError('아이를 선택해주세요');
+        setError(availableChildren.length === 0 ? '먼저 아이를 등록해주세요' : '아이를 선택해주세요');
         setPhase('error');
         setTimeout(() => router.replace('/(main)/home'), 1500);
         return;
       }
 
-      // Apply user defaults when AI didn't parse amount/duration
-      if (parsed.amount == null && parsed.subType === 'formula' && voiceDefaults.formulaAmount) {
-        parsed.amount = Number(voiceDefaults.formulaAmount);
-      }
-      // 옛 nap/night 가 백엔드에서 와도 통합 sleep 으로 정규화 (앱이 낮잠/밤잠 구분 안 함)
-      if (parsed.type === 'sleep' && (parsed.subType === 'nap' || parsed.subType === 'night')) {
-        parsed.subType = 'sleep';
-      }
-
-      if (parsed.duration == null) {
-        if (parsed.subType === 'breast' && voiceDefaults.breastDuration) {
-          parsed.duration = Number(voiceDefaults.breastDuration);
-        } else if (parsed.type === 'sleep') {
-          // 통합 수면 기본값 — napDuration / nightDuration 중 있는 값 사용 (하위 호환)
-          const napD = Number(voiceDefaults.napDuration) || 0;
-          const nightD = Number(voiceDefaults.nightDuration) || 0;
-          const sleepD = napD > 0 ? napD : nightD;
-          if (sleepD > 0) parsed.duration = sleepD;
-        }
-      }
-
-      // Build record
+      // 다중 사건 일괄 처리: 날짜별로 묶어 한 번씩 저장
       const now = new Date();
-      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      const recordId = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-      const timeStr = parsed.time || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const recordsByDate: Record<string, TrackerRecord[]> = {};
+      let lastBreastNote: '왼쪽' | '오른쪽' | null = null;
+      // 공동육아: 초대받은 가족이 음성으로 기록하면 작성자 라벨 주입 (소유자는 no-op)
+      const authorMeta = await resolveAuthorMeta(targetChildId);
 
-      // 모유 좌/우 자동 추천 — note 없으면 같은 날 마지막 모유 기록의 반대쪽으로 채움
-      let autoNote = parsed.note;
-      if (parsed.type === 'feeding' && parsed.subType === 'breast' && !autoNote) {
-        try {
-          const existingForSide = await loadRecords(targetChildId, dateStr);
-          const lastBreast = [...existingForSide]
-            .reverse()
-            .find((r) => r.type === 'feeding' && r.subType === 'breast' && (r.note === '왼쪽' || r.note === '오른쪽'));
-          if (lastBreast?.note === '왼쪽') autoNote = '오른쪽';
-          else if (lastBreast?.note === '오른쪽') autoNote = '왼쪽';
-        } catch { /* ignore */ }
+      for (let i = 0; i < records.length; i++) {
+        const r = records[i];
+
+        // 옛 nap/night → sleep
+        if (r.type === 'sleep' && (r.subType === 'nap' || r.subType === 'night')) {
+          r.subType = 'sleep';
+        }
+        // 기본값 적용
+        if (r.amount == null && r.subType === 'formula' && voiceDefaults.formulaAmount) {
+          r.amount = Number(voiceDefaults.formulaAmount);
+        }
+        if (r.duration == null) {
+          if (r.subType === 'breast' && voiceDefaults.breastDuration) {
+            r.duration = Number(voiceDefaults.breastDuration);
+          } else if (r.type === 'sleep') {
+            const napD = Number(voiceDefaults.napDuration) || 0;
+            const nightD = Number(voiceDefaults.nightDuration) || 0;
+            const sleepD = napD > 0 ? napD : nightD;
+            if (sleepD > 0) r.duration = sleepD;
+          }
+        }
+
+        const dateStr = r.date && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : todayStr;
+        const timeStr = r.time || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const recordId = `${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}`;
+
+        // cross-day sleep endTime 정규화 — "M/D HH:MM" 형식 필요
+        // baby-tracker 가 endTime.startsWith("{todayMonth}/{todayDay} ") 로 cross-day 감지
+        // 음성 파서가 HH:MM 만 주면 today 가 표시 안 됨 → 자정 넘었을 때 prefix 추가
+        let endTimeStr = r.endTime;
+        if (r.type === 'sleep' && endTimeStr && /^\d{1,2}:\d{2}$/.test(endTimeStr)) {
+          const [sh, sm] = timeStr.split(':').map((v) => parseInt(v, 10));
+          const [eh, em] = endTimeStr.split(':').map((v) => parseInt(v, 10));
+          const startMin = sh * 60 + sm;
+          const endMin = eh * 60 + em;
+          // 종료가 시작보다 빠르면 자정 넘음 → 다음날 prefix 추가
+          if (!isNaN(startMin) && !isNaN(endMin) && endMin < startMin) {
+            const [yy, mm, dd] = dateStr.split('-').map((v) => parseInt(v, 10));
+            const nextDay = new Date(Date.UTC(yy, mm - 1, dd + 1));
+            const nm = nextDay.getUTCMonth() + 1;
+            const nd = nextDay.getUTCDate();
+            endTimeStr = `${nm}/${nd} ${endTimeStr}`;
+          }
+        }
+
+        // 모유 좌/우 자동 추천 — note 없으면 직전 모유의 반대쪽
+        let autoNote = r.note;
+        if (r.type === 'feeding' && r.subType === 'breast' && !autoNote) {
+          if (lastBreastNote === null) {
+            try {
+              const existingForSide = await loadRecords(targetChildId, dateStr);
+              const lastBreast = [...existingForSide]
+                .reverse()
+                .find((rec) => rec.type === 'feeding' && rec.subType === 'breast' && (rec.note === '왼쪽' || rec.note === '오른쪽'));
+              if (lastBreast?.note === '왼쪽' || lastBreast?.note === '오른쪽') lastBreastNote = lastBreast.note;
+            } catch { /* ignore */ }
+          }
+          if (lastBreastNote === '왼쪽') autoNote = '오른쪽';
+          else if (lastBreastNote === '오른쪽') autoNote = '왼쪽';
+          if (autoNote === '왼쪽') lastBreastNote = '왼쪽';
+          else if (autoNote === '오른쪽') lastBreastNote = '오른쪽';
+        } else if (r.type === 'feeding' && r.subType === 'breast' && (r.note === '왼쪽' || r.note === '오른쪽')) {
+          lastBreastNote = r.note;
+        }
+
+        const record: TrackerRecord = stampAuthor({
+          id: recordId,
+          type: r.type as TrackerRecord['type'],
+          subType: r.subType,
+          time: timeStr,
+          createdAt: new Date(Date.now() + i).toISOString(),
+          ...(endTimeStr ? { endTime: endTimeStr } : {}),
+          ...(r.amount != null ? { amount: r.amount } : {}),
+          ...(r.duration != null ? { duration: r.duration } : {}),
+          ...(autoNote ? { note: autoNote } : {}),
+        }, authorMeta);
+
+        if (!recordsByDate[dateStr]) recordsByDate[dateStr] = [];
+        recordsByDate[dateStr].push(record);
       }
 
-      const record: TrackerRecord = {
-        id: recordId,
-        type: parsed.type as TrackerRecord['type'],
-        subType: parsed.subType,
-        time: timeStr,
-        createdAt: new Date().toISOString(),
-        ...(parsed.endTime ? { endTime: parsed.endTime } : {}),
-        ...(parsed.amount != null ? { amount: parsed.amount } : {}),
-        ...(parsed.duration != null ? { duration: parsed.duration } : {}),
-        ...(autoNote ? { note: autoNote } : {}),
-      };
-
-      // saveRecords 사용 — 로컬 저장 + 서버 putDay 동기화 + home 화면 자동 갱신(bump)
-      // 기존 raw AsyncStorage 직접 쓰기 방식은 서버 sync / home 새로고침이 빠져 있어서
-      // 데이터 삭제·재설치 시 음성기록만 사라지고, home stats 도 즉시 반영 안 되던 버그.
+      // 날짜별로 한 번씩 saveRecords (로컬 + 서버 putDay + home bump)
       try {
-        const existing = await loadRecords(targetChildId, dateStr);
-        await saveRecords(targetChildId, dateStr, [...existing, record]);
-      } catch {
-        // 저장 실패해도 사용자에게 status 는 완료로 보여주지 않음
-      }
+        for (const [dateStr, dayRecords] of Object.entries(recordsByDate)) {
+          const existing = await loadRecords(targetChildId, dateStr);
+          await saveRecords(targetChildId, dateStr, [...existing, ...dayRecords]);
+        }
+      } catch { /* 저장 실패해도 status 는 완료로 보여주지 않음 */ }
 
-      const label = SUBTYPE_LABELS[parsed.subType] ?? parsed.subType;
-      const doneLabel = `${label} ${timeStr} 기록됨`;
-      setStatus(`${label} 기록 완료!`);
+      const totalCount = records.length;
+      const firstLabel = SUBTYPE_LABELS[records[0].subType] ?? records[0].subType;
+      const doneLabel = totalCount === 1
+        ? `${firstLabel} ${records[0].time ?? ''} 기록됨`
+        : `${totalCount}건 일괄 기록됨 (${firstLabel} 외)`;
+      setStatus(totalCount === 1 ? `${firstLabel} 기록 완료!` : `${totalCount}건 기록 완료!`);
       setLastRecord(doneLabel);
       setPhase('done');
 

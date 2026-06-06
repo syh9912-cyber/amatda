@@ -19,6 +19,7 @@ interface Props {
   onSend: () => void;
   onPhoto: (uri: string) => void;
   disabled: boolean;
+  placeholder?: string;
 }
 
 export function CoachingInput({
@@ -27,6 +28,7 @@ export function CoachingInput({
   onSend,
   onPhoto,
   disabled,
+  placeholder,
 }: Props) {
   const handlePhoto = async () => {
     const picked = await pickImageFromLibrary({ quality: 0.8 });
@@ -48,7 +50,7 @@ export function CoachingInput({
         </TouchableOpacity>
         <TextInput
           style={styles.input}
-          placeholder={'고민을 말씀해주세요...'}
+          placeholder={placeholder ?? '고민을 말씀해주세요...'}
           placeholderTextColor={COACHING_COLORS.textLight}
           value={value}
           onChangeText={onChangeText}

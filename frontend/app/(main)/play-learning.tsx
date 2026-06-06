@@ -4,6 +4,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import {
@@ -12,6 +13,7 @@ import {
 } from '../../constants/playActivities';
 import type { PlayActivity } from '../../constants/playActivities';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                           */
@@ -26,6 +28,7 @@ const ACCENT_LIGHT = '#FFF0E6';
 
 export default function PlayLearningScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const selectedChild = useChildStore((s) => s.selectedChild);
 
@@ -48,10 +51,10 @@ export default function PlayLearningScreen() {
     selectedChild?.innateData?.dominantType?.split('(')[0] ?? '';
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <Header
+      <ScreenHeader
         title={`${childName}의 놀이학습`}
         onBack={() => router.back()}
       />
@@ -90,36 +93,6 @@ export default function PlayLearningScreen() {
         )}
       </ScrollView>
       <AdSlot />
-    </View>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Header                                                             */
-/* ------------------------------------------------------------------ */
-
-function Header({
-  title,
-  onBack,
-}: {
-  title: string;
-  onBack: () => void;
-}) {
-  return (
-    <View style={styles.header}>
-      <TouchableOpacity
-        onPress={onBack}
-        style={styles.backBtn}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        accessibilityRole="button"
-        accessibilityLabel="뒤로"
-      >
-        <Text style={styles.backArrow}>{'<'}</Text>
-      </TouchableOpacity>
-      <Text style={styles.headerTitle} numberOfLines={1}>
-        {title}
-      </Text>
-      <View style={styles.backBtn} />
     </View>
   );
 }

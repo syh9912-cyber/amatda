@@ -13,6 +13,7 @@ import {
   Modal,
 } from 'react-native';
 import { Stack } from 'expo-router';
+import { BackButton } from '../../components/common/BackButton';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { isPinShortcutSupported, requestPinVoiceShortcut } from '../../modules/shortcut-pin/src';
@@ -69,12 +70,12 @@ interface AssistantGuide {
 const SIRI_GUIDE: AssistantGuide = {
   key: 'siri',
   name: 'Siri',
-  subtitle: 'iPhone / iPad (iOS 전용)',
+  subtitle: 'iPhone / iPad (iOS 16 이상)',
   platformLabel: 'iPhone 사용자',
   color: '#5856D6',
-  trigger: '"시리야, 육아" → 말하면 바로 기록',
+  trigger: '"시리야, 아맞다 육아" → 앱 열리며 바로 녹음',
   urlNote: `${DEEP_LINK}{받아쓰기 텍스트}`,
-  openLabel: '단축어 앱 열기',
+  openLabel: '단축어 앱 열기 (선택)',
   open: () => {
     Linking.openURL('shortcuts://').catch(() => {
       Alert.alert('단축어 앱', 'App Store에서 "단축어"를 검색해 설치하세요.');
@@ -82,28 +83,20 @@ const SIRI_GUIDE: AssistantGuide = {
   },
   steps: [
     {
-      title: '단축어 앱 열기 → 오른쪽 상단 + 탭',
-      desc: '아래 버튼으로 단축어 앱을 여세요. 없으면 App Store에서 "단축어"로 설치하세요 (Apple 기본 앱, 무료).\n\n앱이 열리면 화면 오른쪽 상단 ＋ 버튼을 탭하세요. 빈 단축어 편집 화면이 열려요.',
+      title: '설정 없이 바로 사용 (iOS 16 이상)',
+      desc: '앱을 한 번 설치·실행하면 별도 설정 없이 시리가 "아맞다 육아" 명령을 인식해요.\n\n"시리야, 아맞다 육아"라고 말하면 → 아맞다 음성기록 화면이 열리며 자동으로 녹음이 시작돼요.\n\n※ 처음 실행 시 마이크/음성인식 권한 팝업이 뜨면 모두 "허용"을 눌러주세요.',
     },
     {
-      title: '동작 ① "텍스트 받아쓰기" 추가',
-      desc: '편집 화면 하단 검색창(또는 "동작 추가" 버튼)에 "받아쓰기"를 입력하세요.\n검색 결과에서 "텍스트 받아쓰기"를 탭해서 추가하세요.\n\n이 동작이 "시리야, 육아" 실행 후 내 말을 텍스트로 변환해줘요.',
+      title: '여러 개를 한 번에 말해도 OK',
+      desc: '녹음이 시작되면 자연스럽게 말하세요.\n예: "윤도 밥먹고 똥싸고 자고있어"\n→ AI가 밥 + 똥 + 잠 3가지로 자동 분리해서 기록해요.\n\n양·시간도 같이: "분유 120 먹고 30분 잤어"',
     },
     {
-      title: '동작 ② "URL 열기" 추가',
-      desc: '화면 하단 검색창에 "URL 열기"를 입력하세요.\n검색 결과에서 "URL 열기"를 탭해서 두 번째 동작으로 추가하세요.',
+      title: '인식되는 시리 문구',
+      desc: '앞에 "시리야,"를 붙여서 아래 중 아무거나 말하면 돼요:\n· "아맞다 육아"\n· "아맞다 기록"\n· "아맞다 음성"\n\n※ Apple 규칙상 시리 문구엔 앱 이름("아맞다")이 꼭 들어가요. "아맞다"만 말하면 녹음이 아니라 앱만 열려요.',
     },
     {
-      title: 'URL 입력 → 변수 연결 ← 이 단계가 핵심',
-      desc: '"URL 열기" 동작의 URL 입력란을 탭하세요.\n아래 "URL 복사" 버튼으로 복사 후 붙여넣으세요.\n\n그 다음: 붙여넣은 URL 끝에 커서를 두면 키보드 위에 파란색 변수 바가 나타나요. 거기서 "받아쓰기 텍스트"(파란 알약 모양 토큰)를 탭하면 URL 뒤에 자동으로 연결돼요.\n\n토큰이 안 보이면 화면 하단 "변수 선택"을 탭하세요.',
-    },
-    {
-      title: '단축어 이름을 "육아"로 저장',
-      desc: '편집 화면 상단의 "새로운 단축어" 제목을 탭하세요.\n"이름 변경"을 탭 → "육아" 입력 → 완료를 누르세요.\n\n오른쪽 상단 "완료"를 눌러 저장하세요.',
-    },
-    {
-      title: '완성! 이렇게 사용하세요',
-      desc: '"시리야, 육아"라고 말하면 → 시리가 "뭐라고 말할까요?" 물어봐요 → "윤도 밥먹었어", "분유 120ml 먹었어" 처럼 말하면 → 아맞다 앱이 열리면서 자동 기록돼요!\n\n※ 처음 실행 시 마이크/앱 권한 허용 팝업이 나와요. 모두 "허용"을 눌러주세요.',
+      title: '(선택) "육아"처럼 더 짧게 — 단축어에서 URL 연결',
+      desc: '앱 이름 없이 "시리야, 육아"로 쓰고 싶으면 아이폰 "단축어" 앱에서 직접 만들 수 있어요 (1회 설정):\n\n1) 아래 "단축어 앱 열기" → 오른쪽 위 ＋\n2) "텍스트 받아쓰기" 동작 추가\n3) "URL 열기" 동작 추가 → 아래 URL을 복사해 붙여넣고, URL 끝에 "받아쓰기 텍스트" 변수를 연결\n4) 단축어 이름을 "육아"로 저장\n\n그럼 "시리야, 육아"로도 실행돼요.',
     },
   ],
 };
@@ -335,6 +328,7 @@ export default function VoiceSettingsScreen() {
   return (
     <View style={s.container}>
       <Stack.Screen options={{ headerShown: false }} />
+      <BackButton style={{ position: 'absolute', top: 44, left: 12, zIndex: 20 }} />
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Header */}
@@ -456,8 +450,8 @@ export default function VoiceSettingsScreen() {
         {/* ── Section 4: iOS Siri 가이드 (참고용 — 안드로이드에서도 표시) ── */}
         {guides.length > 0 && (
           <View style={s.card}>
-            <Text style={s.cardTitle}>{'iOS Siri 단축어 (아이폰 사용자)'}</Text>
-            <Text style={s.cardDesc}>{'아이폰에선 "시리야, 육아" 한마디로 음성 기록 실행 가능. 안드로이드는 위 방법 ①/② 사용.'}</Text>
+            <Text style={s.cardTitle}>{'iOS Siri 명령 (아이폰 사용자)'}</Text>
+            <Text style={s.cardDesc}>{'아이폰은 설정 없이 "시리야, 아맞다 육아" 한마디로 음성 기록 실행 (iOS 16+). 안드로이드는 위 방법 ①/② 사용.'}</Text>
 
             {guides.filter((g) => g.key === 'siri').map((guide) => (
               <View key={guide.key}>
@@ -466,7 +460,7 @@ export default function VoiceSettingsScreen() {
                   onPress={() => { setCopied(false); setOpenGuide(guide); }}
                   activeOpacity={0.7}
                   accessibilityRole="button"
-                  accessibilityLabel="Siri 단축어 설정 방법 보기"
+                  accessibilityLabel="Siri 명령 사용 방법 보기"
                 >
                   <View style={[s.assistantDot, { backgroundColor: guide.color }]} />
                   <View style={s.assistantInfo}>
@@ -529,7 +523,7 @@ export default function VoiceSettingsScreen() {
             <ScrollView contentContainerStyle={s.modalScroll} showsVerticalScrollIndicator={false}>
               {/* 트리거 안내 */}
               <View style={[s.triggerBanner, { backgroundColor: openGuide.color + '15' }]}>
-                <Text style={[s.triggerBannerLabel, { color: openGuide.color }]}>{'설정 완료 후 이렇게 말하세요'}</Text>
+                <Text style={[s.triggerBannerLabel, { color: openGuide.color }]}>{'이렇게 말하면 바로 기록돼요'}</Text>
                 <Text style={[s.triggerBannerText, { color: openGuide.color }]}>{openGuide.trigger}</Text>
               </View>
 
@@ -621,7 +615,7 @@ const s = StyleSheet.create({
   /* Header */
   header: { alignItems: 'center', paddingTop: 60, paddingBottom: 20, paddingHorizontal: SPACING.lg },
   headerIcon: { width: 48, height: 48, marginBottom: 12, tintColor: COLORS.primary },
-  headerTitle: { fontSize: FONT_SIZE.xl, fontWeight: '800', color: COLORS.text, marginBottom: 4 },
+  headerTitle: { fontSize: FONT_SIZE.xl, fontWeight: '600', color: COLORS.text, marginBottom: 4 },
   headerSub: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
 
   /* Card */
@@ -681,7 +675,7 @@ const s = StyleSheet.create({
 
   /* Tip box */
   tipBox: { backgroundColor: '#F0F7FF', borderRadius: RADIUS.sm, padding: 14, marginTop: SPACING.sm },
-  tipTitle: { fontSize: FONT_SIZE.xs, fontWeight: '800', color: '#4A90D9', marginBottom: 4 },
+  tipTitle: { fontSize: FONT_SIZE.xs, fontWeight: '600', color: '#4A90D9', marginBottom: 4 },
   tipText: { fontSize: FONT_SIZE.xs, color: '#5A7A9A', lineHeight: 18 },
 
   /* ── Assistant cards ── */
@@ -719,12 +713,12 @@ const s = StyleSheet.create({
   /* Trigger banner */
   triggerBanner: { borderRadius: RADIUS.md, padding: 16, marginBottom: 24, alignItems: 'center' },
   triggerBannerLabel: { fontSize: FONT_SIZE.xs, fontWeight: '600', marginBottom: 4 },
-  triggerBannerText: { fontSize: FONT_SIZE.xl, fontWeight: '800' },
+  triggerBannerText: { fontSize: FONT_SIZE.xl, fontWeight: '600' },
 
   /* Modal steps */
   modalStep: { flexDirection: 'row', marginBottom: 20 },
   modalStepCircle: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 12, marginTop: 2 },
-  modalStepNum: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
+  modalStepNum: { fontSize: 13, fontWeight: '600', color: '#FFFFFF' },
   modalStepContent: { flex: 1 },
   modalStepTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text, marginBottom: 4 },
   modalStepDesc: { fontSize: FONT_SIZE.sm, color: '#6B5E50', lineHeight: 22 },

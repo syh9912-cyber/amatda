@@ -2,10 +2,36 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections, db, genId } from '../services/firestore';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { logger } from '../utils/logger';
 
 const router = Router();
+
+// 미사용(pending) 초대 만료 기간 — 이후엔 수락 불가 + 스케줄 sweep 으로 삭제
+export const INVITE_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7일
+
+/**
+ * 만료된 미사용 초대 정리 — 매일 스케줄 sweep(index.ts dormantUserSweep)에서 호출.
+ * status 단일 equality 만 사용(복합 인덱스 회피), createdAt 비교는 코드에서 수행.
+ */
+export async function sweepExpiredInvites(): Promise<number> {
+  const cutoff = Date.now() - INVITE_EXPIRY_MS;
+  const snap = await collections.familyMembers
+    .where('status', '==', 'pending')
+    .get();
+  const expired = snap.docs.filter((d) => {
+    const ts = d.data().createdAt as Timestamp | undefined;
+    return ts ? ts.toMillis() < cutoff : false;
+  });
+  if (expired.length === 0) return 0;
+  for (let i = 0; i < expired.length; i += 450) {
+    const batch = db.batch();
+    expired.slice(i, i + 450).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+  logger.info('coparenting/sweepExpiredInvites', `deleted=${expired.length}`);
+  return expired.length;
+}
 
 /* ------------------------------------------------------------------ */
 /* Permission Types                                                    */
@@ -127,6 +153,38 @@ router.post('/accept', authMiddleware, async (req: Request, res: Response) => {
       if (data.invitedBy === req.userId) {
         return { ok: false as const, reason: 'self-invite' };
       }
+
+      // 만료된 초대(오래된 pending)는 무효 처리 + 삭제 (읽기 후 쓰기 — 즉시 return)
+      const ts = data.createdAt as Timestamp | undefined;
+      const createdMs = ts?.toMillis?.() ?? 0;
+      if (createdMs && Date.now() - createdMs > INVITE_EXPIRY_MS) {
+        tx.delete(doc.ref);
+        return { ok: false as const, reason: 'expired' };
+      }
+
+      // 중복 가드: 이미 이 아이의 accepted 멤버면 새 멤버십을 만들지 않고
+      // 이 pending 초대만 소비(삭제) → 같은 사람이 중복 등록되는 문제 방지.
+      // (트랜잭션 규칙: 모든 읽기는 쓰기 전에 — dup read 를 update/delete 보다 먼저 수행)
+      const dupSnap = await tx.get(
+        collections.familyMembers
+          .where('childId', '==', data.childId)
+          .where('inviteeUserId', '==', req.userId)
+          .where('status', '==', 'accepted')
+          .limit(1),
+      );
+      if (!dupSnap.empty) {
+        const existing = dupSnap.docs[0];
+        tx.delete(doc.ref);
+        return {
+          ok: true as const,
+          id: existing.id,
+          childId: data.childId as string,
+          role: existing.data().role as string,
+          permissions: (existing.data().permissions as string[]) ?? [],
+          alreadyMember: true,
+        };
+      }
+
       tx.update(doc.ref, {
         inviteeUserId: req.userId,
         status: 'accepted',
@@ -138,12 +196,15 @@ router.post('/accept', authMiddleware, async (req: Request, res: Response) => {
         childId: data.childId as string,
         role: data.role as string,
         permissions: data.permissions as string[],
+        alreadyMember: false,
       };
     });
 
     if (!result.ok) {
       if (result.reason === 'self-invite') {
         error(res, '자신을 초대할 수 없습니다');
+      } else if (result.reason === 'expired') {
+        error(res, '만료된 초대 코드입니다. 다시 초대를 요청해주세요', 410);
       } else {
         error(res, '유효하지 않은 초대 코드입니다', 404);
       }
@@ -155,6 +216,7 @@ router.post('/accept', authMiddleware, async (req: Request, res: Response) => {
       childId: result.childId,
       role: result.role,
       permissions: result.permissions,
+      alreadyMember: result.alreadyMember,
     });
   } catch (err: unknown) {
     logger.error('route', err);

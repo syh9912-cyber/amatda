@@ -17,6 +17,7 @@ import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { momLocationApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 
 const COLOR = {
   bg: '#F8F5F2',
@@ -161,13 +162,7 @@ export default function MomLocationSetupScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={styles.backArrow}>{'‹'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.topTitle}>위치 등록</Text>
-        <View style={styles.backBtn} />
-      </View>
+      <ScreenHeader title="위치 등록" />
 
       {loading ? (
         <View style={styles.loadingWrap}><ActivityIndicator /></View>
@@ -275,13 +270,13 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLOR.border,
   },
   backArrow: { fontSize: 20, color: COLOR.text, fontWeight: '700' },
-  topTitle: { fontSize: 16, fontWeight: '900', color: COLOR.text },
+  topTitle: { fontSize: 16, fontWeight: '700', color: COLOR.text },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   scroll: { paddingHorizontal: 16, paddingBottom: 60, gap: 14 },
 
   intro: { paddingTop: 6, paddingBottom: 4 },
-  introTitle: { fontSize: 22, fontWeight: '900', color: COLOR.text, marginBottom: 6 },
+  introTitle: { fontSize: 22, fontWeight: '700', color: COLOR.text, marginBottom: 6 },
   introSub: { fontSize: 13, color: COLOR.textSub, fontWeight: '600', lineHeight: 19 },
 
   gpsBtn: {
@@ -295,7 +290,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
   },
   gpsBtnIcon: { fontSize: 20 },
-  gpsBtnText: { fontSize: 15, fontWeight: '900', color: '#FFFFFF' },
+  gpsBtnText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
 
   formCard: {
     backgroundColor: '#FFFFFF',
@@ -329,7 +324,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FFD4BB',
   },
-  infoTitle: { fontSize: 13, fontWeight: '900', color: COLOR.primary, marginBottom: 4 },
+  infoTitle: { fontSize: 13, fontWeight: '700', color: COLOR.primary, marginBottom: 4 },
   infoText: { fontSize: 12, color: '#7A4A2E', fontWeight: '600', lineHeight: 18 },
 
   saveBtn: {
@@ -340,7 +335,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     marginTop: 4,
   },
-  saveBtnText: { fontSize: 15, fontWeight: '900', color: '#FFFFFF' },
+  saveBtnText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
 
   removeLink: { alignSelf: 'center', paddingVertical: 8 },
   removeLinkText: { fontSize: 13, color: '#FF3B30', fontWeight: '700', textDecorationLine: 'underline' },

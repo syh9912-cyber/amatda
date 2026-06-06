@@ -13,7 +13,9 @@ import {
   Image,
 } from 'react-native';
 import { Stack } from 'expo-router';
+import { BackButton } from '../../components/common/BackButton';
 import { useChildStore } from '../../stores/childStore';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VaccinationDonut } from '../../components/vaccination/VaccinationDonut';
 import { vaccinationApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
@@ -110,6 +112,7 @@ async function saveRegistrationAge(childId: string, months: number): Promise<voi
 }
 
 export default function VaccinationScreen() {
+  const insets = useSafeAreaInsets();
   const child = useChildStore((s) => s.selectedChild);
   const childId = child?.id ?? '';
 
@@ -240,8 +243,9 @@ export default function VaccinationScreen() {
 
   if (!child || child.isPregnant) {
     return (
-      <View style={styles.container}>
-        <Stack.Screen options={{ title: '접종달력' }} />
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.navBar}><BackButton /></View>
         <View style={styles.emptyCenter}>
           <Image source={require('../../assets/quick-syringe.png')} style={styles.emptyIconImg} resizeMode="contain" />
           <Text style={styles.emptyText}>
@@ -253,8 +257,9 @@ export default function VaccinationScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ title: `${child.name} 접종달력` }} />
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.navBar}><BackButton /></View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -525,6 +530,7 @@ export default function VaccinationScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  navBar: { height: 44, justifyContent: 'center', paddingHorizontal: 8 },
   scrollContent: { padding: SPACING.md, paddingBottom: 100 },
 
   /* Summary */
@@ -601,20 +607,20 @@ const styles = StyleSheet.create({
   checkCircle: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, borderColor: COLORS.border, justifyContent: 'center', alignItems: 'center' },
   checkEmpty: { color: COLORS.textLight, fontSize: 14 },
   checkCircleDone: { width: 22, height: 22, borderRadius: 11, backgroundColor: COLORS.success, justifyContent: 'center', alignItems: 'center' },
-  checkMark: { color: '#FFF', fontSize: 13, fontWeight: '900' },
+  checkMark: { color: '#FFF', fontSize: 13, fontWeight: '700' },
 
   vaccineCenter: { flex: 1 },
   vaccineNameRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   vaccineName: { fontSize: 13, fontWeight: '700', color: COLORS.text },
   vaccineNameDone: { color: COLORS.textSecondary, textDecorationLine: 'line-through' },
   requiredBadge: { backgroundColor: '#E91E63', borderRadius: 3, paddingHorizontal: 5, paddingVertical: 0 },
-  requiredText: { color: '#FFF', fontSize: 9, fontWeight: '900' },
+  requiredText: { color: '#FFF', fontSize: 9, fontWeight: '700' },
   vaccineDisease: { fontSize: 11, color: COLORS.textSecondary, marginTop: 1 },
   vaccineCompleted: { fontSize: 10, color: COLORS.success, marginTop: 1 },
   vaccineSchedule: { fontSize: 10, color: COLORS.textLight, marginTop: 1 },
 
   vaccineRight: { marginLeft: 6 },
-  dDayText: { fontSize: 12, fontWeight: '800' },
+  dDayText: { fontSize: 12, fontWeight: '600' },
 
   /* Empty */
   emptyCenter: { alignItems: 'center', paddingTop: 60 },

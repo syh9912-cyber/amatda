@@ -68,14 +68,14 @@ function getWeeklyQuestion(name: string, week: number): { emoji: string; text: s
 /* ------------------------------------------------------------------ */
 
 const COLOR = {
-  bg: '#F2F2F7',
+  bg: '#FFFFFF',            // 순백 iOS
   card: '#FFFFFF',
-  accent: '#FF8C5A',
-  accentLight: '#FFF0E6',
-  text: '#1C1C1E',
-  textSub: '#636366',
-  textLight: '#ABABAB',
-  mint: '#5CBFAB',
+  accent: '#F4A98C',        // 톤다운
+  accentLight: '#FFF4EE',
+  text: '#333333',          // 부드러운 검정 (베빌 톤)
+  textSub: '#666666',
+  textLight: '#9E9E9E',
+  mint: '#7FD4CD',
   mintBg: '#F0FAF7',
   yellow: '#FFD76E',
   yellowBg: '#FFFCF0',
@@ -150,7 +150,7 @@ function getAgeText(months: number): string {
 /* ── 맞춤 추천 카테고리 (홈 + 마이페이지 동일) ── */
 
 const RECO_CATEGORIES = [
-  { icon: require('../../assets/cat-eating.png'), label: '음식 추천', category: '음식', desc: '기질에 맞는 영양 식단과 레시피', color: '#FF8C5A', bg: '#FFF0E6' },
+  { icon: require('../../assets/cat-eating.png'), label: '음식 추천', category: '음식', desc: '기질에 맞는 영양 식단과 레시피', color: '#F4A98C', bg: '#FFF0E6' },
   { icon: require('../../assets/cat-growth.png'), label: '생활습관', category: '생활습관', desc: '수면, 위생, 루틴 등 생활 가이드', color: '#4ECDC4', bg: '#E8FAF8' },
   { icon: require('../../assets/cat-social.png'), label: '학원 추천', category: '학원', desc: '기질과 발달에 맞는 교육 활동', color: '#7C83EC', bg: '#EEEDFC' },
   { icon: require('../../assets/play-activity.png'), label: '놀이학습', category: '놀이학습', desc: '집에서 할 수 있는 놀이와 활동', color: '#FFB344', bg: '#FFF8E1' },
@@ -329,6 +329,23 @@ export default function HomeScreen() {
     }
   };
 
+  // 화면 포커스(탭 복귀/네비게이션 복귀) 시 자녀 목록 재동기화.
+  // 공동육아 연결이 끊긴 아이가 엄마 앱에 유령처럼 남던 문제 해결 —
+  // 소유자가 연결을 해제하면 백엔드 권한이 즉시 사라지므로, 다음 포커스에
+  // 재조회하면 setChildren(목록 교체)이 그 아이를 깔끔히 제거한다.
+  // 최초 mount 는 위 useEffect 가 이미 로드하므로 첫 포커스는 건너뛴다.
+  const didInitialFocus = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!didInitialFocus.current) {
+        didInitialFocus.current = true;
+        return;
+      }
+      void loadChildren();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
+
   const checkProactivePopup = async () => {
     try {
       const now = Date.now();
@@ -453,12 +470,22 @@ export default function HomeScreen() {
     );
   }
 
-  /* Empty state */
-  if (children.length === 0) {
-    return <EmptyState />;
-  }
-
-  const child = selectedChild;
+  // 자녀 미등록 시에도 홈 전체 UI 노출 — 풀스크린 EmptyState 제거 + placeholder child 사용.
+  //   placeholder: 영아 (0개월) 기본값 → DenseStatsRow / AllActionsGrid 등 정상 렌더.
+  //   탭 시 register 유도 배너 + 카드들은 빈 데이터 표시.
+  const PLACEHOLDER_CHILD = {
+    id: '',
+    name: '',
+    isPregnant: false as boolean,
+    pregnancyWeeks: 0,
+    ageInfo: { months: 0, group: 'infant' as const },
+    birthDate: undefined as string | undefined,
+    innateData: null,
+    isHighRiskPregnancy: false,
+    gender: undefined as string | undefined,
+    photoUri: null as string | null,
+  };
+  const child = selectedChild ?? (PLACEHOLDER_CHILD as unknown as typeof selectedChild);
 
   return (
     <View style={styles.container}>
@@ -473,10 +500,24 @@ export default function HomeScreen() {
         />
       }
     >
-      <OnboardingGuide />
-
       {/* === 1. Header === */}
       <Header child={child} onPickPhoto={pickPhoto} />
+
+      {/* 자녀 미등록 배너 — 둘러보기 모드 안내 */}
+      {children.length === 0 && (
+        <TouchableOpacity
+          style={styles.registerBanner}
+          activeOpacity={0.8}
+          onPress={() => router.push('/onboarding/child-info')}
+        >
+          <Text style={styles.registerBannerIcon}>👶</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.registerBannerTitle}>자녀를 등록해보세요</Text>
+            <Text style={styles.registerBannerDesc}>맞춤 코칭과 기록을 시작할 수 있어요</Text>
+          </View>
+          <Text style={styles.registerBannerArrow}>›</Text>
+        </TouchableOpacity>
+      )}
 
       {/* === Child Selector + 진통 체크 (같은 줄, 양 끝 정렬) ===
           - 좌측: ChildSelector (자녀 1명이면 빈 공간)
@@ -659,6 +700,12 @@ export default function HomeScreen() {
         </View>
         <Text style={styles.addChildBannerPlus}>{'+'}</Text>
       </TouchableOpacity>
+    </ScrollView>
+
+      {/* iOS 터치 버그 방지: 모든 Modal 은 ScrollView 밖(화면 루트)에 렌더한다.
+          ScrollView 안에서 Modal 을 닫으면 iOS 에서 하위 콘텐츠의 탭(터치 응답)이 죽는다
+          (스크롤은 유지됨). RN/Expo 공식 권장: Modal 은 화면 최상위에 둔다. */}
+      <OnboardingGuide />
 
       {/* Proactive Popup */}
       <ProactivePopup
@@ -796,7 +843,6 @@ export default function HomeScreen() {
               <Text style={styles.birthCancelText}>취소</Text>
             </TouchableOpacity>
       </CenterModal>
-    </ScrollView>
 
     {/* 화면 하단 배너 광고 — FREE 사용자만, 프리미엄/체험 사용자는 자동 숨김 (useShowAds) */}
     <AdSlot />
@@ -1002,7 +1048,7 @@ const traitCardStyles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#FF8C5A',
+    backgroundColor: '#F4A98C',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -1014,23 +1060,23 @@ const traitCardStyles = StyleSheet.create({
     borderRadius: 19,
     backgroundColor: '#FFB48E',
   },
-  iconText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  iconText: { color: '#FFFFFF', fontSize: 11, fontWeight: '600' },
   textCol: { flex: 1 },
-  title: { fontSize: 15, fontWeight: '900', color: '#1C1C1E' },
-  sub: { fontSize: 11, color: '#636366', marginTop: 1 },
+  title: { fontSize: 14, fontWeight: '600', color: '#1F2937' },
+  sub: { fontSize: 12, color: '#7A7A82', marginTop: 2 },
   typeBadge: {
     marginLeft: 6,
-    backgroundColor: '#FF8C5A',
+    backgroundColor: '#F4A98C',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 5,
   },
   typeBadgeText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
-  arrow: { color: '#FF8C5A', fontSize: 18, fontWeight: '600', marginLeft: 6 },
+  arrow: { color: '#F4A98C', fontSize: 18, fontWeight: '500', marginLeft: 6 },
 });
 
 function MonthlyCharCard({ child }: { child: Child }) {
@@ -1528,10 +1574,10 @@ const aiCardStyles = StyleSheet.create({
     borderRadius: 19,
     backgroundColor: '#A9AEF5',
   },
-  iconText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  iconText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
   textCol: { flex: 1 },
-  title: { fontSize: 15, fontWeight: '900', color: '#1C1C1E' },
-  sub: { fontSize: 11, color: '#636366', marginTop: 1 },
+  title: { fontSize: 14, fontWeight: '600', color: '#1F2937' },
+  sub: { fontSize: 12, color: '#7A7A82', marginTop: 2 },
   newBadge: {
     marginLeft: 6,
     backgroundColor: '#FFD76E',
@@ -1539,7 +1585,7 @@ const aiCardStyles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 5,
   },
-  newBadgeText: { fontSize: 9, fontWeight: '800', color: '#7C5A00' },
+  newBadgeText: { fontSize: 9, fontWeight: '600', color: '#7C5A00' },
   arrow: { fontSize: 18, color: '#7C83EC', marginLeft: 4 },
 });
 
@@ -1591,6 +1637,24 @@ const CARD_SHADOW = {
 };
 
 const styles = StyleSheet.create({
+  /* 자녀 미등록 배너 */
+  registerBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 4,
+    marginTop: 4,
+    marginBottom: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFF4EE',
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#FAD8C5',
+  },
+  registerBannerIcon: { fontSize: 24, marginRight: 12 },
+  registerBannerTitle: { fontSize: 14, fontWeight: '600', color: '#2D2D33' },
+  registerBannerDesc: { fontSize: 12, color: '#7A7A82', marginTop: 2 },
+  registerBannerArrow: { fontSize: 22, color: '#B5B5BD', marginLeft: 8 },
   /* Layout */
   container: {
     flex: 1,
@@ -1679,7 +1743,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   headerNameStrong: {
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLOR.text,
     fontSize: 15,
   },
@@ -1795,7 +1859,7 @@ const styles = StyleSheet.create({
   },
   feverAlertLabel: {
     color: '#FF3B30',
-    fontWeight: '800',
+    fontWeight: '600',
   },
 
 
@@ -1896,7 +1960,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center' as const,
     borderWidth: 1.5,
     borderColor: '#FFD4BB',
-    shadowColor: '#FF8C5A',
+    shadowColor: '#F4A98C',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.10,
     shadowRadius: 6,
@@ -2040,7 +2104,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderWidth: 1,
     borderColor: '#FFD4BB',
-    shadowColor: '#FF8C5A',
+    shadowColor: '#F4A98C',
     shadowOpacity: 0.10,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
@@ -2054,7 +2118,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#FF8C5A',
+    shadowColor: '#F4A98C',
     shadowOpacity: 0.18,
     shadowOffset: { width: 0, height: 3 },
     shadowRadius: 5,
@@ -2065,7 +2129,7 @@ const styles = StyleSheet.create({
   addChildBannerImage: { width: 40, height: 40 },
   addChildBannerTitle: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
     color: COLOR.text,
     lineHeight: 22,
   },
@@ -2077,7 +2141,7 @@ const styles = StyleSheet.create({
   },
   addChildBannerPlus: {
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: '600',
     color: COLOR.accent,
   },
 
@@ -2253,12 +2317,12 @@ const styles = StyleSheet.create({
   contractionPillText: {
     color: '#C0392B',
     fontSize: 12,
-    fontWeight: '800' as const,
+    fontWeight: '600' as const,
   },
   contractionPillTextEmph: {
     color: '#B71C1C',
     fontSize: 13,
-    fontWeight: '900' as const,
+    fontWeight: '700' as const,
   },
   contractionPillTextUrgent: {
     color: '#C2185B',
@@ -2297,7 +2361,7 @@ const styles = StyleSheet.create({
   },
   preghomeBigTitle: {
     fontSize: 16,
-    fontWeight: '900' as const,
+    fontWeight: '700' as const,
     color: '#E91E63',
     marginBottom: 3,
   },
@@ -2441,7 +2505,7 @@ const styles = StyleSheet.create({
   sosFabText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800' as const,
+    fontWeight: '600' as const,
     letterSpacing: 1,
   },
 });

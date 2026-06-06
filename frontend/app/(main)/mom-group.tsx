@@ -16,14 +16,19 @@ import {
   ActionSheetIOS,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useChildStore } from '../../stores/childStore';
 import { momGroupApi, momLocationApi, uploadApi, authApi, type MomGroupCategory, type MomGroupSort } from '../../services/api';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { BackButton } from '../../components/common/BackButton';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { GuideButton } from '../../components/common/GuideButton';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { MOMGROUP_GUIDE } from '../../features/guide/momGroupGuide';
 
 const IC_HEART = require('../../assets/icon-heart.png');
 const IC_COMMENT = require('../../assets/icon-comment.png');
@@ -142,7 +147,13 @@ function compactDate(iso: string): string {
 const MONTH_WINDOW = 3; // 내 예정월 ±3개월까지 이동 허용
 
 type RoomType = 'month' | 'region' | 'radius';
-type ViewMode = 'feed' | 'bookmarks' | 'mine';
+type ViewMode = 'feed' | 'bookmarks' | 'mine' | 'honor' | 'anonymous';
+
+// 명예의 전당 진입 임계값 — 게시물의 인기 점수 = likeCount + commentCount * 2
+const HONOR_SCORE_THRESHOLD = 5;
+
+// 가이드맵 1회만 노출용 AsyncStorage 키. 가이드 변경 시 v2로 bump.
+const GUIDE_SEEN_KEY = 'mom-group-guide-seen-v1';
 
 type RadiusKey = 5 | 10 | 50 | 100 | 0; // 0 = 전국
 const RADIUS_TABS: { key: RadiusKey; label: string; sub: string }[] = [
@@ -249,6 +260,21 @@ export default function MomGroupScreen() {
   const [loadingBookmarks, setLoadingBookmarks] = useState(false);
   const [minePosts, setMinePosts] = useState<Post[]>([]);
   const [loadingMine, setLoadingMine] = useState(false);
+
+  // 첫 진입 가이드 — 1회만 노출 (스포트라이트 GuideCarousel)
+  const [showGuide, setShowGuide] = useState(false);
+  useEffect(() => {
+    (async () => {
+      try {
+        const seen = await AsyncStorage.getItem(GUIDE_SEEN_KEY);
+        if (!seen) setShowGuide(true);
+      } catch { /* AsyncStorage 실패는 무시 — 가이드 안 보이는 것뿐 */ }
+    })();
+  }, []);
+  const closeGuide = useCallback(async () => {
+    setShowGuide(false);
+    try { await AsyncStorage.setItem(GUIDE_SEEN_KEY, '1'); } catch { /* 무시 */ }
+  }, []);
   const [postImage, setPostImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -727,84 +753,66 @@ export default function MomGroupScreen() {
   // 빈 상태(no groupKey) 분기 제거 — myGroupKey가 currentMonthKey로 항상 fallback되므로 도달 불가
 
   /**
-   * 모던 리스트 행 — Threads 스타일 카드 + 미세한 카테고리 그라디언트
-   * 카드 자체에 카테고리 색의 살짝 틴트 → 위→아래 화이트로 페이드
+   * 게시글 리스트 행 — 베이비빌리/마미톡 톤 (평평한 흰 배경 + bottom divider)
+   *   - 이벤트/공식/핀 글: 작은 chip 배지 + 매우 옅은 배경 틴트
+   *   - 일반 글: 흰 배경
+   *   - 우측: 댓글 카운트 버블 (베빌 스타일)
    */
   const renderBoardRow = (p: Post, _idx: number) => {
     const isBookmarked = bookmarkedIds.has(p.id);
     const cat = CATEGORY_META[p.category] ?? CATEGORY_META.chat;
     const isPinTop = p.isPinned && p.isOfficial;
-
-    // 그라디언트 색 — 핀/공식/폴백/일반에 따라 결정
-    let gradientFrom = `${cat.color}1A`; // ~10% alpha
-    let gradientTo = '#FFFFFF';
-    if (isPinTop) {
-      gradientFrom = '#FFE9D6';      // 산뜻한 피치
-      gradientTo = '#FFFAF3';
-    } else if (p.isFallback) {
-      gradientFrom = '#E8F0FE';      // 산뜻한 라벤더-블루
-      gradientTo = '#FBFCFF';
-    } else if (p.isOfficial) {
-      gradientFrom = '#E1F5FE';      // 공식 = 산뜻한 스카이
-      gradientTo = '#FBFEFF';
-    }
+    const isHighlight = isPinTop || p.isOfficial || p.isFallback;
 
     return (
       <TouchableOpacity
         key={p.id}
-        style={styles.modernRowOuter}
-        activeOpacity={0.7}
+        style={[
+          styles.billyRow,
+          isHighlight && styles.billyRowHighlight,
+        ]}
+        activeOpacity={0.6}
         onPress={() => openComments(p)}
       >
-        <LinearGradient
-          colors={[gradientFrom, gradientTo]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.modernRow}
-        >
-        {/* 좌측 액센트 바 — 핀 글은 코랄, 공식 글은 블루, 일반은 카테고리 색 */}
-        <View
-          style={[
-            styles.modernLeftBar,
-            { backgroundColor: isPinTop ? '#FFAB6E' : p.isOfficial ? '#42A5F5' : cat.color },
-          ]}
-        />
+        {/* 좌측 이미지 미리보기 — 있을 때만, 작은 thumb */}
+        {p.imageUrl ? (
+          <Image
+            source={{ uri: p.imageUrl }}
+            style={styles.billyThumb}
+            contentFit="cover"
+          />
+        ) : null}
 
-        {/* 메인 콘텐츠 */}
-        <View style={styles.modernContent}>
-          {/* 1줄: 카테고리 + 제목 */}
-          <View style={styles.modernTitleRow}>
-            {isPinTop ? <Text style={styles.modernPinIcon}>📌 </Text> : null}
-            <Text style={[styles.modernCatText, { color: cat.color }]}>{cat.label}</Text>
-            {p.isOfficial ? <Text style={styles.modernOfficialChip}>공식</Text> : null}
-            {p.isFallback ? <Text style={styles.modernFallbackChip}>전국</Text> : null}
-            <Text style={styles.modernTitle} numberOfLines={1}>
-              {' '}{displayTitle(p)}
+        <View style={styles.billyRowMain}>
+          {/* 1줄: 배지 + 제목 (한 줄 ellipsis) */}
+          <View style={styles.boardTitleRow}>
+            {isPinTop ? <View style={[styles.chip, styles.chipEvent]}><Text style={styles.chipEventText}>이벤트</Text></View> : null}
+            {p.isOfficial && !isPinTop ? <View style={[styles.chip, styles.chipRecommend]}><Text style={styles.chipRecommendText}>추천</Text></View> : null}
+            {p.isFallback ? <View style={[styles.chip, styles.chipNation]}><Text style={styles.chipNationText}>전국</Text></View> : null}
+            <Text style={styles.boardTitle} numberOfLines={1} ellipsizeMode="tail">
+              {displayTitle(p)}
             </Text>
           </View>
 
-          {/* 2줄: 작성자 · 시간 · 메타 */}
-          <View style={styles.modernMetaRow}>
-            <Text style={styles.modernAuthor} numberOfLines={1}>
-              {p.anonymous ? '익명' : p.nickname}
-            </Text>
-            <Text style={styles.modernDot}>·</Text>
-            <Text style={styles.modernTime}>{compactDate(p.createdAt)}</Text>
-            {p.imageUrl ? <Text style={styles.modernIcon}>· 📷</Text> : null}
-            {isBookmarked ? <Text style={styles.modernIcon}>· 🔖</Text> : null}
-          </View>
-        </View>
-
-        {/* 우측 인터랙션 카운트 */}
-        <View style={styles.modernActions}>
-          <Text style={[styles.modernCount, p.likeCount > 0 && { color: '#EC407A' }]}>
-            ♥ {p.likeCount}
+          {/* 2줄: 작성자 · 카테고리 */}
+          <Text style={styles.boardAuthor} numberOfLines={1}>
+            {p.anonymous ? '익명' : p.nickname}
+            <Text style={styles.boardCategory}> · {cat.label}</Text>
           </Text>
-          {p.commentCount > 0 ? (
-            <Text style={styles.modernCount}>💬 {p.commentCount}</Text>
-          ) : null}
+
+          {/* 3줄: 날짜 · 조회수 · 공감 */}
+          <View style={styles.boardMetaRow}>
+            <Text style={styles.boardMeta}>{compactDate(p.createdAt)}</Text>
+            {p.viewCount > 0 ? <Text style={styles.boardMeta}>  조회 {p.viewCount}</Text> : null}
+            {p.likeCount > 0 ? <Text style={styles.boardMeta}>  공감 {p.likeCount}</Text> : null}
+            {isBookmarked ? <Text style={styles.boardMetaIcon}>  🔖</Text> : null}
+          </View>
         </View>
-        </LinearGradient>
+
+        {/* 우측 댓글 카운트 버블 */}
+        <View style={styles.commentBubble}>
+          <Text style={styles.commentBubbleText}>{p.commentCount}</Text>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -812,25 +820,63 @@ export default function MomGroupScreen() {
   const isFeed = viewMode === 'feed';
   const isBookmarkView = viewMode === 'bookmarks';
   const isMineView = viewMode === 'mine';
+  const isHonorView = viewMode === 'honor';
+  const isAnonymousView = viewMode === 'anonymous';
 
-  const list = isFeed ? posts : isBookmarkView ? bookmarkPosts : minePosts;
-  const isLoading = isFeed ? loading : isBookmarkView ? loadingBookmarks : loadingMine;
+  // 명예의 전당 / 익명 탭은 별도 API 없이 현재 페이지 posts 에서 파생.
+  //   한계: 페이지네이션된 posts 중 현재 페이지만 필터링됨 → 출시 후 백엔드 인덱스/쿼리 보강 권장.
+  //   honor: 인기 점수 = likeCount + commentCount * 2 ≥ HONOR_SCORE_THRESHOLD
+  //   anonymous: anonymous === true
+  const honorPosts = useMemo(
+    () => posts
+      .filter((p) => p.likeCount + p.commentCount * 2 >= HONOR_SCORE_THRESHOLD)
+      .sort((a, b) =>
+        (b.likeCount + b.commentCount * 2) - (a.likeCount + a.commentCount * 2),
+      ),
+    [posts],
+  );
+  const anonymousPosts = useMemo(
+    () => posts.filter((p) => p.anonymous),
+    [posts],
+  );
+
+  const list = isFeed
+    ? posts
+    : isBookmarkView
+      ? bookmarkPosts
+      : isMineView
+        ? minePosts
+        : isHonorView
+          ? honorPosts
+          : anonymousPosts;
+  const isLoading = isFeed
+    ? loading
+    : isBookmarkView
+      ? loadingBookmarks
+      : isMineView
+        ? loadingMine
+        // honor / anonymous 는 posts 파생이므로 loading 상태 공유
+        : loading;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backBtn}>{'< 뒤로'}</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>맘스톡</Text>
-        <TouchableOpacity
-          style={styles.headerSearchBtn}
-          onPress={() => setSearchExpanded((v) => !v)}
-          hitSlop={8}
-        >
-          <Text style={styles.headerSearchIcon}>{searchExpanded ? '✕' : '🔍'}</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="맘스톡"
+        right={
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <GuideButton onPress={() => setShowGuide(true)} />
+            <TouchableOpacity
+              style={styles.headerSearchBtn}
+              onPress={() => setSearchExpanded((v) => !v)}
+              hitSlop={8}
+            >
+              <Text style={styles.headerSearchIcon}>{searchExpanded ? '✕' : '🔍'}</Text>
+            </TouchableOpacity>
+          </View>
+        }
+      />
 
       {/* 검색 영역 — 헤더 우측 🔍 탭 시 펼침 */}
       {searchExpanded && isFeed && (
@@ -1032,8 +1078,13 @@ export default function MomGroupScreen() {
 
       {/* 카테고리 필터 제거 — 사용자 요청 */}
 
-      {/* 정렬 + 북마크 + 내 글 */}
-      <View style={styles.sortRow}>
+      {/* 정렬 + 북마크 + 내 글 — 가로 스크롤 1줄 */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.sortRow}
+        contentContainerStyle={styles.sortRowContent}
+      >
         <TouchableOpacity
           style={[styles.sortBtn, isFeed && sortMode === 'recent' && styles.sortBtnActive]}
           onPress={() => { setViewMode('feed'); setSortMode('recent'); }}
@@ -1045,6 +1096,22 @@ export default function MomGroupScreen() {
           onPress={() => { setViewMode('feed'); setSortMode('popular'); }}
         >
           <Text style={[styles.sortText, isFeed && sortMode === 'popular' && styles.sortTextActive]}>🔥 인기</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.sortBtn, isHonorView && styles.sortBtnActive]}
+          onPress={() => setViewMode(isHonorView ? 'feed' : 'honor')}
+        >
+          <Text style={[styles.sortText, isHonorView && styles.sortTextActive]}>
+            🏆 명예 {honorPosts.length > 0 ? `(${honorPosts.length})` : ''}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.sortBtn, isAnonymousView && styles.sortBtnActive]}
+          onPress={() => setViewMode(isAnonymousView ? 'feed' : 'anonymous')}
+        >
+          <Text style={[styles.sortText, isAnonymousView && styles.sortTextActive]}>
+            🕶️ 익명 {anonymousPosts.length > 0 ? `(${anonymousPosts.length})` : ''}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.sortBtn, isBookmarkView && styles.sortBtnActive]}
@@ -1062,7 +1129,7 @@ export default function MomGroupScreen() {
             👤 내 글 {minePosts.length > 0 ? `(${minePosts.length})` : ''}
           </Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -1442,11 +1509,73 @@ export default function MomGroupScreen() {
       </Modal>
 
       <AdSlot />
+
+      {/* 첫 진입 가이드 — 스포트라이트 코치마크 (앱 공용 GuideCarousel). */}
+      <GuideCarousel visible={showGuide} pages={MOMGROUP_GUIDE} onClose={closeGuide} onComplete={closeGuide} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // ── 가이드맵 (첫 진입 모달) ──────────────────────────────
+  guideOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 28,
+  },
+  guideCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    ...SHADOWS.medium,
+  },
+  guideTitle: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: '600',
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  guideEmoji: { fontSize: 56, marginVertical: 12 },
+  guideDesc: {
+    fontSize: FONT_SIZE.md,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  guideDots: { flexDirection: 'row', gap: 8, marginBottom: 24 },
+  guideDot: {
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: '#E5E7EB',
+  },
+  guideDotActive: { backgroundColor: COLORS.primary, width: 24 },
+  guideBtnRow: { flexDirection: 'row', width: '100%', gap: 10 },
+  guideBtnSecondary: {
+    flex: 1, height: 48,
+    borderRadius: 12,
+    borderWidth: 1, borderColor: '#E5E7EB',
+    backgroundColor: '#FFF',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  guideBtnSecondaryText: {
+    fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.textSecondary,
+  },
+  guideBtnPrimary: {
+    flex: 1, height: 48,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  guideBtnPrimaryText: {
+    fontSize: FONT_SIZE.md, fontWeight: '700', color: '#FFF',
+  },
   container: { flex: 1, backgroundColor: '#F4F8FB' }, // 산뜻한 라이트 블루-그레이 (Notion/Linear 톤)
   // ── 모던 리스트 행 ──────────────────────────────────────
   // outer: shadow + radius 컨테이너 (LinearGradient 위 layer)
@@ -1485,12 +1614,12 @@ const styles = StyleSheet.create({
   modernPinIcon: { fontSize: 9 },
   modernCatText: {
     fontSize: 9,
-    fontWeight: '800',
+    fontWeight: '600',
     letterSpacing: 0.1,
   },
   modernOfficialChip: {
     fontSize: 8,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FFFFFF',
     backgroundColor: '#42A5F5',
     paddingHorizontal: 4,
@@ -1501,7 +1630,7 @@ const styles = StyleSheet.create({
   },
   modernFallbackChip: {
     fontSize: 8,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FFFFFF',
     backgroundColor: '#9575CD',
     paddingHorizontal: 4,
@@ -1542,6 +1671,89 @@ const styles = StyleSheet.create({
     marginVertical: 0,
   },
   // ── /모던 리스트 행 ─────────────────────────────────────
+
+  // ── 게시글 리스트 (베빌 톤) ────────────────────────────
+  billyRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#EFEFF1',
+    alignItems: 'center',
+  },
+  billyRowHighlight: {
+    backgroundColor: '#FFF8F4', // 매우 옅은 코랄 틴트 — 강조 글
+  },
+  billyRowMain: { flex: 1, paddingRight: 10 },
+  billyThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: '#F3F4F6',
+  },
+  boardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+    marginBottom: 4,
+  },
+  chip: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginRight: 6,
+    marginBottom: 2,
+  },
+  chipEvent: { backgroundColor: '#FFE4E6' },
+  chipEventText: { fontSize: 11, color: '#E11D48', fontWeight: '600' },
+  chipRecommend: { backgroundColor: '#EDE9FE' },
+  chipRecommendText: { fontSize: 11, color: '#6D28D9', fontWeight: '600' },
+  chipNation: { backgroundColor: '#E0F2FE' },
+  chipNationText: { fontSize: 11, color: '#0369A1', fontWeight: '600' },
+  boardTitle: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333333',
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  boardAuthor: {
+    fontSize: 11,
+    color: '#666666',
+    marginTop: 2,
+    fontWeight: '400',
+  },
+  boardCategory: { color: '#9CA3AF', fontWeight: '400' },
+  boardMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  boardMeta: {
+    fontSize: 11,
+    color: '#9CA3AF',
+  },
+  boardMetaIcon: {
+    fontSize: 11,
+    color: '#9CA3AF',
+  },
+  commentBubble: {
+    minWidth: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  commentBubbleText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  // ── /게시글 리스트 ──────────────────────────────────────
   // ── 헤더 검색 아이콘 + 펼침 영역 ───────────────────────
   headerSearchBtn: {
     width: 36,
@@ -1643,7 +1855,7 @@ const styles = StyleSheet.create({
     color: '#1A6B4C',
   },
   locationInfoStrong: {
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#0F4D33',
   },
   locationChangeBtn: {
@@ -1654,7 +1866,7 @@ const styles = StyleSheet.create({
   },
   locationChangeText: {
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   matchHint: {
@@ -1701,7 +1913,7 @@ const styles = StyleSheet.create({
   },
   ageRangeChipTextActive: {
     color: '#AD1457',
-    fontWeight: '900',
+    fontWeight: '700',
   },
 
   monthNav: {
@@ -1714,7 +1926,7 @@ const styles = StyleSheet.create({
     width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
     backgroundColor: '#FCE4EC',
   },
-  monthArrowText: { fontSize: 20, fontWeight: '800', color: '#AD1457' },
+  monthArrowText: { fontSize: 20, fontWeight: '600', color: '#AD1457' },
   monthCenter: { alignItems: 'center', flex: 1 },
   monthTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text },
   monthReset: { fontSize: 11, color: COLORS.primary, marginTop: 2 },
@@ -1794,16 +2006,23 @@ const styles = StyleSheet.create({
   catChipTextActive: { color: '#E91E63', fontWeight: '700' },
 
   sortRow: {
-    flexDirection: 'row', gap: 3, paddingHorizontal: SPACING.md, paddingVertical: 4,
-    flexWrap: 'wrap', backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.surface,
     borderBottomWidth: 1, borderBottomColor: COLORS.border,
+    flexGrow: 0, flexShrink: 0,
+  },
+  sortRowContent: {
+    flexDirection: 'row', gap: 3, alignItems: 'center',
+    paddingHorizontal: SPACING.md, paddingVertical: 6,
   },
   sortBtn: {
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.sm,
+    paddingHorizontal: 8, paddingVertical: 6, borderRadius: RADIUS.sm,
     backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
+    justifyContent: 'center',
   },
   sortBtnActive: { backgroundColor: '#F8BBD0', borderColor: '#E91E63' },
-  sortText: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, fontWeight: '600' },
+  sortText: {
+    fontSize: FONT_SIZE.xs, lineHeight: 18, color: COLORS.textSecondary, fontWeight: '600',
+  },
   sortTextActive: { color: '#AD1457', fontWeight: '700' },
 
   scrollContent: { padding: 0, paddingBottom: 120 },
@@ -1827,7 +2046,7 @@ const styles = StyleSheet.create({
   expandBtnText: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '700',
   },
 
   // 클래식 표형 게시판 행
@@ -2003,7 +2222,7 @@ const styles = StyleSheet.create({
   postNickname: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: COLORS.text, marginBottom: 4 },
   postTime: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary },
   detailTitle: {
-    fontSize: 18, fontWeight: '800', color: COLORS.text,
+    fontSize: 18, fontWeight: '600', color: COLORS.text,
     marginTop: SPACING.xs, marginBottom: SPACING.xs,
   },
   postContent: { fontSize: FONT_SIZE.md, color: COLORS.text, lineHeight: 22 },

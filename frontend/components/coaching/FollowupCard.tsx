@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { FollowupItem, COACHING_COLORS } from './types';
 
  
@@ -42,12 +41,7 @@ export function FollowupCard({ followup, onRespond, onDismiss }: Props) {
   };
 
   return (
-    <LinearGradient
-      colors={['#FFF0E6', '#FFE4D6']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.card}
-    >
+    <View style={styles.card}>
       <Image source={IC_BELL} style={styles.bellIconImg} resizeMode="contain" />
       <Text style={styles.questionText}>{followup.followupText}</Text>
 
@@ -100,12 +94,13 @@ export function FollowupCard({ followup, onRespond, onDismiss }: Props) {
           <Text style={styles.dismissText}>{'나중에'}</Text>
         </TouchableOpacity>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    backgroundColor: '#FFF4EE',
     borderRadius: 20,
     padding: 18,
     marginBottom: 12,

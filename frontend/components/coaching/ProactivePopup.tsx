@@ -6,7 +6,6 @@ import {
   Modal,
   StyleSheet,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { COACHING_COLORS } from './types';
 
  
@@ -68,10 +67,7 @@ export function ProactivePopup({
       onRequestClose={onDismiss}
     >
       <View style={styles.overlay}>
-        <LinearGradient
-          colors={['#F2F2F7', '#FFE4D6']}
-          style={styles.card}
-        >
+        <View style={styles.card}>
           <Image source={content.icon} style={styles.popupIcon} resizeMode="contain" />
           <Text style={styles.title}>{content.title}</Text>
           <Text style={styles.question}>{content.question}</Text>
@@ -98,7 +94,7 @@ export function ProactivePopup({
               {'다음에 응답할게요'}
             </Text>
           </TouchableOpacity>
-        </LinearGradient>
+        </View>
       </View>
     </Modal>
   );
@@ -114,6 +110,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
+    backgroundColor: '#FFF4EE',
     borderRadius: 24,
     padding: 28,
     alignItems: 'center',

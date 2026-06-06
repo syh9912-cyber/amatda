@@ -1,10 +1,17 @@
 import { collections } from '../firestore';
 import { ChildContext, TrackingSummary } from './types';
 
-/** 아이 프로필에서 프롬프트용 컨텍스트 빌드 (소유자 OR 가족 구성원) */
+/**
+ * 아이 프로필에서 프롬프트용 컨텍스트 빌드 (소유자 OR 가족 구성원).
+ * @param requiredPermission 공유 멤버에게 요구할 권한.
+ *   - AI 코칭 생성(ask/firstTalk/dailyDiary/analyzeMedia/followup): 'useCoaching' (기본값)
+ *   - 단순 열람(마일스톤 등): 'viewProfile' 등 호출부에서 지정
+ *   소유자는 항상 통과.
+ */
 export async function buildChildContext(
   childId: string,
-  userId: string
+  userId: string,
+  requiredPermission: string = 'useCoaching'
 ): Promise<ChildContext | null> {
   const doc = await collections.children.doc(childId).get();
   if (!doc.exists) {
@@ -13,9 +20,8 @@ export async function buildChildContext(
   }
   const d = doc.data() as Record<string, unknown>;
 
-  // 소유자가 아니면 가족 멤버 확인 (useCoaching 권한 불필요 - 접근 가능하면 허용)
+  // 소유자가 아니면 가족 멤버 + 권한 확인
   if (d.userId !== userId) {
-    console.warn('[buildChildContext] userId mismatch: childOwner=%s requester=%s childId=%s', d.userId, userId, childId);
     const memberSnap = await collections.familyMembers
       .where('childId', '==', childId)
       .where('inviteeUserId', '==', userId)
@@ -26,7 +32,12 @@ export async function buildChildContext(
       console.warn('[buildChildContext] no familyMember entry - denying access');
       return null;
     }
-    // 가족 구성원이면 useCoaching 권한 체크 없이 허용
+    // 권한 잠금: 멤버가 requiredPermission 을 보유해야 허용
+    const perms = (memberSnap.docs[0].data().permissions as string[]) ?? [];
+    if (!perms.includes(requiredPermission)) {
+      console.warn('[buildChildContext] member lacks %s - denying: childId=%s', requiredPermission, childId);
+      return null;
+    }
   }
 
   // 월령 계산

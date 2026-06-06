@@ -1,5 +1,4 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ELEMENT_DISPLAY_NAMES, TRAIT_COLORS } from './traitConstants';
 
 interface Props {
@@ -21,11 +20,8 @@ export function TraitBars({ fiveElements }: Props) {
               {ELEMENT_DISPLAY_NAMES[key] ?? key}
             </Text>
             <View style={styles.track}>
-              <LinearGradient
-                colors={[TRAIT_COLORS.coral, TRAIT_COLORS.coralEnd]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[styles.fill, { width: `${pct}%` }]}
+              <View
+                style={[styles.fill, { width: `${pct}%`, backgroundColor: TRAIT_COLORS.coral }]}
               />
             </View>
             <Text style={styles.pct}>{pct}%</Text>

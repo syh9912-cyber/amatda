@@ -9,7 +9,6 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { AuthInput } from '../../components/ui/AuthInput';
 import { AuthDivider } from '../../components/ui/AuthDivider';
@@ -29,12 +28,8 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >
-      {/* 전체 화면 부드러운 그라디언트 배경 */}
-      <LinearGradient
-        colors={[BG_TOP, BG_BOTTOM]}
-        locations={[0, 0.55]}
-        style={StyleSheet.absoluteFill}
-      />
+      {/* 전체 화면 단색 배경 — 그라디언트 제거 */}
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: BG_TOP }]} />
       <View style={styles.scroll}>
         {/* ── 투명 배경 캐릭터 일러스트 (텍스트 없이 크게) ── */}
         <View style={styles.heroWrap}>

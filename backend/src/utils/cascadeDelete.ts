@@ -132,7 +132,10 @@ export async function cascadeDeleteUserData(
     collections.postLikes.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
     collections.postComments.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
     collections.pushSchedules.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
-    collections.familyMembers.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
+    // familyMembers 에는 userId 필드가 없음 — 내가 초대한(invitedBy) / 내가 수락한(inviteeUserId)
+    // 두 방향 모두 정리해야 유령 연결 문서가 남지 않음.
+    collections.familyMembers.where('invitedBy', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
+    collections.familyMembers.where('inviteeUserId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
     collections.conversationSummaries.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
     collections.clinicReviews.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
     // 맘스톡(mom-group) — 글/댓글/북마크 모두 사용자 발화 데이터

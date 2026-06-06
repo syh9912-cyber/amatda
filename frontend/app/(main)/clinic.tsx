@@ -14,12 +14,13 @@ import {
 } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 import { Stack } from 'expo-router';
-
-const IC_HOSPITAL = require('../../assets/icon-hospital.png') as ImageSourcePropType;
 import { clinicApi } from '../../services/api';
 import { useLocationStore } from '../../stores/locationStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { BackButton } from '../../components/common/BackButton';
+
+const IC_HOSPITAL = require('../../assets/icon-hospital.png') as ImageSourcePropType;
 
 // ── Types ──
 
@@ -113,7 +114,7 @@ export default function ClinicScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: '소아과 / 아동병원', headerShown: true }} />
+      <Stack.Screen options={{ title: '소아과 / 아동병원', headerShown: true, headerLeft: () => <BackButton /> }} />
 
       {/* Search bar */}
       <View style={styles.searchSection}>
@@ -328,7 +329,7 @@ const styles = StyleSheet.create({
   },
   erBadgeText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
   clinicDistance: {

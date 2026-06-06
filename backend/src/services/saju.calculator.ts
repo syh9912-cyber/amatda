@@ -234,25 +234,18 @@ function countElements(pillars: { stem: string; branch: string }[]): Record<stri
 }
 
 function normalizeElements(counts: Record<string, number>): Record<string, number> {
-  const total = Object.values(counts).reduce((a, b) => a + b, 0);
-  if (total === 0) {
-    return { wood: 20, fire: 20, earth: 20, metal: 20, water: 20 };
+  // 0점 방지: 기본 50점에서 시작 + 해당 오행 글자당 +10점 (최대 100).
+  // 사주 8글자(천간4+지지4) 기준 — 없는 기운도 기본 50, 우세 기운은 50+글자수*10.
+  // (한 기운이 5글자 이상이면 100 으로 캡. 화면들은 합100 가정 안 함: 우세 기준 또는 값 그대로 표시)
+  const BASE = 50;
+  const PER = 10;
+  const ELEMENTS = ['wood', 'fire', 'earth', 'metal', 'water'] as const;
+  const result: Record<string, number> = {};
+  for (const key of ELEMENTS) {
+    const c = counts[key] ?? 0;
+    result[key] = Math.min(100, BASE + c * PER);
   }
-
-  const normalized: Record<string, number> = {};
-  for (const [key, val] of Object.entries(counts)) {
-    normalized[key] = Math.round((val / total) * 100);
-  }
-
-  // 합이 100이 되도록 보정
-  const sum = Object.values(normalized).reduce((a, b) => a + b, 0);
-  if (sum !== 100) {
-    const maxKey = Object.entries(normalized)
-      .sort((a, b) => b[1] - a[1])[0][0];
-    normalized[maxKey] += 100 - sum;
-  }
-
-  return normalized;
+  return result;
 }
 
 export function calculateSaju(

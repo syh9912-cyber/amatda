@@ -72,6 +72,52 @@ export async function pickImageFromLibrary(options?: {
 }
 
 /**
+ * 갤러리에서 여러 장 선택 (일괄 추가용)
+ * 권한 없거나 취소하면 빈 배열 반환
+ */
+export async function pickMultipleFromLibrary(options?: {
+  quality?: number;
+  selectionLimit?: number;
+}): Promise<PickImageResult[]> {
+  try {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('권한 필요', '사진 접근 권한이 필요합니다. 설정에서 허용해주세요.');
+      return [];
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions
+        ? ImagePicker.MediaTypeOptions.Images
+        : ('images' as unknown as ImagePicker.MediaTypeOptions),
+      quality: options?.quality ?? 0.8,
+      allowsMultipleSelection: true,
+      selectionLimit: options?.selectionLimit ?? 20,
+    });
+
+    if (result.canceled || result.assets.length === 0) return [];
+
+    return result.assets.map((asset) => ({
+      uri: asset.uri,
+      width: asset.width,
+      height: asset.height,
+      mimeType: asset.mimeType ?? undefined,
+    }));
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('No Activity') || msg.includes('activity') || msg.includes('설치')) {
+      Alert.alert(
+        '갤러리를 열 수 없어요',
+        '기기의 기본 갤러리 앱이 없거나 비활성화되어 있어요.\n설정 > 앱에서 갤러리/사진 앱을 활성화해주세요.',
+      );
+    } else {
+      Alert.alert('오류', '사진을 불러오지 못했어요. 다시 시도해주세요.');
+    }
+    return [];
+  }
+}
+
+/**
  * 카메라로 사진 촬영
  * 권한 없거나 취소하면 null 반환
  */

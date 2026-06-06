@@ -298,7 +298,7 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     // cascade delete — 자녀와 연결된 모든 컬렉션
     // ⚠️ 신규 컬렉션이 childId를 가질 때마다 여기에 추가할 것
     //    누락 시 자녀 삭제 후에도 stale 데이터로 푸시/추천이 발생함
-    const relatedQueries = await Promise.all([
+    const relatedQueries = await Promise.allSettled([
       // 코칭/일기/관찰
       collections.observations.where('childId', '==', childId).get(),
       collections.coachingSessions.where('childId', '==', childId).get(),
@@ -340,9 +340,13 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
 
     // Firestore batch 최대 500개 → 청크 분할 삭제
     const db = collections.children.firestore;
+    // ★ 자녀 doc 을 먼저 삭제 — 관련 데이터 정리가 일부 실패/지연돼도 자녀가 "삭제 안 되고 stuck" 되는 것 방지.
+    //   (예전: Promise.all 중 하나라도 실패하면 자녀 doc 도 안 지워져 영구히 삭제 불가였음)
+    await doc.ref.delete();
     const allRefs = [doc.ref];
-    for (const snap of relatedQueries) {
-      for (const d of snap.docs) allRefs.push(d.ref);
+    for (const r of relatedQueries) {
+      if (r.status !== 'fulfilled') { logger.warn('child/delete/query', String(r.reason)); continue; }
+      for (const d of r.value.docs) allRefs.push(d.ref);
     }
 
     // pushSchedules는 docId 패턴 `{userId}_{childId}` 사용 → 직접 ref로 삭제
@@ -352,8 +356,9 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
     // Storage 파일 삭제 대상 URL 수집 — albumPhotos / milestonePhotos / growthAlbums.
     // Storage prefix 가 자녀별로 격리돼 있지 않아 doc 의 url 필드를 역추적해 개별 삭제.
     const storageUrls: Array<string | null | undefined> = [];
-    for (const snap of relatedQueries) {
-      for (const d of snap.docs) {
+    for (const r of relatedQueries) {
+      if (r.status !== 'fulfilled') continue;
+      for (const d of r.value.docs) {
         const data = d.data() as Record<string, unknown>;
         if (typeof data.uri === 'string') storageUrls.push(data.uri);
         if (typeof data.printUrl === 'string') storageUrls.push(data.printUrl);
@@ -364,11 +369,43 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
       }
     }
 
+    // 가족피드(momstagram posts) 정리 — posts 는 childId 가 없고 linkedAlbumId 로 앨범 record 와 연결됨.
+    // 삭제되는 앨범 record(milestonePhotos[11]/albumPhotos[12]/growthAlbums[13]) id 와 linkedAlbumId 가 일치하는
+    // 본인 포스트를 같이 삭제 → 아이 삭제 후에도 가족피드에 사진이 남던 문제 해결.
+    // ⚠️ 인덱스 [11,12,13] 은 위 relatedQueries 배열 순서 기준 — 쿼리 순서 변경 시 같이 갱신할 것.
+    const albumRecordIds: string[] = [];
+    for (const idx of [11, 12, 13]) {
+      const r = relatedQueries[idx];
+      if (r && r.status === 'fulfilled') {
+        for (const d of r.value.docs) albumRecordIds.push(d.id);
+      }
+    }
+    for (let i = 0; i < albumRecordIds.length; i += 10) {
+      const chunk = albumRecordIds.slice(i, i + 10);
+      try {
+        const postSnap = await collections.posts.where('linkedAlbumId', 'in', chunk).get();
+        for (const p of postSnap.docs) {
+          const pd = p.data() as Record<string, unknown>;
+          if (pd.userId !== req.userId) continue; // 본인 포스트만
+          allRefs.push(p.ref);
+          if (typeof pd.imageUrl === 'string') storageUrls.push(pd.imageUrl);
+          if (typeof pd.thumbnailUrl === 'string') storageUrls.push(pd.thumbnailUrl);
+          if (typeof pd.videoUrl === 'string') storageUrls.push(pd.videoUrl);
+        }
+      } catch (feedErr) {
+        logger.warn('child/delete/feedPosts', String(feedErr));
+      }
+    }
+
     const BATCH_LIMIT = 450;
     for (let i = 0; i < allRefs.length; i += BATCH_LIMIT) {
-      const batch = db.batch();
-      allRefs.slice(i, i + BATCH_LIMIT).forEach((ref) => batch.delete(ref));
-      await batch.commit();
+      try {
+        const batch = db.batch();
+        allRefs.slice(i, i + BATCH_LIMIT).forEach((ref) => batch.delete(ref));
+        await batch.commit();
+      } catch (batchErr) {
+        logger.error('child/delete/batch', batchErr);
+      }
     }
 
     // Storage 정리는 Firestore 삭제 후 best-effort 로 — 실패해도 자녀 삭제는 성공 처리.

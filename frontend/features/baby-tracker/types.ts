@@ -24,6 +24,10 @@ export interface TrackerRecord {
   // sleep 의 경우 sleep_start 누른 시점 (sleepSession.startTime), 다른 type 은 추가 시점.
   // 옛 데이터엔 없을 수 있어 optional. 정렬 fallback 은 records.index.
   createdAt?: string;
+  // 공동육아 작성자 표기 — 초대받은 가족이 기록한 경우에만 채워짐.
+  // 소유자(owner) 본인 기록 / 옛 데이터엔 없음 → 라벨 미표시(graceful).
+  authorId?: string;
+  authorLabel?: string; // 비정규화 닉네임 ("엄마"/"아빠"). 작성 시점 스냅샷.
 }
 
 export interface DaySummary {

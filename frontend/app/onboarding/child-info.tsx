@@ -116,7 +116,7 @@ export default function ChildInfoScreen() {
       const res = await childApi.registerPregnant(payload);
       const childData = { ...res.data.data };
       addChild(childData);
-      // 임산부는 기질분석 없이 바로 홈으로
+      // 임산부는 기질분석 없이 바로 홈으로. 알림 priming 은 (main)/_layout 게이트가 처리.
       router.replace('/(main)/home');
     } catch {
       Alert.alert('오류', '임신 등록에 실패했습니다');
@@ -137,7 +137,31 @@ export default function ChildInfoScreen() {
         bounces={false}
         showsVerticalScrollIndicator={false}
       >
-        <Stack.Screen options={{ title: childType === 'pregnant' ? '임신 등록' : '자녀 정보 입력' }} />
+        <Stack.Screen
+          options={{
+            // iOS 뒤로가기: 하드웨어 버튼이 없으므로 이 화면만 네이티브 헤더를 켜서
+            // 좌상단 뒤로 버튼 + 엣지 스와이프 + 안전영역(노치) 처리를 일괄 확보.
+            // 헤더 배경/색을 앱 톤(크림)에 맞춰 이질감 제거.
+            headerShown: true,
+            title: childType === 'pregnant' ? '임신 등록' : '자녀 정보 입력',
+            headerStyle: { backgroundColor: COLORS.background },
+            headerShadowVisible: false,
+            headerTintColor: COLORS.text,
+            headerBackTitle: '뒤로',
+            // 이 화면은 onboarding 스택의 첫 화면이라 네이티브 자동 뒤로버튼이 안 뜸 →
+            // headerLeft 로 명시적 뒤로 버튼 강제(router.back 은 루트 history 로 복귀: 홈 등).
+            headerLeft: () => (
+              <TouchableOpacity
+                onPress={() => router.back()}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="뒤로"
+              >
+                <Text style={{ color: COLORS.text, fontSize: 17, fontWeight: '600' }}>{'‹ 뒤로'}</Text>
+              </TouchableOpacity>
+            ),
+          }}
+        />
 
         {/* ── 임신 중 / 태어남 선택 ── */}
         <Text style={styles.heading}>어떤 상황인가요?</Text>

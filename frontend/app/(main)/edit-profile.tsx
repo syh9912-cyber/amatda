@@ -8,7 +8,7 @@ import { Stack, useRouter } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
 import apiInstance, { authApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
-import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */

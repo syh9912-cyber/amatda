@@ -20,6 +20,11 @@ import { pregnancyApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { BackButton } from '../../components/common/BackButton';
+import { GuideButton } from '../../components/common/GuideButton';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { GDM_GUIDE } from '../../features/guide/gdmGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { pickImageFromLibrary, pickImageFromCamera } from '../../utils/imagePicker';
 import type { ImageSourcePropType } from 'react-native';
 
@@ -122,6 +127,10 @@ const MEAL_CARB_LIMIT: Record<FoodMealType, number> = {
 export default function GdmScreen() {
   const child = useChildStore((s) => s.selectedChild);
   const childId = child?.id ?? '';
+
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => { shouldAutoShowGuide('gdm').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen('gdm'); };
 
   const [tab, setTab] = useState<TabMode>('glucose');
 
@@ -394,7 +403,7 @@ export default function GdmScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: '임당 관리', headerShown: true }} />
+      <Stack.Screen options={{ title: '임당 관리', headerShown: true, headerLeft: () => <BackButton />, headerRight: () => <View style={{ marginRight: 14 }}><GuideButton onPress={() => setGuideVisible(true)} color="#7FB1BB" /></View> }} />
 
       {/* 탭 */}
       <View style={styles.tabBar}>
@@ -424,6 +433,17 @@ export default function GdmScreen() {
         >
           <Text style={styles.reportBtnText}>🤖 이번 주 AI 분석 받기</Text>
           <Text style={styles.reportBtnSub}>최근 7일 혈당+식단 종합 코칭</Text>
+        </TouchableOpacity>
+
+        {/* 인라인 입력 버튼 — FAB 가 광고에 가려 잘 안 보임 보완 */}
+        <TouchableOpacity
+          style={styles.inlineAddBtn}
+          onPress={() => (tab === 'glucose' ? setShowGlucoseModal(true) : openFoodModal())}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.inlineAddBtnText}>
+            {tab === 'glucose' ? '＋ 혈당 기록 추가' : '＋ 식단 기록 추가'}
+          </Text>
         </TouchableOpacity>
 
         {/* 산모 정보 */}
@@ -561,7 +581,16 @@ export default function GdmScreen() {
                       <View style={styles.recordCenter}>
                         <Text style={styles.recordMeal}>{MEAL_LABELS[r.mealType] ?? r.mealType}</Text>
                         {r.memo ? <Text style={styles.recordMemo} numberOfLines={1}>{r.memo}</Text> : null}
-                        <Text style={styles.recordTime}>{r.measuredAt?.slice(11, 16) ?? ''}</Text>
+                        <Text style={styles.recordTime}>
+                          🕐 {r.measuredAt
+                            ? new Date(r.measuredAt).toLocaleTimeString('ko-KR', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: false,
+                                timeZone: 'Asia/Seoul',
+                              })
+                            : ''}
+                        </Text>
                       </View>
                       <View style={[styles.statusBadge, { backgroundColor: sc.bg }]}>
                         <Text style={[styles.statusText, { color: sc.text }]}>{sc.label}</Text>
@@ -607,7 +636,14 @@ export default function GdmScreen() {
                         <Text style={styles.foodMealTag}>{FOOD_MEAL_LABELS[f.mealType] ?? f.mealType}</Text>
                       </View>
                       <Text style={styles.foodTime}>
-                        {f.eatenAt?.slice(11, 16) ?? ''}
+                        🕐 {f.eatenAt
+                          ? new Date(f.eatenAt).toLocaleTimeString('ko-KR', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: false,
+                              timeZone: 'Asia/Seoul',
+                            })
+                          : ''}
                         {typeof f.carbs === 'number' ? ` · 탄수 ${f.carbs}g` : ''}
                         {typeof f.calories === 'number' ? ` · ${f.calories}kcal` : ''}
                       </Text>
@@ -934,6 +970,8 @@ export default function GdmScreen() {
           </ScrollView>
         </View>
       </Modal>
+
+      <GuideCarousel visible={guideVisible} pages={GDM_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#7FB1BB" />
     </View>
   );
 }
@@ -969,8 +1007,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   tabBtnActive: { backgroundColor: '#FCE4EC', borderColor: '#E91E63' },
-  tabText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, fontWeight: '600' },
-  tabTextActive: { color: '#AD1457' },
+  tabText: { fontSize: FONT_SIZE.md, color: '#5D4037', fontWeight: '700' },
+  tabTextActive: { color: '#AD1457', fontWeight: '600' },
 
   /* Info card */
   infoCard: {
@@ -1202,6 +1240,17 @@ const styles = StyleSheet.create({
   },
   reportBtnText: { color: '#FFF', fontSize: FONT_SIZE.md, fontWeight: '700' },
   reportBtnSub: { color: '#FCE4EC', fontSize: 11, marginTop: 3 },
+  inlineAddBtn: {
+    backgroundColor: '#FFF',
+    borderWidth: 2,
+    borderColor: '#E91E63',
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.md,
+    alignItems: 'center',
+  },
+  inlineAddBtnText: { color: '#AD1457', fontSize: FONT_SIZE.md, fontWeight: '600' },
   reportStatsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',

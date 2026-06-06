@@ -12,6 +12,7 @@ import React from 'react';
 import { ScrollView, View, Text, StyleSheet } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BackButton } from '../../components/common/BackButton';
 
 type Stage = 'early' | 'wk12' | 'stable' | 'late' | 'birth';
 
@@ -308,8 +309,9 @@ export default function PregnancyJourneyDetailScreen() {
           headerShown: true,
           title: STAGE_LABELS[stage],
           headerStyle: { backgroundColor: COLOR.bg },
-          headerTitleStyle: { fontSize: 16, fontWeight: '900', color: COLOR.text },
+          headerTitleStyle: { fontSize: 16, fontWeight: '700', color: COLOR.text },
           headerTintColor: COLOR.pink,
+          headerLeft: () => <BackButton />,
         }}
       />
       <ScrollView
@@ -380,12 +382,12 @@ const styles = StyleSheet.create({
   },
   heroBadgeText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
     color: COLOR.pink,
   },
   heroTitle: {
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLOR.text,
     marginBottom: 4,
   },
@@ -402,7 +404,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLOR.text,
     marginBottom: 8,
     marginLeft: 4,
@@ -433,7 +435,7 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     color: COLOR.text,
     marginBottom: 3,
   },

@@ -15,6 +15,26 @@ import {
   Platform,
 } from 'react-native';
 import type { ImageSourcePropType, StyleProp, TextStyle } from 'react-native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import { captureError } from '../../services/sentry';
+import * as FileSystem from 'expo-file-system/legacy';
+import { Stack } from 'expo-router';
+import { BackButton } from '../../components/common/BackButton';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useChildStore } from '../../stores/childStore';
+import { pregnancyApi, coachingApi, uploadApi } from '../../services/api';
+import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { AdSlot } from '../../components/ads/AdSlot';
+import { NextCheckupModal } from '../../components/home/NextCheckupModal';
+import {
+  getNextCheckup,
+  daysUntil,
+  formatDday,
+  formatKoreanDate,
+  useCheckupStore,
+} from '../../services/checkup';
 
 /* 임신 마일스톤·증상 이모지 → 우리 일러스트 매핑 (3D clay 통일) */
 const PREG_EMOJI_ICON: Record<string, ImageSourcePropType> = {
@@ -77,26 +97,8 @@ function EmojiOrIcon({
     />
   );
 }
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import { captureError } from '../../services/sentry';
-import * as FileSystem from 'expo-file-system/legacy';
-import { Stack } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useChildStore } from '../../stores/childStore';
 
 const DEFAULT_COVER_SOURCE = require('../../assets/album-cover.png') as number;
-import { pregnancyApi, coachingApi, uploadApi } from '../../services/api';
-import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
-import { AdSlot } from '../../components/ads/AdSlot';
-import { NextCheckupModal } from '../../components/home/NextCheckupModal';
-import {
-  getNextCheckup,
-  daysUntil,
-  formatDday,
-  formatKoreanDate,
-  useCheckupStore,
-} from '../../services/checkup';
 
 /* ================================================================== */
 /*  Types                                                              */
@@ -119,7 +121,7 @@ interface SymptomPreset {
 
 interface TimelineWeek {
   week: number;
-  items: Array<{
+  items: {
     id: string;
     source: string;
     type: string;
@@ -129,7 +131,7 @@ interface TimelineWeek {
     mediaUri?: string;
     mediaType?: string;
     createdAt: string;
-  }>;
+  }[];
 }
 
 /* ================================================================== */
@@ -258,6 +260,10 @@ interface PregAlbumPhoto {
   date: string;
   title: string;
   memo?: string;
+  /** 마일스톤 이모지 (PDF 에서 아이콘 배지로 렌더) */
+  milestoneEmoji?: string;
+  /** 마일스톤 타입 — 색상 매핑용 */
+  milestoneType?: string;
 }
 
 function generatePregnancyAlbumHTML(
@@ -329,8 +335,13 @@ function generatePregnancyAlbumHTML(
         pageCounter += 1;
         const cellsHTML = chunk
           .map((photo) => {
+            // 마일스톤 아이콘 배지 — 이모지를 컬러 원형 배지로 표시 (PNG 없이 시각적 구분)
+            const emoji = photo.milestoneEmoji ?? '';
+            const badgeHTML = emoji
+              ? `<div class="ms-icon-badge">${emoji}</div>`
+              : `<div class="ms-icon-badge ms-icon-default">&#10084;</div>`;
             const titleHTML = photo.title
-              ? `<div class="ms-row"><span class="ms-label">&#10084; ${escapeHtml(photo.title)}</span></div>`
+              ? `<div class="ms-row">${badgeHTML}<span class="ms-label">${escapeHtml(photo.title)}</span></div>`
               : '';
             const memoHTML = photo.memo
               ? `<div class="photo-memo">${escapeHtml(photo.memo)}</div>`
@@ -436,6 +447,8 @@ function generatePregnancyAlbumHTML(
     .photo-date { font-family: 'Jua', sans-serif; font-size: 13px; color: #9E7080; letter-spacing: 0.5px; }
     .ms-row { display: flex; align-items: center; gap: 6px; min-height: 0; }
     .ms-label { font-family: 'Do Hyeon', 'Jua', sans-serif; font-size: 15px; color: #C2185B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .ms-icon-badge { width: 22px; height: 22px; border-radius: 11px; background: #FFE3F1; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; line-height: 1; }
+    .ms-icon-default { color: #FF6BA9; }
     .photo-memo { font-family: 'Single Day', 'Gaegu', 'Jua', cursive; font-size: 18px; color: #3A1525; line-height: 1.25; text-shadow: 0.4px 0 0 currentColor, -0.4px 0 0 currentColor, 0 0.4px 0 currentColor; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     .ending-page { width: 297mm; height: 210mm; page-break-after: always; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #FFF0F5; background-image: linear-gradient(135deg, #FCE4EC 0%, #FFF0F5 40%, #F8BBD0 100%); overflow: hidden; }
     .ending-heart { font-size: 88px; margin-bottom: 10mm; }
@@ -527,19 +540,19 @@ const checkupStyles = StyleSheet.create({
   icon: { fontSize: 22 },
   label: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FF8C5A',
     letterSpacing: 0.3,
     marginBottom: 2,
   },
   value: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#1C1C1E',
   },
   dday: {
     color: '#FF8C5A',
-    fontWeight: '900',
+    fontWeight: '700',
   },
   placeholder: {
     fontSize: 13,
@@ -549,7 +562,7 @@ const checkupStyles = StyleSheet.create({
   arrow: {
     fontSize: 18,
     color: '#ABABAB',
-    fontWeight: '900',
+    fontWeight: '700',
   },
 });
 
@@ -657,7 +670,7 @@ export default function PregnancyScreen() {
       const data = res.data?.data as { diary?: string; date?: string } | undefined;
       if (data?.diary) {
         setDiaryText(data.diary);
-        setDiaryDate(data.date ?? new Date().toISOString().slice(0, 10));
+        setDiaryDate(data.date ?? new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(0, 10));
       } else {
         Alert.alert('알림', '오늘의 기록이 아직 없어서 일기를 생성할 수 없어요.');
       }
@@ -735,11 +748,20 @@ export default function PregnancyScreen() {
           const converted = await pregUriToDataUri(it.mediaUri!);
           const ok = converted.startsWith('data:');
           if (!ok) failCount += 1;
+          // 마일스톤 정보 추출 — 저장된 milestoneEmoji 우선, 없으면 milestoneType 으로 lookup
+          const itAny = it as unknown as { milestoneEmoji?: string; milestoneType?: string };
+          let emoji = itAny.milestoneEmoji;
+          if (!emoji && itAny.milestoneType) {
+            const ms = ALL_MILESTONES.find((m) => m.type === itAny.milestoneType);
+            if (ms) emoji = ms.emoji;
+          }
           return {
             uri: ok ? converted : '',
             date: it.createdAt.slice(0, 10),
             title: it.title,
             memo: it.content,
+            milestoneEmoji: emoji,
+            milestoneType: itAny.milestoneType,
           };
         }),
       );
@@ -1168,13 +1190,14 @@ export default function PregnancyScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
+      <ScreenHeader title="임신앨범" />
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Title (성장앨범과 동일) ── */}
-        <Text style={styles.albumTitle}>임신앨범</Text>
+        {/* ── 부제목 (제목은 ScreenHeader로 이동) ── */}
         <Text style={styles.albumChildLabel}>{childName}의 임신앨범</Text>
 
         {/* ── 현재 임신 주차 배지 (성장앨범 currentBadge와 동일) ── */}
@@ -1801,7 +1824,7 @@ const styles = StyleSheet.create({
   /* === 성장앨범과 동일한 시각 요소 === */
   albumTitle: {
     fontSize: FONT_SIZE.xl ?? 24,
-    fontWeight: '800',
+    fontWeight: '600',
     color: COLORS.text,
     marginBottom: 4,
   },
@@ -1886,7 +1909,7 @@ const styles = StyleSheet.create({
   composePlaceholderText: { fontSize: FONT_SIZE.sm, color: COLORS.textLight, fontWeight: '600' },
   composeChipGroupLabel: {
     fontSize: FONT_SIZE.xs,
-    fontWeight: '800',
+    fontWeight: '600',
     color: COLORS.textSecondary,
     marginTop: SPACING.sm,
     marginBottom: 4,
@@ -1909,7 +1932,7 @@ const styles = StyleSheet.create({
   },
   composeChipEmoji: { fontSize: 14 },
   composeChipText: { fontSize: FONT_SIZE.sm, fontWeight: '600', color: COLORS.text },
-  composeChipTextActive: { fontWeight: '800' },
+  composeChipTextActive: { fontWeight: '600' },
   composeInput: {
     minHeight: 60,
     padding: SPACING.sm,
@@ -1941,7 +1964,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderColor: COLORS.primary,
   },
-  composeShareCheckMark: { color: '#FFFFFF', fontSize: 14, fontWeight: '900' },
+  composeShareCheckMark: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   composeShareText: {
     fontSize: FONT_SIZE.sm,
     fontWeight: '600',
@@ -1954,7 +1977,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: SPACING.sm,
   },
-  composeSaveBtnText: { color: '#FFF', fontSize: FONT_SIZE.md, fontWeight: '800' },
+  composeSaveBtnText: { color: '#FFF', fontSize: FONT_SIZE.md, fontWeight: '600' },
 
   feedCount: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, marginBottom: SPACING.sm, fontWeight: '700' },
   feedCard: {
@@ -2015,7 +2038,7 @@ const styles = StyleSheet.create({
   },
   albumSectionTitle: {
     fontSize: FONT_SIZE.md,
-    fontWeight: '800',
+    fontWeight: '600',
     color: COLORS.text,
   },
   albumNewBtn: {
@@ -2024,7 +2047,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: RADIUS.full,
   },
-  albumNewBtnText: { fontSize: FONT_SIZE.sm, fontWeight: '800', color: '#C2185B' },
+  albumNewBtnText: { fontSize: FONT_SIZE.sm, fontWeight: '600', color: '#C2185B' },
   albumSectionDesc: {
     fontSize: FONT_SIZE.sm,
     color: COLORS.textSecondary,

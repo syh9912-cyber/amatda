@@ -1,6 +1,7 @@
 import { ScrollView, Text, StyleSheet, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import { BackButton } from '../../components/common/BackButton';
 
 function Section({ title, children }: { title: string; children: string }) {
   return (
@@ -14,7 +15,7 @@ function Section({ title, children }: { title: string; children: string }) {
 export default function PrivacyPolicyScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: '개인정보 처리방침', headerShown: true }} />
+      <Stack.Screen options={{ title: '개인정보 처리방침', headerShown: true, headerLeft: () => <BackButton /> }} />
 
       <Text style={styles.heading}>개인정보 처리방침</Text>
       <Text style={styles.meta}>

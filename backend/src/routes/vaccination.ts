@@ -3,6 +3,7 @@ import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
 import { collections, genId } from '../services/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
+import { getChildIfAccessible } from '../utils/childAccess';
 
 const router = Router();
 
@@ -147,15 +148,10 @@ router.get('/schedule', authMiddleware, async (req: Request, res: Response) => {
     const childId = req.query.childId as string;
     if (!childId) { error(res, 'childId는 필수입니다'); return; }
 
-    const childDoc = await collections.children.doc(childId).get();
-    if (!childDoc.exists) { error(res, '아이를 찾을 수 없습니다', 404); return; }
-
-    const childData = childDoc.data()!;
-    // 소유권 검증 (BOLA 방어) — 임의 childId 로 출생일/접종 이력 조회 차단
-    if (childData.userId !== req.userId) {
-      error(res, '아이를 찾을 수 없습니다', 404);
-      return;
-    }
+    // 공동육아: 소유자 OR viewRecords 권한 멤버 (BOLA 방어 + 공유 멤버 조회 허용)
+    const access = await getChildIfAccessible(childId, req.userId, 'viewRecords', res);
+    if (!access) return;
+    const childData = access.data;
     const birthDate = childData.birthDate as string | null;
     if (!birthDate) {
       error(res, '출생일이 등록되지 않은 아이입니다 (임신 중에는 사용 불가)');
@@ -220,12 +216,8 @@ router.post('/complete', authMiddleware, async (req: Request, res: Response) => 
     const valid = NATIONAL_VACCINES.find((v) => v.id === vaccineId);
     if (!valid) { error(res, '유효하지 않은 접종 ID입니다'); return; }
 
-    // 아이 확인
-    const childDoc = await collections.children.doc(childId).get();
-    if (!childDoc.exists || childDoc.data()!.userId !== req.userId) {
-      error(res, '아이를 찾을 수 없습니다', 404);
-      return;
-    }
+    // 공동육아: 소유자 OR editRecords 권한 멤버 (공유 멤버도 접종 완료 기록 가능)
+    if (!await getChildIfAccessible(childId, req.userId, 'editRecords', res)) return;
 
     // 중복 확인
     const existing = await vaccinationsCol
@@ -287,15 +279,10 @@ router.post('/schedule-alerts', authMiddleware, async (req: Request, res: Respon
     const { childId } = req.body as { childId: string };
     if (!childId) { error(res, 'childId는 필수입니다'); return; }
 
-    const childDoc = await collections.children.doc(childId).get();
-    if (!childDoc.exists) { error(res, '아이를 찾을 수 없습니다', 404); return; }
-
-    const childData = childDoc.data()!;
-    // 소유권 검증 (BOLA 방어)
-    if (childData.userId !== req.userId) {
-      error(res, '아이를 찾을 수 없습니다', 404);
-      return;
-    }
+    // 공동육아: 소유자 OR editRecords 권한 멤버 (공유 멤버도 접종 알림 예약 가능)
+    const access = await getChildIfAccessible(childId, req.userId, 'editRecords', res);
+    if (!access) return;
+    const childData = access.data;
     const birthDate = childData.birthDate as string | null;
     if (!birthDate) { error(res, '출생일이 등록되지 않은 아이입니다'); return; }
 

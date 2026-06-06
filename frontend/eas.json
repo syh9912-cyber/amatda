@@ -54,5 +54,19 @@
         "EXPO_PUBLIC_SENTRY_DSN": "https://dd7124a12d7082892c04cee84ecc0aac@o4511325473865728.ingest.us.sentry.io/4511325488873472"
       }
     }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6775913119",
+        "ascApiKeyPath": "../AuthKey_SQ3HB62VCH.p8",
+        "ascApiKeyId": "SQ3HB62VCH",
+        "ascApiKeyIssuerId": "488debaf-47af-4d1c-8f5f-e9baa8dc1b24"
+      },
+      "android": {
+        "serviceAccountKeyPath": "../backend/service-account.json",
+        "track": "internal"
+      }
+    }
   }
 }

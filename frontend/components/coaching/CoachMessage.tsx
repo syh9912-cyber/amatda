@@ -1,4 +1,4 @@
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { CoachingMessage, COACHING_COLORS } from './types';
 
 const IC_WARN = require('../../assets/icon-redflag.png') as number;
@@ -11,6 +11,10 @@ const IC_CHECK = require('../../assets/icon-heart.png') as number;
 
 interface Props {
   message: CoachingMessage;
+  /** 추천 질문 칩 탭 시 호출 (해당 질문 바로 전송) */
+  onPickFollowup?: (question: string) => void;
+  /** 최신 답변일 때만 추천 질문 칩 노출 */
+  isLatest?: boolean;
 }
 
 function safeFollowupText(followup: unknown): string | undefined {
@@ -25,11 +29,14 @@ function SectionIcon({ src, size = 14 }: { src: number; size?: number }) {
   return <Image source={src} style={{ width: size, height: size, marginRight: 4 }} resizeMode="contain" />;
 }
 
-export function CoachMessage({ message }: Props) {
+export function CoachMessage({ message, onPickFollowup, isLatest }: Props) {
   const timeStr = formatTime(message.createdAt);
   const sourceBadge = message.source === 'ai' ? 'AI' : 'DB';
   const sourceIcon = message.source === 'ai' ? IC_AI : IC_DB;
   const followupDisplay = safeFollowupText(message.followup);
+  // 추천 질문 칩 — 최신 답변 + 핸들러 있을 때만 (없으면 기존 단일 followup 텍스트로 fallback)
+  const chips = (message.followups ?? []).filter((q) => q && q.trim().length > 0).slice(0, 3);
+  const showChips = isLatest && !!onPickFollowup && chips.length > 0;
 
   return (
     <View style={styles.row}>
@@ -97,8 +104,8 @@ export function CoachMessage({ message }: Props) {
             </View>
           ) : null}
 
-          {/* Follow-up question */}
-          {followupDisplay ? (
+          {/* Follow-up question (단일) — 칩 안 보일 때만 fallback 표시 */}
+          {followupDisplay && !showChips ? (
             <View style={styles.followupBox}>
               <View style={styles.sectionRow}>
                 <SectionIcon src={IC_CHAT} size={13} />
@@ -107,6 +114,22 @@ export function CoachMessage({ message }: Props) {
             </View>
           ) : null}
         </View>
+
+        {/* 추천 질문 칩 — 탭하면 바로 이어서 질문 */}
+        {showChips ? (
+          <View style={styles.chipWrap}>
+            {chips.map((q, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={styles.chip}
+                activeOpacity={0.7}
+                onPress={() => onPickFollowup?.(q)}
+              >
+                <Text style={styles.chipText} numberOfLines={2}>{q}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
 
         <View style={styles.meta}>
           <View style={styles.sourceBadge}>
@@ -272,5 +295,26 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 20,
     flex: 1,
+  },
+  /* 추천 질문 칩 */
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+  },
+  chip: {
+    backgroundColor: '#F0F0FA',
+    borderWidth: 1,
+    borderColor: '#D9D9F0',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  chipText: {
+    fontSize: 12.5,
+    color: '#5C5CAE',
+    fontWeight: '600',
+    lineHeight: 17,
   },
 });

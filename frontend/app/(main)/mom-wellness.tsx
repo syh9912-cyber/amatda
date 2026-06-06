@@ -17,6 +17,12 @@ import { useChildStore } from '../../stores/childStore';
 import { pregnancyApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { BackButton } from '../../components/common/BackButton';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { GuideButton } from '../../components/common/GuideButton';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { MOMWELLNESS_GUIDE } from '../../features/guide/momWellnessGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
 // ─── 빠른 기분 일기 (간단 mood pick + 한 줄 메모) — EPDS 와 별개, AsyncStorage 로컬 저장 ───
 type MoodKey = 'great' | 'good' | 'soso' | 'down' | 'bad';
@@ -55,7 +61,7 @@ interface EpdsAnalysis {
   direction?: 'improving' | 'stable' | 'worsening' | 'unknown';
   recentAvg?: number | null;
   earlierAvg?: number | null;
-  timeline?: Array<{ score: number; createdAt: string; riskLevel: string }>;
+  timeline?: { score: number; createdAt: string; riskLevel: string }[];
   recommendation?: string;
   nextRecommendedAt?: string;
   stage?: string;
@@ -116,6 +122,10 @@ export default function MomWellnessScreen() {
   const { selectedChild } = useChildStore();
   const childId = selectedChild?.id ?? '';
   const stage: MentalStage = detectStage(selectedChild?.dueDate, selectedChild?.birthDate);
+
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => { shouldAutoShowGuide('mom-wellness').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen('mom-wellness'); };
 
   const [questions, setQuestions] = useState<EpdsQuestion[]>([]);
   const [extraQuestions, setExtraQuestions] = useState<EpdsQuestion[]>([]);
@@ -270,11 +280,7 @@ export default function MomWellnessScreen() {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}><Text style={styles.backBtn}>{'< 뒤로'}</Text></TouchableOpacity>
-          <Text style={styles.headerTitle}>마음 진단</Text>
-          <View style={{ width: 60 }} />
-        </View>
+        <ScreenHeader title="마음 진단" />
         <View style={styles.emptyCenter}><Text style={styles.emptyText}>아이를 선택해주세요</Text></View>
       </View>
     );
@@ -284,11 +290,7 @@ export default function MomWellnessScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backBtn}>{'< 뒤로'}</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>마음 진단</Text>
-        <View style={{ width: 60 }} />
-      </View>
+      <ScreenHeader title="마음 진단" right={<GuideButton onPress={() => setGuideVisible(true)} color="#9D8CC6" />} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* ─── 빠른 기분 일기 ─── */}
@@ -574,6 +576,7 @@ export default function MomWellnessScreen() {
         </View>
       </ScrollView>
       <AdSlot />
+      <GuideCarousel visible={guideVisible} pages={MOMWELLNESS_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#9D8CC6" />
     </View>
   );
 }
@@ -662,7 +665,7 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     marginBottom: SPACING.md,
   },
-  resultScore: { fontSize: FONT_SIZE.lg, fontWeight: '800', marginBottom: SPACING.sm },
+  resultScore: { fontSize: FONT_SIZE.lg, fontWeight: '600', marginBottom: SPACING.sm },
   resultMessage: { fontSize: FONT_SIZE.md, lineHeight: 22, marginBottom: SPACING.sm },
   resultNotice: { fontSize: FONT_SIZE.sm, fontWeight: '600', marginTop: 4 },
   resultCloseBtn: {
@@ -765,7 +768,7 @@ const styles = StyleSheet.create({
   },
   emergencyTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: '#E65100', marginBottom: 6 },
   emergencyText: { fontSize: FONT_SIZE.sm, color: '#BF360C', lineHeight: 22 },
-  emergencyNum: { fontWeight: '800', color: '#BF360C' },
+  emergencyNum: { fontWeight: '600', color: '#BF360C' },
 
   errorCard: {
     backgroundColor: '#FFEBEE',
@@ -801,7 +804,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     ...SHADOWS.soft,
   },
-  analysisDirection: { fontSize: FONT_SIZE.md, fontWeight: '800', marginBottom: SPACING.sm },
+  analysisDirection: { fontSize: FONT_SIZE.md, fontWeight: '600', marginBottom: SPACING.sm },
   analysisRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

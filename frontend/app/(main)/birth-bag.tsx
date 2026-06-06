@@ -25,6 +25,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChildStore } from '../../stores/childStore';
 import { getHospital } from '../../services/deliveryHospital';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { GuideButton } from '../../components/common/GuideButton';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { BIRTHBAG_GUIDE } from '../../features/guide/birthBagGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
 /* PNG 아이콘 (기본 이모지 대신 — 우리 앱 일러스트 톤 유지) */
 const IC_FOOT = require('../../assets/preg-foot.png') as ImageSourcePropType;
@@ -204,6 +209,10 @@ const STATUS_META: Record<Exclude<Status, null>, { label: string; bg: string; fg
 export default function BirthBagScreen() {
   const insets = useSafeAreaInsets();
   const child = useChildStore((s) => s.selectedChild);
+
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => { shouldAutoShowGuide('birth-bag').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen('birth-bag'); };
 
   const [birthType, setBirthType] = useState<BirthType>('natural');
   const [postpartumPlan, setPostpartumPlan] = useState<PostpartumPlan>('sanhujowon');
@@ -490,20 +499,22 @@ export default function BirthBagScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Top bar */}
-      <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} hitSlop={8}>
-          <Text style={styles.backArrow}>{'‹'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.topTitle}>출산가방 체크리스트</Text>
-        <TouchableOpacity
-          style={styles.shareBtn}
-          onPress={() => setShareModalVisible(true)}
-          hitSlop={8}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.shareBtnText}>공유</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="출산가방 체크리스트"
+        right={
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <GuideButton onPress={() => setGuideVisible(true)} color="#7CA46E" />
+            <TouchableOpacity
+              style={styles.shareBtn}
+              onPress={() => setShareModalVisible(true)}
+              hitSlop={8}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.shareBtnText}>공유</Text>
+            </TouchableOpacity>
+          </View>
+        }
+      />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Hero */}
@@ -905,6 +916,8 @@ export default function BirthBagScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <GuideCarousel visible={guideVisible} pages={BIRTHBAG_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#7CA46E" />
     </View>
   );
 }
@@ -1248,7 +1261,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLOR.border,
   },
   backArrow: { fontSize: 20, color: COLOR.text, fontWeight: '700' },
-  topTitle: { fontSize: 16, fontWeight: '900', color: COLOR.text },
+  topTitle: { fontSize: 16, fontWeight: '700', color: COLOR.text },
   shareBtn: {
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -1259,7 +1272,7 @@ const styles = StyleSheet.create({
   },
   shareBtnText: {
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLOR.primary,
   },
 
@@ -1267,13 +1280,13 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 12,
   },
-  heroTitle: { fontSize: 22, fontWeight: '900', color: COLOR.text, marginBottom: 4 },
+  heroTitle: { fontSize: 22, fontWeight: '700', color: COLOR.text, marginBottom: 4 },
   heroSub: { fontSize: 12, color: COLOR.textSub, fontWeight: '600', lineHeight: 18 },
 
   section: { marginBottom: 12 },
   sectionLabel: {
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLOR.textSub,
     marginBottom: 6,
     letterSpacing: 0.5,
@@ -1296,7 +1309,7 @@ const styles = StyleSheet.create({
   },
   typeEmoji: { fontSize: 20, marginBottom: 4 },
   typeIcon: { width: 32, height: 32, marginBottom: 4 },
-  typeLabel: { fontSize: 13, fontWeight: '900', color: COLOR.text },
+  typeLabel: { fontSize: 13, fontWeight: '700', color: COLOR.text },
   typeLabelActive: { color: COLOR.primary },
   typeSub: { fontSize: 10, fontWeight: '600', color: COLOR.textSub, marginTop: 2 },
   typeSubActive: { color: COLOR.primary },
@@ -1316,7 +1329,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   progressLabel: { fontSize: 13, fontWeight: '700', color: COLOR.text },
-  progressValue: { fontSize: 15, fontWeight: '900', color: COLOR.primary },
+  progressValue: { fontSize: 15, fontWeight: '700', color: COLOR.primary },
   progressPct: { fontSize: 12, color: COLOR.textSub, fontWeight: '700' },
   progressTrack: {
     height: 8,
@@ -1337,7 +1350,7 @@ const styles = StyleSheet.create({
   progressDone: {
     marginTop: 10,
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#43A047',
     textAlign: 'center',
   },
@@ -1385,15 +1398,15 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: '#FFFFFF',
-    fontWeight: '900',
+    fontWeight: '700',
   },
   filterChipTextDadEmph: {
     color: '#1565C0',
-    fontWeight: '900',
+    fontWeight: '700',
   },
   filterChipTextActiveDad: {
     color: '#FFFFFF',
-    fontWeight: '900',
+    fontWeight: '700',
   },
 
   itemSection: {
@@ -1406,7 +1419,7 @@ const styles = StyleSheet.create({
   },
   itemSectionTitle: {
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLOR.text,
   },
   sectionHeader: {
@@ -1428,7 +1441,7 @@ const styles = StyleSheet.create({
   },
   sectionCaret: {
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLOR.textLight,
   },
   itemHeaderRow: {
@@ -1445,7 +1458,7 @@ const styles = StyleSheet.create({
   },
   customBadgeText: {
     fontSize: 9,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLOR.primary,
   },
   // '필수' 배지 — 분만/산후 특화 항목 표시
@@ -1461,7 +1474,7 @@ const styles = StyleSheet.create({
   },
   essentialBadgeText: {
     fontSize: 9,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#C2185B',
   },
   moreBtn: {
@@ -1471,7 +1484,7 @@ const styles = StyleSheet.create({
   },
   moreBtnText: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLOR.textLight,
     lineHeight: 16,
   },
@@ -1487,7 +1500,7 @@ const styles = StyleSheet.create({
   },
   addItemBtnText: {
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLOR.primary,
   },
   hiddenLink: {
@@ -1538,7 +1551,7 @@ const styles = StyleSheet.create({
   },
   dadModeTitle: {
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#1565C0',
   },
   dadModeTitleActive: {
@@ -1562,7 +1575,7 @@ const styles = StyleSheet.create({
   },
   dadShareBtnText: {
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   itemRow: {
@@ -1586,7 +1599,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLOR.primary,
     borderColor: COLOR.primary,
   },
-  checkMark: { color: '#FFFFFF', fontSize: 14, fontWeight: '900', lineHeight: 14 },
+  checkMark: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', lineHeight: 14 },
   itemLabel: { fontSize: 13, fontWeight: '600', color: COLOR.text, lineHeight: 18 },
   itemLabelChecked: { textDecorationLine: 'line-through', color: COLOR.textLight },
   itemLabelNa: { color: COLOR.textLight },
@@ -1623,7 +1636,7 @@ const styles = StyleSheet.create({
   commerceSlotArrow: {
     fontSize: 14,
     color: '#B5895C',
-    fontWeight: '900',
+    fontWeight: '700',
   },
   commerceSlotAd: {
     fontSize: 8,
@@ -1647,7 +1660,7 @@ const styles = StyleSheet.create({
   },
   tipIcon: { fontSize: 18, marginTop: 2 },
   tipIconImg: { width: 28, height: 28, marginTop: 2 },
-  tipTitle: { fontSize: 13, fontWeight: '900', color: '#7E5400', marginBottom: 4 },
+  tipTitle: { fontSize: 13, fontWeight: '700', color: '#7E5400', marginBottom: 4 },
   tipText: { fontSize: 12, color: '#7E5400', fontWeight: '600', lineHeight: 18 },
 });
 
@@ -1663,7 +1676,7 @@ const chipStyles = StyleSheet.create({
     borderRadius: 10,
   },
   chipLabel: { fontSize: 10, fontWeight: '700' },
-  chipValue: { fontSize: 13, fontWeight: '900' },
+  chipValue: { fontSize: 13, fontWeight: '700' },
 });
 
 const tagStyles = StyleSheet.create({
@@ -1674,7 +1687,7 @@ const tagStyles = StyleSheet.create({
   },
   text: {
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '700',
   },
 });
 
@@ -1698,7 +1711,7 @@ const recoStyles = StyleSheet.create({
   },
   icon: { fontSize: 16 },
   iconImg: { width: 22, height: 22 },
-  title: { fontSize: 12, fontWeight: '900', color: COLOR.text },
+  title: { fontSize: 12, fontWeight: '700', color: COLOR.text },
   desc: { fontSize: 11, color: COLOR.textSub, fontWeight: '600', marginTop: 1 },
   arrow: { fontSize: 18, color: COLOR.textLight, fontWeight: '700' },
 });
@@ -1720,7 +1733,7 @@ const pickerStyles = StyleSheet.create({
   },
   title: {
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLOR.text,
     textAlign: 'center',
     marginBottom: 6,
@@ -1737,14 +1750,14 @@ const pickerStyles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: COLOR.text,
   },
-  optionText: { fontSize: 14, fontWeight: '800' },
-  optionCheck: { fontSize: 16, fontWeight: '900' },
+  optionText: { fontSize: 14, fontWeight: '600' },
+  optionCheck: { fontSize: 16, fontWeight: '700' },
 });
 
 const addStyles = StyleSheet.create({
   label: {
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLOR.textSub,
     marginTop: 8,
     marginBottom: 4,
@@ -1773,7 +1786,7 @@ const addStyles = StyleSheet.create({
     backgroundColor: '#F2EFEC',
     alignItems: 'center',
   },
-  cancelText: { fontSize: 13, fontWeight: '900', color: COLOR.textSub },
+  cancelText: { fontSize: 13, fontWeight: '700', color: COLOR.textSub },
   submitBtn: {
     flex: 1,
     paddingVertical: 12,
@@ -1782,7 +1795,7 @@ const addStyles = StyleSheet.create({
     alignItems: 'center',
   },
   submitBtnDisabled: { backgroundColor: '#F0D0BD' },
-  submitText: { fontSize: 13, fontWeight: '900', color: '#FFFFFF' },
+  submitText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
 });
 
 const hiddenStyles = StyleSheet.create({
@@ -1811,7 +1824,7 @@ const hiddenStyles = StyleSheet.create({
   },
   restoreText: {
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLOR.primary,
   },
 });
@@ -1832,7 +1845,7 @@ const shareStyles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLOR.text,
     textAlign: 'center',
     marginBottom: 4,
@@ -1863,7 +1876,7 @@ const shareStyles = StyleSheet.create({
   },
   optionPrimaryText: {
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   optionSecondary: {
@@ -1876,7 +1889,7 @@ const shareStyles = StyleSheet.create({
   },
   optionSecondaryText: {
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '700',
     color: COLOR.primary,
   },
   privacyNote: {

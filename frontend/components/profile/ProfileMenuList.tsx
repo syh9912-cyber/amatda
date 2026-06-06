@@ -160,6 +160,18 @@ const COMMON_BOTTOM: MenuItem[] = [
     description: '문의 및 건의사항 보내기',
     route: '/(main)/support',
   },
+  {
+    icon: require('../../assets/support-faq.png'),
+    label: '이용약관',
+    description: '서비스 이용약관 보기',
+    route: '/(main)/terms',
+  },
+  {
+    icon: require('../../assets/icon-lock.png'),
+    label: '개인정보처리방침',
+    description: '개인정보 수집·이용 안내',
+    route: '/(main)/privacy',
+  },
 ];
 
 export function ProfileMenuList() {

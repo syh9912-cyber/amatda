@@ -12,13 +12,16 @@ import {
   Dimensions,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useChildStore } from '../../stores/childStore';
+import { canDo } from '../../features/coparenting/permissions';
 import { coachingApi } from '../../services/api';
 import { isScreenAvailable } from '../../constants/ageFeatures';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { UpsellModal } from '../../components/common/UpsellModal';
 import { saveAnalysisHistory } from '../../utils/analysisHistory';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 import type { ImageSourcePropType } from 'react-native';
 
 const IC_CAMERA = require('../../assets/icon-camera.png') as ImageSourcePropType;
@@ -52,7 +55,7 @@ interface UsageInfo {
 
 interface AnalysisResult {
   analysis: string;
-  possibilities: Array<{ label: string; likelihood: string }>;
+  possibilities: { label: string; likelihood: string }[];
   recommendations: string[];
   needsDoctor: boolean;
   usage?: UsageInfo;
@@ -66,6 +69,7 @@ const LIKELIHOOD_CONFIG: Record<string, { color: string; bg: string }> = {
 
 export default function PoopAnalyzerScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const selectedChild = useChildStore((s) => s.selectedChild);
 
   // 연령 제한: 영아+유아(0-72개월)만 접근 가능 (임신부 모드는 조용히 뒤로)
@@ -126,6 +130,11 @@ export default function PoopAnalyzerScreen() {
 
   const handleAnalyze = useCallback(async () => {
     if (!photoUri || !selectedChild) return;
+    // 공동육아: AI 분석은 useCoaching 권한 필요 (열람 전용 멤버 차단)
+    if (!(await canDo(selectedChild.id, 'useCoaching'))) {
+      Alert.alert('열람 전용', '분석 기능 사용 권한이 없어요.\n보호자에게 "상담이모 사용" 권한을 요청해주세요.');
+      return;
+    }
     setAnalyzing(true);
     try {
       const base64 = await FileSystem.readAsStringAsync(photoUri, {
@@ -190,21 +199,9 @@ export default function PoopAnalyzerScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로"
-        >
-          <Text style={styles.backBtn}>{'<'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{'대변 분석기'}</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader title="대변 분석기" />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {result ? (
@@ -218,6 +215,12 @@ export default function PoopAnalyzerScreen() {
               <Text style={styles.guideDesc}>
                 {'아이의 대변 사진을 촬영하거나 갤러리에서 선택하면\nAI가 색상, 형태, 상태를 분석해 드려요.'}
               </Text>
+            </View>
+
+            {/* 촬영 팁 */}
+            <View style={{ backgroundColor: '#FFF8F0', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#F0E0CC' }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#C2703B', marginBottom: 6 }}>{'📸 잘 나오는 사진 팁'}</Text>
+              <Text style={{ fontSize: 12.5, color: '#6B6B73', lineHeight: 19 }}>{'• 밝은 곳에서 또렷하게 (그림자·흔들림 X)\n• 대변이 화면에 가득 차게 가까이서\n• 기저귀·변기 배경은 단순하게'}</Text>
             </View>
 
             {/* 사진 영역 */}
@@ -425,7 +428,7 @@ const resultStyles = StyleSheet.create({
   urgentIcon: { fontSize: 28 },
   urgentIconImg: { width: 32, height: 32 },
   urgentTextWrap: { flex: 1 },
-  urgentTitle: { fontSize: 16, fontWeight: '800', color: '#D32F2F', marginBottom: 6 },
+  urgentTitle: { fontSize: 16, fontWeight: '600', color: '#D32F2F', marginBottom: 6 },
   urgentDesc: { fontSize: 13, color: '#C62828', lineHeight: 20 },
 
   analysisCard: {

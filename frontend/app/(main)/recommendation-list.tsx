@@ -8,6 +8,8 @@ import { useChildStore } from '../../stores/childStore';
 import { recommendationApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { BackButton } from '../../components/common/BackButton';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 
 /* ------------------------------------------------------------------ */
 /*  Category styling                                                    */
@@ -90,12 +92,8 @@ export default function RecommendationListScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backArrow}>{'<'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{catStyle.emoji} {category}</Text>
-        <View style={styles.backBtn} />
+      <View style={styles.headerWrap}>
+        <ScreenHeader title={`${catStyle.emoji} ${category}`} />
       </View>
 
       {/* Content */}
@@ -229,6 +227,9 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: SPACING.lg, paddingBottom: 120 },
 
+  headerWrap: {
+    paddingTop: 56,
+  },
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingTop: 56, paddingBottom: SPACING.md, paddingHorizontal: SPACING.lg,

@@ -4,9 +4,11 @@ import {
   TouchableOpacity, Linking,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 import {
   FOOD_RECOMMENDATIONS,
   resolveTemperamentKey,
@@ -38,6 +40,7 @@ function getRecommendPercent(index: number): string {
 
 export default function NutritionScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<FoodTab>('good');
   const [expandedItems, setExpandedItems] = useState<Set<number>>(
     new Set(),
@@ -68,10 +71,10 @@ export default function NutritionScreen() {
     selectedChild?.innateData?.dominantType?.split('(')[0] ?? '';
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <Header
+      <ScreenHeader
         title={`${childName}${childName.endsWith('를') ? '' : '를'} 위한 식단 가이드`}
         onBack={() => router.back()}
       />
@@ -103,36 +106,6 @@ export default function NutritionScreen() {
         )}
       </ScrollView>
       <AdSlot />
-    </View>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Header                                                             */
-/* ------------------------------------------------------------------ */
-
-function Header({
-  title,
-  onBack,
-}: {
-  title: string;
-  onBack: () => void;
-}) {
-  return (
-    <View style={styles.header}>
-      <TouchableOpacity
-        onPress={onBack}
-        style={styles.backBtn}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        accessibilityRole="button"
-        accessibilityLabel="뒤로"
-      >
-        <Text style={styles.backArrow}>{'<'}</Text>
-      </TouchableOpacity>
-      <Text style={styles.headerTitle} numberOfLines={1}>
-        {title}
-      </Text>
-      <View style={styles.backBtn} />
     </View>
   );
 }

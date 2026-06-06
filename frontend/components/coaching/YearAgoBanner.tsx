@@ -1,5 +1,4 @@
-import { Text, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, StyleSheet } from 'react-native';
 import { COACHING_COLORS } from './types';
 
 interface Props {
@@ -8,27 +7,23 @@ interface Props {
 
 export function YearAgoBanner({ memory }: Props) {
   return (
-    <LinearGradient
-      colors={['#FFE8D6', '#FFF0E6']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.card}
-    >
+    <View style={styles.card}>
       <Text style={styles.label}>1년 전 오늘</Text>
       <Text style={styles.memory}>{memory}</Text>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
+    backgroundColor: '#FFF4EE',
     borderRadius: 16,
     padding: 14,
     marginBottom: 12,
   },
   label: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: COACHING_COLORS.accent,
     marginBottom: 4,
   },

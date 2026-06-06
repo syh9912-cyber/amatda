@@ -21,10 +21,6 @@ import {
 import { useChildStore } from '../../stores/childStore';
 import { growthApi } from '../../services/api';
 import type { ImageSourcePropType } from 'react-native';
-
-const IC_REPORT = require('../../assets/quick-report.png') as ImageSourcePropType;
-const IC_POOP = require('../../assets/cat-poop.png') as ImageSourcePropType;
-const IC_LULLABY = require('../../assets/quick-lullaby.png') as ImageSourcePropType;
 // 로컬 AsyncStorage 헬퍼 — baby-tracker가 자체 저장한 일일 기록을 같은 형식으로
 // 읽어 AI 분석 페이로드에 포함. 서버 통신이 아닌 디바이스-로컬 데이터이므로
 // CLAUDE.md "UI→Repository 직접 호출 금지" 규칙은 Service-tier 헬퍼로 간주해 적용.
@@ -32,6 +28,15 @@ import { loadRecords } from '../../features/baby-tracker/storage';
 import { formatDate } from '../../features/baby-tracker/utils/time';
 import type { TrackerAnalysisResult } from '../../features/baby-tracker/types';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { BackButton } from '../../components/common/BackButton';
+import { GuideButton } from '../../components/common/GuideButton';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { AIANALYSIS_GUIDE } from '../../features/guide/aiAnalysisGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
+
+const IC_REPORT = require('../../assets/quick-report.png') as ImageSourcePropType;
+const IC_POOP = require('../../assets/cat-poop.png') as ImageSourcePropType;
+const IC_LULLABY = require('../../assets/quick-lullaby.png') as ImageSourcePropType;
 
 type TabKey = AnalysisType;
 
@@ -92,6 +97,11 @@ export default function AIAnalysisScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>('pattern');
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<AnalysisHistoryItem | null>(null);
+
+  // 가이드 (첫 진입 1회 자동 + 헤더 '?' 재열람)
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => { shouldAutoShowGuide('ai-analysis').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen('ai-analysis'); };
 
   // 패턴 분석 상태
   const [patternLoading, setPatternLoading] = useState(false);
@@ -238,7 +248,7 @@ export default function AIAnalysisScreen() {
 
   return (
     <View style={styles.root}>
-      <Stack.Screen options={{ title: 'AI 분석', headerShown: true }} />
+      <Stack.Screen options={{ title: 'AI 분석', headerShown: true, headerLeft: () => <BackButton />, headerRight: () => <View style={{ marginRight: 14 }}><GuideButton onPress={() => setGuideVisible(true)} color="#9D8CC6" /></View> }} />
 
       {/* Tab Switcher */}
       <View style={styles.tabRow}>
@@ -255,7 +265,7 @@ export default function AIAnalysisScreen() {
               <Text
                 style={[
                   styles.tabLabel,
-                  active && { color: t.accent, fontWeight: '800' },
+                  active && { color: t.accent, fontWeight: '600' },
                 ]}
               >
                 {t.label}
@@ -480,6 +490,8 @@ export default function AIAnalysisScreen() {
           </View>
         </View>
       </Modal>
+
+      <GuideCarousel visible={guideVisible} pages={AIANALYSIS_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#9D8CC6" />
     </View>
   );
 }
@@ -515,7 +527,7 @@ const styles = StyleSheet.create({
   },
   startEmoji: { fontSize: 40, marginBottom: 8 },
   startIconImg: { width: 48, height: 48, marginBottom: 8 },
-  startTitle: { fontSize: 18, fontWeight: '800', color: '#1C1C1E', marginBottom: 4 },
+  startTitle: { fontSize: 18, fontWeight: '600', color: '#1C1C1E', marginBottom: 4 },
   startDesc: { fontSize: 13, color: '#636366', marginBottom: 16, textAlign: 'center' },
   startBtn: {
     paddingHorizontal: 24,
@@ -538,7 +550,7 @@ const styles = StyleSheet.create({
   },
   resultTitle: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#1C1C1E',
     marginBottom: 8,
   },
@@ -632,7 +644,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#ECECEE',
   },
-  modalTitle: { fontSize: 16, fontWeight: '800', color: '#1C1C1E', flex: 1 },
+  modalTitle: { fontSize: 16, fontWeight: '600', color: '#1C1C1E', flex: 1 },
   modalClose: { fontSize: 18, color: '#8E8E93', paddingHorizontal: 6 },
   modalScroll: { maxHeight: 520 },
   modalScrollContent: { padding: 18 },
@@ -646,7 +658,7 @@ const styles = StyleSheet.create({
   },
   modalSectionTitle: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#1C1C1E',
     marginTop: 12,
     marginBottom: 6,
@@ -667,7 +679,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     gap: 6,
   },
-  recBullet: { fontSize: 13, color: '#7C83EC', fontWeight: '800' },
+  recBullet: { fontSize: 13, color: '#7C83EC', fontWeight: '600' },
   recText: { flex: 1, fontSize: 13, color: '#3A3A3C', lineHeight: 19 },
   adviceBox: {
     marginTop: 8,
@@ -681,7 +693,7 @@ const styles = StyleSheet.create({
   adviceLabel: {
     fontSize: 11,
     color: '#2BA89E',
-    fontWeight: '800',
+    fontWeight: '600',
     marginBottom: 3,
   },
   adviceText: {

@@ -127,7 +127,7 @@ router.post('/skill/menu', async (_req: Request, res: Response) => {
           textCard: {
             title: '안녕하세요, 아맞다입니다 💛',
             description:
-              '임신부터 초등까지, AI 기질분석 육아 코칭 「아맞다」.\n6월 6일 정식 출시!\n\n무엇을 도와드릴까요?',
+              '임신부터 초등까지, AI 기질분석 육아 코칭 「아맞다」.\n드디어 정식 출시되었어요 🎉\n\n무엇을 도와드릴까요?',
             buttons: [
               { action: 'message', label: '🤖 AI 육아 상담', messageText: 'AI 상담' },
               { action: 'message', label: '🆘 응급 안내', messageText: '응급' },
@@ -266,8 +266,8 @@ router.post('/skill/faq', async (_req: Request, res: Response) => {
             header: { title: '❓ 자주 묻는 질문' },
             items: [
               { title: '아맞다는 어떤 앱이에요?', description: '임신부터 초등까지 AI 기질분석 육아 코칭 앱' },
-              { title: '비용이 들어요?', description: '기본 기능 무료, 프리미엄은 월 9,900원 (출시 기념 1년 무료)' },
-              { title: '어디서 다운받아요?', description: '구글 플레이 / 앱 스토어 (6월 6일 출시)' },
+              { title: '비용이 들어요?', description: '기본 기능 무료, 프리미엄은 월 3,900원 / 연 39,900원 (연간 15% 할인)' },
+              { title: '어디서 다운받아요?', description: '구글 플레이 / 앱 스토어에서 "아맞다" 검색 후 다운로드' },
               { title: 'AI 답변은 믿을 수 있나요?', description: '응급 상황은 119/병원 우선 안내, 일반 정보는 참고용입니다' },
               { title: '아이폰도 돼요?', description: 'Android / iOS 모두 지원' },
             ],
@@ -297,15 +297,16 @@ router.post('/skill/beta', async (_req: Request, res: Response) => {
             title: '🎁 출시 기념 테스터 50명 모집',
             description:
               '✨ 전원 혜택\n' +
-              '• 프리미엄 1년 무료 (12만원 상당)\n' +
+              '• 프리미엄 1년 무료 (39,900원 상당)\n' +
               '• AI 코칭 무제한\n' +
               '• 광고 완전 제거\n\n' +
               '🏆 우수 리뷰어 TOP 5\n' +
               '• 신세계상품권 10만원\n\n' +
-              '⏰ ~6월 5일 자정 마감\n' +
-              '📩 선정 6월 6일 개별 연락',
+              '📝 선정 시 베타 기간 중 스토어 리뷰 1회 이상 필수\n' +
+              '⏰ ~6월 13일 자정 마감\n' +
+              '📩 선정 6월 14일 개별 연락',
             buttons: [
-              { action: 'webLink', label: '📝 신청하기', webLinkUrl: 'https://sylabs.kr/amatda' },
+              { action: 'webLink', label: '📝 신청하기', webLinkUrl: 'https://forms.gle/yRigYK7fSxWeqVke7' },
               { action: 'webLink', label: '📲 앱 다운로드', webLinkUrl: 'https://sylabs.kr/amatda' },
             ],
           },

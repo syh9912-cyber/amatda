@@ -27,6 +27,8 @@ import {
 } from '../../services/pushNotifications';
 import { useChildStore } from '../../stores/childStore';
 import { useFeverStore } from '../../stores/feverStore';
+import { BackButton } from '../../components/common/BackButton';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 // 열 관리는 긴급 관련 페이지 — 광고 없음 (VIP 여부 무관)
 
 const IC_THERMOMETER = require('../../assets/quick-thermometer.png') as ImageSourcePropType;
@@ -879,25 +881,8 @@ export default function FeverScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          headerTitle: '',
-          headerStyle: { backgroundColor: COLOR.bg },
-          headerShadowVisible: false,
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => router.back()}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={styles.backButton}
-              accessibilityRole="button"
-              accessibilityLabel="뒤로"
-            >
-              <Text style={styles.backArrow}>{'<'}</Text>
-            </TouchableOpacity>
-          ),
-        }}
-      />
+      <Stack.Screen options={{ headerShown: false }} />
+      <ScreenHeader title="열나열나" />
 
       <ScrollView
         style={styles.scrollView}
@@ -905,16 +890,12 @@ export default function FeverScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* == Title Bar == */}
-        <View style={styles.titleBar}>
-          <View style={styles.titleRow}>
-            <Image source={IC_THERMOMETER} style={styles.titleIconImg} resizeMode="contain" />
-            <Text style={styles.screenTitle}>열나열나</Text>
-          </View>
-          {selectedChild && (
+        {/* == Subtitle (제목은 ScreenHeader로 이동) == */}
+        {selectedChild && (
+          <View style={[styles.titleBar, { justifyContent: 'center' }]}>
             <Text style={styles.screenSubtitle}>{selectedChild.name}의 체온 케어</Text>
-          )}
-        </View>
+          </View>
+        )}
 
         {/* ============================================ */}
         {/* 행동 가이드 카드 (체온 입력 후 노출 — 결과보다 위) */}
@@ -1152,7 +1133,7 @@ export default function FeverScreen() {
             const nextOther = last.type !== 'other' ? calcNextDoseAt(medLog, otherType) : null;
 
             // 가장 빠른 (= 가장 작은 nextAt) 다음 복용을 1건만 선택
-            const candidates: Array<{ at: number; type: MedicineType; isAlt: boolean }> = [];
+            const candidates: { at: number; type: MedicineType; isAlt: boolean }[] = [];
             if (nextSame) candidates.push({ at: nextSame.nextAt, type: last.type, isAlt: false });
             if (nextOther) candidates.push({ at: nextOther.nextAt, type: otherType, isAlt: true });
             if (candidates.length === 0) return null;
@@ -1616,7 +1597,7 @@ function MedicineSection({
               activeOpacity={0.7}
             >
               <Image source={b.icon} style={styles.medGridIconImg} resizeMode="contain" />
-              <Text style={[styles.medGridLabel, isSelected && { color: b.color, fontWeight: '900' }]}>
+              <Text style={[styles.medGridLabel, isSelected && { color: b.color, fontWeight: '700' }]}>
                 {b.label}
               </Text>
             </TouchableOpacity>
@@ -1638,7 +1619,7 @@ function MedicineSection({
               activeOpacity={0.7}
             >
               <View style={[styles.champDot, { backgroundColor: '#E53935' }]} />
-              <Text style={[styles.champBtnText, champType === 'red' && { color: TYLENOL_COLOR, fontWeight: '900' }]}>
+              <Text style={[styles.champBtnText, champType === 'red' && { color: TYLENOL_COLOR, fontWeight: '700' }]}>
                 빨강 (아세트 32mg/ml)
               </Text>
             </TouchableOpacity>
@@ -1651,7 +1632,7 @@ function MedicineSection({
               activeOpacity={0.7}
             >
               <View style={[styles.champDot, { backgroundColor: '#B71C1C' }]} />
-              <Text style={[styles.champBtnText, champType === 'red_er' && { color: TYLENOL_COLOR, fontWeight: '900' }]}>
+              <Text style={[styles.champBtnText, champType === 'red_er' && { color: TYLENOL_COLOR, fontWeight: '700' }]}>
                 ER 고농도 (48mg/ml)
               </Text>
             </TouchableOpacity>
@@ -1664,7 +1645,7 @@ function MedicineSection({
               activeOpacity={0.7}
             >
               <View style={[styles.champDot, { backgroundColor: '#1E88E5' }]} />
-              <Text style={[styles.champBtnText, champType === 'blue' && { color: BRUFEN_COLOR, fontWeight: '900' }]}>
+              <Text style={[styles.champBtnText, champType === 'blue' && { color: BRUFEN_COLOR, fontWeight: '700' }]}>
                 파랑 (이부 20mg/ml)
               </Text>
             </TouchableOpacity>
@@ -1765,14 +1746,14 @@ const medLogStyles = StyleSheet.create({
   },
   nextDoseLabel: {
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: 0.5,
     color: '#FF8C5A',
     marginBottom: 4,
   },
   nextDoseHeadline: {
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#1C1C1E',
     marginBottom: 4,
   },
@@ -1842,7 +1823,7 @@ const medLogStyles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#1C1C1E',
     marginBottom: 4,
   },
@@ -1876,7 +1857,7 @@ const medLogStyles = StyleSheet.create({
     borderColor: '#FF8C5A',
   },
   modalChipText: { fontSize: 12, fontWeight: '600', color: '#636366' },
-  modalChipTextActive: { color: '#FF8C5A', fontWeight: '800' },
+  modalChipTextActive: { color: '#FF8C5A', fontWeight: '600' },
   modalInput: {
     fontSize: 16,
     color: '#1C1C1E',
@@ -1899,7 +1880,7 @@ const medLogStyles = StyleSheet.create({
   modalBtnCancel: { backgroundColor: '#F2F2F7' },
   modalBtnSave: { backgroundColor: '#FF8C5A' },
   modalBtnCancelText: { fontSize: 14, fontWeight: '700', color: '#636366' },
-  modalBtnSaveText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
+  modalBtnSaveText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
 });
 
 const styles = StyleSheet.create({
@@ -1936,7 +1917,7 @@ const styles = StyleSheet.create({
   },
   screenTitle: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '600',
     color: COLOR.text,
   },
   titleRow: {
@@ -2110,13 +2091,13 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: 0.5,
     marginBottom: 4,
   },
   actionHeadline: {
     fontSize: 17,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#1A1A1A',
     lineHeight: 24,
     marginBottom: 6,
@@ -2147,7 +2128,7 @@ const styles = StyleSheet.create({
   },
   actionEmergencyText: {
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#FFFFFF',
   },
 
@@ -2170,7 +2151,7 @@ const styles = StyleSheet.create({
   },
   levelLabel: {
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '600',
     marginBottom: 4,
   },
   levelTemp: {
@@ -2228,7 +2209,7 @@ const styles = StyleSheet.create({
   weightInputField: {
     flex: 1,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#1A1A1A',
     paddingVertical: 4,
     paddingHorizontal: 8,
@@ -2237,7 +2218,7 @@ const styles = StyleSheet.create({
   },
   weightInputUnit: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FF6F00',
   },
   weightInputHint: {
@@ -2332,13 +2313,13 @@ const styles = StyleSheet.create({
   },
   medGuideStatus: {
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: 0.5,
     marginBottom: 6,
   },
   medGuideHeadline: {
     fontSize: 19,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#1A1A1A',
     lineHeight: 27,
   },
@@ -2356,7 +2337,7 @@ const styles = StyleSheet.create({
   },
   bigDoseDrug: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     letterSpacing: 0.5,
     marginBottom: 6,
   },
@@ -2368,13 +2349,13 @@ const styles = StyleSheet.create({
   bigDoseNumber: {
     // 새벽에도 즉시 인지: 56pt → 110pt 약 2배
     fontSize: 110,
-    fontWeight: '900',
+    fontWeight: '700',
     lineHeight: 116,
     letterSpacing: -3,
   },
   bigDoseUnit: {
     fontSize: 36,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#636366',
   },
   bigDoseSub: {
@@ -2415,7 +2396,7 @@ const styles = StyleSheet.create({
   },
   tipSlotTitle: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#1C1C1E',
     marginBottom: 2,
   },
@@ -2544,7 +2525,7 @@ const styles = StyleSheet.create({
   },
   ampmTextActive: {
     color: '#FF8C5A',
-    fontWeight: '900',
+    fontWeight: '700',
   },
   timeField: {
     width: 50,
@@ -2555,13 +2536,13 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5EA',
     backgroundColor: '#FFFFFF',
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#1C1C1E',
     textAlign: 'center',
   },
   timeColon: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#636366',
   },
   nowBtn: {
@@ -2574,7 +2555,7 @@ const styles = StyleSheet.create({
   nowBtnText: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
   },
 
   /* Recommended primary medicine card */
@@ -2590,12 +2571,12 @@ const styles = StyleSheet.create({
   },
   recPrimaryBadge: {
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: 0.5,
   },
   recPrimaryName: {
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#1C1C1E',
     marginBottom: 6,
   },
@@ -2627,7 +2608,7 @@ const styles = StyleSheet.create({
   recPrimaryNotifyIconImg: { width: 18, height: 18, marginRight: 4 },
   recPrimaryNotifyText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
 
@@ -2654,7 +2635,7 @@ const styles = StyleSheet.create({
   },
   recSecondaryName: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   recSecondaryDose: {
     fontSize: 11,

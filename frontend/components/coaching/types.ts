@@ -15,6 +15,8 @@ export interface CoachingMessage {
   reasons?: string[];
   medical?: string;
   followup?: string;
+  /** in-chat 추천 질문 칩 (최대 3개). 탭하면 바로 이어 질문. */
+  followups?: string[];
 }
 
 export interface FollowupItem {
@@ -25,18 +27,19 @@ export interface FollowupItem {
   category?: string;
 }
 
+// 톤다운 v2 — 배경 화이트, accent 부드러운 코랄, 버블 매우 옅은 회색.
 export const COACHING_COLORS = {
-  bg: '#FFF5EC',
-  coachBubble: '#FFFFFF',
-  parentBubble: '#FF8C5A',
-  reasonBg: '#FFF9E6',
-  solutionBg: '#E8FAF8',
-  text: '#2D2016',
-  textSub: '#8C7A6B',
-  textLight: '#B5A99A',
-  accent: '#FF8C5A',
-  coachAvatar: '#FFE4D6',
-  border: '#F0E6DA',
+  bg: '#FFFFFF',           // 진한 베이지 → 순백
+  coachBubble: '#F7F7F8',  // AI 답변 옅은 회색
+  parentBubble: '#F4A98C', // 톤다운된 코랄
+  reasonBg: '#FFFBEC',     // 더 옅은 노랑
+  solutionBg: '#F0FAF8',
+  text: '#333333',
+  textSub: '#666666',
+  textLight: '#9E9E9E',
+  accent: '#F4A98C',
+  coachAvatar: '#FFEEE3',
+  border: '#EFEFF1',
   white: '#FFFFFF',
 };
 

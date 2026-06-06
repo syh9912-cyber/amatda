@@ -1,5 +1,6 @@
 import { ScrollView, Text, StyleSheet, View } from 'react-native';
 import { Stack } from 'expo-router';
+import { BackButton } from '../../components/common/BackButton';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
 function Section({ title, children }: { title: string; children: string }) {
@@ -14,7 +15,7 @@ function Section({ title, children }: { title: string; children: string }) {
 export default function TermsScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: '이용약관', headerShown: true }} />
+      <Stack.Screen options={{ title: '이용약관', headerShown: true, headerLeft: () => <BackButton /> }} />
 
       <Text style={styles.heading}>이용약관</Text>
       <Text style={styles.meta}>
@@ -110,7 +111,7 @@ export default function TermsScreen() {
       </Section>
 
       <Section title="제11조 (유료 서비스 및 결제)">
-        {`1. 회사는 "VIP 월간(3,900원/월)", "VIP 연간(33,900원/년)" 등 유료 구독 서비스를 제공합니다.
+        {`1. 회사는 "VIP 월간(3,900원/월)", "VIP 연간(39,900원/년)" 등 유료 구독 서비스를 제공합니다.
 2. 결제는 Google Play(Android) / App Store(iOS) 의 인앱결제 시스템을 통해 이루어집니다.
 3. 구독은 선택한 기간(월간/연간)으로 자동 갱신되며, 갱신 24시간 전까지 구독을 취소하지 않으면 자동 결제됩니다.
 4. 회사는 사전 공지 후 가격을 변경할 수 있으며, 변경된 가격은 다음 갱신 시점부터 적용됩니다.

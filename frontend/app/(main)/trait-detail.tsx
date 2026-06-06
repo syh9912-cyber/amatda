@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,10 +12,14 @@ import { Stack, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { captureRef } from 'react-native-view-shot';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useChildStore, AnalysisReport } from '../../stores/childStore';
 import { AdSlot } from '../../components/ads/AdSlot';
-import { useShowAds } from '../../hooks/useShowAds';
+// (useShowAds 제거 — 스크롤형 전환으로 compact 분기 불필요)
+import { BackButton } from '../../components/common/BackButton';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { GuideButton } from '../../components/common/GuideButton';
+import { TRAIT_GUIDE } from '../../features/guide/traitGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { TraitTabBar } from '../../components/trait/TraitTabBar';
 import { TraitTypeCard } from '../../components/trait/TraitTypeCard';
 import { TraitBars } from '../../components/trait/TraitBars';
@@ -28,10 +32,12 @@ export default function TraitDetailScreen() {
   const router = useRouter();
   const child = useChildStore((s) => s.selectedChild);
   const insets = useSafeAreaInsets();
-  const adsActive = useShowAds(); // 광고 활성 시 cover 압축
   const [activeTab, setActiveTab] = useState<TraitTab>('summary');
   const [sharing, setSharing] = useState(false);
   const coverRef = useRef<View>(null);
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => { shouldAutoShowGuide('trait').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen('trait'); };
 
   if (!child) return null;
 
@@ -77,21 +83,20 @@ export default function TraitDetailScreen() {
   // dominantType 별 코발트 톤 그라디언트 (EditorialCover 와 동일 색)
   const gradient = TYPE_GRADIENT[innateData?.dominantType ?? ''] ?? TYPE_GRADIENT['분석형'];
 
+  const rootBg = Array.isArray(gradient) && gradient.length > 0 ? gradient[0] : '#1A3A5C';
   return (
-    <LinearGradient
-      colors={gradient}
-      start={{ x: 0.1, y: 0 }}
-      end={{ x: 0.9, y: 1 }}
-      style={styles.darkRoot}
-    >
+    <View style={[styles.darkRoot, { backgroundColor: rootBg }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* 다크 헤더 — 표지 위에 floating, status bar 안전 마진 반영 (좀 더 위로) */}
       <View style={[styles.darkHeader, { paddingTop: insets.top + 2 }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
-          <Text style={styles.darkHeaderArrow}>{'←'}</Text>
-        </TouchableOpacity>
+        <BackButton color="#FFFFFF" background="rgba(255,255,255,0.2)" />
         <View style={{ flex: 1 }} />
+        <GuideButton
+          onPress={() => setGuideVisible(true)}
+          color="#FFFFFF"
+          style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderColor: 'transparent', marginRight: 12 }}
+        />
         <TouchableOpacity hitSlop={12} onPress={handleShare} disabled={sharing}>
           {sharing ? (
             <ActivityIndicator size="small" color="#FFD2A8" />
@@ -101,18 +106,15 @@ export default function TraitDetailScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ScrollView 제거 — 화면 딱 맞게 flex 레이아웃 (위아래 스크롤 없음).
-          captureRef → flexBody 전체 영역(cover + bottomActions)을 캡처해서 공유.
-          flexBody 자체는 transparent → captureRef 시 검정 fallback 방지 위해
-          내부에 root 와 동일한 LinearGradient 를 absoluteFill 로 깐다. */}
-      <View ref={coverRef} collapsable={false} style={[styles.flexBody, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20 }]}>
-        <LinearGradient
-          colors={gradient}
-          start={{ x: 0.1, y: 0 }}
-          end={{ x: 0.9, y: 1 }}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        />
+      {/* 정석: ScrollView 로 콘텐츠가 넘치면 스크롤(절대 안 잘림). 광고는 아래 flex 형제.
+          공유 캡처는 안쪽 coverRef(자연높이 전체)를 캡처 → 화면 넘어가는 부분까지 전부 포함. */}
+      <ScrollView
+        style={styles.flexBody}
+        contentContainerStyle={{ paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View ref={coverRef} collapsable={false}>
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: rootBg }]} pointerEvents="none" />
         {/* 표지 — 남은 공간 채움 (flex 1).
             CTA(READ FULL REPORT)는 cover 외부 bottomActions 로 분리 — 다시 분석하기 버튼과
             물리적으로 겹치지 않도록(이전엔 cover 내부 space-between 때문에 좁은 화면에서 충돌) */}
@@ -125,7 +127,6 @@ export default function TraitDetailScreen() {
             fiveElements={innateData?.fiveElements ?? null}
             description={analysisReport?.summary}
             fullScreen
-            compact={adsActive}
             // onSeeDetail 의도적으로 미전달 — CTA는 아래 bottomActions 에 별도 배치
           />
         </View>
@@ -160,10 +161,12 @@ export default function TraitDetailScreen() {
             <Text style={styles.darkReAnalyzeBtnText}>다시 분석하기</Text>
           </TouchableOpacity>
         </View>
-      </View>
+        </View>
+      </ScrollView>
 
       <AdSlot />
-    </LinearGradient>
+      <GuideCarousel visible={guideVisible} pages={TRAIT_GUIDE} onClose={closeGuide} onComplete={closeGuide} />
+    </View>
   );
 }
 
@@ -345,9 +348,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   coverWrap: {
-    flex: 1,
-    // 좁은 화면에서 cover 내부 컨텐츠가 늘어나도 bottomActions 영역 침범 방지
-    overflow: 'hidden',
+    // 스크롤형 — 자연 높이 (flex/overflow 불필요, 넘치면 ScrollView 가 스크롤)
   },
   // CTA + 다시 분석하기 묶음 — 화면 하단에 고정 (광고 유무와 상관없이 한 덩어리로 이동)
   bottomActions: {

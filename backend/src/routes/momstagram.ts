@@ -110,12 +110,13 @@ router.get('/feed', authMiddleware, async (req: Request, res: Response) => {
         .where('status', '==', 'accepted')
         .get();
       memberSnap.docs.forEach((d) => {
-        const memberId = d.data().userId as string;
+        // familyMembers 스키마: 수락자 식별자는 inviteeUserId (userId 필드는 존재하지 않음)
+        const memberId = d.data().inviteeUserId as string;
         if (memberId && !familyUserIds.includes(memberId)) familyUserIds.push(memberId);
       });
-      // 내가 초대받은 경우도 포함
+      // 내가 초대받은 경우도 포함 (내가 inviteeUserId 인 연결)
       const invitedSnap = await collections.familyMembers
-        .where('userId', '==', userId)
+        .where('inviteeUserId', '==', userId)
         .where('status', '==', 'accepted')
         .get();
       invitedSnap.docs.forEach((d) => {

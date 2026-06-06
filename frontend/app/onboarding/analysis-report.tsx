@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useChildStore, AnalysisReport } from '../../stores/childStore';
 import { childApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
-import { EditorialCover } from '../../components/report/EditorialCover';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { EditorialCover, TYPE_GRADIENT } from '../../components/report/EditorialCover';
 
 /**
  * 분석 결과 — 첫 페이지 (풀스크린 표지).
@@ -31,6 +32,12 @@ export default function AnalysisReportScreen() {
   const [loading, setLoading] = useState(false);
 
   const report = storeReport ?? localReport;
+
+  // 색: trait-detail 과 동일하게 기질 타입별 네이비 그라디언트 사용 (하드코딩 다크 제거).
+  // 안전영역: 상단 상태바 / 하단 네비바와 겹쳐 클릭 안 되던 문제 해결.
+  const insets = useSafeAreaInsets();
+  const gradient = TYPE_GRADIENT[child?.innateData?.dominantType ?? ''] ?? TYPE_GRADIENT['분석형'];
+  const rootBg = gradient[0];
 
   useEffect(() => {
     if (childId && !storeReport && !localReport && !loading) {
@@ -85,18 +92,35 @@ export default function AnalysisReportScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: rootBg }]}>
       <Stack.Screen options={{ title: '분석 결과', headerShown: false }} />
-      <EditorialCover
-        childName={safeString(child.name)}
-        ageMonths={child.ageInfo?.months ?? 0}
-        dominantType={safeString(child.innateData?.dominantType ?? '')}
-        label={safeString(child.innateData?.label ?? '')}
-        fiveElements={child.innateData?.fiveElements ?? null}
-        description={safeString(report.summary)}
-        fullScreen
-        onSeeDetail={handleSeeDetail}
-      />
+      <ScrollView
+        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 16, flexGrow: 1 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <EditorialCover
+          childName={safeString(child.name)}
+          ageMonths={child.ageInfo?.months ?? 0}
+          dominantType={safeString(child.innateData?.dominantType ?? '')}
+          label={safeString(child.innateData?.label ?? '')}
+          fiveElements={child.innateData?.fiveElements ?? null}
+          description={safeString(report.summary)}
+          fullScreen
+          // onSeeDetail 미전달 — CTA는 아래 bottomActions 로 분리(다시분석과 간격 통일)
+        />
+        <View style={styles.bottomActions}>
+          <TouchableOpacity style={styles.fullReportBtn} onPress={handleSeeDetail} activeOpacity={0.85}>
+            <Text style={styles.fullReportBtnText}>{'READ THE FULL REPORT  →'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.reAnalyzeBtn}
+            onPress={() => router.push({ pathname: '/onboarding/questions', params: { childId: childId ?? '' } })}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.reAnalyzeBtnText}>다시 분석하기</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -116,4 +140,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md,
   },
   homeBtnText: { color: '#FFF', fontWeight: '600', fontSize: FONT_SIZE.md },
+  bottomActions: { paddingHorizontal: 24, paddingTop: 12, gap: 10 },
+  fullReportBtn: { backgroundColor: '#FFFFFF', paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
+  fullReportBtnText: { color: '#1C1C1E', fontSize: 14, fontWeight: '900', letterSpacing: 0.4 },
+  reAnalyzeBtn: {
+    paddingVertical: 12, borderRadius: 12, alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255, 210, 168, 0.3)',
+    backgroundColor: 'rgba(255, 210, 168, 0.06)',
+  },
+  reAnalyzeBtnText: { color: '#E0C8B8', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
 });

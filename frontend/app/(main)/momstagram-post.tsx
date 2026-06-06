@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { BackButton } from '../../components/common/BackButton';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 import { useChildStore } from '../../stores/childStore';
 import { useMomstagramStore, PostCategory, MomstagramPost } from '../../stores/momstagramStore';
@@ -144,7 +145,7 @@ export default function MomstagramPostScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <Stack.Screen options={{ title: '새 게시물', headerShown: true }} />
+      <Stack.Screen options={{ title: '새 게시물', headerShown: true, headerLeft: () => <BackButton /> }} />
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"

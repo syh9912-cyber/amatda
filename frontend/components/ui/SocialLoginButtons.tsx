@@ -1,7 +1,26 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { SocialProvider } from '../../services/social-auth';
 import { FONT_SIZE, SPACING } from '../../constants/theme';
 import { SOCIAL_BUTTON_LIST } from './socialButtonConfig';
+
+// Apple 네이티브 모듈이 현재 빌드에 포함됐는지 확인 (동적 require + fallback).
+// OTA 안전장치: 모듈이 없는 기존 빌드에선 require 가 throw → Apple 버튼 숨김.
+// 모듈이 포함된 새 빌드에서만 버튼이 자동 노출되어 "눌러도 에러" 상황을 방지.
+function isAppleAuthAvailable(): boolean {
+  if (Platform.OS !== 'ios') return false;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require('expo-apple-authentication');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Apple 로그인은 iOS + 네이티브 모듈 존재 시에만 노출 (Android/web/구빌드 제외)
+const VISIBLE_SOCIAL_BUTTONS = SOCIAL_BUTTON_LIST.filter(
+  (b) => !b.iosOnly || isAppleAuthAvailable(),
+);
 
 interface SocialLoginButtonsProps {
   onPress: (provider: SocialProvider) => void;
@@ -14,7 +33,7 @@ export function SocialLoginButtons({
 }: SocialLoginButtonsProps) {
   return (
     <View style={styles.container}>
-      {SOCIAL_BUTTON_LIST.map((btn) => (
+      {VISIBLE_SOCIAL_BUTTONS.map((btn) => (
         <TouchableOpacity
           key={btn.provider}
           style={[

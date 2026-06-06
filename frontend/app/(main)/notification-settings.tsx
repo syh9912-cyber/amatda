@@ -1,8 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, Switch, ScrollView, Platform, Image } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
-
-const IC_BELL = require('../../assets/icon-bell.png') as ImageSourcePropType;
-const IC_WATER = require('../../assets/quick-water.png') as ImageSourcePropType;
 import { useState, useEffect, useCallback } from 'react';
 import { Stack, router } from 'expo-router';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -18,6 +15,10 @@ import {
   cancelDailyMissionReminder,
 } from '../../services/pushNotifications';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
+
+const IC_BELL = require('../../assets/icon-bell.png') as ImageSourcePropType;
+const IC_WATER = require('../../assets/quick-water.png') as ImageSourcePropType;
 
 type BoolKey = 'morning' | 'afternoon' | 'evening' | 'weekly';
 type TimeKey = 'morningTime' | 'afternoonTime' | 'eveningTime';
@@ -181,18 +182,7 @@ export default function NotificationSettingsScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로"
-        >
-          <Text style={styles.backArrow}>{'<'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>알림 설정</Text>
-        <View style={{ width: 32 }} />
-      </View>
+      <ScreenHeader title="알림 설정" />
 
       <View style={styles.descCard}>
         <Image source={IC_BELL} style={styles.descEmojiImg} resizeMode="contain" />

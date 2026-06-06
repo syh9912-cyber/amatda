@@ -8,6 +8,8 @@ import { useChildStore } from '../../stores/childStore';
 import { recommendationApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { BackButton } from '../../components/common/BackButton';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 
 /* ------------------------------------------------------------------ */
 /*  Category meta                                                      */
@@ -137,18 +139,8 @@ export default function RecommendationDetailScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로"
-        >
-          <Text style={styles.backArrow}>{'<'}</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
-        <View style={styles.headerSpacer} />
+      <View style={styles.headerWrap}>
+        <ScreenHeader title={title} />
       </View>
 
       {/* Category Badge */}
@@ -226,6 +218,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  headerWrap: {
+    paddingTop: 56,
   },
   header: {
     flexDirection: 'row',

@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { COLORS } from '../../constants/theme';
-import { ScreenHeader } from '../../components/ui/ScreenHeader';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
 
 const COLOR = {
   bg: COLORS.background,

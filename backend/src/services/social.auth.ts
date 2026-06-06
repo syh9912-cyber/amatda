@@ -1,6 +1,8 @@
 import { env } from '../config/env';
+import { createPublicKey } from 'crypto';
+import jwt from 'jsonwebtoken';
 
-export type SocialProvider = 'GOOGLE' | 'KAKAO' | 'NAVER';
+export type SocialProvider = 'GOOGLE' | 'KAKAO' | 'NAVER' | 'APPLE';
 
 export interface SocialUserInfo {
   provider: SocialProvider;
@@ -173,6 +175,78 @@ async function verifyNaverToken(accessToken: string): Promise<SocialUserInfo> {
   };
 }
 
+/**
+ * Apple Sign In 검증 — identityToken(RS256 JWT)을 Apple 공개키(JWKS)로 검증.
+ * 정석: 서명 검증 + iss(Apple) + aud(우리 bundleId) + exp(jwt.verify 자동) 확인.
+ * 다른 앱용으로 발급된 Apple 토큰으로 우리 사용자 가장 차단.
+ *
+ * aud 는 네이티브 Sign in with Apple 에서 앱 bundleId. (공개값 — 시크릿 아님)
+ */
+const APPLE_AUD = 'com.sylabs.amatda';
+const APPLE_ISSUER = 'https://appleid.apple.com';
+const APPLE_KEYS_URL = 'https://appleid.apple.com/auth/keys';
+const APPLE_KEYS_TTL_MS = 60 * 60 * 1000; // 공개키 1시간 캐시
+
+interface AppleJwk { kty: string; kid: string; use: string; alg: string; n: string; e: string; }
+let appleKeysCache: { keys: AppleJwk[]; fetchedAt: number } | null = null;
+
+async function fetchAppleKeys(): Promise<AppleJwk[]> {
+  const res = await fetch(APPLE_KEYS_URL);
+  if (!res.ok) throw new Error('Apple 공개키 조회 실패');
+  const data = await res.json() as { keys: AppleJwk[] };
+  appleKeysCache = { keys: data.keys, fetchedAt: Date.now() };
+  return data.keys;
+}
+
+async function getAppleSigningKey(kid: string): Promise<AppleJwk> {
+  let keys = (appleKeysCache && Date.now() - appleKeysCache.fetchedAt < APPLE_KEYS_TTL_MS)
+    ? appleKeysCache.keys
+    : await fetchAppleKeys();
+  let key = keys.find((k) => k.kid === kid);
+  if (!key) {
+    // kid 회전 가능 — 캐시 무시하고 1회 강제 갱신 후 재탐색
+    keys = await fetchAppleKeys();
+    key = keys.find((k) => k.kid === kid);
+  }
+  if (!key) throw new Error('Apple 토큰 서명 키(kid) 불일치');
+  return key;
+}
+
+async function verifyAppleToken(identityToken: string): Promise<SocialUserInfo> {
+  // 1) 헤더에서 kid 추출
+  const decoded = jwt.decode(identityToken, { complete: true });
+  if (!decoded || typeof decoded === 'string' || !decoded.header?.kid) {
+    throw new Error('Apple identityToken 형식 오류');
+  }
+  // 2) Apple 공개키로 서명 + iss/aud/exp 검증
+  const jwk = await getAppleSigningKey(decoded.header.kid);
+  // Node 내장 crypto 로 JWK→공개키 (새 의존성 없이). JsonWebKey 전역 타입 부재 → 파라미터 타입으로 캐스팅.
+  const pubKey = createPublicKey(
+    { key: jwk, format: 'jwk' } as unknown as Parameters<typeof createPublicKey>[0],
+  );
+  let payload: jwt.JwtPayload;
+  try {
+    payload = jwt.verify(identityToken, pubKey, {
+      algorithms: ['RS256'],
+      issuer: APPLE_ISSUER,
+      audience: APPLE_AUD,
+    }) as jwt.JwtPayload;
+  } catch (e) {
+    throw new Error(`Apple 토큰 검증 실패: ${e instanceof Error ? e.message : 'unknown'}`);
+  }
+  if (!payload.sub) throw new Error('Apple 토큰에 sub(사용자 식별자) 없음');
+  // email 은 email_verified=true 인 경우만 신뢰 (가짜 이메일 자동 연결 takeover 방지)
+  const emailVerified = payload.email_verified === true || payload.email_verified === 'true';
+  const email = (emailVerified && typeof payload.email === 'string') ? payload.email : null;
+  return {
+    provider: 'APPLE',
+    socialId: payload.sub,            // Apple 고유 사용자 ID (앱별 namespace)
+    email,
+    name: null,                       // Apple 토큰엔 이름 미포함 (최초 1회 네이티브 응답에만)
+    accessToken: identityToken,       // unlink 미사용 — 저장만
+  };
+}
+
 /** 소셜 프로바이더별 토큰 검증 통합 */
 export async function verifySocialToken(
   provider: SocialProvider,
@@ -186,6 +260,7 @@ export async function verifySocialToken(
     case 'GOOGLE': return verifyGoogleToken(accessToken);
     case 'KAKAO': return verifyKakaoToken(accessToken);
     case 'NAVER': return verifyNaverToken(accessToken);
+    case 'APPLE': return verifyAppleToken(accessToken);
     default: throw new Error(`지원하지 않는 소셜 프로바이더: ${provider}`);
   }
 }
@@ -385,6 +460,9 @@ export async function unlinkSocialAccount(
     case 'KAKAO': return unlinkKakao(socialId, accessToken);
     case 'NAVER': return unlinkNaver(accessToken);
     case 'GOOGLE': return revokeGoogle(accessToken);
+    // Apple 토큰 revocation 은 별도 client_secret(.p8 서명 JWT)이 필요 — 탈퇴 시 user/데이터
+    // 삭제로 충분(연결 끊김). 추후 Apple revoke(/auth/revoke) 보강 가능.
+    case 'APPLE': return;
     default: throw new Error(`unlink 지원 안 됨: ${provider}`);
   }
 }

@@ -10,6 +10,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, ImageSourcePropType } 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loadRecords } from '../../features/baby-tracker/storage';
 import { computeSummary } from '../../features/baby-tracker/utils/summary';
+import type { TrackerRecord } from '../../features/baby-tracker/types';
 import { useTrackerStore } from '../../stores/trackerStore';
 import { getDailyReference } from '../../constants/dailyReference';
 import {
@@ -85,9 +86,12 @@ const MOOD_OPTIONS: { key: MoodKey; label: string; src: ImageSourcePropType }[] 
   { key: 'pain',       label: '통증',   src: ASSETS.moodPain },
 ];
 
-function todayYMD(): string {
-  const d = new Date();
+function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function todayYMD(): string {
+  return ymd(new Date());
 }
 
 export function DenseStatsRow({ child, onTapCheckup }: Props) {
@@ -112,9 +116,30 @@ function BabyStats({ child }: { child: Child }) {
     (async () => {
       try {
         // baby-tracker와 동일한 로컬 storage에서 오늘자 records 로드
-        const recs = await loadRecords(child.id, todayYMD());
+        const today = new Date();
+        const yest = new Date(today);
+        yest.setDate(yest.getDate() - 1);
+        const recs = await loadRecords(child.id, ymd(today));
+        // 어제 시작 → 오늘 새벽 기상한 cross-day 수면 → 가상 '기상' 엔트리
+        // (baby-tracker와 동일 로직. 누락 시 새벽 수면이 홈에서 0h로 빠짐)
+        const yRecs = await loadRecords(child.id, ymd(yest));
         if (cancelled) return;
-        const sum = computeSummary(recs);
+        const todayPrefix = `${today.getMonth() + 1}/${today.getDate()} `;
+        const crossDayWakes: TrackerRecord[] = [];
+        for (const r of yRecs) {
+          const o = r as unknown as Record<string, unknown>;
+          if (o.type === 'sleep' && typeof o.endTime === 'string' && o.endTime.startsWith(todayPrefix)) {
+            crossDayWakes.push({
+              ...r,
+              id: `${r.id}__crosswake`,
+              subType: 'sleep_end',
+              time: o.endTime.slice(todayPrefix.length),
+              endTime: undefined,
+            } as TrackerRecord);
+          }
+        }
+        const ageMonths = child.ageInfo?.months ?? 6;
+        const sum = computeSummary(recs, crossDayWakes, ageMonths);
         // computeSummary 결과 — feedingCount / totalMl / diaperCount(소변+대변) / totalSleepMinutes
         const feedCount = (sum as { feedingCount?: number }).feedingCount ?? 0;
         const feedMl = (sum as { totalMl?: number }).totalMl ?? 0;

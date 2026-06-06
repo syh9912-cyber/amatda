@@ -55,12 +55,12 @@ export const usePremiumStore = create<PremiumStoreState>((set, get) => ({
         lastFetched: Date.now(),
       });
     } catch {
-      // API 실패 → 보수적으로 PAID 처리 (VIP 사용자가 광고를 보는 회귀 방지)
-      set({
-        status: { tier: 'PAID', trialActive: false, premiumActive: false },
-        isLoading: false,
-        lastFetched: Date.now(),
-      });
+      // API 실패 → 직전 상태 유지 + 캐시 안 함(다음 호출 때 재조회).
+      // 과거엔 무조건 PAID 처리 → 무료 사용자가 일시적 네트워크 실패 한 번에
+      // 광고가 영구히 사라지던 문제(5분 캐시) 발생. 이제:
+      //  - 직전 성공 상태(PAID/FREE)가 있으면 그대로 유지 → VIP 광고 회귀 방지 + FREE 광고 유지
+      //  - 최초 로딩 실패는 status=null 유지(로딩 취급) → lastFetched=null 로 즉시 재시도
+      set({ isLoading: false, lastFetched: null });
     }
   },
 

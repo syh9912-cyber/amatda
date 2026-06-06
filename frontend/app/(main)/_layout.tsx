@@ -1,10 +1,22 @@
-import { Tabs, Redirect } from 'expo-router';
-import { useEffect } from 'react';
+import { Tabs, Redirect, router } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import { Image, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import { useAuthStore } from '../../stores/authStore';
 import { useChildStore } from '../../stores/childStore';
 import { usePremiumStore } from '../../stores/premiumStore';
+import { authApi } from '../../services/api';
+
+// 약관 버전 게이트 — consent.tsx / register.tsx 와 동기화
+//   기존 사용자가 신규 필수 항목(커뮤니티 약관) 누락 시 재동의 화면 강제 라우팅.
+const REQUIRED_CONSENT_VERSION = '2026-05-28';
+
+// 알림 priming 화면을 한 번만 띄우기 위한 AsyncStorage 키 (notification-permission.tsx 와 동기화)
+// v4: 가입 흐름 간소화 (priming → home 직행).
+const NOTIF_PRIMED_KEY = 'notif_primed_v4';
 
 const ACTIVE_COLOR = '#FF8C5A';
 const INACTIVE_COLOR = '#8E8E93';
@@ -68,6 +80,47 @@ export default function MainLayout() {
     }
   }, [isAuthenticated, fetchPremiumStatus, resetPremium]);
 
+  // 약관 버전 게이트 + 알림 priming 게이트 — 인증 통과 후 1회 실행.
+  //   ① 약관: 신규 필수 항목(커뮤니티 등) 누락 시 /onboarding/consent?reauth=1 강제
+  //   ② 알림: status === 'undetermined' + priming 미경험 시 /onboarding/notification-permission
+  //   각 게이트는 redirect 시 (main) 이 unmount → 다음 진입에서 다시 검사.
+  const gateChecked = useRef(false);
+  useEffect(() => {
+    if (!isAuthenticated || gateChecked.current) return;
+    gateChecked.current = true;
+    (async () => {
+      // ① 약관 버전 게이트
+      try {
+        const res = await authApi.getProfile();
+        const consent = res.data?.data?.consent as
+          | { community?: boolean; version?: string | null }
+          | null
+          | undefined;
+        const needsReauth =
+          !consent ||
+          consent.community !== true ||
+          consent.version !== REQUIRED_CONSENT_VERSION;
+        if (needsReauth) {
+          router.replace('/onboarding/consent?reauth=1');
+          return; // priming 은 다음 진입에서 처리
+        }
+      } catch {
+        // 네트워크 실패 → priming 검사로 진행
+      }
+
+      // ② 알림 priming 게이트 — 폴백 경로 (consent 후 명시 진입 우선).
+      //    primed === null 이면 status 무관으로 priming 노출. 교육 목적상 1회는 보여줌.
+      try {
+        if (!Device.isDevice) return;
+        const primed = await AsyncStorage.getItem(NOTIF_PRIMED_KEY);
+        if (primed === '1') return;
+        router.replace('/onboarding/notification-permission');
+      } catch {
+        // 권한 조회 실패 — 무시. 다음 진입에서 재시도.
+      }
+    })();
+  }, [isAuthenticated]);
+
   const ageGroup = selectedChild?.ageInfo?.group;
   const isElementary = ageGroup === 'elementary';
   const isPregnant = ageGroup === 'pregnant';
@@ -82,6 +135,7 @@ export default function MainLayout() {
       backBehavior="history"
       screenOptions={{
         headerShown: false,
+        headerTitleAlign: 'center',
         tabBarActiveTintColor: ACTIVE_COLOR,
         tabBarInactiveTintColor: INACTIVE_COLOR,
         tabBarStyle: {

@@ -20,6 +20,12 @@ import { pickAllPhones, type PickedPhone } from '../../services/deliveryHospital
 import { MissionToast } from '../../components/common/MissionToast';
 import { HospitalRegisterModal } from '../../components/pregnancy/HospitalRegisterModal';
 import { captureError } from '../../services/sentry';
+import { BackButton } from '../../components/common/BackButton';
+import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { GuideButton } from '../../components/common/GuideButton';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { LABORMONITOR_GUIDE } from '../../features/guide/laborMonitorGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
 type Tab = 'kick' | 'contraction';
 
@@ -37,6 +43,10 @@ export default function LaborMonitorScreen() {
   const { selectedChild } = useChildStore();
   const childId = selectedChild?.id ?? '';
   const currentWeek = getCurrentWeek(selectedChild?.dueDate);
+
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => { shouldAutoShowGuide('labor-monitor').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen('labor-monitor'); };
 
   const params = useLocalSearchParams<{ tab?: string }>();
   const tab: Tab = params.tab === 'contraction' ? 'contraction' : 'kick';
@@ -383,11 +393,7 @@ export default function LaborMonitorScreen() {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}><Text style={styles.backBtn}>{'< 뒤로'}</Text></TouchableOpacity>
-          <Text style={styles.headerTitle}>{headerTitle}</Text>
-          <View style={{ width: 60 }} />
-        </View>
+        <ScreenHeader title={headerTitle} />
         <View style={styles.emptyCenter}>
           <Text style={styles.emptyText}>임신 중인 아이를 선택해주세요</Text>
         </View>
@@ -402,11 +408,7 @@ export default function LaborMonitorScreen() {
     <View style={[styles.container, { paddingTop: insets.top, backgroundColor: screenBg }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}><Text style={styles.backBtn}>{'< 뒤로'}</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>{headerTitle}</Text>
-        <View style={{ width: 60 }} />
-      </View>
+      <ScreenHeader title={headerTitle} right={<GuideButton onPress={() => setGuideVisible(true)} color="#DB6A5F" />} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {tab === 'kick' ? (
@@ -937,6 +939,8 @@ export default function LaborMonitorScreen() {
           refreshHospitalRegistered();
         }}
       />
+
+      <GuideCarousel visible={guideVisible} pages={LABORMONITOR_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#DB6A5F" />
     </View>
   );
 }
@@ -976,7 +980,7 @@ const kickStyles = StyleSheet.create({
   historyValue: {
     fontSize: 20,
     color: '#FF8C5A',
-    fontWeight: '800',
+    fontWeight: '600',
   },
   historyFoot: {
     fontSize: 11,
@@ -1048,7 +1052,7 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.lg,
     ...SHADOWS.soft,
   },
-  bigCount: { fontSize: 72, fontWeight: '800', color: '#C2185B' },
+  bigCount: { fontSize: 72, fontWeight: '600', color: '#C2185B' },
   bigLabel: { fontSize: FONT_SIZE.md, color: '#AD1457', fontWeight: '600' },
 
   statsRow: {
@@ -1121,8 +1125,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 28,
   },
-  hintBoxStrong: { fontWeight: '800', color: '#1A1A1A' },
-  hintBoxAccent: { fontWeight: '800', color: '#7C5CFF' },
+  hintBoxStrong: { fontWeight: '600', color: '#1A1A1A' },
+  hintBoxAccent: { fontWeight: '600', color: '#7C5CFF' },
   hintBoxArrow: { fontSize: 18, color: '#7C5CFF' },
   hintBoxAlert: {
     fontSize: 14,
@@ -1156,7 +1160,7 @@ const styles = StyleSheet.create({
   },
   guideLinkLargeText: {
     fontSize: 19,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FFFFFF',
     lineHeight: 26,
   },
@@ -1180,7 +1184,7 @@ const styles = StyleSheet.create({
   },
   guideCardLabel: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#37474F',
     marginBottom: 8,
     lineHeight: 30,
@@ -1226,7 +1230,7 @@ const styles = StyleSheet.create({
   guideCardLabelImminent: {
     fontSize: 32,
     lineHeight: 40,
-    fontWeight: '900',
+    fontWeight: '700',
     textAlign: 'center',
     marginBottom: SPACING.sm,
   },
@@ -1251,7 +1255,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.soft,
   },
   directCallIcon: { fontSize: 30, color: '#FFFFFF' },
-  directCallText: { fontSize: 20, fontWeight: '900', color: '#FFFFFF' },
+  directCallText: { fontSize: 20, fontWeight: '700', color: '#FFFFFF' },
 
   /* 인라인 면책 고지 (분석 박스 바로 아래) */
   disclaimerBoxInline: {
@@ -1308,7 +1312,7 @@ const styles = StyleSheet.create({
   },
   disclaimerStrong: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#616161',
     marginBottom: 4,
   },
@@ -1340,7 +1344,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: FONT_SIZE.lg,
-    fontWeight: '800',
+    fontWeight: '600',
     color: COLORS.text,
     marginBottom: 4,
   },
@@ -1370,7 +1374,7 @@ const styles = StyleSheet.create({
   },
   dangerTitle: {
     fontSize: FONT_SIZE.md,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#C62828',
     marginBottom: SPACING.sm,
   },
@@ -1405,7 +1409,7 @@ const styles = StyleSheet.create({
   },
   emergencyBannerTitle: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#B71C1C',
     marginBottom: 6,
   },
@@ -1425,7 +1429,7 @@ const styles = StyleSheet.create({
   },
   emergencyRegisterText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#D9534F',
     textAlign: 'center',
   },
@@ -1455,7 +1459,7 @@ const styles = StyleSheet.create({
   },
   emergency119Text: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   emergencyHospitalBtn: {
@@ -1469,7 +1473,7 @@ const styles = StyleSheet.create({
   },
   emergencyHospitalText: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#C62828',
   },
   // === 양수파수 확인 — 골든타임 모드 (대문짝 버튼) ===
@@ -1510,7 +1514,7 @@ const styles = StyleSheet.create({
   },
   phoneChoiceTitle: {
     fontSize: 17,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#1A1A1A',
     marginBottom: 4,
     textAlign: 'center',
@@ -1538,7 +1542,7 @@ const styles = StyleSheet.create({
   },
   phoneChoiceLabel: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#1A1A1A',
   },
   phoneChoiceLabelPrimary: {

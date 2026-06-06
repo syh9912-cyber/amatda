@@ -296,7 +296,7 @@ router.post('/social', async (req: Request, res: Response) => {
     const { provider, accessToken } = req.body;
     if (!provider || !accessToken) { error(res, 'provider와 accessToken이 필요합니다'); return; }
 
-    const validProviders: SocialProvider[] = ['GOOGLE', 'KAKAO', 'NAVER'];
+    const validProviders: SocialProvider[] = ['GOOGLE', 'KAKAO', 'NAVER', 'APPLE'];
     const upperProvider = provider.toUpperCase() as SocialProvider;
     if (!validProviders.includes(upperProvider)) { error(res, '지원하지 않는 소셜 로그인입니다'); return; }
 

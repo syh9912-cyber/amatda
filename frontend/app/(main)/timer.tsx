@@ -11,6 +11,7 @@ import { Stack } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { BackButton } from '../../components/common/BackButton';
 
 const PRESETS = [
   { label: '5분', seconds: 5 * 60 },
@@ -79,7 +80,7 @@ export default function TimerScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Quality Time', headerShown: true }} />
+      <Stack.Screen options={{ title: 'Quality Time', headerShown: true, headerLeft: () => <BackButton /> }} />
 
       <Text style={styles.subtitle}>
         형제자매와 1:1 시간을 보내세요

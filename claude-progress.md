@@ -1,5 +1,916 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-05-25 — 출시 전 종합 점검 (P0/P1/P2 + 결제 + UX + 정책)
+> 최종 업데이트: 2026-06-06 — 가이드 전면 개편(스포트라이트 코치마크) + 카카오 챗봇 문구 개편 + 연간 구독가 39,900원
+
+---
+
+## 2026-06-06 임신모드 가이드 4종 + 아이콘/헤더 수정 + 기간요약 탭 분리 (프로덕션 OTA 완료)
+
+### 작업
+- **임신모드 가이드 4종 신규** (스포트라이트, 각 3페이지, 의료성 3종 면책 포함):
+  - `gdmGuide.tsx`(임당): 혈당 시점·기준선 → 식단 AI 사진분석 → 주간리포트+면책. 아이콘 quick-blood/icon-camera/quick-report.
+  - `momWellnessGuide.tsx`(마음진단): 매일 기분일기 → EPDS 점수해석 → 가족공유+위기상담(1577-0199/1393)+면책. icon-heart.
+  - `laborMonitorGuide.tsx`(진통·태동): 진통 시작/종료 → 가진통/진진통·5-1-1 → 태동카운트+응급면책. icon-hospital/quick-baby/icon-redflag.
+  - `birthBagGuide.tsx`(출산가방): 분만/산후 맞춤목록 → 상태/담당태그·진행률 → 아빠모드·공유. icon-share.
+  - 연결: gdm(native headerRight), mom-wellness/labor-monitor(ScreenHeader right), birth-bag(공유버튼 옆 row). 첫방문 자동(`shouldAutoShowGuide`)+'?'.
+- **맘스톡 이모지→기존 에셋**: 월방 quick-timeline, 내동네 cat-social, 익명 icon-lock, 신고 icon-redflag.
+- **성장앨범·AI분석 '?' 잘림 수정**: native Stack.Screen headerRight를 `<View style={{marginRight:14}}>`로 감싸 안쪽으로.
+- **아기시간 기간요약 → 2개 독립 토글 분리**: ①기간 분석(7/14/1달 표) ②하루 패턴·24시간(DayClock 원형). 각각 따로 펴고 접힘. 둘 중 하나 열리면 광고. 상태 `clockSectionOpen` 추가.
+
+### 검증 / 배포
+- `tsc` ✓ 0 에러 / `lint` ✓ 0 에러. 크롬으로 4종 가이드 + 맘스톡 교체 아이콘 실제 PNG 렌더 확인.
+- `eas update --branch production` — android+ios. group 59c2ca73-5cf9-44c1-91ce-f438fda2ebd0, runtime 2.9.1.
+
+### 가이드 총괄 (14개 화면)
+첫실행·아기시간·상담이모·공동육아·성장·SOS·기질·성장앨범·AI분석·맘스톡 + **임당·마음진단·진통/태동·출산가방**.
+
+---
+
+## 2026-06-06 기간요약 24시간 원형차트 + 가이드 아이콘 교체 (프로덕션 OTA 완료)
+
+### 작업
+- **`components/baby-tracker/DayClock.tsx` 신규** — 하루 24시간 원형 패턴 차트 (react-native-svg). 베이비빌리 '패턴' 개선판:
+  - 0시 12시방향·시계방향, 2h 눈금 + 0/6/12/18 라벨.
+  - 수면 = 시작~종료 **호(arc)**, 단발기록(수유/배변/투약) = 링 바깥 **색점**.
+  - 가운데 날짜 + 핵심요약(수유 N·수면 Nh), 범례, 빈 상태 안내. records만으로 자체 집계.
+  - `baby-tracker.tsx` 기간요약 펼침 영역 상단에 `<DayClock records={allRecordsSorted} dateLabel=.../>` 렌더 (기존 일별 표는 아래 유지 → 하루 패턴 + 다기간 추세 둘 다).
+  - 색상 = TRACKER_COLORS 톤(배변 #6AAFBB, 수유 #E6B84D, 수면 #B8A0D2, 투약 #558B2F).
+- **가이드 이모지 → 커스텀 아이콘**:
+  - `albumGuide.tsx`: 👣🗣😊 → milestone-body/talk/heart, 📖 → album-cover.png, 그리드 이모지 → 파스텔 placeholder, PDF는 텍스트 배지.
+  - `aiAnalysisGuide.tsx`: 📊💩🔊 → quick-report/cat-poop/cat-crying, 📷🎙️ → icon-camera/icon-mic.
+
+### 검증 / 배포
+- `tsc` ✓ 0 에러 / `lint` ✓ 0 에러. 크롬으로 DayClock SVG(샘플 하루) + 실제 PNG 아이콘 렌더 확인.
+- `eas update --branch production` — android+ios. group 643676ec-d845-437e-a813-600a73bef0ef, runtime 2.9.1.
+
+### 남은 이슈 / 후속
+- 맘스톡(📅📍🙈🚨) + 오래된 가이드(첫실행/상담이모 등)의 이모지는 딱 맞는 커스텀 에셋 부재로 미교체 — 에셋 확보 후 추가 교체 가능.
+
+---
+
+## 2026-06-06 가이드 추가 — 성장앨범·AI분석·맘스톡 + 기질 정리 (프로덕션 OTA 완료)
+
+### 작업
+- **기질 가이드**: 마지막 의미없는 🌷 "참고로만 봐주세요" 페이지 제거 (4→3페이지).
+- **신규 가이드 3종** (스포트라이트 스타일, 핵심 3페이지·군더더기 없음):
+  - `features/guide/albumGuide.tsx` (성장앨범): 사진 기록 → 발달단계(마일스톤) 자동 제안 → PDF 앨범.
+  - `features/guide/aiAnalysisGuide.tsx` (AI분석): 3종(육아패턴/대변/울음) → 기록만 하면 패턴 자동분석 → 사진·녹음 분석 + 촬영/녹음 팁 + 연령 안내 + 참고용 면책.
+  - `features/guide/momGroupGuide.tsx` (맘스톡): 월방/내동네 → 글쓰기·카테고리 → 익명·신고 안전장치.
+- **화면 연결** (첫방문 자동 `shouldAutoShowGuide` + 헤더 '?' `GuideButton`):
+  - `ai-analysis.tsx`: Stack.Screen headerRight + GuideCarousel (accent 보라).
+  - `album.tsx`(BabyAlbum): headerRight + GuideCarousel.
+  - `mom-group.tsx`: **기존 옛 모달 가이드(GUIDE_PAGES/guideStep) 제거 → 새 GuideCarousel로 교체**, 헤더 우측에 '?'+🔍 나란히.
+
+### 검증 / 배포
+- `tsc` ✓ 0 에러 / `expo lint` ✓ 0 에러(남은 경고는 전부 기존). 크롬 HTML 렌더로 3종 목업 확인.
+- `eas update --branch production` — android+ios. group d4d1803b-c962-4631-88d8-237fae119987, runtime 2.9.1.
+
+### 가이드 총괄 (10개 화면 통일)
+첫실행 · 아기시간 · 상담이모 · 공동육아 · 성장 · SOS · 기질 · **성장앨범 · AI분석 · 맘스톡**
+
+---
+
+## 2026-06-06 가이드 전면 개편 — 스포트라이트 코치마크 (프로덕션 OTA 완료)
+
+### 작업 목적
+- 기존 가이드(흰 모달 카드 + 목업)가 "대충"해 보임 → 베이비빌리류 **스포트라이트 코치마크**(실제 화면 반투명 딤 + 점선 화살표 + 떠 있는 카드)로 고급화. 7개 가이드 톤 통일.
+
+### 핵심 변경
+- **`components/common/GuideCarousel.tsx` 전면 재작성** (공용 쉘):
+  - 반투명 딤(rgba(18,17,24,0.66)) + 상단(건너뛰기·진행점·다음›) + 흰 캡션 + **점선 화살표(▾, 순수 View)** + 밝게 떠 있는 카드(그림자) + 페이드·슬라이드 전환. 하단 "← 이전" 미니멀.
+  - `GuidePage` API 100% 호환 → 콘텐츠 파일 미변경으로 6개 화면 자동 적용.
+- **`components/baby-tracker/BabyTrackerGuide.tsx`**: 자체 쉘 제거 → 목업 5종 유지하고 `GuideCarousel` 위임(통일). 미사용 import/스타일 정리.
+- **색감 톤다운**(촌스러움 제거): `GUIDE_C` + 베이비트래커 `C` 팔레트 채도↓ 파스텔화(accent #FF8C5A→#F0976C, blue/gold/purple/green/red 전부 뮤트). 퀵버튼 연한 파스텔+다크텍스트. SOS 4단계는 구분 유지·채도만↓.
+- **글씨 Medium**: 제목 800(→앱 폰트패처 Medium), 설명 500, 내비 600/700. (얇음↔두꺼움 3회 반복 후 Medium 확정)
+- 화면별 강조색 동기화: sos #E5564B→#DB6A5F, coparenting #8B72BE→#9D8CC6, growth #5E9A4E→#7CA46E, GuideButton 기본 #FF8C5A→#F0976C.
+
+### 구조적 수정 (HTML 미리보기로 못 잡는 RN 이슈)
+- 카드 그림자를 배경 없는 래퍼(cardWrap)→배경 있는 카드(mockFrame)로 이동 — **Android elevation은 배경 있는 뷰에만 그림자 렌더**되므로 양 플랫폼 일관 확보.
+
+### 검증 / 배포
+- 크롬으로 **HTML 1:1 미리보기 렌더·스크린샷**하여 화면/구조/레퍼런스 일치 점검(3회 반복).
+- `npx tsc --noEmit` ✓ 0 에러 / `npx expo lint` ✓ 0 에러.
+- `eas update --branch production` — android+ios 발행. group 2034153f-80b6-41b3-a83b-8406e8d5572a, runtime 2.9.1.
+
+### 적용 가이드 (7)
+첫실행(OnboardingGuide) · 아기시간 · 상담이모 · 공동육아 · 성장 · SOS · 기질
+
+### 남은 이슈
+- 없음. (추후 더 두껍게/얇게 미세조정 요청 시 GuideCarousel title/desc fontWeight만 조정)
+
+---
+
+## 2026-06-06 상세 작업 로그 (세션 풀 기록)
+
+> 아래 두 작업(카카오 챗봇 개편 / 연간가 39,900원)의 **세부 진행 과정·이슈·결정**을 빠짐없이 기록.
+
+### A. 카카오 챗봇 — 작업 흐름
+1. 사용자가 "회원가입 시 카톡 안내문구 너가 쓴 거 수정해야 함" → 발신원 2개로 분리 확인:
+   - **채널 추가 자동 환영 메시지** = 카카오 관리자 콘솔 설정(코드 아님) → 손 안 댐.
+   - **챗봇 스킬 응답** = `backend/src/routes/kakao.ts` (내가 작성한 부분) → 여기 수정.
+2. 챗봇 블록 구조 확인: `/skill/menu`, `/skill/qa`(Gemini), `/skill/emergency`, `/skill/faq`, `/skill/beta`, `/skill/fallback`, `/health`.
+3. 시점 지난 문구 4곳 수정(아래 변경 표 참조).
+4. 베타 카드 처리 방침을 사용자에게 질문(AskUserQuestion) → 답변:
+   - 베타 블록: **"마감일 연장해서 계속 모집"**
+   - 신청 링크: **"구글폼으로 연결"**
+5. 구글폼 신규 생성(아래 C) → 단축 URL 확보 → 버튼에 연결.
+6. 타입체크 → api 함수만 배포 → grep로 8개 변경 라이브 확인.
+
+### B. 카카오 챗봇 — 변경 라인 상세 (kakao.ts)
+| 위치 | 이전 | 이후 |
+|------|------|------|
+| L130 메뉴카드 | "6월 6일 정식 출시!" | "드디어 정식 출시되었어요 🎉" |
+| L269 FAQ 비용 | "월 9,900원 (출시기념 1년 무료)" | "월 3,900원 / 연 39,900원 (연간 15% 할인)" |
+| L270 FAQ 다운로드 | "(6월 6일 출시)" | '"아맞다" 검색 후 다운로드' |
+| L300 베타 혜택 | "프리미엄 1년 무료 (12만원 상당)" | "프리미엄 1년 무료 (39,900원 상당)" |
+| L305-307 베타 마감/리뷰 | "~6월 5일 마감 / 선정 6월 6일" | "리뷰 1회 이상 필수 / ~6월 13일 자정 마감 / 선정 6월 14일 개별 연락" |
+| L309 신청하기 버튼 | 홈페이지 webLink | `https://forms.gle/yRigYK7fSxWeqVke7` |
+> 참고: 앱 다운로드 버튼은 `https://sylabs.kr/amatda` 유지(미변경).
+
+### C. 구글폼 — 생성 상세
+- 생성 수단: 구글폼 **Gemini AI 폼빌더**("만들기"→"양식 만들기")로 초안 생성 후 수정.
+- 폼 ID: `1S2Vp83OK2irbSwOZlmnQ7CwSTpgjxVMphtkIA1VbMR4`
+- 제목: **"아맞다 베타 테스터 신청"**
+- 문항(8): 이름\*, 전화번호\*, 자녀개월수, 임신개월수, 휴대폰기종\*, SNS주소\*, 리뷰동의(체크)\*, 개인정보동의(체크)\* — (\* = 필수)
+- 게시: "게시"(공개) → 응답 권한 "링크가 있는 누구나" → "URL 단축" → **forms.gle/yRigYK7fSxWeqVke7**
+- 발생 이슈: 전화번호 문항 "필수" 토글이 안 켜진 듯 보임 → 원인 (1) 클릭 좌표가 라벨에 맞음, (2) 편집 중엔 빨간 별표가 가려짐 → 파란 토글(ON)이 실제 상태. ref 클릭으로 ON 확인해 해결.
+- 응답 확인: 폼 편집화면 "응답" 탭 또는 스프레드시트 연동.
+
+### D. 연간가 39,900원 — 작업 흐름 / 스토어
+1. 코드 9곳 동기화(아래 "수정 파일" 참조) — 모두 39,900 / 15% / 월 3,325.
+2. **Google Play Console**: 일괄 "Set prices" 다이얼로그가 39,900→40,000으로 **반올림**(price-ending rounding) → 행별 인라인 "가격 수정" 에디터로 39900 직접 입력 → "변경사항 저장" → "신규 정기결제 사용자에게만 적용" 확인.
+3. **App Store Connect**: ₩39,900이 기본 가격대 드롭다운엔 "결과 없음" → "추가 가격 보기"(확장 900 price points) 로드 → ₩39,900.00 선택 → 대한민국 기준 확정, 175개국 자동 환산.
+4. **보안 결정**: ASC 로그인 페이지(authResult=FAILED) 등장 시 비밀번호 입력 **거부**(자격증명 입력 금지 규칙) → 사용자가 직접 로그인 후 진행.
+5. 백엔드 6개 함수 배포 + 프로덕션 OTA(android+ios, group 7fb0abca, runtime 2.9.1).
+
+### E. 미해결 / 후속
+- iOS 구독(premium_yearly/monthly) "메타데이터 누락됨" — 가격은 들어갔으나 **현지화(표시명/설명)** 보완 + 유료앱 계약 활성화해야 IAP 심사 제출 가능. (가격 작업과 별개, 사용자 작업 대기)
+- Play 가격 변경은 신규 구독자만 적용(기존 구독자 없음 — 클린).
+
+---
+
+## 2026-06-06 카카오 챗봇 문구 개편 + 베타 신청 구글폼
+
+### 작업 목적
+- 카카오 채널 챗봇(`backend/src/routes/kakao.ts`)에 시점 지난 문구 정리 + 베타 모집 재정비.
+
+### 변경 (kakao.ts)
+- 메뉴 카드: "6월 6일 정식 출시!" → "드디어 정식 출시되었어요 🎉" (날짜 비의존)
+- FAQ 다운로드: "(6월 6일 출시)" → '구글 플레이 / 앱 스토어에서 "아맞다" 검색 후 다운로드'
+- 베타 카드: 마감 ~6/5 → **~6/13**, 선정 연락 6/6 → **6/14**, **"리뷰 1회 이상 필수"** 문구 추가
+- 베타 "📝 신청하기" 버튼: 홈페이지 → **구글폼** `https://forms.gle/yRigYK7fSxWeqVke7`
+
+### 구글폼 (크롬 자동화로 생성·게시)
+- 폼: "아맞다 베타 테스터 신청" (Gemini 폼빌더로 생성, 계정 juhyun/주현 송)
+- 8문항: 이름*, 전화번호*, 자녀개월수, 임신개월수, 휴대폰기종*, SNS주소*, 리뷰동의(체크)*, 개인정보동의(체크)*
+- 게시 완료(링크가 있는 누구나 응답) → 단축링크 forms.gle/yRigYK7fSxWeqVke7
+- 편집 URL: docs.google.com/forms/d/1S2Vp83OK2irbSwOZlmnQ7CwSTpgjxVMphtkIA1VbMR4/edit
+
+### 배포
+- `npx tsc --noEmit` ✓
+- `firebase deploy --only functions:api --project amatda-parenting` — api 함수 업데이트 성공.
+- (프론트 무관 — 카카오는 백엔드 응답이라 OTA 불필요)
+
+---
+
+## 2026-06-06 프리미엄 연간 구독가 변경 (33,900 → 39,900원)
+
+### 작업 목적
+- 카카오 챗봇 베타 카드의 "프리미엄 1년 무료 (12만원 상당)" 문구가 실제가(33,900)와 안 맞아 정정 요청.
+- 추가로 사용자가 연간가를 39,900원으로 인상 결정 → 코드 + 스토어 전부 동기화.
+
+### 수정 파일 (코드 9곳 — 모두 39,900 / 할인율 15% / 월환산 3,325원)
+- `backend/src/routes/payment.ts` — premium_yearly price 33900→39900
+- `backend/src/routes/subscription.ts` — price 39900, monthlyPrice 3325, "15% 할인" x2, "월 3,325원꼴"
+- `backend/src/routes/kakao.ts` — 챗봇 FAQ "월 3,900 / 연 39,900 (15% 할인)", 베타카드 "39,900원 상당" (※ FAQ 기존 "월 9,900" 오타도 3,900으로 정정)
+- `frontend/app/(main)/subscription.tsx` — price/priceLabel/discount/월환산/priceKRW
+- `frontend/services/payment.ts` — premium_yearly price 39900
+- `frontend/app/(main)/terms.tsx` — 이용약관 "VIP 연간(39,900원/년)"
+
+### 스토어 (크롬 자동화로 직접 변경)
+- **Google Play Console** — premium_yearly 기본요금제(yearly/대한민국) KRW 33,900 → **39,900** 저장.
+  - 주의: 일괄 "Set prices"는 40,000으로 반올림됨 → 행별 인라인 "가격 수정"으로 정확히 39,900 입력해야 함.
+- **App Store Connect** — premium_yearly 구독가 **대한민국 ₩39,900** 신규 설정 (175개국 자동 환산).
+  - ₩39,900은 기본 가격대엔 없고 "추가 가격 보기"(확장 900 price points)에서 선택.
+  - ⚠️ iOS 구독은 아직 "메타데이터 누락됨" — 가격은 들어갔으나 현지화(표시명/설명) 보완해야 심사 제출 가능. (가격 작업과 별개)
+
+### 검증 / 배포
+- `cd backend && npx tsc --noEmit` ✓ / `cd frontend && npx tsc --noEmit` ✓
+- 남은 33900/2825/28% 흔적 0건 확인.
+- 백엔드: `firebase deploy --only functions --project amatda-parenting` — 6개 함수 전부 성공.
+- 프론트: `eas update --branch production` — android+ios 발행 (group 7fb0abca, runtime 2.9.1).
+
+### 남은 이슈
+- iOS premium_yearly/monthly "메타데이터 누락됨" — IAP 심사 제출 전 현지화 필요 (유료앱 계약 활성화 대기와 별개).
+- Play 가격 변경은 신규 구독자에게만 적용(기존 구독자 없음 — 클린).
+
+---
+
+## 2026-06-05 아기시간(baby-tracker) — 공동육아 작성자 표기 ("엄마가 기록함")
+
+### 작업 목적
+- 초대받은 가족(엄마/아빠/조부모 등)이 아기시간에 기록하면, 타임라인 카드에
+  "엄마가 기록함" / "아빠가 기록함" 처럼 작성자를 표시.
+- 소유자(owner) 본인 기록 / 옛 기록은 라벨 미표시(graceful) — 요구사항대로.
+
+### 스키마 변경 (사용자 승인 받음 — Rule of Two)
+- `TrackerRecord` / 백엔드 `TrackerRecordSchema`에 optional 2필드 추가:
+  - `authorId?: string` — 작성자 userId
+  - `authorLabel?: string` — 비정규화 닉네임("엄마"/"아빠"). 작성 시점 스냅샷.
+- 둘 다 optional → 옛 데이터/소유자 기록엔 없음 → 라벨 미표시.
+
+### 해결 방식
+- 신규 헬퍼 `features/baby-tracker/author.ts`:
+  - `resolveAuthorMeta(childId)` — `GET /coparenting/my-permissions/:childId` 조회.
+    role==='owner'·nickname 없음·403/오프라인 → null(라벨없음). 멤버면 `{authorId, authorLabel:nickname}`.
+    `${userId}:${childId}` 키로 세션 내 캐싱.
+  - `stampAuthor(record, meta)` — **신규 기록 생성 시점에만** 주입(배열 일괄 stamp 금지 — 남의 기록 덮어쓰기 방지).
+- `baby-tracker.tsx`: 마운트 시 `authorMeta` 1회 조회. 생성 경로 전부 stamp:
+  `handleAddRecord`(빠른추가/타이머-quick/분유원터치/폼저장), 수면기상(타이머·일반), 모유종료, 커스텀.
+  편집/이동 경로는 `...editRecord` spread 로 원작성자 보존(재stamp 안 함).
+  `TimelineEntry` 렌더에 `record.authorLabel` 있으면 "{라벨}가 기록함" 캡션 표시.
+- `PhotoLogReview.tsx`(사진 일괄), `voice.tsx`(음성 일괄)도 저장 직전 `resolveAuthorMeta` → stamp.
+- 홈 `DenseStatsRow`는 개별 기록이 아닌 집계만 렌더 → 작성자 표시 대상 아님(변경 없음).
+
+### 검증 결과
+- `cd backend && npx tsc --noEmit` 통과 (0 에러)
+- `cd frontend && npx tsc --noEmit` 통과 (0 에러)
+- `cd frontend && npx expo lint` — 0 errors (기존 미사용 변수 warning만 잔존, 신규 코드 무관)
+
+### 배포 (2026-06-05 완료)
+- 프론트 OTA: `eas update --branch preview` 완료 (런타임 2.9.1, Android/iOS).
+  update group `21af6dc0-dfed-44dc-b8de-334b70d222ed`.
+- 백엔드: `firebase deploy --only functions --project amatda-parenting` 완료.
+  - 1차 배포에서 `api` 함수가 "No changes detected"로 skip되어, `--only functions:api`로 재배포 →
+    "Successful update operation" 확인 (해시 캐시 quirk).
+  - 헬스체크: `PUT /api/baby-tracker/test/days/...` → HTTP 401 "인증이 필요합니다" (라우트/인증 정상).
+
+### 남은 이슈
+- 엑셀 import(BabyTime 과거 데이터 일괄)는 "본인 과거기록 이관" 성격이라 작성자 미주입(의도적).
+- 실기기 E2E 확인(초대받은 가족 계정으로 기록 → 소유자 화면에 "엄마가 기록함" 노출)은 사용자 단말에서.
+
+---
+
+## 2026-06-05 공동육아 invitee 화면 — 연결상태/역할/권한 표시 (UX 회귀)
+
+### 증상
+- 초대를 수락한 사람(invitee, 예: 엄마)의 공동육아 화면에 "가족과 함께 ...의 성장을 기록하세요"
+  문구만 뜨고, 본인이 그 아이에 어떤 역할/권한으로 연결됐는지 알 수 없음.
+- 더 나아가 `coparenting.tsx`의 "나 (소유자)" 카드가 `isOwner` 무관하게 무조건 렌더되어
+  invitee도 자신을 "소유자"로 잘못 표시.
+
+### 원인
+- 화면이 owner 중심으로만 설계됨. invitee 분기(자기 역할/권한 표시) 부재.
+
+### 해결 방식 (frontend 1파일만 수정: `app/(main)/coparenting.tsx`)
+- 백엔드는 변경 불필요 — 이미 invitee 접근 지원:
+  - `getAccessibleChildIds`가 공유받은 아이를 `GET /children`에 포함 → invitee childStore에 공유 아이 표시됨.
+  - `GET /coparenting/members/:childId`가 invitee(accepted)도 호출 가능, `isOwner:false` + 전체 멤버 반환.
+- `authStore.userId`로 members 목록에서 "나"(`inviteeUserId === userId`) 식별.
+- `isOwner` 분기 렌더:
+  - owner: 기존 "나(소유자)" + "연결된 가족" + 초대/권한수정/삭제.
+  - invitee: **연결상태 카드**("당신은 [아이]의 공동육아에 [역할]로 연결되어 있어요" + 표시이름 + 연결됨 뱃지)
+    + **내 권한 목록**(허용/제한 표시, 읽기 전용) + **함께하는 가족**(읽기 전용).
+- "초대 코드 입력" 버튼·혜택 카드는 공유, 초대하기 버튼은 owner 전용.
+
+### 검증 결과
+- `cd frontend && npx tsc --noEmit` 통과 (0 에러)
+- `cd frontend && npx expo lint` — coparenting.tsx 경고/에러 0 (기존 타 파일 warning만 잔존)
+
+### 남은 이슈
+- OTA 배포(production/preview)는 사용자 확인 후 진행 — 작업트리에 v2.9.0 다른 수정 다수 포함됨.
+
+---
+
+## 2026-06-03 iOS 첫 빌드 회귀 — 홈 화면 터치 먹통 수정 (P0)
+
+### 증상
+- iOS TestFlight 빌드에서 **홈 탭만** 모든 콘텐츠 탭(터치) 무반응. 스크롤은 정상.
+  SOS 플로팅 버튼(ScrollView 밖)만 눌림. 다른 탭(아기시간/상담이모/가족피드/마이) 정상.
+- "가이드/팝업을 닫은 뒤부터" 발생, 앱 재시작 시 일시 해소(닫기 전까지만).
+
+### 원인 (구조적)
+- **RN iOS 알려진 버그**: `<Modal>` 을 `<ScrollView>` **안**에 렌더하면, 그 모달을 닫은 뒤
+  iOS 에서 하위 콘텐츠의 탭 응답(hit-test)이 죽음(스크롤은 유지). Android 는 영향 없음 → 첫 iOS 빌드라 표면화.
+- `app/(main)/home.tsx` 가 ScrollView 안에 Modal 5개 렌더 중이었음:
+  OnboardingGuide(첫진입 가이드), ProactivePopup, NextCheckupModal, 체험만료/출산 CenterModal.
+
+### 해결 (정석)
+- `app/(main)/home.tsx` — Modal 5개를 전부 **ScrollView 밖, 화면 루트(container 직속 형제)** 로 이동.
+  Modal 은 자체 네이티브 윈도우로 떠서 트리 위치를 옮겨도 외형·동작 동일, iOS 터치 버그만 제거.
+  (RN/Expo 공식 권장 패턴.) 로직/핸들러/상태 변경 없음 — 순수 JSX 구조 이동.
+
+### 검증
+- babel 파싱 OK(JSX 균형·문법 정상). 타입/식별자 변화 없어 tsc 영향 없음(sandbox 미설치로 tsc 직접 실행 불가).
+- **JS-only 변경 → OTA(expo-updates)로 배포 가능, 네이티브 재빌드 불필요.**
+
+### 전체 탭 감사 결과 (Modal-in-ScrollView)
+- **home** — RN Modal 5개 ScrollView 안 → 밖 이동 (실제 버그, 수정).
+- baby-tracker — clean (Modal들 이미 ScrollView 밖 / "Modal 안 ScrollView"는 정상).
+- chatbot(상담이모) — clean (Modal 없음).
+- momstagram(가족피드) — clean (Modal이 FlatList 밖, 내부 ScrollView 정상).
+- **profile(마이)** — `PasswordModal`은 RN Modal 아님(인라인 `position:absolute` 전체화면 오버레이).
+  Modal-dismiss 터치버그는 아니나, root ScrollView 안이라 열면 스크롤 콘텐츠 기준 배치돼 화면 못 덮는 별개 결함 →
+  `<View flex:1>` 로 감싸고 PasswordModal 을 ScrollView 밖으로 이동 + `View` import 추가. (검증: babel 파싱 OK)
+
+## 2026-06-03 iOS 자녀 등록 화면 뒤로가기 없음 (P1)
+- 증상: iOS엔 하드웨어 뒤로가기 없는데 `app/onboarding/child-info.tsx`에 뒤로 버튼 없음 → 진입 후 못 빠져나옴.
+  원인: `app/onboarding/_layout.tsx`가 전 화면 `headerShown:false` + child-info에 자체 뒤로 UI 없음.
+- 해결: child-info `<Stack.Screen>`에 `headerShown:true` + 앱 톤 헤더(배경 크림/그림자 제거/tint=text/`headerBackTitle:'뒤로'`)
+  → 네이티브 뒤로 버튼 + 엣지 스와이프 + 노치 안전영역 일괄 확보. (검증: babel 파싱 OK)
+- 후속 점검(미적용): set-nickname/intake-form/kakao-channel/analysis-report 도 뒤로 없음 →
+  forward-only 의도(consent/notification-permission/result)와 구분해 선별 추가 검토 필요. 사용자 판단 대기.
+
+## 2026-06-03 iOS 사진기록(PhotoLogReview) 취소버튼 안전영역 (P1)
+- 증상: 아기시간 "📷 사진기록" 화면(`PhotoLogReview`, 전체화면 Modal)에서 취소 버튼이 iOS 상태바(시계) 영역에 깔려 클릭 불가.
+- 원인: Modal `container`에 안전영역 상단 inset 없음 → `header`(취소)가 y=0(노치 밑)에서 시작.
+- 해결: `components/baby-tracker/PhotoLogReview.tsx` — `useSafeAreaInsets()` 추가,
+  `container`에 `paddingTop: Math.max(insets.top, iOS?44:0)` 적용(modal 내 insets 0 폴백 보장). Platform import 추가. (검증: babel OK)
+- 후속(미적용): 동일 Modal 하단 액션 버튼 home indicator 겹침 가능 → 필요 시 `insets.bottom` 보강 검토.
+
+### 2026-06-03 사진기록 날짜 — 설명 + 편집 기능 추가 (OTA)
+- 문의: 사진(알림장) 기록이 오늘(6/3) 입력인데 6/2로 저장됨.
+- 원인(버그 아님): `backend/src/routes/tracker.ts` photo-parse 프롬프트가 "알림장에 날짜 보이면 그 날짜 사용".
+  AI가 알림장 사진 속 날짜(6/2)를 읽은 것. 프론트 clientDate/백엔드 KST 계산은 정상(6/3).
+- 사용자 선택 = 날짜 직접 수정 가능하게.
+- `components/baby-tracker/PhotoLogReview.tsx` — 확인화면 상단에 **날짜 바**(TextInput + "오늘" 버튼) 추가.
+  `setAllDates`/`setAllToday` 로 모든 기록 날짜 일괄 변경(사진 1장=보통 하루). 배포: update group b8ca06b3.
+
+### 2026-06-03 가족 초대 링크(딥링크) — 무료 MVP (OTA + Hosting)
+- 요구: 초대코드 손입력 대신, 링크 누르면 앱 있으면 자동참여 / 없으면 스토어+설치후 재탭.
+- Branch 안 씀(유료 절벽). 무료 방식 = 커스텀 스킴(amatda://, 기설정) + Firebase Hosting 랜딩 + "설치 후 링크 재탭".
+- 신규 `public/invite.html` — `?code=XXX` 읽어 `amatda://coparenting?inviteCode=XXX` 자동 열기 시도 + 스토어 버튼 + 재탭 안내 + 코드 표시(폴백). `firebase.json` `/invite` rewrite 추가.
+- `app/(main)/coparenting.tsx`(OTA): `useLocalSearchParams` 로 `inviteCode` 수신 → 자동 `accept()` (실패 시 코드 채워 수동). 공유 메시지를 `https://amatda-parenting.web.app/invite?code=` 링크로 변경. (APP_STORE_LINK 상수 제거)
+- 배포: Firebase Hosting 배포 완료(https://amatda-parenting.web.app/invite) + OTA(production 5718064a / preview f44b6ea5).
+- 한계(MVP): 커스텀 스킴이라 iOS Safari 자동열기 시 프롬프트 가능. 완전 매끄럽게(유니버설 링크)는 재빌드 필요 — 추후. iOS 신규설치 deferred 100%자동은 Branch 필요(현재는 "재탭"으로 무료 우회).
+
+### 2026-06-03 기질(오행) 점수 0점 제거 — 기본점수 방식 (백엔드 배포)
+- 문의: 새 아이 기질 분석에 0점이 너무 많음(예 20·0·50·25·0). "0점 없게" 규칙이 빠져있었음.
+- 원인: `saju.calculator.ts` `normalizeElements` 가 글자수/8×100(%) 변환이라 없는 오행=0%. floor 없음.
+  (사주 8글자=천간4+지지4 카운트는 정상)
+- 수정(사용자 선택=기본50): **각 오행 = 50 + 글자수×10 (최대 100)**. 없는 기운=50, 2글자=70, 4글자=90. 0 제거.
+  - 합100 가정하던 디스플레이 없음 확인: TraitBars/result=우세기준(val/max), EditorialCover=값 그대로(0~100). 모두 OK.
+  - AI 코칭은 dominantType만 사용(숫자 무관) → 영향 없음. dominant=최다글자라 그대로 유지.
+- 배포: 백엔드 Functions 배포 완료(api/coachingApi 등).
+- ⚠️ **기존 아이는 innateData가 등록 시 저장돼 있어 옛 점수 유지** → 새 점수 보려면 **신규 등록** 또는 **"다시 분석"**(홈 기질카드/trait-detail) 필요.
+
+### 2026-06-03 분석결과 표지 색/안전영역 + 레이아웃 정석 (진행중)
+- analysis-report 표지가 다크브라운(`#1A0E0B` 하드코딩)이라 trait-detail의 기질별 네이비와 불일치 →
+  `TYPE_GRADIENT[dominantType][0]` 사용 + `useSafeAreaInsets`로 상단/하단 패딩(상태바·네비바 겹침 해결). OTA 완료(364a8e65/preview 6a9327f9).
+- **정석 리팩토링 완료(사용자 동의=스크롤형)**: EditorialCover `fullScreen`을 자연높이로(`flex:1`+`space-between` 제거).
+  - trait-detail: flexBody → `ScrollView`(넘치면 스크롤·안 잘림) + `AdSlot` flex 형제(안 겹침) + `coverRef`를 안쪽 View로(공유 캡처 전체 유지) + `compact`/`adsActive`/`useShowAds` 제거.
+  - analysis-report: `ScrollView` + **"다시 분석하기" 버튼 추가**(첫분석 화면에도) + 안전영역.
+  - 배포: OTA production bcd05e70 / preview d05c8bda.
+- 점수(미해결, 사용자 #2 우선): 25/13/36=등록 시 저장된 구 % 값. 신 공식은 **신규 등록 아이엔 적용**되나 기존 아이는 사주 재계산 트리거 필요(다시분석=질문만 재실시, 사주 점수 재계산 X). → 추후 "다시분석 시 사주 재계산" 배선 or 신규아이 등록으로 확인.
+
+### 2026-06-03 아이 삭제 stuck 버그 (백엔드 배포)
+- 증상: 한 아이 삭제 무반응(첫 시도) → 재시도 시 "삭제에 실패했습니다", 그 아이만 영구 삭제 불가(다른 아이는 정상).
+- 원인: `child.ts` DELETE 가 관련 30개 컬렉션을 `Promise.all`로 조회 → 하나라도 실패하면 전체 reject →
+  자녀 doc 도 batch 에 묶여있어 안 지워짐 → 영구 stuck. (데이터 많은 아이가 첫 시도 타임아웃/실패 시 발생)
+- 수정: ① **자녀 doc 먼저 `delete()`**(즉시 사라짐, stuck 방지) ② 관련 조회 `Promise.allSettled`(실패 쿼리 무시·로깅)
+  ③ 배치 commit 각각 try/catch(best-effort). → 관련 정리 일부 실패해도 자녀는 삭제됨.
+- 배포: 백엔드 api 함수. 앱 업데이트 불필요 — **그 stuck 아이 다시 삭제하면 됨.**
+
+### 네이버 로그인 — 해결됨 (사용자 확인)
+- 네이버 개발자센터 iOS 환경(URL Scheme `naverlogin` + Bundle ID `com.sylabs.amatda`) 등록 → 정상 동작. 코드/빌드 무관(콘솔측).
+
+### 온보딩 뒤로가기 추가 후속 점검 결과
+- set-nickname / kakao-channel / analysis-report: 모두 `router.replace`로 진입(forward-only) → history 없어 뒤로 버튼 자체가 안 뜸 → 추가 불필요(설계상 정상).
+- intake-form: 참조 0건(데드 라우트 의심) → 별도 정리 대상.
+- 결론: 실제 push 진입(홈→)인 child-info만 뒤로 필요했고 이미 수정.
+
+## 2026-06-03 OTA env 이슈 + 앨범 일괄추가 취소버튼
+- **web 번들 실패**: `eas update`가 web까지 export → `react-native-google-mobile-ads`가 web 미지원 → 실패.
+  해결: `app.json`에 `platforms: ["ios","android"]` 추가(web export 제외). app.config.js 보존 확인.
+- **iOS 광고가 회색 목업 박스**: `eas update`가 로컬 `.env`(`EXPO_PUBLIC_ADS_MOCK=true`, 광고ID 없음)를 번들 → AdSlot 목업 표시.
+  안드로이드는 EAS 빌드 번들(ADS_MOCK=false)이라 정상 테스트광고. 
+  해결방침(사용자 선택=구글 테스트광고): OTA 실행 시 환경변수 인라인 오버라이드(`.env`는 개발용 보존):
+  `$env:EXPO_PUBLIC_ADS_MOCK="false"` + 구글 테스트 배너 ID(android 6300978111 / ios 2934735716). medium 은 배너ID 폴백.
+  ※ 근본 후속: eas update용 production 환경변수를 EAS 호스팅(env)으로 이전 검토.
+- **앨범 일괄추가 취소버튼 안전영역**: `components/album/BatchPhotoReview.tsx` — PhotoLogReview와 동일 패턴
+  (`useSafeAreaInsets` + container `paddingTop`). (검증: babel OK)
+
+### 🆕 iOS Siri 앱 명령(App Intents) 추가 — "시리야, 아맞다 육아" (네이티브, 다음 빌드)
+- 목적: 수동 단축어 설정 없이 시리로 음성기록 직행. 사용자 선택 = "아맞다 육아".
+- 신규 `plugins/withIosSiriShortcut.js` (Expo config plugin):
+  - prebuild 시 `ios/<project>/AmatdaSiriShortcut.swift` 생성 + Xcode 빌드소스 등록(멱등).
+  - Swift(App Intents, iOS16+): `AmatdaVoiceRecordIntent.perform → OpenURLIntent("amatda://voice?from=siri")`
+    → 앱 열림 → expo-router `/voice` → 텍스트 없는 진입(Case 2) → 음성인식 자동 시작.
+  - `AmatdaAppShortcuts` 문구: "아맞다 육아"/"아맞다 기록"/"아맞다 음성 기록"/"아맞다 음성".
+- `app.json` plugins 에 `"./plugins/withIosSiriShortcut"` 등록. (검증: app.config.js 반영 OK, 플러그인 로드 OK)
+- 제약(사용자 안내됨): Apple 규칙상 문구에 앱이름 필수 + 앱이름 단독("아맞다")은 "앱 열기"와 충돌·일반실행과 구분 불가
+  → 동작어 붙인 "아맞다 육아"가 음성기록 직행. 다중입력(여러 행동)은 동일 AI 파싱이라 그대로 작동.
+- ⚠️ **OTA 불가 — 새 네이티브 빌드 + TestFlight 재제출부터 적용.** 여기서 컴파일 검증 불가(빌드해봐야 확인).
+  권장: production 재제출 전 preview 빌드로 App Intents 정상 빌드 확인.
+- 가이드 동기화: `app/(main)/voice-settings.tsx` SIRI_GUIDE 를 새 방식으로 교체 —
+  "설정 없이 '시리야, 아맞다 육아'" 주력 + 다중입력 예시 + 인식 문구 안내, 기존 수동 단축어("육아")는 (선택) 스텝으로 보존.
+  섹션 타이틀/트리거 배너 문구도 갱신. (검증: babel 파싱 OK)
+- **빌드 #1(75ddaf3e) 실패**: `OpenURLIntent` 이 iOS 18.0+ 전용인데 `@available(iOS 16.0)` 로 가드 → XCODE_BUILD_ERROR.
+  수정: Swift 두 struct `@available(iOS 18.0, *)` 로 상향. 가이드 문구도 iOS 18 이상으로 갱신.
+  (앱 자체는 deploymentTarget 16.0 유지·동작, Siri 명령만 18+. 구형은 수동 가이드로 커버.)
+- **빌드 #2(b9bf07a1) → build 16 제출**: 빌드/제출 성공했으나 **실기기 실행 시 에러**:
+  "The provided URL scheme `amatda` is unsupported; launch is prohibited" — `OpenURLIntent` 이 시리/단축어
+  컨텍스트에서 커스텀 앱 스킴 실행을 차단당함. (단축어 자체는 "음성 기록"으로 정상 등록·색인됨)
+- **수정(방식 변경)**: OpenURLIntent 제거 →
+  - Swift: `openAppWhenRun = true` 로 앱만 전면에 띄우고 `NSUserDefaults("amatda_siri_voice_pending")` 플래그 기록. iOS 16+ 로 복귀.
+  - RN: 신규 `hooks/useSiriVoiceLaunch.ts` — react-native `Settings`(=NSUserDefaults) 로 플래그 감지(mount + AppState active)
+    → `router.push('/voice')` → 텍스트 없는 진입(Case 2) → 녹음 자동 시작. `app/_layout.tsx` RootLayout 에서 호출.
+  - 가이드 문구 iOS 16 으로 복귀. (네이티브 모듈/AppDelegate 수정 불필요 — RN 내장 Settings 활용)
+- **빌드 #3(0d7673e3) 성공 → build 17 TestFlight 제출 완료** (submission 349736cb).
+  플래그 방식이라 "scheme prohibited" 에러 회피. Apple 처리 후 설치 가능.
+  ※ 실기기 검증 대기: "시리야 아맞다 육아" → 앱 열림 + /voice 이동 + 녹음. (워밍업: 설치 후 앱 1회 실행 → 시리 색인)
+  콜드런치 타이밍은 변수 — 일반(백그라운드→시리 호출) 케이스는 동작 예상.
+- **실기기 결과**: "아맞다 육아" → 앱·음성화면 정상 진입 확인! 단 **말하기 전에 화면이 조기 종료**되는 문제 →
+  Siri 핸드오프 직후 오디오 세션 충돌로 인식 error → `error` 핸들러가 자동으로 baby-tracker 이탈하던 것이 원인.
+- **수정(OTA, JS-only)** `app/voice.tsx`:
+  - 첫 입력(텍스트≥2) 전에는 **자동 종료 금지** — error/무음 end 시 baby-tracker 이탈 대신 **재시작(듣기 유지)**, 최대 15회.
+  - 실제 입력 들어오면 재시작 카운터 리셋. 상단 "완료" 버튼으로만 수동 이탈.
+  - **Siri 진입 시 시작 지연 800ms**(오디오 세션 settle). restartCountRef 추가.
+  - 배포: update group **2235784a-3873-4063-b2cf-20a6cbeeee72** (runtime 2.9.1).
+
+### ✅ OTA v5 배포 (2026-06-03) — 앨범 "사진 선택" 그리드 취소버튼 (실제 화면)
+- v4 로 PhotoLogReview(사진기록)는 고쳐졌으나 앨범은 그대로 → "여러 장 추가" 플로우의 **첫 화면이 RecentPhotosGrid("사진 선택" 그리드)**
+  였고, BatchPhotoReview(확인화면)가 아니었음. 즉 그동안 잘못된 컴포넌트를 고침.
+- `components/album/RecentPhotosGrid.tsx` — container 에 고정 상단 패딩(`iOS 60 / Android StatusBar.currentHeight`) 추가. Platform/StatusBar import.
+- 사전 스캔: 추가 전체화면 slide 모달 후보 = `components/pregnancy/HospitalRegisterModal.tsx`(임신부 전용) 1건만 → 미적용(추후 점검).
+- 배포: update group **bae36fd3-7ff2-4314-ab71-07e34c5aa268** (runtime 2.9.1, android+ios).
+
+### ✅ OTA v4 배포 (2026-06-03) — 모달 취소버튼 최종 수정
+- v3 에서 광고는 해결(Test Ad 확인). 그러나 모달 취소버튼은 SafeAreaProvider+SafeAreaView 로도 실패 →
+  **New Architecture(Fabric)에서 RN Modal 내 safe-area-context 측정이 깨지는 알려진 버그**로 확정.
+- 측정 의존 전면 포기 → **고정 상단 패딩** `Platform.OS==='ios' ? 60 : (StatusBar.currentHeight ?? 24)`.
+  iOS 60pt 가 노치(~47)·다이내믹아일랜드(~59) 모두 덮음. 측정/Provider 무의존이라 적용 시 확정 동작.
+  PhotoLogReview/BatchPhotoReview 둘 다. safe-area-context import 제거, Platform/StatusBar 사용.
+- 배포: update group **b2215482-ee82-4196-857b-e35b112160bc** (runtime 2.9.1, android+ios).
+
+### ✅ OTA v3 배포 (2026-06-03) — v2 잔여 2건(광고·모달취소) 재수정
+- v2 적용됨(자녀등록 뒤로 동작 확인=headerLeft v2). 그러나 광고·모달취소 여전히 실패. 원인·재수정:
+  - **광고**: `.env` 만 고치면 AdSlot.tsx(미변경)가 **Metro 변환 캐시**의 옛 `ADS_MOCK=true` 인라인값 재사용 →
+    `eas update --clear-cache` 로 강제 재변환(=.env false 새로 박힘). (.env 외 override 파일 없음 확인)
+  - **모달 취소버튼**: `useSafeAreaInsets()` 는 RN Modal 내부에서 0, `initialWindowMetrics` 는 New Arch 에서 null →
+    **모달 내부에 `SafeAreaProvider` + `SafeAreaView edges={['top']}`** (라이브러리 공식 권장). PhotoLogReview/BatchPhotoReview 둘 다.
+    부수: 두 파일 Platform/insets/initialWindowMetrics import 정리.
+- 배포: update group **5c934473-a9ef-463f-82b9-1e4accd84f60** (runtime 2.9.1, android+ios, --clear-cache).
+
+### ✅ OTA v2 배포 (2026-06-03) — v1 회귀 3건 재수정
+- v1(bdd5d069)은 적용됐으나 3건이 잘못 고쳐짐(광고 회색박스/자녀등록 뒤로X/모달취소 위쪽). 원인·재수정:
+  - **광고**: 인라인 `$env:` 오버라이드가 `.env`에 밀림(Expo가 .env 우선) → `.env` 직접 `ADS_MOCK=false`+구글 테스트 배너ID 추가.
+  - **자녀등록 뒤로**: child-info 가 onboarding 스택 첫 화면이라 네이티브 자동 뒤로버튼 미표시 →
+    `Stack.Screen.headerLeft` 에 `router.back()` 버튼 명시 강제.
+  - **모달 취소버튼**: RN Modal 내 `useSafeAreaInsets().top`=0 + 44pt 폴백이 Dynamic Island(~59pt)에 부족 →
+    `initialWindowMetrics?.insets?.top`(앱 시작 시 네이티브 측정값, 모달 무관 신뢰) 사용. PhotoLogReview/BatchPhotoReview 둘 다.
+- 배포: update group **381a4fb5-bb7e-416f-bc48-f1c10997db36** (runtime 2.9.1, android+ios).
+- ※ `.env` ADS_MOCK=false 로 변경됨 → 로컬 Expo Go 개발 시 광고 "모듈 미로딩" 박스(무해). 출시 땐 eas.json production(실제ID) 사용.
+
+### ✅ OTA 배포 완료 (2026-06-03)
+- 5건 수정(home, profile, child-info, PhotoLogReview, BatchPhotoReview) + app.json platforms + 테스트광고 env 인라인.
+- `eas update --branch production` (runtime 2.9.1, android+ios). Update group: bdd5d069-852a-495b-87a8-228f0376b99c.
+- 테스트광고 env: `EXPO_PUBLIC_ADS_MOCK=false` + 구글 테스트 배너ID(android 6300978111/ios 2934735716) 인라인 오버라이드.
+- 배포 후 폰 2회 재실행(다운로드→적용) 후 확인:
+  홈 터치 / 마이 비번모달 / 자녀등록 뒤로 / 사진기록·앨범일괄 취소버튼 / iOS 'Test Ad' 배너.
+- 근본 후속: eas update용 production env를 EAS 호스팅(env)으로 이전(매번 인라인 오버라이드 불편 해소).
+
+---
+
+## 2026-06-02 출시 준비 세션 (가이드·음성·가족피드 + Sentry 보강 + 백엔드 배포)
+
+### 1) 사진/앨범/시작속도 (프론트, OTA preview)
+- `components/album/RecentPhotosGrid.tsx` — 얼굴분석 가속(`accurate→fast`, 리사이즈 900→560, minFaceSize 0.04→0.12, 동시 5→6) + **분석 중 취소** 버튼(cancelAnalysisRef)
+- `app/splash.tsx` — 스플래시 연출 ~3.7초 → ~2.05초 단축(대기/타이밍 압축)
+- `app/(main)/album.tsx` — 앨범 PDF OOM 대응: 장수 따라 적응형 화질(`pdfMaxW`), 상한 200장
+
+### 2) 아기시간 첫 진입 가이드 (신규)
+- **신규** `components/baby-tracker/BabyTrackerGuide.tsx` — 코드 목업형 5페이지 캐러셀(캡처 불필요).
+  탭소개/원터치(길게=수정·직접입력)/음성입력(앱·홈 아이콘)/알림장 실물형→AI정리/주간요약+AI인사이트.
+  페이지 높이 통일(고정 프레임), 세련된 팔레트, `onComplete`(시작하기) 분리.
+- `app/(main)/baby-tracker.tsx` — 첫 진입 1회 자동표시(`BABY_GUIDE_SHOWN_KEY`) + 헤더 `?` 재열람,
+  **가이드 완료 직후 홈 음성아이콘 핀 프롬프트**(`promptVoicePinOnce`, 안드로이드, 1회).
+
+### 3) 인앱 음성입력 + 칩 레이아웃
+- `app/(main)/baby-tracker.tsx` — 🎤 **인앱 음성입력 버튼**(액센트) → `/voice`(iOS 포함 전 기기).
+  칩을 날짜 아래 별도 줄로 분리(`chipRow`, 가운데 정렬) → 날짜 가림 해결, 날짜 화살표 근접(dateNav center).
+  **분유값설정 칩 제거**(음성설정과 중복).
+- 기존 음성 단축 인프라 확인: 정적 단축어 + `modules/shortcut-pin`(홈 핀, 음성설정에서 호출) 이미 존재.
+
+### 4) 가족피드 빈 카드 버그 수정 (P1)
+- 원인: 가족피드 공유 시 이미지 업로드 실패하면 **로컬 URI(`content://`)로 게시** → 재시작/타기기서 빈 카드.
+- `app/(main)/album.tsx` — 단일/배치 공유 둘 다 **유효 https 클라우드 URL 없으면 게시 금지** + 실패 안내. 배치는 step1 클라우드 URL 재사용.
+- `services/api.ts` — `uploadApi.upload`에 **지수 백오프 재시도 3회**(일시적 네트워크/5xx 흡수) — 앱 전체 업로드 안정화.
+
+### 5) Sentry 트리아지 + 백엔드 보강·배포
+- 18건 트리아지 결과: **인증(jwtid/audience/TOKEN_ENCRYPTION_KEY)·IAP raw.state·mom-group 인덱스는 현재 코드에서 이미 수정 확인**(옛날 에러). ExpoUpdates/navigate-before-mount/AI fallback은 무해.
+- 보강 3개: `payment.ts` `sanitizeAppleRaw` undefined 제거 / `forbidden.filter.ts` 금지어 로그 error→warn / `firestore.indexes.json` momGroupPosts `hidden+babyBirthYear+category+lat` 인덱스 추가.
+- 커밋 `1b06ac7`(backend 미배포 누적분 일괄) → **firebase deploy 완료**: firestore:indexes ✅, functions ✅(api/coachingApi/dormantUserSweep/trialEndingSweep/neighborGroupNudge/keepWarm).
+
+### 검증
+- backend tsc ✅0 / frontend tsc ✅0 / expo lint ✅0 errors / backend build ✅ / firebase deploy ✅
+
+### 남은 이슈 / 출시 전 확인
+- 🔴 **AdMob 프로덕션 미완성**: eas.json 광고 unit ID가 구글 **테스트 ID**(`...3940256099942544...`), AdMob **App ID 미설정**(`react-native-google-mobile-ads` 플러그인 app.json에 없음). 수익화하려면 실제 App ID+unit ID 발급 후 플러그인/eas.json 반영 + **네이티브 리빌드**. (출시 블로커 아님 — 광고 끄고 출시 후 업데이트 가능)
+- 🟠 **OTA env 불일치**: `frontend/.env` `EXPO_PUBLIC_ADS_MOCK=true` → `eas update`(OTA)는 mock, `eas build production`은 eas.json(false). 프로덕션 OTA 시 .env 누수 주의.
+- 🟠 **versionCode 수동**(`appVersionSource: local`): 현재 android 5 / ios 4. 새 빌드마다 증가 필요.
+- ⚠️ `SENTRY_DSN_BACKEND` 미설정 → 백엔드 자체 에러 추적 꺼짐(현재 클라이언트가 API 실패만 포착). 선택사항.
+- 출시 경로: 안드 법인계정(12명/14일 면제) → 내부테스트 → 프로덕션 승격(단계적 롤아웃) + 테스터 모집. iOS는 애플 계정 승인 후 TestFlight+심사 병행.
+
+---
+
+## 2026-05-30 동네 또래맘 커뮤니티 유도 푸시 (맘그룹 참여 유도)
+
+### 목적
+- 빌리 앱처럼 "우리 동네 N개월 또래맘들과 소통해요" 형태의 맘그룹(맘스톡) 참여 유도 푸시 신설
+- 제품 결정: 또래 표현=개월수, 동네 범위=지역명(구 단위), 발송 빈도=주 2회
+
+### 수정/추가 파일
+- **신규** `backend/src/utils/neighborGroupSweep.ts`
+  - `runNeighborGroupSweep()` — 위치(locationLabel) 등록 사용자 타깃팅 → Expo 푸시
+  - 타깃: `users.orderBy('locationUpdatedAt')` 로 위치 보유자 필터(단일필드, 인덱스 불필요)
+  - 자녀 개월수: 소유 자녀 중 출생일 있는 비임신 아이, babyBirthYear 매칭 우선 → `calculateAge`/`formatAgeKo`
+  - 지역명: `extractDistrict()` 로 locationLabel 에서 구/군/시 추출 (예: "광산구 신창동"→"광산구")
+  - 토큰: pushSchedules(userId) 의 ExponentPushToken 수집
+  - 멱등성: `users.lastNeighborPushAt` 가드(최근 2일 내 발송 skip) — 기존 dormantUserSweep 패턴 그대로
+- `backend/src/index.ts` — `neighborGroupNudge` onSchedule 추가 (`0 19 * * 2,5` = 화·금 19시 KST, 주 2회)
+- `frontend/app/_layout.tsx` — ALLOWED_PUSH_SCREENS 화이트리스트에 `'mom-group'` 추가 (탭 시 맘그룹 이동)
+
+### 스키마 변경 (사용자 승인)
+- `users.lastNeighborPushAt` (Timestamp) 필드 1개 추가 — 중복 발송 가드. 새 컬렉션 없음.
+
+### 검증
+- backend tsc ✅ 0 / frontend tsc ✅ 0 / expo lint ✅ 0 errors
+- 실서버 발송 테스트는 미실행 (실사용자에게 실제 푸시가 가므로) — 배포 후 Functions 로그로 검증 예정
+
+### 남은 이슈 / 배포 필요
+- ⚠️ 아직 미배포: `cd backend && npm run deploy` (firebase deploy --only functions) 해야 스케줄 활성화
+- 메시지 문구("…또래맘 모임 💬")는 A/B 또는 카피 조정 여지 있음
+
+---
+
+## 2026-05-27 (저녁) 추가 작업
+
+### 1. voice-parse sleep cross-day 회귀 fix
+- 증상: "어제 9시 자고 오늘 7시 일어났고 7시반 분유 8시 똥쌌어" → feeding/diaper 만 저장, sleep 누락
+- 원인: 시스템 프롬프트에 "일어났어" 매핑 없음 + 흡수 룰이 다중 예시 괄호에만 명시 → Gemini 가 sleep record 자체를 drop
+- 수정 (`backend/src/routes/tracker.ts`):
+  - 시스템 프롬프트 sleep 섹션에 흡수 룰 4줄 격상 ("일어났어/깼어" 단독 → 별도 record 금지, 직전 sleep endTime 흡수)
+  - cross-day 명시 예시 추가
+  - 다중사건 예시 2 추가 (사용자 보고 케이스 그대로)
+  - ★ Fallback 안전망: raw text 에 sleep+wake 키워드 둘 다 있는데 sleep record 누락 시 정규식으로 시작/종료 시각 추출해 강제 주입
+
+### 2. 답변 길이/톤 단축
+- `backend/src/services/coaching/prompt.builder.ts` 영유아 + 임산부 양쪽 [길이와 톤] 강화
+  - "사용자 입력 반복 절대 금지" 룰 신설 (X/O 예시 포함)
+  - "공감 반복 금지, 진짜 인사이트 한 줄"
+  - 전체 200~400자 권장
+  - "조금은/것 같아요/~시군요" 군더더기 어미 금지
+- `backend/src/services/coaching/types.ts` maxOutputTokens 유지 (free 900 / paid 1200)
+  - 1차 시도 (500/700) 는 너무 빡빡해서 truncation 위험 → 원복
+
+### 3. context caching 모니터링 로깅
+- `backend/src/services/coaching/gemini.client.ts`
+  - `GeminiResponse` 인터페이스에 `usageMetadata` 추가
+  - 매 호출 후 `gemini/usage prompt=N cached=N (P%) output=N` 로깅
+  - Gemini 2.5 implicit cache hit ratio 측정 (코드 변경 0, 자동 동작)
+
+### 4. 검증 + 배포
+- backend `npx tsc --noEmit` → 0 에러
+- `npm run deploy` → api/coachingApi/keepWarm/dormantUserSweep/trialEndingSweep 5개 함수 업데이트 완료
+- Function URL: https://api-usglfifguq-uc.a.run.app
+
+### 4-10. timezone 일괄 fix — 식단 + 일기 + child-card (11차 OTA)
+- 증상: 식단 카드 시각 안 맞음 + 잠재 버그 (album/pregnancy 일기 기본 날짜, child-card 발급/만료 날짜) 새벽 시간대 어제 표시 가능
+- 원인: `toISOString().slice(0,10/11,16)` UTC 그대로 잘라 쓰는 패턴 다수
+- 수정:
+  - `frontend/app/(main)/gdm.tsx:629` 식단 eatenAt 시각 → KST toLocaleTimeString + 🕐
+  - `frontend/app/(main)/album.tsx:1240,1682` diaryDate 기본값 → KST sv-SE slice
+  - `frontend/app/(main)/pregnancy.tsx:671` diaryDate 기본값 → KST sv-SE slice
+  - `frontend/app/(main)/child-card.tsx:94~106` toKstYmd 헬퍼 신설 + birth/issue/expiry KST 일괄
+- 패턴: `new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(0, 10)` (sv-SE = ISO 친화 YYYY-MM-DD)
+- 잠재 추가 점검 후보: mom-wellness.tsx:157 storage key 일관성 (저장/읽기 같은 패턴이면 OK)
+- OTA preview 배포 (Android 019e6a15, iOS 019e6a17)
+
+### 4-9. 임당 혈당 기록 측정 시각 KST 변환 (10차 OTA)
+- 증상: 사용자 폰 시각 12:13에 기록했는데 화면 "15:13" 표시 — 시간 안 맞음
+- 원인: 백엔드 `pregnancy.ts:1336` `new Date().toISOString()` UTC 저장. 프론트 `.slice(11, 16)` UTC 시간 그대로 잘라서 표시 (timezone 변환 X)
+- 수정 (`frontend/app/(main)/gdm.tsx:575`):
+  - `new Date(measuredAt).toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit', hour12:false, timeZone:'Asia/Seoul' })`
+  - 🕐 시계 아이콘 추가 (사용자 요청)
+- OTA preview 배포 (Android 019e6a0c, iOS 019e6a0e)
+
+### 4-8. 임당관리 UI 가독성 + 입력 접근성 fix (9차 OTA)
+- 증상 1: 상단 탭 "🩸 혈당", "🍚 식단" 텍스트가 잘 안 보임 (옅은 색 + 작은 폰트)
+- 증상 2: FAB(+) 버튼이 광고 배너에 가려 잘 안 보임
+- 수정 (`frontend/app/(main)/gdm.tsx`):
+  - tabText 색상 #5D4037, 폰트 FONT_SIZE.md, weight 700 / Active 800
+  - AI 분석 버튼 바로 아래 인라인 입력 버튼 추가 ("＋ 혈당/식단 기록 추가")
+  - inlineAddBtn 스타일: 흰 배경 + 핑크 테두리 2px + 강조 텍스트
+  - FAB 는 그대로 유지 (양쪽 접근)
+- OTA preview 배포 (Android 019e6a03, iOS 019e6a05)
+
+### 4-7. 음성 조기 종료 fix — 말 중간 숨고르기 자동종료 (8차 OTA)
+- 증상: 말하고 있는데 중간에 입력 끝남 (말 다 못 하고 process 됨)
+- 원인:
+  - expo-speech-recognition start 옵션이 기본값 → 무음 ~500ms 에 isFinal 떨어뜨림
+  - voice.tsx result 핸들러가 isFinal && len ≥ 2 면 즉시 processVoice
+  - 말 중간 숨고르기(2~3음절 쉼) 도중 isFinal 가 떨어져 early termination
+- 수정 (`frontend/app/voice.tsx`):
+  - start 옵션 `continuous: true` + Android intent options 추가:
+    - EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 3000
+    - EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 2500
+    - EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 5000
+  - 디바운스 도입 (SILENCE_DEBOUNCE_MS = 2000):
+    - debounceTimerRef 추가
+    - result 이벤트마다 timer reset
+    - 2초 동안 새 result 안 오면 그때 processVoice + STT stop
+  - end 이벤트는 백업 (디바운스 진행 중이면 skip)
+  - unmount cleanup 에 timer clear 추가
+- OTA preview 배포 (Android 019e69f5, iOS 019e69f8)
+
+### 4-6. cross-day sleep "기록 됐다가 지워짐" 진짜 원인 fix (7차 배포)
+- 증상: "어제 9시 잤고 오늘 7시 깼어" → 화면에 기록됨 표시 → baby-tracker 진입 시 사라짐
+- 원인: 백엔드 `babyTracker.ts:36` `TrackerRecordSchema.endTime` regex 가 `^\d{2}:\d{2}$` 만 허용. 프론트 voice.tsx 가 cross-day sleep 일 때 endTime 에 "M/D HH:MM" prefix 붙여서 보냄 → Zod validation 실패 → putDay 400 → 서버 저장 실패 → baby-tracker reload 시 서버 빈 데이터로 로컬 덮어쓰기 → 사라짐
+- 수정 (`backend/src/routes/babyTracker.ts`):
+  - END_TIME_RE 신설: `/^(\d{2}:\d{2}|\d{1,2}\/\d{1,2}\s\d{2}:\d{2})$/`
+  - 기존 HH:MM + 새 M/D HH:MM 둘 다 허용
+- 재배포 완료
+
+### 4-5. voice 화면 "먼저 아이를 등록해주세요" 회귀 fix (6차 OTA)
+- 증상: 4-4 OTA 후에도 voice 단축 아이콘 진입 시 "먼저 아이를 등록해주세요" 표시
+- 원인: childStore 가 persist 없음. 메모리만 보관. home 만 setChildren 호출 → 단축 아이콘으로 home 안 거치고 직접 voice 진입 시 store children 빈 채로 시작
+- 수정 (`frontend/app/voice.tsx`):
+  - childApi import 추가
+  - fallback 우선순위 재구성:
+    1) store children 비어있으면 childApi.list() 자체 fetch + setChildren
+    2) 그래도 storeSelectedChild 없으면 children[0] 자동 선택
+    3) 진짜 0명일 때만 "먼저 아이를 등록해주세요"
+- OTA preview 배포 완료 (Android 019e69e3, iOS 019e69e5)
+
+### 4-4. voice 화면 "아이를 선택해주세요" 회귀 fix (OTA 배포)
+- 증상: 음성 발화 시 모두 "아이를 선택해주세요" 표시 + home 으로 강제 리다이렉트
+- 원인: `useChildStore.getState().selectedChild` 가 null 인 상태로 voice 진입 시 fallback 부재
+- 수정 (`frontend/app/voice.tsx`):
+  - targetChildId 없을 때 등록된 children[0] 으로 자동 선택 후 진행
+  - 등록 아이 0명일 때만 "먼저 아이를 등록해주세요" 안내
+- OTA preview 배포 완료 (Android update 019e69da, iOS 019e69dd)
+
+### 4-3. sleep record 중복 dedupe (4차 배포)
+- 증상: "어제밤 9시 잤다가 오늘아침 7시 깼어" → 어제 21:00 sleep record 2개 생성
+- 원인 후보: Gemini hallucination (같은 사건 2번 출력) 또는 이전 테스트 잔여 누적
+- 수정 (`backend/src/routes/tracker.ts`):
+  - normalized 단계 직후 dedupe Map 추가
+  - key = `date|type|subType|time` 동일하면 중복으로 간주
+  - 더 정보 많은 쪽 (endTime/amount/duration 있는 쪽) 우선 유지
+- 재배포 완료
+
+### 4-2. sleep endTime 누락 회귀 fix (3차 배포)
+- 증상: "어제밤 9시에 잤다가 오늘아침 7시 깼어" → sleep record 어제 21:00 startTime 은 저장됐는데 endTime 누락 → baby-tracker 오늘 view 가상 기상 entry 생성 안 됨
+- 원인 1: Gemini 가 sleep record 만들었으나 endTime 빠뜨림
+- 원인 2: hasSleepKeyword 정규식에 "잤다가" 미포함 → fallback 조건 매칭 X
+- 수정 (`backend/src/routes/tracker.ts`):
+  - hasSleepKeyword 에 "잤다" 추가
+  - Fallback 2-A 신설: sleep record 있는데 endTime 빈 경우 → text 마지막 시각 추출해 endTime backfill + duration 자동 계산
+  - 시각 없으면 기본값 07:00 채움
+  - 프롬프트 강조: "endTime 반드시 채워. 절대 비우지 마"
+- 재배포 완료
+
+### 4-1. 시간 없는 sleep cross-day 추가 강화 (2차 배포)
+- 증상: "어제 자고 오늘 깼어" 시간 명시 없으면 fallback 정규식 미동작 → sleep record 누락
+- 수정 (`backend/src/routes/tracker.ts`):
+  - 시스템 프롬프트에 룰 추가: "시간 명시 없는 짧은 발화도 sleep record 만들어. time/endTime null 로 둬"
+  - Fallback 안전망 확장: timeMatches.length < 2 인 경우 기본값 21:00~07:00 (10h) 자동 주입
+- 재배포 완료
+
+### 5. 남은 확인 사항
+- 사용자 음성 테스트: "어제 9시 자고 오늘 7시 일어났고 7시반 분유 먹고 8시 똥쌌어" → 4개 record 정상 저장 확인 필요
+- 챗봇 답변 길이/톤 실제 변화 확인 필요
+- 며칠 후 Firebase Functions logs 에서 `gemini/usage` 검색해 cache hit ratio 확인
+
+---
+
+## 2026-05-27 작업 기록
+
+### 1. 광고 (AdMob) 활성화 + 위치 재배치
+
+#### 1-1. native 광고 실제 활성화
+- `react-native-google-mobile-ads` v16.3.3 native 모듈 빌드 포함
+- `AdSlot.tsx`: mobileAds.initialize() 호출 (이전 누락 → 광고 안 뜨던 버그)
+- `AdSlot.tsx`: minHeight 50pt + 미설정 진단 라벨 ("광고 unit ID 미설정" / "광고 모듈 미로딩 (APK 재설치 필요)")
+- EAS preview env 갱신:
+  - `EXPO_PUBLIC_ADS_ENABLED=true`
+  - `EXPO_PUBLIC_ADS_MOCK=false`
+  - `EXPO_PUBLIC_ADMOB_BANNER_ANDROID=ca-app-pub-3940256099942544/6300978111` (Google 테스트 ID)
+  - `EXPO_PUBLIC_ADMOB_BANNER_IOS=ca-app-pub-3940256099942544/2934735716`
+- `eas.json` preview env 동일하게 업데이트
+
+#### 1-2. AdSlot variant 추가 (300×250 MEDIUM_RECTANGLE)
+- `AdSlot.tsx`: `variant: 'banner' | 'medium'` prop 추가
+- 'medium' → MEDIUM_RECTANGLE 300×250 사각형 (배너 대비 CPM 3~5배)
+- 적용처: `voice.tsx` (음성 인식 화면 — 빈 공간 활용 + 무음 광고)
+
+#### 1-3. 광고 위치 재배치
+| 화면 | 광고 |
+|---|---|
+| 홈 | ✓ banner |
+| **마이탭 (신규)** | ✓ banner |
+| **음성기록 (신규, 300×250)** | ✓ medium |
+| 아기시간 메인 | ✗ 제거 (이탈 방지) |
+| **아기시간 → 기간 요약 펼침 (이동)** | ✓ banner |
+| 아기시간 시간 피커 모달 | ✗ 제거 (잘못된 위치였음) |
+| 응급/결제/음성 입력 중 | ✗ |
+- `profile.tsx`: AdSlot import + ProfileFooter 아래 추가
+- `voice.tsx`: AdSlot variant="medium" + 마이크/말씀하세요 paddingTop:80 으로 상단 정렬
+- `baby-tracker.tsx`: 메인 하단 고정 AdSlot 제거 + 기간 요약 섹션 내부로 이동
+
+---
+
+### 2. 홈 화면 단축 아이콘 (Pin Shortcut Native Module)
+
+#### 2-1. 로컬 Expo Native Module 신설
+- 신규 디렉토리: `frontend/modules/shortcut-pin/`
+  - `expo-module.config.json` (Android: `expo.modules.shortcutpin.ShortcutPinModule`)
+  - `package.json` (`name: "shortcut-pin"`, `main: "src/index.ts"`)
+  - `android/build.gradle` (useExpoModulesCorePlugin + useExpoPublishing)
+  - `android/src/main/AndroidManifest.xml`
+  - `android/src/main/java/expo/modules/shortcutpin/ShortcutPinModule.kt`
+    - `Name("ShortcutPin")` 등록
+    - `isSupported()` — ShortcutManager.isRequestPinShortcutSupported
+    - `requestPinVoiceShortcut()` — Intent ACTION_VIEW + `amatda://voice` deep link
+  - `src/index.ts` — JS 래퍼, dynamic `requireNativeModule`
+- `frontend/package.json`: `expo.autolinking.nativeModulesDir: "./modules"`
+
+#### 2-2. .gitignore 예외 추가 (핵심 버그)
+- 원인: 루트 `.gitignore`에 `android/` 패턴 — 로컬 Expo 모듈의 android/ 폴더까지 제외
+- EAS Cloud build 시 Kotlin 파일 미포함 → APK에 native 모듈 없음 → "APK 재설치 필요" alert
+- 수정: `.gitignore`에 `!frontend/modules/*/android/` + `!frontend/modules/*/android/**` 예외 추가
+- 3개 android 파일 git 포함
+
+#### 2-3. voice-settings.tsx UI
+- Section 3.5 "안드로이드에서 음성 기록 호출" 카드 신설:
+  - 방법 ① 앱 아이콘 길게 누르기
+  - 방법 ② "＋ 홈 화면에 추가" 버튼 → `requestPinVoiceShortcut()`
+- 진단 alert 5종 — `시스템 다이얼로그 호출됨` / `미지원 런처` / `미지원 OS` / `APK 재설치 필요` / `실패 (사유)`
+- `pinSupported` 비활성 gate 제거 (런처 false 보고 우회) — 버튼 항상 클릭 가능
+
+---
+
+### 3. 음성 인식 (voice-parse) 대폭 개선
+
+#### 3-1. 다중 사건 입력 지원
+- 백엔드 `tracker.ts` 응답: `{ records: ParsedRecord[] }` 형식 (이전: 단일 객체)
+- 프롬프트 재작성: "여러 사건이면 records 배열에 담아"
+- 예: "어제 9시에 자고 오늘 9시에 일어났고 9시반에 분유 120 먹고 10시에 똥싸고 12시에 낮잠자고 1시에 일어났어"
+  → 4개 record (수면 → 분유 → 대변 → 수면)
+- 프론트 `voice.tsx`: 백워드 호환 (단일/배열 둘 다 처리) + 날짜별 그룹화 saveRecords 일괄
+
+#### 3-2. 상대 날짜 해석 (어제/오늘/그저께/내일)
+- API 요청에 `clientDate` (YYYY-MM-DD) 추가
+- 프롬프트가 어제/그저께/내일 → 정확한 YYYY-MM-DD 매핑
+- 어제 시작 + 오늘 종료 sleep → 단일 record `date=어제, time=21:00, endTime=09:00`
+
+#### 3-3. Cross-day sleep endTime 정규화 (사용자 보고 버그)
+- 음성 sleep에서 endMin < startMin (자정 넘김) 감지
+- endTime을 "M/D HH:MM" 형식으로 자동 변환 (예: "09:00" → "5/27 09:00")
+- baby-tracker가 cross-day 가상 기상 entry로 다음날 view에 표시
+
+#### 3-4. medication 지원
+- type='medication' subType: fever/antibiotic/vitamin/other
+- 프롬프트: 해열제/타이레놀/항생제/비타민/D3/감기약 등 인식
+
+#### 3-5. 모유 좌/우 + 자동 추천
+- 프롬프트: "왼쪽/좌측/left" / "오른쪽/우측/right" → note 정규화
+- voice.tsx: note 없으면 같은 날 마지막 모유 반대쪽으로 자동 채움 (multi-event 내 연속도 처리)
+
+#### 3-6. endTime 범위 발화 + duration 자동
+- "10시부터 11시까지 잤어" → time=10:00, endTime=11:00, duration=60
+- 백엔드 자동 산출 (자정 넘김 +24h 처리)
+
+#### 3-7. 수면 subType 통합 (옛 버그 수정)
+- 백엔드 + 프론트: nap/night → 'sleep' 정규화 (앱이 낮잠/밤잠 구분 안 함)
+- voice-settings: "낮잠/밤잠 기본 시간" → "수면 기본 시간" 단일 입력
+
+#### 3-8. 서버 동기화 누락 버그 수정
+- 이전: voice.tsx가 raw AsyncStorage 직접 사용 → 서버 미전송, home 미갱신
+- 수정: `saveRecords()` 경유 → 자동 `putDay` 서버 sync + `useTrackerStore.bump()` 호출
+
+---
+
+### 4. 음성설정 (voice-settings) 가이드 2026 현행화
+
+- iOS Siri 카드 — Platform.OS gate 제거 (Android에서도 참고용 표시)
+- 안드로이드 음성 비서 안내 카드 — 직접 호출 불가 사유 정직하게 명시:
+  - 빅스비 "빠른 명령어" 2024.12 삭제, S25+/One UI 7부터 새 빅스비(Perplexity)
+  - Google Assistant → Gemini 전환 2026, 한국어 빌드 "맞춤 작업" 메뉴 사라짐
+  - 한국어 앱 이름 인식 약함
+- 결론: 작동하는 방법은 ① 앱 아이콘 길게 + ② 홈 단축 아이콘 두 가지뿐 명시
+
+---
+
+### 5. 앨범 (성장앨범) 마일스톤 이미지 깨짐 수정
+
+#### 5-1. PDF "추억" placeholder X 박스 수정
+- 원인: 사용자가 마일스톤 미선택 시 백엔드 `title='추억'` fallback (저장 시)
+- PDF 생성 시 `milestone-image?label=추억` 호출 → 404 → broken X 박스
+- 수정 1: `uriToDataUri` HTTP 상태 체크 — 200 아니면 throw → fallback emoji 렌더
+- 수정 2: `0m-추억.png` PNG 추가 (`frontend/assets/milestone-heart.png` 복사) → 서버가 응답
+- 수정 3: `getMilestoneImageBuffer` 3차 fallback — 매칭 안 되는 모든 라벨 → 추억 PNG 반환 (미래 라벨도 X 박스 안 뜸)
+
+#### 5-2. 임신앨범 ♥ → 마일스톤별 이모지 배지
+- 이전: 모든 임신 마일스톤이 `&#10084;` (♥) 하나만 표시
+- 수정: `PregAlbumPhoto`에 `milestoneEmoji`/`milestoneType` 필드 추가
+- `ALL_MILESTONES` lookup으로 emoji 복원 (이전 저장 데이터에 emoji 없어도)
+- HTML: `<div class="ms-icon-badge">{emoji}</div>` — 분홍 원형 배지
+- 20개 임신 마일스톤 각각 고유 이모지 (💊 🏥 📸 💓 🧪 🦶 등)
+
+---
+
+### 6. 아기시간 (baby-tracker) 추가 개선
+
+#### 6-1. 모유 수유 진행 중 배너
+- 실시간 ml 추정 표시 + 계산식 + 면책 문구
+  - "예상 수유량: 약 N ml"
+  - "계산: 경과 시간 × 분당 Nml (X개월 기준)"
+  - "ⓘ 의료 자료 기반 추정치예요. 실제 양은 아기/엄마/시간대에 따라 달라요."
+- breastStyles에 estimateText / estimateHint / estimateNote 스타일 추가
+
+#### 6-2. 타임라인 모유 항목에 추정 ml 표시
+- `TimelineEntryProps` + `HourGroupedTimelineProps`에 ageMonths 전달
+- 모유 entry에 `formatMinutes(duration) · 약 Nml (추정)` 표시
+- 요약 표(주/월)와 동일한 연령별 ml/분 계수 사용
+
+---
+
+### 7. EAS Build + 배포 이력 (오늘)
+
+#### APK 빌드 (preview)
+- 빌드 #1: `a194c0a4-c534-4615-9a1f-f26b150434f9` (FINISHED, native shortcut-pin 미포함 — .gitignore 버그)
+- 빌드 #2: `2c4899f7-437a-4345-a6f7-96e2d56dc666` (FINISHED, 동일 — 재확인 필요)
+- 빌드 #3: `2d02d827-9b58-4da3-8fc3-f1bbb37134df` (FINISHED, .gitignore 수정 후 — native 모듈 정상 포함, 사용자 확인 대기)
+
+#### OTA (preview branch)
+- 광고 mobileAds.initialize + 진단 라벨
+- iOS Siri 카드 + pin shortcut 진단 alert
+- 광고 위치 재배치 (마이/voice/baby-tracker 기간요약)
+- voice MEDIUM_RECTANGLE 300×250
+- 앨범 추억 PNG + 미지 라벨 fallback
+- 음성 다중 사건 + 어제/오늘 상대 날짜
+- 임신앨범 마일스톤 이모지 배지
+- cross-day sleep endTime 정규화
+
+#### 백엔드 배포 (firebase functions)
+- `tracker.ts` voice-parse 다중 사건 + medication + 모유 좌/우 + endTime 범위
+- `album.ts` placeholder filter + uriToDataUri 호환
+- `album.pdf.service.ts` getMilestoneImageBuffer 3차 fallback
+- 신규 asset: `backend/src/assets/milestones-sm/0m-추억.png`
+
+---
+
+### 8. 검증 결과 (오늘 종료 시점)
+
+- frontend `npx tsc --noEmit` → **0 에러**
+- backend `npx tsc --noEmit` → **0 에러**
+- frontend `npx expo lint` → 0 에러 (warnings only — 신규 코드에서 추가된 것 없음)
+- APK 빌드 #3 → FINISHED, 사용자 검증 대기 (홈 단축 아이콘 native 작동 확인)
+
+### 신규/수정 파일 요약 (오늘)
+
+**Frontend**:
+- `app/voice.tsx` — 다중 사건 record 일괄 저장, cross-day sleep prefix, AdSlot 추가, saveRecords 경유
+- `app/(main)/voice-settings.tsx` — iOS/Android 분리, pin shortcut 버튼, 진단 alert
+- `app/(main)/baby-tracker.tsx` — 모유 ml 추정 (배너/타임라인), 광고 위치 이동
+- `app/(main)/profile.tsx` — AdSlot 추가
+- `app/(main)/album.tsx` — 추억 placeholder 정규화, uriToDataUri 상태 체크
+- `app/(main)/pregnancy.tsx` — 마일스톤 이모지 배지
+- `components/ads/AdSlot.tsx` — variant prop (banner/medium), initialize, 진단 라벨, minHeight
+- `services/api.ts` — voiceParse에 clientDate 추가
+- `features/baby-tracker/utils/summary.ts` — 연령별 모유 ml/분 추정
+- `features/baby-tracker/types.ts` — DayStat 분유/모유 분리
+- `features/baby-tracker/storage.ts` — loadRangeStats에 ageMonths 인자
+- `eas.json` — preview env ADMOB 추가
+- `package.json` — expo.autolinking.nativeModulesDir
+
+**Frontend (신규)**:
+- `modules/shortcut-pin/` — 전체 디렉토리 (6 files)
+- `modules/shortcut-pin/android/` — Kotlin native module
+
+**Backend**:
+- `src/routes/tracker.ts` — voice-parse 다중사건 + clientDate + medication + 모유 좌/우
+- `src/routes/album.ts` — milestone 매핑 단순화
+- `src/services/album.pdf.service.ts` — getMilestoneImageBuffer 3차 fallback
+
+**Backend (신규)**:
+- `src/assets/milestones-sm/0m-추억.png` — 기본 마일스톤 placeholder
+
+**Root**:
+- `.gitignore` — `!frontend/modules/*/android/**` 예외
+
+### 남은 이슈 / 다음 작업
+
+1. **APK 빌드 #3 사용자 검증 대기** — 홈 단축 아이콘 native 작동 확인 ("APK 재설치 필요" alert 사라지고 시스템 다이얼로그 뜨면 성공)
+2. **실제 AdMob 계정 + Production unit ID 발급** — 출시 직전 교체 (현재 Google 테스트 ID)
+3. **음성 발화 long input 테스트** — 5건 이상 사건 정확도 확인
+4. **임신앨범 마일스톤 이모지 — PDF 폰트 fallback** — 이모지 미지원 폰트면 □ 표시 가능
+5. **0m-추억.png 디자인 개선** — 현재 milestone-heart.png 복사본, 출시 전 전용 디자인
+
+---
+
+## 2026-05-25 — 출시 전 종합 점검 (P0/P1/P2 + 결제 + UX + 정책)
 
 ---
 
@@ -4629,3 +5540,312 @@ sleepKnowledgeCache, dailyTraits, milestonePhotos, kakaoOAuthState
 - `contraction-clock.png`
 - `preg-test/stethoscope/ultrasound/leaf/ribbon/foot/bag.png`
 - `preg-mood-good/tired/nausea/pain.png`
+
+
+---
+
+## 2026-06-05 — 공동육아 연결 해제 시 공유받은 앱 자동 동기화
+
+**수정 파일**
+- `frontend/app/(main)/home.tsx` — `useFocusEffect` + `didInitialFocus` ref 추가
+
+**작업 목적**
+소유자(아빠)가 공동육아 연결을 끊었는데, 공유받은 사람(엄마) 앱에 아이가 그대로 남아있던 문제.
+
+**원인**
+- 데이터 모델은 owner-centric(정상): 아이는 1개, 소유자 소유. 엄마는 `familyMembers`(status=accepted) 문서로 같은 아이에 **공유 접근** (복사 아님).
+- 백엔드 `getAccessibleChildIds`는 멤버 문서 삭제 즉시 권한을 회수해 정상. 단, 홈 `loadChildren()`이 **mount 1회만** 실행돼서, 앱을 껐다 켜기 전까지 in-memory store에 아이가 유령처럼 남음. 그 상태 편집 시 백엔드 404.
+
+**해결**
+- 홈 화면 포커스(탭/네비 복귀) 시 `loadChildren()` 재실행 → `setChildren`이 목록 전체 교체 → 권한 사라진 아이 자동 제거. 첫 포커스는 mount useEffect와 중복 방지 위해 skip.
+
+**올바른 동작 정의(확정)**
+- 소유자가 연결 해제 → 공유받은 사람 앱에서 해당 아이 사라짐. 그동안 기록한 데이터는 소유자 아이에 그대로 남음(엄마에게 복사본 없음).
+
+**검증**
+- `frontend tsc --noEmit` 통과 / `expo lint` 0 error
+- 사용자 확인: "껐다키니깐 삭제됨" → 이제 포커스 재동기화로 재시작 불필요
+- OTA 배포: preview, runtime 2.9.1, group 1b95ebba
+
+**남은 이슈**
+- 공동육아 초대받은 사람 연결상태 표시 + "나가기" 버튼(task chip #1)
+- 아기시간 기록 작성자(가족) 표시(task chip #2, Firestore 필드 추가 → 승인 필요)
+
+---
+
+## 2026-06-05 — 공동육아 권한·필드 버그 수정 (1·2·3번)
+
+**수정 파일**
+- `backend/src/routes/momstagram.ts` — 가족피드 멤버 수집 필드 `userId`→`inviteeUserId` (113/118)
+- `backend/src/routes/sos.ts` — notify-family 멤버검사 `userId`→`inviteeUserId`; fever-calculator·check-symptom 에 `getChildIfAccessible(null)` 접근검증 추가
+- `backend/src/utils/cascadeDelete.ts` — 계정탈퇴 familyMembers 정리 `userId`(없는필드)→`invitedBy`+`inviteeUserId` 2쿼리
+- `backend/src/routes/album.ts` — `verifyChildOwnership`(소유자전용) 제거 → `getChildIfAccessible`(POST=editTimeline, GET/generate/albums=viewTimeline)
+- `backend/src/routes/vaccination.ts` — schedule(viewRecords)/complete(editRecords)/schedule-alerts(editRecords) 소유자전용 → `getChildIfAccessible`
+
+**원인**
+- `familyMembers` 스키마에 `userId` 필드 없음(`invitedBy`/`inviteeUserId`만 존재). 세 곳이 없는 필드로 쿼리 → 항상 빈 결과.
+  - momstagram: 공동육아 상대 글이 가족피드에 안 뜸
+  - sos notify-family: 공유 멤버가 SOS 못 보냄(소유자만 가능) ※보안구멍 아님, 기능버그
+  - cascadeDelete: 탈퇴해도 연결문서 유령 잔존
+- album/vaccination/sos응급도구: 소유자 전용/무인증 → 공유 멤버 기능 배제 또는 BOLA.
+
+**해결**
+- 필드명 정정(3곳), 권한 헬퍼 `getChildIfAccessible`로 통일(공유 멤버 권한 기반 접근 허용).
+
+**검증**
+- `backend tsc --noEmit` 통과
+- `npm run build` + `firebase deploy --only functions:api` 성공 (api us-central1 업데이트)
+
+**미적용(제품 결정 필요 — 4번)**
+- 중복 수락 가드(같은 사람 2번 수락 시 accepted 문서 중복)
+- AI 코칭 useCoaching 권한 무시(context.builder 의도적) — 권한모델 일치 여부 결정 필요
+- pending 초대 만료 정책
+
+**참고**
+- Firestore composite 인덱스: familyMembers 쿼리는 전부 순수 equality → 불필요(에이전트 과장 정정).
+
+---
+
+## 2026-06-05 — 공동육아 4번(제품 결정 항목) 반영
+
+**수정 파일**
+- `backend/src/routes/coparenting.ts` — INVITE_EXPIRY_MS(7일) + sweepExpiredInvites() 추가; accept 트랜잭션에 만료 거부(410) + 중복 가드(이미 accepted 멤버면 새 멤버십 안 만들고 pending 초대만 삭제, alreadyMember 반환)
+- `backend/src/services/coaching/context.builder.ts` — buildChildContext 에 requiredPermission(기본 'useCoaching') 인자 추가, 공유 멤버 권한 잠금
+- `backend/src/routes/coaching/history.handler.ts` — 마일스톤 열람은 'viewProfile' 로 호출(코칭 생성과 구분, 열람 막힘 방지)
+- `backend/src/index.ts` — dormantUserSweep(매일 03:30 KST) 콜백에서 sweepExpiredInvites() 호출
+
+**결정/해결**
+1. 중복 수락 → "이미 멤버면 안 만든다": accept 트랜잭션에서 dup(accepted) 존재 시 새 멤버십 생성 안 함, 중복 pending 만 소비. (읽기 후 쓰기 트랜잭션 규칙 준수)
+2. AI 코칭 권한 → "잠그기": 공유 멤버는 useCoaching 보유해야 코칭 생성(ask/firstTalk/dailyDiary/analyzeMedia/followup) 가능. 소유자는 항상 통과. 마일스톤 열람은 viewProfile 로 분리해 과잉 차단 방지.
+3. pending 초대 만료 → "안 쓴 초대코드 삭제": 7일 경과 pending 은 수락 불가(410) + 매일 sweep 으로 삭제. createdAt(기존 필드) 비교 → 스키마 변경 없음.
+
+**검증**
+- `backend tsc --noEmit` 통과
+- `npm run build` + `firebase deploy --only functions:api,functions:dormantUserSweep` 성공
+
+**비고**
+- accept 응답에 alreadyMember 필드 추가(하위호환 — 프론트 무변경).
+- 만료 sweep 은 status 단일 equality 쿼리 + 코드 비교 → 복합 인덱스 불필요.
+
+---
+
+## 2026-06-05 — 아기시간 열람전용 멤버 기록 차단 (할머니 기록 버그)
+
+**증상**: 할머니(grandparent, 열람전용)인데 아기시간에 기록이 되고 "할머니가 기록함" 표시됨.
+
+**진단(실데이터 확인)**: accepted 멤버십 1개(중복 아님), 권한도 정확히 열람전용(editRecords 없음). 서버 PUT 은 editRecords 로 정상 차단. → 원인은 프론트.
+- `features/baby-tracker/storage.ts`: putDay/putSessions 가 `.catch(()=>{})` fire-and-forget → 403 조용히 삼킴.
+- 아기시간은 offline-first → 로컬에 먼저 저장+표시. 즉 할머니 폰 로컬에만 보이고 실제 공유 데이터엔 미반영. 프론트가 권한 게이팅을 안 함.
+
+**수정 파일**
+- `frontend/features/baby-tracker/author.ts` — resolveCanEditRecords(childId) 추가 (owner 또는 editRecords 보유 → true, 조회실패 fail-open, 캐시)
+- `frontend/app/(main)/baby-tracker.tsx` — canEditRecords 상태/effect + ensureCanEdit() 가드를 핵심 4 진입점(handleBottomAction/handleTimedActionRequest/handleEditSave/handleDeleteRecord)에 적용 + 열람전용 배너
+
+**해결**: 열람전용 멤버는 입력/수정/삭제 시 "열람 전용" 안내 후 차단, 상단에 열람전용 배너 표시. 소유자/편집권한 멤버는 영향 없음.
+
+**검증**
+- `frontend tsc --noEmit` 통과, `expo lint` 0 error(기존 경고만)
+- OTA: preview, runtime 2.9.1, group e326bed7
+
+**비고**: 보안 구멍 아님(서버는 항상 editRecords 로 차단). 프론트 UX 갭만 수정. 진단 스크립트(backend/scripts/diag-familymembers.js)는 사용 후 삭제.
+
+---
+
+## 2026-06-05 — 공동육아 권한 게이팅 정석화 (클라이언트 전수)
+
+**배경**: 서버는 권한 강제 정상이나, 프론트가 거의 모든 화면에서 권한 미확인 + offline-first 로컬저장 + fire-and-forget(.catch(()=>{})) → 열람전용 멤버가 "로컬엔 되는데 공유 안 됨" 착각. 아기시간만 게이팅돼 있었음.
+
+**정석 원칙**: 서버=진실의 원천, 클라=권한 반영(못쓰는 기능 차단/안내), 조회실패는 fail-open(서버가 최종 차단).
+
+**신규**: `frontend/features/coparenting/permissions.ts` — 공용 권한 레이어
+- resolveChildPermissions/canDo(비동기, 캐시) + useChildPermissions(훅). owner=전권, 실패=fail-open.
+
+**적용 화면(권한)**
+- chatbot.tsx — useCoaching (입력창 비활성+안내, 전송 가드). CoachingInput 에 placeholder prop 추가.
+- cry-analyzer/poop-analyzer.tsx — useCoaching (analyzeMedia 가드)
+- diary.tsx — handleSubmit=editRecords, handleGenerateAiDiary=useCoaching
+- growth-stats.tsx — editProfile (성장기록 저장 가드 — 기존 .catch 로컬착각 차단)
+- album.tsx — editTimeline (saveEntry/handleBatchConfirm/handleEditSave/삭제 가드)
+- baby-tracker.tsx — 기존 editRecords 게이팅(이전 작업)
+
+**감사로 확인(정정)**: 백엔드는 이미 견고. 에이전트가 flag 한 followups(userId 필터—본인것만, 누수X)·recommendations(childId는 AI트리거 플래그—데이터 미접근)는 실제 버그 아님 → 변경 안 함.
+
+**검증**: frontend tsc 0 error, expo lint 0 error(기존 경고만). OTA preview runtime 2.9.1 group a358f981.
+
+**남은 후속(선택)**: 각 화면 상단 "열람 전용" 배너 일관 적용(현재 아기시간만 배너, 나머지는 액션시 안내), 권한변경 후 캐시 무효화 호출(invalidatePermissions) 연결.
+
+---
+
+## 2026-06-05 — iOS/Android 플랫폼 패리티 전수 감사 (정석 검증)
+
+**요청**: iOS도 동일 방식 전수 확인, 안드와 다른 점/잘못된 것 수정, 정석 문서 기준, 끝나면 OTA.
+
+**방법**: Platform.OS/select 101곳(49파일) + app.json/app.config.js 직접 검증. RN/Expo 공식 KeyboardAvoidingView/Platform 문서 참조.
+
+**결론: 수정할 OTA 가능한 플랫폼 버그 없음. 현재 처리 방식이 정석.**
+
+에이전트 over-flag 직접 검증·반박:
+- NSPhotoLibraryAddUsageDescription "누락" → 오진. expo-media-library savePhotosPermission 이 자동 주입.
+- NSUserTrackingUsageDescription "누락" → 오진. react-native-google-mobile-ads userTrackingUsageDescription 자동 주입.
+- aps-environment "누락" → 오진. Expo+EAS 빌드 시 provisioning 으로 자동 관리.
+- associated-domains "누락" → 버그 아님. 커스텀 스킴 amatda:// 사용(유니버설 링크는 선택).
+- mom-group 신고 ActionSheetIOS "Android 불가" → 오진. else 분기에 Alert fallback 있음.
+- payment IAP "iOS 크래시" → 오진. available:true 양쪽 동일, expo-iap 플러그인 구성됨.
+- KeyboardAvoidingView undefined(Android) → 정석 허용 패턴(Platform.select ios만 지정 시 undefined). 버그 아님 → 미변경.
+- 안드 전용 분기(음성 핀/알림채널)·iOS 전용(Siri 플러그인) → 의도된 분기, 정상.
+
+**유일한 실제 항목(미구현·승인 필요)**:
+- Sign in with Apple (App Store 정책 4.8: 타 소셜로그인 제공 시 Apple 로그인 필수). 단 이는 (1)네이티브 변경→OTA 불가, (2)인증 핵심 구조 변경→Rule of Two 승인 필요, (3)백엔드 핸들러 추가 필요. → 구현 보류, 사용자 결정 대기.
+
+**데드코드(선택 정리)**: profile.tsx handleChangePassword(미사용, eslint-disable). Alert.prompt iOS 전용 분기.
+
+**OTA**: JS 변경 없음 → OTA 불필요(빈 퍼블리시 안 함). iOS 설정 변경도 없음(빌드 불필요).
+
+---
+
+## 2026-06-05 — Sign in with Apple 추가 (iOS 전용, App Store 정책 4.8)
+
+**범위**: Apple 로그인은 iOS 에만 노출(Android 미노출 — 정책상 의무도 iOS만). Android 기존 카카오/네이버/구글 유지.
+
+**백엔드(배포 완료)**
+- `services/social.auth.ts` — SocialProvider 에 'APPLE' 추가. verifyAppleToken(): identityToken(RS256 JWT)을 Apple JWKS(공개키)로 검증 — Node 내장 crypto.createPublicKey({format:'jwk'}) + jsonwebtoken(신규 의존성 0). iss(Apple)/aud(com.sylabs.amatda)/exp/서명 검증, sub→socialId, email_verified=true 만 신뢰. unlink 는 no-op(추후 revoke 보강).
+- `routes/auth.ts` — /auth/social validProviders 에 'APPLE' 추가. findOrCreateSocialUser 는 provider 제네릭이라 무수정.
+
+**프론트(OTA 완료 — 단 실제 동작은 새 빌드 필요)**
+- `services/social-auth.ts` — appleLogin(): expo-apple-authentication 동적 require + signInAsync → identityToken 을 /auth/social(provider=APPLE) 로. 취소(ERR_REQUEST_CANCELED)는 null.
+- `components/ui/socialButtonConfig.ts` — APPLE 버튼(검정/Apple로고 글리프, iosOnly) 최상단.
+- `components/ui/SocialLoginButtons.tsx` — isAppleAuthAvailable(동적 require 가드): iOS + 네이티브 모듈 존재 시에만 노출 → 구빌드 OTA 안전(버튼 숨김), 새 빌드에서 자동 노출.
+- `app.json` — ios.usesAppleSignIn:true + plugins 에 expo-apple-authentication. expo-apple-authentication ~8.0.8 설치.
+
+**검증**: backend tsc / frontend tsc / expo lint 0 error. backend firebase deploy 완료. OTA preview runtime 2.9.1 group 38fc79a0.
+
+**⚠️ 남은 필수(사용자/빌드)**:
+1. 새 iOS 빌드 필요(`eas build -p ios`) — 네이티브 모듈+entitlement 포함돼야 버튼 실제 노출/동작. OTA만으론 동작 안 함(가드로 숨김).
+2. Apple Developer: App ID 에 "Sign in with Apple" capability 활성화(EAS 자동관리 시도하나 확인 필요). App Store Connect 제출.
+3. (선택) Apple 토큰 revocation(/auth/revoke, .p8 client_secret) — 탈퇴 시 Apple 측 연결 해제 강화.
+
+---
+
+## 2026-06-05 — iOS preview 빌드 (Apple 로그인 활성화)
+
+- 1차 빌드 실패: GoogleService-Info.plist 가 git 미추적 → EAS 빌드에 미업로드.
+- 해결: `eas env:create --environment preview --name GOOGLE_SERVICES_PLIST --type file --value ./GoogleService-Info.plist --visibility secret` (안드로이드 GOOGLE_SERVICES_JSON 과 동일 방식). app.config.js 가 process.env.GOOGLE_SERVICES_PLIST 를 이미 읽음.
+- 자격증명: 배포 인증서 재사용(NKS49W7XV6), 프로비저닝 프로필에 Sign in with Apple entitlement + iPhone 11 등록.
+- 재빌드 성공 큐잉: build 5d9df328-b2af-42c2-b157-cc57f1a9c200 (클라우드 진행 중).
+- 빌드 완료 후 등록된 기기에 설치 → 로그인 화면에 Apple 버튼 노출/동작 예상.
+
+---
+
+## 2026-06-05 — iOS production 빌드 + TestFlight 제출 성공 (Apple 로그인)
+
+**문제**: production(App Store) 빌드가 "Provisioning profile doesn't include com.apple.developer.applesignin entitlement" 로 반복 실패. 원인 = Apple 로그인 추가(usesAppleSignIn) 전 6/2 에 생성된 App Store 프로필엔 권한 없음. EAS 는 만료 전 캐시 프로필 재사용 → 비대화형으론 갱신 안 함.
+
+**해결 (정석, 공식 CI 문서 기준)**:
+1. 낡은 App Store 프로비저닝 프로필을 Expo 대시보드에서 삭제(사용자).
+2. ASC API 키 환경변수 5개로 비대화형 재빌드 → EAS 가 새 프로필(ZK443R6KAD) 자동 생성(App ID 의 Sign in with Apple capability 자동 포함):
+   - EXPO_ASC_API_KEY_PATH, EXPO_ASC_KEY_ID, EXPO_ASC_ISSUER_ID, EXPO_APPLE_TEAM_ID, **EXPO_APPLE_TEAM_TYPE=INDIVIDUAL**
+   - 핵심: EXPO_APPLE_TEAM_TYPE 누락 시 Apple ID 대화형 로그인("Select your Apple Team Type")으로 빠져 실패. 5개 다 줘야 ASC 키로 비대화형 인증.
+3. 빌드 성공: 8fe4885f (build number 21, .ipa). 사이닝 통과.
+4. `eas submit -p ios --profile production --id 8fe4885f --non-interactive` → App Store Connect/TestFlight 업로드 성공(submission 5deb12d4).
+
+**상태**: Apple 처리 중(~5-10분) → TestFlight 노출 예정. ITSAppUsesNonExemptEncryption=false 라 수출규정 자동 통과.
+
+**남은 사용자 작업**: TestFlight 에서 빌드 확인 → 테스터 배포 → Apple 로그인 실동작 테스트.
+
+---
+
+## 2026-06-05 — 소셜/Apple 로그인 409 에러 메시지 개선 + 양채널 OTA
+
+**증상**: Apple 로그인 시 "소셜 로그인 실패 409". 원인 = Apple ID 이메일이 이미 다른 provider 로 가입된 계정과 충돌(findOrCreateSocialUser 의 의도된 takeover 방지 409). Apple 로그인 자체는 정상.
+
+**결정**: A(차단 유지) — 자동 연결 안 함(보안). 백엔드 로직 무변경.
+
+**수정**: `hooks/useLoginHandlers.ts` — catch 에서 axios e.message("Request failed with status code 409") 대신 서버 메시지(e.response.data.error: "이미 OO로 가입된 이메일이에요...")를 우선 노출. 친절한 안내가 가려지던 문제 해결.
+
+**검증/배포**: frontend tsc 통과. OTA preview(f0a0802f) + production(b52bc4fb), runtime 2.9.1 — TestFlight 빌드(8fe4885f, 2.9.1)와 런타임 일치하여 반영됨.
+
+**테스트 가이드**: Apple 로그인 성공 확인은 (1) Apple 시트에서 "이메일 가리기(Hide My Email)" → 새 계정, (2) 충돌 이메일은 원래 provider 로 로그인.
+
+---
+
+## 2026-06-05 — IAP 구독 상품 생성 (App Store Connect API) — 결제 "SKU not found" 대응
+
+**증상**: TestFlight 에서 Apple IAP 구독 시 "결제 실패: requestPurchase ... SKU not found". 원인 = ASC 에 구독 상품 미존재(구독 그룹 0개 확인).
+
+**앱 코드 상품 ID**: premium_monthly(3900), premium_yearly(33900) — services/payment.ts. apple:{sku:productId}.
+
+**API 작업(ASC API 키 SQ3HB62VCH, ES256 JWT, jsonwebtoken)**:
+- 구독 그룹 "아맞다 VIP" 생성(id 22135877) + ko 현지화.
+- 구독 premium_monthly(id 6777005928, ONE_MONTH) + premium_yearly(id 6777006158, ONE_YEAR) 생성 — productId 코드와 정확 일치.
+- ko 현지화(이름/설명, 설명 55자 제한 준수) 성공.
+- 가격 포인트 KOR 3900/33900 정확 매칭 확인. **단 가격 설정 POST /v1/subscriptionPrices 가 409 "processing the pricing information" 로 반복 실패 → 유료 앱 계약 미활성으로 추정.**
+
+**상태**: 두 구독 모두 MISSING_METADATA (가격 미설정).
+
+**사용자 필수(법적/금융 — 대행 불가)**: ASC 비즈니스 → 유료 앱 계약 동의 + 은행/세금 정보 → 활성화. 이후 가격 설정(재시도 스크립트 backend/asc-price.js) + Ready to Submit.
+
+**비고**: 임시 스크립트 asc-check/create/finish.js 삭제, asc-price.js 만 보관(계약 후 가격 재설정용).
+
+---
+
+## 2026-06-05 — 출시 점검 + 온보딩/가이드 대개편 (계획 승인 후 구현)
+
+**Part A 출시필수**
+- `components/profile/ProfileMenuList.tsx` — 마이 메뉴에 "이용약관"(/terms) + "개인정보처리방침"(/privacy) 링크 추가(스토어 심사 필수, 기존엔 온보딩 동의에서만 노출).
+- (검증) AdMob 실제 ID는 app.json plugin에 있고 app.config.js 테스트 fallback은 hasAdMob 가드로 스킵 → 차단 아님. 계정삭제(cascadeDelete) 정상. → 에이전트 과장 정정.
+
+**Part B 가이드 시스템(B1)** — BabyTrackerGuide 패턴 일반화
+- 신규 `components/common/GuideCarousel.tsx` — 목업+진행점+애니메이션 공용 쉘. export: GUIDE_C, GuideFrame, GuidePill, GuideBubble. accent prop.
+- 신규 `components/common/GuideButton.tsx` — 헤더 '?' 재열람 버튼.
+- 신규 `features/guide/seen.ts` — shouldAutoShowGuide/markGuideSeen (guide_seen_<key>).
+
+**B2 환영 투어 개편**
+- `components/common/OnboardingGuide.tsx` — 빈약 4스텝 텍스트 → 마스코트+목업 6스텝(환영/기질분석/상담이모/아기시간/공동육아/탭지도). GuideCarousel 사용.
+
+**B3 탭별 가이드**(헤더 '?' + 첫방문 1회 자동표시)
+- 신규 콘텐츠: `features/guide/{chatbotGuide,coparentingGuide,growthGuide,sosGuide}.tsx`
+- 연결: chatbot.tsx(커스텀헤더), coparenting/growth-stats/sos(ScreenHeader right 슬롯). growth는 GrowthHeader에 onGuide prop 추가. sos는 기존 guideKey와 분리(guideVisible). baby-tracker는 기존 가이드 유지(이미 '?' 있음).
+
+**검증**: frontend tsc 0 error / expo lint 0 error(기존 경고만).
+
+**미적용(B4 선택)**: 기질카드 툴팁, 기준치 설명, 분석기 촬영가이드, 권한 예시, SOS 다음행동 — 승인 시 선별.
+
+---
+
+## 2026-06-05 — B4: 기질 분석 가이드 추가
+- 신규 `features/guide/traitGuide.tsx` (4스텝: 기질이란/분석법/활용처/참고용). 사주·오행 용어 미사용.
+- `app/(main)/trait-detail.tsx` 다크 헤더에 GuideButton('?') + 첫방문 자동표시(guide key 'trait') + GuideCarousel 연결. useEffect import 추가.
+- 검증: frontend tsc 0 error / lint 0 error. OTA preview(21626831).
+- production 채널 OTA는 사용자 명시 승인 대기(자동모드 soft-block).
+
+---
+
+## 2026-06-05 — B4 보강 3건 (사용자 "다해줘")
+- 아기시간 DailyReferenceCard 하단에 "ⓘ 권장치는 월령·몸무게 맞춤 자동 계산" 한 줄 추가 (baby-tracker.tsx).
+- poop-analyzer: "📸 잘 나오는 사진 팁" 카드 추가(미리보기는 기존 존재). cry-analyzer는 이미 녹음 팁+파일미리보기 보유 → 무변경.
+- sos ResultCard: 행동 목록 위 "👉 지금 할 일" 헤더 추가로 다음 행동 명확화.
+- 검증 tsc 0 / lint 0. OTA preview(e2c14ae7). production은 명시 승인 대기.
+
+---
+
+## 2026-06-06 — 상담 인사 성별화 + 음성핀 재요청 (사용자 피드백)
+- chatbot.tsx 첫 인사 `${childName}맘` → parentRole 기반 호칭(아빠/맘/할머니/할아버지/이모/삼촌). authApi.getProfile()로 parentRole 조회. parentGreetingSuffix 헬퍼.
+- baby-tracker.tsx promptVoicePinOnce(force) — completeGuide 가 force=true 로 호출 → 가이드를 '?'로 재열람 후 완료해도 음성입력 아이콘 추가를 다시 물어봄(이전엔 1회 거부 시 영구 미표시).
+- 광고: 빌드 프로필별 ID(production=실광고 ca-app-pub-1736147235986434, preview=테스트). OTA로 변경 불가. 요약칸 미표시는 AdMob fill 일시 실패(재시도 시 표시) → 코드 문제 아님. ⚠️ 실광고 자기클릭 금지(계정 정지 위험) — 테스트는 preview 빌드/테스트기기로.
+- 검증 tsc 0 / lint 0. OTA preview 예정.
+
+---
+
+## 2026-06-06 — 상담인사/음성핀 수정 production 반영 + 배포정책 변경
+- 원인: 상담 첫인사 부모역할 호칭 + 음성핀 재요청 수정이 preview 채널에만 있었음 → 사용자는 production 빌드(Play/TestFlight) 테스트라 미반영.
+- parentRole 저장값 확인: register/set-nickname 모두 '엄마'/'아빠' → parentGreetingSuffix 매칭 정확(코드 정상).
+- production 채널 OTA(faf15d2e). 
+- ⚠️ 배포정책 변경: 사용자 요청 — 앞으로 OTA는 **production 채널로만** (preview 생략).
+
+---
+
+## 2026-06-06 — 광고 버그: 프리미엄 상태 조회 실패 시 PAID 강제처리 제거
+- 원인: stores/premiumStore.ts catch 블록이 status 조회 실패 시 무조건 {tier:'PAID'}로 set + 5분 캐시 → 무료 계정이 일시적 네트워크 실패(예: WiFi 끊김) 한 번에 광고가 사라지고 5분간 유지됨. useShowAds가 PAID로 판단 → AdSlot이 공간째 null.
+- 수정: 실패 시 `set({ isLoading:false, lastFetched:null })` — 직전 상태 유지(VIP 보호 + FREE 광고 유지) + 캐시 안 함(다음 호출 재조회). 최초 실패는 null 유지 후 재시도.
+- 검증 tsc 0. production OTA(85497612).
+- 확인 필요: 사용자 계정 실제 tier(마이→프리미엄 플랜이 '무료'인지 '체험 N일'인지). 무료인데도 재시작 후 광고 없으면 status 조회 자체 실패 추가 조사.

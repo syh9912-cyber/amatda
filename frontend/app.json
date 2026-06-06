@@ -4,6 +4,7 @@
     "slug": "amatda",
     "scheme": "amatda",
     "version": "2.9.1",
+    "platforms": ["ios", "android"],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -11,11 +12,12 @@
     "splash": {
       "image": "./assets/mascot-happy.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FFF5EC"
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "bundleIdentifier": "com.sylabs.amatda",
       "supportsTablet": true,
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "아이 사진을 촬영하여 프로필과 성장앨범에 사용합니다",
         "NSPhotoLibraryUsageDescription": "갤러리에서 아이 사진을 선택하여 프로필과 성장앨범에 사용합니다",
@@ -52,6 +54,7 @@
       "expo-web-browser",
       "expo-router",
       "expo-secure-store",
+      "expo-apple-authentication",
       [
         "@react-native-seoul/kakao-login",
         {
@@ -99,6 +102,7 @@
       ],
       "expo-iap",
       "./plugins/withAndroidShortcuts",
+      "./plugins/withIosSiriShortcut",
       [
         "expo-speech-recognition",
         {

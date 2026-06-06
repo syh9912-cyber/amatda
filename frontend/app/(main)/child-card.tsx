@@ -11,16 +11,16 @@ import {
 } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { Stack, router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useChildStore } from '../../stores/childStore';
 import { memoriesApi } from '../../services/api';
 import { captureRef } from 'react-native-view-shot';
 import { AdSlot } from '../../components/ads/AdSlot';
+import { BackButton } from '../../components/common/BackButton';
 
-/* eslint-disable @typescript-eslint/no-require-imports */
+ 
 const IC_BOY = require('../../assets/avatar-boy.png') as number;
 const IC_GIRL = require('../../assets/avatar-girl.png') as number;
-/* eslint-enable @typescript-eslint/no-require-imports */
+ 
 
 /* ── Types ── */
 
@@ -123,14 +123,7 @@ export default function ChildCardScreen() {
 
       {/* ── Nav header ── */}
       <View style={s.navRow}>
-        <TouchableOpacity
-          onPress={() => router.canGoBack() ? router.back() : router.replace('/(main)/home')}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityRole="button"
-          accessibilityLabel="뒤로"
-        >
-          <Text style={s.navBack}>{'<'}</Text>
-        </TouchableOpacity>
+        <BackButton color="#FFFFFF" background="rgba(255,255,255,0.2)" />
         <Text style={s.navTitle}>PASSPORT</Text>
         <View style={{ width: 24 }} />
       </View>
@@ -157,16 +150,11 @@ export default function ChildCardScreen() {
               {/* ════════ PAGE 1 (Left) ════════ */}
               <View style={s.page}>
                 {/* Dark header — skin-colored */}
-                <LinearGradient
-                  colors={SKIN_GRADIENT}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={s.header}
-                >
+                <View style={[s.header, { backgroundColor: SKIN_PRIMARY }]}>
                   <Text style={[s.headerKr, { color: SKIN_ACCENT }]}>{'어 린 이  공 화 국'}</Text>
                   <Text style={[s.headerSub, { color: SKIN_ACCENT }]}>REPUBLIC OF CHILDHOOD</Text>
                   <Text style={[s.headerTitle, { color: SKIN_ACCENT }]}>PASSPORT</Text>
-                </LinearGradient>
+                </View>
 
                 <View style={s.pageBody}>
                   {/* Type / Country / No. */}
@@ -273,16 +261,11 @@ export default function ChildCardScreen() {
               {/* ════════ PAGE 2 (Right) ════════ */}
               <View style={s.page}>
                 {/* Same header as page 1 — skin-colored */}
-                <LinearGradient
-                  colors={SKIN_GRADIENT}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={s.header}
-                >
+                <View style={[s.header, { backgroundColor: SKIN_PRIMARY }]}>
                   <Text style={[s.headerKr, { color: SKIN_ACCENT }]}>{'어 린 이  공 화 국'}</Text>
                   <Text style={[s.headerSub, { color: SKIN_ACCENT }]}>REPUBLIC OF CHILDHOOD</Text>
                   <Text style={[s.headerTitle, { color: SKIN_ACCENT }]}>PASSPORT</Text>
-                </LinearGradient>
+                </View>
 
                 <View style={s.pageBody}>
                   {/* 한글성명 */}
@@ -359,18 +342,13 @@ export default function ChildCardScreen() {
             disabled={sharing}
             activeOpacity={0.8}
           >
-            <LinearGradient
-              colors={['#D4AF37', '#B8941F']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={s.shareBtnInner}
-            >
+            <View style={[s.shareBtnInner, { backgroundColor: '#D4AF37' }]}>
               {sharing ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
                 <Text style={s.shareBtnText}>SNS에 여권 공유하기</Text>
               )}
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
           <Text style={s.hintText}>{'카카오톡, 인스타그램 등에 바로 공유할 수 있어요'}</Text>
         </>

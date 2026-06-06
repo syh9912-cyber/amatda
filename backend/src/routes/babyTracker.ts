@@ -41,6 +41,10 @@ const TrackerRecordSchema = z.object({
   duration: z.number().min(0).max(24 * 60).optional(),
   note: z.string().max(500).optional(),
   createdAt: z.string().max(64).optional(),
+  // 공동육아 작성자 표기 — 초대받은 가족이 기록한 경우에만 채워짐.
+  // authorId: 작성자 userId, authorLabel: 비정규화 닉네임("엄마"/"아빠"). 소유자 본인 기록엔 미설정.
+  authorId: z.string().max(128).optional(),
+  authorLabel: z.string().max(40).optional(),
 });
 
 const DayParamsSchema = z.object({

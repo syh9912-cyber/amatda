@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { coachingApi, memoriesApi } from '../../services/api';
+import { coachingApi, memoriesApi, authApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { scheduleCoachingFollowup } from '../../services/pushNotifications';
 import { CoachMessage } from '../../components/coaching/CoachMessage';
@@ -27,17 +27,51 @@ import {
   FollowupItem,
   COACHING_COLORS,
 } from '../../components/coaching/types';
+import { useChildPermissions } from '../../features/coparenting/permissions';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { GuideButton } from '../../components/common/GuideButton';
+import { CHATBOT_GUIDE } from '../../features/guide/chatbotGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
+
+/** 부모 역할별 호칭 접미사 (아이 이름 + 접미사). 아버지면 "아빠", 어머니면 "맘" 등 */
+function parentGreetingSuffix(role?: string): string {
+  switch (role) {
+    case '아빠': return '아빠';
+    case '엄마': return '맘';
+    case '할머니': return '할머니';
+    case '할아버지': return '할아버지';
+    case '고모이모': return '이모';
+    case '삼촌': return '삼촌';
+    default: return '맘';
+  }
+}
 
 export default function CoachingScreen() {
   const router = useRouter();
   const { firstMessage } = useLocalSearchParams<{ firstMessage?: string }>();
   const child = useChildStore((s) => s.selectedChild);
+  // 공동육아: useCoaching 권한 없는 멤버는 AI 상담 사용 불가 (열람 전용)
+  const { can } = useChildPermissions(child?.id);
+  const canUseCoaching = can('useCoaching');
   const [messages, setMessages] = useState<CoachingMessage[]>([]);
   const [followups, setFollowups] = useState<FollowupItem[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [firstTalkDone, setFirstTalkDone] = useState(false);
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => { shouldAutoShowGuide('chatbot').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen('chatbot'); };
+  // 부모 역할(아빠/엄마/조부모…)로 첫 인사 호칭을 맞춤 — "OO맘/OO아빠"
+  const [parentRole, setParentRole] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    authApi.getProfile()
+      .then((res) => {
+        const role = (res.data?.data as { parentRole?: string } | undefined)?.parentRole;
+        if (role) setParentRole(role);
+      })
+      .catch(() => {});
+  }, []);
   const [yearAgoMemory, setYearAgoMemory] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const firstMessageHandled = useRef(false);
@@ -172,6 +206,16 @@ export default function CoachingScreen() {
         setMessages((prev) => [...prev, noChildMsg]);
         return;
       }
+      // 공동육아 권한 게이팅: useCoaching 없는 멤버는 차단 (서버도 차단하지만 UX상 미리 안내)
+      if (!canUseCoaching) {
+        setMessages((prev) => [...prev, {
+          id: `e-${Date.now()}`,
+          isCoach: true,
+          text: '상담 사용 권한이 없어요. 보호자에게 "상담이모 사용" 권한을 요청해주세요.',
+          createdAt: new Date().toISOString(),
+        }]);
+        return;
+      }
       setInput('');
       setSending(true);
 
@@ -209,6 +253,9 @@ export default function CoachingScreen() {
           reasons: Array.isArray(reply?.reasons) ? (reply.reasons as string[]) : undefined,
           medical: (reply?.medical as string | undefined) ?? undefined,
           followup: followupText,
+          followups: Array.isArray(reply?.followups)
+            ? (reply.followups as unknown[]).filter((q): q is string => typeof q === 'string')
+            : undefined,
           createdAt: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, coachMsg]);
@@ -238,7 +285,7 @@ export default function CoachingScreen() {
         scrollToBottom();
       }
     },
-    [sending, child, photoUri, scrollToBottom]
+    [sending, child, photoUri, scrollToBottom, canUseCoaching]
   );
 
   const handleFirstTalkSelect = useCallback(
@@ -346,9 +393,12 @@ export default function CoachingScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          {'상담이모'}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={styles.headerTitle}>
+            {'상담이모'}
+          </Text>
+          <GuideButton onPress={() => setGuideVisible(true)} />
+        </View>
         <View style={styles.headerChild}>
           {child?.photoUri ? (
             <Image
@@ -407,7 +457,7 @@ export default function CoachingScreen() {
             message={{
               id: 'greeting',
               isCoach: true,
-              text: `안녕하세요, ${childName}맘 :) 무엇이 궁금하세요?`,
+              text: `안녕하세요, ${childName}${parentGreetingSuffix(parentRole)} :) 무엇이 궁금하세요?`,
               createdAt: new Date().toISOString(),
               source: 'ai',
             }}
@@ -435,9 +485,14 @@ export default function CoachingScreen() {
         ) : null}
 
         {/* Messages */}
-        {messages.map((msg) =>
+        {messages.map((msg, idx) =>
           msg.isCoach ? (
-            <CoachMessage key={msg.id} message={msg} />
+            <CoachMessage
+              key={msg.id}
+              message={msg}
+              onPickFollowup={sendMessage}
+              isLatest={idx === messages.length - 1 && !sending}
+            />
           ) : (
             <ParentMessage key={msg.id} message={msg} />
           )
@@ -503,9 +558,12 @@ export default function CoachingScreen() {
           onChangeText={setInput}
           onSend={handleSend}
           onPhoto={handlePhoto}
-          disabled={sending}
+          disabled={sending || !canUseCoaching}
+          placeholder={!canUseCoaching ? '상담 사용 권한이 없어요 (열람 전용)' : undefined}
         />
       )}
+
+      <GuideCarousel visible={guideVisible} pages={CHATBOT_GUIDE} onClose={closeGuide} onComplete={closeGuide} />
     </KeyboardAvoidingView>
   );
 }
@@ -516,15 +574,15 @@ const styles = StyleSheet.create({
     backgroundColor: COACHING_COLORS.bg,
   },
   disclaimer: {
-    backgroundColor: '#FFF8F0',
+    backgroundColor: '#FAFAFA',
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#FFE0C0',
+    borderBottomColor: '#EFEFF1',
   },
   disclaimerText: {
     fontSize: 10,
-    color: '#B05000',
+    color: '#7A7A82',
     lineHeight: 14,
     textAlign: 'center',
   },

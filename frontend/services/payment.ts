@@ -54,7 +54,7 @@ export type ProductId = 'premium_monthly' | 'premium_yearly';
 
 export const PRODUCT_INFO: Record<ProductId, { name: string; price: number }> = {
   premium_monthly: { name: '아맞다 VIP 월간', price: 3900 },
-  premium_yearly: { name: '아맞다 VIP 연간', price: 33900 },
+  premium_yearly: { name: '아맞다 VIP 연간', price: 39900 },
 };
 
 // ─── PortOne 환경 (앱 빌드 시 EAS env에서 주입) ───
