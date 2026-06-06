@@ -24,7 +24,7 @@ import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { pickImageFromLibrary, pickImageFromCamera } from '../../utils/imagePicker';
 import { trackerApi } from '../../services/api';
-import { loadRecords, saveRecords } from '../../features/baby-tracker/storage';
+import { loadRecords, saveRecords, loadSleepSession, saveSleepSession } from '../../features/baby-tracker/storage';
 import type { TrackerRecord } from '../../features/baby-tracker/types';
 import { resolveAuthorMeta, stampAuthor } from '../../features/baby-tracker/author';
 import { useTrackerStore } from '../../stores/trackerStore';
@@ -163,8 +163,25 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
       const authorMeta = await resolveAuthorMeta(childId);
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+      // 진행 중(종료 미정) 수면 → 활성 수면 세션으로 등록 후보:
+      // 오늘 날짜 + endTime 없음 중 가장 늦은 시각 1건. 단, 기존 진행중 세션이 없을 때만.
+      const existingSession = await loadSleepSession(childId);
+      let sessionCandidateId: string | null = null;
+      if (!existingSession) {
+        const opens = chosen.filter((r) =>
+          r.type === 'sleep' && !r.endTime &&
+          ((r.date && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : todayStr) === todayStr),
+        );
+        if (opens.length > 0) {
+          const latest = opens.reduce((a, b) => (normTime(b.time, now) > normTime(a.time, now) ? b : a));
+          sessionCandidateId = latest._id;
+        }
+      }
+
       const byDate: Record<string, TrackerRecord[]> = {};
       chosen.forEach((r, i) => {
+        if (r._id === sessionCandidateId) return; // 세션으로 등록 → 정적 record 에서는 제외(중복 방지)
         const date = r.date && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : todayStr;
         const startT = normTime(r.time, now);
         // 자정 넘는 수면: 깬 시각이 잠든 시각보다 이르면 endTime 에 "(선택 날짜+1) M/D" 표식 →
@@ -202,6 +219,19 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
       for (const [date, recs] of Object.entries(byDate)) {
         const existing = await loadRecords(childId, date);
         await saveRecords(childId, date, [...existing, ...recs]);
+      }
+      // 진행 중 수면 세션 등록 (LIVE 표시 + 나중에 '기상' 탭으로 마감)
+      if (sessionCandidateId) {
+        const cand = chosen.find((c) => c._id === sessionCandidateId);
+        if (cand) {
+          const t = normTime(cand.time, now);
+          const m = /(\d{1,2}):(\d{2})/.exec(t);
+          const hh = m ? Number(m[1]) : now.getHours();
+          const mi = m ? Number(m[2]) : now.getMinutes();
+          const [yy, mo, dd] = todayStr.split('-').map(Number);
+          const startTime = new Date(yy, mo - 1, dd, hh, mi).toISOString();
+          await saveSleepSession(childId, { startTime, startDate: todayStr, note: cand.note || undefined });
+        }
       }
       useTrackerStore.getState().bump();
       reset();

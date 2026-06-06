@@ -2675,7 +2675,7 @@ function BabyTrackerInner() {
           visible={photoLogVisible}
           childId={childId}
           onClose={() => setPhotoLogVisible(false)}
-          onSaved={() => { setPhotoLogVisible(false); loadData(); }}
+          onSaved={() => { setPhotoLogVisible(false); loadData(); loadSleepSession(childId).then((s) => setSleepSession(s)); }}
         />
 
         {/* ---- Breast-feeding timer banner (only when active) ---- */}

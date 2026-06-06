@@ -13,7 +13,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '../stores/authStore';
 import { useChildStore } from '../stores/childStore';
 import { trackerApi, childApi } from '../services/api';
-import { loadRecords, saveRecords } from '../features/baby-tracker/storage';
+import { loadRecords, saveRecords, loadSleepSession, saveSleepSession } from '../features/baby-tracker/storage';
 import { resolveAuthorMeta, stampAuthor } from '../features/baby-tracker/author';
 import type { TrackerRecord } from '../features/baby-tracker/types';
 import { AdSlot } from '../components/ads/AdSlot';
@@ -524,6 +524,25 @@ export default function VoiceScreen() {
           await saveRecords(targetChildId, dateStr, [...existing, ...dayRecords]);
         }
       } catch { /* 저장 실패해도 status 는 완료로 보여주지 않음 */ }
+
+      // 진행 중(종료 미정) 수면 → 활성 수면 세션으로 등록 (오늘 + 기존 진행중 세션 없을 때)
+      // → 진행중(LIVE) 표시 + 나중에 '기상' 탭으로 마감. 정적 record 에서는 제거(중복 방지).
+      try {
+        const existingSession = await loadSleepSession(targetChildId);
+        const todayRecs = recordsByDate[todayStr];
+        if (!existingSession && todayRecs) {
+          const opens = todayRecs.filter((rec) => rec.type === 'sleep' && !rec.endTime);
+          if (opens.length > 0) {
+            const latest = opens.reduce((a, b) => (b.time > a.time ? b : a));
+            const remaining = (await loadRecords(targetChildId, todayStr)).filter((rec) => rec.id !== latest.id);
+            await saveRecords(targetChildId, todayStr, remaining);
+            const [hh, mi] = latest.time.split(':').map((v) => parseInt(v, 10));
+            const [yy, mo, dd] = todayStr.split('-').map((v) => parseInt(v, 10));
+            const startTime = new Date(yy, mo - 1, dd, hh || 0, mi || 0).toISOString();
+            await saveSleepSession(targetChildId, { startTime, startDate: todayStr, note: latest.note });
+          }
+        }
+      } catch { /* best-effort */ }
 
       const totalCount = records.length;
       const firstLabel = SUBTYPE_LABELS[records[0].subType] ?? records[0].subType;
