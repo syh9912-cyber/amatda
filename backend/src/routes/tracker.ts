@@ -425,6 +425,16 @@ router.post('/photo-parse', authMiddleware, async (req: Request, res: Response) 
       ? clientTime
       : `${String(kst.getUTCHours()).padStart(2, '0')}:${String(kst.getUTCMinutes()).padStart(2, '0')}`;
 
+    // 상대 날짜 계산 (어제/그저께/내일) — 손글씨 메모에 "어제 …" 표현 대응
+    const offsetDate = (base: string, days: number): string => {
+      const [y, m, d] = base.split('-').map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d + days));
+      return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+    };
+    const yesterday = offsetDate(currentDate, -1);
+    const dayBeforeYesterday = offsetDate(currentDate, -2);
+    const tomorrow = offsetDate(currentDate, 1);
+
     const systemPrompt = `너는 한국 어린이집 알림장 또는 손글씨 육아 기록지 "사진"을 읽는 파서야.
 이미지의 표·항목·메모에서 아기 활동을 추출해 JSON 으로 변환해.
 
@@ -444,8 +454,18 @@ router.post('/photo-parse', authMiddleware, async (req: Request, res: Response) 
 - 등원/하원 시간은 기록 대상 아님 (무시)
 
 ## 시간/날짜
+현재 KST 날짜: ${currentDate}
 - 시간표기(13:00 / 오후 2시 / 1시반)는 24시간제 HH:MM 으로. 오후는 +12.
-- 알림장에 날짜가 보이면 그 날짜를 YYYY-MM-DD 로, 안 보이면 "${currentDate}".
+- 알림장/메모에 날짜가 보이면 그 날짜를 YYYY-MM-DD 로.
+
+### 상대 날짜 (손글씨 메모에 자주 나옴 — 매우 중요)
+- "오늘" / 날짜 표현 없음 → date: "${currentDate}"
+- "어제" / "어젯밤" → date: "${yesterday}"
+- "그저께" / "이틀 전" → date: "${dayBeforeYesterday}"
+- "내일" → date: "${tomorrow}"
+- "오늘 아침" / "오늘 저녁" → date: "${currentDate}" (시각은 time 으로)
+- ★ 자정 넘는 수면: "어제 밤10시에 자고 오늘 아침 7시에 일어났어" → sleep 1개 record 로, date="${yesterday}"(잠들기 시작한 날 기준), time="22:00", endTime="07:00", duration 자동
+- ★ "어제 N시" 가 자기 시작이면 저녁/밤 우세(예: 어제 10시에 잤어 → 22:00), "일어났어/먹었어" 면 오전/오후 우세
 
 ## ★ 시각이 안 적힌 알림장 (한국 알림장은 대부분 이래 — 매우 중요)
 알림장은 보통 시각 없이 "점심 잘 먹고 낮잠 자고 똥 쌌어요" 식 서술형이야.
