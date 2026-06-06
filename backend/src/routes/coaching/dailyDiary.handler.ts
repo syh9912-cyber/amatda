@@ -88,31 +88,43 @@ export function registerDailyDiaryHandler(router: Router): void {
       const child = await buildChildContext(childId, req.userId!);
       if (!child) { error(res, '자녀 정보 없음', 404); return; }
 
-      // 오늘 상담 내역 조회
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayISO = today.toISOString();
-      const sessionsSnap = await collections.coachingSessions
-        .where('userId', '==', req.userId)
-        .where('childId', '==', childId)
-        .where('createdAt', '>=', todayISO)
-        .orderBy('createdAt', 'asc')
-        .get();
-
-      const sessions = sessionsSnap.docs
-        .map((d) => d.data() as Record<string, unknown>)
-        .filter((s) => s.source !== 'filter' && s.source !== 'limit');
-
-      // 오늘 추적 데이터 조회 — 실제 아기시간 기록은 babyTrackerDays/{childId}_{date} 에 저장됨
-      // (이전엔 미사용 컬렉션 dailyTracking 을 조회해 항상 '기록 없음' 으로 떴던 버그 수정)
-      // 날짜는 KST 기준 — 자정 근처 UTC 오프셋 오류 방지.
+      // 일기 대상 날짜 결정 (KST 기준).
+      // 오늘 우선, 오늘 기록이 없으면 최근 2일 내 기록 있는 날로 폴백 —
+      // 밤에 기록하고 자정 넘겨 일기를 만들 때 '오늘'엔 기록이 없어 '기록 없음' 뜨던 문제 보완.
+      // 실제 아기시간 기록은 babyTrackerDays/{childId}_{date} 에 저장됨
+      // (이전엔 미사용 컬렉션 dailyTracking 을 조회해 항상 '기록 없음' 으로 떴던 버그도 함께 수정).
       const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
-      const todayStr = `${kstNow.getUTCFullYear()}-${String(kstNow.getUTCMonth() + 1).padStart(2, '0')}-${String(kstNow.getUTCDate()).padStart(2, '0')}`;
-      const dayDoc = await collections.babyTrackerDays.doc(`${childId}_${todayStr}`).get();
-      const dayRecords = dayDoc.exists
-        ? ((dayDoc.data()?.records as unknown[] | undefined) ?? [])
-        : [];
+      const ymd = (offsetDays: number): string => {
+        const d = new Date(kstNow.getTime() + offsetDays * 24 * 60 * 60 * 1000);
+        return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+      };
+      const todayStr = ymd(0);
+
+      let diaryDate = todayStr;
+      let dayRecords: unknown[] = [];
+      for (const off of [0, -1, -2]) {
+        const ds = ymd(off);
+        const doc = await collections.babyTrackerDays.doc(`${childId}_${ds}`).get();
+        const recs = doc.exists ? ((doc.data()?.records as unknown[] | undefined) ?? []) : [];
+        if (recs.length > 0) { diaryDate = ds; dayRecords = recs; break; }
+      }
       const trackingData = dayRecords.length > 0 ? { records: dayRecords } : undefined;
+
+      // 상담 내역 — 일기 대상 날짜가 오늘일 때만 포함 (과거 일기에 오늘 상담을 섞지 않음)
+      let sessions: Record<string, unknown>[] = [];
+      if (diaryDate === todayStr) {
+        const today0 = new Date();
+        today0.setHours(0, 0, 0, 0);
+        const sessionsSnap = await collections.coachingSessions
+          .where('userId', '==', req.userId)
+          .where('childId', '==', childId)
+          .where('createdAt', '>=', today0.toISOString())
+          .orderBy('createdAt', 'asc')
+          .get();
+        sessions = sessionsSnap.docs
+          .map((d) => d.data() as Record<string, unknown>)
+          .filter((s) => s.source !== 'filter' && s.source !== 'limit');
+      }
 
       if (sessions.length === 0 && !trackingData) {
         success(res, {
@@ -139,7 +151,7 @@ export function registerDailyDiaryHandler(router: Router): void {
       if (!isGeminiAvailable()) {
         success(res, {
           childName: child.name,
-          date: todayStr,
+          date: diaryDate,
           diary: buildMockDiary('아이', child.temperament, sessions.length),
         });
         return;
@@ -149,12 +161,12 @@ export function registerDailyDiaryHandler(router: Router): void {
         const prompt = `너는 따뜻한 육아일기 작가야. 오늘 하루 부모가 아이와 보낸 기록을 바탕으로 감성적이고 개인적인 육아일기를 한국어로 2~3문단 작성해.
 
 아이: 아이 (${child.ageInfo}, ${child.gender}, ${child.temperament})
-날짜: ${todayStr}
+날짜: ${diaryDate}
 
-오늘 상담 내역:
+상담 내역:
 ${sessionTexts || '없음'}
 
-오늘 추적 기록:
+그날 기록:
 ${trackingSummaryText}
 
 규칙:
@@ -176,13 +188,13 @@ ${trackingSummaryText}
 
         success(res, {
           childName: child.name,
-          date: todayStr,
+          date: diaryDate,
           diary: safeText || buildMockDiary('아이', child.temperament, sessions.length),
         });
       } catch {
         success(res, {
           childName: child.name,
-          date: todayStr,
+          date: diaryDate,
           diary: buildMockDiary('아이', child.temperament, sessions.length),
         });
       }
