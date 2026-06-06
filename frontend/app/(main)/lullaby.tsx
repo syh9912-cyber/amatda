@@ -14,6 +14,10 @@ import {
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { BackButton } from '../../components/common/BackButton';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { GuideButton } from '../../components/common/GuideButton';
+import { LULLABY_GUIDE, LULLABY_PRENATAL_GUIDE } from '../../features/guide/lullabyGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Audio, AVPlaybackSource } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -161,6 +165,14 @@ export default function LullabyScreen() {
   const cryRowLabel = isPrenatal
     ? '🤰 엄마 목소리 녹음'
     : '👂 울음 감지 자동 재생';
+  // 사용 가이드 (모드별: 자장가 / 태교음악) — 첫 진입 1회 자동표시 + ? 버튼 재열람
+  const guideKey = isPrenatal ? 'lullaby_prenatal' : 'lullaby';
+  const guidePages = isPrenatal ? LULLABY_PRENATAL_GUIDE : LULLABY_GUIDE;
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => {
+    shouldAutoShowGuide(guideKey).then((sh) => { if (sh) setGuideVisible(true); });
+  }, [guideKey]);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen(guideKey); };
   const [playing, setPlaying] = useState<string | null>(null);
   const [timer, setTimer] = useState(0);
   const [remaining, setRemaining] = useState(0);
@@ -437,7 +449,7 @@ export default function LullabyScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header */}
-      <ScreenHeader title={headerTitle} />
+      <ScreenHeader title={headerTitle} right={<GuideButton onPress={() => setGuideVisible(true)} color="#9D8CC6" />} />
       <View style={[styles.header, { alignItems: 'center' }]}>
         <Text style={styles.headerSub}>{headerSub}</Text>
       </View>
@@ -644,6 +656,7 @@ export default function LullabyScreen() {
         <View style={{ height: insets.bottom + 30 }} />
       </ScrollView>
       <AdSlot />
+      <GuideCarousel visible={guideVisible} pages={guidePages} onClose={closeGuide} onComplete={closeGuide} accent="#9D8CC6" />
     </View>
   );
 }

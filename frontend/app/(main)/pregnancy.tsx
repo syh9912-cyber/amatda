@@ -22,6 +22,10 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Stack } from 'expo-router';
 import { BackButton } from '../../components/common/BackButton';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { GuideButton } from '../../components/common/GuideButton';
+import { PREGNANCY_ALBUM_GUIDE } from '../../features/guide/pregnancyAlbumGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChildStore } from '../../stores/childStore';
 import { pregnancyApi, coachingApi, uploadApi } from '../../services/api';
@@ -578,6 +582,13 @@ export default function PregnancyScreen() {
   const childName = child?.name ?? '아가';
 
   const [refreshing, setRefreshing] = useState(false);
+
+  // 사용 가이드 (첫 진입 1회 자동표시 + ? 버튼 재열람)
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => {
+    shouldAutoShowGuide('pregnancy_album').then((sh) => { if (sh) setGuideVisible(true); });
+  }, []);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen('pregnancy_album'); };
 
   // Timeline
   const [timeline, setTimeline] = useState<TimelineWeek[]>([]);
@@ -1190,7 +1201,7 @@ export default function PregnancyScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScreenHeader title="임신앨범" />
+      <ScreenHeader title="임신앨범" right={<GuideButton onPress={() => setGuideVisible(true)} color="#E91E63" />} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -1796,6 +1807,7 @@ export default function PregnancyScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      <GuideCarousel visible={guideVisible} pages={PREGNANCY_ALBUM_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#E91E63" />
     </View>
   );
 }

@@ -6,6 +6,7 @@ import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
 import { GROWTH_GUIDE } from '../../features/guide/growthGuide';
+import { WEEKLY_DEV_GUIDE } from '../../features/guide/weeklyDevGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useChildStore } from '../../stores/childStore';
 import { canDo } from '../../features/coparenting/permissions';
@@ -218,21 +219,24 @@ export default function GrowthStatsScreen() {
   const selectedChild = useChildStore((s) => s.selectedChild);
   const isPregnant = selectedChild?.isPregnant === true;
 
+  // 모드별 가이드: 임신(주수별 발달) / 육아(성장 기록)
+  const guideKey = isPregnant ? 'weekly_dev' : 'growth';
   const [guideVisible, setGuideVisible] = useState(false);
   useEffect(() => {
-    if (!isPregnant) shouldAutoShowGuide('growth').then((sh) => { if (sh) setGuideVisible(true); });
-  }, [isPregnant]);
-  const closeGuide = () => { setGuideVisible(false); markGuideSeen('growth'); };
+    shouldAutoShowGuide(guideKey).then((sh) => { if (sh) setGuideVisible(true); });
+  }, [guideKey]);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen(guideKey); };
 
   if (isPregnant) {
     return (
       <View style={{ flex: 1 }}>
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
           <Stack.Screen options={{ headerShown: false }} />
-          <ScreenHeader title="주수별 발달" />
+          <ScreenHeader title="주수별 발달" right={<GuideButton onPress={() => setGuideVisible(true)} />} />
           <PregnancyWeeklyDevelopment />
         </ScrollView>
         <AdSlot />
+        <GuideCarousel visible={guideVisible} pages={WEEKLY_DEV_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#F0976C" />
       </View>
     );
   }

@@ -29,6 +29,10 @@ import { useChildStore } from '../../stores/childStore';
 import { useFeverStore } from '../../stores/feverStore';
 import { BackButton } from '../../components/common/BackButton';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { GuideButton } from '../../components/common/GuideButton';
+import { FEVER_GUIDE } from '../../features/guide/feverGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 // 열 관리는 긴급 관련 페이지 — 광고 없음 (VIP 여부 무관)
 
 const IC_THERMOMETER = require('../../assets/quick-thermometer.png') as ImageSourcePropType;
@@ -638,6 +642,12 @@ export default function FeverScreen() {
   const [medModalBrand, setMedModalBrand] = useState<MedicineBrand | null>(null);
   const [medModalDose, setMedModalDose] = useState<string>('');
   const [medModalNote, setMedModalNote] = useState<string>('');
+  // 사용 가이드 (첫 진입 1회 자동표시 + ? 버튼 재열람)
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => {
+    shouldAutoShowGuide('fever').then((sh) => { if (sh) setGuideVisible(true); });
+  }, []);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen('fever'); };
   // 1분마다 갱신하는 'now' (다음 복용 카운트다운용)
   const [medNow, setMedNow] = useState<number>(Date.now());
   useEffect(() => {
@@ -882,7 +892,7 @@ export default function FeverScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScreenHeader title="열나열나" />
+      <ScreenHeader title="열나열나" right={<GuideButton onPress={() => setGuideVisible(true)} />} />
 
       <ScrollView
         style={styles.scrollView}
@@ -1376,6 +1386,7 @@ export default function FeverScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      <GuideCarousel visible={guideVisible} pages={FEVER_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#DB6A5F" />
     </View>
   );
 }

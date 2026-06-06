@@ -14,6 +14,10 @@ import {
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { BackButton } from '../../components/common/BackButton';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { GuideButton } from '../../components/common/GuideButton';
+import { VACCINATION_GUIDE } from '../../features/guide/vaccinationGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useChildStore } from '../../stores/childStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VaccinationDonut } from '../../components/vaccination/VaccinationDonut';
@@ -131,6 +135,15 @@ export default function VaccinationScreen() {
 
   // Detail modal
   const [showDetail, setShowDetail] = useState<VaccineItem | null>(null);
+
+  // 사용 가이드 (첫 진입 1회 자동표시 + ? 버튼 재열람) — 육아 모드에서만
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => {
+    if (child && !child.isPregnant) {
+      shouldAutoShowGuide('vaccination').then((sh) => { if (sh) setGuideVisible(true); });
+    }
+  }, [child]);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen('vaccination'); };
 
   /* ── Load ── */
   const loadSchedule = useCallback(async () => {
@@ -259,7 +272,10 @@ export default function VaccinationScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.navBar}><BackButton /></View>
+      <View style={styles.navBar}>
+        <BackButton />
+        <GuideButton onPress={() => setGuideVisible(true)} color="#5B8DEF" />
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -520,6 +536,7 @@ export default function VaccinationScreen() {
         </View>
       </Modal>
       <AdSlot />
+      <GuideCarousel visible={guideVisible} pages={VACCINATION_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#5B8DEF" />
     </View>
   );
 }
@@ -530,7 +547,7 @@ export default function VaccinationScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  navBar: { height: 44, justifyContent: 'center', paddingHorizontal: 8 },
+  navBar: { height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 },
   scrollContent: { padding: SPACING.md, paddingBottom: 100 },
 
   /* Summary */

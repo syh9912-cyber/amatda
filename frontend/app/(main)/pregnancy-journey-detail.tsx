@@ -8,11 +8,15 @@
  * 모든 정보는 일반 안내 — 의료적 결정은 산부인과 권유.
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScrollView, View, Text, StyleSheet } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '../../components/common/BackButton';
+import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { GuideButton } from '../../components/common/GuideButton';
+import { PREGNANCY_JOURNEY_GUIDE } from '../../features/guide/pregnancyJourneyGuide';
+import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
 type Stage = 'early' | 'wk12' | 'stable' | 'late' | 'birth';
 
@@ -302,6 +306,13 @@ export default function PregnancyJourneyDetailScreen() {
     : 'stable') as Stage;
   const content = STAGE_CONTENT[stage];
 
+  // 사용 가이드 (첫 진입 1회 자동표시 + ? 버튼 재열람)
+  const [guideVisible, setGuideVisible] = useState(false);
+  useEffect(() => {
+    shouldAutoShowGuide('pregnancy_journey').then((sh) => { if (sh) setGuideVisible(true); });
+  }, []);
+  const closeGuide = () => { setGuideVisible(false); markGuideSeen('pregnancy_journey'); };
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen
@@ -312,6 +323,7 @@ export default function PregnancyJourneyDetailScreen() {
           headerTitleStyle: { fontSize: 16, fontWeight: '700', color: COLOR.text },
           headerTintColor: COLOR.pink,
           headerLeft: () => <BackButton />,
+          headerRight: () => <GuideButton onPress={() => setGuideVisible(true)} color={COLOR.pink} />,
         }}
       />
       <ScrollView
@@ -359,6 +371,7 @@ export default function PregnancyJourneyDetailScreen() {
           </Text>
         </View>
       </ScrollView>
+      <GuideCarousel visible={guideVisible} pages={PREGNANCY_JOURNEY_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent={COLOR.pink} />
     </View>
   );
 }
