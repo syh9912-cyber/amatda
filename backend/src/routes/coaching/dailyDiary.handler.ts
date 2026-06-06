@@ -152,15 +152,15 @@ export function registerDailyDiaryHandler(router: Router): void {
         success(res, {
           childName: child.name,
           date: diaryDate,
-          diary: buildMockDiary('아이', child.temperament, sessions.length),
+          diary: buildMockDiary(child.name, child.temperament, sessions.length),
         });
         return;
       }
 
       try {
-        const prompt = `너는 따뜻한 육아일기 작가야. 오늘 하루 부모가 아이와 보낸 기록을 바탕으로 감성적이고 개인적인 육아일기를 한국어로 2~3문단 작성해.
+        const prompt = `너는 따뜻한 육아일기 작가야. 부모가 아이와 보낸 그날 기록을 바탕으로 짧고 따뜻한 육아일기를 한국어로 작성해.
 
-아이: 아이 (${child.ageInfo}, ${child.gender}, ${child.temperament})
+아이: ${child.ageInfo}, ${child.gender}, ${child.temperament}
 날짜: ${diaryDate}
 
 상담 내역:
@@ -170,32 +170,38 @@ ${sessionTexts || '없음'}
 ${trackingSummaryText}
 
 규칙:
+- 길이: 3~4문장, 한 문단으로 짧게 (장황하게 늘리지 마)
 - 부모 시점(1인칭)으로 작성
+- 아이를 반드시 [[NAME]] 토큰으로만 지칭 (다른 이름·대괄호·"아이" 등 금지, [[NAME]] 그대로 사용)
 - 사주/오행 용어 절대 금지
 - 따뜻하고 일상적인 톤으로
-- 아이 이름을 자연스럽게 포함
 - JSON 없이 일기 텍스트만 출력`;
 
         const aiText = await callGeminiText(prompt, {
           temperature: 0.7,
-          maxTokens: 500,
+          maxTokens: 240,
         });
 
         // 응답 후처리: 사주/오행 등 금지 용어 검출 시 fallback
-        const safeText = containsForbiddenTerms(aiText)
-          ? buildMockDiary('아이', child.temperament, sessions.length)
+        const raw = containsForbiddenTerms(aiText)
+          ? buildMockDiary(child.name, child.temperament, sessions.length)
           : aiText.trim();
+        // 마스킹 복원: [[NAME]] 토큰 + 모델이 임의로 넣은 placeholder 를 실명으로 치환
+        const safeText = raw
+          .replace(/\[\[NAME\]\]/g, child.name)
+          .replace(/\[아이\s*이름\]/g, child.name)
+          .replace(/\{\{?\s*NAME\s*\}?\}/gi, child.name);
 
         success(res, {
           childName: child.name,
           date: diaryDate,
-          diary: safeText || buildMockDiary('아이', child.temperament, sessions.length),
+          diary: safeText || buildMockDiary(child.name, child.temperament, sessions.length),
         });
       } catch {
         success(res, {
           childName: child.name,
           date: diaryDate,
-          diary: buildMockDiary('아이', child.temperament, sessions.length),
+          diary: buildMockDiary(child.name, child.temperament, sessions.length),
         });
       }
     } catch (err: unknown) {

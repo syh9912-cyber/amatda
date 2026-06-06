@@ -525,6 +525,26 @@ router.post('/photo-parse', authMiddleware, async (req: Request, res: Response) 
       }
       if (!r.time) r.time = currentTime;
       if (!r.date || !/^\d{4}-\d{2}-\d{2}$/.test(r.date)) r.date = currentDate;
+
+      // 결정적 날짜 보정 — note 에 상대 날짜가 있는데 모델이 오늘로 넣은 경우 교정
+      // (사진 손글씨 메모 "어제 밤10시…" 가 오늘로 들어가던 문제 보강)
+      if (r.note) {
+        if (/그저께|이틀\s*전/.test(r.note) && r.date === currentDate) r.date = dayBeforeYesterday;
+        else if (/어제|어젯밤|간밤|지난밤/.test(r.note) && r.date === currentDate) r.date = yesterday;
+      }
+
+      // cross-day 수면: 깬 시각이 잠든 시각보다 이르면(자정 넘김) endTime 에 다음날 "M/D " 표식을 붙여
+      // 프론트가 '기상'을 깬 날에만 표시하도록(잠든 날 중복 방지). 이미 표식 있으면 유지.
+      if (r.type === 'sleep' && r.time && r.endTime && !r.endTime.includes(' ')) {
+        const [sh, sm] = r.time.split(':').map((v) => parseInt(v, 10));
+        const [eh, em] = r.endTime.split(':').map((v) => parseInt(v, 10));
+        if (!isNaN(sh) && !isNaN(sm) && !isNaN(eh) && !isNaN(em) && (eh * 60 + em) < (sh * 60 + sm)) {
+          const [yy, mm, dd] = r.date.split('-').map(Number);
+          const wake = new Date(Date.UTC(yy, mm - 1, dd + 1));
+          r.endTime = `${wake.getUTCMonth() + 1}/${wake.getUTCDate()} ${r.endTime}`;
+        }
+      }
+
       normalized.push(r);
     }
 
