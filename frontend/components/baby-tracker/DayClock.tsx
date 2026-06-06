@@ -83,12 +83,22 @@ function buildWedges(records: TrackerRecord[]): Wedge[] {
     const start = minutesOfDay(r.time);
     if (start == null) continue;
     if (r.type === 'sleep') {
+      // 자정 넘긴 수면의 '오늘 새벽' 부분 (어제 시작 → 오늘 기상한 가상 sleep_end 엔트리):
+      // time=기상시각. 오늘 클럭에서는 0:00 ~ 기상시각 구간이 수면.
+      if (r.subType === 'sleep_end') {
+        if (start > 0) wedges.push({ start: 0, sweep: start, color: C.sleep, z: 0 });
+        continue;
+      }
       let sweep = MIN_SLEEP_SWEEP;
       if (typeof r.duration === 'number' && r.duration > 0) sweep = r.duration;
       else {
         const end = minutesOfDay(r.endTime);
         if (end != null) sweep = (end - start + 1440) % 1440 || MIN_SLEEP_SWEEP;
       }
+      // 하루 클럭이므로 자정을 넘기는 부분은 오늘 끝(24:00)까지만 그림.
+      // (나머지 새벽 부분은 다음날 클럭의 sleep_end 로 표시 — 한 클럭에 한 바퀴 다 채우는 오작동 방지)
+      sweep = Math.min(sweep, 1440 - start);
+      if (sweep <= 0) sweep = MIN_SLEEP_SWEEP;
       // z=0: 수면은 넓으니 배경 레이어로 먼저
       wedges.push({ start, sweep, color: C.sleep, z: 0 });
     } else {
@@ -118,15 +128,20 @@ export function DayClock({ records, dateLabel }: Props) {
     let fc = 0;
     let sleepMin = 0;
     for (const r of records) {
-      if (r.type === 'feeding') fc += 1;
-      else if (r.type === 'sleep') {
-        if (typeof r.duration === 'number' && r.duration > 0) sleepMin += r.duration;
-        else {
-          const start = minutesOfDay(r.time);
-          const end = minutesOfDay(r.endTime);
-          if (start != null && end != null) sleepMin += (end - start + 1440) % 1440;
-        }
+      if (r.type === 'feeding') { fc += 1; continue; }
+      if (r.type !== 'sleep') continue;
+      const start = minutesOfDay(r.time);
+      if (start == null) continue;
+      // 자정 넘긴 수면의 '오늘 새벽' 부분: 0:00~기상시각
+      if (r.subType === 'sleep_end') { sleepMin += start; continue; }
+      let sweep = 0;
+      if (typeof r.duration === 'number' && r.duration > 0) sweep = r.duration;
+      else {
+        const end = minutesOfDay(r.endTime);
+        if (end != null) sweep = (end - start + 1440) % 1440;
       }
+      // 하루 클럭과 동일하게 오늘 몫만 (자정 넘기는 부분 제외)
+      sleepMin += Math.max(0, Math.min(sweep, 1440 - start));
     }
     return { feedingCount: fc, sleepHours: sleepMin / 60 };
   }, [records]);
