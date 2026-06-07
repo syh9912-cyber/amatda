@@ -4,7 +4,7 @@
  * 노출/날짜 제어는 서버(announcements 컬렉션), 다시 보지 않기는 로컬(AsyncStorage)에서 처리.
  */
 import { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { CenterModal } from '../ui/CenterModal';
 
 export interface Announcement {
@@ -12,6 +12,9 @@ export interface Announcement {
   title: string;
   body: string;
   imageUrl?: string | null;
+  /** 있으면 본문 아래 '이동' 버튼 표시 (구글폼 등) */
+  linkUrl?: string | null;
+  linkLabel?: string | null;
 }
 
 export type DismissChoice = 'today' | 'week' | 'none';
@@ -29,6 +32,13 @@ export function AnnouncementPopup({ visible, announcement, onClose }: Props) {
   const close = () => {
     onClose(choice ?? 'none');
     setChoice(null);
+  };
+
+  const openLink = () => {
+    if (announcement.linkUrl) {
+      Linking.openURL(announcement.linkUrl).catch(() => { /* ignore */ });
+    }
+    close();
   };
 
   return (
@@ -54,9 +64,20 @@ export function AnnouncementPopup({ visible, announcement, onClose }: Props) {
           />
         </View>
 
-        <TouchableOpacity style={s.closeBtn} onPress={close} activeOpacity={0.85}>
-          <Text style={s.closeText}>닫기</Text>
-        </TouchableOpacity>
+        {announcement.linkUrl ? (
+          <>
+            <TouchableOpacity style={s.linkBtn} onPress={openLink} activeOpacity={0.85}>
+              <Text style={s.linkText}>{announcement.linkLabel || '자세히 보기'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.closeTextBtn} onPress={close} activeOpacity={0.7}>
+              <Text style={s.closeTextOnly}>닫기</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity style={s.closeBtn} onPress={close} activeOpacity={0.85}>
+            <Text style={s.closeText}>닫기</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </CenterModal>
   );
@@ -90,4 +111,8 @@ const s = StyleSheet.create({
   checkLabel: { fontSize: 13.5, color: '#444', fontWeight: '600' },
   closeBtn: { backgroundColor: ACCENT, borderRadius: 24, paddingVertical: 13, alignItems: 'center' },
   closeText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
+  linkBtn: { backgroundColor: ACCENT, borderRadius: 24, paddingVertical: 13, alignItems: 'center' },
+  linkText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  closeTextBtn: { paddingVertical: 10, alignItems: 'center', marginTop: 2 },
+  closeTextOnly: { color: '#9E9E9E', fontSize: 14, fontWeight: '600' },
 });

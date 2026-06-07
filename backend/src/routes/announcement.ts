@@ -26,6 +26,8 @@ interface AnnDoc {
   title?: string;
   body?: string;
   imageUrl?: string | null;
+  linkUrl?: string | null;
+  linkLabel?: string | null;
   active?: boolean;
   priority?: number;
   startAt?: unknown;
@@ -79,6 +81,8 @@ router.get('/active', authMiddleware, async (_req: Request, res: Response) => {
       title: picked.title ?? '',
       body: picked.body ?? '',
       imageUrl: picked.imageUrl ?? null,
+      linkUrl: picked.linkUrl ?? null,
+      linkLabel: picked.linkLabel ?? null,
     });
   } catch (err) {
     logger.error('announcement/active', err);
