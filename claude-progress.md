@@ -1,5 +1,29 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-06-06 — 가이드 전면 개편(스포트라이트 코치마크) + 카카오 챗봇 문구 개편 + 연간 구독가 39,900원
+> 최종 업데이트: 2026-06-07 — 시작 공지 팝업(원격 제어) + 베타 100명/10명×5만원 + 웹 구독가 동기화 + 아기시간/그래프 다수 수정
+
+---
+
+## 2026-06-07 출시 준비 — 공지 팝업 · 베타 문구 · 웹 가격 동기화 · 아기시간 개선 (OTA/배포 완료)
+
+### 신규 기능
+- **시작 공지 팝업** (원격 Firestore 제어):
+  - 신규 컬렉션 `announcements` + `GET /api/announcement/active` (admin SDK, 클라 직접접근 X → firestore.rules 무변경)
+  - 콘솔에서 `active`·`startAt`/`endAt`·`priority`로 노출/기간 제어, 앱 업데이트 불필요
+  - 홈 첫 진입 시 이미지+제목+본문+링크버튼(구글폼) 팝업, "오늘/일주일 보지 않기" 체크박스(AsyncStorage)
+  - 파일: `backend/src/routes/announcement.ts`, `frontend/components/common/AnnouncementPopup.tsx`, home 연동
+- **베타 테스터 공지 생성** (Firestore doc `U5cdAwiyVnDD0PIiMVbg`): 100명 모집 / 우수리뷰어 10명×5만원 / 모집 6.8~14 / 발표 6.15(팝업+개별연락) / 구글폼 `forms.gle/yRigYK7fSxWeqVke7`
+  - 카카오 챗봇 베타 카드(`kakao.ts`)도 동일 문구로 동기화·배포
+
+### 아기시간 / 패턴 그래프 수정
+- 사진 파서: 상대날짜(어제/dayRef) 보정 + note에서 기상시각 추출(endTime) + cross-day endTime 표식
+- 리뷰 화면: 기록별 어제/오늘 날짜 토글
+- AI 오늘 일기: 컬렉션 버그(dailyTracking→babyTrackerDays) + 날짜 폴백 + 실명 토큰치환 + 길이 단축
+- 24h 패턴(DayClock): 베이비빌리식 라디얼(필터칩·1시간 눈금) + cross-day 수면 그래프 오작동 수정 + 날짜 네비
+- 진행중 수면 LIVE 세션 등록(사진/음성)
+
+### 웹/가격 동기화
+- **refund.html·amatda.html 연간가 33,900→39,900 (28%→15% 할인)** 잔재 수정 + Firebase Hosting 배포
+- 홈/로딩/스플래시 배경 순백 통일
 
 ---
 
