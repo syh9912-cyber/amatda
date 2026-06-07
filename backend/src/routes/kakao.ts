@@ -302,9 +302,9 @@ router.post('/skill/beta', async (_req: Request, res: Response) => {
               '• 광고 완전 제거\n\n' +
               '🏆 우수 리뷰어 TOP 5\n' +
               '• 신세계상품권 10만원\n\n' +
-              '📝 선정 시 베타 기간 중 스토어 리뷰 1회 이상 필수\n' +
-              '⏰ ~6월 13일 자정 마감\n' +
-              '📩 선정 6월 14일 개별 연락',
+              '📅 모집 기간: 6월 8일 ~ 14일\n' +
+              '📣 발표: 6월 15일 (팝업 공지 + 개별 연락)\n' +
+              '📝 선정 시 베타 기간 중 스토어 리뷰 1회 이상 필수',
             buttons: [
               { action: 'webLink', label: '📝 신청하기', webLinkUrl: 'https://forms.gle/yRigYK7fSxWeqVke7' },
               { action: 'webLink', label: '📲 앱 다운로드', webLinkUrl: 'https://sylabs.kr/amatda' },
