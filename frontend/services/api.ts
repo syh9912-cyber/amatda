@@ -384,6 +384,12 @@ export const coparentingApi = {
     api.get('/coparenting/presets'),
 };
 
+// 앱 시작 공지 팝업
+export const announcementApi = {
+  /** 현재 노출할 공지 1건 (없으면 data: null) */
+  active: () => api.get('/announcement/active'),
+};
+
 // Upload (이미지/영상 → Firebase Storage)
 export const uploadApi = {
   /**

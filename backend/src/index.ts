@@ -38,6 +38,7 @@ import momGroupRoutes from './routes/mom-group';
 import momLocationRoutes from './routes/mom-location';
 import birthbagShareRoutes from './routes/birthbag-share';
 import kakaoRoutes from './routes/kakao';
+import announcementRoutes from './routes/announcement';
 
 /* ------------------------------------------------------------------ */
 /* 🚀 함수 분리 아키텍처 (claude-progress.md 2026-04-16 의도)          */
@@ -96,6 +97,7 @@ app.use('/api/mom-location', momLocationRoutes);
 app.use('/api/birthbag-share', birthbagShareRoutes);
 // 카카오 i 오픈빌더 챗봇 skill 서버 — 외부 webhook, 인증 불필요 (URL 비밀로 유지)
 app.use('/api/kakao', kakaoRoutes);
+app.use('/api/announcement', announcementRoutes);
 
 /* ─── /api/coaching 안전망 마운트 ───
  *

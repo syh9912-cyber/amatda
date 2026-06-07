@@ -132,6 +132,10 @@ export const collections = {
   //   문서 ID: childId
   //   { userId, childId, sleepSession?: {...} | null, breastSession?: {...} | null, updatedAt }
   babyTrackerSessions: db.collection('babyTrackerSessions'),
+
+  // announcements — 앱 시작 공지 팝업 (콘솔/관리자에서 작성)
+  //   { title, body, imageUrl?, active, startAt?, endAt?, priority?, createdAt }
+  announcements: db.collection('announcements'),
 };
 
 /** 문서 ID 생성 */

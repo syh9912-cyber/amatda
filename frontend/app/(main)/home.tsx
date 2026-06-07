@@ -17,7 +17,8 @@ import {
 import { router, useFocusEffect } from 'expo-router';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { childApi, coachingApi, premiumApi, uploadApi } from '../../services/api';
+import { childApi, coachingApi, premiumApi, uploadApi, announcementApi } from '../../services/api';
+import { AnnouncementPopup, type Announcement, type DismissChoice } from '../../components/common/AnnouncementPopup';
 import { useChildStore, Child } from '../../stores/childStore';
 import { useFeverStore } from '../../stores/feverStore';
 import { DenseStatsRow } from '../../components/home/DenseStatsRow';
@@ -196,6 +197,44 @@ export default function HomeScreen() {
   const [birthTimeVal, setBirthTimeVal] = useState('');
   const [birthLoading, setBirthLoading] = useState(false);
 
+  // ── 시작 공지 팝업 ──
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const [announcementVisible, setAnnouncementVisible] = useState(false);
+
+  const checkAnnouncement = useCallback(async () => {
+    try {
+      const res = await announcementApi.active();
+      const ann = res.data?.data as Announcement | null;
+      if (!ann || !ann.id) return;
+      // "다시 보지 않기" 기간 내면 스킵
+      const until = await AsyncStorage.getItem(`announcement_dismiss_${ann.id}`);
+      if (until) {
+        const ts = Date.parse(until);
+        if (!Number.isNaN(ts) && ts > Date.now()) return;
+      }
+      setAnnouncement(ann);
+      setAnnouncementVisible(true);
+    } catch (err) {
+      console.warn('[home] announcement check failed:', err instanceof Error ? err.message : String(err));
+    }
+  }, []);
+
+  const handleAnnouncementClose = useCallback(async (choice: DismissChoice) => {
+    setAnnouncementVisible(false);
+    if (!announcement || choice === 'none') return;
+    let until: number;
+    if (choice === 'week') {
+      until = Date.now() + 7 * 24 * 60 * 60 * 1000;
+    } else {
+      const d = new Date();
+      d.setHours(24, 0, 0, 0); // 다음날 0시
+      until = d.getTime();
+    }
+    try {
+      await AsyncStorage.setItem(`announcement_dismiss_${announcement.id}`, new Date(until).toISOString());
+    } catch { /* best-effort */ }
+  }, [announcement]);
+
   const checkTrialStatus = useCallback(async () => {
     try {
       const res = await premiumApi.status();
@@ -232,6 +271,7 @@ export default function HomeScreen() {
       loadChildren(),
       checkProactivePopup(),
       checkTrialStatus(),
+      checkAnnouncement(),
     ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -706,6 +746,13 @@ export default function HomeScreen() {
           ScrollView 안에서 Modal 을 닫으면 iOS 에서 하위 콘텐츠의 탭(터치 응답)이 죽는다
           (스크롤은 유지됨). RN/Expo 공식 권장: Modal 은 화면 최상위에 둔다. */}
       <OnboardingGuide />
+
+      {/* 시작 공지 팝업 */}
+      <AnnouncementPopup
+        visible={announcementVisible}
+        announcement={announcement}
+        onClose={handleAnnouncementClose}
+      />
 
       {/* Proactive Popup */}
       <ProactivePopup
