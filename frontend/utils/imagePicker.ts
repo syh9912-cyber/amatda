@@ -31,12 +31,7 @@ export async function pickImageFromLibrary(options?: {
   aspect?: [number, number];
 }): Promise<PickImageResult | null> {
   try {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('권한 필요', '사진 접근 권한이 필요합니다. 설정에서 허용해주세요.');
-      return null;
-    }
-
+    // Android 사진 선택 도구(Photo Picker) 사용 — 별도 미디어 권한 요청 불필요 (Google Play 정책 준수)
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions
         ? ImagePicker.MediaTypeOptions.Images
@@ -80,12 +75,7 @@ export async function pickMultipleFromLibrary(options?: {
   selectionLimit?: number;
 }): Promise<PickImageResult[]> {
   try {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('권한 필요', '사진 접근 권한이 필요합니다. 설정에서 허용해주세요.');
-      return [];
-    }
-
+    // Android 사진 선택 도구(Photo Picker) 사용 — 별도 미디어 권한 요청 불필요 (Google Play 정책 준수)
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions
         ? ImagePicker.MediaTypeOptions.Images

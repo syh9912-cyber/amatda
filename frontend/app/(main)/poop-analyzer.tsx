@@ -96,8 +96,7 @@ export default function PoopAnalyzerScreen() {
   const handlePickImage = useCallback(async () => {
     try {
       const ImagePicker = await import('expo-image-picker');
-      const permResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permResult.granted) return;
+      // Photo Picker 사용 — 미디어 권한 요청 불필요 (Google Play 정책 준수)
       const pickerResult = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,

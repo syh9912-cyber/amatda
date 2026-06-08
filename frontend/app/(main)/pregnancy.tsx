@@ -654,11 +654,7 @@ export default function PregnancyScreen() {
   const composePickPhoto = useCallback(async () => {
     try {
       const ImagePicker = await import('expo-image-picker');
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('권한 필요', '갤러리 접근 권한을 허용해주세요');
-        return;
-      }
+      // Photo Picker 사용 — 미디어 권한 요청 불필요 (Google Play 정책 준수)
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         quality: 0.85,
@@ -696,11 +692,7 @@ export default function PregnancyScreen() {
   const pickCoverImage = useCallback(async () => {
     try {
       const ImagePicker = await import('expo-image-picker');
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('권한 필요', '갤러리 접근 권한을 허용해주세요');
-        return;
-      }
+      // Photo Picker 사용 — 미디어 권한 요청 불필요 (Google Play 정책 준수)
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         quality: 0.85,
@@ -991,11 +983,7 @@ export default function PregnancyScreen() {
           setMediaType(asset.type === 'video' ? 'video' : 'photo');
         }
       } else {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('권한 필요', '사진 접근 권한을 허용해주세요');
-          return;
-        }
+        // Photo Picker 사용 — 미디어 권한 요청 불필요 (Google Play 정책 준수)
         const result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ['images', 'videos'],
           quality: 0.8,
@@ -1128,8 +1116,7 @@ export default function PregnancyScreen() {
   const pickEditImage = useCallback(async () => {
     try {
       const ImagePicker = await import('expo-image-picker');
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') { Alert.alert('권한 필요', '갤러리 접근 권한을 허용해주세요'); return; }
+      // Photo Picker 사용 — 미디어 권한 요청 불필요 (Google Play 정책 준수)
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [4, 3] });
       if (!result.canceled && result.assets[0]) setEditNewImage(result.assets[0].uri);
     } catch { Alert.alert('오류', '사진을 불러오지 못했습니다'); }
