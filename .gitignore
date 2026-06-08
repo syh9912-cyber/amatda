@@ -65,3 +65,7 @@ test-milestone-*.cjs
 # 마이그레이션 스크립트의 백업 데이터 (사용자 PII 포함 가능)
 backend/scripts/migrate-album-photos/backup-*/
 backend/scripts/**/backup-*/
+
+# 임시 문서 생성 폴더 (소명자료 docx)
+_tmp_doc/
+*.docx
