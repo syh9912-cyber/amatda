@@ -21,6 +21,7 @@ import { BackButton } from '../../components/common/BackButton';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideButton } from '../../components/common/GuideButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { MedicalCitation } from '../../components/common/MedicalCitation';
 import { MOMWELLNESS_GUIDE } from '../../features/guide/momWellnessGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
@@ -574,6 +575,14 @@ export default function MomWellnessScreen() {
             {'\n'}보건소 모자건강사업 (지역별 전화)
           </Text>
         </View>
+
+        <MedicalCitation
+          note="자가 체크 결과는 참고용이며 의학적 진단이 아닙니다. 지속되는 우울감은 전문가와 상담하세요."
+          sources={[
+            { label: '에든버러 산후우울척도(EPDS) — Cox, Holden & Sagovsky (1987)' },
+            { label: '보건복지부 국가정신건강정보포털', url: 'https://www.mentalhealth.go.kr' },
+          ]}
+        />
       </ScrollView>
       <AdSlot />
       <GuideCarousel visible={guideVisible} pages={MOMWELLNESS_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#9D8CC6" />

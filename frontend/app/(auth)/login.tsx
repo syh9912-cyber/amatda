@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Dimensions,
   ActivityIndicator,
@@ -30,7 +31,14 @@ export default function LoginScreen() {
     >
       {/* 전체 화면 단색 배경 — 그라디언트 제거 */}
       <View style={[StyleSheet.absoluteFill, { backgroundColor: BG_TOP }]} />
-      <View style={styles.scroll}>
+      {/* ScrollView 필수 — 세로 공간이 작은 기기(iPad 호환모드 등)에서 하단
+          소셜 로그인 버튼·회원가입 링크가 잘리면 스크롤로 접근 가능해야 한다 (심사 G4). */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* ── 투명 배경 캐릭터 일러스트 (텍스트 없이 크게) ── */}
         <View style={styles.heroWrap}>
           <Image
@@ -110,7 +118,7 @@ export default function LoginScreen() {
           <Text style={styles.version}>{`v${require('../../app.json').expo.version}`}</Text>
           <Text style={styles.companyName}>SY Labs</Text>
         </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -122,6 +130,11 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+  },
+  // flexGrow: 1 — 내용이 화면보다 짧으면 footer 가 marginTop:'auto' 로 하단 고정,
+  // 길면 자연스럽게 스크롤.
+  scrollContent: {
+    flexGrow: 1,
   },
 
   /* ── 캐릭터 hero (중간 사이즈 — 짤리지 않고 적당히) ── */

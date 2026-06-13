@@ -6,6 +6,7 @@ import type { ImageSourcePropType } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { MedicalCitation } from '../../components/common/MedicalCitation';
 import { useChildStore } from '../../stores/childStore';
 import { AdSlot } from '../../components/ads/AdSlot';
 
@@ -159,6 +160,14 @@ export default function MonthlyCharacteristicScreen() {
               <Text style={s.tempBody}>{temperamentTip}</Text>
             </View>
           ) : null}
+
+          <MedicalCitation
+            note="발달 시기는 평균 기준이며 아이마다 차이가 있습니다. 발달이 걱정되면 소아과 전문의와 상담하세요."
+            sources={[
+              { label: '질병관리청 국가건강정보포털 (영유아 발달)', url: 'https://health.kdca.go.kr' },
+              { label: '대한소아과학회 어린이 건강정보', url: 'https://www.pediatrics.or.kr' },
+            ]}
+          />
         </ScrollView>
       )}
       <AdSlot />

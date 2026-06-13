@@ -52,6 +52,15 @@ export default function MomstagramPostScreen() {
     if (picked) setImageUri(picked.uri);
   };
 
+  // 게시 성공 후 폼 초기화. 화면 인스턴스가 재사용될 때 이전 글/사진/카테고리가
+  // 그대로 남는 문제를 방지한다(다음에 '+'로 들어와도 빈 폼이 보이도록).
+  const resetForm = () => {
+    setContent('');
+    setImageUri(null);
+    setCategory('일상');
+    setIsPrivate(false);
+  };
+
   const handleSubmit = async () => {
     if (!content.trim()) {
       Alert.alert('알림', '내용을 입력해주세요.');
@@ -78,6 +87,7 @@ export default function MomstagramPostScreen() {
         isPrivate: true,
       };
       addPrivatePost(newPost);
+      resetForm();
       Alert.alert('완료', '나만보기 게시물이 저장되었습니다.', [
         { text: '확인', onPress: () => router.back() },
       ]);
@@ -130,6 +140,7 @@ export default function MomstagramPostScreen() {
         isPrivate: false,
       };
       addPost(newPost);
+      resetForm();
       Alert.alert('완료', '게시물이 공유되었습니다.', [
         { text: '확인', onPress: () => router.back() },
       ]);

@@ -13,6 +13,7 @@ import {
   Modal,
 } from 'react-native';
 import { Stack } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '../../components/common/BackButton';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
@@ -322,13 +323,15 @@ export default function VoiceSettingsScreen() {
     }
   };
 
+  const insets = useSafeAreaInsets();
+
   /* Siri 가이드 — 안드로이드 사용자도 참고용으로 항상 표시 */
   const guides: AssistantGuide[] = [SIRI_GUIDE];
 
   return (
     <View style={s.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      <BackButton style={{ position: 'absolute', top: 44, left: 12, zIndex: 20 }} />
+      <BackButton style={{ position: 'absolute', top: Math.max(insets.top + 4, 44), left: 12, zIndex: 20 }} />
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Header */}
@@ -451,7 +454,9 @@ export default function VoiceSettingsScreen() {
         {guides.length > 0 && (
           <View style={s.card}>
             <Text style={s.cardTitle}>{'iOS Siri 명령 (아이폰 사용자)'}</Text>
-            <Text style={s.cardDesc}>{'아이폰은 설정 없이 "시리야, 아맞다 육아" 한마디로 음성 기록 실행 (iOS 16+). 안드로이드는 위 방법 ①/② 사용.'}</Text>
+            <Text style={s.cardDesc}>{Platform.OS === 'ios'
+              ? '아이폰은 설정 없이 "시리야, 아맞다 육아" 한마디로 음성 기록을 실행할 수 있어요 (iOS 16+).'
+              : '아이폰은 "시리야, 아맞다 육아" 한마디로 실행 (iOS 16+). 안드로이드는 위 방법 ①/② 사용.'}</Text>
 
             {guides.filter((g) => g.key === 'siri').map((guide) => (
               <View key={guide.key}>

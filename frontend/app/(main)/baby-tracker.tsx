@@ -13,6 +13,7 @@ import {
   Platform,
   Dimensions,
   KeyboardAvoidingView,
+  Keyboard,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';  // 임시 — 커스텀 라벨용
@@ -1491,7 +1492,9 @@ const modalStyles = StyleSheet.create({
     color: TRACKER_COLORS.textSub,
   },
   tabBtnTextActive: { color: TRACKER_COLORS.white },
-  scrollBody: { flexGrow: 0 },
+  // flexShrink: 1 필수 — sheet(maxHeight 85%)보다 내용이 길 때 ScrollView가 줄어들어야
+  // 실제 스크롤이 생긴다. 없으면 내용 높이 그대로 시트 밖으로 잘려 스크롤 불가(심사 거절 G4).
+  scrollBody: { flexGrow: 0, flexShrink: 1 },
   sectionTitle: {
     fontSize: FONT_SIZE.sm,
     fontWeight: '700',
@@ -3286,12 +3289,16 @@ function BabyTrackerInner() {
         animationType="fade"
         onRequestClose={() => { setEntryActionId(null); setEditRecord(null); }}
       >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
+        >
         <TouchableOpacity
           style={pickerStyles.backdrop}
           activeOpacity={1}
           onPress={() => { setEntryActionId(null); setEditRecord(null); }}
         >
-          <TouchableOpacity activeOpacity={1} style={pickerStyles.sheet}>
+          <TouchableOpacity activeOpacity={1} style={pickerStyles.sheet} onPress={() => Keyboard.dismiss()}>
             {editRecord === null && entryActionId !== null ? (
               <>
                 <Text style={pickerStyles.title}>기록 옵션</Text>
@@ -3419,6 +3426,7 @@ function BabyTrackerInner() {
             ) : null}
           </TouchableOpacity>
         </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

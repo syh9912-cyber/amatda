@@ -87,7 +87,7 @@ export default function ChildCardScreen() {
       const S = require('expo-sharing') as { isAvailableAsync: () => Promise<boolean>; shareAsync: (u: string, o?: Record<string, unknown>) => Promise<void> };
       if (!(await S.isAvailableAsync())) throw new Error('no');
       await S.shareAsync(uri, { mimeType: 'image/png', dialogTitle: '여권 공유' });
-    } catch { Alert.alert('공유 불가', 'APK 설치 후 이용해주세요.'); }
+    } catch { Alert.alert('공유 불가', '공유 기능을 사용할 수 없어요. 잠시 후 다시 시도해주세요.'); }
     finally { setSharing(false); }
   };
 
@@ -109,7 +109,33 @@ export default function ChildCardScreen() {
   const mrzLine1 = `P<CHD<${card?.name ?? ''}`.padEnd(44, '<');
   const mrzLine2 = `${(card?.shareCode || 'AMATDA001').toUpperCase()}<1CHD${birthFmt.replace(/\.\s*/g, '')}${child?.gender === 'F' ? 'F' : 'M'}FOREVER`.padEnd(44, '<');
 
-  if (!child) return null;
+  if (!child) {
+    return (
+      <View style={{ flex: 1, backgroundColor: SKIN_PRIMARY }}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={s.navRow}>
+          <BackButton color="#FFFFFF" background="rgba(255,255,255,0.2)" />
+          <Text style={s.navTitle}>PASSPORT</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 }}>
+            등록된 아이가 없어요
+          </Text>
+          <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginBottom: 24, lineHeight: 21 }}>
+            아이를 먼저 등록하면{'\n'}디지털 카드를 만들 수 있어요
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.replace('/(main)/home')}
+            style={{ backgroundColor: SKIN_ACCENT, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 24 }}
+            activeOpacity={0.85}
+          >
+            <Text style={{ color: SKIN_PRIMARY, fontSize: 15, fontWeight: '700' }}>홈으로 가기</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   /* ── Temperament description ── */
   const temperamentDesc = card?.temperament

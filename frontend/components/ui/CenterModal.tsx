@@ -1,4 +1,4 @@
-import { Modal, View, StyleSheet, ViewStyle, StyleProp, TouchableWithoutFeedback } from 'react-native';
+import { Modal, View, ScrollView, StyleSheet, ViewStyle, StyleProp, TouchableWithoutFeedback } from 'react-native';
 import { ReactNode } from 'react';
 import { COLORS, RADIUS, SPACING } from '../../constants/theme';
 
@@ -42,7 +42,18 @@ export function CenterModal({
       >
         <View style={[styles.overlay, overlayStyle]}>
           <TouchableWithoutFeedback>
-            <View style={[styles.card, cardStyle]}>{children}</View>
+            <View style={[styles.card, cardStyle]}>
+              {/* 내용이 카드 maxHeight(85%)를 넘으면 잘리는 대신 스크롤 (iPad 호환모드 등 세로 공간 부족 대비) */}
+              <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                bounces={false}
+              >
+                {children}
+              </ScrollView>
+            </View>
           </TouchableWithoutFeedback>
         </View>
       </TouchableWithoutFeedback>
@@ -64,5 +75,14 @@ const styles = StyleSheet.create({
     padding: 28,
     alignItems: 'center',
     width: '100%',
+    maxHeight: '85%',
+  },
+  scroll: {
+    alignSelf: 'stretch',
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  scrollContent: {
+    alignItems: 'center',
   },
 });

@@ -74,8 +74,8 @@ export default function KakaoChannelScreen() {
 
         <View style={styles.benefitList}>
           <Benefit emoji="🆘" title="새벽 응급 핫라인" desc="119 안내 + 즉시 코칭" />
-          <Benefit emoji="🎁" title="출시 기념 쿠폰" desc="채널 친구만 받는 혜택" />
-          <Benefit emoji="📰" title="신기능 가장 먼저" desc="베타 기능 사전 체험" />
+          <Benefit emoji="📚" title="육아 꿀팁 콘텐츠" desc="월령별 육아 정보를 카톡으로" />
+          <Benefit emoji="📰" title="신기능 가장 먼저" desc="새 기능 소식 우선 안내" />
           <Benefit emoji="💬" title="1:1 운영팀 채널" desc="문의 카톡으로 바로" />
         </View>
 

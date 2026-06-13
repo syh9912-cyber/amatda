@@ -5,6 +5,7 @@ import { Stack, router } from 'expo-router';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
+import { MedicalCitation } from '../../components/common/MedicalCitation';
 import { GROWTH_GUIDE } from '../../features/guide/growthGuide';
 import { WEEKLY_DEV_GUIDE } from '../../features/guide/weeklyDevGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
@@ -234,6 +235,12 @@ export default function GrowthStatsScreen() {
           <Stack.Screen options={{ headerShown: false }} />
           <ScreenHeader title="주수별 발달" right={<GuideButton onPress={() => setGuideVisible(true)} />} />
           <PregnancyWeeklyDevelopment />
+          <MedicalCitation
+            sources={[
+              { label: '보건복지부·임신육아종합포털 「아이사랑」 임신 주차별 정보', url: 'https://www.childcare.go.kr' },
+              { label: '대한산부인과학회 임신·출산 정보', url: 'https://www.ksog.org' },
+            ]}
+          />
         </ScrollView>
         <AdSlot />
         <GuideCarousel visible={guideVisible} pages={WEEKLY_DEV_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#F0976C" />
@@ -255,6 +262,12 @@ export default function GrowthStatsScreen() {
         <GrowthHeader onGuide={() => setGuideVisible(true)} />
 
         <PhysicalTab childName={selectedChild?.name ?? '아이'} />
+        <MedicalCitation
+          sources={[
+            { label: '질병관리청·대한소아과학회 「2017 소아청소년 성장도표」', url: 'https://www.kdca.go.kr' },
+            { label: 'WHO Child Growth Standards (0–5세)', url: 'https://www.who.int/tools/child-growth-standards' },
+          ]}
+        />
       </ScrollView>
       <AdSlot />
       <GuideCarousel visible={guideVisible} pages={GROWTH_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#7CA46E" />

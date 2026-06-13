@@ -12,6 +12,8 @@ import {
   Image,
   ActivityIndicator,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { Stack } from 'expo-router';
@@ -23,6 +25,7 @@ import { AdSlot } from '../../components/ads/AdSlot';
 import { BackButton } from '../../components/common/BackButton';
 import { GuideButton } from '../../components/common/GuideButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { MedicalCitation } from '../../components/common/MedicalCitation';
 import { GDM_GUIDE } from '../../features/guide/gdmGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { pickImageFromLibrary, pickImageFromCamera } from '../../utils/imagePicker';
@@ -656,6 +659,13 @@ export default function GdmScreen() {
           </>
         )}
 
+        <MedicalCitation
+          note="혈당·식단 권고는 일반 기준이며 개인별 목표는 담당 의료진과 상의하세요."
+          sources={[
+            { label: '대한당뇨병학회 「당뇨병 진료지침」 (임신성 당뇨병)', url: 'https://www.diabetes.or.kr' },
+            { label: '식품의약품안전처 식품영양성분 데이터베이스', url: 'https://www.foodsafetykorea.go.kr' },
+          ]}
+        />
         <View style={{ height: 100 }} />
       </ScrollView>
       <AdSlot />
@@ -671,7 +681,7 @@ export default function GdmScreen() {
 
       {/* 혈당 모달 */}
       <Modal visible={showGlucoseModal} transparent animationType="slide" onRequestClose={() => setShowGlucoseModal(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => setShowGlucoseModal(false)}>
@@ -725,7 +735,7 @@ export default function GdmScreen() {
               <Text style={styles.saveBtnText}>{saving ? '저장 중...' : '기록 저장'}</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* 주간 AI 리포트 모달 */}
@@ -815,7 +825,7 @@ export default function GdmScreen() {
 
       {/* 식단 모달 */}
       <Modal visible={showFoodModal} transparent animationType="slide" onRequestClose={() => setShowFoodModal(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView
             style={{ maxHeight: '90%' }}
             contentContainerStyle={{ flexGrow: 0 }}
@@ -968,7 +978,7 @@ export default function GdmScreen() {
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       <GuideCarousel visible={guideVisible} pages={GDM_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#7FB1BB" />

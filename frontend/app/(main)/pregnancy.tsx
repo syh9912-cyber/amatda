@@ -24,6 +24,7 @@ import { BackButton } from '../../components/common/BackButton';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
+import { MedicalCitation } from '../../components/common/MedicalCitation';
 import { PREGNANCY_ALBUM_GUIDE } from '../../features/guide/pregnancyAlbumGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -1547,6 +1548,12 @@ export default function PregnancyScreen() {
           )}
         </View>
 
+        <MedicalCitation
+          sources={[
+            { label: '보건복지부·임신육아종합포털 「아이사랑」 임신 주차별 정보', url: 'https://www.childcare.go.kr' },
+            { label: '대한산부인과학회 임신·출산 정보', url: 'https://www.ksog.org' },
+          ]}
+        />
         <View style={{ height: 40 }} />
       </ScrollView>
       <AdSlot />

@@ -16,7 +16,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.sylabs.amatda",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "아이 사진을 촬영하여 프로필과 성장앨범에 사용합니다",
@@ -81,14 +81,6 @@
         }
       ],
       [
-        "expo-media-library",
-        {
-          "photosPermission": "성장앨범에 추가할 최근 사진을 갤러리에서 불러옵니다",
-          "savePhotosPermission": "성장앨범 사진을 갤러리에 저장합니다",
-          "isAccessMediaLocationEnabled": false
-        }
-      ],
-      [
         "expo-location",
         {
           "locationWhenInUsePermission": "주변 소아과 찾기 및 맘스톡 지역 그룹 매칭을 위해 위치 정보를 사용합니다"
@@ -119,8 +111,7 @@
         "react-native-google-mobile-ads",
         {
           "androidAppId": "ca-app-pub-1736147235986434~1355077756",
-          "iosAppId": "ca-app-pub-1736147235986434~8088841219",
-          "userTrackingUsageDescription": "사용자 맞춤형 광고를 제공하기 위해 기기 식별자를 사용합니다"
+          "iosAppId": "ca-app-pub-1736147235986434~8088841219"
         }
       ]
     ],

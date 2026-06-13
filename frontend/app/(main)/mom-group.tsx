@@ -637,6 +637,31 @@ export default function MomGroupScreen() {
     } catch { Alert.alert('오류', '처리에 실패했어요'); }
   };
 
+  // UGC 정책(Apple 1.2) — 사용자 차단: 즉시 피드에서 제거 + 운영팀(개발자) 통지(자동 신고).
+  const handleBlockUser = (post: Post) => {
+    if (post.isMine) return;
+    const name = post.anonymous ? '익명 사용자' : (post.nickname || '이 사용자');
+    const doBlock = async () => {
+      try {
+        await momGroupApi.blockUser(post.userId, post.id);
+        // 즉시 제거: 이 사용자의 모든 글을 피드에서 빼고 상세를 닫는다.
+        setPosts((prev) => prev.filter((p) => p.userId !== post.userId));
+        setActivePost(null);
+        Alert.alert('차단 완료', '해당 사용자의 글이 더 이상 보이지 않아요. 운영팀에도 검토 요청이 전달됐어요.');
+      } catch {
+        Alert.alert('오류', '차단 처리에 실패했어요');
+      }
+    };
+    Alert.alert(
+      `${name}님을 차단할까요?`,
+      '차단하면 이 사용자의 글과 댓글이 피드에서 즉시 사라지고, 운영팀에 검토 요청이 접수됩니다.',
+      [
+        { text: '취소', style: 'cancel' },
+        { text: '차단', style: 'destructive', onPress: doBlock },
+      ],
+    );
+  };
+
   const handleReport = (post: Post) => {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
@@ -1442,9 +1467,14 @@ export default function MomGroupScreen() {
                       </TouchableOpacity>
                     </>
                   ) : (
-                    <TouchableOpacity style={styles.postAction} onPress={() => handleReport(activePost)}>
-                      <Text style={styles.postActionTextMuted}>🚩 신고</Text>
-                    </TouchableOpacity>
+                    <>
+                      <TouchableOpacity style={styles.postAction} onPress={() => handleReport(activePost)}>
+                        <Text style={styles.postActionTextMuted}>🚩 신고</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.postAction} onPress={() => handleBlockUser(activePost)}>
+                        <Text style={styles.postActionTextDanger}>🚫 차단</Text>
+                      </TouchableOpacity>
+                    </>
                   )}
                 </View>
               </View>

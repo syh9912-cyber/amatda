@@ -1,5 +1,197 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-06-07 — 시작 공지 팝업(원격 제어) + 베타 100명/10명×5만원 + 웹 구독가 동기화 + 아기시간/그래프 다수 수정
+> 최종 업데이트: 2026-06-13 — 공동육아 무한 로딩 + 가족피드 작성폼 미초기화 버그 수정
+
+---
+
+## 2026-06-13 — 가족피드(momstagram) 작성폼 미초기화 수정
+
+- 증상: 가족피드에 게시물 올린 뒤 '+'로 새 글을 열면 직전 글/사진/카테고리가 그대로 남아있음.
+- 원인: 피드의 '+'(FAB·헤더)가 `router.push('/(main)/momstagram-post')`로 파라미터 없이 진입하는데, 작성 화면이 게시 후 `router.back()`만 하고 폼 상태(content/imageUri/category/isPrivate)를 비우지 않음. 화면 인스턴스가 재사용되며 이전 state가 유지됨(카테고리 '여행'이 남은 게 근거 — params로는 전달 안 되는 값).
+- 수정: `resetForm()` 헬퍼 추가, 공개·나만보기 게시 성공 직후 호출해 폼 초기화. prefill 진입(마운트 시 1회 적용)은 영향 없음.
+- 검증: 프론트 `tsc --noEmit` 통과, `expo lint` momstagram-post.tsx 신규 이슈 0.
+- 파일: `frontend/app/(main)/momstagram-post.tsx`
+
+---
+
+## 2026-06-13 — 공동육아(coparenting) 무한 로딩 스피너 수정
+
+- 증상: 초대 링크로 연결 후 "연결되었습니다" 팝업은 뜨는데 화면이 가운데 스피너만 계속 돌고 전환 안 됨. 뒤로가기는 정상.
+- 원인: `coparenting.tsx`의 `loadMembers`가 `if (!selectedChild) return;`로 early-return하면서 `setLoading(false)`를 호출하지 않음. 등록된 아이가 없는 피초대자는 `selectedChild`가 null이라 `loading=true`가 영구 유지됨(다른 모든 경로는 `finally`에서 해제됨).
+- 수정: (1) early-return 시 `setMembers([]) + setLoading(false)` 처리. (2) `!selectedChild`일 때 무한 로딩 대신 "먼저 아이를 등록해주세요" 안내 화면 + 초대 코드 입력 버튼 노출. emptyState 스타일 추가.
+- 검증: 프론트 `tsc --noEmit` 통과, `expo lint` 신규 에러/경고 0(coparenting.tsx 기준).
+- 파일: `frontend/app/(main)/coparenting.tsx`
+
+---
+
+## 2026-06-12 — iOS 3차 거절 (빌드 27, 2.3.2 + 2.1b + 1.2) 대응
+
+지난 G4·1.4.1은 통과. 새 3개:
+
+### 1.2 (UGC): 맘스톡에 사용자 차단 기능 없음 → 추가 완료
+- 원인: mom-group(맘스톡)은 신고만 있고 차단 없음(momstagram엔 있었음). 리뷰어 스샷 근거.
+- 백엔드(mom-group.ts): getBlockedUserIds 헬퍼 + /posts·/posts/radius 피드 차단 필터 + POST/DELETE /users/:uid/block, GET /users/blocked 라우트. 차단 시 postId 함께 받으면 자동 신고 접수(개발자 통지) — Apple "notify developer" 충족. userBlocks 컬렉션은 momstagram과 공유.
+- 프론트: momGroupApi.blockUser/unblockUser/getBlockedUsers. mom-group.tsx 게시글 상세에 "🚫 차단" 버튼 + handleBlockUser(즉시 setPosts 필터로 피드에서 제거 + 상세 닫기) — "remove instantly" 충족.
+- 배포: 백엔드 functions:api 배포 완료(--project amatda-parenting), OTA(production) 완료, 빌드28 진행 중. tsc(백·프) 통과, lint 0.
+
+### 2.3.2 (홍보이미지 중복): 월간/연간 동일 이미지 → 삭제 완료
+- ASC 구독(아맞다 VIP) 월간·연간 프로모션 이미지가 동일(VIP_구독이미지)이라 거절.
+- 조치: 크롬으로 두 구독의 거절된 프로모션 이미지 모두 삭제(Apple 권고대로 — 프로모션 안 하면 삭제 가능). 완료.
+
+### 2.1(b) IAP 결제 실패 ("requestPurchase failed / Unable to Complete Request")
+- 확인(비즈니스 페이지): 유료 앱 계약=활성, 은행=활성, 미국 세금양식=활성. **대한민국 세금 양식=대기 중(2026.6.5 제출)**.
+- 구독 상태 "개발자 조치 필요"는 프로모션 이미지 거절 때문 → 이미지 삭제로 해소 예상.
+- 핵심: 구독 안내문 "구독을 앱 버전과 함께 제출(버전 페이지 '앱 내 구입 및 구독' 섹션에서 선택)" → 구독이 제출에 미연결이라 샌드박스 결제 불가 가능성. 재제출(빌드28) 시 구독 함께 선택 필요.
+
+### 남은 작업
+- 빌드28 완료 → eas submit → 버전 페이지에서 빌드28 선택 + **구독 2개 선택(앱 내 구입 및 구독)** + 재제출.
+- 1.2: 실기기 화면녹화(EULA 동의 → 신고 → 차단) 촬영해 심사 메모(Review Notes)에 첨부 — Apple 요구.
+- 2.1b: 대한민국 세금 양식 '대기 중' 처리 확인(IAP 차단 요인 가능).
+
+---
+
+## 2026-06-10 — iOS 2차 거절 (빌드 25, G4 + 1.4.1) 대응
+
+리뷰 기기: iPhone 17 Pro Max + iPad Pro 11" (M4). 2개 항목 잔존.
+
+### G4 (Design): "additional menu 확장 시 아래로 스크롤 불가"
+- **원인 확정**: baby-tracker.tsx 기록추가 시트(AddRecordModal) — sheet `maxHeight: '85%'` 인데 내부 ScrollView 가 `scrollBody: { flexGrow: 0 }` 만 있고 **flexShrink 없음** → 내용이 길면 ScrollView가 내용 높이 그대로 유지된 채 시트 밖으로 잘림. ScrollView 자신은 overflow가 없다고 판단해 **스크롤 미동작** + ScrollView 밖(시트 하단)의 "기록 저장" 버튼도 화면 밖으로 밀림. iPad 호환모드(세로공간 작음)에서 쉽게 재현.
+- **수정**: `scrollBody: { flexGrow: 0, flexShrink: 1 }` — 내용 길면 ScrollView가 줄어들어 스크롤 생기고 저장 버튼 항상 고정 노출.
+- **추가 방어**: components/ui/CenterModal.tsx — card에 `maxHeight: '85%'` + children을 ScrollView(alignSelf stretch, flexShrink 1, contentContainerStyle alignItems center)로 래핑. 사용처 3곳(공지팝업·home 모달2) 모두 세로공간 부족 시 스크롤.
+
+### 1.4.1 (의료 출처): 빌드25에 어제 OTA분(7화면)이 미내장이 원인
+- 빌드25는 출처 7화면 OTA(0b05228b) **이전에** 빌드됨 → 리뷰어 첫 실행 = 내장번들(출처 없음). 빌드26에 전부 내장으로 해결.
+- **추가 출처 3화면**(재거절 방어): pregnancy.tsx(아이사랑·산부인과학회), monthly-characteristic.tsx(KDCA·소아과학회 + 발달차이 면책), recommendation-detail.tsx(KDCA·식약처 + AI생성 참고용 면책). → 출처 표기 총 14화면.
+
+### G4 진짜 원인 — 리뷰어 첨부 스크린샷으로 확정 (로그인 화면)
+- 리뷰어 캡처 = iPad 로그인 화면 하단 잘림 (Google 버튼 반쯤 잘리고 카카오/네이버/회원가입 접근 불가).
+- **원인**: app/(auth)/login.tsx:33 — 스타일명만 `scroll`인 **일반 View** (ScrollView 아님) → 세로공간 부족 기기에서 스크롤 자체 불가.
+- **수정**: ScrollView 전환 (contentContainerStyle flexGrow:1 — footer marginTop:'auto' 유지, keyboardShouldPersistTaps). register.tsx 는 이미 ScrollView 라 무관.
+- baby-tracker 시트 flexShrink + CenterModal maxHeight 수정도 유효한 G4 방어로 유지.
+
+### 배포
+- OTA(production): group 7b561e21 (시트/출처) + group b916af05 (로그인 ScrollView) — 기존 빌드 24/25 사용자에게도 적용.
+- 빌드 26은 로그인 수정 미포함이라 **취소**(b4cf8e81). 모든 수정 포함 **빌드 27** 재빌드 → ASC 제출 → 빌드 교체 + 리뷰어 회신 + 재심사 (진행 중).
+- 검증: tsc 통과, lint 에러 0.
+
+## 2026-06-09 — iOS App Review 거절 대응 (Submission 083a5ae0, build 1.0(24))
+
+Apple이 iPad Air(M3)에서 심사, 6개 가이드라인 위반으로 거절. 원인 분석 후 수정.
+
+### 거절 사유 → 원인 → 조치
+- **2.1(a) 버그** (아이 디지털카드·기질분석 빈 화면 / 맞춤추천 무한로딩)
+  - 근본원인: 심사 계정에 `selectedChild`가 없음(자녀 미등록). 자녀 없으면 프로필 메뉴가 PARENTING 항목으로 기본 표시 → 전부 실패.
+    - child-card.tsx / trait-detail.tsx: `if (!child) return null` → 새하얀 화면
+    - recommendation-list.tsx: useEffect early-return으로 `loading=true` 고정 → 무한 스피너
+  - 조치: 세 화면 모두 "아이를 먼저 등록해주세요 + 홈으로 가기" 안내 화면으로 교체. recommendation-list는 no-child 시 `setLoading(false)`.
+  - 추가: child-card 공유 실패 문구 "APK 설치 후 이용해주세요" → 중립 문구.
+- **2.3.10 Android/Google Play 언급(바이너리)**
+  - subscription.tsx 2곳(구독중 alert·약관고지) → Platform 분기로 iOS는 App Store 문구만.
+  - cry-analyzer.tsx "APK/Expo Go" alert → 중립 문구. voice-settings Siri 설명의 "안드로이드는…" → iOS에서 숨김. (안드로이드 단축 섹션은 이미 Platform.OS==='android' 게이트)
+- **5.3.2 콘테스트/추첨 + 2.2 베타**
+  - 원인: Firestore `announcements` 활성 공지 "🎁 출시기념 테스터 100명 모집 + 우수리뷰어 신세계상품권 5만원".
+  - 조치: 해당 공지 active=false 비활성화(완료). kakao-channel "베타 기능 사전 체험" → "새 기능 소식 우선 안내".
+- **1.4.1 의료정보 출처 누락**
+  - 신규 `components/common/MedicalCitation.tsx` 작성(출처+링크+면책).
+  - 배치: growth-stats(성장통계=KDCA/WHO, 주수별발달=아이사랑/산부인과학회), gdm(당뇨병학회/식약처), mom-wellness(EPDS/국가정신건강포털), pregnancy-journey-detail(시기별 가이드=아이사랑/산부인과학회).
+- **4 Design (iPad 복잡)**: iPhone 전용 유지(supportsTablet=false) 결정. 버그 수정 + 리뷰어 회신으로 대응.
+
+### 검증
+- frontend `tsc --noEmit` 통과, `expo lint` 에러 0(경고 100 기존).
+
+### 재제출 완료 (2026-06-10)
+- iOS 빌드 25(2.9.1) EAS 빌드 + eas submit → ASC 업로드 완료. 빌드 25 첨부 후 재제출.
+- 상태: "🟡 1.0 심사 대기 중". 리뷰어 회신(6개 항목 영어) 게시 완료.
+- 데모 계정 syh9912@naver.com: 아이+기질분석 완료 확인. 테스트 안내(메모) "반드시 데모 계정 사용/Apple 로그인=빈 계정" 버전으로 교체.
+- App Store 설명·키워드·프로모션: Android 언급 없음 확인(메타데이터 clean).
+- 추첨 공지 비활성화 유지.
+
+### 재심사 중 주의
+- Gemini 결제 잔액 유지(소진 시 AI 실패→2.1a 재거절). 추첨 공지 재활성화 금지. 데모 계정 데이터 유지.
+
+### 2026-06-10 추가 — 전체 점검 후 심사대응 패키지 1 (OTA group 0b05228b)
+4개 영역 병렬 감사(심사 컴플라이언스/의료출처/결제·정책/시스템) 후 1차 패키지 적용:
+- **의료출처(1.4.1) 7개 화면 추가**: fever(소아과학회·KDCA), sos(소방청119·KDCA·적십자), vaccination(예방접종도우미 nip.kdca.go.kr·소아과학회), poop-analyzer, cry-analyzer(소아과학회·KDCA), labor-monitor(산부인과학회·아이사랑), nutrition(식약처·복지부) — MedicalCitation 컴포넌트 재사용.
+- **lullaby.tsx**: 음원 미확보(source:null) 트랙 7개(드라이기/반짝반짝/오르골/모차르트K448/비발디봄/바흐아리아/파헬벨캐논) 목록에서 filter 제외 — "준비 중" 미완성 인상(2.1a/2.2) 제거. `*_ALL` 배열 + filter 분리(타입 보존). 음원 추가 시 source 채우면 자동 재노출.
+- **kakao-channel.tsx**: "출시 기념 쿠폰" → "육아 꿀팁 콘텐츠" (5.3.2 보수 대응).
+- **voice.tsx**: 로컬 저장 실패 시 "기록 완료!" 위장 제거 → setError+phase('error') 재시도 화면.
+- 검증: tsc 통과, lint 에러 0. OTA(production, iOS+Android) 배포 완료.
+
+### 감사에서 발견된 잔여 이슈 (통과 후 1주 내 권장)
+- P0: tracker.ts voice-parse/photo-parse Gemini 불가 시 fallback 없음(즉시 에러) — Google Cloud 예산 알림 설정 필수.
+- P1: storage.ts putDay/putSessions fire-and-forget(재설치 시 미동기 기록 유실 가능) — 재시도 큐 권장.
+- P1: 백엔드 new Date() 광범위(serverTimestamp 규칙 위반) — 단계적 전환.
+- P2: payment.ts:114 `as any` 1곳, voice-parse sanitizeForPrompt 인젝션 방어 한정적.
+- 오탐 정정: app.json buildNumber/versionCode 불일치는 appVersionSource:remote라 무시됨(비문제).
+- 사장님 확인 필요: 데모 계정으로 놀이학습·추천 4종 열어 빈 화면("준비 중") 없는지.
+
+---
+
+## 2026-06-08 — 편집 모달 키보드 fix + 맘스톡 공식계정 전환 + iOS 구독 제출 준비
+
+### A. 분유/기록 편집 모달 키보드 가림 fix (프로덕션 OTA 완료)
+- 증상(iOS): `baby-tracker.tsx` 타임라인 편집 모달에서 양(ml) number-pad가 저장 버튼을 가리고, 카드 탭/바깥 탭으로 닫을 수 없어 저장 불가
+- 원인: 해당 모달만 `KeyboardAvoidingView` 미적용 + 내부 카드 onPress 없음(키보드 dismiss 불가) + number-pad엔 완료키 없음
+- 수정: 같은 화면 다른 모달과 동일 패턴 적용 — `KeyboardAvoidingView(behavior=ios?'padding')`로 감싸 저장 버튼 노출 + 카드 탭 시 `Keyboard.dismiss()`. `Keyboard` import 추가
+- 검증: `frontend tsc` ✅ EXIT=0, `expo lint` ✅ EXIT=0 / OTA: `--branch production` runtime 2.9.1 (group 2c93f24b)
+
+### B. 맘스톡 공식 계정 전환 (서버 데이터, 앱 업데이트 불필요)
+- 기존 공식 계정 = `test@amatda.com`(uid AIJX…, LOCAL) — 사용자 개인계정(syh9912@naver.com)으론 남의 글이라 삭제 버튼 미표시였음
+- 변경: `users/zE6jtDczy3sY0yPLX2Ey`(syh9912@naver.com, 네이버, 닉네임 와이돈츄).isOfficial=true / `test@amatda.com`.isOfficial=false
+- 공식 시드글 10개(`_seedKey`) `userId` → syh9912 uid로 이전 (nickname "아맞다 공식"·isOfficial=true 유지 → 표시 불변, 삭제권한만 이전). 삭제권한은 `momGroupPosts.userId === req.userId` 기준
+- 임시 스크립트 사용 후 삭제, dry→apply 검증 완료
+
+### C. iOS 인앱 구독 (App Store Connect)
+- 구독 2종(premium_yearly ₩39,900 / premium_monthly ₩3,900) 현지화·가격·심사스크린샷(1242×2688)·1024 프로모 이미지·심사메모 채워 "제출 준비 완료"
+- 앱 버전 1.0 "앱 내 구입 또는 구독" 섹션에 두 구독 연결 완료
+- 남은 항목(사용자): 스크린샷 0/10, 빌드 연결, 데모 로그인 계정(아이 프로필 있는 별도 계정), 연락처, 개인정보 설문
+
+### D. 공동육아 초대 SMS 공유 버그 fix (iOS)
+- 증상(iOS): 문자 공유 시 받는사람=앱주소, 본문=빈칸
+- 원인: `coparenting.tsx:218` `sms:${phone}${encodeURIComponent('?body='+message)}` — `?body=` 구분자까지 인코딩(`%3Fbody%3D`)되어 iOS가 뒤 URL 전체를 수신자로 인식. + iOS는 본문 구분자가 `&`인데 `?` 사용
+- 수정: `const sep = Platform.OS==='ios'?'&':'?'; sms:${phone}${sep}body=${encodeURIComponent(message)}` (메시지만 인코딩) + `canOpenURL` 체크 후 실패 시 `Share.share` 폴백. `Platform` import 추가
+- 검증: `tsc` ✅ EXIT=0 / `lint` ✅ 0 errors
+
+### E. iOS 전체 점검 — 키보드 가림 모달 4곳 추가 fix (탐색 에이전트 2개 병렬)
+- iOS 숫자키보드(완료키 없음)가 저장 버튼을 가리는 동일 유형 버그를 전수 점검 → 고위험 4곳 `KeyboardAvoidingView` + (ScrollView는)`keyboardShouldPersistTaps="handled"` 적용:
+  - `coparenting.tsx` 가족 초대 모달(phone-pad)
+  - `components/home/NextCheckupModal.tsx` 검진일정(number-pad)
+  - `components/pregnancy/HospitalRegisterModal.tsx` 병원등록(phone-pad, 풀스크린+ScrollView)
+  - `gdm.tsx` 혈당 기록 모달(decimal-pad)
+- 검증: `tsc` ✅ EXIT=0 / `lint` ✅ 0 errors
+- 참고: Apple 로그인(SocialLoginButtons)·Share API·mailto 인코딩(support/DataRetention)은 점검 결과 이상 없음
+
+### F. 🟡 항목 추가 수정 (저위험 iOS 정리)
+- `nutrition.tsx` 유튜브 `Linking.openURL` → `.catch(Alert)` 폴백 추가 (Alert import)
+- `poop-analyzer.tsx` 카메라 권한 거부 시 조용히 return → 안내 Alert 추가
+- `voice-settings.tsx` 뒤로가기 버튼 절대배치 `top:44` → `Math.max(insets.top+4, 44)` (다이내믹아일랜드 대응, `useSafeAreaInsets`). 기존 기기는 44 유지
+- 오탐으로 판정해 **미수정**: `poop-analyzer` photoRemoveBtn `top:10`(사진 박스 기준, 화면상단 아님) / `_layout` mascotGlow `top:10`(마스코트 장식) / `voice-settings` Bixby `intent://`(가이드 목록은 SIRI만 노출돼 호출 불가한 dead code) / `lullaby` 마이크 권한(이미 Alert 존재)
+- 검증: `tsc` ✅ EXIT=0 / `lint` ✅ 0 errors
+
+### G. 임당 식단 모달 키보드 가림 fix + 임신부 모드 전수 점검 (사용자 보고)
+- 증상(iOS): 임당(gdm) **식단 기록 모달**에서 decimal-pad가 "식단 저장" 버튼을 가려 저장 불가 (keyboardShouldPersistTaps만 있고 KAV 없어서 — 앞서 "중위험"으로 봤으나 실제 막힘 확인)
+- 수정: `gdm.tsx` 식단 모달 `modalOverlay` View → `KeyboardAvoidingView(behavior=ios?'padding')` 교체
+- 임신부 모드 전수 점검(에이전트): 혈당 모달·출산가방 AddItemModal·병원등록·다음검진 모달은 **이미 KAV 적용됨**, mom-wellness(EPDS 버튼선택)·labor-monitor·임신앨범은 숫자입력 모달 없음 → 추가 수정 불필요
+- 검증: `tsc` ✅ EXIT=0 / `lint` ✅ 0 errors
+
+### H. iOS App Privacy(앱이 수집하는 개인정보) 설문 작성·게시 (크롬)
+- 개인정보 처리방침 URL: `https://amatda-parenting.web.app/privacy`
+- 코드 감사 기반 15개 데이터 유형 신고 + 목적/신원연결/추적여부 설정 후 게시. **앱 추적(ATT)=사용 안 함**(비개인화 광고 `requestNonPersonalizedAdsOnly`, ATT 호출 없음, Firebase Analytics는 uid만)
+- 연결: 건강/민감정보(임신)/연락처(이름·이메일·전화)/위치(정밀)/사용자콘텐츠(사진·기타)/사용자ID/구입내역/제품상호작용/충돌·실적데이터
+- 미연결: 기기ID·광고데이터(AdMob 비개인화, 제3자 광고 목적)
+
+### I. iOS 출시 마무리 — 앱정보·가격·빌드·제출 (크롬)
+- 콘텐츠 권한="예(권한 있음)" / 연령등급=**13+**(UGC·의료정보·광고) / 카테고리=라이프스타일+건강및피트니스 / 가격=무료(전 국가)
+- **iPhone 전용 + ATT 제거 리빌드**: `app.json` `supportsTablet:false`, AdMob 플러그인 `userTrackingUsageDescription` 제거 → 빌드 24(`336dd2f3`) → ASC 업로드 → 버전 빌드 23→24 교체로 iPad·추적 오류 해결
+- **iOS 앱 1.0 (빌드 24) 심사 제출 완료** → "심사 대기 중" (구독 연간/월간 동반 제출)
+- 출시국가: 현재 대한민국(검토 필요 — 전세계 확장 가능)
+
+### J. Android 사진/동영상 권한 정책 위반 fix (expo-media-library 제거)
+- 증상: Play Console "READ_MEDIA_IMAGES/VIDEO 잘못된 사용" — 비핵심/일회성 미디어 접근엔 시스템 사진 선택기만 허용
+- 원인: `components/album/RecentPhotosGrid.tsx`가 `expo-media-library`(getAssetsAsync)로 갤러리 전체를 읽어 READ_MEDIA_IMAGES 요구 (얼굴감지 자동선택 기능)
+- 수정: RecentPhotosGrid를 **시스템 사진 선택기(`pickMultipleFromLibrary`) 전용 래퍼로 재작성** (호출부 album.tsx 무변경) + `app.json`에서 expo-media-library 플러그인 제거 + `npm uninstall expo-media-library`. blockedPermissions(READ_MEDIA_IMAGES/VIDEO)는 유지
+- 기능 영향: 앨범 사진 추가(여러 장 포함) 정상 / "얼굴 사진만 자동선택" 편의기능만 제거(정책상 유지 불가). 얼굴감지 잔재 코드/토글 0건 확인
+- 검증: `tsc` ✅ EXIT=0 / `lint` ✅ 0 errors / Android 프로덕션 리빌드 진행 중(vc11)
+- 통신판매업 신고: 신규/간이과세자면 면제 가능성 높음(직전년도 거래 50회 미만 or 간이과세자) → Play Console이 번호 강제하는지 확인 필요
 
 ---
 

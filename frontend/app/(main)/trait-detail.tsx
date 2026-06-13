@@ -39,7 +39,31 @@ export default function TraitDetailScreen() {
   useEffect(() => { shouldAutoShowGuide('trait').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
   const closeGuide = () => { setGuideVisible(false); markGuideSeen('trait'); };
 
-  if (!child) return null;
+  if (!child) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#FFF9F3' }}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 16 }}>
+          <BackButton />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#5B4636', marginBottom: 8 }}>
+            등록된 아이가 없어요
+          </Text>
+          <Text style={{ fontSize: 14, color: '#9B8579', textAlign: 'center', marginBottom: 24, lineHeight: 21 }}>
+            아이를 등록하고 기질 분석을 완료하면{'\n'}결과를 확인할 수 있어요
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.replace('/(main)/home')}
+            style={{ backgroundColor: '#FF8C5A', paddingHorizontal: 28, paddingVertical: 14, borderRadius: 24 }}
+            activeOpacity={0.85}
+          >
+            <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>홈으로 가기</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   const innateData = child.innateData;
   const analysisReport = child.analysisReport;

@@ -55,7 +55,11 @@ export default function RecommendationListScreen() {
   const catStyle = CATEGORY_STYLE[category] ?? CATEGORY_STYLE['음식'];
 
   useEffect(() => {
-    if (!selectedChild || !category) return;
+    // 자녀/카테고리 미선택 시 무한 스피너 방지 — loading 종료 후 안내 화면 표시.
+    if (!category || !selectedChild) {
+      setLoading(false);
+      return;
+    }
     fetchList();
   }, [selectedChild?.id, category]);
 
@@ -97,7 +101,20 @@ export default function RecommendationListScreen() {
       </View>
 
       {/* Content */}
-      {loading ? (
+      {!selectedChild ? (
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyEmoji}>{catStyle.emoji}</Text>
+          <Text style={styles.emptyText}>아이를 먼저 등록해주세요</Text>
+          <Text style={styles.emptySubText}>아이 정보를 등록하면 맞춤 추천을 받을 수 있어요</Text>
+          <TouchableOpacity
+            style={[styles.emptyCta, { backgroundColor: catStyle.color }]}
+            onPress={() => router.replace('/(main)/home')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.emptyCtaText}>홈으로 가기</Text>
+          </TouchableOpacity>
+        </View>
+      ) : loading ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={catStyle.color} />
           <Text style={styles.loadingText}>
@@ -256,6 +273,13 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 48, marginBottom: SPACING.md },
   emptyText: { fontSize: FONT_SIZE.lg, color: COLORS.text, fontWeight: '600' },
   emptySubText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: SPACING.xs },
+  emptyCta: {
+    marginTop: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+    borderRadius: 24,
+  },
+  emptyCtaText: { color: '#FFFFFF', fontSize: FONT_SIZE.md, fontWeight: '700' },
 
   card: {
     backgroundColor: COLORS.surface, borderRadius: 16,

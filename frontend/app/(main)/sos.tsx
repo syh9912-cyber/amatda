@@ -20,6 +20,7 @@ import { BackButton } from '../../components/common/BackButton';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
+import { MedicalCitation } from '../../components/common/MedicalCitation';
 import { SOS_GUIDE } from '../../features/guide/sosGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -693,6 +694,14 @@ export default function SOSScreen() {
           </>
         )}
 
+        <MedicalCitation
+          note="응급처치 안내는 참고용입니다. 위급 시 즉시 119에 신고하고 의료진 지시를 따르세요."
+          sources={[
+            { label: '소방청 119 응급처치 안내', url: 'https://www.nfa.go.kr' },
+            { label: '질병관리청 국가건강정보포털 (응급처치)', url: 'https://health.kdca.go.kr' },
+            { label: '대한적십자사 응급처치 가이드', url: 'https://www.redcross.or.kr' },
+          ]}
+        />
         <View style={{ height: 40 }} />
       </ScrollView>
 

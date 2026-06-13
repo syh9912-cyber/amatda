@@ -691,6 +691,13 @@ export const momGroupApi = {
     api.delete(`/mom-group/comments/${id}`),
   reportPost: (id: string, reason: 'abuse' | 'ad' | 'privacy' | 'spam' | 'other' = 'other') =>
     api.post(`/mom-group/posts/${id}/report`, { reason }),
+  // UGC 정책(Apple 1.2) — 사용자 차단. postId 함께 보내면 해당 글 자동 신고(개발자 통지).
+  blockUser: (userId: string, postId?: string) =>
+    api.post(`/mom-group/users/${userId}/block`, postId ? { postId } : {}),
+  unblockUser: (userId: string) =>
+    api.delete(`/mom-group/users/${userId}/block`),
+  getBlockedUsers: () =>
+    api.get('/mom-group/users/blocked'),
   toggleBookmark: (id: string) =>
     api.post(`/mom-group/posts/${id}/bookmark`),
   listBookmarks: () =>

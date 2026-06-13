@@ -165,16 +165,21 @@ export default function SubscriptionScreen() {
       const expiresAt = status.expiresAt ? new Date(status.expiresAt) : null;
       const stillActive = expiresAt ? expiresAt > new Date() : true;
       if (stillActive) {
+        const isIOS = Platform.OS === 'ios';
+        const storeLabel = isIOS ? 'App Store 구독' : 'Google Play 정기 결제';
+        const manageUrl = isIOS
+          ? 'https://apps.apple.com/account/subscriptions'
+          : 'https://play.google.com/store/account/subscriptions';
         Alert.alert(
           '이미 구독 중이에요',
-          '현재 프리미엄을 이용 중이세요. 플랜 변경은 Google Play 정기 결제 관리에서 가능해요.',
+          `현재 프리미엄을 이용 중이세요. 플랜 변경은 ${storeLabel} 관리에서 가능해요.`,
           [
             { text: '취소', style: 'cancel' },
             {
               text: '구독 관리 열기',
               onPress: () => {
-                Linking.openURL('https://play.google.com/store/account/subscriptions').catch(() => {
-                  Alert.alert('오류', '정기 결제 관리 페이지를 열 수 없어요.');
+                Linking.openURL(manageUrl).catch(() => {
+                  Alert.alert('오류', '구독 관리 페이지를 열 수 없어요.');
                 });
               },
             },
@@ -454,7 +459,9 @@ export default function SubscriptionScreen() {
             {'• 구독은 선택한 기간(월간/연간)으로 자동 갱신됩니다.\n' +
             '• 7일 무료 체험 종료 후 선택한 플랜 요금이 자동 청구됩니다.\n' +
             '• 갱신 24시간 전까지 구독을 취소하지 않으면 자동 결제됩니다.\n' +
-            '• 구독 취소: 설정 앱 → Apple ID(또는 Google Play 구독) → 구독 관리\n' +
+            (Platform.OS === 'ios'
+              ? '• 구독 취소: 설정 앱 → 본인 Apple 계정 → 구독 → 아맞다 → 구독 취소\n'
+              : '• 구독 취소: Play 스토어 → 프로필 → 결제 및 정기 결제 → 정기 결제 → 아맞다\n') +
             '• 구독 기간 중 취소해도 만료일까지 이용 가능합니다.'}
           </Text>
 

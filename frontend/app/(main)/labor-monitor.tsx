@@ -24,6 +24,7 @@ import { BackButton } from '../../components/common/BackButton';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideButton } from '../../components/common/GuideButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
+import { MedicalCitation } from '../../components/common/MedicalCitation';
 import { LABORMONITOR_GUIDE } from '../../features/guide/laborMonitorGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
@@ -795,6 +796,13 @@ export default function LaborMonitorScreen() {
             위급 상황 시에는 반드시 의료기관의 도움을 받으세요.
           </Text>
         </View>
+
+        <MedicalCitation
+          sources={[
+            { label: '대한산부인과학회 임신·출산 정보 (진통·태동)', url: 'https://www.ksog.org' },
+            { label: '보건복지부·임신육아종합포털 「아이사랑」', url: 'https://www.childcare.go.kr' },
+          ]}
+        />
       </ScrollView>
 
       {/* 태동 안심 가이드 모달 */}

@@ -8,6 +8,20 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '../utils/logger';
 import { distanceKm, isValidLatLng, radiusBoundingBox } from '../utils/location';
 
+/**
+ * 내가 차단한 사용자 ID Set.
+ * UGC 정책(Apple 1.2): 차단한 사용자의 글은 피드에서 즉시 제외되어야 한다.
+ * userBlocks 컬렉션은 momstagram(가족피드)과 공유 — 한 번 차단하면 전 서비스에서 안 보임.
+ */
+async function getBlockedUserIds(userId: string): Promise<Set<string>> {
+  try {
+    const snap = await collections.userBlocks.where('userId', '==', userId).get();
+    return new Set(snap.docs.map((d) => d.data().blockedUserId as string).filter(Boolean));
+  } catch {
+    return new Set<string>();
+  }
+}
+
 const router = Router();
 
 /* ================================================================== */
@@ -181,6 +195,10 @@ router.get('/posts', authMiddleware, async (req: Request, res: Response) => {
 
     // mine 모드에선 hidden도 보여줌 (내 글 숨겨져도 확인 가능)
     if (!mine) posts = posts.filter((p) => !p.hidden);
+
+    // 차단한 사용자의 글 제외 (UGC 정책 — Apple 1.2)
+    const blockedIds = await getBlockedUserIds(req.userId!);
+    if (blockedIds.size > 0) posts = posts.filter((p) => p.isMine || !blockedIds.has(p.userId));
 
     // 검색 필터 (제목/내용/작성자, 또는 전체)
     if (searchQ) {
@@ -620,6 +638,10 @@ router.get('/posts/radius', authMiddleware, async (req: Request, res: Response) 
       }
     }
 
+    // 차단한 사용자의 글 제외 (UGC 정책 — Apple 1.2)
+    const blockedIds = await getBlockedUserIds(req.userId!);
+    if (blockedIds.size > 0) posts = posts.filter((p) => p.isMine || !blockedIds.has(p.userId));
+
     const total = posts.length;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const start = (page - 1) * pageSize;
@@ -927,6 +949,72 @@ router.post('/posts/:id/report', authMiddleware, async (req: Request, res: Respo
   } catch (err) {
     logger.error('mom-group:reportPost', err, { userId: req.userId, postId: req.params.id });
     error(res, '신고 처리 중 오류가 발생했습니다', 500);
+  }
+});
+
+/**
+ * POST /api/mom-group/users/:uid/block — 특정 사용자 차단 (UGC 정책 — Apple 1.2)
+ *   차단 시: ① userBlocks 기록(이후 피드에서 제외) ② 선택적으로 신고글 자동 접수(개발자 통지).
+ *   postId 가 함께 오면 해당 글을 자동 신고 처리해 운영팀이 부적절 콘텐츠를 인지하도록 한다.
+ */
+router.post('/users/:uid/block', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const blockedUserId = req.params.uid as string;
+    if (!blockedUserId || blockedUserId === userId) {
+      error(res, '잘못된 요청입니다');
+      return;
+    }
+    const docId = `${userId}_${blockedUserId}`;
+    await collections.userBlocks.doc(docId).set({
+      userId,
+      blockedUserId,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    // 개발자 통지: 차단과 함께 넘어온 게시글을 자동 신고 접수(중복이면 무시).
+    const postId = (req.body as { postId?: string })?.postId;
+    if (postId && typeof postId === 'string') {
+      try {
+        const reportRef = collections.momGroupPosts.doc(postId).collection('reports').doc(userId);
+        if (!(await reportRef.get()).exists) {
+          await reportRef.set({ userId, reason: 'abuse', viaBlock: true, createdAt: FieldValue.serverTimestamp() });
+          const postRef = collections.momGroupPosts.doc(postId);
+          await postRef.update({ reportCount: FieldValue.increment(1) });
+          const cnt = ((await postRef.get()).data()?.reportCount as number | undefined) ?? 0;
+          if (cnt >= 3) await postRef.update({ hidden: true });
+        }
+      } catch { /* 자동 신고 실패는 차단 자체를 막지 않음 */ }
+    }
+
+    success(res, { blocked: true, blockedUserId });
+  } catch (err) {
+    logger.error('mom-group/block', err);
+    error(res, '차단 처리 중 오류가 발생했습니다', 500);
+  }
+});
+
+/** DELETE /api/mom-group/users/:uid/block — 차단 해제 */
+router.delete('/users/:uid/block', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const blockedUserId = req.params.uid as string;
+    await collections.userBlocks.doc(`${userId}_${blockedUserId}`).delete();
+    success(res, { unblocked: true, blockedUserId });
+  } catch (err) {
+    logger.error('mom-group/unblock', err);
+    error(res, '차단 해제 중 오류가 발생했습니다', 500);
+  }
+});
+
+/** GET /api/mom-group/users/blocked — 내가 차단한 사용자 목록 */
+router.get('/users/blocked', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const blocked = Array.from(await getBlockedUserIds(req.userId!));
+    success(res, { blocked });
+  } catch (err) {
+    logger.error('mom-group/blocked-list', err);
+    error(res, '차단 목록 조회 중 오류가 발생했습니다', 500);
   }
 });
 

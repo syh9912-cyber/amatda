@@ -12,6 +12,8 @@ import {
   Modal,
   Switch,
   ActivityIndicator,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { BackButton } from '../../components/common/BackButton';
@@ -121,7 +123,14 @@ export default function CoparentingScreen() {
   const closeGuide = () => { setGuideVisible(false); markGuideSeen('coparenting'); };
 
   const loadMembers = useCallback(async () => {
-    if (!selectedChild) return;
+    // 선택된 아이가 없으면(예: 초대 링크로 막 진입한 피초대자) 로딩을 끝내고 안내 화면 노출.
+    // 여기서 return만 하면 loading=true가 유지돼 스피너가 무한히 도는 버그가 발생함.
+    if (!selectedChild) {
+      setMembers([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     try {
       const res = await coparentingApi.members(selectedChild.id);
       const data = res.data?.data;
@@ -215,8 +224,14 @@ export default function CoparentingScreen() {
             onPress: async () => {
               const phone = invitePhone.replace(/[^0-9]/g, '');
               if (phone.length >= 10) {
-                const smsUrl = `sms:${phone}${encodeURIComponent(`?body=${message}`)}`;
-                try { await Linking.openURL(smsUrl); } catch { /* */ }
+                // iOS는 본문 구분자로 '&', Android는 '?' 사용. 메시지만 인코딩(구분자는 인코딩 금지).
+                const sep = Platform.OS === 'ios' ? '&' : '?';
+                const smsUrl = `sms:${phone}${sep}body=${encodeURIComponent(message)}`;
+                try {
+                  const ok = await Linking.canOpenURL(smsUrl);
+                  if (ok) { await Linking.openURL(smsUrl); }
+                  else { await Share.share({ message }); }
+                } catch { try { await Share.share({ message }); } catch { /* */ } }
               } else {
                 try { await Share.share({ message }); } catch { /* */ }
               }
@@ -325,6 +340,20 @@ export default function CoparentingScreen() {
 
         {loading ? (
           <ActivityIndicator size="large" color={COLOR.accent} style={{ marginTop: 40 }} />
+        ) : !selectedChild ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>👶</Text>
+            <Text style={styles.emptyTitle}>먼저 아이를 등록해주세요</Text>
+            <Text style={styles.emptyDesc}>
+              공동육아는 등록된 아이의 기록을{'\n'}가족과 함께 보고 작성하는 기능이에요.
+            </Text>
+            <TouchableOpacity
+              style={[styles.acceptBtn, { marginTop: 20, alignSelf: 'stretch' }]}
+              onPress={() => setAcceptVisible(true)}
+            >
+              <Text style={styles.acceptBtnText}>{'초대 코드 입력'}</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <>
             {isOwner ? (
@@ -499,9 +528,9 @@ export default function CoparentingScreen() {
 
       {/* ── Invite Modal ── */}
       <Modal visible={inviteVisible} transparent animationType="slide" onRequestClose={() => setInviteVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalContent}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <Text style={styles.modalTitle}>가족 초대</Text>
 
               <Text style={styles.fieldLabel}>이름/별명</Text>
@@ -582,7 +611,7 @@ export default function CoparentingScreen() {
               </View>
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ── Permission Edit Modal ── */}
@@ -726,6 +755,11 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLOR.accent,
   },
   acceptBtnText: { fontSize: 15, fontWeight: '700', color: COLOR.accent },
+
+  emptyState: { alignItems: 'center', paddingVertical: 36, paddingHorizontal: 8 },
+  emptyIcon: { fontSize: 48, marginBottom: 12 },
+  emptyTitle: { fontSize: 17, fontWeight: '700', color: COLOR.text, marginBottom: 8 },
+  emptyDesc: { fontSize: 13, color: COLOR.textSub, textAlign: 'center', lineHeight: 20 },
 
   benefitCard: { backgroundColor: COLOR.mintBg, borderRadius: 16, padding: 20, marginBottom: 20 },
   benefitTitle: { fontSize: 16, fontWeight: '700', color: COLOR.text, marginBottom: 12 },

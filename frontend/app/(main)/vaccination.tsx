@@ -16,6 +16,7 @@ import { Stack } from 'expo-router';
 import { BackButton } from '../../components/common/BackButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
+import { MedicalCitation } from '../../components/common/MedicalCitation';
 import { VACCINATION_GUIDE } from '../../features/guide/vaccinationGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useChildStore } from '../../stores/childStore';
@@ -408,6 +409,14 @@ export default function VaccinationScreen() {
             </Text>
           </View>
         )}
+
+        <MedicalCitation
+          note="접종 일정은 국가예방접종 표준 일정 기준이며, 실제 접종은 소아과 의사와 상담 후 진행하세요."
+          sources={[
+            { label: '질병관리청 예방접종도우미 (표준 예방접종 일정)', url: 'https://nip.kdca.go.kr' },
+            { label: '대한소아과학회 예방접종 지침', url: 'https://www.pediatrics.or.kr' },
+          ]}
+        />
       </ScrollView>
 
       {/* ════════════════════════════════════════════════ */}

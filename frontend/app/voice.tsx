@@ -436,6 +436,14 @@ export default function VoiceScreen() {
       // 공동육아: 초대받은 가족이 음성으로 기록하면 작성자 라벨 주입 (소유자는 no-op)
       const authorMeta = await resolveAuthorMeta(targetChildId);
 
+      // 진행 중(종료 미정) 수면 발화 감지 — "자고있어/자는중/취침 중/지금 자/아직 자" 이면서
+      // 기상('일어났/깼/기상')·범위 종료('까지')가 없을 때. 마지막 sleep record 를 라이브 대상으로.
+      const isOngoingSleepUtter =
+        /자고\s*있|자는\s*중|취침\s*중|지금\s*자|아직\s*자/.test(voiceText) &&
+        !/일어났|깼|기상|까지/.test(voiceText);
+      const sleepIdxs = records.map((rec, idx) => (rec.type === 'sleep' ? idx : -1)).filter((idx) => idx >= 0);
+      const ongoingSleepIdx = isOngoingSleepUtter && sleepIdxs.length > 0 ? sleepIdxs[sleepIdxs.length - 1] : -1;
+
       for (let i = 0; i < records.length; i++) {
         const r = records[i];
 
@@ -456,6 +464,12 @@ export default function VoiceScreen() {
             const sleepD = napD > 0 ? napD : nightD;
             if (sleepD > 0) r.duration = sleepD;
           }
+        }
+
+        // 진행 중(종료 미정) 수면이면 종료시각·지속시간을 비워, 아래 활성 수면 세션 등록 로직이 라이브로 잡도록 한다.
+        if (i === ongoingSleepIdx) {
+          r.endTime = undefined;
+          r.duration = undefined;
         }
 
         const dateStr = r.date && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : todayStr;
@@ -523,16 +537,22 @@ export default function VoiceScreen() {
           const existing = await loadRecords(targetChildId, dateStr);
           await saveRecords(targetChildId, dateStr, [...existing, ...dayRecords]);
         }
-      } catch { /* 저장 실패해도 status 는 완료로 보여주지 않음 */ }
+      } catch {
+        // 로컬 저장 실패 — "완료" 로 위장하지 않고 에러 화면(재시도 버튼)으로 전환
+        setError('기록 저장에 실패했어요. 다시 말해주세요.');
+        setPhase('error');
+        return;
+      }
 
       // 진행 중(종료 미정) 수면 → 활성 수면 세션으로 등록 (오늘 + 기존 진행중 세션 없을 때)
       // → 진행중(LIVE) 표시 + 나중에 '기상' 탭으로 마감. 정적 record 에서는 제거(중복 방지).
       try {
         const existingSession = await loadSleepSession(targetChildId);
         const todayRecs = recordsByDate[todayStr];
-        if (!existingSession && todayRecs) {
+        if (todayRecs) {
           const opens = todayRecs.filter((rec) => rec.type === 'sleep' && !rec.endTime);
-          if (opens.length > 0) {
+          // 등록 조건: open 수면이 있고, (기존 활성 세션 없음) 또는 (사용자가 '자고있어' 명시 → 기존 세션 덮어쓰기)
+          if (opens.length > 0 && (!existingSession || ongoingSleepIdx >= 0)) {
             const latest = opens.reduce((a, b) => (b.time > a.time ? b : a));
             const remaining = (await loadRecords(targetChildId, todayStr)).filter((rec) => rec.id !== latest.id);
             await saveRecords(targetChildId, todayStr, remaining);

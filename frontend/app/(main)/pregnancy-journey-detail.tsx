@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '../../components/common/BackButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
+import { MedicalCitation } from '../../components/common/MedicalCitation';
 import { PREGNANCY_JOURNEY_GUIDE } from '../../features/guide/pregnancyJourneyGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
@@ -370,6 +371,13 @@ export default function PregnancyJourneyDetailScreen() {
             ⚠️ 이 정보는 일반 안내입니다. 모든 의료적 결정은 산부인과 전문의와 상담하세요.
           </Text>
         </View>
+
+        <MedicalCitation
+          sources={[
+            { label: '보건복지부·임신육아종합포털 「아이사랑」', url: 'https://www.childcare.go.kr' },
+            { label: '대한산부인과학회 임신·출산 정보', url: 'https://www.ksog.org' },
+          ]}
+        />
       </ScrollView>
       <GuideCarousel visible={guideVisible} pages={PREGNANCY_JOURNEY_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent={COLOR.pink} />
     </View>

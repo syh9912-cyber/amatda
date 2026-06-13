@@ -10,6 +10,7 @@ import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { BackButton } from '../../components/common/BackButton';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { MedicalCitation } from '../../components/common/MedicalCitation';
 
 /* ------------------------------------------------------------------ */
 /*  Category meta                                                      */
@@ -203,6 +204,14 @@ export default function RecommendationDetailScreen() {
           >
             <Text style={styles.askMoreText}>AI에게 더 물어보기</Text>
           </TouchableOpacity>
+
+          <MedicalCitation
+            note="AI가 생성한 참고용 추천입니다. 건강·식이 관련 결정은 소아과 의사 등 전문가와 상담하세요."
+            sources={[
+              { label: '질병관리청 국가건강정보포털', url: 'https://health.kdca.go.kr' },
+              { label: '식품의약품안전처 식품안전나라', url: 'https://www.foodsafetykorea.go.kr' },
+            ]}
+          />
         </ScrollView>
       )}
       <AdSlot />

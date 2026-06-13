@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Linking,
+  TouchableOpacity, Linking, Alert,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { MedicalCitation } from '../../components/common/MedicalCitation';
 import {
   FOOD_RECOMMENDATIONS,
   resolveTemperamentKey,
@@ -63,7 +64,9 @@ export default function NutritionScreen() {
 
   const openYoutube = useCallback((query: string) => {
     const url = `https://m.youtube.com/results?search_query=${encodeURIComponent(query)}`;
-    Linking.openURL(url);
+    Linking.openURL(url).catch(() => {
+      Alert.alert('열 수 없어요', '유튜브를 열 수 없습니다. 잠시 후 다시 시도해주세요.');
+    });
   }, []);
 
   const childName = selectedChild?.name ?? '';
@@ -104,6 +107,14 @@ export default function NutritionScreen() {
             <BadFoodCard key={idx} food={food} index={idx} />
           ))
         )}
+
+        <MedicalCitation
+          note="음식 권장은 일반 영양 정보 기반 참고용이며, 알레르기·질환이 있는 경우 소아과 의사와 상담하세요."
+          sources={[
+            { label: '식품의약품안전처 식품영양성분 데이터베이스', url: 'https://www.foodsafetykorea.go.kr' },
+            { label: '보건복지부 한국인 영양소 섭취기준', url: 'https://www.mohw.go.kr' },
+          ]}
+        />
       </ScrollView>
       <AdSlot />
     </View>

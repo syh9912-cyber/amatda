@@ -57,7 +57,7 @@ interface PrenatalSoundItem {
   pendingFile?: string;
 }
 
-const BUILT_IN_SOUNDS: SoundItem[] = [
+const BUILT_IN_SOUNDS_ALL: SoundItem[] = [
   { id: 'womb',      label: '자궁 소리', iconImg: require('../../assets/sound-womb.png'),      category: 'white',   desc: '엄마 뱃속 소리',   source: require('../../assets/sounds/womb.mp3') },
   { id: 'vacuum',    label: '청소기',    iconImg: require('../../assets/sound-vacuum.png'),    category: 'white',   desc: '일정한 백색소음',  source: require('../../assets/sounds/vacuum.mp3') },
   { id: 'hairdryer', label: '드라이기',  iconImg: require('../../assets/sound-hairdryer.png'), category: 'white',   desc: '부드러운 바람소리', source: null, pendingFile: 'hairdryer.mp3' },
@@ -71,6 +71,9 @@ const BUILT_IN_SOUNDS: SoundItem[] = [
   { id: 'mozart',    label: '모차르트',  iconImg: require('../../assets/sound-mozart.png'),    category: 'lullaby', desc: '아이네클라이네',   source: require('../../assets/sounds/mozart.mp3') },
   { id: 'orgel',     label: '오르골',    iconImg: require('../../assets/sound-orgel.png'),     category: 'lullaby', desc: '오르골 멜로디',    source: null, pendingFile: 'orgel.mp3' },
 ];
+// 음원 미확보(source: null) 트랙은 스토어 심사 기준상 미완성 기능으로 보여 목록에서 제외.
+// 음원 추가 후 source 를 채우면 자동으로 다시 노출된다.
+const BUILT_IN_SOUNDS: SoundItem[] = BUILT_IN_SOUNDS_ALL.filter((s) => s.source !== null);
 
 /**
  * 태교음악 전용 목록.
@@ -80,7 +83,7 @@ const BUILT_IN_SOUNDS: SoundItem[] = [
  * ※ 저작권 안내: 클래식 "작곡"은 퍼블릭 도메인이지만 "녹음(연주 음원)"은 저작인접권 있음.
  *   Musopen/IMSLP에서 Public Domain 표기 음원을 받거나, Pixabay/Freesound의 CC0 음원 사용.
  */
-const PRENATAL_SOUNDS: PrenatalSoundItem[] = [
+const PRENATAL_SOUNDS_ALL: PrenatalSoundItem[] = [
   // 클래식 (태교 검증곡) — 작곡 자체는 전부 퍼블릭 도메인. 음원 미확보 → 준비 중 표시.
   { id: 'p_mozart_k448',    label: '모차르트 K.448',    iconImg: require('../../assets/p-mozart.png'),       category: 'classic',    desc: '두 대의 피아노를 위한 소나타', source: null, pendingFile: 'mozart-sonata.mp3' },
   { id: 'p_vivaldi_spring', label: '비발디 봄',          iconImg: require('../../assets/p-vivaldi.png'),      category: 'classic',    desc: '사계 중 봄',               source: null, pendingFile: 'vivaldi-spring.mp3' },
@@ -100,6 +103,8 @@ const PRENATAL_SOUNDS: PrenatalSoundItem[] = [
   { id: 'p_sleep_piano',  label: '수면 피아노', iconImg: require('../../assets/p-meditation.png'),   category: 'meditation', desc: '몽환적인 피아노 솔로', source: require('../../assets/sounds/sleeppiano.mp3') },
   { id: 'p_harp',         label: '하프',        iconImg: require('../../assets/p-meditation.png'),   category: 'meditation', desc: '부드러운 하프 선율',   source: require('../../assets/sounds/harp.mp3') },
 ];
+// 음원 미확보 트랙(클래식 등)은 목록에서 제외 — 음원 추가 시 자동 노출
+const PRENATAL_SOUNDS: PrenatalSoundItem[] = PRENATAL_SOUNDS_ALL.filter((s) => s.source !== null);
 
 const TIMER_OPTIONS = [
   { label: '끄기', minutes: 0 },

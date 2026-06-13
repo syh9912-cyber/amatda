@@ -20,6 +20,7 @@ import { isScreenAvailable } from '../../constants/ageFeatures';
 import { UpsellModal } from '../../components/common/UpsellModal';
 import { saveAnalysisHistory } from '../../utils/analysisHistory';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { MedicalCitation } from '../../components/common/MedicalCitation';
 import type { ImageSourcePropType } from 'react-native';
 
 const IC_LULLABY = require('../../assets/quick-lullaby.png') as ImageSourcePropType;
@@ -118,8 +119,8 @@ export default function CryAnalyzerScreen() {
       const msg = e instanceof Error ? e.message : '';
       if (msg.includes('native module')) {
         Alert.alert(
-          '빌드 필요',
-          '녹음 파일 선택은 빌드된 앱(APK)에서만 사용 가능합니다.\nExpo Go에서는 지원되지 않아요.',
+          '사용할 수 없어요',
+          '녹음 파일 선택 기능을 현재 사용할 수 없어요. 잠시 후 다시 시도해주세요.',
         );
       } else {
         Alert.alert('파일 선택 오류', `파일을 열 수 없습니다.\n${msg}`);
@@ -273,6 +274,14 @@ export default function CryAnalyzerScreen() {
                 {'- 스마트폰 기본 녹음 앱으로 5~15초 정도 녹음해주세요\n- 아이 가까이에서 녹음하면 정확도가 높아요\n- 주변 소음이 적을수록 좋아요\n- 녹음 후 이 화면에서 파일을 선택하세요'}
               </Text>
             </View>
+
+            <MedicalCitation
+              note="울음 분석 결과는 참고용 추정이며 의학적 진단이 아닙니다. 평소와 다른 울음·증상이 지속되면 소아과 진료를 받으세요."
+              sources={[
+                { label: '대한소아과학회 어린이 건강정보 (영아 울음)', url: 'https://www.pediatrics.or.kr' },
+                { label: '질병관리청 국가건강정보포털', url: 'https://health.kdca.go.kr' },
+              ]}
+            />
           </>
         )}
       </ScrollView>

@@ -22,6 +22,7 @@ import { AdSlot } from '../../components/ads/AdSlot';
 import { UpsellModal } from '../../components/common/UpsellModal';
 import { saveAnalysisHistory } from '../../utils/analysisHistory';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
+import { MedicalCitation } from '../../components/common/MedicalCitation';
 import type { ImageSourcePropType } from 'react-native';
 
 const IC_CAMERA = require('../../assets/icon-camera.png') as ImageSourcePropType;
@@ -114,7 +115,10 @@ export default function PoopAnalyzerScreen() {
     try {
       const ImagePicker = await import('expo-image-picker');
       const permResult = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permResult.granted) return;
+      if (!permResult.granted) {
+        Alert.alert('카메라 권한 필요', '사진을 촬영하려면 카메라 권한이 필요해요. 설정 > 아맞다에서 허용해주세요.');
+        return;
+      }
       const pickerResult = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
@@ -271,6 +275,13 @@ export default function PoopAnalyzerScreen() {
                 {'이 분석은 의학적 진단을 대체하지 않습니다. 걱정되는 증상이 있으면 반드시 소아과 전문의와 상담하세요.'}
               </Text>
             </View>
+
+            <MedicalCitation
+              sources={[
+                { label: '대한소아과학회 어린이 건강정보 (영유아 배변)', url: 'https://www.pediatrics.or.kr' },
+                { label: '질병관리청 국가건강정보포털', url: 'https://health.kdca.go.kr' },
+              ]}
+            />
           </>
         )}
       </ScrollView>

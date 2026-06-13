@@ -20,6 +20,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  KeyboardAvoidingView,
   Linking,
   Alert,
   Platform,
@@ -161,7 +162,8 @@ export function HospitalRegisterModal({
           ))}
         </View>
 
-        <ScrollView contentContainerStyle={styles.content}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {tab === 'delivery' ? (
             <View style={styles.guideBox}>
               <Text style={styles.guideText}>
@@ -299,6 +301,7 @@ export function HospitalRegisterModal({
             <Text style={styles.saveBtnText}>{saving ? '저장 중...' : '저장하기'}</Text>
           </TouchableOpacity>
         </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );

@@ -31,6 +31,7 @@ import { BackButton } from '../../components/common/BackButton';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
+import { MedicalCitation } from '../../components/common/MedicalCitation';
 import { FEVER_GUIDE } from '../../features/guide/feverGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 // 열 관리는 긴급 관련 페이지 — 광고 없음 (VIP 여부 무관)
@@ -1285,6 +1286,13 @@ export default function FeverScreen() {
           </View>
         )}
 
+        <MedicalCitation
+          note="해열제 용량·복용 간격은 일반 기준이며, 실제 투약은 반드시 소아과 의사·약사 지시를 따르세요."
+          sources={[
+            { label: '대한소아과학회 어린이 건강정보 (발열·해열제)', url: 'https://www.pediatrics.or.kr' },
+            { label: '질병관리청 국가건강정보포털 (소아 발열)', url: 'https://health.kdca.go.kr' },
+          ]}
+        />
         <View style={{ height: 40 }} />
       </ScrollView>
 

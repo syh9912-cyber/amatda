@@ -69,3 +69,4 @@ backend/scripts/**/backup-*/
 # 임시 문서 생성 폴더 (소명자료 docx)
 _tmp_doc/
 *.docx
+_iap_screenshots/
