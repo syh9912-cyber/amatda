@@ -147,7 +147,21 @@ function compactDate(iso: string): string {
 const MONTH_WINDOW = 3; // 내 예정월 ±3개월까지 이동 허용
 
 type RoomType = 'month' | 'region' | 'radius';
-type ViewMode = 'feed' | 'bookmarks' | 'mine' | 'honor' | 'anonymous';
+type ViewMode = 'feed' | 'bookmarks' | 'mine' | 'honor';
+
+// 부적절 콘텐츠(욕설·비방 등) 1차 필터 — Apple 1.2 objectionable content filtering 대응.
+// 공백·자모 분리를 제거해 우회를 일부 방지한다. 서버측(mom-group.ts)에도 동일 검사 권장.
+const BANNED_WORDS = [
+  '씨발', '시발', '씨빨', '시1발', '씨1발', '씨발년', '씨발놈', '개씨발',
+  '병신', '븅신', 'ㅂㅅ', '지랄', 'ㅈㄹ', '개새끼', '개새', '새끼', 'ㅅㄲ',
+  '좆', '좇', '좆같', '존나', '졸라', '엠창', '느금', '니애미', '니미',
+  '미친놈', '미친년', '창녀', '걸레년', '보지', '자지', '씹', '꺼져', '닥쳐',
+  'ㅅㅂ', 'ㅄ', '시발', 'fuck', 'shit', 'bitch', 'asshole',
+];
+function containsBannedWord(text: string): boolean {
+  const normalized = text.replace(/\s+/g, '').toLowerCase();
+  return BANNED_WORDS.some((w) => normalized.includes(w.toLowerCase()));
+}
 
 // 명예의 전당 진입 임계값 — 게시물의 인기 점수 = likeCount + commentCount * 2
 const HONOR_SCORE_THRESHOLD = 5;
@@ -241,7 +255,6 @@ export default function MomGroupScreen() {
   const [writeTitle, setWriteTitle] = useState('');
   const [writeContent, setWriteContent] = useState('');
   const [writeCategory, setWriteCategory] = useState<MomGroupCategory>('chat');
-  const [writeAnonymous, setWriteAnonymous] = useState(false);
   const [writePinned, setWritePinned] = useState(false);
   const [writing, setWriting] = useState(false);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
@@ -250,7 +263,6 @@ export default function MomGroupScreen() {
   const [activePost, setActivePost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentContent, setCommentContent] = useState('');
-  const [commentAnonymous, setCommentAnonymous] = useState(false);
   const [loadingComments, setLoadingComments] = useState(false);
   const [posting, setPosting] = useState(false);
 
@@ -507,7 +519,6 @@ export default function MomGroupScreen() {
     setWriteTitle('');
     setWriteContent('');
     setWriteCategory('chat');
-    setWriteAnonymous(false);
     setWritePinned(false);
     setPostImage(null);
     setEditingPostId(null);
@@ -518,7 +529,6 @@ export default function MomGroupScreen() {
     setWriteTitle(p.title || '');
     setWriteContent(p.content || '');
     setWriteCategory(p.category);
-    setWriteAnonymous(p.anonymous);
     setWritePinned(p.isPinned === true);
     setPostImage(p.imageUrl ?? null);
     setShowWriteModal(true);
@@ -529,6 +539,10 @@ export default function MomGroupScreen() {
     const body = writeContent.trim();
     if (!title) { Alert.alert('알림', '제목을 입력해주세요'); return; }
     if (!body) { Alert.alert('알림', '내용을 입력해주세요'); return; }
+    if (containsBannedWord(title) || containsBannedWord(body)) {
+      Alert.alert('알림', '부적절한 표현(욕설·비방 등)이 포함되어 있어 등록할 수 없습니다.');
+      return;
+    }
 
     setWriting(true);
     try {
@@ -564,7 +578,7 @@ export default function MomGroupScreen() {
           title,
           body,
           writeCategory,
-          writeAnonymous,
+          false, // 익명 게시 폐지 — 항상 실명(닉네임)으로 작성 (Apple 1.2 대응)
           imageUrl ?? null,
           isOfficialUser ? writePinned : undefined,
         );
@@ -727,7 +741,6 @@ export default function MomGroupScreen() {
 
   const openComments = async (post: Post) => {
     setActivePost(post);
-    setCommentAnonymous(false);
     setLoadingComments(true);
     try {
       const res = await momGroupApi.listComments(post.id);
@@ -740,9 +753,13 @@ export default function MomGroupScreen() {
     if (!activePost) return;
     const body = commentContent.trim();
     if (!body) return;
+    if (containsBannedWord(body)) {
+      Alert.alert('알림', '부적절한 표현(욕설·비방 등)이 포함되어 있어 등록할 수 없습니다.');
+      return;
+    }
     setPosting(true);
     try {
-      await momGroupApi.createComment(activePost.id, body, commentAnonymous);
+      await momGroupApi.createComment(activePost.id, body, false);
       setCommentContent('');
       const res = await momGroupApi.listComments(activePost.id);
       setComments((res.data.data as Comment[]) ?? []);
@@ -846,7 +863,6 @@ export default function MomGroupScreen() {
   const isBookmarkView = viewMode === 'bookmarks';
   const isMineView = viewMode === 'mine';
   const isHonorView = viewMode === 'honor';
-  const isAnonymousView = viewMode === 'anonymous';
 
   // 명예의 전당 / 익명 탭은 별도 API 없이 현재 페이지 posts 에서 파생.
   //   한계: 페이지네이션된 posts 중 현재 페이지만 필터링됨 → 출시 후 백엔드 인덱스/쿼리 보강 권장.
@@ -1131,14 +1147,6 @@ export default function MomGroupScreen() {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.sortBtn, isAnonymousView && styles.sortBtnActive]}
-          onPress={() => setViewMode(isAnonymousView ? 'feed' : 'anonymous')}
-        >
-          <Text style={[styles.sortText, isAnonymousView && styles.sortTextActive]}>
-            🕶️ 익명 {anonymousPosts.length > 0 ? `(${anonymousPosts.length})` : ''}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
           style={[styles.sortBtn, isBookmarkView && styles.sortBtnActive]}
           onPress={() => setViewMode(isBookmarkView ? 'feed' : 'bookmarks')}
         >
@@ -1322,24 +1330,8 @@ export default function MomGroupScreen() {
                 </TouchableOpacity>
               )}
 
-              {/* 익명 토글 (새 글 작성 시에만) */}
-              {!editingPostId && (
-                <View style={styles.anonRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.anonTitle}>🕶️ 익명으로 쓰기</Text>
-                    <Text style={styles.anonDesc}>실제 닉네임 대신 같은 방에서만 고정되는 &apos;익명맘#1234&apos;로 표시돼요</Text>
-                  </View>
-                  <Switch
-                    value={writeAnonymous}
-                    onValueChange={setWriteAnonymous}
-                    trackColor={{ false: '#D1D5DB', true: '#F48FB1' }}
-                    thumbColor={writeAnonymous ? '#E91E63' : '#F3F4F6'}
-                  />
-                </View>
-              )}
-
-              {/* 상단 고정 토글 (공식 계정만 + 익명 OFF일 때만) */}
-              {isOfficialUser && !writeAnonymous && (
+              {/* 상단 고정 토글 (공식 계정만) */}
+              {isOfficialUser && (
                 <View style={styles.anonRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.anonTitle}>📌 상단 고정</Text>
@@ -1506,16 +1498,6 @@ export default function MomGroupScreen() {
               )}
             </View>
             </ScrollView>
-
-            <View style={styles.commentAnonRow}>
-              <Text style={styles.commentAnonLabel}>🕶️ 익명으로</Text>
-              <Switch
-                value={commentAnonymous}
-                onValueChange={setCommentAnonymous}
-                trackColor={{ false: '#D1D5DB', true: '#F48FB1' }}
-                thumbColor={commentAnonymous ? '#E91E63' : '#F3F4F6'}
-              />
-            </View>
 
             <View style={styles.commentInputRow}>
               <TextInput
