@@ -70,3 +70,9 @@ backend/scripts/**/backup-*/
 _tmp_doc/
 *.docx
 _iap_screenshots/
+
+# build artifacts (do not commit large binaries)
+frontend/dist-aab/
+*.aab
+*.apk
+*.ipa
