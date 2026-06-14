@@ -30,9 +30,12 @@ const MINT_LIGHT = '#E8FAF8';
 const CORAL_RED = '#FF6B6B';
 const CORAL_RED_LIGHT = '#FFF0F0';
 
-function getRecommendPercent(index: number): string {
-  const values = [95, 92, 90, 88, 85, 83, 80, 78];
-  return `${values[index % values.length]}%`;
+// 한글 목적격 조사(을/를) — 마지막 글자의 받침 유무로 판정.
+function objectParticle(name: string): string {
+  if (!name) return '';
+  const last = name.charCodeAt(name.length - 1);
+  if (last < 0xac00 || last > 0xd7a3) return '를'; // 한글 음절 밖이면 기본 '를'
+  return (last - 0xac00) % 28 === 0 ? '를' : '을';
 }
 
 /* ------------------------------------------------------------------ */
@@ -70,6 +73,7 @@ export default function NutritionScreen() {
   }, []);
 
   const childName = selectedChild?.name ?? '';
+  const displayName = childName || '우리 아이';
   const dominantLabel =
     selectedChild?.innateData?.dominantType?.split('(')[0] ?? '';
 
@@ -78,7 +82,7 @@ export default function NutritionScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <ScreenHeader
-        title={`${childName}${childName.endsWith('를') ? '' : '를'} 위한 식단 가이드`}
+        title={`${displayName}${objectParticle(displayName)} 위한 식단 가이드`}
         onBack={() => router.back()}
       />
 
@@ -203,7 +207,7 @@ function GoodFoodCard({
         </View>
         <View style={styles.mintBadge}>
           <Text style={styles.mintBadgeText}>
-            {'추천도 '}{getRecommendPercent(index)}
+            {'맞춤 추천'}
           </Text>
         </View>
       </View>

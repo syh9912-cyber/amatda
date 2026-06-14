@@ -209,10 +209,14 @@ function calculatePercentile(value: number, std: PercentileData): number {
 }
 
 function getPercentileLabel(percentile: number): string {
-  if (percentile <= 10) return `상위 ${percentile}%`;
-  if (percentile <= 25) return `상위 ${percentile}%`;
-  if (percentile <= 50) return `상위 ${percentile}%`;
-  return `상위 ${percentile}%`;
+  // calculatePercentile은 (100 - 실제백분위)를 반환(작을수록 큰 아이)하므로
+  // 실제 백분위(p)로 환산해 또래 대비 위치를 정확히, 구간별로 표기한다.
+  const p = Math.max(1, Math.min(99, 100 - percentile));
+  if (p >= 90) return `또래보다 큰 편 (상위 ${100 - p}%)`;
+  if (p >= 60) return `또래보다 살짝 큰 편 (백분위 ${p})`;
+  if (p >= 40) return `또래 평균 (백분위 ${p})`;
+  if (p >= 11) return `또래보다 살짝 작은 편 (백분위 ${p})`;
+  return `또래보다 작은 편 (하위 ${p}%)`;
 }
 
 export default function GrowthStatsScreen() {
@@ -1399,18 +1403,14 @@ function FilterTabs({
 
 function GrowthAnalysisSection({ childId }: { childId: string }) {
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<GrowthAnalysisResult | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const spinAnim = useRef(new Animated.Value(0)).current;
-  const progressAnim = useRef(new Animated.Value(0)).current;
 
   const startLoadingAnimation = useCallback(() => {
-    setProgress(0);
-    progressAnim.setValue(0);
-
-    // Spin animation loop
+    // 가짜 진행률 시뮬레이션 제거(rule #4) — 실제 단계 정보가 없으므로
+    // 무한(indeterminate) 스피너만 사용한다.
     const spin = Animated.loop(
       Animated.timing(spinAnim, {
         toValue: 1,
@@ -1419,29 +1419,10 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
       }),
     );
     spin.start();
-
-    // Progress bar animation: 0 -> 0.85 over 3 seconds (simulated feel)
-    Animated.timing(progressAnim, {
-      toValue: 0.85,
-      duration: 3000,
-      useNativeDriver: false,
-    }).start();
-
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 85) {
-          clearInterval(interval);
-          return 85;
-        }
-        return prev + Math.random() * 8 + 2;
-      });
-    }, 300);
-
     return () => {
       spin.stop();
-      clearInterval(interval);
     };
-  }, [spinAnim, progressAnim]);
+  }, [spinAnim]);
 
   const handleAnalyze = async () => {
     setLoading(true);
@@ -1461,9 +1442,6 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
         return;
       }
 
-      // Complete the progress bar
-      setProgress(100);
-      progressAnim.setValue(1);
       setResult(parsed);
     } catch {
       setError('성장 분석에 실패했습니다. 다시 시도해주세요.');
@@ -1476,11 +1454,6 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
   const spinInterpolation = spinAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
-  });
-
-  const progressWidth = progressAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '100%'],
   });
 
   const allMetrics = [
@@ -1544,15 +1517,6 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
                 </Text>
                 <Text style={gaStyles.loadingSubtitle}>
                   AI가 성장 패턴을 꼼꼼히 살펴보고 있어요
-                </Text>
-                {/* Progress Bar */}
-                <View style={gaStyles.progressBarBg}>
-                  <Animated.View
-                    style={[gaStyles.progressBarFill, { width: progressWidth as Animated.AnimatedInterpolation<string> }]}
-                  />
-                </View>
-                <Text style={gaStyles.progressText}>
-                  {Math.min(Math.round(progress), 100)}%
                 </Text>
               </View>
             )}
