@@ -1091,7 +1091,7 @@ export default function MomGroupScreen() {
             </View>
           )}
         </View>
-      ) : isFeed && roomType === 'month' && groupKey ? (
+      ) : roomType === 'month' && groupKey ? (
         <View style={styles.monthNav}>
           <TouchableOpacity
             style={[styles.monthArrow, !canGoPrev && { opacity: 0.25 }]}
