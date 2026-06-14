@@ -300,7 +300,8 @@ export default function MomstagramScreen() {
   };
 
   const renderFooter = () => {
-    if (!hasMore || allPosts.length === 0) return null;
+    // 실제 추가 로딩 중일 때만 노출 (idle 상태 상시 스피너 = 가짜 로딩 방지)
+    if (!loading || !hasMore || allPosts.length === 0) return null;
     return (
       <View style={styles.footerWrap}>
         <ActivityIndicator size="small" color={CORAL} />

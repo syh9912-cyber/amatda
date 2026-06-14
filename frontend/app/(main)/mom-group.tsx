@@ -268,6 +268,8 @@ export default function MomGroupScreen() {
 
   const [viewMode, setViewMode] = useState<ViewMode>('feed');
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
+  // 이번 세션에서 공감(좋아요)한 게시물 — 활성 상태 표시 + 토글 방향 판정
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const [bookmarkPosts, setBookmarkPosts] = useState<Post[]>([]);
   const [loadingBookmarks, setLoadingBookmarks] = useState(false);
   const [minePosts, setMinePosts] = useState<Post[]>([]);
@@ -611,36 +613,45 @@ export default function MomGroupScreen() {
     ]);
   };
 
-  const handleToggleLike = async (post: Post) => {
-    // 낙관적 업데이트: posts + activePost 둘 다
+  const applyLikeDelta = (postId: string, delta: number) => {
+    if (delta === 0) return;
     setPosts((prev) => prev.map((p) =>
-      p.id === post.id ? { ...p, likeCount: p.likeCount + 1 } : p,
+      p.id === postId ? { ...p, likeCount: Math.max(0, p.likeCount + delta) } : p,
     ));
-    setActivePost((prev) => (prev && prev.id === post.id
-      ? { ...prev, likeCount: prev.likeCount + 1 }
+    setActivePost((prev) => (prev && prev.id === postId
+      ? { ...prev, likeCount: Math.max(0, prev.likeCount + delta) }
       : prev));
+  };
+
+  const handleToggleLike = async (post: Post) => {
+    const wasLiked = likedIds.has(post.id);
+    const optimisticDelta = wasLiked ? -1 : 1;
+    // 낙관적: 토글 방향대로 카운트/활성상태 즉시 반영
+    setLikedIds((prev) => {
+      const next = new Set(prev);
+      if (wasLiked) next.delete(post.id); else next.add(post.id);
+      return next;
+    });
+    applyLikeDelta(post.id, optimisticDelta);
     try {
       const res = await momGroupApi.toggleLike(post.id);
-      const liked = (res.data.data?.liked as boolean) ?? true;
-      // 서버 응답이 '취소'면 -2 보정 (낙관적 +1 → 실제 -1)
-      const delta = liked ? 0 : -2;
-      if (delta !== 0) {
-        setPosts((prev) => prev.map((p) =>
-          p.id === post.id
-            ? { ...p, likeCount: Math.max(0, p.likeCount + delta) }
-            : p,
-        ));
-        setActivePost((prev) => (prev && prev.id === post.id
-          ? { ...prev, likeCount: Math.max(0, prev.likeCount + delta) }
-          : prev));
-      }
+      const liked = (res.data.data?.liked as boolean) ?? !wasLiked;
+      // 서버 실제 상태로 보정 (낙관적 가정과 다르면 카운트 재조정)
+      setLikedIds((prev) => {
+        const next = new Set(prev);
+        if (liked) next.add(post.id); else next.delete(post.id);
+        return next;
+      });
+      const actualDelta = liked ? 1 : -1;
+      applyLikeDelta(post.id, actualDelta - optimisticDelta);
     } catch {
-      setPosts((prev) => prev.map((p) =>
-        p.id === post.id ? { ...p, likeCount: Math.max(0, p.likeCount - 1) } : p,
-      ));
-      setActivePost((prev) => (prev && prev.id === post.id
-        ? { ...prev, likeCount: Math.max(0, prev.likeCount - 1) }
-        : prev));
+      // 롤백
+      setLikedIds((prev) => {
+        const next = new Set(prev);
+        if (wasLiked) next.add(post.id); else next.delete(post.id);
+        return next;
+      });
+      applyLikeDelta(post.id, -optimisticDelta);
     }
   };
 
@@ -1435,8 +1446,14 @@ export default function MomGroupScreen() {
                 ) : null}
                 <View style={styles.postActions}>
                   <TouchableOpacity style={styles.postActionWithIcon} onPress={() => handleToggleLike(activePost)}>
-                    <Image source={IC_HEART} style={styles.actionIcon} contentFit="contain" />
-                    <Text style={styles.postActionText}>{activePost.likeCount}</Text>
+                    <Image
+                      source={IC_HEART}
+                      style={[styles.actionIcon, likedIds.has(activePost.id) && styles.actionIconLiked]}
+                      contentFit="contain"
+                    />
+                    <Text style={[styles.postActionText, likedIds.has(activePost.id) && styles.postActionTextLiked]}>
+                      {activePost.likeCount}
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.postActionWithIcon} onPress={() => handleToggleBookmark(activePost)}>
                     <Image source={IC_BOOKMARK} style={styles.actionIcon} contentFit="contain" />
@@ -2191,6 +2208,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   actionIcon: { width: 16, height: 16, tintColor: COLORS.textSecondary },
+  actionIconLiked: { tintColor: '#E91E63' },
 
   // 하단 검색 바
   searchRowBottom: {
@@ -2283,6 +2301,7 @@ const styles = StyleSheet.create({
   },
   postAction: { padding: 4 },
   postActionText: { fontSize: FONT_SIZE.sm, color: COLORS.text, fontWeight: '600' },
+  postActionTextLiked: { color: '#E91E63', fontWeight: '700' },
   postActionTextMuted: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
   postActionTextDanger: { fontSize: FONT_SIZE.sm, color: COLORS.error, fontWeight: '600' },
 
