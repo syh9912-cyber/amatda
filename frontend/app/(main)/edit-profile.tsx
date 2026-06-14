@@ -22,6 +22,12 @@ interface UserProfile {
   parentRole?: string;
 }
 
+// 별명 유효성 — 저장 버튼 disabled 조건과 저장 검증을 동일 기준으로 통일
+function isValidNickname(name: string): boolean {
+  const t = name.trim();
+  return t.length >= 2 && t.length <= 10;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Main Screen                                                        */
 /* ------------------------------------------------------------------ */
@@ -68,12 +74,8 @@ export default function EditProfileScreen() {
 
   const handleSaveNickname = async () => {
     const trimmed = nickname.trim();
-    if (!trimmed) {
-      Alert.alert('알림', '별명을 입력해주세요');
-      return;
-    }
-    if (trimmed.length < 2 || trimmed.length > 10) {
-      Alert.alert('알림', '별명은 2~10자로 입력해주세요');
+    if (!isValidNickname(trimmed)) {
+      Alert.alert('알림', trimmed.length === 0 ? '별명을 입력해주세요' : '별명은 2~10자로 입력해주세요');
       return;
     }
 
@@ -88,6 +90,21 @@ export default function EditProfileScreen() {
       Alert.alert('오류', '별명 변경에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // 부모 역할 변경을 별명 저장 버튼과 독립적으로 즉시 저장.
+  // (기존엔 별명 저장 버튼을 눌러야만 반영 → 별명 2자 미만이면 역할 저장 불가)
+  const handleSelectRole = async (role: string) => {
+    setParentRole(role);
+    const currentNick = (nickname.trim() || profile?.nickname || '').trim();
+    // 유효한 별명이 아직 없으면 로컬 선택만 — 별명 저장 시 함께 반영됨
+    if (!isValidNickname(currentNick)) return;
+    try {
+      await apiInstance.put('/auth/nickname', { nickname: currentNick, parentRole: role });
+      if (profile) setProfile({ ...profile, parentRole: role });
+    } catch {
+      Alert.alert('오류', '역할 저장에 실패했어요. 다시 시도해주세요.');
     }
   };
 
@@ -200,10 +217,10 @@ export default function EditProfileScreen() {
             <TouchableOpacity
               style={[
                 styles.saveBtn,
-                (saving || nickname.trim().length < 2) && styles.saveBtnDisabled,
+                (saving || !isValidNickname(nickname)) && styles.saveBtnDisabled,
               ]}
               onPress={handleSaveNickname}
-              disabled={saving || nickname.trim().length < 2}
+              disabled={saving || !isValidNickname(nickname)}
               activeOpacity={0.7}
             >
               <Text style={styles.saveBtnText}>
@@ -222,7 +239,7 @@ export default function EditProfileScreen() {
               <TouchableOpacity
                 key={role}
                 style={[styles.roleBtn, parentRole === role && styles.roleBtnActive]}
-                onPress={() => setParentRole(role)}
+                onPress={() => handleSelectRole(role)}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.roleBtnText, parentRole === role && styles.roleBtnTextActive]}>

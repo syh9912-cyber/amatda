@@ -244,7 +244,8 @@ export default function MomWellnessScreen() {
 
   const handleSubmit = async () => {
     if (!childId) return;
-    if (Object.keys(answers).length < 10) {
+    // 서버 문항 수와 불일치 시 점수 왜곡 방지 — 하드코딩 10 대신 실제 문항 수 사용
+    if (questions.length === 0 || Object.keys(answers).length < questions.length) {
       Alert.alert('알림', '모든 문항에 답해주세요');
       return;
     }

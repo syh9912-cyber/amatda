@@ -232,7 +232,7 @@ export default function VaccinationScreen() {
   /* ── Filter ── */
   const filtered = scopedSchedule.filter((v) => {
     switch (filter) {
-      case 'upcoming': return !v.completed && v.dDay >= -30;
+      case 'upcoming': return !v.completed && v.dDay >= 0;
       case 'overdue': return !v.completed && v.dDay < 0;
       case 'completed': return v.completed;
       case 'all': return true;
@@ -252,7 +252,8 @@ export default function VaccinationScreen() {
   /* ── Stats (등록 기준 이후만) ── */
   const totalCount = scopedSchedule.length;
   const completedCount = scopedSchedule.filter((v) => v.completed).length;
-  const upcomingCount = scopedSchedule.filter((v) => !v.completed && v.dDay >= 0 && v.dDay <= 30).length;
+  // '다가오는' 탭 필터와 동일 기준(미완료 & dDay>=0)으로 통일 — 배지 카운트와 목록 일치
+  const upcomingCount = scopedSchedule.filter((v) => !v.completed && v.dDay >= 0).length;
   const overdueCount = scopedSchedule.filter((v) => !v.completed && v.dDay < 0).length;
 
   if (!child || child.isPregnant) {

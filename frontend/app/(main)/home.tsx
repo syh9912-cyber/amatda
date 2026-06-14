@@ -136,7 +136,9 @@ function getActionsForAge(ageGroup: AgeGroupKey, child?: Child | null): QuickAct
     }
   }
 
-  return filtered.slice(0, 8);
+  // 임산부 막달엔 접종달력 포함 9개까지 허용(slice(0,8)에 잘려 영구 미노출되던 문제).
+  // 그 외 연령은 4열 그리드 2줄(최대 8개)로 캡.
+  return filtered.slice(0, ageGroup === 'pregnant' ? 9 : 8);
 }
 
 /* ------------------------------------------------------------------ */
