@@ -1939,7 +1939,11 @@ const styles = StyleSheet.create({
     width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center',
     backgroundColor: '#FCE4EC',
   },
-  monthArrowText: { fontSize: 20, fontWeight: '600', color: '#AD1457' },
+  monthArrowText: {
+    fontSize: 20, fontWeight: '600', color: '#AD1457',
+    lineHeight: 22, textAlign: 'center', textAlignVertical: 'center',
+    includeFontPadding: false, width: 20,
+  },
   monthCenter: { alignItems: 'center', flex: 1 },
   monthTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text },
   monthReset: { fontSize: 11, color: COLORS.primary, marginTop: 2 },
