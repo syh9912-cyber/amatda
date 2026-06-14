@@ -100,6 +100,8 @@ export default function VoiceScreen() {
   const [phase, setPhase] = useState<'init' | 'listening' | 'processing' | 'done' | 'error'>('init');
   const [recognizedText, setRecognizedText] = useState('');
   const [speechAvailable, setSpeechAvailable] = useState(false);
+  // 음성 모듈이 로드됐는지(Case 1 포함) — 에러 화면 '다시 말하기' 노출 기준.
+  const [speechReady, setSpeechReady] = useState(false);
   // 직전 기록 정보 — 연속 기록 시 화면에 표시
   const [lastRecord, setLastRecord] = useState('');
 
@@ -202,7 +204,7 @@ export default function VoiceScreen() {
       processVoice(text.trim());
       // speechModuleRef 초기화 (processVoice 완료 후 연속 모드 시작 시 필요)
       loadSpeechModule().then((mod) => {
-        if (mod && mounted) speechModuleRef.current = mod;
+        if (mod && mounted) { speechModuleRef.current = mod; setSpeechReady(true); }
       }).catch(() => { /* ignore */ });
       return () => { mounted = false; };
     }
@@ -233,6 +235,7 @@ export default function VoiceScreen() {
     }
 
     speechModuleRef.current = mod;
+    setSpeechReady(true);
 
     // 가용성 확인
     try {
@@ -580,11 +583,12 @@ export default function VoiceScreen() {
         hasProcessed.current = false;
         setRecognizedText('');
         setStatus('');
-        if (speechModuleRef.current) {
-          // 이미 모듈 로드된 경우 (Case 2 정상 경로)
+        // 리스너(result/error/end) 등록 여부로 분기 — 모듈만 있고 리스너가 없으면
+        // (Case 1 Siri 텍스트 경로) startListening만 하면 result 이벤트를 못 받아
+        // 무한 듣기 상태가 됨. 리스너 없으면 initSpeechRecognition부터 호출.
+        if (speechModuleRef.current && subscriptionsRef.current.length > 0) {
           startListening(speechModuleRef.current);
         } else {
-          // Siri 텍스트 경로(Case 1) — 음성 인식 초기화부터 시작
           initSpeechRecognition();
         }
       }, 1500);
@@ -597,12 +601,15 @@ export default function VoiceScreen() {
 
   // 다시 말하기 (에러 후 재시도)
   const handleRetry = () => {
-    if (speechModuleRef.current) {
-      recognizedTextRef.current = '';
-      hasProcessed.current = false;
-      setError('');
-      setRecognizedText('');
+    recognizedTextRef.current = '';
+    hasProcessed.current = false;
+    setError('');
+    setRecognizedText('');
+    // 리스너가 등록돼 있으면 바로 재청취, 아니면(Case 1 등) 초기화부터 — 리스너 보강
+    if (speechModuleRef.current && subscriptionsRef.current.length > 0) {
       startListening(speechModuleRef.current);
+    } else {
+      initSpeechRecognition();
     }
   };
 
@@ -689,7 +696,7 @@ export default function VoiceScreen() {
           <Image source={IC_MASCOT} style={s.mascot} resizeMode="contain" />
           <Text style={s.errorText}>{error}</Text>
 
-          {speechAvailable && (
+          {(speechAvailable || speechReady) && (
             <TouchableOpacity style={s.retryBtn} onPress={handleRetry}>
               <Text style={s.retryBtnText}>{'다시 말하기'}</Text>
             </TouchableOpacity>
