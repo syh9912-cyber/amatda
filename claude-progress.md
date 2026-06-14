@@ -1,16 +1,34 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-06-14 — iOS 4차 거절(1.4.1·1.2·2.1a) 대응: 맘스톡 익명 폐지 + 욕설 필터
+> 최종 업데이트: 2026-06-14 — iOS 4차 거절 대응 완료(맘스톡 익명폐지·욕설필터·콘텐츠 시드) + 빌드29 제출 + OTA
 
 ---
 
-## 2026-06-14 — iOS 4차 거절 대응 (1.4.1 / 1.2 / 2.1a)
+## 2026-06-14 — iOS 4차 거절(1.4.1 / 1.2 / 2.1a) 대응 — 처리 완료
 
-- 1.2 (UGC 익명): 맘스톡 '익명으로 쓰기'(글·댓글) 기능 **완전 제거** → 항상 실명(닉네임). 익명 보기 탭 제거. 18+ 등급 회피. + **욕설/금칙어 1차 필터**(containsBannedWord, BANNED_WORDS) 게시·댓글 등록 시 차단. (기존 차단/신고/약관 유지)
-  - 파일: `frontend/app/(main)/mom-group.tsx` (writeAnonymous/commentAnonymous state·토글·탭·reset 제거, createPost/createComment anonymous=false 고정, BANNED_WORDS 필터 추가)
-  - 검증: tsc 통과, expo lint 신규 이슈 0.
-- 1.4.1 (의료 면책): App Store '설명(description)' 메타데이터에 의료 면책 문구 추가 필요(앱 내 면책은 이미 있음). → 사용자가 ASC에서 수정.
-- 2.1a (데모 접근): 리뷰어가 '내 동네'(위치기반) 빈 화면만 봄. → 데모 계정 + 콘텐츠 시드 + '월방' 탭 안내 필요.
-- 남은 작업: 데모 계정/콘텐츠, 설명 문구 반영, (코드 반영 위해) iOS 신규 빌드 또는 OTA 채널/런타임 확인 후 배포, Apple 회신.
+### 코드 수정 (release/v2.9.0)
+- **1.2 (UGC 익명)** — 맘스톡 '익명으로 쓰기'(글·댓글) 기능 **완전 제거** → 항상 실명(닉네임). 익명 보기 탭 제거. 18+ 등급 회피. + **욕설/금칙어 1차 필터**(`BANNED_WORDS`, `containsBannedWord`) 게시·댓글 등록 시 차단. (기존 차단/신고/약관 유지)
+  - 파일: `frontend/app/(main)/mom-group.tsx` — writeAnonymous/commentAnonymous state·토글·탭·reset 제거, createPost/createComment anonymous=false 고정, BANNED_WORDS 필터 추가. 커밋 `bbe20db`.
+- **맘스톡 색상 버그** — 내동네에서 전국 폴백 글(isFallback)까지 강조배경이 깔리던 문제 → `isHighlight = isPinTop || p.isOfficial`로 변경(공지·고정 글만 강조). 커밋 `3d5c2dd`.
+- 검증: 프론트 tsc 통과, expo lint 신규 이슈 0.
+
+### Firestore 데이터 수정 (service-account.json + firebase-admin, 즉시 라이브·빌드 무관)
+- **2.1a 콘텐츠 시드** — 맘스톡 월방 **2024-08**에 실명 글 8개 + 댓글 8개 시드(다양한 카테고리, 욕설 없음). 데모 계정 월방이 2024-08이라 매칭.
+- **공지 상단고정** — 공식 공지 2개(`isOfficial=true`)가 `isPinned=false`라 최신글에 밀림 → `isPinned=true`로 변경(전 방 상단 고정).
+- **전국 필터** — 글에 `babyBirthYear`가 0/26개라 '전국(나이별)' 필터가 전부 걸러냄 → 월방 groupKey(YYYY-MM)에서 출생연도 추출해 20개 글 **babyBirthYear 백필**. 전국(2023~2025) 쿼리 13개 노출 확인.
+- **테스트 글 2개** — groupKey 2025-01 / babyBirthYear 2025 / 무안 남악 좌표(lat~34.81, lng~126.46) — 동네·전국·월방 매칭 테스트용.
+
+### 빌드/배포
+- **iOS 빌드 29** (v2.9.1, 런타임 2.9.1) EAS 빌드 완료 + `--auto-submit`로 App Store Connect 업로드. 익명/욕설 수정 포함. 사용자가 빌드29로 심사 제출.
+- **OTA(production, 2.9.1)** — 색상 수정 발행(빌드29 런타임 일치 → 빌드29가 수신). 커밋 3d5c2dd.
+
+### ⚠️ 사용자 ASC 액션(빌드로 안 고쳐지는 메타데이터 — 미확인)
+- **1.4.1** App Store '설명(description)'에 의료 면책 문구 추가 (한/영 문구 전달함).
+- **2.1a** App Review Information에 데모 계정 `syh9912@naver.com`(+비번, 네이버 2FA 해제) 기입 + 회신문("맘스톡 월방>2024년 8월에 글 많음, 내동네는 위치기반") 답장.
+
+### 참고 — 비(非)앱 산출물 (바탕화면, git 외부)
+- `바탕화면/아맞다 수연/` : 인스타 홍보 카드뉴스 5세트(맘스톡·가족육아·열나·AI분석·기질분석) — AI 실사 표지 + 실제 앱 화면 사용법.
+- `바탕화면/지원사업/` : 2026 혁신 소상공인 AI 활용지원 사업 — SY Labs(사장님ON+아맞다) 사업계획서·서식2 양식형·발표 슬라이드·체크리스트(docx/pdf).
+- `Downloads/상표출원_신청서_에스와이랩스(작성본).hwp` : 전남TP 소상공인 IP(상표)출원 지원 신청서 — 아맞다 상표출원, HWP COM 자동 작성.
 
 ---
 
