@@ -144,7 +144,7 @@ function compactDate(iso: string): string {
   return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
 }
 
-const MONTH_WINDOW = 3; // 내 예정월 ±3개월까지 이동 허용
+const MONTH_WINDOW = 12; // 내 예정월 ±12개월(1년)까지 이동 허용
 
 type RoomType = 'month' | 'region' | 'radius';
 type ViewMode = 'feed' | 'bookmarks' | 'mine' | 'honor';
