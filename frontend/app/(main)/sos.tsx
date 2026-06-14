@@ -422,6 +422,7 @@ export default function SOSScreen() {
     }
 
     setChecking(true);
+    setResult(null); // 새 검사 시작 — 직전 결과(예: 이전 '응급' 카드) 잔류 방지
     try {
       const temp = temperature ? parseFloat(temperature) : undefined;
       const res = await sosApi.checkSymptom(
@@ -432,6 +433,8 @@ export default function SOSScreen() {
       const data = res.data?.data as SymptomCheckResult | undefined;
       if (data) {
         setResult(data);
+      } else {
+        Alert.alert('오류', '증상 확인 결과를 받지 못했습니다. 다시 시도해주세요.');
       }
     } catch {
       Alert.alert('오류', '증상 확인 중 오류가 발생했습니다. 다시 시도해주세요.');

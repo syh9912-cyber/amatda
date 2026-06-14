@@ -242,12 +242,15 @@ function buildActionGuide(
 ): ActionGuide {
   const adj = current.adjusted;
   // 1) 회복 추세 감지 (직전 기록 vs 현재)
-  const prev = history.find((h) => h.timestamp < Date.now() - 1); // 가장 최근 (오늘 측정 외)
-  const recovering = prev && prev.adjustedTemp - adj >= 0.4 && adj < 38.0;
+  // history[0]은 방금 입력한 현재 측정값이므로, 비교 대상인 직전 기록은 history[1]
+  const prev = history.length > 1 ? history[1] : undefined;
+  const recovering = !!prev && prev.adjustedTemp - adj >= 0.4 && adj < 38.0;
 
   // 2) 마지막 해열제 복용 시간
   const lastMed = medLog[0]; // medLog는 최신순
   const minutesSinceMed = lastMed ? Math.round((Date.now() - lastMed.timestamp) / 60000) : -1;
+  // 마지막 복용 약 종류별 최소 재복용 간격 (아세트아미노펜 4h, 이부프로펜 6h)
+  const requiredIntervalMin = lastMed ? MED_INTERVAL_HR[lastMed.type].min * 60 : 0;
 
   // 3) 분류별 행동 가이드
   if (current.level === 'emergency') {
@@ -295,8 +298,8 @@ function buildActionGuide(
 
   if (current.level === 'high') {
     // 고열 — 해열제 가능 여부 체크
-    if (lastMed && minutesSinceMed < 240) {
-      const remain = 240 - minutesSinceMed;
+    if (lastMed && minutesSinceMed < requiredIntervalMin) {
+      const remain = requiredIntervalMin - minutesSinceMed;
       return {
         label: '고열',
         headline: `해열제는 ${remain}분 후 가능해요`,
@@ -323,7 +326,7 @@ function buildActionGuide(
   }
 
   if (current.level === 'moderate') {
-    if (lastMed && minutesSinceMed < 240) {
+    if (lastMed && minutesSinceMed < requiredIntervalMin) {
       return {
         label: '발열',
         headline: '잠시 더 지켜봐 주세요',

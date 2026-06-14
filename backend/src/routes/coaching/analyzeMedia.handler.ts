@@ -295,7 +295,7 @@ function buildMockPoopAnalysis(
       { label: '정상 범위', likelihood: needsDoctor ? '낮음' : '높음' },
       { label: '식이 영향', likelihood: hasWatery ? '높음' : '보통' },
       { label: '소화 기능 변화', likelihood: hasWatery ? '높음' : '낮음' },
-      { label: '장 감염/염증', likelihood: needsDoctor ? '보통' : '낮음' },
+      { label: '장 감염/염증', likelihood: needsDoctor ? '높음' : '낮음' },
       { label: '알레르기 반응', likelihood: hasRed ? '보통' : '낮음' },
     ],
     recommendations: needsDoctor
