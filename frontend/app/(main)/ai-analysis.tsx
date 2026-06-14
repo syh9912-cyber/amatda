@@ -169,15 +169,12 @@ export default function AIAnalysisScreen() {
         .reduce((sum, r) => sum + (r.duration ?? 0), 0);
       const sleepHours = Math.round((sleepMinutes / 60) * 10) / 10;
 
-      const minDelay = new Promise<void>((resolve) => setTimeout(resolve, 2000));
-      const [, res] = await Promise.all([
-        minDelay,
-        growthApi.analysis(childId, {
-          diaper: diaperCount,
-          feeding: feedingCount,
-          sleep: sleepHours,
-        }),
-      ]);
+      // 강제 2초 가짜 지연 제거(rule #4) — 실제 분석 완료 시점에 결과 표시
+      const res = await growthApi.analysis(childId, {
+        diaper: diaperCount,
+        feeding: feedingCount,
+        sleep: sleepHours,
+      });
       const data = res.data?.data as TrackerAnalysisResult | undefined;
       if (data?.trackerMetrics) {
         // 해결책(advice) 우선, 없으면 comment fallback

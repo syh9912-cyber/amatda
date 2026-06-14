@@ -74,6 +74,10 @@ const BUILT_IN_SOUNDS_ALL: SoundItem[] = [
 // 음원 미확보(source: null) 트랙은 스토어 심사 기준상 미완성 기능으로 보여 목록에서 제외.
 // 음원 추가 후 source 를 채우면 자동으로 다시 노출된다.
 const BUILT_IN_SOUNDS: SoundItem[] = BUILT_IN_SOUNDS_ALL.filter((s) => s.source !== null);
+// 울음 감지 자동재생 기본 트랙 — 반드시 음원이 있는(목록에 노출되는) 트랙이어야 무음 실패 방지.
+// (기존 기본값 'twinkle'은 source null 이라 목록에서 제외돼 자동재생이 무음이었음)
+const DEFAULT_CRY_SOUND_ID =
+  BUILT_IN_SOUNDS.find((s) => s.category === 'lullaby')?.id ?? BUILT_IN_SOUNDS[0]?.id ?? '';
 
 /**
  * 태교음악 전용 목록.
@@ -182,7 +186,7 @@ export default function LullabyScreen() {
   const [timer, setTimer] = useState(0);
   const [remaining, setRemaining] = useState(0);
   const [cryDetect, setCryDetect] = useState(false);
-  const [lastCrySound, setLastCrySound] = useState<string>('twinkle');
+  const [lastCrySound, setLastCrySound] = useState<string>(DEFAULT_CRY_SOUND_ID);
   const [isListening, setIsListening] = useState(false);
 
   // Recording states

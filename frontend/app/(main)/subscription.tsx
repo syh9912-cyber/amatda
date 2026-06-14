@@ -435,24 +435,34 @@ export default function SubscriptionScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Free trial — trialUsed 면 비활성 + 안내 텍스트 (재시작 차단) */}
-          {status?.trialUsed ? (
-            <View style={[styles.trialBtn, styles.trialBtnDisabled]}>
-              <Text style={[styles.trialBtnText, styles.trialBtnTextDisabled]}>
-                이미 체험하셨습니다
-              </Text>
-            </View>
-          ) : !status?.trialDaysLeft ? (
-            <TouchableOpacity
-              style={styles.trialBtn}
-              onPress={handleStartTrial}
-              disabled={subscribing}
-              accessibilityRole="button"
-              accessibilityLabel="7일 무료 체험 시작"
-            >
-              <Text style={styles.trialBtnText}>7일 무료 체험 시작</Text>
-            </TouchableOpacity>
-          ) : null}
+          {/* Free trial — 진행 중이면 숨김(상단 'N일 남음'), 종료/사용했으면 비활성,
+              한 번도 시작 안 했을 때만 시작 버튼 노출.
+              trialDaysLeft 0(종료)과 undefined(미시작)을 구분해 재시작 차단 */}
+          {(() => {
+            const trialActive = (status?.trialDaysLeft ?? 0) > 0;
+            const trialEnded = status?.trialUsed === true || status?.trialDaysLeft === 0;
+            if (trialActive) return null;
+            if (trialEnded) {
+              return (
+                <View style={[styles.trialBtn, styles.trialBtnDisabled]}>
+                  <Text style={[styles.trialBtnText, styles.trialBtnTextDisabled]}>
+                    이미 체험하셨습니다
+                  </Text>
+                </View>
+              );
+            }
+            return (
+              <TouchableOpacity
+                style={styles.trialBtn}
+                onPress={handleStartTrial}
+                disabled={subscribing}
+                accessibilityRole="button"
+                accessibilityLabel="7일 무료 체험 시작"
+              >
+                <Text style={styles.trialBtnText}>7일 무료 체험 시작</Text>
+              </TouchableOpacity>
+            );
+          })()}
 
           {/* 자동갱신 / 체험 고지 — Apple/Google 정책 필수 표기 */}
           <Text style={styles.legalNotice}>
