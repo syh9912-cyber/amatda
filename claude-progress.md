@@ -1,5 +1,38 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-06-14 — iOS 4차 거절 대응 완료(맘스톡 익명폐지·욕설필터·콘텐츠 시드) + 빌드29 제출 + OTA
+> 최종 업데이트: 2026-06-15 — 전체 화면 감사(AUDIT-2026-06-14.md) Tier 1 수정 완료(무한스피너·안전직결·위험도강등)
+
+---
+
+## 2026-06-15 — 화면 감사 1순위(Tier 1) 수정 완료 (release/v2.9.0)
+
+전체 화면 감사 보고서(`AUDIT-2026-06-14.md`, High 36/Medium 58/Low 65) 중
+**최우선(무한 스피너·사주오행·안전 직결)** 을 배치별 tsc/lint 검증 + 배치별 커밋으로 처리.
+
+### 무한 스피너 4건 — 커밋 `0200fce`
+- `monthly-characteristic` / `diary` / `intake-form` / `recommendation-detail`:
+  selectedChild 미선택 시 early-return으로 로딩이 영구 true로 남던 회귀.
+  early-return·useEffect else 분기에서 setLoading(false)+빈 데이터 처리. (coparenting과 동일 패턴)
+
+### 사주/오행 노출 3건 — 검사 결과 오탐, 변경 없음
+- `result.tsx`/`momstagram-post.tsx`: dominantType은 enum(`탐구형` 등) 한글값,
+  `EditorialCover`/result 차트는 fiveElements 키를 성향 라벨(탐구/활동/안정/결단/지혜)로 매핑.
+  → 실제 UI에 오행/천간/지지 노출 없음.
+
+### 안전 직결 — 커밋 `5297b93`, `80f2b09`
+- `fever`: 해열제 재복용 간격을 약 종류별(아세트아미노펜 4h·이부프로펜 6h)로 계산.
+  기존 240분 하드코딩은 이부프로펜을 4h만에 "복용 가능"으로 오안내. (`5297b93`)
+- `fever`: 회복추세 비교 대상을 history[1](직전 기록)로 교정. 기존 `Date.now()-1` 필터는
+  현재 측정값을 자기 자신과 비교 → '열 내리는 중' 카드가 영구 미표시. (`5297b93`)
+- `sos`: 증상검사 시작 시 setResult(null)+빈 응답 명시 처리. data 없을 때 직전 '응급'
+  카드 잔류하던 버그 수정. (`5297b93`)
+- `poop`/`cry` 위험도 강등: 서버 likelihood가 enum과 불일치 시 `?? '보통'`으로 떨어져
+  '높음' 빨강 경고색이 사라지던 의료화면 안전버그 → `resolveLikelihoodConfig`('높' 우선
+  포함 매칭) 도입. analyzeMedia poop mock의 장감염/염증 보통→높음도 교정. (`5297b93`, `80f2b09`)
+
+### 남은 항목
+- Tier 2(나머지 High ~30): voice·timer·growth-stats·nutrition·pregnancy·labor-monitor·
+  edit-profile 등 로직/UX. Tier 3(Medium/Low) 다수. Low/코스메틱은 사용자 합의로 후순위.
+- OTA 배포: Tier 1 커밋 미배포(배포는 배치 종료 후 일괄 예정).
 
 ---
 
