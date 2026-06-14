@@ -195,13 +195,16 @@ export default function CoparentingScreen() {
     if (!selectedChild) return;
 
     setInviteLoading(true);
+    // 전화번호를 초기화(setInvitePhone(''))하기 전에 지역 변수로 캡처 —
+    // 이후 Alert 콜백에서도 동일 값을 안전하게 사용(상태 초기화 영향 없음).
+    const phoneDigits = invitePhone.replace(/[^0-9]/g, '');
     try {
       const res = await coparentingApi.invite(
         selectedChild.id,
         inviteRole,
         inviteNickname.trim(),
         invitePerms,
-        invitePhone.replace(/[^0-9]/g, '') || undefined,
+        phoneDigits || undefined,
       );
       const data = res.data?.data;
       const code = data?.inviteCode ?? '';
@@ -222,7 +225,7 @@ export default function CoparentingScreen() {
           {
             text: '문자 보내기',
             onPress: async () => {
-              const phone = invitePhone.replace(/[^0-9]/g, '');
+              const phone = phoneDigits;
               if (phone.length >= 10) {
                 // iOS는 본문 구분자로 '&', Android는 '?' 사용. 메시지만 인코딩(구분자는 인코딩 금지).
                 const sep = Platform.OS === 'ios' ? '&' : '?';
@@ -379,7 +382,7 @@ export default function CoparentingScreen() {
                 {members.length > 0 && (
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>
-                      연결된 가족 ({members.filter((m) => m.status === 'accepted').length})
+                      가족 ({members.length})
                     </Text>
                     {members.map((m) => (
                       <View key={m.id} style={styles.memberCard}>
