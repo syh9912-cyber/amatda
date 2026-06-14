@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useChildStore, AnalysisReport } from '../../stores/childStore';
 import { childApi } from '../../services/api';
+import { captureError } from '../../services/sentry';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EditorialCover, TYPE_GRADIENT } from '../../components/report/EditorialCover';
@@ -30,6 +31,8 @@ export default function AnalysisReportScreen() {
 
   const [localReport, setLocalReport] = useState<AnalysisReport | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const fetchAttempted = useRef(false);
 
   const report = storeReport ?? localReport;
 
@@ -40,24 +43,30 @@ export default function AnalysisReportScreen() {
   const rootBg = gradient[0];
 
   useEffect(() => {
-    if (childId && !storeReport && !localReport && !loading) {
-      setLoading(true);
-      childApi.list()
-        .then((res) => {
-          const list = res.data?.data as Record<string, unknown>[] | undefined;
-          const found = list?.find((c) => (c.id as string) === childId);
-          if (found) {
-            const parsed = found.analysisReport as AnalysisReport | null;
-            if (parsed) {
-              setLocalReport(parsed);
-              updateChild(found as unknown as ReturnType<typeof useChildStore.getState>['children'][0]);
-            }
+    // fetchAttempted ref로 1회만 시도 — 실패 시 loading 토글로 effect가 재실행되어
+    // 무한 재요청되던 루프 방지. 재시도는 '다시 시도' 버튼이 ref를 초기화해 트리거.
+    if (!childId || storeReport || localReport || fetchAttempted.current) return;
+    fetchAttempted.current = true;
+    setLoading(true);
+    setLoadError(false);
+    childApi.list()
+      .then((res) => {
+        const list = res.data?.data as Record<string, unknown>[] | undefined;
+        const found = list?.find((c) => (c.id as string) === childId);
+        if (found) {
+          const parsed = found.analysisReport as AnalysisReport | null;
+          if (parsed) {
+            setLocalReport(parsed);
+            updateChild(found as unknown as ReturnType<typeof useChildStore.getState>['children'][0]);
           }
-        })
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    }
-  }, [childId, storeReport, localReport, loading, updateChild]);
+        }
+      })
+      .catch((e) => {
+        captureError(e, { ctx: 'analysis-report/fetch', childId });
+        setLoadError(true);
+      })
+      .finally(() => setLoading(false));
+  }, [childId, storeReport, localReport, updateChild]);
 
   if (loading) {
     return (
@@ -73,12 +82,32 @@ export default function AnalysisReportScreen() {
     return (
       <View style={styles.emptyContainer}>
         <Stack.Screen options={{ title: '분석 결과', headerShown: false }} />
-        <Text style={styles.emptyText}>분석 결과를 불러올 수 없습니다</Text>
+        <Text style={styles.emptyText}>
+          {loadError ? '분석 결과를 불러오지 못했어요.\n네트워크 확인 후 다시 시도해주세요.' : '분석 결과를 불러올 수 없습니다'}
+        </Text>
+        {loadError && (
+          <TouchableOpacity
+            style={styles.homeBtn}
+            onPress={() => {
+              fetchAttempted.current = false;
+              setLoadError(false);
+              setLocalReport(null);
+            }}
+          >
+            <Text style={styles.homeBtnText}>다시 시도</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
-          style={styles.homeBtn}
+          style={[styles.homeBtn, { marginTop: SPACING.sm }]}
+          onPress={() => router.replace({ pathname: '/onboarding/questions', params: { childId: childId ?? '' } })}
+        >
+          <Text style={styles.homeBtnText}>다시 분석하기</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.homeLink}
           onPress={() => router.replace('/(main)/home')}
         >
-          <Text style={styles.homeBtnText}>홈으로 이동</Text>
+          <Text style={styles.homeLinkText}>홈으로 이동</Text>
         </TouchableOpacity>
       </View>
     );
@@ -140,6 +169,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md,
   },
   homeBtnText: { color: '#FFF', fontWeight: '600', fontSize: FONT_SIZE.md },
+  homeLink: { marginTop: SPACING.lg, paddingVertical: SPACING.sm },
+  homeLinkText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
   bottomActions: { paddingHorizontal: 24, paddingTop: 12, gap: 10 },
   fullReportBtn: { backgroundColor: '#FFFFFF', paddingVertical: 14, borderRadius: 14, alignItems: 'center' },
   fullReportBtnText: { color: '#1C1C1E', fontSize: 14, fontWeight: '900', letterSpacing: 0.4 },

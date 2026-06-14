@@ -17,6 +17,7 @@ import {
 } from '../../constants/onboardingHelpers';
 import { calculateTemperament } from '../../constants/onboardingQuestions';
 import { AnalyzingScreen } from '../../components/onboarding/AnalyzingScreen';
+import { captureError } from '../../services/sentry';
 
 /**
  * 5 기질 옵션 — 사용자가 질문에 가장 가까운 기질 1개를 선택.
@@ -105,8 +106,10 @@ export default function QuestionsScreen() {
           // 스토어 전파 보장
           await new Promise((r) => setTimeout(r, 200));
         }
-      } catch {
-        // navigate anyway after timer
+      } catch (e) {
+        // 분석 실패 시에도 타이머 후 이동하되, 실패를 조용히 삼키지 않고 기록.
+        // (analysis-report 화면이 서버에서 재조회/재시도·다시분석 경로 제공)
+        captureError(e, { ctx: 'onboarding/questions/analyze', childId });
       } finally {
         apiDoneRef.current = true;
       }

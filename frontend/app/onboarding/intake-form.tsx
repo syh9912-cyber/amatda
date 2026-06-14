@@ -12,6 +12,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { questionApi, childApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
+import { captureError } from '../../services/sentry';
 
 interface Question {
   id: string;
@@ -24,6 +25,7 @@ export default function IntakeFormScreen() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const children = useChildStore((s) => s.children);
   const child = children.find((c) => c.id === childId);
@@ -36,14 +38,18 @@ export default function IntakeFormScreen() {
 
   const loadQuestions = async () => {
     if (!child) { setLoading(false); return; }
+    setLoading(true);
+    setLoadError(false);
     try {
       const res = await questionApi.list(
         child.ageInfo.months,
         child.innateData?.dominantType ?? ''
       );
       setQuestions(res.data.data);
-    } catch {
-      // ignore
+    } catch (e) {
+      // 로드 실패를 '질문 없음'으로 위장하지 않고 명시적으로 구분 + 재시도 제공
+      captureError(e, { ctx: 'intake-form/loadQuestions', childId });
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -130,7 +136,22 @@ export default function IntakeFormScreen() {
         </TouchableOpacity>
       )}
 
-      {questions.length === 0 && (
+      {questions.length === 0 && loadError && (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyText}>질문을 불러오지 못했어요.{'\n'}네트워크 확인 후 다시 시도해주세요.</Text>
+          <TouchableOpacity style={styles.skipBtn} onPress={loadQuestions}>
+            <Text style={styles.skipText}>다시 시도</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.skipLink}
+            onPress={() => router.replace('/(main)/home')}
+          >
+            <Text style={styles.skipLinkText}>건너뛰기</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {questions.length === 0 && !loadError && (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyText}>해당 연령/기질의 질문이 아직 없습니다</Text>
           <TouchableOpacity
@@ -177,4 +198,6 @@ const styles = StyleSheet.create({
   emptyText: { color: COLORS.textSecondary, marginBottom: SPACING.md },
   skipBtn: { backgroundColor: COLORS.primary, borderRadius: RADIUS.md, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.sm },
   skipText: { color: '#FFF', fontWeight: '600' },
+  skipLink: { marginTop: SPACING.md, paddingVertical: SPACING.xs },
+  skipLinkText: { color: COLORS.textSecondary, fontSize: FONT_SIZE.sm },
 });

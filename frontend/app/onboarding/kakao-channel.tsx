@@ -8,9 +8,9 @@
  * 진입: register.tsx / consent.tsx 신규 가입 성공 직후
  * 종료: 추가/나중에 양쪽 모두 → /onboarding/set-nickname
  */
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Platform, Linking,
+  View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Platform, Linking, AppState,
 } from 'react-native';
 import { router } from 'expo-router';
 
@@ -23,16 +23,29 @@ const CHANNEL_URLS = [
 
 export default function KakaoChannelScreen() {
   const [submitting, setSubmitting] = useState(false);
+  // 카카오톡으로 전환됐다가 앱에 복귀(AppState active)하면 다음 단계로 진행.
+  // 즉시 라우팅하면 카카오 앱 전환과 화면 전환이 경쟁하므로 복귀 시점에 진행한다.
+  const awaitingReturn = useRef(false);
 
   const goNext = () => {
     router.replace('/onboarding/set-nickname');
   };
 
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && awaitingReturn.current) {
+        awaitingReturn.current = false;
+        goNext();
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   const handleAdd = async () => {
     setSubmitting(true);
+    let opened = false;
     try {
       // 신형 URL 시도 → 못 열면 구형으로 폴백
-      let opened = false;
       for (const url of CHANNEL_URLS) {
         try {
           const can = await Linking.canOpenURL(url);
@@ -47,12 +60,17 @@ export default function KakaoChannelScreen() {
       }
       // 둘 다 실패하면 마지막 URL 강제 호출 (canOpenURL false 라도 일부 환경에서 동작)
       if (!opened) {
-        try { await Linking.openURL(CHANNEL_URLS[0]); } catch { /* noop */ }
+        try { await Linking.openURL(CHANNEL_URLS[0]); opened = true; } catch { /* noop */ }
       }
     } finally {
       setSubmitting(false);
-      // 카카오톡으로 전환됐어도 앱 복귀 시 다음 단계 진행되도록 즉시 라우팅
-      goNext();
+      if (opened) {
+        // 카카오 전환됨 — 복귀 시 AppState 리스너가 goNext 호출. (못 돌아오면 '나중에'로 진행)
+        awaitingReturn.current = true;
+      } else {
+        // 아예 열지 못했으면 즉시 다음 단계로
+        goNext();
+      }
     }
   };
 

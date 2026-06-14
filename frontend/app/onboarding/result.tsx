@@ -19,6 +19,16 @@ const ELEMENT_LABELS: Record<string, string> = {
   water: '감성',
 };
 
+// dominantType이 만약 내부 키(wood 등)로 저장돼 있어도 화면엔 성향명만 노출.
+// (오행/영문 키 노출 방지 — 이미 한글 성향형이면 그대로 통과)
+const DOMINANT_LABELS: Record<string, string> = {
+  wood: '탐구형',
+  fire: '활동형',
+  earth: '안정형',
+  metal: '분석형',
+  water: '감성형',
+};
+
 export default function ResultScreen() {
   const { childId } = useLocalSearchParams<{ childId: string }>();
   const children = useChildStore((s) => s.children);
@@ -49,7 +59,7 @@ export default function ResultScreen() {
 
       <View style={styles.card}>
         <Text style={styles.childName}>{child.name}</Text>
-        <Text style={styles.dominant}>{dominantType}</Text>
+        <Text style={styles.dominant}>{DOMINANT_LABELS[dominantType] ?? dominantType}</Text>
         <Text style={styles.label}>{label}</Text>
       </View>
 
