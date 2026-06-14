@@ -8,6 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import { Stack } from 'expo-router';
+import Svg, { Circle } from 'react-native-svg';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
@@ -19,6 +20,10 @@ const PRESETS = [
   { label: '15분', seconds: 15 * 60 },
   { label: '20분', seconds: 20 * 60 },
 ];
+
+// 진행 링(SVG) — 반지름 90, 둘레 기준 strokeDashoffset로 실제 진행 표시
+const RING_R = 90;
+const RING_CIRC = 2 * Math.PI * RING_R;
 
 function formatTime(sec: number): string {
   const m = Math.floor(sec / 60);
@@ -33,6 +38,11 @@ export default function TimerScreen() {
   const [selectedChild, setSelectedChildIdx] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const children = useChildStore((s) => s.children);
+  // 인터벌 콜백이 start 시점의 selectedChild를 캡처해 stale 되는 문제 방지 — ref로 미러링
+  const selectedChildRef = useRef(selectedChild);
+  useEffect(() => {
+    selectedChildRef.current = selectedChild;
+  }, [selectedChild]);
 
   useEffect(() => {
     return () => {
@@ -48,9 +58,12 @@ export default function TimerScreen() {
           clearInterval(intervalRef.current!);
           setRunning(false);
           Vibration.vibrate([0, 500, 200, 500]);
+          // 최신 선택 아이 이름을 ref+store에서 읽어 stale 방지
+          const doneName =
+            useChildStore.getState().children[selectedChildRef.current]?.name ?? '아이';
           Alert.alert(
             'Quality Time 완료!',
-            `${children[selectedChild]?.name ?? '아이'}와의 소중한 시간이었어요 💕`
+            `${doneName}와의 소중한 시간이었어요 💕`
           );
           return 0;
         }
@@ -120,7 +133,21 @@ export default function TimerScreen() {
 
       {/* 타이머 원형 표시 */}
       <View style={styles.timerCircle}>
-        <View style={[styles.progressRing, { opacity: progress }]} />
+        <Svg width={200} height={200} style={styles.progressSvg}>
+          <Circle cx={100} cy={100} r={RING_R} stroke={COLORS.border} strokeWidth={6} fill="none" />
+          <Circle
+            cx={100}
+            cy={100}
+            r={RING_R}
+            stroke={COLORS.primary}
+            strokeWidth={6}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={RING_CIRC}
+            strokeDashoffset={RING_CIRC * (1 - progress)}
+            transform="rotate(-90 100 100)"
+          />
+        </Svg>
         <Text style={styles.timerText}>{formatTime(remaining)}</Text>
         <Text style={styles.timerLabel}>
           {running ? '진행 중...' : remaining === 0 ? '완료!' : '준비'}
@@ -194,10 +221,7 @@ const styles = StyleSheet.create({
     shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1, shadowRadius: 10, elevation: 3,
   },
-  progressRing: {
-    position: 'absolute', width: '100%', height: '100%', borderRadius: 100,
-    backgroundColor: COLORS.primaryLight,
-  },
+  progressSvg: { position: 'absolute' },
   timerText: { fontSize: 40, fontWeight: '700', color: COLORS.text },
   timerLabel: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: SPACING.xs },
   controlRow: {
