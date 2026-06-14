@@ -30,6 +30,19 @@ import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
 type Tab = 'kick' | 'contraction';
 
+// createdAt이 ISO 문자열/숫자/Firestore Timestamp({_seconds}|{seconds}) 어느 형태든
+// 밀리초로 정규화 — 문자열이 아니면 NaN으로 '오늘 0회' 표시되던 문제 방지.
+function toMillis(v: unknown): number {
+  if (typeof v === 'string') return new Date(v).getTime();
+  if (typeof v === 'number') return v;
+  if (v && typeof v === 'object') {
+    const o = v as { _seconds?: number; seconds?: number };
+    const s = o._seconds ?? o.seconds;
+    if (typeof s === 'number') return s * 1000;
+  }
+  return NaN;
+}
+
 function getCurrentWeek(dueDate?: string | null): number {
   if (!dueDate) return 0;
   const due = new Date(dueDate).getTime();
@@ -86,7 +99,7 @@ export default function LaborMonitorScreen() {
     let week7Count = 0;
     for (const r of kickHistory) {
       if (!r.createdAt) continue;
-      const t = new Date(r.createdAt).getTime();
+      const t = toMillis(r.createdAt);
       if (isNaN(t)) continue;
       if (t >= todayStart.getTime()) {
         todayCount += r.count;
@@ -257,10 +270,14 @@ export default function LaborMonitorScreen() {
         score: 0,
       };
     }
-    const last5 = contractions.slice(-5);
+    // 진행 중인 진통의 시작 시각도 포함해 최신 간격을 반영
+    // (완료된 진통만 보면 임계 판정이 항상 한 박자 늦음)
+    const starts = contractions.map((c) => c.start);
+    if (currentContraction !== null) starts.push(currentContraction);
+    const recentStarts = starts.slice(-6);
     const intervals: number[] = [];
-    for (let i = 1; i < last5.length; i++) {
-      intervals.push((last5[i].start - last5[i - 1].start) / 1000);
+    for (let i = 1; i < recentStarts.length; i++) {
+      intervals.push((recentStarts[i] - recentStarts[i - 1]) / 1000);
     }
     const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
     const max = Math.max(...intervals);
@@ -314,7 +331,7 @@ export default function LaborMonitorScreen() {
       tone: 'info' as const,
       score,
     };
-  }, [contractions, diagAnswers]);
+  }, [contractions, currentContraction, diagAnswers]);
 
   /** 진진통 판정 (배경 빨강 + 분만실 전화 노출) */
   const isLaborImminent = contractionGuide.tone === 'danger' || contractionGuide.tone === 'emergency';

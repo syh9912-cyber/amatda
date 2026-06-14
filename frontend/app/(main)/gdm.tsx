@@ -335,6 +335,10 @@ export default function GdmScreen() {
         const [h, m] = eatenTime.split(':').map(Number);
         const d = new Date();
         d.setHours(h, m, 0, 0);
+        // 입력 시각이 현재보다 미래면 전날 식사로 간주(미래 시각 저장 방지)
+        if (d.getTime() > Date.now()) {
+          d.setDate(d.getDate() - 1);
+        }
         eatenAt = d.toISOString();
       }
       const carbsNum = parseFloat(carbs);
@@ -453,10 +457,13 @@ export default function GdmScreen() {
         {child && (
           <View style={styles.infoCard}>
             <Text style={styles.infoTitle}>{child.name} 산모님의 임당 관리</Text>
-            {child.momWeight ? (
+            {(child.momHeight || child.momWeight || child.momBloodType) ? (
               <Text style={styles.infoSub}>
-                {child.momHeight ? `${child.momHeight}cm` : ''}{child.momWeight ? ` / ${child.momWeight}kg` : ''}
-                {child.momBloodType ? ` / ${child.momBloodType}형` : ''}
+                {[
+                  child.momHeight ? `${child.momHeight}cm` : null,
+                  child.momWeight ? `${child.momWeight}kg` : null,
+                  child.momBloodType ? `${child.momBloodType}형` : null,
+                ].filter(Boolean).join(' / ')}
               </Text>
             ) : null}
             {tab === 'glucose' && <Text style={styles.thresholdText}>{thresholdInfo}</Text>}

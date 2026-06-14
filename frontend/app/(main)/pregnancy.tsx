@@ -594,6 +594,7 @@ export default function PregnancyScreen() {
   // Timeline
   const [timeline, setTimeline] = useState<TimelineWeek[]>([]);
   const [loadingTimeline, setLoadingTimeline] = useState(false);
+  const [timelineError, setTimelineError] = useState(false);
 
   // Record creation modal
   const [showModal, setShowModal] = useState(false);
@@ -834,10 +835,15 @@ export default function PregnancyScreen() {
   const loadTimeline = useCallback(async () => {
     if (!childId) return;
     setLoadingTimeline(true);
+    setTimelineError(false);
     try {
       const res = await pregnancyApi.getTimeline(childId);
       setTimeline(res.data.data ?? []);
-    } catch { /* silent */ }
+    } catch (e) {
+      // 로드 실패를 빈 화면으로 위장하지 않고 명시 + 재시도 제공
+      captureError(e, { ctx: 'pregnancy/loadTimeline', childId });
+      setTimelineError(true);
+    }
     setLoadingTimeline(false);
   }, [childId]);
 
@@ -963,6 +969,11 @@ export default function PregnancyScreen() {
     await Promise.all([loadTimeline(), loadHealth()]);
     setRefreshing(false);
   };
+
+  // 사용자 기록(development 자동항목 제외)만 — 빈 상태 판정/피드의 공통 기준
+  const userTimelineItems = timeline
+    .flatMap((wg) => wg.items.filter((it) => it.source !== 'development'))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   /* ── Image picker (camera or gallery) ── */
   const launchPicker = async (mode: 'camera' | 'gallery') => {
@@ -1352,9 +1363,7 @@ export default function PregnancyScreen() {
 
         {/* ── 성장앨범과 동일한 평면 피드 ── */}
         {(() => {
-          const flatItems = timeline
-            .flatMap((wg) => wg.items.filter((it) => it.source !== 'development'))
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          const flatItems = userTimelineItems;
           if (flatItems.length === 0) return null;
           return (
             <>
@@ -1414,11 +1423,23 @@ export default function PregnancyScreen() {
           );
         })()}
 
-        {!loadingTimeline && timeline.length === 0 && (
+        {!loadingTimeline && userTimelineItems.length === 0 && (
           <View style={styles.emptyCenter}>
-            <EmojiOrIcon emoji={'📝'} size={48} textStyle={styles.emptyIcon} />
-            <Text style={styles.emptyText}>첫 임신앨범 기록을 남겨보세요</Text>
-            <Text style={styles.emptySubText}>진료기록, 초음파, 마일스톤, 엄마상태를 한번에 기록할 수 있어요</Text>
+            <EmojiOrIcon emoji={timelineError ? '⚠️' : '📝'} size={48} textStyle={styles.emptyIcon} />
+            <Text style={styles.emptyText}>
+              {timelineError ? '기록을 불러오지 못했어요' : '첫 임신앨범 기록을 남겨보세요'}
+            </Text>
+            <Text style={styles.emptySubText}>
+              {timelineError ? '네트워크 확인 후 다시 시도해주세요' : '진료기록, 초음파, 마일스톤, 엄마상태를 한번에 기록할 수 있어요'}
+            </Text>
+            {timelineError && (
+              <TouchableOpacity
+                style={{ marginTop: 16, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 12, backgroundColor: '#E91E63' }}
+                onPress={loadTimeline}
+              >
+                <Text style={{ color: '#FFF', fontWeight: '700' }}>다시 시도</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
