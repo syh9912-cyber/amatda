@@ -804,7 +804,8 @@ export default function MomGroupScreen() {
     const isBookmarked = bookmarkedIds.has(p.id);
     const cat = CATEGORY_META[p.category] ?? CATEGORY_META.chat;
     const isPinTop = p.isPinned && p.isOfficial;
-    const isHighlight = isPinTop || p.isOfficial || p.isFallback;
+    // 강조 배경은 공지(공식)·고정 글에만. 전국 폴백 글(isFallback)은 '전국' 칩만 달고 배경은 일반과 동일.
+    const isHighlight = isPinTop || p.isOfficial;
 
     return (
       <TouchableOpacity
