@@ -65,7 +65,7 @@ export default function MonthlyCharacteristicScreen() {
   }, [selectedChild?.id]);
 
   const loadCharacteristic = async () => {
-    if (!selectedChild) return;
+    if (!selectedChild) { setLoading(false); return; }
     setLoading(true);
     try {
       const { getCharacteristicForChild } = await import('../../constants/monthlyCharacteristics');

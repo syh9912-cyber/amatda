@@ -55,11 +55,12 @@ export default function DiaryScreen() {
 
   useEffect(() => {
     if (selectedChild) loadObservations();
+    else { setObservations([]); setListLoading(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChild?.id]);
 
   const loadObservations = async () => {
-    if (!selectedChild) return;
+    if (!selectedChild) { setListLoading(false); return; }
     try {
       const res = await observationApi.list(selectedChild.id);
       setObservations(res.data.data ?? []);

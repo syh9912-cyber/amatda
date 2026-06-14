@@ -88,12 +88,12 @@ export default function RecommendationDetailScreen() {
   const meta = getCategoryMeta(category);
 
   useEffect(() => {
-    if (!selectedChild || !title) return;
+    if (!selectedChild || !title) { setLoading(false); return; }
     fetchContent();
   }, [selectedChild?.id, title]);
 
   const fetchContent = async () => {
-    if (!selectedChild) return;
+    if (!selectedChild) { setLoading(false); return; }
     setLoading(true);
     setErrorMsg(null);
     try {

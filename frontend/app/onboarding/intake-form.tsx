@@ -30,11 +30,12 @@ export default function IntakeFormScreen() {
 
   useEffect(() => {
     if (child) loadQuestions();
+    else setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [child?.id]);
 
   const loadQuestions = async () => {
-    if (!child) return;
+    if (!child) { setLoading(false); return; }
     try {
       const res = await questionApi.list(
         child.ageInfo.months,
