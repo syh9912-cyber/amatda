@@ -68,6 +68,15 @@ const LIKELIHOOD_CONFIG: Record<string, { color: string; bg: string }> = {
   '\uB0AE\uC74C': { color: COLORS.normal, bg: COLORS.normalBg },
 };
 
+// \uC11C\uBC84 likelihood \uBB38\uC790\uC5F4\uC774 enum\uACFC \uC815\uD655\uD788 \uC77C\uCE58\uD558\uC9C0 \uC54A\uC544\uB3C4(\uACF5\uBC31\u00B7"\uB9E4\uC6B0 \uB192\uC74C" \uB4F1)
+// '\uB192\uC74C'(\uC704\uD5D8 \uACBD\uACE0\uC0C9)\uC774 '\uBCF4\uD1B5'\uC73C\uB85C \uAC15\uB4F1\uB418\uC9C0 \uC54A\uB3C4\uB85D '\uB192' \uC6B0\uC120 \uD3EC\uD568 \uB9E4\uCE6D.
+function resolveLikelihoodConfig(likelihood: string): { color: string; bg: string } {
+  const s = likelihood ?? '';
+  if (s.includes('\uB192')) return LIKELIHOOD_CONFIG['\uB192\uC74C'];
+  if (s.includes('\uB0AE')) return LIKELIHOOD_CONFIG['\uB0AE\uC74C'];
+  return LIKELIHOOD_CONFIG['\uBCF4\uD1B5'];
+}
+
 export default function PoopAnalyzerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -318,7 +327,7 @@ function ResultView({ result, onReset }: { result: AnalysisResult; onReset: () =
         <View style={resultStyles.sectionCard}>
           <Text style={resultStyles.sectionTitle}>{'가능성 분석'}</Text>
           {result.possibilities.map((p, i) => {
-            const cfg = LIKELIHOOD_CONFIG[p.likelihood] ?? LIKELIHOOD_CONFIG['\uBCF4\uD1B5'];
+            const cfg = resolveLikelihoodConfig(p.likelihood);
             return (
               <View key={i} style={resultStyles.possibilityRow}>
                 <Text style={resultStyles.possibilityLabel}>{p.label}</Text>

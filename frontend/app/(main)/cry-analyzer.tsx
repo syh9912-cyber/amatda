@@ -66,6 +66,15 @@ const LIKELIHOOD_CONFIG: Record<string, { color: string; bg: string }> = {
   '낮음': { color: COLORS.normal, bg: COLORS.normalBg },
 };
 
+// 서버 likelihood 문자열이 enum과 정확히 일치하지 않아도(공백·"매우 높음" 등)
+// '높음'(위험 경고색)이 '보통'으로 강등되지 않도록 '높' 우선 포함 매칭.
+function resolveLikelihoodConfig(likelihood: string): { color: string; bg: string } {
+  const s = likelihood ?? '';
+  if (s.includes('높')) return LIKELIHOOD_CONFIG['높음'];
+  if (s.includes('낮')) return LIKELIHOOD_CONFIG['낮음'];
+  return LIKELIHOOD_CONFIG['보통'];
+}
+
 export default function CryAnalyzerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -315,7 +324,7 @@ function ResultView({ result, onReset }: { result: AnalysisResult; onReset: () =
         <View style={resultStyles.sectionCard}>
           <Text style={resultStyles.sectionTitle}>{'가능성 분석'}</Text>
           {result.possibilities.map((p, i) => {
-            const cfg = LIKELIHOOD_CONFIG[p.likelihood] ?? LIKELIHOOD_CONFIG['보통'];
+            const cfg = resolveLikelihoodConfig(p.likelihood);
             return (
               <View key={i} style={resultStyles.possibilityRow}>
                 <Text style={resultStyles.possibilityLabel}>{p.label}</Text>
