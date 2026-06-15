@@ -214,6 +214,10 @@ export default function ConsentScreen() {
                 label="야간(21:00~08:00) 광고성 정보 수신 동의"
               />
               <View style={styles.consentDivider} />
+              <Text style={styles.ugcNote}>
+                ⚠️ 커뮤니티(맘스톡·가족피드)는 욕설·혐오·음란·불법 등 부적절한 콘텐츠와 타인을 괴롭히는 행위에 대해 무관용 원칙을 적용합니다. 위반 시 사전 통지 없이 게시물이 삭제되고 이용이 제한될 수 있으며, 부적절한 콘텐츠 신고 및 사용자 차단 기능을 제공합니다.
+              </Text>
+              <View style={styles.consentDivider} />
               <Text style={styles.dormantNote}>
                 ⓘ 1년 이상 미접속 시 사전 안내 후 계정과 사진이 자동 파기됩니다 (정보통신망법 시행령 16조). 다시 접속하면 자동 연장됩니다.
               </Text>
@@ -324,6 +328,7 @@ const styles = StyleSheet.create({
   consentLinkBtn: { paddingHorizontal: 8, paddingVertical: 4 },
   consentLink: { fontSize: 12, color: '#6366F1', fontWeight: '600', textDecorationLine: 'underline' },
   dormantNote: { fontSize: 11, color: '#9CA3AF', lineHeight: 16, paddingTop: 6, paddingHorizontal: 2 },
+  ugcNote: { fontSize: 11, color: '#8A6520', lineHeight: 16, paddingTop: 6, paddingHorizontal: 2, fontWeight: '600' },
   button: {
     backgroundColor: '#4338CA',
     borderRadius: 14,
