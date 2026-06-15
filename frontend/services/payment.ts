@@ -380,7 +380,12 @@ export async function purchaseIAP(productId: ProductId): Promise<{
   } catch (e) {
     // 서버 검증 실패 — finishTransaction은 아래서 반드시 호출 (트랜잭션 보류 방지)
     try { await IAP.finishTransaction({ purchase, isConsumable: false }); } catch { /* 무시 */ }
-    return { ok: false, message: '서버 검증 실패: ' + String(e) };
+    // raw AxiosError 노출 금지 — 상태코드별 사용자 친화 메시지
+    const status = (e as { response?: { status?: number } })?.response?.status;
+    const message = status === 503
+      ? '결제 서버를 일시적으로 사용할 수 없어요. 잠시 후 다시 시도해주세요.'
+      : '결제 검증에 실패했어요. 잠시 후 다시 시도하거나 "구매 복원"을 눌러주세요.';
+    return { ok: false, message };
   }
 
   // 4) 검증 성공 → 트랜잭션 finalize (Apple/Google 모두 필수)
