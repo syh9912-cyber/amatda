@@ -23,13 +23,11 @@ import { useChildStore } from '../../stores/childStore';
 // useTrackerStore는 storage.ts의 saveRecords에서 자동 호출 — 여기 import 불필요
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { getDailyReference, calcFeedIntervalProgress } from '../../constants/dailyReference';
-import { growthApi, childApi } from '../../services/api';
 import { getTrackerTabs, getFeedingTypes } from '../../constants/ageFeatures';
 import type { AgeGroupKey } from '../../constants/ageGroups';
 import PregnancyScreen from './pregnancy';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { BackButton } from '../../components/common/BackButton';
-import { saveAnalysisHistory } from '../../utils/analysisHistory';
 import type {
   BreastSession,
   BreastSide,
@@ -40,7 +38,6 @@ import type {
   RecordType,
   SleepSession,
   SleepSubType,
-  TrackerAnalysisResult,
   TrackerRecord,
 } from '../../features/baby-tracker/types';
 import {
@@ -70,7 +67,6 @@ import {
   loadHintRemaining,
   decrementHint,
   loadFormulaDefault,
-  saveFormulaDefault,
   syncRangeFromServer,
   syncSessionsFromServer,
 } from '../../features/baby-tracker/storage';
@@ -85,8 +81,6 @@ const IC_NIGHT = require('../../assets/weather-night.png') as number;
 const IC_EMPTY = require('../../assets/empty-diary.png') as number;
 const IC_MASCOT_EAT = require('../../assets/mascot-eating.png') as number;
 const IC_MIC = require('../../assets/icon-mic.png') as number;
-const IC_ANALYZING = require('../../assets/analyzing.png') as number;
-const IC_BADGE_AI = require('../../assets/badge-ai.png') as number;
 const IC_MEDICATION = require('../../assets/icon-hospital.png') as number;
 const IC_CUSTOM = require('../../assets/icon-mic.png') as number;
 
@@ -1591,10 +1585,6 @@ function BabyTrackerInner() {
   // 기본은 접힘 상태 — 타임라인을 더 잘 보이게
   const [periodSectionOpen, setPeriodSectionOpen] = useState(false);
   const [clockSectionOpen, setClockSectionOpen] = useState(false);
-  const [analysisLoading, setAnalysisLoading] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<TrackerAnalysisResult | null>(null);
-  const [analysisExpanded, setAnalysisExpanded] = useState(true);
-  const [analysisError, setAnalysisError] = useState('');
   const [sleepSession, setSleepSession] = useState<SleepSession | null>(null);
   const [sleepNow, setSleepNow] = useState(Date.now());
   const [breastSession, setBreastSession] = useState<BreastSession | null>(null);
@@ -1622,7 +1612,6 @@ function BabyTrackerInner() {
   const [timedActionDate, setTimedActionDate] = useState<string>('');
   const [timedActionAmount, setTimedActionAmount] = useState<string>('');
   const [defaultFormulaAmount, setDefaultFormulaAmount] = useState<number>(0);
-  const [formulaSettingVisible, setFormulaSettingVisible] = useState(false);
 
   // 첫 진입 1회 기능 가이드 (코드 목업형) — 헤더 '?' 로 언제든 재열람
   const [guideVisible, setGuideVisible] = useState(false);
@@ -1642,7 +1631,6 @@ function BabyTrackerInner() {
     AsyncStorage.setItem(BABY_GUIDE_SHOWN_KEY, '1').catch(() => {});
     setTimeout(() => { promptVoicePinOnce(true); }, 400);
   }, []);
-  const [formulaSettingInput, setFormulaSettingInput] = useState('');
   // 타임라인 entry 길게 누르기 → 액션 시트 + 편집 모달
   const [entryActionId, setEntryActionId] = useState<string | null>(null);
   const [editRecord, setEditRecord] = useState<TrackerRecord | null>(null);
@@ -2468,56 +2456,6 @@ function BabyTrackerInner() {
     showToast(`'${name}' 기록 완료`);
   }
 
-  /* ---- Pattern Analysis ---- */
-  async function handlePatternAnalysis() {
-    if (analysisLoading) return;
-    setAnalysisLoading(true);
-    setAnalysisResult(null);
-    setAnalysisError('');
-    setAnalysisExpanded(true);
-
-    const diaperCount = records.filter((r) => r.type === 'diaper').length;
-    const feedingCount = records.filter((r) => r.type === 'feeding').length;
-    const sleepMinutes = records
-      .filter((r) => r.type === 'sleep' && r.duration != null)
-      .reduce((sum, r) => sum + (r.duration ?? 0), 0);
-    const sleepHours = Math.round((sleepMinutes / 60) * 10) / 10;
-
-    // Show loading for at least 3 seconds for UX
-    const minDelay = new Promise<void>((resolve) => setTimeout(resolve, 3000));
-
-    try {
-      const [, res] = await Promise.all([
-        minDelay,
-        growthApi.analysis(childId, {
-          diaper: diaperCount,
-          feeding: feedingCount,
-          sleep: sleepHours,
-        }),
-      ]);
-      const data = res.data?.data as TrackerAnalysisResult | undefined;
-      if (data?.trackerMetrics) {
-        setAnalysisResult(data);
-        void saveAnalysisHistory({
-          type: 'pattern',
-          summary: data.overallSummary?.slice(0, 80) ?? '육아패턴 분석 완료',
-          details: data.trackerMetrics
-            .slice(0, 3)
-            .map((m) => `${m.title}: ${m.value}`)
-            .join(' · '),
-          childId: selectedChild?.id,
-          childName: selectedChild?.name,
-        });
-      } else {
-        setAnalysisError('분석 결과를 불러올 수 없습니다.');
-      }
-    } catch {
-      setAnalysisError('분석 중 오류가 발생했습니다. 다시 시도해주세요.');
-    } finally {
-      setAnalysisLoading(false);
-    }
-  }
-
   /* ---- Breast elapsed display ---- */
   const breastElapsed = useMemo(() => {
     if (!breastSession) return '';
@@ -2879,81 +2817,6 @@ function BabyTrackerInner() {
           <Text style={toastStyles.text}>{toastMessage}</Text>
         </Animated.View>
       )}
-
-      {/* ---- 기본 분유량 설정 모달 ---- */}
-      <Modal
-        visible={formulaSettingVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setFormulaSettingVisible(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={customModalStyles.overlay}
-        >
-          <TouchableOpacity
-            style={customModalStyles.backdrop}
-            activeOpacity={1}
-            onPress={() => setFormulaSettingVisible(false)}
-          />
-          <View style={customModalStyles.card}>
-            <Text style={customModalStyles.title}>기본 분유량 설정</Text>
-            <Text style={customModalStyles.sub}>
-              기본 분유량을 설정하면 분유 버튼 원터치로{'\n'}해당 양이 바로 기록됩니다.{'\n'}(변경이 필요한 날은 길게 눌러 조절하세요)
-            </Text>
-
-            <Text style={customModalStyles.label}>분유량 (ml)</Text>
-            <TextInput
-              style={customModalStyles.input}
-              placeholder="예) 150"
-              placeholderTextColor="#ABABAB"
-              value={formulaSettingInput}
-              onChangeText={setFormulaSettingInput}
-              keyboardType="number-pad"
-              maxLength={4}
-              autoFocus
-            />
-
-            <View style={customModalStyles.btnRow}>
-              <TouchableOpacity
-                style={[customModalStyles.btn, customModalStyles.btnCancel]}
-                onPress={() => setFormulaSettingVisible(false)}
-              >
-                <Text style={customModalStyles.btnCancelText}>취소</Text>
-              </TouchableOpacity>
-              {defaultFormulaAmount > 0 && (
-                <TouchableOpacity
-                  style={[customModalStyles.btn, { backgroundColor: '#FFF0F0' }]}
-                  onPress={async () => {
-                    await saveFormulaDefault(childId, 0);
-                    setDefaultFormulaAmount(0);
-                    setFormulaSettingVisible(false);
-                    showToast('기본 분유량 해제');
-                  }}
-                >
-                  <Text style={[customModalStyles.btnCancelText, { color: TRACKER_COLORS.danger }]}>해제</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                style={[customModalStyles.btn, customModalStyles.btnSave]}
-                onPress={async () => {
-                  const amt = parseInt(formulaSettingInput, 10);
-                  if (Number.isNaN(amt) || amt <= 0 || amt > 1000) {
-                    Alert.alert('분유량 오류', '1~1000 사이 숫자를 입력해주세요.');
-                    return;
-                  }
-                  await saveFormulaDefault(childId, amt);
-                  setDefaultFormulaAmount(amt);
-                  setFormulaSettingVisible(false);
-                  showToast(`기본 분유량 ${amt}ml 설정 완료`);
-                }}
-              >
-                <Text style={customModalStyles.btnSaveText}>저장</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
 
       {/* ---- Phase 4-B: 사용자 정의 기록 모달 ---- */}
       <Modal
