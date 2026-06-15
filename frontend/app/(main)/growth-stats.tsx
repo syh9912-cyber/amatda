@@ -212,11 +212,11 @@ function getPercentileLabel(percentile: number): string {
   // calculatePercentile은 (100 - 실제백분위)를 반환(작을수록 큰 아이)하므로
   // 실제 백분위(p)로 환산해 또래 대비 위치를 정확히, 구간별로 표기한다.
   const p = Math.max(1, Math.min(99, 100 - percentile));
-  if (p >= 90) return `또래보다 큰 편 (상위 ${100 - p}%)`;
-  if (p >= 60) return `또래보다 살짝 큰 편 (백분위 ${p})`;
-  if (p >= 40) return `또래 평균 (백분위 ${p})`;
-  if (p >= 11) return `또래보다 살짝 작은 편 (백분위 ${p})`;
-  return `또래보다 작은 편 (하위 ${p}%)`;
+  if (p >= 90) return `큰 편 · 상위 ${100 - p}%`;
+  if (p >= 60) return `살짝 큰 편 · 백분위 ${p}`;
+  if (p >= 40) return `또래 평균 · 백분위 ${p}`;
+  if (p >= 11) return `살짝 작은 편 · 백분위 ${p}`;
+  return `작은 편 · 하위 ${p}%`;
 }
 
 export default function GrowthStatsScreen() {
@@ -238,13 +238,15 @@ export default function GrowthStatsScreen() {
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
           <Stack.Screen options={{ headerShown: false }} />
           <ScreenHeader title="주수별 발달" right={<GuideButton onPress={() => setGuideVisible(true)} />} />
-          <PregnancyWeeklyDevelopment />
           <MedicalCitation
+            compact
+            note="주차별 발달 정보는 일반 참고용이며, 개인별 상태는 산부인과 전문의와 상담하세요."
             sources={[
               { label: '보건복지부·임신육아종합포털 「아이사랑」 임신 주차별 정보', url: 'https://www.childcare.go.kr' },
               { label: '대한산부인과학회 임신·출산 정보', url: 'https://www.ksog.org' },
             ]}
           />
+          <PregnancyWeeklyDevelopment />
         </ScrollView>
         <AdSlot />
         <GuideCarousel visible={guideVisible} pages={WEEKLY_DEV_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#F0976C" />
@@ -265,13 +267,15 @@ export default function GrowthStatsScreen() {
 
         <GrowthHeader onGuide={() => setGuideVisible(true)} />
 
-        <PhysicalTab childName={selectedChild?.name ?? '아이'} />
         <MedicalCitation
+          compact
+          note="성장 백분위·통계는 표준 성장도표 기반 참고용이며, 개인별 평가는 소아과 전문의와 상담하세요."
           sources={[
             { label: '질병관리청·대한소아과학회 「2017 소아청소년 성장도표」', url: 'https://www.kdca.go.kr' },
             { label: 'WHO Child Growth Standards (0–5세)', url: 'https://www.who.int/tools/child-growth-standards' },
           ]}
         />
+        <PhysicalTab childName={selectedChild?.name ?? '아이'} />
       </ScrollView>
       <AdSlot />
       <GuideCarousel visible={guideVisible} pages={GROWTH_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#7CA46E" />
@@ -1937,7 +1941,12 @@ function PhysicalTab({ childName }: { childName: string }) {
               </Text>
               {heightPercentile !== null && initialHeight ? (
                 <View style={pStyles.percentileRow}>
-                  <Text style={pStyles.percentileLabel}>키</Text>
+                  <View style={pStyles.percentileTop}>
+                    <Text style={pStyles.percentileLabel}>키</Text>
+                    <Text style={pStyles.percentileValue}>
+                      {getPercentileLabel(heightPercentile)}
+                    </Text>
+                  </View>
                   <View style={pStyles.barBg}>
                     <View
                       style={[
@@ -1946,14 +1955,16 @@ function PhysicalTab({ childName }: { childName: string }) {
                       ]}
                     />
                   </View>
-                  <Text style={pStyles.percentileValue}>
-                    {getPercentileLabel(heightPercentile)}
-                  </Text>
                 </View>
               ) : null}
               {weightPercentile !== null && initialWeight ? (
                 <View style={pStyles.percentileRow}>
-                  <Text style={pStyles.percentileLabel}>몸무게</Text>
+                  <View style={pStyles.percentileTop}>
+                    <Text style={pStyles.percentileLabel}>몸무게</Text>
+                    <Text style={pStyles.percentileValue}>
+                      {getPercentileLabel(weightPercentile)}
+                    </Text>
+                  </View>
                   <View style={pStyles.barBg}>
                     <View
                       style={[
@@ -1962,9 +1973,6 @@ function PhysicalTab({ childName }: { childName: string }) {
                       ]}
                     />
                   </View>
-                  <Text style={pStyles.percentileValue}>
-                    {getPercentileLabel(weightPercentile)}
-                  </Text>
                 </View>
               ) : null}
             </View>
@@ -2098,7 +2106,12 @@ function PhysicalTab({ childName }: { childName: string }) {
                   </Text>
                   {latestHeightPercentile !== null && latestHeight ? (
                     <View style={pStyles.percentileRow}>
-                      <Text style={pStyles.percentileLabel}>키</Text>
+                      <View style={pStyles.percentileTop}>
+                        <Text style={pStyles.percentileLabel}>키</Text>
+                        <Text style={pStyles.percentileValue}>
+                          {getPercentileLabel(latestHeightPercentile)}
+                        </Text>
+                      </View>
                       <View style={pStyles.barBg}>
                         <View
                           style={[
@@ -2107,14 +2120,16 @@ function PhysicalTab({ childName }: { childName: string }) {
                           ]}
                         />
                       </View>
-                      <Text style={pStyles.percentileValue}>
-                        {getPercentileLabel(latestHeightPercentile)}
-                      </Text>
                     </View>
                   ) : null}
                   {latestWeightPercentile !== null && latestWeight ? (
                     <View style={pStyles.percentileRow}>
-                      <Text style={pStyles.percentileLabel}>몸무게</Text>
+                      <View style={pStyles.percentileTop}>
+                        <Text style={pStyles.percentileLabel}>몸무게</Text>
+                        <Text style={pStyles.percentileValue}>
+                          {getPercentileLabel(latestWeightPercentile)}
+                        </Text>
+                      </View>
                       <View style={pStyles.barBg}>
                         <View
                           style={[
@@ -2123,9 +2138,6 @@ function PhysicalTab({ childName }: { childName: string }) {
                           ]}
                         />
                       </View>
-                      <Text style={pStyles.percentileValue}>
-                        {getPercentileLabel(latestWeightPercentile)}
-                      </Text>
                     </View>
                   ) : null}
                 </View>
@@ -2210,18 +2222,23 @@ const pStyles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   percentileRow: {
+    flexDirection: 'column',
+    marginBottom: SPACING.sm,
+    gap: 6,
+  },
+  percentileTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.xs,
+    justifyContent: 'space-between',
     gap: SPACING.sm,
   },
   percentileLabel: {
     fontSize: FONT_SIZE.sm,
+    fontWeight: '600',
     color: COLORS.textSecondary,
-    width: 44,
   },
   barBg: {
-    flex: 1,
+    width: '100%',
     height: 10,
     backgroundColor: COLORS.border,
     borderRadius: 5,
@@ -2236,7 +2253,7 @@ const pStyles = StyleSheet.create({
     fontSize: FONT_SIZE.sm,
     fontWeight: '700',
     color: COLORS.primary,
-    width: 72,
+    flexShrink: 1,
     textAlign: 'right',
   },
 });

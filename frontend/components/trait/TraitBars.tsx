@@ -16,7 +16,7 @@ export function TraitBars({ fiveElements }: Props) {
         const pct = Math.round((val / maxVal) * 100);
         return (
           <View key={key} style={styles.row}>
-            <Text style={styles.label}>
+            <Text style={styles.label} numberOfLines={1}>
               {ELEMENT_DISPLAY_NAMES[key] ?? key}
             </Text>
             <View style={styles.track}>

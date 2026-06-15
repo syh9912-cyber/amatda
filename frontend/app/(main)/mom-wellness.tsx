@@ -295,6 +295,15 @@ export default function MomWellnessScreen() {
       <ScreenHeader title="마음 진단" right={<GuideButton onPress={() => setGuideVisible(true)} color="#9D8CC6" />} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <MedicalCitation
+          compact
+          note="자가 체크 결과는 참고용이며 의학적 진단이 아닙니다. 지속되는 우울감은 전문가와 상담하세요."
+          sources={[
+            { label: '에든버러 산후우울척도(EPDS) — Cox, Holden & Sagovsky (1987)' },
+            { label: '보건복지부 국가정신건강정보포털', url: 'https://www.mentalhealth.go.kr' },
+          ]}
+        />
+
         {/* ─── 빠른 기분 일기 ─── */}
         {!showSurvey && !result && (
           <View style={styles.moodCard}>
@@ -577,13 +586,6 @@ export default function MomWellnessScreen() {
           </Text>
         </View>
 
-        <MedicalCitation
-          note="자가 체크 결과는 참고용이며 의학적 진단이 아닙니다. 지속되는 우울감은 전문가와 상담하세요."
-          sources={[
-            { label: '에든버러 산후우울척도(EPDS) — Cox, Holden & Sagovsky (1987)' },
-            { label: '보건복지부 국가정신건강정보포털', url: 'https://www.mentalhealth.go.kr' },
-          ]}
-        />
       </ScrollView>
       <AdSlot />
       <GuideCarousel visible={guideVisible} pages={MOMWELLNESS_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#9D8CC6" />

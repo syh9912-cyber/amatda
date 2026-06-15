@@ -432,6 +432,15 @@ export default function GdmScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        <MedicalCitation
+          compact
+          note="혈당·식단 권고는 일반 기준이며 개인별 목표는 담당 의료진과 상의하세요."
+          sources={[
+            { label: '대한당뇨병학회 「당뇨병 진료지침」 (임신성 당뇨병)', url: 'https://www.diabetes.or.kr' },
+            { label: '식품의약품안전처 식품영양성분 데이터베이스', url: 'https://www.foodsafetykorea.go.kr' },
+          ]}
+        />
+
         {/* AI 주간 분석 버튼 */}
         <TouchableOpacity
           style={styles.reportBtn}
@@ -666,13 +675,6 @@ export default function GdmScreen() {
           </>
         )}
 
-        <MedicalCitation
-          note="혈당·식단 권고는 일반 기준이며 개인별 목표는 담당 의료진과 상의하세요."
-          sources={[
-            { label: '대한당뇨병학회 「당뇨병 진료지침」 (임신성 당뇨병)', url: 'https://www.diabetes.or.kr' },
-            { label: '식품의약품안전처 식품영양성분 데이터베이스', url: 'https://www.foodsafetykorea.go.kr' },
-          ]}
-        />
         <View style={{ height: 100 }} />
       </ScrollView>
       <AdSlot />
