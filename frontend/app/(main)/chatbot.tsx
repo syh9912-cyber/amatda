@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Alert,
+  Linking,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { coachingApi, memoriesApi, authApi } from '../../services/api';
@@ -32,6 +33,12 @@ import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
 import { CHATBOT_GUIDE } from '../../features/guide/chatbotGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
+
+// 의료/건강 정보 출처 (App Store Guideline 1.4.1) — 신뢰 가능한 공신력 있는 기관.
+const MEDICAL_SOURCES: { label: string; url: string }[] = [
+  { label: '질병관리청 국가건강정보포털', url: 'https://health.kdca.go.kr' },
+  { label: '대한소아청소년과학회', url: 'https://www.pediatrics.or.kr' },
+];
 
 /** 부모 역할별 호칭 접미사 (아이 이름 + 접미사). 아버지면 "아빠", 어머니면 "맘" 등 */
 function parentGreetingSuffix(role?: string): string {
@@ -416,11 +423,27 @@ export default function CoachingScreen() {
         </View>
       </View>
 
-      {/* 의료 면책 고지 — Apple/Google 헬스 앱 정책 필수 */}
+      {/* 의료 면책 고지 + 정보 출처 — Apple Guideline 1.4.1 (의료 정보 출처 표기) */}
       <View style={styles.disclaimer}>
         <Text style={styles.disclaimerText}>
           ⚠️ 상담이모 답변은 일반 정보 제공용이며 의료 진단·처방을 대체하지 않습니다.
         </Text>
+        <View style={styles.citationRow}>
+          <Text style={styles.citationLabel}>정보 출처: </Text>
+          {MEDICAL_SOURCES.map((src, i) => (
+            <TouchableOpacity
+              key={src.url}
+              onPress={() => Linking.openURL(src.url).catch(() => {})}
+              activeOpacity={0.7}
+              accessibilityRole="link"
+              accessibilityLabel={`${src.label} 출처 열기`}
+            >
+              <Text style={styles.citationLink}>
+                {src.label}{i < MEDICAL_SOURCES.length - 1 ? ' · ' : ''}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* Category toggle (hidden during first talk) */}
@@ -585,6 +608,24 @@ const styles = StyleSheet.create({
     color: '#7A7A82',
     lineHeight: 14,
     textAlign: 'center',
+  },
+  citationRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 3,
+  },
+  citationLabel: {
+    fontSize: 10,
+    color: '#9A9AA2',
+    lineHeight: 14,
+  },
+  citationLink: {
+    fontSize: 10,
+    color: '#5B8DEF',
+    lineHeight: 14,
+    textDecorationLine: 'underline',
   },
   /* Header */
   header: {
