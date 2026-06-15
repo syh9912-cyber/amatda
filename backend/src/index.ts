@@ -186,6 +186,12 @@ const REGISTERED_SECRETS: string[] = [
   'GOOGLE_PUBSUB_AUDIENCE',
   // 결제 — Google Play 영수증 검증 service account (Android Publisher API)
   'GOOGLE_PLAY_SERVICE_ACCOUNT_JSON',
+  // 결제 — Apple App Store Server API (IAP 영수증/거래 검증).
+  // 누락 시 process.env 미주입 → isAppleIAPAvailable() false → 검증 503 (Apple 심사 2.1b 실패).
+  'APPLE_ISSUER_ID',
+  'APPLE_KEY_ID',
+  'APPLE_PRIVATE_KEY',
+  'APPLE_BUNDLE_ID',
 ];
 
 // memory: 512MiB — 비코칭 라우트는 가벼운 CRUD가 다수
