@@ -10,7 +10,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc && node scripts/copy-assets.js",
     "start": "node dist/index.js",
-    "deploy": "npm run build && cd .. && firebase deploy --only functions",
+    "deploy": "npm run build && cd .. && npx firebase-tools deploy --only functions --project amatda-parenting",
     "seed:firestore": "ts-node prisma/seed-firestore.ts"
   },
   "prisma": {
