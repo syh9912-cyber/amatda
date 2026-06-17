@@ -314,8 +314,8 @@ function buildActionGuide(
     }
     return {
       label: '고열',
-      headline: '지금 바로 해열제를 먹이세요!',
-      emotion: '엄마, 당황하지 마세요. 지금은 해열제가 필요한 시점입니다. 30분 뒤 다시 재볼게요.',
+      headline: '해열제 복용을 고려해볼 수 있어요 (참고)',
+      emotion: '엄마, 당황하지 마세요. 투약 여부·용량은 참고용이며, 판단이 어려우면 소아과·약사와 상담하세요. 30분 뒤 다시 재볼게요.',
       bgColor: '#FFEBEE',
       borderColor: '#E53935',
       accentColor: '#C62828',
@@ -1069,18 +1069,18 @@ export default function FeverScreen() {
           <View style={styles.section}>
             <View style={styles.sectionTitleRow}>
               <Image source={IC_PILL} style={styles.sectionTitleIconImg} resizeMode="contain" />
-              <Text style={styles.sectionTitle}>해열제 복용량</Text>
+              <Text style={styles.sectionTitle}>해열제 복용량 (참고 정보)</Text>
             </View>
             <Text style={styles.sectionDesc}>
-              아이 체중 기준 보수값(권장 최소치)으로 계산된 복용량입니다
+              아이 체중 기준 보수값(권장 최소치)으로 계산된 참고용 정보입니다
             </Text>
 
-            {/* 의료 disclaimer — 약 농도 / 처방 우선 안내 (App Store 심사 + 안전성) */}
+            {/* 의료 disclaimer — 진단·치료 목적 아님 명시 (App Store 1.4.1 + 안전성) */}
             <View style={styles.medDisclaimer}>
               <Text style={styles.medDisclaimerText}>
-                ⚠️ 본 계산은 일반 가이드용 보수값(권장 범위 최소치)이며 의료 진단을 대체하지 않습니다.{'\n'}
+                ⚠️ 본 화면의 용량·복용 간격은 일반적인 참고 정보이며, 진단이나 치료를 목적으로 하는 의료행위에 해당하지 않습니다.{'\n'}
                 약마다 농도가 다르니 제품 라벨의 농도(예: 타이레놀 32mg/ml, 챔프 ER 48mg/ml)를 반드시 확인하세요.{'\n'}
-                실제 처방·교차 복용은 약사·소아과 안내를 우선해주세요.
+                실제 투약·복용·교차 복용은 반드시 소아과 의사·약사와 상담 후 결정하세요. 응급 증상이 의심되면 즉시 119에 연락하세요.
               </Text>
             </View>
 
@@ -1543,8 +1543,8 @@ function MedicineSection({
 
   // 동적 감성 헤드라인 — 선택한 약·용량 실시간 연동 (단일 행동 강조)
   const headline = recommendation.available
-    ? `지금은 ${brandLabel} ${mlNumber}ml를 먹여야 합니다`
-    : `${formatRelative(recommendation.deltaMs)} 후에 ${brandLabel} ${mlNumber}ml`;
+    ? `참고 기준: ${brandLabel} 약 ${mlNumber}ml (의사·약사 상담 후 투약)`
+    : `${formatRelative(recommendation.deltaMs)} 후 ${brandLabel} 약 ${mlNumber}ml (참고)`;
 
   // 4-브랜드 그리드 항목
   const grid: { key: BrandKey; label: string; icon: ImageSourcePropType; color: string }[] = [
@@ -1581,7 +1581,7 @@ function MedicineSection({
       {/* === 단일 행동 카드 — 가장 강하게 인지되는 화면 === */}
       <View style={[styles.medGuideCard, { borderColor: drugColor }]}>
         <Text style={[styles.medGuideStatus, { color: drugColor }]}>
-          {recommendation.available ? '지금 해야 할 행동' : `다음 복용까지 ${formatRelative(recommendation.deltaMs)}`}
+          {recommendation.available ? '참고 안내' : `다음 복용까지 ${formatRelative(recommendation.deltaMs)}`}
         </Text>
         <Text style={styles.medGuideHeadline}>{headline}</Text>
       </View>

@@ -111,12 +111,12 @@ interface WeeklyReport {
 
 const GLUCOSE_ADVICE: Record<string, { title: string; body: string }> = {
   caution: {
-    title: '살짝 주의가 필요해요',
-    body: '기준치보다 조금 높아요.\n· 식후라면 10~15분 가벼운 산책이 도움돼요\n· 다음 끼니는 탄수화물 양을 조금 줄여보세요\n· 물을 충분히 드시고, 1~2시간 후 재측정을 권해요',
+    title: '살짝 주의가 필요해요 (참고)',
+    body: '기준치보다 조금 높아요.\n· 식후라면 10~15분 가벼운 산책이 도움돼요\n· 다음 끼니는 탄수화물 양을 조금 줄여보세요\n· 물을 충분히 드시고, 1~2시간 후 재측정을 권해요\n※ 참고용 안내이며 의학적 진단이 아닙니다. 담당 의료진과 상담하세요.',
   },
   warning: {
-    title: '위험 범위예요',
-    body: '기준치보다 많이 높아요.\n· 물을 충분히 드시고 안정을 취하세요\n· 같은 패턴이 반복되면 담당 의료진과 상의하세요\n· 이번 식사 내용을 식단 탭에 기록해두면 원인 파악에 도움돼요',
+    title: '기준치보다 높아요 (참고)',
+    body: '기준치보다 많이 높아요.\n· 물을 충분히 드시고 안정을 취하세요\n· 같은 패턴이 반복되면 담당 의료진과 상의하세요\n· 이번 식사 내용을 식단 탭에 기록해두면 원인 파악에 도움돼요\n※ 참고용 안내이며 의학적 진단이 아닙니다. 담당 의료진과 상담하세요.',
   },
 };
 
@@ -476,6 +476,7 @@ export default function GdmScreen() {
               </Text>
             ) : null}
             {tab === 'glucose' && <Text style={styles.thresholdText}>{thresholdInfo}</Text>}
+            {tab === 'glucose' && <Text style={styles.thresholdText}>※ 정상/주의/위험 분류는 일반 참고 기준이며 의학적 진단이 아닙니다.</Text>}
             {tab === 'food' && (
               <Text style={styles.thresholdText}>
                 임당은 탄수화물 섭취량 관리가 핵심이에요. 매끼 식사 내용과 시간을 남겨주세요.

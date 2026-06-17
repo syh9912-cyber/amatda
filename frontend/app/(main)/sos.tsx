@@ -784,6 +784,10 @@ function ResultCard({
           <Text style={styles.resultBtnText}>가까운 병원 찾기</Text>
         </TouchableOpacity>
       )}
+
+      <Text style={{ fontSize: 11, color: '#888', marginTop: 10, lineHeight: 16 }}>
+        ⚠️ 본 안내는 참고용 정보이며 의학적 진단이 아닙니다. 판단이 어렵거나 증상이 악화되면 즉시 119 또는 응급실을 이용하세요.
+      </Text>
     </View>
   );
 }

@@ -325,7 +325,7 @@ function ResultView({ result, onReset }: { result: AnalysisResult; onReset: () =
       {/* 가능성 */}
       {result.possibilities.length > 0 && (
         <View style={resultStyles.sectionCard}>
-          <Text style={resultStyles.sectionTitle}>{'가능성 분석'}</Text>
+          <Text style={resultStyles.sectionTitle}>{'가능성 분석 (참고 추정)'}</Text>
           {result.possibilities.map((p, i) => {
             const cfg = resolveLikelihoodConfig(p.likelihood);
             return (
@@ -363,7 +363,7 @@ function ResultView({ result, onReset }: { result: AnalysisResult; onReset: () =
 
       <View style={resultStyles.disclaimerBox}>
         <Text style={resultStyles.disclaimerText}>
-          {'이 분석 결과는 참고용이며 의학적 진단을 대체하지 않습니다.'}
+          {'이 분석은 참고용 추정 정보이며, 진단이나 치료를 목적으로 하는 의료행위가 아닙니다. 정확한 진단은 소아과 의사와 상담하세요.'}
         </Text>
       </View>
 

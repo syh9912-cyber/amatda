@@ -282,7 +282,7 @@ export default function MomWellnessScreen() {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <ScreenHeader title="마음 진단" />
+        <ScreenHeader title="마음 건강 자가체크" />
         <View style={styles.emptyCenter}><Text style={styles.emptyText}>아이를 선택해주세요</Text></View>
       </View>
     );
@@ -292,7 +292,7 @@ export default function MomWellnessScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScreenHeader title="마음 진단" right={<GuideButton onPress={() => setGuideVisible(true)} color="#9D8CC6" />} />
+      <ScreenHeader title="마음 건강 자가체크" right={<GuideButton onPress={() => setGuideVisible(true)} color="#9D8CC6" />} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <MedicalCitation
@@ -362,7 +362,7 @@ export default function MomWellnessScreen() {
             </View>
             <Text style={styles.introTitle}>💗 산전·산후 우울감 체크 (EPDS)</Text>
             <Text style={styles.introDesc}>
-              세계적으로 표준인 10문항 자가진단이에요. 지난 7일 기준으로 답해주세요.
+              세계적으로 표준인 10문항 자가체크예요. 지난 7일 기준으로 답해주세요.
               {'\n'}30점 만점 · ≥10 주의, ≥13 상담 권장
               {'\n'}현재 단계에 맞춘 보조 문항도 함께 나와요.
             </Text>
@@ -433,6 +433,9 @@ export default function MomWellnessScreen() {
                 📨 가족 {result.notifiedFamily}명에게 알림이 전달됐어요
               </Text>
             )}
+            <Text style={styles.introDisclaimer}>
+              ⚠️ 이 결과는 참고용 자가체크이며 의학적 진단이 아닙니다. 정확한 평가·진단은 정신건강 전문가와 상담하세요.
+            </Text>
             <TouchableOpacity style={styles.resultCloseBtn} onPress={() => { setResult(null); setShowSurvey(false); }}>
               <Text style={styles.resultCloseText}>확인</Text>
             </TouchableOpacity>

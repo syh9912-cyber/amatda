@@ -102,7 +102,7 @@ const ALL_ACTIONS: QuickAction[] = [
   { icon: require('../../assets/quick-baby.png'), label: '주수별 발달', route: '/(main)/growth-stats', bg: '#F3E5F5', ages: ['pregnant'] },
   { icon: require('../../assets/quick-blood.png'), label: '임당 관리', route: '/(main)/gdm', bg: '#FCE4EC', ages: ['pregnant'] },
   { icon: require('../../assets/quick-sleep.png'), label: '태동 체크', route: '/(main)/labor-monitor?tab=kick', bg: '#FCE4EC', ages: ['pregnant'] },
-  { icon: require('../../assets/quick-parent-level.png'), label: '마음 진단', route: '/(main)/mom-wellness', bg: '#F8BBD0', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-parent-level.png'), label: '마음 건강체크', route: '/(main)/mom-wellness', bg: '#F8BBD0', ages: ['pregnant'] },
   { icon: require('../../assets/quick-lullaby.png'), label: '태교음악', route: '/(main)/lullaby?mode=prenatal', bg: '#EDE7F6', ages: ['pregnant'] },
 
   // 영아·유아 순서 (사용자 요청 순서): 아기시간 → 성장앨범 → 열나 → 성장통계 → 접종달력 → 자장가 → 맘스톡 → 가족육아
