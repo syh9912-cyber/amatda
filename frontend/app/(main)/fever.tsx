@@ -160,14 +160,14 @@ const FEVER_LEVEL: Record<FeverLevel, {
     bgColor: '#FFF8F0',
     label: '중등도 발열',
     icon: IC_WORRIED,
-    advice: '체온이 높아요. 해열제 복용을 고려하세요. 30분 후 다시 체온을 확인해주세요.',
+    advice: '체온이 높아요. 해열제 복용을 고려해볼 수 있어요(용량·투약은 의사·약사 상담 권장). 30분 후 다시 체온을 확인해주세요.',
   },
   high: {
     color: '#FF3B30',
     bgColor: '#FFF0F0',
     label: '고열',
     icon: IC_THERMOMETER,
-    advice: '고열입니다. 해열제를 복용시키고, 30분 후에도 열이 내리지 않으면 소아과를 방문하세요.',
+    advice: '고열입니다. 해열제 복용을 고려해볼 수 있어요(용량·투약은 의사·약사 상담). 30분 후에도 열이 내리지 않으면 소아과를 방문하세요.',
   },
   danger: {
     color: '#D32F2F',
