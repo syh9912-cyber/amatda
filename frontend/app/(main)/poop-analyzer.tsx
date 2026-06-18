@@ -141,14 +141,21 @@ export default function PoopAnalyzerScreen() {
   }, []);
 
   const handleAnalyze = useCallback(async () => {
-    if (!photoUri || !selectedChild) return;
-    // 공동육아: AI 분석은 useCoaching 권한 필요 (열람 전용 멤버 차단)
-    if (!(await canDo(selectedChild.id, 'useCoaching'))) {
-      Alert.alert('열람 전용', '분석 기능 사용 권한이 없어요.\n보호자에게 "상담이모 사용" 권한을 요청해주세요.');
+    if (!photoUri) {
+      Alert.alert('안내', '먼저 사진을 선택해주세요.');
+      return;
+    }
+    if (!selectedChild) {
+      Alert.alert('안내', '먼저 아이를 등록하거나 선택해주세요.');
       return;
     }
     setAnalyzing(true);
     try {
+      // 공동육아: AI 분석은 useCoaching 권한 필요 (열람 전용 멤버 차단)
+      if (!(await canDo(selectedChild.id, 'useCoaching'))) {
+        Alert.alert('열람 전용', '분석 기능 사용 권한이 없어요.\n보호자에게 "상담이모 사용" 권한을 요청해주세요.');
+        return;
+      }
       const base64 = await FileSystem.readAsStringAsync(photoUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
@@ -415,7 +422,7 @@ const styles = StyleSheet.create({
     borderRadius: 16, overflow: 'hidden', marginBottom: 20,
   },
   photoPreview: {
-    width: SCREEN_WIDTH - 80, height: SCREEN_WIDTH - 80, borderRadius: 16,
+    width: Math.min(SCREEN_WIDTH - 80, 320), height: Math.min(SCREEN_WIDTH - 80, 320), borderRadius: 16,
   },
   photoRemoveBtn: {
     position: 'absolute', top: 10, right: 10,

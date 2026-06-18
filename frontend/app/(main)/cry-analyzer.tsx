@@ -139,14 +139,21 @@ export default function CryAnalyzerScreen() {
 
   /* ── 분석 ── */
   const handleAnalyze = useCallback(async () => {
-    if (!fileUri || !selectedChild) return;
-    // 공동육아: AI 분석은 useCoaching 권한 필요 (열람 전용 멤버 차단)
-    if (!(await canDo(selectedChild.id, 'useCoaching'))) {
-      Alert.alert('열람 전용', '분석 기능 사용 권한이 없어요.\n보호자에게 "상담이모 사용" 권한을 요청해주세요.');
+    if (!fileUri) {
+      Alert.alert('안내', '먼저 울음 소리를 녹음하거나 파일을 선택해주세요.');
+      return;
+    }
+    if (!selectedChild) {
+      Alert.alert('안내', '먼저 아이를 등록하거나 선택해주세요.');
       return;
     }
     setAnalyzing(true);
     try {
+      // 공동육아: AI 분석은 useCoaching 권한 필요 (열람 전용 멤버 차단)
+      if (!(await canDo(selectedChild.id, 'useCoaching'))) {
+        Alert.alert('열람 전용', '분석 기능 사용 권한이 없어요.\n보호자에게 "상담이모 사용" 권한을 요청해주세요.');
+        return;
+      }
       const base64 = await FileSystem.readAsStringAsync(fileUri, {
         encoding: FileSystem.EncodingType.Base64,
       });

@@ -17,6 +17,7 @@
  */
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
@@ -29,6 +30,7 @@ export default function NotificationPermissionScreen() {
   const params = useLocalSearchParams<{ next?: string }>();
   const next = params.next; // 'kakao-channel' | 'home' | undefined
   const [submitting, setSubmitting] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const finish = async () => {
     try {
@@ -94,7 +96,10 @@ export default function NotificationPermissionScreen() {
             ⓘ 광고/마케팅 알림은 별도 동의 시에만 발송되며, 모든 알림은 [더보기 &gt; 알림 설정]에서 끌 수 있어요.
           </Text>
         </View>
+      </ScrollView>
 
+      {/* 액션 버튼은 ScrollView 밖 하단 고정 — 모든 화면 크기에서 잘림 없이 항상 노출·탭 가능 */}
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <TouchableOpacity
           style={[styles.allowBtn, submitting && styles.allowBtnDisabled]}
           onPress={handleAllow}
@@ -118,7 +123,7 @@ export default function NotificationPermissionScreen() {
         >
           <Text style={styles.laterText}>나중에</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -137,7 +142,11 @@ function Benefit({ emoji, title, desc }: { emoji: string; title: string; desc: s
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAFAF8' },
-  scroll: { paddingHorizontal: 28, paddingTop: Platform.OS === 'ios' ? 60 : 48, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 28, paddingTop: Platform.OS === 'ios' ? 60 : 48, paddingBottom: 16, flexGrow: 1 },
+  footer: {
+    paddingHorizontal: 28, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: '#EFEFEC', backgroundColor: '#FAFAF8',
+  },
   hero: { alignItems: 'center', marginBottom: 16 },
   heroImg: { width: 96, height: 96 },
   title: {
@@ -163,7 +172,7 @@ const styles = StyleSheet.create({
   },
   noteText: { fontSize: 12, color: '#9A6635', lineHeight: 18 },
   allowBtn: {
-    marginTop: 24, height: 56, borderRadius: 14,
+    height: 56, borderRadius: 14,
     backgroundColor: '#FF8C5A',
     justifyContent: 'center', alignItems: 'center',
   },
