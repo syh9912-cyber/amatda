@@ -272,7 +272,7 @@ router.post('/skill/faq', async (_req: Request, res: Response) => {
               { title: '아이폰도 돼요?', description: 'Android / iOS 모두 지원' },
             ],
             buttons: [
-              { action: 'webLink', label: '📲 앱 다운로드', webLinkUrl: 'https://sylabs.kr/amatda' },
+              { action: 'webLink', label: '🍎 App Store 다운로드', webLinkUrl: 'https://apps.apple.com/app/id6775913119' },
             ],
           },
         },
@@ -302,12 +302,12 @@ router.post('/skill/beta', async (_req: Request, res: Response) => {
               '• 광고 완전 제거\n\n' +
               '🏆 우수 리뷰어 10명\n' +
               '• 신세계상품권 5만원\n\n' +
-              '📅 모집 기간: 6월 8일 ~ 14일\n' +
-              '📣 발표: 6월 15일 (팝업 공지 + 개별 연락)\n' +
+              '📅 모집 기간: 6월 26일 ~ 7월 2일\n' +
+              '📣 발표: 7월 3일 (팝업 공지 + 개별 연락)\n' +
               '📝 선정 시 베타 기간 중 스토어 리뷰 1회 이상 필수',
             buttons: [
               { action: 'webLink', label: '📝 신청하기', webLinkUrl: 'https://forms.gle/yRigYK7fSxWeqVke7' },
-              { action: 'webLink', label: '📲 앱 다운로드', webLinkUrl: 'https://sylabs.kr/amatda' },
+              { action: 'webLink', label: '🍎 App Store 다운로드', webLinkUrl: 'https://apps.apple.com/app/id6775913119' },
             ],
           },
         },
