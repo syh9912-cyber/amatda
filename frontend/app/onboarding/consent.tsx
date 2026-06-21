@@ -41,7 +41,6 @@ export default function ConsentScreen() {
   //   signup=email → 이메일 신규 가입 (register API 호출)
   //   기본(소셜) → saveConsent
   const params = useLocalSearchParams<{ reauth?: string; signup?: string }>();
-  const isReauth = params.reauth === '1';
   const isEmailSignup = params.signup === 'email';
   const setAuth = useAuthStore((s) => s.setAuth);
   const insets = useSafeAreaInsets();
@@ -121,13 +120,9 @@ export default function ConsentScreen() {
       }
       // reauth / 소셜 신규: saveConsent
       await authApi.saveConsent(consentPayload);
-      // 재동의(reauth)는 기존 사용자 → 홈 직행. 신규 소셜 가입은 채널 추가 화면 거침.
+      // 신규 가입·재동의 모두 채널 추가 화면 거쳐 홈. (재동의 사용자도 채널 안내 1회 — 건너뛰기 가능)
       // priming 화면은 primed 키가 자동으로 1회만 표시 관리.
-      router.replace(
-        isReauth
-          ? '/onboarding/notification-permission?next=home'
-          : '/onboarding/notification-permission?next=kakao-channel',
-      );
+      router.replace('/onboarding/notification-permission?next=kakao-channel');
     } catch {
       // 가입/저장 실패 시 자격증명 임시 보관도 비움 — stale 방지.
       if (isEmailSignup) pendingSignup.clear();
