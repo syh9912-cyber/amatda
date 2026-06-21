@@ -5,8 +5,8 @@
  * SDK 통합 대신 웹 URL 방식(Linking) — 카카오톡 앱 설치 시 앱 열림, 미설치 시 브라우저.
  * 출시 일정상 네이티브 모듈 추가 회피.
  *
- * 진입: register.tsx / consent.tsx 신규 가입 성공 직후
- * 종료: 추가/나중에 양쪽 모두 → /onboarding/set-nickname
+ * 진입: consent.tsx 신규 가입 성공 직후 (알림 priming 다음 단계)
+ * 종료: 추가/나중에 양쪽 모두 → /(main)/home (별명/자녀 등록은 추후 메뉴에서)
  */
 import { useState, useEffect, useRef } from 'react';
 import {
@@ -28,7 +28,7 @@ export default function KakaoChannelScreen() {
   const awaitingReturn = useRef(false);
 
   const goNext = () => {
-    router.replace('/onboarding/set-nickname');
+    router.replace('/(main)/home');
   };
 
   useEffect(() => {

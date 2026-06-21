@@ -115,14 +115,19 @@ export default function ConsentScreen() {
         analytics.setUserId(user.id);
         analytics.logSignUp('email');
         pendingSignup.clear();
-        // 가입 흐름 간소화: priming → 홈 직행. 카카오 채널/별명/자녀 등록은 추후 메뉴에서.
-        router.replace('/onboarding/notification-permission?next=home');
+        // 신규 가입: priming → 카카오 채널 추가 화면 거쳐 홈. (별명/자녀 등록은 추후 메뉴에서)
+        router.replace('/onboarding/notification-permission?next=kakao-channel');
         return;
       }
       // reauth / 소셜 신규: saveConsent
       await authApi.saveConsent(consentPayload);
-      // 모든 경로 priming 화면 거침 — primed 키가 자동으로 1회만 표시 관리.
-      router.replace('/onboarding/notification-permission?next=home');
+      // 재동의(reauth)는 기존 사용자 → 홈 직행. 신규 소셜 가입은 채널 추가 화면 거침.
+      // priming 화면은 primed 키가 자동으로 1회만 표시 관리.
+      router.replace(
+        isReauth
+          ? '/onboarding/notification-permission?next=home'
+          : '/onboarding/notification-permission?next=kakao-channel',
+      );
     } catch {
       // 가입/저장 실패 시 자격증명 임시 보관도 비움 — stale 방지.
       if (isEmailSignup) pendingSignup.clear();
