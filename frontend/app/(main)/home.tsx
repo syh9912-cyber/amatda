@@ -595,15 +595,8 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* === 임신부: 분만 병원 미등록 시 1회성 팝업 (3일 보지 않기 옵션) ===
-          일반 30주+ / 고위험 24주+ 분기 — snooze 만료 후 재노출 */}
-      {child?.isPregnant && (
-        <HospitalRegisterPrompt
-          childId={child.id}
-          weeks={child.pregnancyWeeks ?? 0}
-          isHighRisk={child.isHighRiskPregnancy === true}
-        />
-      )}
+      {/* HospitalRegisterPrompt(내부 Modal 2개)는 iOS 터치먹통 버그 방지 위해
+          ScrollView 밖(아래 모달 영역)으로 이동함. — 여기 두면 안 됨 */}
 
       {child && (() => {
         // 35주+ 임신부: 출산 임박 → 출산가방을 아이콘 메뉴 앞으로. 그 외엔 기본 순서.
@@ -748,6 +741,15 @@ export default function HomeScreen() {
           ScrollView 안에서 Modal 을 닫으면 iOS 에서 하위 콘텐츠의 탭(터치 응답)이 죽는다
           (스크롤은 유지됨). RN/Expo 공식 권장: Modal 은 화면 최상위에 둔다. */}
       <OnboardingGuide />
+
+      {/* 임신부: 분만 병원 미등록 1회성 팝업 (내부 Modal 2개 → ScrollView 밖 렌더) */}
+      {child?.isPregnant && (
+        <HospitalRegisterPrompt
+          childId={child.id}
+          weeks={child.pregnancyWeeks ?? 0}
+          isHighRisk={child.isHighRiskPregnancy === true}
+        />
+      )}
 
       {/* 시작 공지 팝업 */}
       <AnnouncementPopup
