@@ -29,7 +29,7 @@ const ANNOUNCEMENT = {
     '• AI 코칭 무제한 · 광고 완전 제거\n\n' +
     '🏆 우수 리뷰어 5명\n' +
     '• 신세계상품권 10만원\n\n' +
-    '📅 모집 6월 22일 ~ 6월 28일\n' +
+    '📅 모집 6월 23일 ~ 6월 29일\n' +
     '📣 발표 7월 1일',
   imageUrl: null,
   linkUrl: 'https://forms.gle/yRigYK7fSxWeqVke7',
