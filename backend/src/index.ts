@@ -9,6 +9,7 @@ import { env } from './config/env';
 import { runDormantUserSweep } from './utils/dormantUserSweep';
 import { runTrialEndingSweep } from './utils/trialEndingSweep';
 import { runNeighborGroupSweep } from './utils/neighborGroupSweep';
+import { runPredictiveAlarmSweep } from './utils/predictiveAlarmSweep';
 import { logger } from './utils/logger';
 import { setupSecurity } from './middleware/security';
 import authRoutes from './routes/auth';
@@ -290,6 +291,23 @@ export const neighborGroupNudge = onSchedule(
   },
   async () => {
     await runNeighborGroupSweep();
+  },
+);
+
+/**
+ * 예측 알람 sweep — 15분마다. 최근 3일 수유/수면/기상 패턴 슬롯의 (시각-offset)이
+ * 지금 창에 들면 "곧 ○○ 시간이에요" Expo Push. 데이터 없으면 안 감. 항목별 on/off 반영.
+ */
+export const predictiveAlarmSweep = onSchedule(
+  {
+    schedule: 'every 15 minutes',
+    timeZone: 'Asia/Seoul',
+    memory: '256MiB',
+    timeoutSeconds: 540,
+    secrets: REGISTERED_SECRETS,
+  },
+  async () => {
+    await runPredictiveAlarmSweep();
   },
 );
 

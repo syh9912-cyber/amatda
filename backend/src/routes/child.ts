@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { calculateSajuWithAI } from '../services/saju.interpreter';
+import { computeAlarmSlotsForChild } from '../services/predictiveAlarm';
 import { calculateAge } from '../services/age.calculator';
 import { generateChildReport, monthsToAgeGroup } from '../services/child.report';
 import { success, error } from '../utils/response';
@@ -456,6 +457,53 @@ router.post('/:id/analyze', authMiddleware, async (req: Request, res: Response) 
   } catch (err) {
     logger.error('child/analyze', err);
     error(res, '분석 리포트 생성 중 오류가 발생했습니다', 500);
+  }
+});
+
+/* ── 예측 알람 설정 (수유/수면/기상 — 최근 3일 패턴 offsetMin 전 푸시) ── */
+const DEFAULT_ALARM = { enabled: true, offsetMin: 30, disabledKeys: [] as string[] };
+
+// GET: 설정 + 현재 계산된 슬롯 목록(UI용, 슬롯별 on/off 표시)
+router.get('/:id/alarm-settings', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const access = await getChildIfAccessible(req.params.id as string, req.userId, 'editRecords', res);
+    if (!access) return;
+    const raw = (access.data.predictiveAlarm ?? {}) as Partial<typeof DEFAULT_ALARM>;
+    const settings = {
+      enabled: raw.enabled !== false,
+      offsetMin: typeof raw.offsetMin === 'number' ? raw.offsetMin : 30,
+      disabledKeys: Array.isArray(raw.disabledKeys) ? raw.disabledKeys : [],
+    };
+    const slots = await computeAlarmSlotsForChild(req.params.id as string, new Date());
+    success(res, {
+      settings,
+      slots: slots.map((s) => ({ ...s, on: !settings.disabledKeys.includes(s.key) })),
+    });
+  } catch (err) {
+    logger.error('child/alarm-settings/get', err);
+    error(res, '알람 설정 조회 실패', 500);
+  }
+});
+
+// PUT: 전체 on/off + offset(분) + 개별 끈 슬롯(disabledKeys) 저장
+router.put('/:id/alarm-settings', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const access = await getChildIfAccessible(req.params.id as string, req.userId, 'editRecords', res);
+    if (!access) return;
+    const b = (req.body ?? {}) as Record<string, unknown>;
+    const offset = Number(b.offsetMin);
+    const next = {
+      enabled: b.enabled !== false,
+      offsetMin: Number.isFinite(offset) && offset >= 0 && offset <= 120 ? Math.round(offset) : 30,
+      disabledKeys: Array.isArray(b.disabledKeys)
+        ? (b.disabledKeys as unknown[]).filter((k): k is string => typeof k === 'string').slice(0, 100)
+        : [],
+    };
+    await collections.children.doc(req.params.id as string).update({ predictiveAlarm: next });
+    success(res, { settings: next });
+  } catch (err) {
+    logger.error('child/alarm-settings/put', err);
+    error(res, '알람 설정 저장 실패', 500);
   }
 });
 
