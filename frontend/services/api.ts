@@ -165,6 +165,10 @@ export const childApi = {
     api.post(`/children/${id}/baseline`, { answers }),
   analyze: (id: string, answers: { questionId: string; answer: number }[]) =>
     api.post(`/children/${id}/analyze`, { answers }),
+  // 예측 알람 설정 (수유/수면/기상)
+  getAlarmSettings: (id: string) => api.get(`/children/${id}/alarm-settings`),
+  updateAlarmSettings: (id: string, data: Record<string, unknown>) =>
+    api.put(`/children/${id}/alarm-settings`, data),
   saveDailyTracking: (childId: string, data: Record<string, unknown>) =>
     api.post(`/children/${childId}/daily-tracking`, data),
   getDailyTracking: (childId: string, days = 7) =>

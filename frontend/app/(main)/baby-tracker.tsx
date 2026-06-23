@@ -2610,6 +2610,13 @@ function BabyTrackerInner() {
           >
             <Text style={summaryStyles.voiceBtnText}>📷 사진기록</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={summaryStyles.voiceBtn}
+            onPress={() => router.push('/(main)/alarm-settings' as never)}
+            activeOpacity={0.85}
+          >
+            <Text style={summaryStyles.voiceBtnText}>⏰ 알람설정</Text>
+          </TouchableOpacity>
         </View>
 
         <PhotoLogReview
