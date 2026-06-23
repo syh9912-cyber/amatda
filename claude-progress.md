@@ -1,5 +1,118 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-06-16 — Apple 5차 거절(1.4.1/1.2/2.1b) 대응 완료 + 빌드30 TestFlight 업로드
+> 최종 업데이트: 2026-06-23 — 예측 알람(수유/수면/기상) 풀스택 구현 + 6개월 기질설문 게이트
+
+---
+
+## 2026-06-23 — 신규 기능: 예측 알람 + 6개월 설문 게이트
+
+### Q1 — 기질 설문 6개월 게이트 (OTA)
+- 6개월 미만은 행동 설문 답하기 어려움 → `questions.tsx`에서 `months < 6`이면 설문 스킵,
+  `analyze([])`(생년월일 기반 기질)로 분석결과 직행. 6개월+엔 다시분석으로 정밀화. 커밋 `0702c78`.
+
+### Q2 — 예측 알람 (수유/수면/기상, 최근 3일 패턴, 서버 푸시)
+- **동작:** 데이터 입력 시 다음날부터 자동, 데이터 없으면 미발송. 슬롯시각 30분 전 Expo Push.
+- **백엔드** (커밋 backend): `services/predictiveAlarm.ts`(3일 기록→클러스터링→대표 슬롯,
+  수유 다회는 비슷한 시간끼리 묶음), `utils/predictiveAlarmSweep.ts`(15분 cron, 창 매칭+일별 중복방지,
+  pushSchedules doc에 predictiveSent로 dedup), `child.ts` GET/PUT `/:id/alarm-settings`,
+  `index.ts` predictiveAlarmSweep onSchedule(15분) 등록. child에 `predictiveAlarm` 필드 추가.
+- **프론트** (OTA): `alarm-settings.tsx` 화면(전체 on/off + 알림시점 분 + 슬롯별 개별 on/off,
+  변경 즉시 저장) + 아기시간 액션행 `⏰알람설정` 버튼. Modal-in-ScrollView 회피 위해 별도 화면.
+- 배포: 백엔드 deploy + OTA rt2.9.1(`c54e7562`)/rt2.9.2(`b4f4cfec`).
+- ⚠️ 향후 최적화: cron이 매 15분 전체 pushSchedules 순회(자녀당 child+3일 read) — 사용자 늘면
+  enabled 인덱스/배치 최적화 필요. 현재 소규모라 무방.
+
+### 보류
+- 자장가 백그라운드 재생 = UIBackgroundModes(네이티브) 필요 → 다음 빌드에. (OTA 불가)
+
+---
+
+## 2026-06-23 — iOS 홈 터치 먹통 재발 수정 (P0, OTA)
+
+### 증상
+- 사용자: iPhone 설치 후 "홈 화면에서 아무것도 안 눌러짐" (저번 SOS 증상과 동일).
+
+### 원인
+- 2026-06-03에 고친 **RN iOS Modal-in-ScrollView 버그**의 재발.
+- `home.tsx` 601줄 `<HospitalRegisterPrompt>`(내부 `<Modal>` 2개)가 **ScrollView 안**에
+  남아 있었음 — 당시 다른 모달 5개는 밖으로 뺐으나 이것만 누락(또는 이후 추가).
+- 임신부 모드(30주+/고위험 24주+, 병원 미등록)에서 이 팝업을 닫으면 홈 하위 콘텐츠
+  탭이 죽음(스크롤·SOS FAB만 됨).
+
+### 수정
+- `frontend/app/(main)/home.tsx` — `<HospitalRegisterPrompt>`를 `</ScrollView>` 밖
+  (모달 영역, OnboardingGuide 옆)으로 이동. 순수 JSX 이동, 로직 동일. 커밋 `af0d004`.
+
+### 배포 (OTA, 네이티브 재빌드 불필요)
+- ⚠️ app.json이 2.9.2로 올라가 있어, **runtime 2.9.1·2.9.2 둘 다** publish:
+  - rt 2.9.1 (현재 라이브 빌드33) → Update `b2948e43`
+  - rt 2.9.2 (빌드35/추후) → Update `817d831e`
+- app.json은 2.9.2로 원복(커밋 상태 유지).
+- 교훈: 앞으로 ScrollView 안에 Modal 추가 금지(주석 규칙 home.tsx 747~749). [[ota-needs-eas-env]]
+
+### 후속 — 진짜 원인은 "모달 2개 동시 노출" (일반모드·자녀없음·첫 로그인)
+- 사용자 추가 제보: 임신부 아니고 자녀 없는 일반모드인데 **첫 로그인만 하면** 먹통.
+- 원인: 첫 실행 가이드 `OnboardingGuide`(=`GuideCarousel`, `<Modal>`)와 방금 다시 켠
+  **테스터 공지 팝업(`AnnouncementPopup`=Modal)이 동시에 노출** → iOS는 Modal 2개
+  동시에 뜨면 터치 응답이 죽음. (둘 다 ScrollView 밖이지만 "동시 노출"이 별개 문제)
+- 수정: `home.tsx` `checkAnnouncement`에 가드 — 가이드 완료(`amatda_onboarding_guide_shown`
+  ==='1') 전엔 공지 안 띄움. 커밋 `eabd03d`.
+- 배포: OTA rt2.9.1(`4824df8d`) + rt2.9.2(`a011fa21`).
+
+---
+
+## 2026-06-22 — 가입 후 카카오 채널 추가 화면 복구 (release/v2.9.0, OTA)
+
+### 증상
+- 신규 회원가입 시 카카오 채널 추가 동의/화면이 안 뜨고, 채널 추가 후 와야 할
+  카카오톡 환영 메시지도 안 옴 (네이버 로그인으로 테스트, 로그인 자체는 정상).
+
+### 원인
+- `6/3 출시 준비 단순화 커밋(86900ce)`에서 `consent.tsx`가 가입 완료 후
+  `notification-permission?next=home`으로 보내도록 바뀌어 **kakao-channel 화면을
+  완전히 스킵**. (주석엔 →kakao-channel로 남아있었으나 코드만 드리프트)
+
+### 수정
+- `frontend/app/onboarding/consent.tsx` — 신규 가입(이메일/소셜)은 `next=kakao-channel`,
+  재동의(reauth)는 `next=home` 유지.
+- `frontend/app/onboarding/kakao-channel.tsx` — 완료 후 제거된 `set-nickname` 대신
+  `/(main)/home`으로. 복구 흐름: 동의 → 알림 priming → 카톡 채널 추가 → 홈.
+- 커밋 `2c7faef`.
+
+### 배포
+- JS 라우팅 변경이라 **OTA로 배포** (재심사 불필요). `eas update --branch production`
+  → Update group `957603c0`, runtime 2.9.1, iOS+Android.
+
+### 남은 이슈 (코드 아님 — 카카오 콘솔)
+- 채널 추가 후 **자동 환영 메시지**는 카카오 채널 관리자센터의 자동응답/웰컴(또는 챗봇)
+  설정이 켜져 있어야 발송됨. 사용자 콘솔 확인 필요.
+- 우리 방식은 가입 직후 별도 채널 추가 화면(웹 URL)이며, "카카오 싱크 로그인 안
+  동의항목" 방식과는 다름.
+
+### 후속 — 광고 유닛ID 누락 회귀 복구 (같은 날, OTA)
+- 위 카카오 OTA 직후 iOS에서 "광고 유닛아이디 미설정" 노출.
+- **원인:** `eas update`(OTA)는 `eas.json` 빌드 프로필 `env`를 읽지 않음. 광고 유닛
+  ID(`EXPO_PUBLIC_ADMOB_BANNER_IOS` 등 4개)가 eas.json에만 있고 **EAS 서버 환경엔
+  없어서** OTA 번들에서 빠짐. (빌드 번들엔 있었으나 OTA가 덮어씀)
+- **수정:** EAS `production` 환경에 광고 유닛 ID 4개 추가(plaintext, 공개 ID):
+  `EXPO_PUBLIC_ADMOB_BANNER_IOS/ANDROID`, `EXPO_PUBLIC_ADMOB_MEDIUM_IOS/ANDROID`.
+  이후 OTA 재배포 → Update group `cda0ab3c`. (빌드는 기존대로 eas.json env가 동일값
+  override → 충돌 없음)
+- **교훈:** 앞으로 EXPO_PUBLIC_* 신규 추가 시 OTA도 쓰면 eas.json뿐 아니라 EAS
+  환경에도 같이 넣어야 함.
+- iOS 광고가 여전히 빈 영역이면(미설정 아님) → AdMob 콘솔 게재 대기(no-fill) 이슈로
+  별도 확인.
+
+### 후속2 — 채널 화면이 "기존 회원"에겐 안 뜨던 문제 (같은 날, OTA)
+- 진단표식(ota6) 결과 `next=home` 확인 → 가입이 **신규가 아니라 재동의(reauth) 경로**로
+  진입. 즉 백엔드가 isNewUser=false(기존 회원)로 판정 → (main) 게이트가
+  `consent?reauth=1` 강제 → next=home → 채널 스킵.
+- 원인: 탈퇴 후 재가입했지만 그 소셜 계정이 실제로 안 지워짐(또는 동일 이메일 잔존
+  계정 매칭). 진짜 신규 가입(isNewUser=true) 경로는 코드상 정상(채널 노출 확인).
+- **사용자 결정:** 재동의 흐름에도 채널 노출. → `consent.tsx` 모든 경로
+  `next=kakao-channel`로 통일(isReauth 분기 제거). 진단표식 제거.
+- 커밋 `a68fb64`, OTA Update group `3886e9db`.
+- 미해결 가능성: 탈퇴가 실제 삭제를 안 하는 케이스(백엔드 cascadeDelete는 코드상
+  정상). 필요 시 탈퇴 시 에러/로그 추적 별도 진행.
 
 ---
 
