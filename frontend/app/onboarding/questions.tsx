@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity,
   ActivityIndicator, ScrollView, Image,
@@ -59,6 +59,30 @@ export default function QuestionsScreen() {
   const current = questions[currentIdx];
   const progress = total > 0 ? (currentIdx + 1) / total : 0;
   const currentPicked = current ? pickedTraits[current.id] : undefined;
+
+  // 6개월 미만: 행동 설문은 답하기 어려움 → 설문 건너뛰고 생년월일 기반 기질만 분석.
+  // (기질 자체는 등록 시 calculateSajuWithAI로 이미 계산됨. 6개월+에 다시분석으로 정밀화 가능)
+  const isInfantSkip = !!child && child.ageInfo.months < 6;
+  const infantSkipRan = useRef(false);
+
+  useEffect(() => {
+    if (!isInfantSkip || infantSkipRan.current || !childId) return;
+    infantSkipRan.current = true;
+    (async () => {
+      setAnalyzing(true);
+      try {
+        const res = await childApi.analyze(childId, []); // 빈 답변 → 생년월일 기반
+        const updated = res.data?.data;
+        if (updated) {
+          updateChild(updated);
+          await new Promise((r) => setTimeout(r, 200));
+        }
+      } catch (e) {
+        captureError(e, { ctx: 'onboarding/questions/infant-skip', childId });
+      }
+      router.replace({ pathname: '/onboarding/analysis-report', params: { childId } });
+    })();
+  }, [isInfantSkip, childId, updateChild]);
 
   const handleBack = () => {
     if (currentIdx > 0) {
@@ -135,7 +159,7 @@ export default function QuestionsScreen() {
     );
   }
 
-  if (analyzing) {
+  if (isInfantSkip || analyzing) {
     return <AnalyzingScreen childName={child?.name ?? ''} />;
   }
 
