@@ -205,6 +205,12 @@ export default function HomeScreen() {
 
   const checkAnnouncement = useCallback(async () => {
     try {
+      // iOS 터치먹통 방지: 첫 실행 가이드(OnboardingGuide=Modal)가 뜰 차례면
+      // 공지 팝업(Modal)을 동시에 띄우지 않는다. iOS는 Modal 2개 동시 노출 시
+      // 터치 응답이 죽음. 가이드를 닫은(=key '1') 다음 실행부터 공지 노출.
+      const guideShown = await AsyncStorage.getItem('amatda_onboarding_guide_shown');
+      if (guideShown !== '1') return;
+
       const res = await announcementApi.active();
       const ann = res.data?.data as Announcement | null;
       if (!ann || !ann.id) return;
