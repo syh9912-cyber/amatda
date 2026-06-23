@@ -272,7 +272,8 @@ router.post('/skill/faq', async (_req: Request, res: Response) => {
               { title: '아이폰도 돼요?', description: 'Android / iOS 모두 지원' },
             ],
             buttons: [
-              { action: 'webLink', label: '🍎 App Store 다운로드', webLinkUrl: 'https://apps.apple.com/app/id6775913119' },
+              { action: 'webLink', label: '🍎 App Store', webLinkUrl: 'https://apps.apple.com/app/id6775913119' },
+              { action: 'webLink', label: '🤖 Play 스토어', webLinkUrl: 'https://play.google.com/store/apps/details?id=com.sylabs.amatda' },
             ],
           },
         },
@@ -307,7 +308,8 @@ router.post('/skill/beta', async (_req: Request, res: Response) => {
               '📝 선정 시 베타 기간 중 스토어 리뷰 1회 이상 필수',
             buttons: [
               { action: 'webLink', label: '📝 신청하기', webLinkUrl: 'https://forms.gle/yRigYK7fSxWeqVke7' },
-              { action: 'webLink', label: '🍎 App Store 다운로드', webLinkUrl: 'https://apps.apple.com/app/id6775913119' },
+              { action: 'webLink', label: '🍎 App Store', webLinkUrl: 'https://apps.apple.com/app/id6775913119' },
+              { action: 'webLink', label: '🤖 Play 스토어', webLinkUrl: 'https://play.google.com/store/apps/details?id=com.sylabs.amatda' },
             ],
           },
         },
