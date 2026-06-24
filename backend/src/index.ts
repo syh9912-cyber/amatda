@@ -172,6 +172,8 @@ const REGISTERED_SECRETS: string[] = [
   'TOKEN_ENCRYPTION_KEY',
   'SENTRY_DSN_BACKEND',
   'GEMINI_API_KEY',
+  // 코칭 타사 폴백 — Gemini 전체 과부하 시 OpenAI gpt-5-nano 사용
+  'OPENAI_API_KEY',
   'JWT_SECRET',
   'JWT_REFRESH_SECRET',
   'PASSPORT_SALT',
