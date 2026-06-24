@@ -67,6 +67,7 @@ import {
   loadHintRemaining,
   decrementHint,
   loadFormulaDefault,
+  saveFormulaDefault,
   syncRangeFromServer,
   syncSessionsFromServer,
 } from '../../features/baby-tracker/storage';
@@ -1169,9 +1170,11 @@ interface AddModalProps {
   // 단일 항목만 입력하도록 잠금 (예: 분유 전용 다이얼로그)
   lockSubType?: boolean;
   lockTitle?: string;
+  // 분유량을 기본값으로 저장 (childId는 부모가 보유 → 콜백 위임)
+  onSetDefaultFormula?: (ml: number) => void;
 }
 
-function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, availableTabs, feedingOptions, lockSubType, lockTitle }: AddModalProps) {
+function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, availableTabs, feedingOptions, lockSubType, lockTitle, onSetDefaultFormula }: AddModalProps) {
   const [tab, setTab] = useState<RecordType>(initialTab);
   const [subType, setSubType] = useState<string>('');
   const [time, setTime] = useState(nowTime());
@@ -1179,6 +1182,7 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
   const [amount, setAmount] = useState('');
   const [durationMin, setDurationMin] = useState('');
   const [note, setNote] = useState('');
+  const [saveAsDefault, setSaveAsDefault] = useState(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -1202,6 +1206,7 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
     setAmount('');
     setDurationMin('');
     setNote('');
+    setSaveAsDefault(false);
     if (sub) {
       setSubType(sub);
       return;
@@ -1232,7 +1237,10 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
 
     if (tab === 'feeding') {
       const ml = parseInt(amount, 10);
-      if (subType === 'formula' && ml > 0) record.amount = ml;
+      if (subType === 'formula' && ml > 0) {
+        record.amount = ml;
+        if (saveAsDefault) onSetDefaultFormula?.(ml);
+      }
       const dur = parseInt(durationMin, 10);
       if (subType === 'breast' && dur > 0) record.duration = dur;
     }
@@ -1387,6 +1395,25 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
                   maxLength={4}
                 />
               </View>
+            )}
+
+            {/* 기본 분유량 설정 체크박스 (분유일 때만) */}
+            {tab === 'feeding' && subType === 'formula' && (
+              <TouchableOpacity
+                onPress={() => setSaveAsDefault((v) => !v)}
+                activeOpacity={0.7}
+                style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2, marginBottom: 6, paddingHorizontal: 2 }}
+              >
+                <View style={{
+                  width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, marginRight: 10,
+                  borderColor: saveAsDefault ? '#FF8C5A' : '#C7C7CC',
+                  backgroundColor: saveAsDefault ? '#FF8C5A' : '#FFFFFF',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {saveAsDefault ? <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '900' }}>✓</Text> : null}
+                </View>
+                <Text style={{ fontSize: 13.5, color: '#555555', fontWeight: '600' }}>기본 분유량으로 자동 저장됩니다</Text>
+              </TouchableOpacity>
             )}
 
             {/* Breast duration */}
@@ -2914,6 +2941,7 @@ function BabyTrackerInner() {
         initialSubType={modalSubType}
         onClose={() => setModalVisible(false)}
         onSave={handleAddRecord}
+        onSetDefaultFormula={(ml) => { saveFormulaDefault(childId, ml).catch(() => {}); setDefaultFormulaAmount(ml); }}
         availableTabs={ageTabs}
         feedingOptions={ageFeedingTypes.map((f) => ({
           key: f.key,
