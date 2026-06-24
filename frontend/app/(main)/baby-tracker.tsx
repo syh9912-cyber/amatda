@@ -1172,9 +1172,11 @@ interface AddModalProps {
   lockTitle?: string;
   // 분유량을 기본값으로 저장 (childId는 부모가 보유 → 콜백 위임)
   onSetDefaultFormula?: (ml: number) => void;
+  // 현재 기본 분유량 (표시·프리필·해제용)
+  defaultFormulaAmount?: number;
 }
 
-function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, availableTabs, feedingOptions, lockSubType, lockTitle, onSetDefaultFormula }: AddModalProps) {
+function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, availableTabs, feedingOptions, lockSubType, lockTitle, onSetDefaultFormula, defaultFormulaAmount = 0 }: AddModalProps) {
   const [tab, setTab] = useState<RecordType>(initialTab);
   const [subType, setSubType] = useState<string>('');
   const [time, setTime] = useState(nowTime());
@@ -1199,6 +1201,13 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
       slideAnim.setValue(0);
     }
   }, [visible, initialTab, initialSubType, slideAnim]);
+
+  // 분유 선택 시 기본 분유량 프리필 (값이 비어있을 때만 — 수정/해제 쉽게)
+  useEffect(() => {
+    if (visible && subType === 'formula' && defaultFormulaAmount > 0) {
+      setAmount((cur) => (cur === '' ? String(defaultFormulaAmount) : cur));
+    }
+  }, [visible, subType, defaultFormulaAmount]);
 
   function resetForm(t: RecordType, sub?: string) {
     setTime(nowTime());
@@ -1401,6 +1410,19 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
             {tab === 'feeding' && subType === 'formula' && (
               <TouchableOpacity
                 onPress={() => setSaveAsDefault((v) => !v)}
+                onLongPress={() => {
+                  if (defaultFormulaAmount > 0) {
+                    Alert.alert(
+                      `기본 분유량 ${defaultFormulaAmount}ml`,
+                      '분유량을 새로 입력하고 체크 후 저장하면 변경돼요.',
+                      [
+                        { text: '기본값 해제', style: 'destructive', onPress: () => { onSetDefaultFormula?.(0); setSaveAsDefault(false); setAmount(''); } },
+                        { text: '취소', style: 'cancel' },
+                      ],
+                    );
+                  }
+                }}
+                delayLongPress={400}
                 activeOpacity={0.7}
                 style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2, marginBottom: 6, paddingHorizontal: 2 }}
               >
@@ -1412,7 +1434,11 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
                 }}>
                   {saveAsDefault ? <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '900' }}>✓</Text> : null}
                 </View>
-                <Text style={{ fontSize: 13.5, color: '#555555', fontWeight: '600' }}>기본 분유량으로 자동 저장됩니다</Text>
+                <Text style={{ fontSize: 13.5, color: '#555555', fontWeight: '600' }}>
+                  {defaultFormulaAmount > 0
+                    ? `기본 분유량 ${defaultFormulaAmount}ml · 길게 눌러 변경/해제`
+                    : '기본 분유량으로 자동 저장됩니다'}
+                </Text>
               </TouchableOpacity>
             )}
 
@@ -2942,6 +2968,7 @@ function BabyTrackerInner() {
         onClose={() => setModalVisible(false)}
         onSave={handleAddRecord}
         onSetDefaultFormula={(ml) => { saveFormulaDefault(childId, ml).catch(() => {}); setDefaultFormulaAmount(ml); }}
+        defaultFormulaAmount={defaultFormulaAmount}
         availableTabs={ageTabs}
         feedingOptions={ageFeedingTypes.map((f) => ({
           key: f.key,
