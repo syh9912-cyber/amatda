@@ -26,6 +26,8 @@ export interface GeminiCallOptions {
   mediaData?: { mimeType: string; base64: string };
   /** 'application/json' 지정 시 Gemini가 JSON 출력 보장 */
   responseMimeType?: string;
+  /** controlled generation — 스키마 강제로 구조 100% 보장 (responseMimeType=application/json 와 함께) */
+  responseSchema?: Record<string, unknown>;
 }
 
 /** Gemini API 사용 가능 여부 */
@@ -63,7 +65,7 @@ export async function callGeminiText(
     throw new Error('MOCK_MODE');
   }
 
-  const { systemPrompt, temperature = 0.4, maxTokens = 500, mediaData, responseMimeType } = options;
+  const { systemPrompt, temperature = 0.4, maxTokens = 500, mediaData, responseMimeType, responseSchema } = options;
 
   const parts: Array<Record<string, unknown>> = [{ text: prompt }];
   if (mediaData) {
@@ -76,6 +78,9 @@ export async function callGeminiText(
   };
   if (responseMimeType) {
     generationConfig.responseMimeType = responseMimeType;
+  }
+  if (responseSchema) {
+    generationConfig.responseSchema = responseSchema;
   }
 
   const body: Record<string, unknown> = {

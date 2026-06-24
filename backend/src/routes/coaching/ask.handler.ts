@@ -91,6 +91,21 @@ function isInterviewFollowup(q: string): boolean {
   return INTERVIEW_FOLLOWUP_MARKERS.some((m) => q.includes(m));
 }
 
+// 코칭 응답 구조 스키마 (Gemini controlled generation) — 필드 누락·타입 오류·파싱 실패 차단.
+const COACHING_RESPONSE_SCHEMA: Record<string, unknown> = {
+  type: 'OBJECT',
+  properties: {
+    judgement: { type: 'STRING' },
+    reasons: { type: 'ARRAY', items: { type: 'STRING' } },
+    actions: { type: 'ARRAY', items: { type: 'STRING' } },
+    medical: { type: 'STRING', nullable: true },
+    personalNote: { type: 'STRING' },
+    followupQuestions: { type: 'ARRAY', items: { type: 'STRING' } },
+  },
+  required: ['judgement', 'reasons', 'actions', 'personalNote', 'followupQuestions'],
+  propertyOrdering: ['judgement', 'reasons', 'actions', 'medical', 'personalNote', 'followupQuestions'],
+};
+
 async function callGemini(
   systemPrompt: string,
   runtimePrompt: string,
@@ -100,9 +115,10 @@ async function callGemini(
     systemPrompt,
     temperature: 0.4,
     maxTokens,
-    // ★ JSON 모드 — 마크다운/프롬프트 누락 없이 항상 유효한 JSON 보장.
+    // ★ JSON 모드 + 스키마 강제(controlled generation) — 구조 100% 보장.
     //   이전엔 텍스트로 받아 정규식 추출 → 특정 질문에서 파싱 실패 → mock 폴백되던 문제.
     responseMimeType: 'application/json',
+    responseSchema: COACHING_RESPONSE_SCHEMA,
   });
 
   // followupQuestions(3개 배열) 우선, 없으면 구버전 단일 followupQuestion fallback.
@@ -164,11 +180,13 @@ function getMockResponse(temperament: string, category: string): CoachingAIRespo
     actions: ['아이의 감정을 먼저 인정해주세요.', '일관된 루틴을 유지해보세요.', '1:1 놀이 시간을 가져보세요.'],
   };
 
+  // ★ 정직한 폴백 — 가짜 답변처럼 보이지 않게 "일시 오류 + 재시도 안내"를 명확히 한다.
+  //   (CLAUDE.md: 실패를 조용히 숨기지 말 것) 그동안 도움이 될 일반 팁은 함께 제공.
   return {
-    judgement: `${intro} 이런 모습을 보일 수 있어요. 걱정되시겠지만, 충분히 대처 가능한 상황이에요.`,
+    judgement: '지금 답변을 불러오는 데 일시적인 문제가 있었어요. 잠시 후 같은 질문을 한 번만 다시 보내주시면 더 정확히 답해드릴게요.',
     reasons: [tips.reason, '아이마다 시기와 표현 방식이 달라요.'],
     actions: tips.actions,
-    personalNote: `${intro} 부모님의 따뜻한 관심이 가장 큰 도움이 됩니다.`,
+    personalNote: `${intro} 우선 일반적인 안내를 드렸어요. 다시 시도하면 맞춤 답변이 정상적으로 나와요.`,
     followupQuestion: '내일 상태가 어떤지 알려주세요.',
     followupQuestions: [
       '왜 이런 걸까요?',
@@ -329,9 +347,15 @@ export function registerAskHandler(router: Router): void {
       } else {
         try {
           aiResponse = await callGemini(systemPrompt, runtimePrompt, config.maxOutputTokens);
-        } catch (err) {
-          logger.error('ask.handler/gemini', err);
-          aiResponse = getMockResponse(child.temperament, categoryKo);
+        } catch (err1) {
+          // 1차 실패 → 한 번 더 시도(파싱 실패/일시 오류 흡수). 실패 시에만 추가 호출 → 비용 영향 미미.
+          logger.warn('ask.handler/gemini', `1차 실패 → 재시도: ${err1 instanceof Error ? err1.message.slice(0, 80) : ''}`);
+          try {
+            aiResponse = await callGemini(systemPrompt, runtimePrompt, config.maxOutputTokens);
+          } catch (err2) {
+            logger.error('ask.handler/gemini', err2);
+            aiResponse = getMockResponse(child.temperament, categoryKo);
+          }
         }
         // 응답 후처리 (CLAUDE.md): 사주/오행/천간/지지 등 금지 용어가 응답에 새어나오면
         // hallucination 또는 prompt injection 의심 — fallback 으로 교체.
