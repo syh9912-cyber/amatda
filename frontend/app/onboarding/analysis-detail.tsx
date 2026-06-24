@@ -148,20 +148,30 @@ export default function AnalysisDetailScreen() {
     if (childId && !storeReport && !localReport && !loading && fetchedForRef.current !== childId) {
       fetchedForRef.current = childId;
       setLoading(true);
-      childApi.list()
-        .then((res) => {
-          const list = res.data?.data as Record<string, unknown>[] | undefined;
+      (async () => {
+        try {
+          const listRes = await childApi.list();
+          const list = listRes.data?.data as Record<string, unknown>[] | undefined;
           const found = list?.find((c) => (c.id as string) === childId);
-          if (found) {
-            const parsed = found.analysisReport as AnalysisReport | null;
-            if (parsed) {
-              setLocalReport(parsed);
-              updateChild(found as unknown as ReturnType<typeof useChildStore.getState>['children'][0]);
-            }
+          let parsed = (found?.analysisReport ?? null) as AnalysisReport | null;
+          if (!parsed) {
+            // 설문을 안 한 자녀: 생년월일 기반으로 기질 리포트 즉시 생성 (빈 답변 analyze)
+            const aRes = await childApi.analyze(childId, []);
+            const data = aRes.data?.data as
+              | (Record<string, unknown> & { analysisReport?: AnalysisReport })
+              | undefined;
+            parsed = (data?.analysisReport ?? null) as AnalysisReport | null;
+            if (data) updateChild(data as unknown as ReturnType<typeof useChildStore.getState>['children'][0]);
+          } else if (found) {
+            updateChild(found as unknown as ReturnType<typeof useChildStore.getState>['children'][0]);
           }
-        })
-        .catch(() => {})
-        .finally(() => setLoading(false));
+          if (parsed) setLocalReport(parsed);
+        } catch {
+          /* ignore — report 없으면 빈 상태 표시 */
+        } finally {
+          setLoading(false);
+        }
+      })();
     }
   }, [childId, storeReport, localReport, loading, updateChild]);
 
