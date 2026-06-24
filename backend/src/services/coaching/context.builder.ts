@@ -1,5 +1,6 @@
 import { collections } from '../firestore';
 import { ChildContext, TrackingSummary } from './types';
+import { safeParse } from '../../utils/parse';
 
 /**
  * 아이 프로필에서 프롬프트용 컨텍스트 빌드 (소유자 OR 가족 구성원).
@@ -59,7 +60,9 @@ export async function buildChildContext(
   }
 
   // 기질 정보 추출 (짧은 기질명)
-  const innateData = d.innateData as Record<string, unknown> | undefined;
+  // ★ innateData 는 Firestore 에 JSON 문자열로 저장됨 → 반드시 파싱해야 label/detail 접근 가능.
+  //   (이전엔 raw 캐스팅이라 항상 undefined → 코칭에 기질/성향이 전혀 안 들어갔음)
+  const innateData = safeParse(d.innateData) ?? undefined;
   const fullLabel = (innateData?.label as string) || '';
   const typeMatch = fullLabel.match(/(탐구형|활동형|조화형|분석형|감성형)/);
   const dominantType = typeMatch ? typeMatch[1] : (fullLabel || '정보 없음');
