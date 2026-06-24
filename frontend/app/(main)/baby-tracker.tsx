@@ -1694,6 +1694,7 @@ function BabyTrackerInner() {
   const [editEndDatePrefix, setEditEndDatePrefix] = useState('');
   const [editNote, setEditNote] = useState('');
   const [editAmount, setEditAmount] = useState('');
+  const [editSaveAsDefault, setEditSaveAsDefault] = useState(false);
   const [editDate, setEditDate] = useState('');
   const [editEndDate, setEditEndDate] = useState('');
 
@@ -2083,6 +2084,7 @@ function BabyTrackerInner() {
     }
     setEditNote(record.note ?? '');
     setEditAmount(record.amount != null ? String(record.amount) : '');
+    setEditSaveAsDefault(false);
     setEditDate(dateStr);
   }
 
@@ -2152,8 +2154,13 @@ function BabyTrackerInner() {
     // 양 (수유)
     if (editRecord.type === 'feeding') {
       const num = parseInt(editAmount, 10);
-      if (!Number.isNaN(num) && num > 0) updated.amount = num;
-      else delete updated.amount;
+      if (!Number.isNaN(num) && num > 0) {
+        updated.amount = num;
+        if (editSaveAsDefault && editRecord.subType === 'formula') {
+          saveFormulaDefault(childId, num).catch(() => {});
+          setDefaultFormulaAmount(num);
+        }
+      } else delete updated.amount;
     }
     // 수면: endTime 함께 수정 → duration 재계산 (editEndDate 기반)
     if (editRecord.type === 'sleep' && editRecord.endTime) {
@@ -3361,6 +3368,40 @@ function BabyTrackerInner() {
                       keyboardType="number-pad"
                       maxLength={4}
                     />
+                    {editRecord.subType === 'formula' && (
+                      <TouchableOpacity
+                        onPress={() => setEditSaveAsDefault((v) => !v)}
+                        onLongPress={() => {
+                          if (defaultFormulaAmount > 0) {
+                            Alert.alert(
+                              `기본 분유량 ${defaultFormulaAmount}ml`,
+                              '양을 새로 입력하고 체크 후 저장하면 변경돼요.',
+                              [
+                                { text: '기본값 해제', style: 'destructive', onPress: () => { saveFormulaDefault(childId, 0).catch(() => {}); setDefaultFormulaAmount(0); setEditSaveAsDefault(false); } },
+                                { text: '취소', style: 'cancel' },
+                              ],
+                            );
+                          }
+                        }}
+                        delayLongPress={400}
+                        activeOpacity={0.7}
+                        style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingHorizontal: 2 }}
+                      >
+                        <View style={{
+                          width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, marginRight: 10,
+                          borderColor: editSaveAsDefault ? '#FF8C5A' : '#C7C7CC',
+                          backgroundColor: editSaveAsDefault ? '#FF8C5A' : '#FFFFFF',
+                          alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {editSaveAsDefault ? <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '900' }}>✓</Text> : null}
+                        </View>
+                        <Text style={{ fontSize: 13, color: '#555555', fontWeight: '600', flex: 1 }}>
+                          {defaultFormulaAmount > 0
+                            ? `기본 분유량 ${defaultFormulaAmount}ml · 길게 눌러 변경/해제`
+                            : '기본 분유량으로 자동 저장됩니다'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 ) : null}
                 <View style={editModalStyles.field}>
@@ -4335,13 +4376,14 @@ function BottomActionBar({ breastActive, onAction, onLongAction, hintVisible }: 
         {BAR_ITEMS.map((item) => {
           const isBreast = item.action.kind === 'breast';
           const active = isBreast && breastActive;
-          // 시간 지정 입력 지원: quick / sleepStart / sleepWake / breast
-          // 미지원: modal(분유 — 자체 모달) / custom(자유 입력)
+          // 시간 지정 입력 지원: quick / sleepStart / sleepWake / breast / 분유(modal+formula)
+          // 미지원: custom(자유 입력)
           const supportsTimed =
             item.action.kind === 'quick' ||
             item.action.kind === 'sleepStart' ||
             item.action.kind === 'sleepWake' ||
-            item.action.kind === 'breast';
+            item.action.kind === 'breast' ||
+            (item.action.kind === 'modal' && item.action.subType === 'formula');
           return (
             <TouchableOpacity
               key={item.label}
