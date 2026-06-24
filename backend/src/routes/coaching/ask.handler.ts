@@ -18,6 +18,7 @@ import {
 import { buildPrompt } from '../../services/coaching/prompt.builder';
 import { backfillFollowups } from '../../services/coaching/followup.templates';
 import { callGeminiJSON } from '../../services/coaching/gemini.client';
+import { callOpenAIJSON, isOpenAIAvailable } from '../../services/coaching/openai.client';
 import { detectParentEmotion } from '../../services/coaching/emotion.detector';
 import { getTimeContext } from '../../services/coaching/time.awareness';
 import { getMilestoneContext } from '../../services/coaching/milestone.detector';
@@ -106,21 +107,23 @@ const COACHING_RESPONSE_SCHEMA: Record<string, unknown> = {
   propertyOrdering: ['judgement', 'reasons', 'actions', 'medical', 'personalNote', 'followupQuestions'],
 };
 
-async function callGemini(
-  systemPrompt: string,
-  runtimePrompt: string,
-  maxTokens: number
-): Promise<CoachingAIResponse> {
-  const parsed = await callGeminiJSON<Record<string, unknown>>(runtimePrompt, {
-    systemPrompt,
-    temperature: 0.4,
-    maxTokens,
-    // ★ JSON 모드 + 스키마 강제(controlled generation) — 구조 100% 보장.
-    //   이전엔 텍스트로 받아 정규식 추출 → 특정 질문에서 파싱 실패 → mock 폴백되던 문제.
-    responseMimeType: 'application/json',
-    responseSchema: COACHING_RESPONSE_SCHEMA,
-  });
+// OpenAI strict json_schema 용 (모든 키 required + additionalProperties:false + nullable=타입배열).
+const COACHING_RESPONSE_SCHEMA_OPENAI: Record<string, unknown> = {
+  type: 'object',
+  properties: {
+    judgement: { type: 'string' },
+    reasons: { type: 'array', items: { type: 'string' } },
+    actions: { type: 'array', items: { type: 'string' } },
+    medical: { type: ['string', 'null'] },
+    personalNote: { type: 'string' },
+    followupQuestions: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['judgement', 'reasons', 'actions', 'medical', 'personalNote', 'followupQuestions'],
+  additionalProperties: false,
+};
 
+// 파싱된 객체 → CoachingAIResponse 매핑 (Gemini/OpenAI 공용).
+function buildCoachingResponse(parsed: Record<string, unknown>): CoachingAIResponse {
   // followupQuestions(3개 배열) 우선, 없으면 구버전 단일 followupQuestion fallback.
   const followupQuestions = (Array.isArray(parsed.followupQuestions)
     ? (parsed.followupQuestions as unknown[])
@@ -141,6 +144,36 @@ async function callGemini(
     followupQuestion: singleFollowup,
     followupQuestions,
   };
+}
+
+async function callGemini(
+  systemPrompt: string,
+  runtimePrompt: string,
+  maxTokens: number
+): Promise<CoachingAIResponse> {
+  const parsed = await callGeminiJSON<Record<string, unknown>>(runtimePrompt, {
+    systemPrompt,
+    temperature: 0.4,
+    maxTokens,
+    // ★ JSON 모드 + 스키마 강제(controlled generation) — 구조 100% 보장.
+    responseMimeType: 'application/json',
+    responseSchema: COACHING_RESPONSE_SCHEMA,
+  });
+  return buildCoachingResponse(parsed);
+}
+
+// 타사 폴백 — Gemini 전체 실패(과부하) 시 OpenAI gpt-5-nano 로 동일 스키마 호출.
+async function callOpenAI(
+  systemPrompt: string,
+  runtimePrompt: string,
+  maxTokens: number
+): Promise<CoachingAIResponse> {
+  const parsed = await callOpenAIJSON<Record<string, unknown>>(runtimePrompt, {
+    systemPrompt,
+    responseSchema: COACHING_RESPONSE_SCHEMA_OPENAI,
+    maxTokens,
+  });
+  return buildCoachingResponse(parsed);
 }
 
 // ─── Mock 응답 (Gemini 없을 때) ───
@@ -347,13 +380,18 @@ export function registerAskHandler(router: Router): void {
       } else {
         try {
           aiResponse = await callGemini(systemPrompt, runtimePrompt, config.maxOutputTokens);
-        } catch (err1) {
-          // 1차 실패 → 한 번 더 시도(파싱 실패/일시 오류 흡수). 실패 시에만 추가 호출 → 비용 영향 미미.
-          logger.warn('ask.handler/gemini', `1차 실패 → 재시도: ${err1 instanceof Error ? err1.message.slice(0, 80) : ''}`);
-          try {
-            aiResponse = await callGemini(systemPrompt, runtimePrompt, config.maxOutputTokens);
-          } catch (err2) {
-            logger.error('ask.handler/gemini', err2);
+        } catch (gemErr) {
+          // Gemini 전체(2.5-flash-lite → 3.1-flash-lite, 재시도 포함) 실패 → 타사 OpenAI 폴백.
+          logger.warn('ask.handler/gemini', `Gemini 실패: ${gemErr instanceof Error ? gemErr.message.slice(0, 80) : ''}`);
+          if (isOpenAIAvailable()) {
+            try {
+              aiResponse = await callOpenAI(systemPrompt, runtimePrompt, config.maxOutputTokens);
+              logger.warn('ask.handler/openai-fallback', 'OpenAI gpt-5-nano 폴백 성공');
+            } catch (oaErr) {
+              logger.error('ask.handler/openai', oaErr);
+              aiResponse = getMockResponse(child.temperament, categoryKo);
+            }
+          } else {
             aiResponse = getMockResponse(child.temperament, categoryKo);
           }
         }

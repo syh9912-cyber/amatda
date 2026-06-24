@@ -51,6 +51,8 @@ export const env = {
   JWT_REFRESH_SECRET: jwtRefreshSecret, // 위에서 throw 보장
   MOCK_AI: process.env.MOCK_AI === 'true',
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+  // 타사 폴백(OpenAI gpt-5-nano) — 미설정 시 폴백 비활성(휴면). Secret Manager 등록 필요.
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
   MOCK_SOCIAL: process.env.MOCK_SOCIAL === 'true',
   DATABASE_URL: process.env.DATABASE_URL || 'file:./dev.db',
   /**

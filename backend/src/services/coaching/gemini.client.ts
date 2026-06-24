@@ -4,9 +4,10 @@ import { logger } from '../../utils/logger';
 // 1차 모델(저가) + 과부하 시 폴백 모델(독립 용량, 비슷한 비용, 동일 유료 키).
 // "high demand"(503)는 특정 모델 서버 용량 문제 → 다른 모델로 넘기면 회피됨.
 const GEMINI_PRIMARY_MODEL = 'gemini-2.5-flash-lite';
-// 폴백: 최신 flash-lite 별칭(다른 모델 버전 = 독립 용량, 동일 저가, thinking 없음 → 잘림 없음).
-// gemini-2.5-flash 는 thinking 으로 MAX_TOKENS 잘림 발생 → 폴백 부적합. flash-lite-latest 검증 완료.
-const GEMINI_FALLBACK_MODEL = 'gemini-flash-lite-latest';
+// 폴백: gemini-3.1-flash-lite (버전 고정 — 별칭은 나중에 thinking 모델로 바뀌면 잘림 위험).
+// 3.1-flash-lite 는 thinking 기본값이 minimal → 일반 질문에서 잘림 없음(검증 완료).
+// gemini-2.5-flash 는 thinking high 기본 → MAX_TOKENS 잘림 → 폴백 부적합.
+const GEMINI_FALLBACK_MODEL = 'gemini-3.1-flash-lite';
 function geminiUrl(model: string): string {
   return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 }
