@@ -1664,6 +1664,7 @@ function BabyTrackerInner() {
   const [timedActionNote, setTimedActionNote] = useState<string>('');
   const [timedActionDate, setTimedActionDate] = useState<string>('');
   const [timedActionAmount, setTimedActionAmount] = useState<string>('');
+  const [timedSaveAsDefault, setTimedSaveAsDefault] = useState(false);
   const [defaultFormulaAmount, setDefaultFormulaAmount] = useState<number>(0);
 
   // 첫 진입 1회 기능 가이드 (코드 목업형) — 헤더 '?' 로 언제든 재열람
@@ -1897,6 +1898,7 @@ function BabyTrackerInner() {
     setTimedActionTime(nowTime());
     setTimedActionDate(formatDate(currentDate));
     setTimedActionNote('');
+    setTimedSaveAsDefault(false);
     setTimedActionVisible(true);
   }
 
@@ -1918,7 +1920,13 @@ function BabyTrackerInner() {
       // 분유 시간지정 시 양(ml) 처리
       if (payload.subType === 'formula' && timedActionAmount) {
         const amt = parseInt(timedActionAmount, 10);
-        if (!Number.isNaN(amt) && amt > 0) record.amount = amt;
+        if (!Number.isNaN(amt) && amt > 0) {
+          record.amount = amt;
+          if (timedSaveAsDefault) {
+            saveFormulaDefault(childId, amt).catch(() => {});
+            setDefaultFormulaAmount(amt);
+          }
+        }
       }
       handleAddRecord(record);
       const amtSuffix = payload.subType === 'formula' && record.amount ? ` ${record.amount}ml` : '';
@@ -2436,7 +2444,7 @@ function BabyTrackerInner() {
         createdAt: new Date().toISOString(),
       };
       handleAddRecord(record);
-      showToast(`분유 ${defaultFormulaAmount}ml 기록`);
+      showToast(`분유 ${defaultFormulaAmount}ml 기록 · 길게 눌러 수정`);
       if (hintRemaining > 0) decrementHint().then(setHintRemaining).catch(() => {});
     } else if (action.kind === 'modal') {
       setModalSubType(action.subType);
@@ -3157,6 +3165,39 @@ function BabyTrackerInner() {
                   keyboardType="number-pad"
                   maxLength={4}
                 />
+                {/* 기본 분유량 설정/변경/해제 (체크 후 저장 → 기본값, 길게 눌러 해제) */}
+                <TouchableOpacity
+                  onPress={() => setTimedSaveAsDefault((v) => !v)}
+                  onLongPress={() => {
+                    if (defaultFormulaAmount > 0) {
+                      Alert.alert(
+                        `기본 분유량 ${defaultFormulaAmount}ml`,
+                        '분유량을 새로 입력하고 체크 후 저장하면 변경돼요.',
+                        [
+                          { text: '기본값 해제', style: 'destructive', onPress: () => { saveFormulaDefault(childId, 0).catch(() => {}); setDefaultFormulaAmount(0); setTimedSaveAsDefault(false); setTimedActionAmount(''); } },
+                          { text: '취소', style: 'cancel' },
+                        ],
+                      );
+                    }
+                  }}
+                  delayLongPress={400}
+                  activeOpacity={0.7}
+                  style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingHorizontal: 2 }}
+                >
+                  <View style={{
+                    width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, marginRight: 10,
+                    borderColor: timedSaveAsDefault ? '#FF8C5A' : '#C7C7CC',
+                    backgroundColor: timedSaveAsDefault ? '#FF8C5A' : '#FFFFFF',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {timedSaveAsDefault ? <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '900' }}>✓</Text> : null}
+                  </View>
+                  <Text style={{ fontSize: 13, color: '#555555', fontWeight: '600', flex: 1 }}>
+                    {defaultFormulaAmount > 0
+                      ? `기본 분유량 ${defaultFormulaAmount}ml · 길게 눌러 변경/해제`
+                      : '기본 분유량으로 자동 저장됩니다'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             )}
 
