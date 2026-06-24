@@ -100,6 +100,9 @@ async function callGemini(
     systemPrompt,
     temperature: 0.4,
     maxTokens,
+    // ★ JSON 모드 — 마크다운/프롬프트 누락 없이 항상 유효한 JSON 보장.
+    //   이전엔 텍스트로 받아 정규식 추출 → 특정 질문에서 파싱 실패 → mock 폴백되던 문제.
+    responseMimeType: 'application/json',
   });
 
   // followupQuestions(3개 배열) 우선, 없으면 구버전 단일 followupQuestion fallback.

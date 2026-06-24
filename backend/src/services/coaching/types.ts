@@ -130,8 +130,8 @@ export interface TierConfig {
 export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
   free: {
     // prompt 가이드 "200~400자" 가 실제 길이 제어. maxOutputTokens 은 폭주 방지 안전망.
-    // 한국어 400자 ≈ 500 tok + JSON overhead 150 tok = 650. 안전 마진 250 → 900.
-    maxOutputTokens: 900,
+    // 한국어 400자 ≈ 500 tok + JSON overhead 150 tok = 650. 여유 마진 → 1100 (잘림 방지).
+    maxOutputTokens: 1100,
     dbCandidateCount: 4,      // 무료도 DB 전체 참고 (유료 전환을 위해 무료 경험 강화)
     summaryLines: 5,
     contextDays: 7,
