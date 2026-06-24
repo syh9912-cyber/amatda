@@ -1,7 +1,15 @@
 import { env } from '../../config/env';
 import { logger } from '../../utils/logger';
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
+// 1차 모델(저가) + 과부하 시 폴백 모델(독립 용량, 비슷한 비용, 동일 유료 키).
+// "high demand"(503)는 특정 모델 서버 용량 문제 → 다른 모델로 넘기면 회피됨.
+const GEMINI_PRIMARY_MODEL = 'gemini-2.5-flash-lite';
+// 폴백: 최신 flash-lite 별칭(다른 모델 버전 = 독립 용량, 동일 저가, thinking 없음 → 잘림 없음).
+// gemini-2.5-flash 는 thinking 으로 MAX_TOKENS 잘림 발생 → 폴백 부적합. flash-lite-latest 검증 완료.
+const GEMINI_FALLBACK_MODEL = 'gemini-flash-lite-latest';
+function geminiUrl(model: string): string {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+}
 
 interface GeminiResponse {
   candidates?: {
@@ -35,10 +43,10 @@ export function isGeminiAvailable(): boolean {
   return !!env.GEMINI_API_KEY && !env.MOCK_AI;
 }
 
-// ─── 과부하/일시 오류 재시도 (Gemini "high demand" 503 등) ───
+// ─── 과부하/일시 오류 재시도 + 모델 폴백 (Gemini "high demand" 503 등) ───
 // 운영 로그상 flash-lite 가 간헐적으로 "high demand" 에러를 반환 → 재시도 없이
-// 즉시 mock 폴백되던 문제. 짧은 backoff 로 2회까지 재시도해 폴백 빈도를 낮춘다.
-const GEMINI_MAX_ATTEMPTS = 3;
+// 즉시 mock 폴백되던 문제. 1~2차는 기본 모델 재시도, 3~4차는 폴백 모델로 시도.
+const GEMINI_MAX_ATTEMPTS = 4;
 
 function isRetryableGeminiError(status: number, message: string): boolean {
   if ([429, 500, 502, 503, 504].includes(status)) return true;
@@ -93,11 +101,16 @@ export async function callGeminiText(
 
   let lastError: Error = new Error('Gemini 호출 실패');
   for (let attempt = 1; attempt <= GEMINI_MAX_ATTEMPTS; attempt++) {
+    // 1~2차: 기본 모델, 3~4차: 과부하 폴백 모델(독립 용량). 폴백은 과부하 때만 → 비용 영향 미미.
+    const model = attempt <= 2 ? GEMINI_PRIMARY_MODEL : GEMINI_FALLBACK_MODEL;
+    if (attempt === 3) {
+      logger.warn('gemini/model-fallback', `기본 모델 과부하 → ${GEMINI_FALLBACK_MODEL} 로 폴백`);
+    }
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30_000); // 30s 타임아웃
     let response: Response;
     try {
-      response = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+      response = await fetch(`${geminiUrl(model)}?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
