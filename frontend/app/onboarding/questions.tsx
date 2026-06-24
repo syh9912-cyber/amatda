@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import {
   View, Text, TouchableOpacity,
-  ActivityIndicator, ScrollView, Image,
+  ActivityIndicator, ScrollView, Image, StyleSheet,
 } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
@@ -60,29 +60,25 @@ export default function QuestionsScreen() {
   const progress = total > 0 ? (currentIdx + 1) / total : 0;
   const currentPicked = current ? pickedTraits[current.id] : undefined;
 
-  // 6개월 미만: 행동 설문은 답하기 어려움 → 설문 건너뛰고 생년월일 기반 기질만 분석.
-  // (기질 자체는 등록 시 calculateSajuWithAI로 이미 계산됨. 6개월+에 다시분석으로 정밀화 가능)
+  // 6개월 미만: 행동 설문은 답하기 어려움 → 안내 화면을 보여주고,
+  // 버튼을 누르면 생년월일·시간 기반(빈 답변)으로만 분석. (기질은 등록 시 이미 계산됨)
   const isInfantSkip = !!child && child.ageInfo.months < 6;
-  const infantSkipRan = useRef(false);
 
-  useEffect(() => {
-    if (!isInfantSkip || infantSkipRan.current || !childId) return;
-    infantSkipRan.current = true;
-    (async () => {
-      setAnalyzing(true);
-      try {
-        const res = await childApi.analyze(childId, []); // 빈 답변 → 생년월일 기반
-        const updated = res.data?.data;
-        if (updated) {
-          updateChild(updated);
-          await new Promise((r) => setTimeout(r, 200));
-        }
-      } catch (e) {
-        captureError(e, { ctx: 'onboarding/questions/infant-skip', childId });
+  const runInfantAnalyze = async () => {
+    if (analyzing || !childId) return;
+    setAnalyzing(true);
+    try {
+      const res = await childApi.analyze(childId, []); // 빈 답변 → 생년월일 기반
+      const updated = res.data?.data;
+      if (updated) {
+        updateChild(updated);
+        await new Promise((r) => setTimeout(r, 200));
       }
-      router.replace({ pathname: '/onboarding/analysis-report', params: { childId } });
-    })();
-  }, [isInfantSkip, childId, updateChild]);
+    } catch (e) {
+      captureError(e, { ctx: 'onboarding/questions/infant-skip', childId });
+    }
+    router.replace({ pathname: '/onboarding/analysis-report', params: { childId } });
+  };
 
   const handleBack = () => {
     if (currentIdx > 0) {
@@ -159,8 +155,32 @@ export default function QuestionsScreen() {
     );
   }
 
-  if (isInfantSkip || analyzing) {
+  if (analyzing) {
     return <AnalyzingScreen childName={child?.name ?? ''} />;
+  }
+
+  // 6개월 미만: 행동 설문 대신 생년월일·시간 기반 분석임을 안내 → 버튼 누르면 분석.
+  if (isInfantSkip) {
+    return (
+      <View style={es.wrap}>
+        <Stack.Screen options={{ title: '기질 분석', headerShown: false }} />
+        <View style={es.card}>
+          <Text style={es.emoji}>👶</Text>
+          <Text style={es.title}>아직 6개월 미만이에요</Text>
+          <Text style={es.body}>
+            이 시기엔 아이의 행동 패턴이 뚜렷이 나타나기 전이라,{'\n'}
+            행동 설문 대신 <Text style={es.em}>생년월일과 태어난 시간</Text>으로{'\n'}
+            우리 아이의 타고난 기질을 분석해드려요.
+          </Text>
+          <Text style={es.sub}>
+            백일이 지나 아이만의 행동이 보이기 시작하면,{'\n'}행동 설문으로 더 정밀하게 분석할 수 있어요.
+          </Text>
+          <TouchableOpacity style={es.btn} onPress={runInfantAnalyze} activeOpacity={0.85}>
+            <Text style={es.btnText}>기질 분석 보기</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
   }
 
   if (!current) return null;
@@ -243,3 +263,16 @@ export default function QuestionsScreen() {
     </View>
   );
 }
+
+// 6개월 미만 안내 화면 스타일
+const es = StyleSheet.create({
+  wrap: { flex: 1, backgroundColor: '#FAFAF8', alignItems: 'center', justifyContent: 'center', padding: 28 },
+  card: { width: '100%', maxWidth: 420, alignItems: 'center' },
+  emoji: { fontSize: 52, marginBottom: 14 },
+  title: { fontSize: 22, fontWeight: '800', color: '#1A1A1A', textAlign: 'center', marginBottom: 16 },
+  body: { fontSize: 15, lineHeight: 24, color: '#444', textAlign: 'center', marginBottom: 14 },
+  em: { fontWeight: '800', color: '#FF8C5A' },
+  sub: { fontSize: 13, lineHeight: 20, color: '#9CA3AF', textAlign: 'center', marginBottom: 30 },
+  btn: { backgroundColor: '#FF8C5A', borderRadius: 14, paddingVertical: 15, paddingHorizontal: 40, alignItems: 'center', alignSelf: 'stretch' },
+  btnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+});
