@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
@@ -96,6 +96,8 @@ export default function AnalysisDetailScreen() {
 
   const [localReport, setLocalReport] = useState<AnalysisReport | null>(null);
   const [loading, setLoading] = useState(false);
+  // 리포트 fetch를 자녀당 1회만 — 리포트가 없을 때 무한 재요청(로딩 먹통) 방지
+  const fetchedForRef = useRef<string | null>(null);
   const [firstTalk, setFirstTalk] = useState<FirstTalkData | null>(null);
   const [firstTalkLoading, setFirstTalkLoading] = useState(false);
   const [answer, setAnswer] = useState('');
@@ -143,7 +145,8 @@ export default function AnalysisDetailScreen() {
   const report = storeReport ?? localReport;
 
   useEffect(() => {
-    if (childId && !storeReport && !localReport && !loading) {
+    if (childId && !storeReport && !localReport && !loading && fetchedForRef.current !== childId) {
+      fetchedForRef.current = childId;
       setLoading(true);
       childApi.list()
         .then((res) => {
