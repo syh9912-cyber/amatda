@@ -92,27 +92,34 @@ export async function computeAlarmSlotsForChild(childId: string, now: Date): Pro
   const sleep: number[] = [];
   const wake: number[] = [];
 
+  let daysWithData = 0;
   for (const date of days) {
     const doc = await collections.babyTrackerDays.doc(`${childId}_${date}`).get();
     if (!doc.exists) continue;
     const records = (doc.data()?.records ?? []) as Array<Record<string, unknown>>;
+    let added = false;
     for (const r of records) {
       const t = parseHHMM(r.time);
-      if (r.type === 'feeding' && t != null) feeding.push(t);
+      if (r.type === 'feeding' && t != null) { feeding.push(t); added = true; }
       if (r.type === 'sleep') {
-        if (t != null) sleep.push(t);
+        if (t != null) { sleep.push(t); added = true; }
         const w = parseHHMM(r.endTime);
-        if (w != null) wake.push(w);
+        if (w != null) { wake.push(w); added = true; }
       }
     }
+    if (added) daysWithData++;
   }
 
+  // 데이터가 1일치뿐이면 minCount=1 → 그 하루 기록만으로 바로 알람 생성.
+  // 2일 이상 쌓이면 minCount=2 → 반복된 시각만(1회성 제외, 노이즈 방지).
+  const minCount = daysWithData <= 1 ? 1 : 2;
+
   const slots: AlarmSlot[] = [];
-  // 수유: 하루 여러 번 → 75분 윈도우, 2회 이상 반복된 패턴만
-  for (const tm of clusterTimes(feeding, 75, 2)) slots.push(makeSlot('feeding', tm));
-  // 수면/기상: 보통 1~2회 → 90분 윈도우, 2회 이상
-  for (const tm of clusterTimes(sleep, 90, 2)) slots.push(makeSlot('sleep', tm));
-  for (const tm of clusterTimes(wake, 90, 2)) slots.push(makeSlot('wake', tm));
+  // 수유: 하루 여러 번 → 75분 윈도우로 묶어 대표 시각만
+  for (const tm of clusterTimes(feeding, 75, minCount)) slots.push(makeSlot('feeding', tm));
+  // 수면/기상: 90분 윈도우
+  for (const tm of clusterTimes(sleep, 90, minCount)) slots.push(makeSlot('sleep', tm));
+  for (const tm of clusterTimes(wake, 90, minCount)) slots.push(makeSlot('wake', tm));
 
   return dedupByKey(slots);
 }
