@@ -92,30 +92,28 @@ export async function computeAlarmSlotsForChild(childId: string, now: Date): Pro
   const sleep: number[] = [];
   const wake: number[] = [];
 
-  let daysWithData = 0;
   for (const date of days) {
     const doc = await collections.babyTrackerDays.doc(`${childId}_${date}`).get();
     if (!doc.exists) continue;
     const records = (doc.data()?.records ?? []) as Array<Record<string, unknown>>;
-    let added = false;
     for (const r of records) {
       const t = parseHHMM(r.time);
-      if (r.type === 'feeding' && t != null) { feeding.push(t); added = true; }
+      if (r.type === 'feeding' && t != null) feeding.push(t);
       if (r.type === 'sleep') {
-        if (t != null) { sleep.push(t); added = true; }
+        if (t != null) sleep.push(t);
         const w = parseHHMM(r.endTime);
-        if (w != null) { wake.push(w); added = true; }
+        if (w != null) wake.push(w);
       }
     }
-    if (added) daysWithData++;
   }
 
-  // 데이터가 1일치뿐이면 minCount=1 → 그 하루 기록만으로 바로 알람 생성.
-  // 2일 이상 쌓이면 minCount=2 → 반복된 시각만(1회성 제외, 노이즈 방지).
-  const minCount = daysWithData <= 1 ? 1 : 2;
+  // 기록된 시각은 1번만 있어도 알람 슬롯 생성(사용자 요청 — 1일치로도 바로 알람).
+  // 비슷한 시각(window)은 묶어 대표값, 같은 시(hour) 중복은 dedupByKey 로 제거.
+  // 원치 않는 슬롯은 사용자가 개별 토글(disabledKeys)로 끈다.
+  const minCount = 1;
 
   const slots: AlarmSlot[] = [];
-  // 수유: 하루 여러 번 → 75분 윈도우로 묶어 대표 시각만
+  // 수유: 75분 윈도우로 비슷한 시각끼리 묶어 대표 시각만
   for (const tm of clusterTimes(feeding, 75, minCount)) slots.push(makeSlot('feeding', tm));
   // 수면/기상: 90분 윈도우
   for (const tm of clusterTimes(sleep, 90, minCount)) slots.push(makeSlot('sleep', tm));
