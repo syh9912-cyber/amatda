@@ -304,7 +304,7 @@ router.post('/skill/beta', async (_req: Request, res: Response) => {
               '🏆 우수 리뷰어 5명\n' +
               '• 신세계상품권 10만원\n\n' +
               '📅 모집 기간: 6월 23일 ~ 7월 23일\n' +
-              '📣 발표: 8월 1일 (팝업 공지 + 개별 연락)\n' +
+              '📣 발표: 7월 25일 (팝업 공지 + 개별 연락)\n' +
               '📝 선정 시 베타 기간 중 스토어 리뷰 1회 이상 필수',
             buttons: [
               { action: 'webLink', label: '📝 신청하기', webLinkUrl: 'https://forms.gle/yRigYK7fSxWeqVke7' },
