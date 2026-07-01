@@ -2747,5 +2747,280 @@
       "title": "부칙",
       "body": "본 약관은 2026년 5월 25일부터 시행합니다."
     }
+  },
+  "childEdit": {
+    "infoManagement": "정보 관리",
+    "noSelectedChild": "선택된 아이가 없습니다",
+    "invalidNumberMessage": "{{label}}이(가) 올바른 숫자가 아니에요. 다시 입력해 주세요.",
+    "momHeightLabel": "엄마 키",
+    "momWeightLabel": "엄마 몸무게",
+    "childHeightLabel": "아이 키",
+    "childWeightLabel": "아이 몸무게",
+    "nameRequired": "이름을 입력해주세요",
+    "updateSuccessMessage": "정보가 수정되었습니다.",
+    "updateFailMessage": "정보 수정에 실패했습니다.",
+    "pregnancyInfoLabel": "임신 정보",
+    "childInfoLabel": "아이 정보",
+    "deleteConfirmTitle": "{{label}} 삭제",
+    "deleteConfirmMessage": "{{name}}의 모든 데이터가 영구적으로 삭제됩니다.\n정말 삭제하시겠습니까?",
+    "deleteSuccessMessage": "{{label}}가 삭제되었습니다.",
+    "deleteFailMessage": "삭제에 실패했습니다.",
+    "pregnancyInfoManagement": "임신 정보 관리",
+    "childInfoManagement": "아이 정보 관리",
+    "basicInfo": "기본 정보",
+    "babyNickname": "태명",
+    "name": "이름",
+    "gender": "성별",
+    "girl": "여아",
+    "boy": "남아",
+    "genderUnknown": "성별 모름",
+    "unknown": "모름",
+    "dueDate": "출산예정일",
+    "highRiskPregnancyLabel": "고위험 임신 여부",
+    "highRiskCheckTitle": "⚠️ 고위험 임신이에요",
+    "highRiskCheckSub": "쌍둥이/세쌍둥이, 임신성 고혈압, 임신성 당뇨, 조산 이력,\n35세 이상 고령 임신, 전치태반, 기타 의사 권고 사항",
+    "highRiskInfoNotice": "💡 24주부터 분만 병원 등록 알림이 표시되고,\n진통 발생 시 더 빠른 응급 안내가 제공됩니다.",
+    "pregnancyNotes": "임신 특이사항",
+    "pregnancyNotesPlaceholder": "쌍둥이, 고위험 임신 등",
+    "momHealthInfo": "산모 건강 정보",
+    "heightCm": "키 (cm)",
+    "momHeightPlaceholder": "예: 163",
+    "weightKg": "몸무게 (kg)",
+    "momWeightPlaceholder": "예: 58.5",
+    "bloodType": "혈액형",
+    "bloodTypeSuffix": "{{type}}형",
+    "specialNotes": "특이사항",
+    "momSpecialNotesPlaceholder": "알레르기, 복용 중인 약, 기저질환 등",
+    "healthInfo": "건강 정보",
+    "childHeightPlaceholder": "예: 85",
+    "childWeightPlaceholder": "예: 11.5",
+    "childSpecialNotesPlaceholder": "알레르기, 조심해야 하는 약 등",
+    "saving": "저장 중",
+    "saveInfo": "정보 저장",
+    "savingEllipsis": "저장 중...",
+    "deleteChildInfoLabel": "아이 정보 삭제",
+    "deleteChildInfoHint": "이 아이의 모든 기록이 삭제됩니다",
+    "deletePregnancyInfo": "임신 정보 삭제",
+    "deleteChildInfo": "아이 정보 삭제"
+  },
+  "lullaby": {
+    "title": "자장가",
+    "prenatalTitle": "태교음악",
+    "subtitle": "아이의 편안한 잠을 위해",
+    "prenatalSubtitle": "엄마와 아기의 편안한 시간",
+    "idleLabel": "소리를 선택하세요",
+    "idlePrenatalLabel": "태교음악을 선택하세요",
+    "idleDesc": "아래에서 원하는 소리를 탭하세요",
+    "momVoiceRecordLabel": "🤰 엄마 목소리 녹음",
+    "cryDetectLabel": "👂 울음 감지 자동 재생",
+    "cryDetectDesc": "아이가 울면 자동으로 자장가를 틀어줘요",
+    "micMonitoring": "마이크 모니터링 중...",
+    "stop": "정지",
+    "timerSectionLabel": "타이머",
+    "timer": {
+      "off": "끄기",
+      "min15": "15분",
+      "min30": "30분",
+      "hour1": "1시간",
+      "hour2": "2시간"
+    },
+    "category": {
+      "myVoice": "내 목소리",
+      "whiteNoise": "백색소음",
+      "nature": "자연의 소리",
+      "lullaby": "자장가"
+    },
+    "prenatalCategory": {
+      "momVoice": "엄마 목소리",
+      "classic": "🎻 클래식 태교곡",
+      "womb": "💓 자궁·심장박동",
+      "nature": "🌊 자연의 소리",
+      "meditation": "🧘 명상·힐링"
+    },
+    "saveRecordingTitle": "녹음 저장",
+    "recordingNamePlaceholder": "녹음 이름 (예: 엄마 자장가)",
+    "recordVoiceButton": "엄마/아빠 목소리 녹음하기",
+    "recordingInProgress": "녹음 중 {{time}} (탭하여 중지)",
+    "recordHint": "최대 2분, 자장가를 불러주세요",
+    "longPressToDelete": "길게 눌러 삭제",
+    "noRecordingsYet": "아직 녹음이 없어요",
+    "pendingBadge": "준비 중",
+    "soundPreparingTitle": "음원 준비 중",
+    "soundPreparingMessage": "'{{name}}' 음원은 곧 추가될 예정이에요.",
+    "micPermissionTitle": "권한 필요",
+    "micPermissionRecordMessage": "녹음을 위해 마이크 권한이 필요합니다.",
+    "micPermissionCryMessage": "울음 감지를 위해 마이크 권한이 필요합니다.",
+    "recordStartErrorMessage": "녹음을 시작할 수 없습니다.",
+    "defaultRecordingLabel": "녹음 {{count}}",
+    "deleteRecordingConfirm": "이 녹음을 삭제할까요?",
+    "myVoiceRecordingDesc": "내 목소리 녹음",
+    "sound": {
+      "womb": {
+        "label": "자궁 소리",
+        "desc": "엄마 뱃속 소리"
+      },
+      "vacuum": {
+        "label": "청소기",
+        "desc": "일정한 백색소음"
+      },
+      "hairdryer": {
+        "label": "드라이기",
+        "desc": "부드러운 바람소리"
+      },
+      "fan": {
+        "label": "선풍기",
+        "desc": "시원한 바람소리"
+      },
+      "rain": {
+        "label": "빗소리",
+        "desc": "잔잔한 빗소리"
+      },
+      "wave": {
+        "label": "파도소리",
+        "desc": "해변의 파도"
+      },
+      "forest": {
+        "label": "숲속",
+        "desc": "새소리와 바람"
+      },
+      "stream": {
+        "label": "시냇물",
+        "desc": "졸졸 흐르는 물"
+      },
+      "twinkle": {
+        "label": "반짝반짝",
+        "desc": "작은별 멜로디"
+      },
+      "brahms": {
+        "label": "브람스",
+        "desc": "브람스 자장가"
+      },
+      "mozart": {
+        "label": "모차르트",
+        "desc": "아이네클라이네"
+      },
+      "orgel": {
+        "label": "오르골",
+        "desc": "오르골 멜로디"
+      }
+    },
+    "prenatalSound": {
+      "mozartK448": {
+        "label": "모차르트 K.448",
+        "desc": "두 대의 피아노를 위한 소나타"
+      },
+      "vivaldiSpring": {
+        "label": "비발디 봄",
+        "desc": "사계 중 봄"
+      },
+      "bachAir": {
+        "label": "바흐 G선상의 아리아",
+        "desc": "관현악 모음곡 3번"
+      },
+      "pachelbelCanon": {
+        "label": "파헬벨 캐논",
+        "desc": "D장조 캐논"
+      },
+      "wombHeart": {
+        "label": "자궁 속 심장박동",
+        "desc": "60~80bpm, 자궁 내 환경"
+      },
+      "ocean": {
+        "label": "잔잔한 파도",
+        "desc": "해변의 부드러운 파도"
+      },
+      "rainSoft": {
+        "label": "부드러운 빗소리",
+        "desc": "창가의 빗소리"
+      },
+      "forestBirds": {
+        "label": "숲속 새소리",
+        "desc": "평화로운 아침 숲"
+      },
+      "healing432hz": {
+        "label": "432Hz 힐링",
+        "desc": "자연 주파수 명상"
+      },
+      "sleepPiano": {
+        "label": "수면 피아노",
+        "desc": "몽환적인 피아노 솔로"
+      },
+      "harp": {
+        "label": "하프",
+        "desc": "부드러운 하프 선율"
+      }
+    }
+  },
+  "momWellness": {
+    "screenTitle": "마음 건강 자가체크",
+    "selectChildPrompt": "아이를 선택해주세요",
+    "medicalCitationNote": "자가 체크 결과는 참고용이며 의학적 진단이 아닙니다. 지속되는 우울감은 전문가와 상담하세요.",
+    "citationEpds": "에든버러 산후우울척도(EPDS) — Cox, Holden & Sagovsky (1987)",
+    "citationMohw": "보건복지부 국가정신건강정보포털",
+    "moodCardTitle": "오늘 내 기분",
+    "moodCardHint": "이모지를 눌러 기록해두세요. EPDS 와 별개로 매일 가볍게 남길 수 있어요.",
+    "moodGreat": "아주 좋음",
+    "moodGood": "좋음",
+    "moodSoso": "보통",
+    "moodDown": "우울",
+    "moodBad": "많이 힘듦",
+    "moodNotePlaceholder": "한 줄 메모 (선택) — 오늘 어땠어요?",
+    "moodSavedHint": "저장됨 (기기에만 보관)",
+    "moodHistoryLast7Days": "지난 7일",
+    "stagePrenatal": "임신 중",
+    "stagePostpartumEarly": "출산 후 0~3개월",
+    "stagePostpartumMid": "출산 후 3~6개월",
+    "stagePostpartumLate": "출산 후 6~12개월",
+    "stageGeneral": "일반",
+    "directionImproving": "호전 중",
+    "directionStable": "안정적",
+    "directionWorsening": "악화 주의",
+    "directionUnknown": "데이터 부족",
+    "epdsOptionNever": "전혀 그렇지 않다",
+    "epdsOptionSometimes": "가끔 그렇다",
+    "epdsOptionOften": "자주 그렇다",
+    "epdsOptionAlways": "항상 그렇다",
+    "riskLow": "안정",
+    "riskMild": "약간 스트레스",
+    "riskModerate": "경미한 우울감",
+    "riskHigh": "우울감 뚜렷",
+    "riskUrgent": "긴급",
+    "loadQuestionsFailed": "문항을 불러오지 못했어요",
+    "networkError": "네트워크 오류",
+    "loadQuestionsFailedWithMsg": "문항 로드 실패: {{msg}}",
+    "answerAllQuestions": "모든 문항에 답해주세요",
+    "answerExtraQuestions": "맞춤 문항에도 답해주세요",
+    "saveFailed": "저장에 실패했어요. 잠시 후 다시 시도해주세요.",
+    "introTitle": "산전·산후 우울감 체크 (EPDS)",
+    "introDescLine1": "세계적으로 표준인 10문항 자가체크예요. 지난 7일 기준으로 답해주세요.",
+    "introDescLine2": "30점 만점 · ≥10 주의, ≥13 상담 권장",
+    "introDescLine3": "현재 단계에 맞춘 보조 문항도 함께 나와요.",
+    "introDisclaimer": "이 검사는 참고용 자가 체크이며 전문의의 진단이나 처방을 대체하지 않습니다.점수가 높거나 걱정이 된다면 반드시 의료 전문가 또는 아래 위기상담 전화에 연락하세요.",
+    "startBtn": "지금 체크 시작하기",
+    "analysisTotalChecks": "총 체크",
+    "analysisCountUnit": "{{count}}회",
+    "analysisAvgScore": "평균 점수",
+    "analysisScoreUnit": "{{score}}점",
+    "analysisLatestVsPrev": "최근 / 직전",
+    "nextRecommendedDate": "다음 권장일 · {{date}}",
+    "resultScoreLine": "{{score}} / {{maxScore}}점 · {{label}}",
+    "resultFamilyNotified": "가족 {{count}}명에게 알림이 전달됐어요",
+    "resultDisclaimer": "이 결과는 참고용 자가체크이며 의학적 진단이 아닙니다. 정확한 평가·진단은 정신건강 전문가와 상담하세요.",
+    "loadingQuestions": "문항을 불러오는 중...",
+    "cancelCheck": "체크 취소",
+    "extraQuestionsSeparator": "{{stage}} 맞춤 추가 문항",
+    "extraQuestionPrefix": "추가 {{index}}.",
+    "shareTitle": "남편·가족과 공유",
+    "shareDesc": "우울감 수치가 중간 이상일 때만 가족에게 알림이 가요. 점수는 공유되지 않아요.",
+    "submitBtn": "결과 확인하기",
+    "historySectionTitle": "내 마음 기록",
+    "historyEmpty": "아직 기록이 없어요. 주 1회 정기 체크를 권해드려요.",
+    "historyScoreUnit": "{{score}}점",
+    "historyFamilyShared": "가족 공유",
+    "emergencyTitle": "지금 많이 힘드시다면",
+    "emergencyLine1": "정신건강위기상담전화",
+    "emergencyLine1Suffix": "(24시간 무료)",
+    "emergencyLine2": "자살예방상담전화",
+    "emergencyLine3": "보건소 모자건강사업 (지역별 전화)"
   }
 }

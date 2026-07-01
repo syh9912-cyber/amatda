@@ -2747,5 +2747,280 @@
       "title": "附則",
       "body": "本規約は2026年5月25日から施行します。"
     }
+  },
+  "childEdit": {
+    "infoManagement": "情報管理",
+    "noSelectedChild": "選択されたお子さまがいません",
+    "invalidNumberMessage": "{{label}}が正しい数値ではありません。もう一度入力してください。",
+    "momHeightLabel": "ママの身長",
+    "momWeightLabel": "ママの体重",
+    "childHeightLabel": "お子さまの身長",
+    "childWeightLabel": "お子さまの体重",
+    "nameRequired": "お名前を入力してください",
+    "updateSuccessMessage": "情報が更新されました。",
+    "updateFailMessage": "情報の更新に失敗しました。",
+    "pregnancyInfoLabel": "妊娠情報",
+    "childInfoLabel": "お子さまの情報",
+    "deleteConfirmTitle": "{{label}}を削除",
+    "deleteConfirmMessage": "{{name}}のすべてのデータが完全に削除されます。\n本当に削除しますか？",
+    "deleteSuccessMessage": "{{label}}が削除されました。",
+    "deleteFailMessage": "削除に失敗しました。",
+    "pregnancyInfoManagement": "妊娠情報管理",
+    "childInfoManagement": "お子さま情報管理",
+    "basicInfo": "基本情報",
+    "babyNickname": "胎児のニックネーム",
+    "name": "お名前",
+    "gender": "性別",
+    "girl": "女の子",
+    "boy": "男の子",
+    "genderUnknown": "性別不明",
+    "unknown": "不明",
+    "dueDate": "出産予定日",
+    "highRiskPregnancyLabel": "高リスク妊娠かどうか",
+    "highRiskCheckTitle": "⚠️ 高リスク妊娠です",
+    "highRiskCheckSub": "双子・三つ子、妊娠高血圧、妊娠糖尿病、早産歴、\n35歳以上の高齢妊娠、前置胎盤、その他医師の勧告事項",
+    "highRiskInfoNotice": "💡 24週から分娩病院登録の通知が表示され、\n陣痛発生時により迅速な緊急案内が提供されます。",
+    "pregnancyNotes": "妊娠に関する特記事項",
+    "pregnancyNotesPlaceholder": "双子、高リスク妊娠など",
+    "momHealthInfo": "ママの健康情報",
+    "heightCm": "身長 (cm)",
+    "momHeightPlaceholder": "例: 163",
+    "weightKg": "体重 (kg)",
+    "momWeightPlaceholder": "例: 58.5",
+    "bloodType": "血液型",
+    "bloodTypeSuffix": "{{type}}型",
+    "specialNotes": "特記事項",
+    "momSpecialNotesPlaceholder": "アレルギー、服用中の薬、基礎疾患など",
+    "healthInfo": "健康情報",
+    "childHeightPlaceholder": "例: 85",
+    "childWeightPlaceholder": "例: 11.5",
+    "childSpecialNotesPlaceholder": "アレルギー、注意が必要な薬など",
+    "saving": "保存中",
+    "saveInfo": "情報を保存",
+    "savingEllipsis": "保存中...",
+    "deleteChildInfoLabel": "お子さまの情報を削除",
+    "deleteChildInfoHint": "このお子さまのすべての記録が削除されます",
+    "deletePregnancyInfo": "妊娠情報を削除",
+    "deleteChildInfo": "お子さまの情報を削除"
+  },
+  "lullaby": {
+    "title": "子守唄",
+    "prenatalTitle": "胎教音楽",
+    "subtitle": "お子さまの快適な眠りのために",
+    "prenatalSubtitle": "ママと赤ちゃんの穏やかなひととき",
+    "idleLabel": "音を選んでください",
+    "idlePrenatalLabel": "胎教音楽を選んでください",
+    "idleDesc": "下から好きな音をタップしてください",
+    "momVoiceRecordLabel": "🤰 ママの声を録音",
+    "cryDetectLabel": "👂 泣き声検知で自動再生",
+    "cryDetectDesc": "赤ちゃんが泣いたら自動で子守唄を流します",
+    "micMonitoring": "マイクをモニタリング中...",
+    "stop": "停止",
+    "timerSectionLabel": "タイマー",
+    "timer": {
+      "off": "オフ",
+      "min15": "15分",
+      "min30": "30分",
+      "hour1": "1時間",
+      "hour2": "2時間"
+    },
+    "category": {
+      "myVoice": "自分の声",
+      "whiteNoise": "ホワイトノイズ",
+      "nature": "自然の音",
+      "lullaby": "子守唄"
+    },
+    "prenatalCategory": {
+      "momVoice": "ママの声",
+      "classic": "🎻 クラシック胎教曲",
+      "womb": "💓 子宮内・心音",
+      "nature": "🌊 自然の音",
+      "meditation": "🧘 瞑想・ヒーリング"
+    },
+    "saveRecordingTitle": "録音を保存",
+    "recordingNamePlaceholder": "録音名（例：ママの子守唄）",
+    "recordVoiceButton": "パパ・ママの声を録音する",
+    "recordingInProgress": "録音中 {{time}}（タップで停止）",
+    "recordHint": "最大2分、子守唄を歌ってください",
+    "longPressToDelete": "長押しで削除",
+    "noRecordingsYet": "まだ録音がありません",
+    "pendingBadge": "準備中",
+    "soundPreparingTitle": "音源準備中",
+    "soundPreparingMessage": "「{{name}}」の音源は近日追加予定です。",
+    "micPermissionTitle": "権限が必要です",
+    "micPermissionRecordMessage": "録音にはマイクの権限が必要です。",
+    "micPermissionCryMessage": "泣き声検知にはマイクの権限が必要です。",
+    "recordStartErrorMessage": "録音を開始できません。",
+    "defaultRecordingLabel": "録音 {{count}}",
+    "deleteRecordingConfirm": "この録音を削除しますか？",
+    "myVoiceRecordingDesc": "自分の声の録音",
+    "sound": {
+      "womb": {
+        "label": "子宮の音",
+        "desc": "ママのお腹の中の音"
+      },
+      "vacuum": {
+        "label": "掃除機",
+        "desc": "一定のホワイトノイズ"
+      },
+      "hairdryer": {
+        "label": "ドライヤー",
+        "desc": "やわらかい風の音"
+      },
+      "fan": {
+        "label": "扇風機",
+        "desc": "涼しい風の音"
+      },
+      "rain": {
+        "label": "雨音",
+        "desc": "静かな雨音"
+      },
+      "wave": {
+        "label": "波の音",
+        "desc": "浜辺の波"
+      },
+      "forest": {
+        "label": "森の中",
+        "desc": "鳥の声と風"
+      },
+      "stream": {
+        "label": "小川",
+        "desc": "さらさら流れる水"
+      },
+      "twinkle": {
+        "label": "きらきら",
+        "desc": "きらきら星のメロディ"
+      },
+      "brahms": {
+        "label": "ブラームス",
+        "desc": "ブラームスの子守唄"
+      },
+      "mozart": {
+        "label": "モーツァルト",
+        "desc": "アイネ・クライネ・ナハトムジーク"
+      },
+      "orgel": {
+        "label": "オルゴール",
+        "desc": "オルゴールのメロディ"
+      }
+    },
+    "prenatalSound": {
+      "mozartK448": {
+        "label": "モーツァルト K.448",
+        "desc": "2台のピアノのためのソナタ"
+      },
+      "vivaldiSpring": {
+        "label": "ヴィヴァルディ「春」",
+        "desc": "「四季」より春"
+      },
+      "bachAir": {
+        "label": "バッハ「G線上のアリア」",
+        "desc": "管弦楽組曲第3番"
+      },
+      "pachelbelCanon": {
+        "label": "パッヘルベルのカノン",
+        "desc": "ニ長調のカノン"
+      },
+      "wombHeart": {
+        "label": "子宮内の心音",
+        "desc": "60〜80bpm、子宮内の環境音"
+      },
+      "ocean": {
+        "label": "静かな波",
+        "desc": "浜辺のやわらかな波"
+      },
+      "rainSoft": {
+        "label": "やわらかい雨音",
+        "desc": "窓辺の雨音"
+      },
+      "forestBirds": {
+        "label": "森の鳥の声",
+        "desc": "穏やかな朝の森"
+      },
+      "healing432hz": {
+        "label": "432Hzヒーリング",
+        "desc": "自然周波数の瞑想"
+      },
+      "sleepPiano": {
+        "label": "眠りのピアノ",
+        "desc": "幻想的なピアノソロ"
+      },
+      "harp": {
+        "label": "ハープ",
+        "desc": "やわらかなハープの調べ"
+      }
+    }
+  },
+  "momWellness": {
+    "screenTitle": "ママの心の健康セルフチェック",
+    "selectChildPrompt": "お子さまを選択してください",
+    "medicalCitationNote": "セルフチェックの結果は参考用であり、医学的診断ではありません。気分の落ち込みが続く場合は専門家にご相談ください。",
+    "citationEpds": "エジンバラ産後うつ病質問票（EPDS）— Cox, Holden & Sagovsky（1987）",
+    "citationMohw": "保健福祉部 国家精神健康情報ポータル",
+    "moodCardTitle": "今日の気分",
+    "moodCardHint": "絵文字をタップして記録しましょう。EPDSとは別に、毎日気軽に残せます。",
+    "moodGreat": "とても良い",
+    "moodGood": "良い",
+    "moodSoso": "普通",
+    "moodDown": "憂うつ",
+    "moodBad": "とてもつらい",
+    "moodNotePlaceholder": "一言メモ（任意）— 今日はどうでしたか？",
+    "moodSavedHint": "保存されました（端末のみに保存）",
+    "moodHistoryLast7Days": "過去7日間",
+    "stagePrenatal": "妊娠中",
+    "stagePostpartumEarly": "産後0～3か月",
+    "stagePostpartumMid": "産後3～6か月",
+    "stagePostpartumLate": "産後6～12か月",
+    "stageGeneral": "一般",
+    "directionImproving": "改善中",
+    "directionStable": "安定",
+    "directionWorsening": "悪化に注意",
+    "directionUnknown": "データ不足",
+    "epdsOptionNever": "まったくそう思わない",
+    "epdsOptionSometimes": "たまにそう思う",
+    "epdsOptionOften": "よくそう思う",
+    "epdsOptionAlways": "いつもそう思う",
+    "riskLow": "安定",
+    "riskMild": "少しストレスあり",
+    "riskModerate": "軽い気分の落ち込み",
+    "riskHigh": "明らかな気分の落ち込み",
+    "riskUrgent": "緊急",
+    "loadQuestionsFailed": "質問を読み込めませんでした",
+    "networkError": "ネットワークエラー",
+    "loadQuestionsFailedWithMsg": "質問の読み込みに失敗しました：{{msg}}",
+    "answerAllQuestions": "すべての質問にお答えください",
+    "answerExtraQuestions": "追加の質問にもお答えください",
+    "saveFailed": "保存に失敗しました。しばらくしてからもう一度お試しください。",
+    "introTitle": "妊娠・産後うつ病チェック（EPDS）",
+    "introDescLine1": "世界的に標準とされる10項目のセルフチェックです。過去7日間を基準にお答えください。",
+    "introDescLine2": "満点30点・10点以上で注意、13点以上で相談推奨",
+    "introDescLine3": "現在の段階に合わせた補助質問も一緒に表示されます。",
+    "introDisclaimer": "この検査は参考用のセルフチェックであり、専門医の診断や処方に代わるものではありません。点数が高い場合や不安な場合は、必ず医療専門家または下記の危機相談電話にご連絡ください。",
+    "startBtn": "今すぐチェックを始める",
+    "analysisTotalChecks": "総チェック回数",
+    "analysisCountUnit": "{{count}}回",
+    "analysisAvgScore": "平均スコア",
+    "analysisScoreUnit": "{{score}}点",
+    "analysisLatestVsPrev": "直近／前回",
+    "nextRecommendedDate": "次回推奨日・{{date}}",
+    "resultScoreLine": "{{score}} / {{maxScore}}点・{{label}}",
+    "resultFamilyNotified": "ご家族{{count}}名に通知が届きました",
+    "resultDisclaimer": "この結果は参考用のセルフチェックであり、医学的診断ではありません。正確な評価・診断は精神保健の専門家にご相談ください。",
+    "loadingQuestions": "質問を読み込んでいます...",
+    "cancelCheck": "チェックをキャンセル",
+    "extraQuestionsSeparator": "{{stage}}向けの追加質問",
+    "extraQuestionPrefix": "追加 {{index}}.",
+    "shareTitle": "夫・家族と共有",
+    "shareDesc": "気分の落ち込み度が中程度以上の場合のみ、ご家族に通知が届きます。点数は共有されません。",
+    "submitBtn": "結果を確認する",
+    "historySectionTitle": "私の心の記録",
+    "historyEmpty": "まだ記録がありません。週1回の定期チェックをおすすめします。",
+    "historyScoreUnit": "{{score}}点",
+    "historyFamilyShared": "家族と共有",
+    "emergencyTitle": "今とてもつらいときは",
+    "emergencyLine1": "精神保健危機相談電話",
+    "emergencyLine1Suffix": "（24時間無料）",
+    "emergencyLine2": "自殺予防相談電話",
+    "emergencyLine3": "保健所 母子保健事業（地域別電話）"
   }
 }

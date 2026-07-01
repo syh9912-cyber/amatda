@@ -12,6 +12,7 @@ import {
   TextInput,
  Image } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { BackButton } from '../../components/common/BackButton';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
@@ -36,10 +37,10 @@ type PrenatalCategory = 'myvoice' | 'classic' | 'womb' | 'nature' | 'meditation'
 
 interface SoundItem {
   id: string;
-  label: string;
+  labelKey: string;
   iconImg: ImageSourcePropType;
   category: SoundCategory;
-  desc: string;
+  descKey: string;
   source: AVPlaybackSource | null;
   uri?: string;
   /** 파일이 아직 없으면 안내용 — UI 에서 "준비 중" 배지 표시 */
@@ -48,28 +49,28 @@ interface SoundItem {
 
 interface PrenatalSoundItem {
   id: string;
-  label: string;
+  labelKey: string;
   iconImg: ImageSourcePropType;
   category: PrenatalCategory;
-  desc: string;
+  descKey: string;
   source: AVPlaybackSource | null;
   /** 파일이 아직 없으면 안내용. 파일 넣고 source require 주석 풀면 자동 활성 */
   pendingFile?: string;
 }
 
 const BUILT_IN_SOUNDS_ALL: SoundItem[] = [
-  { id: 'womb',      label: '자궁 소리', iconImg: require('../../assets/sound-womb.png'),      category: 'white',   desc: '엄마 뱃속 소리',   source: require('../../assets/sounds/womb.mp3') },
-  { id: 'vacuum',    label: '청소기',    iconImg: require('../../assets/sound-vacuum.png'),    category: 'white',   desc: '일정한 백색소음',  source: require('../../assets/sounds/vacuum.mp3') },
-  { id: 'hairdryer', label: '드라이기',  iconImg: require('../../assets/sound-hairdryer.png'), category: 'white',   desc: '부드러운 바람소리', source: null, pendingFile: 'hairdryer.mp3' },
-  { id: 'fan',       label: '선풍기',    iconImg: require('../../assets/sound-fan.png'),       category: 'white',   desc: '시원한 바람소리',  source: require('../../assets/sounds/fan.mp3') },
-  { id: 'rain',      label: '빗소리',    iconImg: require('../../assets/sound-rain.png'),      category: 'nature',  desc: '잔잔한 빗소리',    source: require('../../assets/sounds/rain.mp3') },
-  { id: 'wave',      label: '파도소리',  iconImg: require('../../assets/sound-wave.png'),      category: 'nature',  desc: '해변의 파도',      source: require('../../assets/sounds/wave.mp3') },
-  { id: 'forest',    label: '숲속',      iconImg: require('../../assets/sound-forest.png'),    category: 'nature',  desc: '새소리와 바람',    source: require('../../assets/sounds/forest.mp3') },
-  { id: 'stream',    label: '시냇물',    iconImg: require('../../assets/sound-stream.png'),   category: 'nature',  desc: '졸졸 흐르는 물',   source: require('../../assets/sounds/stream.mp3') },
-  { id: 'twinkle',   label: '반짝반짝',  iconImg: require('../../assets/sound-twinkle.png'),   category: 'lullaby', desc: '작은별 멜로디',    source: null, pendingFile: 'twinkle.mp3' },
-  { id: 'brahms',    label: '브람스',    iconImg: require('../../assets/sound-brahms.png'),    category: 'lullaby', desc: '브람스 자장가',    source: require('../../assets/sounds/brahms.mp3') },
-  { id: 'mozart',    label: '모차르트',  iconImg: require('../../assets/sound-mozart.png'),    category: 'lullaby', desc: '아이네클라이네',   source: require('../../assets/sounds/mozart.mp3') },
-  { id: 'orgel',     label: '오르골',    iconImg: require('../../assets/sound-orgel.png'),     category: 'lullaby', desc: '오르골 멜로디',    source: null, pendingFile: 'orgel.mp3' },
+  { id: 'womb',      labelKey: 'lullaby.sound.womb.label',      iconImg: require('../../assets/sound-womb.png'),      category: 'white',   descKey: 'lullaby.sound.womb.desc',      source: require('../../assets/sounds/womb.mp3') },
+  { id: 'vacuum',    labelKey: 'lullaby.sound.vacuum.label',    iconImg: require('../../assets/sound-vacuum.png'),    category: 'white',   descKey: 'lullaby.sound.vacuum.desc',    source: require('../../assets/sounds/vacuum.mp3') },
+  { id: 'hairdryer', labelKey: 'lullaby.sound.hairdryer.label', iconImg: require('../../assets/sound-hairdryer.png'), category: 'white',   descKey: 'lullaby.sound.hairdryer.desc', source: null, pendingFile: 'hairdryer.mp3' },
+  { id: 'fan',       labelKey: 'lullaby.sound.fan.label',       iconImg: require('../../assets/sound-fan.png'),       category: 'white',   descKey: 'lullaby.sound.fan.desc',       source: require('../../assets/sounds/fan.mp3') },
+  { id: 'rain',      labelKey: 'lullaby.sound.rain.label',      iconImg: require('../../assets/sound-rain.png'),      category: 'nature',  descKey: 'lullaby.sound.rain.desc',      source: require('../../assets/sounds/rain.mp3') },
+  { id: 'wave',      labelKey: 'lullaby.sound.wave.label',      iconImg: require('../../assets/sound-wave.png'),      category: 'nature',  descKey: 'lullaby.sound.wave.desc',      source: require('../../assets/sounds/wave.mp3') },
+  { id: 'forest',    labelKey: 'lullaby.sound.forest.label',    iconImg: require('../../assets/sound-forest.png'),    category: 'nature',  descKey: 'lullaby.sound.forest.desc',    source: require('../../assets/sounds/forest.mp3') },
+  { id: 'stream',    labelKey: 'lullaby.sound.stream.label',    iconImg: require('../../assets/sound-stream.png'),   category: 'nature',  descKey: 'lullaby.sound.stream.desc',    source: require('../../assets/sounds/stream.mp3') },
+  { id: 'twinkle',   labelKey: 'lullaby.sound.twinkle.label',   iconImg: require('../../assets/sound-twinkle.png'),   category: 'lullaby', descKey: 'lullaby.sound.twinkle.desc',   source: null, pendingFile: 'twinkle.mp3' },
+  { id: 'brahms',    labelKey: 'lullaby.sound.brahms.label',    iconImg: require('../../assets/sound-brahms.png'),    category: 'lullaby', descKey: 'lullaby.sound.brahms.desc',    source: require('../../assets/sounds/brahms.mp3') },
+  { id: 'mozart',    labelKey: 'lullaby.sound.mozart.label',    iconImg: require('../../assets/sound-mozart.png'),    category: 'lullaby', descKey: 'lullaby.sound.mozart.desc',    source: require('../../assets/sounds/mozart.mp3') },
+  { id: 'orgel',     labelKey: 'lullaby.sound.orgel.label',     iconImg: require('../../assets/sound-orgel.png'),     category: 'lullaby', descKey: 'lullaby.sound.orgel.desc',     source: null, pendingFile: 'orgel.mp3' },
 ];
 // 음원 미확보(source: null) 트랙은 스토어 심사 기준상 미완성 기능으로 보여 목록에서 제외.
 // 음원 추가 후 source 를 채우면 자동으로 다시 노출된다.
@@ -89,48 +90,48 @@ const DEFAULT_CRY_SOUND_ID =
  */
 const PRENATAL_SOUNDS_ALL: PrenatalSoundItem[] = [
   // 클래식 (태교 검증곡) — 작곡 자체는 전부 퍼블릭 도메인. 음원 미확보 → 준비 중 표시.
-  { id: 'p_mozart_k448',    label: '모차르트 K.448',    iconImg: require('../../assets/p-mozart.png'),       category: 'classic',    desc: '두 대의 피아노를 위한 소나타', source: null, pendingFile: 'mozart-sonata.mp3' },
-  { id: 'p_vivaldi_spring', label: '비발디 봄',          iconImg: require('../../assets/p-vivaldi.png'),      category: 'classic',    desc: '사계 중 봄',               source: null, pendingFile: 'vivaldi-spring.mp3' },
-  { id: 'p_bach_air',       label: '바흐 G선상의 아리아', iconImg: require('../../assets/p-bach.png'),         category: 'classic',    desc: '관현악 모음곡 3번',         source: null, pendingFile: 'bach-air.mp3' },
-  { id: 'p_pachelbel_canon',label: '파헬벨 캐논',        iconImg: require('../../assets/p-pachelbel.png'),    category: 'classic',    desc: 'D장조 캐논',               source: null, pendingFile: 'pachelbel-canon.mp3' },
+  { id: 'p_mozart_k448',    labelKey: 'lullaby.prenatalSound.mozartK448.label',    iconImg: require('../../assets/p-mozart.png'),       category: 'classic',    descKey: 'lullaby.prenatalSound.mozartK448.desc', source: null, pendingFile: 'mozart-sonata.mp3' },
+  { id: 'p_vivaldi_spring', labelKey: 'lullaby.prenatalSound.vivaldiSpring.label', iconImg: require('../../assets/p-vivaldi.png'),      category: 'classic',    descKey: 'lullaby.prenatalSound.vivaldiSpring.desc', source: null, pendingFile: 'vivaldi-spring.mp3' },
+  { id: 'p_bach_air',       labelKey: 'lullaby.prenatalSound.bachAir.label',       iconImg: require('../../assets/p-bach.png'),         category: 'classic',    descKey: 'lullaby.prenatalSound.bachAir.desc', source: null, pendingFile: 'bach-air.mp3' },
+  { id: 'p_pachelbel_canon',labelKey: 'lullaby.prenatalSound.pachelbelCanon.label',iconImg: require('../../assets/p-pachelbel.png'),    category: 'classic',    descKey: 'lullaby.prenatalSound.pachelbelCanon.desc', source: null, pendingFile: 'pachelbel-canon.mp3' },
 
   // 자궁·심장박동 (안정감) — 자장가 womb.mp3 재사용
-  { id: 'p_womb_heart', label: '자궁 속 심장박동', iconImg: require('../../assets/p-womb-heart.png'),  category: 'womb', desc: '60~80bpm, 자궁 내 환경',       source: require('../../assets/sounds/womb.mp3') },
+  { id: 'p_womb_heart', labelKey: 'lullaby.prenatalSound.wombHeart.label', iconImg: require('../../assets/p-womb-heart.png'),  category: 'womb', descKey: 'lullaby.prenatalSound.wombHeart.desc', source: require('../../assets/sounds/womb.mp3') },
 
   // 자연소리 (저주파 이완) — 자장가 음원 재사용
-  { id: 'p_ocean',       label: '잔잔한 파도',    iconImg: require('../../assets/p-ocean.png'),        category: 'nature', desc: '해변의 부드러운 파도',  source: require('../../assets/sounds/wave.mp3') },
-  { id: 'p_rain_soft',   label: '부드러운 빗소리', iconImg: require('../../assets/p-rain.png'),         category: 'nature', desc: '창가의 빗소리',         source: require('../../assets/sounds/rain.mp3') },
-  { id: 'p_forest_birds',label: '숲속 새소리',    iconImg: require('../../assets/p-forest.png'),       category: 'nature', desc: '평화로운 아침 숲',      source: require('../../assets/sounds/forest.mp3') },
+  { id: 'p_ocean',       labelKey: 'lullaby.prenatalSound.ocean.label',       iconImg: require('../../assets/p-ocean.png'),        category: 'nature', descKey: 'lullaby.prenatalSound.ocean.desc',  source: require('../../assets/sounds/wave.mp3') },
+  { id: 'p_rain_soft',   labelKey: 'lullaby.prenatalSound.rainSoft.label',    iconImg: require('../../assets/p-rain.png'),         category: 'nature', descKey: 'lullaby.prenatalSound.rainSoft.desc',         source: require('../../assets/sounds/rain.mp3') },
+  { id: 'p_forest_birds',labelKey: 'lullaby.prenatalSound.forestBirds.label', iconImg: require('../../assets/p-forest.png'),       category: 'nature', descKey: 'lullaby.prenatalSound.forestBirds.desc',      source: require('../../assets/sounds/forest.mp3') },
 
   // 명상·힐링
-  { id: 'p_432hz',        label: '432Hz 힐링',  iconImg: require('../../assets/p-meditation.png'),   category: 'meditation', desc: '자연 주파수 명상',     source: require('../../assets/sounds/meditation-432hz.mp3') },
-  { id: 'p_sleep_piano',  label: '수면 피아노', iconImg: require('../../assets/p-meditation.png'),   category: 'meditation', desc: '몽환적인 피아노 솔로', source: require('../../assets/sounds/sleeppiano.mp3') },
-  { id: 'p_harp',         label: '하프',        iconImg: require('../../assets/p-meditation.png'),   category: 'meditation', desc: '부드러운 하프 선율',   source: require('../../assets/sounds/harp.mp3') },
+  { id: 'p_432hz',        labelKey: 'lullaby.prenatalSound.healing432hz.label', iconImg: require('../../assets/p-meditation.png'),   category: 'meditation', descKey: 'lullaby.prenatalSound.healing432hz.desc',     source: require('../../assets/sounds/meditation-432hz.mp3') },
+  { id: 'p_sleep_piano',  labelKey: 'lullaby.prenatalSound.sleepPiano.label',   iconImg: require('../../assets/p-meditation.png'),   category: 'meditation', descKey: 'lullaby.prenatalSound.sleepPiano.desc', source: require('../../assets/sounds/sleeppiano.mp3') },
+  { id: 'p_harp',         labelKey: 'lullaby.prenatalSound.harp.label',        iconImg: require('../../assets/p-meditation.png'),   category: 'meditation', descKey: 'lullaby.prenatalSound.harp.desc',        source: require('../../assets/sounds/harp.mp3') },
 ];
 // 음원 미확보 트랙(클래식 등)은 목록에서 제외 — 음원 추가 시 자동 노출
 const PRENATAL_SOUNDS: PrenatalSoundItem[] = PRENATAL_SOUNDS_ALL.filter((s) => s.source !== null);
 
 const TIMER_OPTIONS = [
-  { label: '끄기', minutes: 0 },
-  { label: '15분', minutes: 15 },
-  { label: '30분', minutes: 30 },
-  { label: '1시간', minutes: 60 },
-  { label: '2시간', minutes: 120 },
+  { labelKey: 'lullaby.timer.off', minutes: 0 },
+  { labelKey: 'lullaby.timer.min15', minutes: 15 },
+  { labelKey: 'lullaby.timer.min30', minutes: 30 },
+  { labelKey: 'lullaby.timer.hour1', minutes: 60 },
+  { labelKey: 'lullaby.timer.hour2', minutes: 120 },
 ];
 
 const CATEGORIES = [
-  { key: 'myvoice' as const, label: '내 목소리' },
-  { key: 'white' as const, label: '백색소음' },
-  { key: 'nature' as const, label: '자연의 소리' },
-  { key: 'lullaby' as const, label: '자장가' },
+  { key: 'myvoice' as const, labelKey: 'lullaby.category.myVoice' },
+  { key: 'white' as const, labelKey: 'lullaby.category.whiteNoise' },
+  { key: 'nature' as const, labelKey: 'lullaby.category.nature' },
+  { key: 'lullaby' as const, labelKey: 'lullaby.category.lullaby' },
 ];
 
 const PRENATAL_CATEGORIES = [
-  { key: 'myvoice' as const, label: '엄마 목소리' },
-  { key: 'classic' as const, label: '🎻 클래식 태교곡' },
-  { key: 'womb' as const, label: '💓 자궁·심장박동' },
-  { key: 'nature' as const, label: '🌊 자연의 소리' },
-  { key: 'meditation' as const, label: '🧘 명상·힐링' },
+  { key: 'myvoice' as const, labelKey: 'lullaby.prenatalCategory.momVoice' },
+  { key: 'classic' as const, labelKey: 'lullaby.prenatalCategory.classic' },
+  { key: 'womb' as const, labelKey: 'lullaby.prenatalCategory.womb' },
+  { key: 'nature' as const, labelKey: 'lullaby.prenatalCategory.nature' },
+  { key: 'meditation' as const, labelKey: 'lullaby.prenatalCategory.meditation' },
 ];
 
 const MY_RECORDINGS_KEY = 'amatda_my_recordings';
@@ -163,17 +164,18 @@ interface MyRecording {
 /* ------------------------------------------------------------------ */
 
 export default function LullabyScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ mode?: string }>();
   const isPrenatal = params.mode === 'prenatal';
-  const headerTitle = isPrenatal ? '태교음악' : '자장가';
+  const headerTitle = isPrenatal ? t('lullaby.prenatalTitle') : t('lullaby.title');
   const headerSub = isPrenatal
-    ? '엄마와 아기의 편안한 시간'
-    : '아이의 편안한 잠을 위해';
-  const idleLabel = isPrenatal ? '태교음악을 선택하세요' : '소리를 선택하세요';
+    ? t('lullaby.prenatalSubtitle')
+    : t('lullaby.subtitle');
+  const idleLabel = isPrenatal ? t('lullaby.idlePrenatalLabel') : t('lullaby.idleLabel');
   const cryRowLabel = isPrenatal
-    ? '🤰 엄마 목소리 녹음'
-    : '👂 울음 감지 자동 재생';
+    ? t('lullaby.momVoiceRecordLabel')
+    : t('lullaby.cryDetectLabel');
   // 사용 가이드 (모드별: 자장가 / 태교음악) — 첫 진입 1회 자동표시 + ? 버튼 재열람
   const guideKey = isPrenatal ? 'lullaby_prenatal' : 'lullaby';
   const guidePages = isPrenatal ? LULLABY_PRENATAL_GUIDE : LULLABY_GUIDE;
@@ -274,10 +276,10 @@ export default function LullabyScreen() {
         source = { uri: myRec.uri };
       } else if (builtIn && !builtIn.source) {
         // 자장가 음원 미확보 — 태교와 동일한 안내
-        Alert.alert('음원 준비 중', `'${builtIn.label}' 음원은 곧 추가될 예정이에요.`);
+        Alert.alert(t('lullaby.soundPreparingTitle'), t('lullaby.soundPreparingMessage', { name: t(builtIn.labelKey) }));
         return;
       } else if (prenatal && !prenatal.source) {
-        Alert.alert('음원 준비 중', `'${prenatal.label}' 음원은 곧 추가될 예정이에요.`);
+        Alert.alert(t('lullaby.soundPreparingTitle'), t('lullaby.soundPreparingMessage', { name: t(prenatal.labelKey) }));
         return;
       } else {
         return;
@@ -290,7 +292,7 @@ export default function LullabyScreen() {
     } catch (err) {
       console.warn('Sound play error:', err);
     }
-  }, [myRecordings]);
+  }, [myRecordings, t]);
 
   const stopSound = useCallback(async () => {
     try {
@@ -315,7 +317,7 @@ export default function LullabyScreen() {
 
       const perm = await Audio.requestPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert('권한 필요', '녹음을 위해 마이크 권한이 필요합니다.');
+        Alert.alert(t('lullaby.micPermissionTitle'), t('lullaby.micPermissionRecordMessage'));
         return;
       }
       await Audio.setAudioModeAsync({ allowsRecordingIOS: true, staysActiveInBackground: true, playsInSilentModeIOS: true });
@@ -339,9 +341,9 @@ export default function LullabyScreen() {
       }, 1000);
     } catch (err) {
       console.warn('Recording start error:', err);
-      Alert.alert('오류', '녹음을 시작할 수 없습니다.');
+      Alert.alert(t('common.error'), t('lullaby.recordStartErrorMessage'));
     }
-  }, [playing, stopSound]);
+  }, [playing, stopSound, t]);
 
   const stopVoiceRecording = useCallback(async () => {
     if (recordTimerRef.current) { clearInterval(recordTimerRef.current); recordTimerRef.current = null; }
@@ -365,7 +367,7 @@ export default function LullabyScreen() {
 
   const saveRecording = useCallback(async () => {
     if (!pendingRecordUri) return;
-    const label = recordLabel.trim() || `녹음 ${myRecordings.length + 1}`;
+    const label = recordLabel.trim() || t('lullaby.defaultRecordingLabel', { count: myRecordings.length + 1 });
     const newRec: MyRecording = {
       id: `rec_${Date.now()}`,
       label,
@@ -378,13 +380,13 @@ export default function LullabyScreen() {
     setShowNameInput(false);
     setPendingRecordUri(null);
     setRecordLabel('');
-  }, [pendingRecordUri, recordLabel, myRecordings]);
+  }, [pendingRecordUri, recordLabel, myRecordings, t]);
 
   const deleteRecording = useCallback(async (id: string) => {
-    Alert.alert('삭제', '이 녹음을 삭제할까요?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('common.delete'), t('lullaby.deleteRecordingConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: async () => {
           if (playing === id) await stopSound();
           const updated = myRecordings.filter((r) => r.id !== id);
@@ -393,13 +395,13 @@ export default function LullabyScreen() {
         },
       },
     ]);
-  }, [myRecordings, playing, stopSound]);
+  }, [myRecordings, playing, stopSound, t]);
 
   // -- Cry Detection --
   const startCryDetection = useCallback(async () => {
     try {
       const perm = await Audio.requestPermissionsAsync();
-      if (!perm.granted) { Alert.alert('권한 필요', '울음 감지를 위해 마이크 권한이 필요합니다.'); setCryDetect(false); return; }
+      if (!perm.granted) { Alert.alert(t('lullaby.micPermissionTitle'), t('lullaby.micPermissionCryMessage')); setCryDetect(false); return; }
       await Audio.setAudioModeAsync({ allowsRecordingIOS: true, staysActiveInBackground: true, playsInSilentModeIOS: true });
 
       const recording = new Audio.Recording();
@@ -425,7 +427,7 @@ export default function LullabyScreen() {
       console.warn('Cry detection error:', err);
       setCryDetect(false);
     }
-  }, [lastCrySound, playSound]);
+  }, [lastCrySound, playSound, t]);
 
   const stopCryDetection = useCallback(async () => {
     if (cryCheckRef.current) { clearInterval(cryCheckRef.current); cryCheckRef.current = null; }
@@ -444,14 +446,15 @@ export default function LullabyScreen() {
     return `${m}:${String(s).padStart(2, '0')}`;
   };
 
-  const currentSound = (isPrenatal
+  const currentSoundItem = isPrenatal
     ? PRENATAL_SOUNDS.find((s) => s.id === playing)
-    : BUILT_IN_SOUNDS.find((s) => s.id === playing)) ?? (
-    myRecordings.find((r) => r.id === playing) ? {
-      id: playing!, label: myRecordings.find((r) => r.id === playing)!.label,
-      iconImg: IC_MIC, desc: '내 목소리 녹음', category: 'myvoice' as const, source: null,
-    } : null
-  );
+    : BUILT_IN_SOUNDS.find((s) => s.id === playing);
+  const currentRecording = myRecordings.find((r) => r.id === playing);
+  const currentSound = currentSoundItem
+    ? { iconImg: currentSoundItem.iconImg, label: t(currentSoundItem.labelKey), desc: t(currentSoundItem.descKey) }
+    : currentRecording
+      ? { iconImg: IC_MIC, label: currentRecording.label, desc: t('lullaby.myVoiceRecordingDesc') }
+      : null;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -473,7 +476,7 @@ export default function LullabyScreen() {
           <Text style={styles.nowPlayingDesc}>{currentSound.desc}</Text>
           {remaining > 0 && <Text style={styles.timerDisplay}>{formatTime(remaining)}</Text>}
           <TouchableOpacity style={styles.stopBtn} onPress={stopSound}>
-            <Text style={styles.stopBtnText}>정지</Text>
+            <Text style={styles.stopBtnText}>{t('lullaby.stop')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -482,7 +485,7 @@ export default function LullabyScreen() {
             <Image source={IC_LULLABY} style={styles.nowPlayingIconImg} resizeMode="contain" />
           </View>
           <Text style={styles.nowPlayingLabel}>{idleLabel}</Text>
-          <Text style={styles.nowPlayingDesc}>아래에서 원하는 소리를 탭하세요</Text>
+          <Text style={styles.nowPlayingDesc}>{t('lullaby.idleDesc')}</Text>
         </View>
       )}
 
@@ -492,7 +495,7 @@ export default function LullabyScreen() {
           <View style={styles.cryInfo}>
             <Text style={styles.cryLabel}>{cryRowLabel}</Text>
             <Text style={styles.cryDesc}>
-              {isListening ? '마이크 모니터링 중...' : '아이가 울면 자동으로 자장가를 틀어줘요'}
+              {isListening ? t('lullaby.micMonitoring') : t('lullaby.cryDetectDesc')}
             </Text>
           </View>
           <Switch value={cryDetect} onValueChange={toggleCryDetect} trackColor={{ false: COLOR.cryOff, true: COLOR.cryOn }} thumbColor="#FFF" />
@@ -501,11 +504,11 @@ export default function LullabyScreen() {
 
       {/* Timer */}
       <View style={styles.timerRow}>
-        <Text style={styles.timerLabel}>타이머</Text>
+        <Text style={styles.timerLabel}>{t('lullaby.timerSectionLabel')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.timerChips}>
           {TIMER_OPTIONS.map((opt) => (
             <TouchableOpacity key={opt.minutes} style={[styles.timerChip, timer === opt.minutes && styles.timerChipActive]} onPress={() => handleTimer(opt.minutes)}>
-              <Text style={[styles.timerChipText, timer === opt.minutes && styles.timerChipTextActive]}>{opt.label}</Text>
+              <Text style={[styles.timerChipText, timer === opt.minutes && styles.timerChipTextActive]}>{t(opt.labelKey)}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -516,11 +519,11 @@ export default function LullabyScreen() {
         <View style={styles.nameInputWrap}>
           <View style={styles.nameInputTitleRow}>
             <Image source={IC_LULLABY} style={styles.nameInputTitleIconImg} resizeMode="contain" />
-            <Text style={styles.nameInputTitle}>{' 녹음 저장'}</Text>
+            <Text style={styles.nameInputTitle}>{` ${t('lullaby.saveRecordingTitle')}`}</Text>
           </View>
           <TextInput
             style={styles.nameInput}
-            placeholder="녹음 이름 (예: 엄마 자장가)"
+            placeholder={t('lullaby.recordingNamePlaceholder')}
             placeholderTextColor={COLOR.textSub}
             value={recordLabel}
             onChangeText={setRecordLabel}
@@ -528,10 +531,10 @@ export default function LullabyScreen() {
           />
           <View style={styles.nameInputBtns}>
             <TouchableOpacity style={styles.nameInputCancel} onPress={() => { setShowNameInput(false); setPendingRecordUri(null); }}>
-              <Text style={styles.nameInputCancelText}>취소</Text>
+              <Text style={styles.nameInputCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.nameInputSave} onPress={saveRecording}>
-              <Text style={styles.nameInputSaveText}>저장</Text>
+              <Text style={styles.nameInputSaveText}>{t('common.save')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -541,7 +544,7 @@ export default function LullabyScreen() {
       <ScrollView style={styles.soundList} showsVerticalScrollIndicator={false}>
         {(isPrenatal ? PRENATAL_CATEGORIES : CATEGORIES).map((cat) => (
           <View key={cat.key} style={styles.categorySection}>
-            <Text style={styles.categoryTitle}>{cat.label}</Text>
+            <Text style={styles.categoryTitle}>{t(cat.labelKey)}</Text>
 
             {/* My Voice: record button + recordings */}
             {cat.key === 'myvoice' && (
@@ -554,10 +557,10 @@ export default function LullabyScreen() {
                 >
                   <View style={[styles.recordDot, isRecording && styles.recordDotActive]} />
                   <Text style={styles.recordBtnText}>
-                    {isRecording ? `녹음 중 ${formatTime(recordSecs)} (탭하여 중지)` : '엄마/아빠 목소리 녹음하기'}
+                    {isRecording ? t('lullaby.recordingInProgress', { time: formatTime(recordSecs) }) : t('lullaby.recordVoiceButton')}
                   </Text>
                 </TouchableOpacity>
-                <Text style={styles.recordHint}>최대 2분, 자장가를 불러주세요</Text>
+                <Text style={styles.recordHint}>{t('lullaby.recordHint')}</Text>
 
                 {/* Saved recordings */}
                 <View style={styles.soundGrid}>
@@ -581,10 +584,10 @@ export default function LullabyScreen() {
                   })}
                 </View>
                 {myRecordings.length > 0 && (
-                  <Text style={styles.recordDeleteHint}>길게 눌러 삭제</Text>
+                  <Text style={styles.recordDeleteHint}>{t('lullaby.longPressToDelete')}</Text>
                 )}
                 {myRecordings.length === 0 && !isRecording && (
-                  <Text style={styles.recordEmpty}>아직 녹음이 없어요</Text>
+                  <Text style={styles.recordEmpty}>{t('lullaby.noRecordingsYet')}</Text>
                 )}
               </View>
             )}
@@ -615,9 +618,9 @@ export default function LullabyScreen() {
                         ]}
                         numberOfLines={1}
                       >
-                        {sound.label}
+                        {t(sound.labelKey)}
                       </Text>
-                      {isPending && <Text style={styles.pendingBadge}>준비 중</Text>}
+                      {isPending && <Text style={styles.pendingBadge}>{t('lullaby.pendingBadge')}</Text>}
                       {isActive && <View style={styles.playingDot} />}
                     </TouchableOpacity>
                   );
@@ -651,9 +654,9 @@ export default function LullabyScreen() {
                         ]}
                         numberOfLines={1}
                       >
-                        {sound.label}
+                        {t(sound.labelKey)}
                       </Text>
-                      {isPending && <Text style={styles.pendingBadge}>준비 중</Text>}
+                      {isPending && <Text style={styles.pendingBadge}>{t('lullaby.pendingBadge')}</Text>}
                       {isActive && <View style={styles.playingDot} />}
                     </TouchableOpacity>
                   );

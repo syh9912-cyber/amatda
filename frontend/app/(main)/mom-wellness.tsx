@@ -13,6 +13,8 @@ import {
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useChildStore } from '../../stores/childStore';
 import { pregnancyApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
@@ -27,13 +29,15 @@ import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
 // ─── 빠른 기분 일기 (간단 mood pick + 한 줄 메모) — EPDS 와 별개, AsyncStorage 로컬 저장 ───
 type MoodKey = 'great' | 'good' | 'soso' | 'down' | 'bad';
-const MOOD_OPTIONS: { key: MoodKey; emoji: string; label: string; color: string }[] = [
-  { key: 'great', emoji: '😊', label: '아주 좋음', color: '#43A047' },
-  { key: 'good', emoji: '🙂', label: '좋음', color: '#7CB342' },
-  { key: 'soso', emoji: '😐', label: '보통', color: '#FB8C00' },
-  { key: 'down', emoji: '😔', label: '우울', color: '#FB6F92' },
-  { key: 'bad', emoji: '😢', label: '많이 힘듦', color: '#C62828' },
-];
+function getMoodOptions(t: TFunction): { key: MoodKey; emoji: string; label: string; color: string }[] {
+  return [
+    { key: 'great', emoji: '😊', label: t('momWellness.moodGreat'), color: '#43A047' },
+    { key: 'good', emoji: '🙂', label: t('momWellness.moodGood'), color: '#7CB342' },
+    { key: 'soso', emoji: '😐', label: t('momWellness.moodSoso'), color: '#FB8C00' },
+    { key: 'down', emoji: '😔', label: t('momWellness.moodDown'), color: '#FB6F92' },
+    { key: 'bad', emoji: '😢', label: t('momWellness.moodBad'), color: '#C62828' },
+  ];
+}
 const MOOD_STORAGE_PREFIX = 'amatda_mood_diary_';
 interface MoodEntry { date: string; mood: MoodKey; note?: string }
 
@@ -88,41 +92,55 @@ function detectStage(dueDate?: string | null, birthDate?: string | null): Mental
   return 'general';
 }
 
-const STAGE_LABEL: Record<MentalStage, string> = {
-  prenatal: '임신 중',
-  postpartum_early: '출산 후 0~3개월',
-  postpartum_mid: '출산 후 3~6개월',
-  postpartum_late: '출산 후 6~12개월',
-  general: '일반',
-};
+function getStageLabel(t: TFunction): Record<MentalStage, string> {
+  return {
+    prenatal: t('momWellness.stagePrenatal'),
+    postpartum_early: t('momWellness.stagePostpartumEarly'),
+    postpartum_mid: t('momWellness.stagePostpartumMid'),
+    postpartum_late: t('momWellness.stagePostpartumLate'),
+    general: t('momWellness.stageGeneral'),
+  };
+}
 
-const DIRECTION_META: Record<string, { emoji: string; label: string; color: string }> = {
-  improving: { emoji: '📉', label: '호전 중', color: '#2E7D32' },
-  stable: { emoji: '➡️', label: '안정적', color: '#1565C0' },
-  worsening: { emoji: '📈', label: '악화 주의', color: '#C62828' },
-  unknown: { emoji: '—', label: '데이터 부족', color: '#666' },
-};
+function getDirectionMeta(t: TFunction): Record<string, { emoji: string; label: string; color: string }> {
+  return {
+    improving: { emoji: '📉', label: t('momWellness.directionImproving'), color: '#2E7D32' },
+    stable: { emoji: '➡️', label: t('momWellness.directionStable'), color: '#1565C0' },
+    worsening: { emoji: '📈', label: t('momWellness.directionWorsening'), color: '#C62828' },
+    unknown: { emoji: '—', label: t('momWellness.directionUnknown'), color: '#666' },
+  };
+}
 
-const EPDS_OPTIONS = [
-  { score: 0, label: '전혀 그렇지 않다' },
-  { score: 1, label: '가끔 그렇다' },
-  { score: 2, label: '자주 그렇다' },
-  { score: 3, label: '항상 그렇다' },
-];
+function getEpdsOptions(t: TFunction) {
+  return [
+    { score: 0, label: t('momWellness.epdsOptionNever') },
+    { score: 1, label: t('momWellness.epdsOptionSometimes') },
+    { score: 2, label: t('momWellness.epdsOptionOften') },
+    { score: 3, label: t('momWellness.epdsOptionAlways') },
+  ];
+}
 
-const RISK_STYLE: Record<string, { bg: string; color: string; emoji: string; label: string }> = {
-  low: { bg: '#E8F5E9', color: '#2E7D32', emoji: '😊', label: '안정' },
-  mild: { bg: '#FFF8E1', color: '#F57C00', emoji: '😌', label: '약간 스트레스' },
-  moderate: { bg: '#FFECB3', color: '#E65100', emoji: '😔', label: '경미한 우울감' },
-  high: { bg: '#FFCDD2', color: '#C62828', emoji: '😢', label: '우울감 뚜렷' },
-  urgent: { bg: '#B71C1C', color: '#FFFFFF', emoji: '🚨', label: '긴급' },
-};
+function getRiskStyle(t: TFunction): Record<string, { bg: string; color: string; emoji: string; label: string }> {
+  return {
+    low: { bg: '#E8F5E9', color: '#2E7D32', emoji: '😊', label: t('momWellness.riskLow') },
+    mild: { bg: '#FFF8E1', color: '#F57C00', emoji: '😌', label: t('momWellness.riskMild') },
+    moderate: { bg: '#FFECB3', color: '#E65100', emoji: '😔', label: t('momWellness.riskModerate') },
+    high: { bg: '#FFCDD2', color: '#C62828', emoji: '😢', label: t('momWellness.riskHigh') },
+    urgent: { bg: '#B71C1C', color: '#FFFFFF', emoji: '🚨', label: t('momWellness.riskUrgent') },
+  };
+}
 
 export default function MomWellnessScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { selectedChild } = useChildStore();
   const childId = selectedChild?.id ?? '';
   const stage: MentalStage = detectStage(selectedChild?.dueDate, selectedChild?.birthDate);
+  const MOOD_OPTIONS = getMoodOptions(t);
+  const STAGE_LABEL = getStageLabel(t);
+  const DIRECTION_META = getDirectionMeta(t);
+  const EPDS_OPTIONS = getEpdsOptions(t);
+  const RISK_STYLE = getRiskStyle(t);
 
   const [guideVisible, setGuideVisible] = useState(false);
   useEffect(() => { shouldAutoShowGuide('mom-wellness').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
@@ -201,15 +219,15 @@ export default function MomWellnessScreen() {
         setQuestions(q);
         setExtraQuestions(payload?.extraQuestions ?? []);
       } else {
-        setLoadError('문항을 불러오지 못했어요');
+        setLoadError(t('momWellness.loadQuestionsFailed'));
       }
     } catch (err: unknown) {
-      const msg = (err as { message?: string })?.message ?? '네트워크 오류';
-      setLoadError(`문항 로드 실패: ${msg}`);
+      const msg = (err as { message?: string })?.message ?? t('momWellness.networkError');
+      setLoadError(t('momWellness.loadQuestionsFailedWithMsg', { msg }));
     } finally {
       setLoadingQuestions(false);
     }
-  }, [stage]);
+  }, [stage, t]);
 
   const loadHistoryAndAnalysis = useCallback(async () => {
     if (!childId) return;
@@ -246,11 +264,11 @@ export default function MomWellnessScreen() {
     if (!childId) return;
     // 서버 문항 수와 불일치 시 점수 왜곡 방지 — 하드코딩 10 대신 실제 문항 수 사용
     if (questions.length === 0 || Object.keys(answers).length < questions.length) {
-      Alert.alert('알림', '모든 문항에 답해주세요');
+      Alert.alert(t('common.notice'), t('momWellness.answerAllQuestions'));
       return;
     }
     if (extraQuestions.length > 0 && Object.keys(extraAnswers).length < extraQuestions.length) {
-      Alert.alert('알림', '맞춤 문항에도 답해주세요');
+      Alert.alert(t('common.notice'), t('momWellness.answerExtraQuestions'));
       return;
     }
     setSubmitting(true);
@@ -267,7 +285,7 @@ export default function MomWellnessScreen() {
       setExtraAnswers({});
       loadHistoryAndAnalysis();
     } catch {
-      Alert.alert('오류', '저장에 실패했어요. 잠시 후 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('momWellness.saveFailed'));
     }
     setSubmitting(false);
   };
@@ -282,8 +300,8 @@ export default function MomWellnessScreen() {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <ScreenHeader title="마음 건강 자가체크" />
-        <View style={styles.emptyCenter}><Text style={styles.emptyText}>아이를 선택해주세요</Text></View>
+        <ScreenHeader title={t('momWellness.screenTitle')} />
+        <View style={styles.emptyCenter}><Text style={styles.emptyText}>{t('momWellness.selectChildPrompt')}</Text></View>
       </View>
     );
   }
@@ -292,23 +310,23 @@ export default function MomWellnessScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScreenHeader title="마음 건강 자가체크" right={<GuideButton onPress={() => setGuideVisible(true)} color="#9D8CC6" />} />
+      <ScreenHeader title={t('momWellness.screenTitle')} right={<GuideButton onPress={() => setGuideVisible(true)} color="#9D8CC6" />} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <MedicalCitation
           compact
-          note="자가 체크 결과는 참고용이며 의학적 진단이 아닙니다. 지속되는 우울감은 전문가와 상담하세요."
+          note={t('momWellness.medicalCitationNote')}
           sources={[
-            { label: '에든버러 산후우울척도(EPDS) — Cox, Holden & Sagovsky (1987)' },
-            { label: '보건복지부 국가정신건강정보포털', url: 'https://www.mentalhealth.go.kr' },
+            { label: t('momWellness.citationEpds') },
+            { label: t('momWellness.citationMohw'), url: 'https://www.mentalhealth.go.kr' },
           ]}
         />
 
         {/* ─── 빠른 기분 일기 ─── */}
         {!showSurvey && !result && (
           <View style={styles.moodCard}>
-            <Text style={styles.moodTitle}>💝 오늘 내 기분</Text>
-            <Text style={styles.moodHint}>이모지를 눌러 기록해두세요. EPDS 와 별개로 매일 가볍게 남길 수 있어요.</Text>
+            <Text style={styles.moodTitle}>💝 {t('momWellness.moodCardTitle')}</Text>
+            <Text style={styles.moodHint}>{t('momWellness.moodCardHint')}</Text>
             <View style={styles.moodRow}>
               {MOOD_OPTIONS.map((opt) => {
                 const selected = todayMood === opt.key;
@@ -329,7 +347,7 @@ export default function MomWellnessScreen() {
               <>
                 <TextInput
                   style={styles.moodNoteInput}
-                  placeholder="한 줄 메모 (선택) — 오늘 어땠어요?"
+                  placeholder={t('momWellness.moodNotePlaceholder')}
                   placeholderTextColor={COLORS.textLight}
                   value={moodNote}
                   onChangeText={setMoodNote}
@@ -337,12 +355,12 @@ export default function MomWellnessScreen() {
                   maxLength={120}
                   multiline
                 />
-                <Text style={styles.moodSavedHint}>✓ 저장됨 (기기에만 보관)</Text>
+                <Text style={styles.moodSavedHint}>✓ {t('momWellness.moodSavedHint')}</Text>
               </>
             )}
             {recentMoods.length > 1 && (
               <View style={styles.moodHistoryRow}>
-                <Text style={styles.moodHistoryLabel}>지난 7일</Text>
+                <Text style={styles.moodHistoryLabel}>{t('momWellness.moodHistoryLast7Days')}</Text>
                 <View style={{ flexDirection: 'row', gap: 4 }}>
                   {recentMoods.slice(0, 7).reverse().map((m, i) => {
                     const opt = MOOD_OPTIONS.find((o) => o.key === m.mood);
@@ -360,18 +378,17 @@ export default function MomWellnessScreen() {
             <View style={styles.stageBadge}>
               <Text style={styles.stageBadgeText}>🗓 {STAGE_LABEL[stage]}</Text>
             </View>
-            <Text style={styles.introTitle}>💗 산전·산후 우울감 체크 (EPDS)</Text>
+            <Text style={styles.introTitle}>💗 {t('momWellness.introTitle')}</Text>
             <Text style={styles.introDesc}>
-              세계적으로 표준인 10문항 자가체크예요. 지난 7일 기준으로 답해주세요.
-              {'\n'}30점 만점 · ≥10 주의, ≥13 상담 권장
-              {'\n'}현재 단계에 맞춘 보조 문항도 함께 나와요.
+              {t('momWellness.introDescLine1')}
+              {'\n'}{t('momWellness.introDescLine2')}
+              {'\n'}{t('momWellness.introDescLine3')}
             </Text>
             <Text style={styles.introDisclaimer}>
-              ⚠️ 이 검사는 참고용 자가 체크이며 전문의의 진단이나 처방을 대체하지 않습니다.
-              점수가 높거나 걱정이 된다면 반드시 의료 전문가 또는 아래 위기상담 전화에 연락하세요.
+              ⚠️ {t('momWellness.introDisclaimer')}
             </Text>
             <TouchableOpacity style={styles.startBtn} onPress={startSurvey}>
-              <Text style={styles.startBtnText}>📝 지금 체크 시작하기</Text>
+              <Text style={styles.startBtnText}>📝 {t('momWellness.startBtn')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -386,21 +403,21 @@ export default function MomWellnessScreen() {
                   {meta.emoji} {meta.label}
                 </Text>
                 <View style={styles.analysisRow}>
-                  <Text style={styles.analysisLabel}>총 체크</Text>
-                  <Text style={styles.analysisValue}>{analysis.count}회</Text>
+                  <Text style={styles.analysisLabel}>{t('momWellness.analysisTotalChecks')}</Text>
+                  <Text style={styles.analysisValue}>{t('momWellness.analysisCountUnit', { count: analysis.count })}</Text>
                 </View>
                 {typeof analysis.avgScore === 'number' && (
                   <View style={styles.analysisRow}>
-                    <Text style={styles.analysisLabel}>평균 점수</Text>
-                    <Text style={styles.analysisValue}>{analysis.avgScore.toFixed(1)}점</Text>
+                    <Text style={styles.analysisLabel}>{t('momWellness.analysisAvgScore')}</Text>
+                    <Text style={styles.analysisValue}>{t('momWellness.analysisScoreUnit', { score: analysis.avgScore.toFixed(1) })}</Text>
                   </View>
                 )}
                 {typeof analysis.latestScore === 'number' && (
                   <View style={styles.analysisRow}>
-                    <Text style={styles.analysisLabel}>최근 / 직전</Text>
+                    <Text style={styles.analysisLabel}>{t('momWellness.analysisLatestVsPrev')}</Text>
                     <Text style={styles.analysisValue}>
-                      {analysis.latestScore}점
-                      {typeof analysis.prevScore === 'number' ? ` / ${analysis.prevScore}점` : ''}
+                      {t('momWellness.analysisScoreUnit', { score: analysis.latestScore })}
+                      {typeof analysis.prevScore === 'number' ? ` / ${t('momWellness.analysisScoreUnit', { score: analysis.prevScore })}` : ''}
                     </Text>
                   </View>
                 )}
@@ -410,7 +427,7 @@ export default function MomWellnessScreen() {
                 {analysis.nextRecommendedAt && (
                   <View style={styles.nextCheckBadge}>
                     <Text style={styles.nextCheckText}>
-                      📅 다음 권장일 · {formatDate(analysis.nextRecommendedAt)}
+                      📅 {t('momWellness.nextRecommendedDate', { date: formatDate(analysis.nextRecommendedAt) })}
                     </Text>
                   </View>
                 )}
@@ -423,21 +440,21 @@ export default function MomWellnessScreen() {
         {result && (
           <View style={[styles.resultCard, { backgroundColor: RISK_STYLE[result.riskLevel].bg }]}>
             <Text style={[styles.resultScore, { color: RISK_STYLE[result.riskLevel].color }]}>
-              {RISK_STYLE[result.riskLevel].emoji} {result.score} / {result.maxScore}점 · {RISK_STYLE[result.riskLevel].label}
+              {RISK_STYLE[result.riskLevel].emoji} {t('momWellness.resultScoreLine', { score: result.score, maxScore: result.maxScore, label: RISK_STYLE[result.riskLevel].label })}
             </Text>
             <Text style={[styles.resultMessage, { color: RISK_STYLE[result.riskLevel].color }]}>
               {result.message}
             </Text>
             {result.notifiedFamily > 0 && (
               <Text style={[styles.resultNotice, { color: RISK_STYLE[result.riskLevel].color }]}>
-                📨 가족 {result.notifiedFamily}명에게 알림이 전달됐어요
+                📨 {t('momWellness.resultFamilyNotified', { count: result.notifiedFamily })}
               </Text>
             )}
             <Text style={styles.introDisclaimer}>
-              ⚠️ 이 결과는 참고용 자가체크이며 의학적 진단이 아닙니다. 정확한 평가·진단은 정신건강 전문가와 상담하세요.
+              ⚠️ {t('momWellness.resultDisclaimer')}
             </Text>
             <TouchableOpacity style={styles.resultCloseBtn} onPress={() => { setResult(null); setShowSurvey(false); }}>
-              <Text style={styles.resultCloseText}>확인</Text>
+              <Text style={styles.resultCloseText}>{t('common.confirm')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -447,7 +464,7 @@ export default function MomWellnessScreen() {
           <View style={{ paddingVertical: 40, alignItems: 'center' }}>
             <ActivityIndicator color={COLORS.primary} />
             <Text style={{ marginTop: 8, color: COLORS.textSecondary, fontSize: FONT_SIZE.sm }}>
-              문항을 불러오는 중...
+              {t('momWellness.loadingQuestions')}
             </Text>
           </View>
         )}
@@ -455,7 +472,7 @@ export default function MomWellnessScreen() {
           <View style={styles.errorCard}>
             <Text style={styles.errorText}>⚠️ {loadError}</Text>
             <TouchableOpacity style={styles.retryBtn} onPress={loadQuestions}>
-              <Text style={styles.retryBtnText}>다시 시도</Text>
+              <Text style={styles.retryBtnText}>{t('common.retry')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -464,7 +481,7 @@ export default function MomWellnessScreen() {
         {showSurvey && !result && !loadingQuestions && questions.length > 0 && (
           <>
             <TouchableOpacity style={styles.cancelBtn} onPress={cancelSurvey}>
-              <Text style={styles.cancelBtnText}>‹ 체크 취소</Text>
+              <Text style={styles.cancelBtnText}>‹ {t('momWellness.cancelCheck')}</Text>
             </TouchableOpacity>
             {questions.map((q, idx) => (
               <View key={q.id} style={styles.questionCard}>
@@ -492,13 +509,13 @@ export default function MomWellnessScreen() {
               <>
                 <View style={styles.extraSeparator}>
                   <Text style={styles.extraSeparatorText}>
-                    📌 {STAGE_LABEL[stage]} 맞춤 추가 문항
+                    📌 {t('momWellness.extraQuestionsSeparator', { stage: STAGE_LABEL[stage] })}
                   </Text>
                 </View>
                 {extraQuestions.map((q, idx) => (
                   <View key={`extra-${q.id}`} style={styles.questionCard}>
                     <Text style={styles.questionText}>
-                      추가 {idx + 1}. {q.text}
+                      {t('momWellness.extraQuestionPrefix', { index: idx + 1 })} {q.text}
                     </Text>
                     <View style={styles.optionsRow}>
                       {EPDS_OPTIONS.map((opt) => {
@@ -524,9 +541,9 @@ export default function MomWellnessScreen() {
             {/* 파트너 공유 */}
             <View style={styles.shareCard}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.shareTitle}>💑 남편·가족과 공유</Text>
+                <Text style={styles.shareTitle}>💑 {t('momWellness.shareTitle')}</Text>
                 <Text style={styles.shareDesc}>
-                  우울감 수치가 중간 이상일 때만 가족에게 알림이 가요. 점수는 공유되지 않아요.
+                  {t('momWellness.shareDesc')}
                 </Text>
               </View>
               <Switch
@@ -545,7 +562,7 @@ export default function MomWellnessScreen() {
               {submitting ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.submitBtnText}>결과 확인하기</Text>
+                <Text style={styles.submitBtnText}>{t('momWellness.submitBtn')}</Text>
               )}
             </TouchableOpacity>
           </>
@@ -553,11 +570,11 @@ export default function MomWellnessScreen() {
 
         {/* 기록 */}
         <View style={styles.historySection}>
-          <Text style={styles.historySectionTitle}>📈 내 마음 기록</Text>
+          <Text style={styles.historySectionTitle}>📈 {t('momWellness.historySectionTitle')}</Text>
           {loadingHistory ? (
             <ActivityIndicator color={COLORS.primary} style={{ marginTop: 20 }} />
           ) : history.length === 0 ? (
-            <Text style={styles.historyEmpty}>아직 기록이 없어요. 주 1회 정기 체크를 권해드려요.</Text>
+            <Text style={styles.historyEmpty}>{t('momWellness.historyEmpty')}</Text>
           ) : (
             history.slice(0, 10).map((h) => {
               const style = RISK_STYLE[h.riskLevel] ?? RISK_STYLE.low;
@@ -569,8 +586,8 @@ export default function MomWellnessScreen() {
                       {h.createdAt ? new Date(h.createdAt).toLocaleDateString('ko-KR') : '-'}
                     </Text>
                     <Text style={styles.historyMeta}>
-                      {style.emoji} {h.score}점 · {style.label}
-                      {h.shareWithPartner ? ' · 가족 공유' : ''}
+                      {style.emoji} {t('momWellness.historyScoreUnit', { score: h.score })} · {style.label}
+                      {h.shareWithPartner ? ` · ${t('momWellness.historyFamilyShared')}` : ''}
                     </Text>
                   </View>
                 </View>
@@ -581,11 +598,11 @@ export default function MomWellnessScreen() {
 
         {/* 위기 안내 */}
         <View style={styles.emergencyCard}>
-          <Text style={styles.emergencyTitle}>🆘 지금 많이 힘드시다면</Text>
+          <Text style={styles.emergencyTitle}>🆘 {t('momWellness.emergencyTitle')}</Text>
           <Text style={styles.emergencyText}>
-            정신건강위기상담전화 {'\u2060'}<Text style={styles.emergencyNum}>1577-0199</Text>{'\u2060'} (24시간 무료)
-            {'\n'}자살예방상담전화 {'\u2060'}<Text style={styles.emergencyNum}>1393</Text>
-            {'\n'}보건소 모자건강사업 (지역별 전화)
+            {t('momWellness.emergencyLine1')} {'⁠'}<Text style={styles.emergencyNum}>1577-0199</Text>{'⁠'} {t('momWellness.emergencyLine1Suffix')}
+            {'\n'}{t('momWellness.emergencyLine2')} {'⁠'}<Text style={styles.emergencyNum}>1393</Text>
+            {'\n'}{t('momWellness.emergencyLine3')}
           </Text>
         </View>
 

@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { childApi } from '../../services/api';
 import {
   cancelAllChildLocalNotifications,
@@ -23,6 +24,7 @@ import { BackButton } from '../../components/common/BackButton';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
 export default function ChildEditScreen() {
+  const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const updateChild = useChildStore((s) => s.updateChild);
   const removeChild = useChildStore((s) => s.removeChild);
@@ -72,8 +74,8 @@ export default function ChildEditScreen() {
   if (!selectedChild) {
     return (
       <View style={styles.container}>
-        <Stack.Screen options={{ title: '정보 관리', headerShown: true, headerLeft: () => <BackButton /> }} />
-        <Text style={styles.emptyText}>선택된 아이가 없습니다</Text>
+        <Stack.Screen options={{ title: t('childEdit.infoManagement'), headerShown: true, headerLeft: () => <BackButton /> }} />
+        <Text style={styles.emptyText}>{t('childEdit.noSelectedChild')}</Text>
       </View>
     );
   }
@@ -83,7 +85,7 @@ export default function ChildEditScreen() {
     if (!raw.trim()) return null;
     const n = parseFloat(raw.replace(/,/g, '.'));
     if (!Number.isFinite(n) || n <= 0) {
-      Alert.alert('알림', `${label}이(가) 올바른 숫자가 아니에요. 다시 입력해 주세요.`);
+      Alert.alert(t('common.notice'), t('childEdit.invalidNumberMessage', { label }));
       return 'INVALID';
     }
     return n;
@@ -91,7 +93,7 @@ export default function ChildEditScreen() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('알림', '이름을 입력해주세요');
+      Alert.alert(t('common.notice'), t('childEdit.nameRequired'));
       return;
     }
     setLoading(true);
@@ -101,20 +103,20 @@ export default function ChildEditScreen() {
       if (isPregnant) {
         if (dueDate.trim()) payload.dueDate = dueDate.trim();
         if (pregnancyNotes.trim()) payload.pregnancyNotes = pregnancyNotes.trim();
-        const mh = safeParseNum(momHeight, '엄마 키');
+        const mh = safeParseNum(momHeight, t('childEdit.momHeightLabel'));
         if (mh === 'INVALID') { setLoading(false); return; }
         payload.momHeight = mh;
-        const mw = safeParseNum(momWeight, '엄마 몸무게');
+        const mw = safeParseNum(momWeight, t('childEdit.momWeightLabel'));
         if (mw === 'INVALID') { setLoading(false); return; }
         payload.momWeight = mw;
         payload.momBloodType = momBloodType || null;
         payload.momSpecialNotes = momSpecialNotes.trim() || null;
         payload.isHighRiskPregnancy = isHighRiskPregnancy;
       } else {
-        const h = safeParseNum(height, '아이 키');
+        const h = safeParseNum(height, t('childEdit.childHeightLabel'));
         if (h === 'INVALID') { setLoading(false); return; }
         payload.height = h;
-        const w = safeParseNum(weight, '아이 몸무게');
+        const w = safeParseNum(weight, t('childEdit.childWeightLabel'));
         if (w === 'INVALID') { setLoading(false); return; }
         payload.weight = w;
         payload.bloodType = bloodType || null;
@@ -140,25 +142,25 @@ export default function ChildEditScreen() {
         }
       }
 
-      Alert.alert('완료', '정보가 수정되었습니다.');
+      Alert.alert(t('common.complete'), t('childEdit.updateSuccessMessage'));
       router.back();
     } catch (e) {
       captureError(e, { ctx: 'child-edit/save', childId: selectedChild.id });
-      Alert.alert('오류', '정보 수정에 실패했습니다.');
+      Alert.alert(t('common.error'), t('childEdit.updateFailMessage'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = () => {
-    const label = isPregnant ? '임신 정보' : '아이 정보';
+    const label = isPregnant ? t('childEdit.pregnancyInfoLabel') : t('childEdit.childInfoLabel');
     Alert.alert(
-      `${label} 삭제`,
-      `${selectedChild.name}의 모든 데이터가 영구적으로 삭제됩니다.\n정말 삭제하시겠습니까?`,
+      t('childEdit.deleteConfirmTitle', { label }),
+      t('childEdit.deleteConfirmMessage', { name: selectedChild.name }),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '삭제',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -170,10 +172,10 @@ export default function ChildEditScreen() {
                 await cancelAllPregnancyLocalNotifications(selectedChild.id);
               }
               removeChild(selectedChild.id);
-              Alert.alert('완료', `${label}가 삭제되었습니다.`);
+              Alert.alert(t('common.complete'), t('childEdit.deleteSuccessMessage', { label }));
               router.back();
             } catch {
-              Alert.alert('오류', '삭제에 실패했습니다.');
+              Alert.alert(t('common.error'), t('childEdit.deleteFailMessage'));
             }
           },
         },
@@ -181,7 +183,7 @@ export default function ChildEditScreen() {
     );
   };
 
-  const screenTitle = isPregnant ? '임신 정보 관리' : '아이 정보 관리';
+  const screenTitle = isPregnant ? t('childEdit.pregnancyInfoManagement') : t('childEdit.childInfoManagement');
 
   return (
     <KeyboardAvoidingView
@@ -197,18 +199,18 @@ export default function ChildEditScreen() {
         <Stack.Screen options={{ title: screenTitle, headerShown: true, headerLeft: () => <BackButton /> }} />
 
         {/* 기본 정보 */}
-        <Text style={styles.sectionTitle}>기본 정보</Text>
+        <Text style={styles.sectionTitle}>{t('childEdit.basicInfo')}</Text>
 
-        <Text style={styles.label}>{isPregnant ? '태명' : '이름'}</Text>
+        <Text style={styles.label}>{isPregnant ? t('childEdit.babyNickname') : t('childEdit.name')}</Text>
         <TextInput
           style={styles.input}
           value={name}
           onChangeText={setName}
-          placeholder={isPregnant ? '태명' : '이름'}
+          placeholder={isPregnant ? t('childEdit.babyNickname') : t('childEdit.name')}
           placeholderTextColor={COLORS.textLight}
         />
 
-        <Text style={styles.label}>성별</Text>
+        <Text style={styles.label}>{t('childEdit.gender')}</Text>
         <View style={styles.row}>
           {(['F', 'M'] as const).map((g) => (
             <TouchableOpacity
@@ -217,10 +219,10 @@ export default function ChildEditScreen() {
               onPress={() => setGender(g)}
               accessibilityRole="radio"
               accessibilityState={{ selected: gender === g }}
-              accessibilityLabel={g === 'F' ? '여아' : '남아'}
+              accessibilityLabel={g === 'F' ? t('childEdit.girl') : t('childEdit.boy')}
             >
               <Text style={[styles.chipText, gender === g && styles.chipTextActive]}>
-                {g === 'F' ? '여아' : '남아'}
+                {g === 'F' ? t('childEdit.girl') : t('childEdit.boy')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -230,9 +232,9 @@ export default function ChildEditScreen() {
               onPress={() => setGender('U')}
               accessibilityRole="radio"
               accessibilityState={{ selected: gender === 'U' }}
-              accessibilityLabel="성별 모름"
+              accessibilityLabel={t('childEdit.genderUnknown')}
             >
-              <Text style={[styles.chipText, gender === 'U' && styles.chipTextActive]}>모름</Text>
+              <Text style={[styles.chipText, gender === 'U' && styles.chipTextActive]}>{t('childEdit.unknown')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -240,7 +242,7 @@ export default function ChildEditScreen() {
         {/* 임산부 전용 */}
         {isPregnant && (
           <>
-            <Text style={styles.label}>출산예정일</Text>
+            <Text style={styles.label}>{t('childEdit.dueDate')}</Text>
             <TextInput
               style={styles.input}
               value={dueDate}
@@ -250,7 +252,7 @@ export default function ChildEditScreen() {
             />
 
             {/* 고위험 임신 체크박스 — SOS/진통 화면 안내 강도에 영향 */}
-            <Text style={styles.label}>고위험 임신 여부</Text>
+            <Text style={styles.label}>{t('childEdit.highRiskPregnancyLabel')}</Text>
             <TouchableOpacity
               style={[styles.checkRow, isHighRiskPregnancy && styles.checkRowActive]}
               onPress={() => setIsHighRiskPregnancy((v) => !v)}
@@ -260,55 +262,53 @@ export default function ChildEditScreen() {
                 {isHighRiskPregnancy && <Text style={styles.checkMark}>✓</Text>}
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.checkTitle}>⚠️ 고위험 임신이에요</Text>
+                <Text style={styles.checkTitle}>{t('childEdit.highRiskCheckTitle')}</Text>
                 <Text style={styles.checkSub}>
-                  쌍둥이/세쌍둥이, 임신성 고혈압, 임신성 당뇨, 조산 이력,{'\n'}
-                  35세 이상 고령 임신, 전치태반, 기타 의사 권고 사항
+                  {t('childEdit.highRiskCheckSub')}
                 </Text>
               </View>
             </TouchableOpacity>
             {isHighRiskPregnancy && (
               <View style={styles.highRiskInfo}>
                 <Text style={styles.highRiskInfoText}>
-                  💡 24주부터 분만 병원 등록 알림이 표시되고,{'\n'}
-                  진통 발생 시 더 빠른 응급 안내가 제공됩니다.
+                  {t('childEdit.highRiskInfoNotice')}
                 </Text>
               </View>
             )}
 
-            <Text style={styles.label}>임신 특이사항</Text>
+            <Text style={styles.label}>{t('childEdit.pregnancyNotes')}</Text>
             <TextInput
               style={[styles.input, styles.multiline]}
               value={pregnancyNotes}
               onChangeText={setPregnancyNotes}
-              placeholder="쌍둥이, 고위험 임신 등"
+              placeholder={t('childEdit.pregnancyNotesPlaceholder')}
               placeholderTextColor={COLORS.textLight}
               multiline
             />
 
-            <Text style={[styles.sectionTitle, { marginTop: SPACING.lg }]}>산모 건강 정보</Text>
+            <Text style={[styles.sectionTitle, { marginTop: SPACING.lg }]}>{t('childEdit.momHealthInfo')}</Text>
 
-            <Text style={styles.label}>키 (cm)</Text>
+            <Text style={styles.label}>{t('childEdit.heightCm')}</Text>
             <TextInput
               style={styles.input}
               value={momHeight}
               onChangeText={setMomHeight}
-              placeholder="예: 163"
+              placeholder={t('childEdit.momHeightPlaceholder')}
               placeholderTextColor={COLORS.textLight}
               keyboardType="decimal-pad"
             />
 
-            <Text style={styles.label}>몸무게 (kg)</Text>
+            <Text style={styles.label}>{t('childEdit.weightKg')}</Text>
             <TextInput
               style={styles.input}
               value={momWeight}
               onChangeText={setMomWeight}
-              placeholder="예: 58.5"
+              placeholder={t('childEdit.momWeightPlaceholder')}
               placeholderTextColor={COLORS.textLight}
               keyboardType="decimal-pad"
             />
 
-            <Text style={styles.label}>혈액형</Text>
+            <Text style={styles.label}>{t('childEdit.bloodType')}</Text>
             <View style={styles.row}>
               {['A', 'B', 'O', 'AB'].map((bt) => (
                 <TouchableOpacity
@@ -316,17 +316,17 @@ export default function ChildEditScreen() {
                   style={[styles.chip, momBloodType === bt && styles.chipActive]}
                   onPress={() => setMomBloodType(momBloodType === bt ? '' : bt)}
                 >
-                  <Text style={[styles.chipText, momBloodType === bt && styles.chipTextActive]}>{bt}형</Text>
+                  <Text style={[styles.chipText, momBloodType === bt && styles.chipTextActive]}>{t('childEdit.bloodTypeSuffix', { type: bt })}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.label}>특이사항</Text>
+            <Text style={styles.label}>{t('childEdit.specialNotes')}</Text>
             <TextInput
               style={[styles.input, styles.multiline]}
               value={momSpecialNotes}
               onChangeText={setMomSpecialNotes}
-              placeholder="알레르기, 복용 중인 약, 기저질환 등"
+              placeholder={t('childEdit.momSpecialNotesPlaceholder')}
               placeholderTextColor={COLORS.textLight}
               multiline
             />
@@ -336,29 +336,29 @@ export default function ChildEditScreen() {
         {/* 아이 전용 */}
         {!isPregnant && (
           <>
-            <Text style={[styles.sectionTitle, { marginTop: SPACING.lg }]}>건강 정보</Text>
+            <Text style={[styles.sectionTitle, { marginTop: SPACING.lg }]}>{t('childEdit.healthInfo')}</Text>
 
-            <Text style={styles.label}>키 (cm)</Text>
+            <Text style={styles.label}>{t('childEdit.heightCm')}</Text>
             <TextInput
               style={styles.input}
               value={height}
               onChangeText={setHeight}
-              placeholder="예: 85"
+              placeholder={t('childEdit.childHeightPlaceholder')}
               placeholderTextColor={COLORS.textLight}
               keyboardType="decimal-pad"
             />
 
-            <Text style={styles.label}>몸무게 (kg)</Text>
+            <Text style={styles.label}>{t('childEdit.weightKg')}</Text>
             <TextInput
               style={styles.input}
               value={weight}
               onChangeText={setWeight}
-              placeholder="예: 11.5"
+              placeholder={t('childEdit.childWeightPlaceholder')}
               placeholderTextColor={COLORS.textLight}
               keyboardType="decimal-pad"
             />
 
-            <Text style={styles.label}>혈액형</Text>
+            <Text style={styles.label}>{t('childEdit.bloodType')}</Text>
             <View style={styles.row}>
               {['A', 'B', 'O', 'AB'].map((bt) => (
                 <TouchableOpacity
@@ -366,17 +366,17 @@ export default function ChildEditScreen() {
                   style={[styles.chip, bloodType === bt && styles.chipActive]}
                   onPress={() => setBloodType(bloodType === bt ? '' : bt)}
                 >
-                  <Text style={[styles.chipText, bloodType === bt && styles.chipTextActive]}>{bt}형</Text>
+                  <Text style={[styles.chipText, bloodType === bt && styles.chipTextActive]}>{t('childEdit.bloodTypeSuffix', { type: bt })}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.label}>특이사항</Text>
+            <Text style={styles.label}>{t('childEdit.specialNotes')}</Text>
             <TextInput
               style={[styles.input, styles.multiline]}
               value={specialNotes}
               onChangeText={setSpecialNotes}
-              placeholder="알레르기, 조심해야 하는 약 등"
+              placeholder={t('childEdit.childSpecialNotesPlaceholder')}
               placeholderTextColor={COLORS.textLight}
               multiline
             />
@@ -389,10 +389,10 @@ export default function ChildEditScreen() {
           onPress={handleSave}
           disabled={loading}
           accessibilityRole="button"
-          accessibilityLabel={loading ? '저장 중' : '정보 저장'}
+          accessibilityLabel={loading ? t('childEdit.saving') : t('childEdit.saveInfo')}
           accessibilityState={{ disabled: loading, busy: loading }}
         >
-          <Text style={styles.saveBtnText}>{loading ? '저장 중...' : '정보 저장'}</Text>
+          <Text style={styles.saveBtnText}>{loading ? t('childEdit.savingEllipsis') : t('childEdit.saveInfo')}</Text>
         </TouchableOpacity>
 
         {/* 삭제 버튼 */}
@@ -400,11 +400,11 @@ export default function ChildEditScreen() {
           style={styles.deleteBtn}
           onPress={handleDelete}
           accessibilityRole="button"
-          accessibilityLabel="아이 정보 삭제"
-          accessibilityHint="이 아이의 모든 기록이 삭제됩니다"
+          accessibilityLabel={t('childEdit.deleteChildInfoLabel')}
+          accessibilityHint={t('childEdit.deleteChildInfoHint')}
         >
           <Text style={styles.deleteBtnText}>
-            {isPregnant ? '임신 정보 삭제' : '아이 정보 삭제'}
+            {isPregnant ? t('childEdit.deletePregnancyInfo') : t('childEdit.deleteChildInfo')}
           </Text>
         </TouchableOpacity>
 

@@ -2747,5 +2747,280 @@
       "title": "附則",
       "body": "本條款自2026年5月25日起施行。"
     }
+  },
+  "childEdit": {
+    "infoManagement": "資訊管理",
+    "noSelectedChild": "尚未選擇孩子",
+    "invalidNumberMessage": "{{label}}不是有效的數字，請重新輸入。",
+    "momHeightLabel": "媽媽的身高",
+    "momWeightLabel": "媽媽的體重",
+    "childHeightLabel": "孩子的身高",
+    "childWeightLabel": "孩子的體重",
+    "nameRequired": "請輸入姓名",
+    "updateSuccessMessage": "資訊已更新。",
+    "updateFailMessage": "資訊更新失敗。",
+    "pregnancyInfoLabel": "懷孕資訊",
+    "childInfoLabel": "孩子的資訊",
+    "deleteConfirmTitle": "刪除{{label}}",
+    "deleteConfirmMessage": "{{name}}的所有資料將被永久刪除。\n確定要刪除嗎？",
+    "deleteSuccessMessage": "{{label}}已刪除。",
+    "deleteFailMessage": "刪除失敗。",
+    "pregnancyInfoManagement": "懷孕資訊管理",
+    "childInfoManagement": "孩子資訊管理",
+    "basicInfo": "基本資訊",
+    "babyNickname": "胎名",
+    "name": "姓名",
+    "gender": "性別",
+    "girl": "女孩",
+    "boy": "男孩",
+    "genderUnknown": "性別不詳",
+    "unknown": "不詳",
+    "dueDate": "預產期",
+    "highRiskPregnancyLabel": "是否為高風險懷孕",
+    "highRiskCheckTitle": "⚠️ 屬於高風險懷孕",
+    "highRiskCheckSub": "雙胞胎/三胞胎、妊娠高血壓、妊娠糖尿病、早產病史、\n35歲以上高齡懷孕、前置胎盤、其他醫師建議事項",
+    "highRiskInfoNotice": "💡 從第24週起會顯示登記生產醫院的提醒，\n陣痛發生時將提供更快速的緊急指引。",
+    "pregnancyNotes": "懷孕特殊事項",
+    "pregnancyNotesPlaceholder": "雙胞胎、高風險懷孕等",
+    "momHealthInfo": "媽媽的健康資訊",
+    "heightCm": "身高 (cm)",
+    "momHeightPlaceholder": "例如：163",
+    "weightKg": "體重 (kg)",
+    "momWeightPlaceholder": "例如：58.5",
+    "bloodType": "血型",
+    "bloodTypeSuffix": "{{type}}型",
+    "specialNotes": "特殊事項",
+    "momSpecialNotesPlaceholder": "過敏史、服用中的藥物、慢性病等",
+    "healthInfo": "健康資訊",
+    "childHeightPlaceholder": "例如：85",
+    "childWeightPlaceholder": "例如：11.5",
+    "childSpecialNotesPlaceholder": "過敏史、需注意的藥物等",
+    "saving": "儲存中",
+    "saveInfo": "儲存資訊",
+    "savingEllipsis": "儲存中...",
+    "deleteChildInfoLabel": "刪除孩子資訊",
+    "deleteChildInfoHint": "這個孩子的所有記錄將被刪除",
+    "deletePregnancyInfo": "刪除懷孕資訊",
+    "deleteChildInfo": "刪除孩子資訊"
+  },
+  "lullaby": {
+    "title": "搖籃曲",
+    "prenatalTitle": "胎教音樂",
+    "subtitle": "為了讓孩子安穩入睡",
+    "prenatalSubtitle": "媽媽與寶寶的放鬆時光",
+    "idleLabel": "請選擇聲音",
+    "idlePrenatalLabel": "請選擇胎教音樂",
+    "idleDesc": "請在下方點選喜歡的聲音",
+    "momVoiceRecordLabel": "🤰 錄下媽媽的聲音",
+    "cryDetectLabel": "👂 偵測哭聲自動播放",
+    "cryDetectDesc": "寶寶哭泣時會自動播放搖籃曲",
+    "micMonitoring": "麥克風監測中...",
+    "stop": "停止",
+    "timerSectionLabel": "計時器",
+    "timer": {
+      "off": "關閉",
+      "min15": "15分鐘",
+      "min30": "30分鐘",
+      "hour1": "1小時",
+      "hour2": "2小時"
+    },
+    "category": {
+      "myVoice": "我的聲音",
+      "whiteNoise": "白噪音",
+      "nature": "大自然的聲音",
+      "lullaby": "搖籃曲"
+    },
+    "prenatalCategory": {
+      "momVoice": "媽媽的聲音",
+      "classic": "🎻 古典胎教樂曲",
+      "womb": "💓 子宮心跳聲",
+      "nature": "🌊 大自然的聲音",
+      "meditation": "🧘 冥想療癒"
+    },
+    "saveRecordingTitle": "儲存錄音",
+    "recordingNamePlaceholder": "錄音名稱（例如：媽媽的搖籃曲）",
+    "recordVoiceButton": "錄下爸爸/媽媽的聲音",
+    "recordingInProgress": "錄音中 {{time}}（點一下停止）",
+    "recordHint": "最長2分鐘，請唱一段搖籃曲",
+    "longPressToDelete": "長按刪除",
+    "noRecordingsYet": "目前還沒有錄音",
+    "pendingBadge": "準備中",
+    "soundPreparingTitle": "音源準備中",
+    "soundPreparingMessage": "「{{name}}」的音源即將推出。",
+    "micPermissionTitle": "需要權限",
+    "micPermissionRecordMessage": "錄音需要麥克風權限。",
+    "micPermissionCryMessage": "偵測哭聲需要麥克風權限。",
+    "recordStartErrorMessage": "無法開始錄音。",
+    "defaultRecordingLabel": "錄音 {{count}}",
+    "deleteRecordingConfirm": "要刪除這段錄音嗎？",
+    "myVoiceRecordingDesc": "我的錄音",
+    "sound": {
+      "womb": {
+        "label": "子宮的聲音",
+        "desc": "媽媽肚子裡的聲音"
+      },
+      "vacuum": {
+        "label": "吸塵器",
+        "desc": "穩定的白噪音"
+      },
+      "hairdryer": {
+        "label": "吹風機",
+        "desc": "柔和的風聲"
+      },
+      "fan": {
+        "label": "電風扇",
+        "desc": "涼爽的風聲"
+      },
+      "rain": {
+        "label": "雨聲",
+        "desc": "輕柔的雨聲"
+      },
+      "wave": {
+        "label": "海浪聲",
+        "desc": "海邊的浪花"
+      },
+      "forest": {
+        "label": "森林裡",
+        "desc": "鳥鳴與風聲"
+      },
+      "stream": {
+        "label": "小溪流水",
+        "desc": "潺潺流水聲"
+      },
+      "twinkle": {
+        "label": "一閃一閃",
+        "desc": "小星星旋律"
+      },
+      "brahms": {
+        "label": "布拉姆斯",
+        "desc": "布拉姆斯搖籃曲"
+      },
+      "mozart": {
+        "label": "莫札特",
+        "desc": "小夜曲"
+      },
+      "orgel": {
+        "label": "音樂盒",
+        "desc": "音樂盒旋律"
+      }
+    },
+    "prenatalSound": {
+      "mozartK448": {
+        "label": "莫札特 K.448",
+        "desc": "雙鋼琴奏鳴曲"
+      },
+      "vivaldiSpring": {
+        "label": "韋瓦第《春》",
+        "desc": "《四季》之春"
+      },
+      "bachAir": {
+        "label": "巴赫G弦之歌",
+        "desc": "管弦樂組曲第三號"
+      },
+      "pachelbelCanon": {
+        "label": "帕海貝爾卡農",
+        "desc": "D大調卡農"
+      },
+      "wombHeart": {
+        "label": "子宮內的心跳聲",
+        "desc": "60~80bpm，模擬子宮內環境"
+      },
+      "ocean": {
+        "label": "平靜的海浪",
+        "desc": "海邊柔和的浪花"
+      },
+      "rainSoft": {
+        "label": "柔和的雨聲",
+        "desc": "窗邊的雨聲"
+      },
+      "forestBirds": {
+        "label": "森林鳥鳴聲",
+        "desc": "寧靜的清晨森林"
+      },
+      "healing432hz": {
+        "label": "432Hz療癒",
+        "desc": "自然頻率冥想"
+      },
+      "sleepPiano": {
+        "label": "助眠鋼琴",
+        "desc": "夢幻鋼琴獨奏"
+      },
+      "harp": {
+        "label": "豎琴",
+        "desc": "柔美的豎琴旋律"
+      }
+    }
+  },
+  "momWellness": {
+    "screenTitle": "媽媽心理健康自我檢測",
+    "selectChildPrompt": "請選擇孩子",
+    "medicalCitationNote": "自我檢測結果僅供參考，並非醫學診斷。若持續感到憂鬱，請諮詢專業人士。",
+    "citationEpds": "愛丁堡產後憂鬱量表（EPDS）— Cox, Holden & Sagovsky（1987）",
+    "citationMohw": "保健福祉部 國家精神健康資訊入口網站",
+    "moodCardTitle": "今天的心情",
+    "moodCardHint": "點選表情符號即可記錄。與EPDS檢測無關，可以每天輕鬆記錄。",
+    "moodGreat": "非常好",
+    "moodGood": "好",
+    "moodSoso": "普通",
+    "moodDown": "憂鬱",
+    "moodBad": "非常辛苦",
+    "moodNotePlaceholder": "一句話備註（選填）— 今天過得如何？",
+    "moodSavedHint": "已儲存（僅保存於裝置）",
+    "moodHistoryLast7Days": "過去7天",
+    "stagePrenatal": "懷孕中",
+    "stagePostpartumEarly": "產後0~3個月",
+    "stagePostpartumMid": "產後3~6個月",
+    "stagePostpartumLate": "產後6~12個月",
+    "stageGeneral": "一般",
+    "directionImproving": "好轉中",
+    "directionStable": "穩定",
+    "directionWorsening": "惡化警示",
+    "directionUnknown": "資料不足",
+    "epdsOptionNever": "完全不是這樣",
+    "epdsOptionSometimes": "偶爾如此",
+    "epdsOptionOften": "經常如此",
+    "epdsOptionAlways": "總是如此",
+    "riskLow": "穩定",
+    "riskMild": "輕微壓力",
+    "riskModerate": "輕度憂鬱感",
+    "riskHigh": "明顯憂鬱感",
+    "riskUrgent": "緊急",
+    "loadQuestionsFailed": "無法載入問卷題目",
+    "networkError": "網路錯誤",
+    "loadQuestionsFailedWithMsg": "題目載入失敗：{{msg}}",
+    "answerAllQuestions": "請回答所有題目",
+    "answerExtraQuestions": "也請回答客製化題目",
+    "saveFailed": "儲存失敗，請稍後再試一次。",
+    "introTitle": "產前‧產後憂鬱檢測（EPDS）",
+    "introDescLine1": "這是國際通用的10題自我檢測。請依過去7天的狀況作答。",
+    "introDescLine2": "滿分30分‧≥10分需留意，≥13分建議諮詢",
+    "introDescLine3": "也會提供符合目前階段的補充題目。",
+    "introDisclaimer": "本檢測僅供參考，並非專科醫師的診斷或處方之替代。若分數偏高或感到擔憂，請務必聯繫醫療專業人員或下方的危機諮詢專線。",
+    "startBtn": "立即開始檢測",
+    "analysisTotalChecks": "總檢測次數",
+    "analysisCountUnit": "{{count}}次",
+    "analysisAvgScore": "平均分數",
+    "analysisScoreUnit": "{{score}}分",
+    "analysisLatestVsPrev": "最近／前次",
+    "nextRecommendedDate": "下次建議日期‧{{date}}",
+    "resultScoreLine": "{{score}} / {{maxScore}}分‧{{label}}",
+    "resultFamilyNotified": "已通知{{count}}位家人",
+    "resultDisclaimer": "此結果僅供參考，並非醫學診斷。準確的評估與診斷請諮詢精神健康專業人員。",
+    "loadingQuestions": "正在載入題目...",
+    "cancelCheck": "取消檢測",
+    "extraQuestionsSeparator": "{{stage}}客製化補充題目",
+    "extraQuestionPrefix": "追加 {{index}}.",
+    "shareTitle": "與先生‧家人分享",
+    "shareDesc": "僅在憂鬱程度達中等以上時，才會通知家人。分數本身不會被分享。",
+    "submitBtn": "查看結果",
+    "historySectionTitle": "我的心情紀錄",
+    "historyEmpty": "尚無紀錄。建議每週定期檢測一次。",
+    "historyScoreUnit": "{{score}}分",
+    "historyFamilyShared": "與家人分享",
+    "emergencyTitle": "若您現在感到非常辛苦",
+    "emergencyLine1": "精神健康危機諮詢專線",
+    "emergencyLine1Suffix": "（24小時免費）",
+    "emergencyLine2": "自殺防治諮詢專線",
+    "emergencyLine3": "保健所母嬰健康事業（各地區電話）"
   }
 }
