@@ -495,5 +495,887 @@
     "monthN": "{{count}}월",
     "endingMessage": "사랑해,<br/>소중한 {{name}}",
     "endingSub": "너의 모든 순간이<br/>우리의 기적이야"
+  },
+  "pregnancy": {
+    "defaultChildName": "아가",
+    "screenTitle": "임신앨범",
+    "selectPregnantChild": "임신 중인 아이를 선택해주세요",
+    "childAlbumLabel": "{{name}}의 임신앨범",
+    "currentWeekBadge": " 현재 임신 {{week}}주차",
+    "weeklyQuestion": {
+      "week6": "{{name}}의 첫 초음파, 확인하셨나요?",
+      "week10": "{{name}} 심장소리는 들으셨나요?",
+      "week13": "{{name}} 목투명대(NT) 검사는 받으셨나요?",
+      "week16": "안정기에요! {{name}}가 잘 크고 있나요?",
+      "week20": "{{name}}가 왕자인가요 공주인가요?",
+      "week24": "{{name}} 태동을 자주 느끼시나요?",
+      "week28": "{{name}} 키는 많이 컸나요? 잘 크고 있나요?",
+      "week32": "출산 준비는 시작하셨나요?",
+      "week36": "{{name}} 출산가방은 준비되었나요?",
+      "week39": "{{name}} 만날 준비 되셨나요?",
+      "week40plus": "{{name}} 만나셨나요?"
+    },
+    "pdf": {
+      "coverCount": "{{count}}장의 소중한 기록",
+      "monthUnit": "월",
+      "dividerCaption": "소중한 순간 {{count}}장",
+      "imageLoadFailed": "사진을 불러올 수 없어요",
+      "pageHeaderMonth": "{{month}}월",
+      "endingMessage": "사랑해,\n소중한 {{name}}",
+      "endingSub": "너를 기다리는 모든 순간이\n우리의 기적이야"
+    },
+    "photoLoadFailed": "사진을 불러오지 못했습니다",
+    "diaryNoRecordToday": "오늘의 기록이 아직 없어서 일기를 생성할 수 없어요.",
+    "diaryGenerateFailed": "AI 일기 생성에 실패했습니다.",
+    "noPhotos": "사진 없음",
+    "noPhotosInPeriod": "선택한 기간에 사진이 없어요.\n먼저 사진을 추가해주세요.",
+    "albumDefaultTitleWithRange": "{{name}} 임신앨범 {{from}}~{{to}}",
+    "pdfGenerateTimeout": "PDF 생성이 너무 오래 걸립니다. 잠시 후 다시 시도해주세요.",
+    "albumSaveDialogTitle": "임신앨범 저장",
+    "saveComplete": "저장 완료",
+    "albumPdfGenerated": "임신앨범 PDF가 생성됐어요.\n{{uri}}",
+    "somePhotosMissing": "일부 사진 누락",
+    "somePhotosMissingBody": "{{total}}장 중 {{failCount}}장은 사진을 불러올 수 없어 PDF 에 포함되지 않았어요.\n(임시 파일이 삭제됐거나 업로드가 완료되지 않은 사진)",
+    "albumGenerateFailed": "앨범 생성에 실패했습니다.\n{{msg}}",
+    "composeEmptyInput": "사진, 메모, 또는 마일스톤·증상 중 하나는 입력해주세요",
+    "photoUploadFailed": "사진 업로드 실패",
+    "photoUploadFailedBody": "네트워크 또는 서버 문제로 사진을 저장할 수 없어요.\n잠시 후 다시 시도해주세요. (Wi-Fi 연결을 확인하시면 도움이 됩니다)",
+    "saveFailed": "저장에 실패했습니다",
+    "permissionNeeded": "권한 필요",
+    "cameraPermissionRequest": "카메라 접근 권한을 허용해주세요",
+    "mediaLoadFailed": "미디어를 불러올 수 없습니다",
+    "addPhotoVideo": "사진/영상 추가",
+    "howToAdd": "어떻게 추가할까요?",
+    "takePhoto": "카메라로 촬영",
+    "chooseFromAlbum": "앨범에서 선택",
+    "atLeastOneItem": "하나 이상의 항목을 입력해주세요",
+    "recordSaveFailed": "기록 저장에 실패했습니다",
+    "editFailed": "수정에 실패했습니다",
+    "deleteFailed": "삭제에 실패했습니다",
+    "recordManage": "기록 관리",
+    "feedCount": "{{count}}장의 기록",
+    "loadRecordsFailed": "기록을 불러오지 못했어요",
+    "leaveFirstRecord": "첫 임신앨범 기록을 남겨보세요",
+    "checkNetworkRetry": "네트워크 확인 후 다시 시도해주세요",
+    "emptyStateDesc": "진료기록, 초음파, 마일스톤, 엄마상태를 한번에 기록할 수 있어요",
+    "createAlbumTitle": "임신앨범 만들기",
+    "albumDefaultTitle": "{{name}} 임신앨범",
+    "newAlbumBtn": "+ 새 앨범",
+    "albumSectionDesc": "기간을 선택하면 기기에서 바로 PDF를 만들어요.\n사진이 있는 기록만 2×2 그리드로 출력돼요",
+    "albumTitleLabel": "앨범 제목 (선택)",
+    "startMonthLabel": "시작 월",
+    "endMonthLabel": "종료 월",
+    "albumFormHint": "YYYY-MM 형식 · 사진이 있는 기록만 포함 · 페이지당 4장",
+    "coverImageLabel": "표지 이미지 (선택)",
+    "defaultCoverHint": "기본 표지 · 탭하여 변경",
+    "startGenerateAlbum": "앨범 생성 시작",
+    "citationChildcarePortal": "보건복지부·임신육아종합포털 「아이사랑」 임신 주차별 정보",
+    "citationKsog": "대한산부인과학회 임신·출산 정보",
+    "backCancel": "< 취소",
+    "editRecordTitle": "기록 수정",
+    "changePhoto": "📷 사진 변경",
+    "addPhoto": "📷 사진 추가",
+    "memoInputPlaceholder": "메모를 입력하세요",
+    "backToBack": "< 뒤로",
+    "weekRecordTitle": "임신 {{week}}주차 기록",
+    "doctorNoteLabel": " 선생님 이야기",
+    "doctorNotePlaceholder": "진료 시 들은 이야기를 적어주세요",
+    "ultrasoundVideoLabel": " 초음파 / 영상",
+    "addPhotoVideoShort": "사진/영상 추가",
+    "thisWeekMilestone": "이번 주 마일스톤",
+    "momStatusLabel": " 엄마 상태",
+    "severityLabel": "힘든 정도",
+    "freeInputPlaceholder": "직접 입력 (증상이나 기분을 자유롭게 적어주세요)",
+    "saving": "저장 중...",
+    "addPhotoPrompt": "사진을 추가하세요",
+    "milestoneLabel": "마일스톤",
+    "momMoodLabel": "엄마 기분",
+    "composeMemoPlaceholder": "하고싶은 이야기나 진료기록을 메모하세요",
+    "shareToFamilyFeed": "가족피드에도 공유하기",
+    "aiTodayDiary": " AI 오늘 일기",
+    "aiDiaryHeader": " AI 일기 - {{date}}",
+    "nextCheckupLabel": "다음 검진 일정",
+    "tapToRegisterHint": "탭해서 등록 (홈에 D-day 표시)"
+  },
+  "growthStats": {
+    "tabPhysical": "키/몸무게/성장",
+    "levelVeryLow": "매우 낮음",
+    "levelLow": "낮음",
+    "levelNormal": "정상",
+    "levelHigh": "높음",
+    "levelVeryHigh": "매우 높음",
+    "percentileLarge": "큰 편 · 상위 {{value}}%",
+    "percentileSlightlyLarge": "살짝 큰 편 · 백분위 {{value}}",
+    "percentileAverage": "또래 평균 · 백분위 {{value}}",
+    "percentileSlightlySmall": "살짝 작은 편 · 백분위 {{value}}",
+    "percentileSmall": "작은 편 · 하위 {{value}}%",
+    "weeklyDevTitle": "주수별 발달",
+    "weeklyDevCitationNote": "주차별 발달 정보는 일반 참고용이며, 개인별 상태는 산부인과 전문의와 상담하세요.",
+    "citationSourceChildcare": "보건복지부·임신육아종합포털 「아이사랑」 임신 주차별 정보",
+    "citationSourceKsog": "대한산부인과학회 임신·출산 정보",
+    "growthCitationNote": "성장 백분위·통계는 표준 성장도표 기반 참고용이며, 개인별 평가는 소아과 전문의와 상담하세요.",
+    "citationSourceKdca": "질병관리청·대한소아과학회 「2017 소아청소년 성장도표」",
+    "citationSourceWho": "WHO Child Growth Standards (0–5세)",
+    "defaultChildName": "아이",
+    "growthHeaderTitle": "성장 기록 & 변화",
+    "task1": "엽산 매일 복용 (400~800mcg)",
+    "task2": "첫 산부인과 방문 + 심장소리 확인",
+    "task3": "1차 기형아 검사 (NT, 목투명대)",
+    "task4": "철분 섭취 시작 (시금치/붉은 고기)",
+    "task5": "2차 기형아 검사 (쿼드/트리플)",
+    "task6": "정밀 초음파 (레벨 2)",
+    "task7": "성별 확인 가능 시기",
+    "task8": "임신성 당뇨 검사 (GCT)",
+    "task9": "출산 준비 교실 수강",
+    "task10": "태동 카운터 매일 체크",
+    "task11": "NST (비수축검사)",
+    "task12": "GBS 검사 (B군 연쇄상구균)",
+    "task13": "출산가방 준비",
+    "task14": "진통 간격 타이머 준비",
+    "trimester1": "1분기 (초기)",
+    "trimester2": "2분기 (안정기)",
+    "trimester3": "3분기 (후기)",
+    "safetySearchFail": "검색에 실패했어요. 잠시 후 다시 시도해주세요.",
+    "medicalDisclaimer": "ⓘ 이 정보는 일반 참고용이며 의료 진단·처방을 대체하지 않습니다. 약물·식이·증상에 관한 결정은 반드시 산부인과 전문의와 상담해주세요. 응급 신호(심한 출혈·복통·태동 급감·시야 이상·심한 부종 등)가 있으면 즉시 병원에 가세요.",
+    "currentlyPregnant": "현재 임신",
+    "weekNumber": "{{week}}주차",
+    "sizeOf": "{{size}} 크기",
+    "daysUntilDueDate": "출산예정일까지",
+    "dDayHint": "📅 주요 검사·출산일 알림이 자동 등록돼요",
+    "weeklyTasksTitle": "📋 이번 주 할 일 · 검사",
+    "taskTypeExam": "검사",
+    "taskTypeTodo": "할 일",
+    "safetySearchTitle": "임산부 금기 검색",
+    "safetySearchSub": "음식·약물·카페인 안전성 확인",
+    "weekLabel": "{{week}}주",
+    "featTitle": "👶 이번 주 아기 발달",
+    "momChangeTitle": "🤰 엄마 몸 변화",
+    "foodTipTitle": "🍎 추천 음식·영양",
+    "cautionTitle": "⚠️ 주의",
+    "weekPhotosTitle": " 이 주의 기록 사진",
+    "bottomHint": "임신앨범에서 사진을 올리면 해당 주수에 자동으로 표시돼요",
+    "safetySearchPlaceholder": "예: 커피, 회, 타이레놀, 홍삼...",
+    "safetySearchButton": "검색",
+    "safetyAnalyzing": "AI가 분석 중이에요...",
+    "safetyLevelSafe": "안전",
+    "safetyLevelCaution": "주의",
+    "safetyLevelAvoid": "피하세요",
+    "safetyDosTitle": "✓ 이렇게 드세요",
+    "safetyDontsTitle": "✗ 주의사항",
+    "analysisParseFail": "분석 결과를 처리할 수 없습니다.",
+    "analysisRequestFail": "성장 분석에 실패했습니다. 다시 시도해주세요.",
+    "analyzeBtn": "성장 분석하기",
+    "analysisModalTitle": "성장 분석",
+    "analysisLoadingTitle": "아이의 성장 데이터를 분석하고 있어요...",
+    "analysisLoadingSubtitle": "AI가 성장 패턴을 꼼꼼히 살펴보고 있어요",
+    "overallAnalysisTitle": "종합 분석",
+    "detailItemsTitle": "상세 항목",
+    "genderBoy": "남아",
+    "genderGirl": "여아",
+    "heightWeightRequired": "키 또는 몸무게를 입력해주세요",
+    "viewOnlyTitle": "열람 전용",
+    "viewOnlyMessage": "성장 기록 저장 권한이 없어요.\n보호자에게 \"아이 프로필 수정\" 권한을 요청해주세요.",
+    "saveCompleteTitle": "저장 완료",
+    "saveCompleteMessage": "{{date}} 성장 기록이 저장되었습니다",
+    "saveFailMessage": "저장에 실패했습니다. 다시 시도해주세요.",
+    "firstRecordTitle": "첫 기록 ({{ageLabel}})",
+    "heightLabel": "키",
+    "weightLabel": "몸무게",
+    "percentileHeader": "동 개월 {{genderLabel}} 대비",
+    "heightWeightChangeTitle": "키 & 몸무게 변화",
+    "chartPlaceholder": "키 또는 몸무게를 기록하면 차트가 표시됩니다",
+    "latestRecordTitleWithDate": "최신 기록 ({{date}})",
+    "latestRecordTitle": "최신 기록",
+    "recordCountLabel": "기록 수",
+    "recordInputTitle": "기록 입력",
+    "measureDateLabel": "측정 날짜",
+    "heightCmLabel": "키 (cm)",
+    "weightKgLabel": "몸무게 (kg)",
+    "saving": "저장 중...",
+    "saveRecord": "기록 저장",
+    "recordHistoryTitle": "성장 기록 내역",
+    "traitSaveCompleteMessage": "오늘의 기질 관찰이 기록되었습니다",
+    "traitChangeRecordTitle": "기질 변화 기록",
+    "currentTraitTypeLabel": "현재 기질 유형",
+    "traitResponseProgress": "응답 누적 {{count}}개 · 첫 인사이트까지 {{progress}}/7",
+    "dailyQuestionTitle": "오늘의 질문 ({{current}}/{{total}})",
+    "observationPlaceholder": "관찰 내용을 입력하세요...",
+    "saveTraitObservation": "기질 관찰 저장",
+    "traitTimelineTitle": "기질 변화 타임라인",
+    "traitInsightEmptyHint": "7개 응답이 쌓이면 첫 기질 변화 인사이트가 생성됩니다",
+    "age0to6m": "0~6개월",
+    "age7to12m": "7~12개월",
+    "age13to18m": "13~18개월",
+    "age19to24m": "19~24개월",
+    "age25to36m": "25~36개월",
+    "age3to4y": "3~4세",
+    "age4to5y": "4~5세",
+    "age5to6y": "5~6세",
+    "ageElementaryLower": "초등 저학년",
+    "ageElementaryUpper": "초등 고학년",
+    "milestoneLoadFail": "발달 체크리스트를 불러올 수 없습니다",
+    "domainFallbackLabel": "발달",
+    "milestoneCheckTitle": "{{ageLabel}} 발달 체크",
+    "milestoneAllComplete": "모든 발달 항목을 달성했어요!",
+    "milestoneGoodProgress": "순조롭게 발달하고 있어요!",
+    "milestoneSlowPace": "천천히 아이 속도에 맞춰주세요",
+    "domainSummaryTitle": "영역별 발달 현황",
+    "checklistTitle": "발달 체크리스트",
+    "checklistHint": "항목을 눌러 체크하고, 다시 눌러 확인 방법을 보세요",
+    "devTipCardTitle": "발달 촉진 팁",
+    "devTipImportantTitle": "이 시기에 중요한 것",
+    "devTipImportantLow": "아직 달성하지 못한 항목이 있어도 걱정하지 마세요. 아이마다 발달 속도가 달라요. 충분한 놀이와 상호작용이 가장 좋은 자극이에요.",
+    "devTipImportantHigh": "많은 항목을 달성했네요! 이 시기에는 다양한 경험을 제공해주는 것이 중요해요. 새로운 장난감, 바깥 활동, 또래 놀이를 시도해보세요.",
+    "devTipParentTitle": "부모가 도와줄 수 있는 것",
+    "devTipParentIncomplete": "미달성 항목은 아이와 함께 놀이하면서 자연스럽게 연습해보세요. 강요하지 않고, 아이가 흥미를 보일 때 격려해주는 것이 효과적이에요.",
+    "devTipParentComplete": "모든 항목을 달성했다면 다음 단계의 발달을 준비해보세요. 조금 더 도전적인 활동으로 자연스럽게 이어가면 좋아요.",
+    "nextGoalLabel": "다음 목표"
+  },
+  "fever": {
+    "screenTitle": "열나열나",
+    "subtitle": "{{name}}의 체온 케어",
+    "emergencyCallShort": "119 응급 전화",
+    "emergencyCallFull": "119에 전화하기",
+    "syrupApprox": "시럽 약 {{ml}}ml",
+    "level": {
+      "normal": {
+        "label": "정상",
+        "advice": "아이의 체온이 정상 범위입니다. 편안하게 지켜봐주세요."
+      },
+      "mild": {
+        "label": "미열",
+        "advice": "미열이 있어요. 옷을 가볍게 입히고 수분 섭취를 해주세요. 미지근한 물수건으로 닦아주세요."
+      },
+      "moderate": {
+        "label": "중등도 발열",
+        "advice": "체온이 높아요. 해열제 복용을 고려해볼 수 있어요(용량·투약은 의사·약사 상담 권장). 30분 후 다시 체온을 확인해주세요."
+      },
+      "high": {
+        "label": "고열",
+        "advice": "고열입니다. 해열제 복용을 고려해볼 수 있어요(용량·투약은 의사·약사 상담). 30분 후에도 열이 내리지 않으면 소아과를 방문하세요."
+      },
+      "danger": {
+        "label": "즉시 병원 진료",
+        "advice": "위험한 고열 수준입니다. 해열제 효과를 기다리지 말고 지금 바로 소아과·응급실로 가세요. 경련·의식 저하가 있으면 즉시 119에 전화하세요."
+      },
+      "emergency": {
+        "label": "응급 — 119 전화",
+        "advice": "생명을 위협할 수 있는 초고열입니다. 지금 바로 119에 전화하거나 응급실로 가세요. 이동 중에도 옷을 얇게 하고 미지근한 물로 몸을 닦아 체온을 낮춰주세요."
+      }
+    },
+    "method": {
+      "ear": "귀",
+      "forehead": "이마",
+      "armpit": "겨드랑이"
+    },
+    "actionGuide": {
+      "emergency": {
+        "label": "응급",
+        "headline": "지금 바로 119로 전화하세요!",
+        "emotion": "엄마, 침착하세요. 옷을 얇게 하고 미지근한 물수건으로 닦으며 응급실로 이동해 주세요."
+      },
+      "danger": {
+        "label": "위험 고열",
+        "headline": "지금 바로 응급실로 가세요!",
+        "emotion": "엄마, 당황하지 마세요. 해열제 효과를 기다리지 말고 병원으로 이동하는 게 가장 안전해요."
+      },
+      "recovering": {
+        "label": "회복 중",
+        "headline": "다행이에요! 열이 내리고 있어요",
+        "emotion": "고생 많으셨어요, 엄마! 1시간 뒤에 한 번 더 재서 안정세인지 확인해 주세요."
+      },
+      "highWaiting": {
+        "label": "고열",
+        "headline": "해열제는 {{remain}}분 후 가능해요",
+        "emotion": "지금은 미지근한 물수건으로 몸을 닦고 시원한 환경을 만들어 주세요. 수분 보충도 잊지 마세요."
+      },
+      "high": {
+        "label": "고열",
+        "headline": "해열제 복용을 고려해볼 수 있어요 (참고)",
+        "emotion": "엄마, 당황하지 마세요. 투약 여부·용량은 참고용이며, 판단이 어려우면 소아과·약사와 상담하세요. 30분 뒤 다시 재볼게요."
+      },
+      "moderateWaiting": {
+        "label": "발열",
+        "headline": "잠시 더 지켜봐 주세요",
+        "emotion": "해열제가 작용하는 중이에요. 30분 뒤 다시 재면 효과를 확인할 수 있어요."
+      },
+      "moderate": {
+        "label": "발열",
+        "headline": "해열제 복용을 고려해 주세요",
+        "emotion": "체온이 올라가고 있어요. 옷을 가볍게 하고 수분을 충분히 주세요."
+      },
+      "mild": {
+        "label": "미열",
+        "headline": "조금 더 지켜봐도 괜찮아요",
+        "emotion": "엄마, 너무 걱정 마세요. 수분 섭취에 신경 써주시고 1시간 뒤 다시 재봐요."
+      },
+      "normal": {
+        "label": "정상",
+        "headline": "지금은 괜찮아요",
+        "emotion": "체온이 정상 범위예요. 편안하게 지켜봐 주세요."
+      },
+      "nextCheck": "다음 측정: {{time}}"
+    },
+    "time": {
+      "justNowAt": "방금 ({{time}})",
+      "minutesAgoAt": "{{diffMin}}분 전 ({{time}})",
+      "todayAt": "오늘 {{time}}",
+      "hoursUnit": "{{hours}}시간",
+      "minutesUnit": "{{minutes}}분",
+      "atTimeIn": "{{time}} (약 {{duration}} 후)",
+      "soon": "곧",
+      "justNow": "방금",
+      "hoursMinutes": "{{hours}}시간 {{minutes}}분",
+      "in": "{{label}} 후",
+      "agoLabel": "{{label}} 전"
+    },
+    "nextDose": {
+      "reasonSame": "{{brandName}} 복용 {{hours}}시간 후",
+      "reasonAlternating": "{{brandName}}(교차) 복용 {{hours}}시간 후"
+    },
+    "measureTime": {
+      "label": "측정 시각",
+      "am": "오전",
+      "pm": "오후",
+      "hourPlaceholder": "시",
+      "minutePlaceholder": "분",
+      "now": "지금"
+    },
+    "alert": {
+      "selectChildTitle": "아이 선택",
+      "selectChildMessage": "먼저 아이를 선택해주세요.",
+      "doseInputTitle": "용량 입력",
+      "doseInputMessage": "올바른 ml 용량을 입력해주세요 (0~50).",
+      "deleteMedLogTitle": "기록 삭제",
+      "deleteMedLogMessage": "이 복용 기록을 삭제할까요?",
+      "tempInputErrorTitle": "체온 입력 오류",
+      "tempInputErrorMessage": "34.0 ~ 43.0 사이의 체온을 입력해주세요.",
+      "recheckReminderTitle": "1시간 뒤 재측정 알림 설정",
+      "recheckReminderMessage": "고열이 감지되었습니다. 1시간 뒤에 다시 재실 수 있도록 알림을 맞춰드렸어요. 걱정 마세요!",
+      "medicineLoadError": "해열제 정보를 불러올 수 없습니다.",
+      "permissionRequiredTitle": "권한 필요",
+      "permissionRequiredMessage": "알림 권한을 허용해주세요.",
+      "notificationSetTitle": "알림 설정 완료",
+      "notificationSetMessage": "{{timeLabel}} 후 알림이 울립니다.",
+      "notificationErrorTitle": "알림 오류",
+      "notificationErrorMessage": "알림을 설정할 수 없습니다.",
+      "clearHistoryTitle": "기록 삭제",
+      "clearHistoryMessage": "모든 체온 기록을 삭제할까요?",
+      "callFailedTitle": "전화 연결 실패",
+      "callFailedMessage": "직접 119로 전화해주세요.",
+      "callFailedDeviceMessage": "기기에서 전화 앱을 열 수 없습니다. 직접 119로 전화해주세요."
+    },
+    "notification": {
+      "doseTimeTitle": "해열제 복용 시간",
+      "doseTimeBody": "{{label}} 복용 시간입니다. 체온을 다시 확인해주세요."
+    },
+    "tempInput": {
+      "title": "체온 입력",
+      "desc": "체온을 입력하고 측정 부위를 선택해주세요",
+      "adjustNote": "* {{method}} 측정 시 +0.5°C 보정하여 판단합니다",
+      "checkButton": "확인"
+    },
+    "levelResult": {
+      "adjustedTemp": "(보정 {{temp}}°C)"
+    },
+    "medicine": {
+      "sectionTitle": "해열제 복용량 (참고 정보)",
+      "sectionDesc": "아이 체중 기준 보수값(권장 최소치)으로 계산된 참고용 정보입니다",
+      "disclaimer": "⚠️ 본 화면의 용량·복용 간격은 일반적인 참고 정보이며, 진단이나 치료를 목적으로 하는 의료행위에 해당하지 않습니다.\n약마다 농도가 다르니 제품 라벨의 농도(예: 타이레놀 32mg/ml, 챔프 ER 48mg/ml)를 반드시 확인하세요.\n실제 투약·복용·교차 복용은 반드시 소아과 의사·약사와 상담 후 결정하세요. 응급 증상이 의심되면 즉시 119에 연락하세요.",
+      "loadError": "해열제 정보를 불러올 수 없습니다."
+    },
+    "medLog": {
+      "sectionTitle": "해열제 복용 기록",
+      "sectionDesc": "먹인 해열제와 용량을 기록하면 다음 복용 가능 시간을 자동으로 알려드려요",
+      "availableNow": "지금 복용 가능",
+      "nextDose": "다음 해열제",
+      "nowOk": "{{typeLabel}}{{altSuffix}} 지금 OK",
+      "atTimeType": "{{time}}에 {{typeLabel}}{{altSuffix}}",
+      "altSuffix": " (교차)",
+      "lastDoseInfo": "마지막: {{brandName}} {{doseMl}}ml · {{relative}}",
+      "inAbout": "약 {{relative}} 후",
+      "historyTitle": "복용 이력",
+      "viewAll": "전체 보기 ({{count}}건)",
+      "empty": "아직 기록이 없어요. 위 버튼으로 복용을 기록하면 다음 복용 시간을 자동 계산해드려요."
+    },
+    "history": {
+      "sectionTitle": "체온 기록",
+      "clearButton": "기록 삭제",
+      "viewAll": "전체 보기 ({{count}}건)"
+    },
+    "citation": {
+      "note": "해열제 용량·복용 간격은 일반 기준이며, 실제 투약은 반드시 소아과 의사·약사 지시를 따르세요.",
+      "source1": "대한소아과학회 어린이 건강정보 (발열·해열제)",
+      "source2": "질병관리청 국가건강정보포털 (소아 발열)"
+    },
+    "medModal": {
+      "title": "{{brandName}} 기록",
+      "defaultBrand": "해열제",
+      "subLabel": "지금 ({{time}}) 복용으로 기록됩니다",
+      "selectMed": "약 선택",
+      "doseLabel": "용량 (ml)",
+      "dosePlaceholder": "예: 5",
+      "noteLabel": "메모 (선택)",
+      "notePlaceholder": "예: 38.5도 / 식후",
+      "saveButton": "기록 저장"
+    },
+    "medType": {
+      "acetaminophenGroup": "타이레놀류",
+      "ibuprofenGroup": "부루펜류",
+      "antipyretic": "해열제"
+    },
+    "brand": {
+      "tylenol": "타이레놀",
+      "champ": "챔프",
+      "brufen": "부루펜",
+      "maxibupen": "맥시부펜",
+      "other": "기타",
+      "champER": "챔프 ER",
+      "champRed": "챔프(빨강)",
+      "champBlue": "챔프(파랑)"
+    },
+    "weightInput": {
+      "label": "현재 몸무게",
+      "liveCalc": "입력값 {{weight}}kg 기준 실시간 계산",
+      "defaultCalc": "{{weight}}kg 기준 (입력 시 즉시 변경)"
+    },
+    "medGuide": {
+      "referenceLabel": "참고 안내",
+      "untilNext": "다음 복용까지 {{relative}}",
+      "headlineAvailable": "참고 기준: {{brandLabel}} 약 {{mlNumber}}ml (의사·약사 상담 후 투약)",
+      "headlineWaiting": "{{relative}} 후 {{brandLabel}} 약 {{mlNumber}}ml (참고)"
+    },
+    "champToggle": {
+      "label": "챔프 종류 (농도 확인)",
+      "red": "빨강 (아세트 32mg/ml)",
+      "redEr": "ER 고농도 (48mg/ml)",
+      "blue": "파랑 (이부 20mg/ml)"
+    },
+    "notifyButton": {
+      "in4h": "4시간 후 알림",
+      "in6h": "6시간 후 알림"
+    }
+  },
+  "momGroup": {
+    "headerTitle": "맘스톡",
+    "roomTypeMonth": "월방",
+    "roomTypeNearby": "내 동네",
+    "category": {
+      "question": "질문",
+      "chat": "수다",
+      "info": "정보",
+      "worry": "고민",
+      "celebration": "축하"
+    },
+    "reportReason": {
+      "abuse": "욕설·비방",
+      "ad": "광고·홍보",
+      "privacy": "개인정보 노출",
+      "spam": "도배·스팸",
+      "other": "기타"
+    },
+    "radius": {
+      "sub5": "바로 옆",
+      "sub10": "우리 동네",
+      "sub50": "우리 도시",
+      "sub100": "근교",
+      "nationwide": "전국",
+      "subNationwide": "나이별"
+    },
+    "region": {
+      "seoul": "서울",
+      "busan": "부산",
+      "daegu": "대구",
+      "incheon": "인천",
+      "gwangju": "광주",
+      "daejeon": "대전",
+      "ulsan": "울산",
+      "sejong": "세종",
+      "gyeonggi": "경기",
+      "gangwon": "강원",
+      "chungbuk": "충북",
+      "chungnam": "충남",
+      "jeonbuk": "전북",
+      "jeonnam": "전남",
+      "gyeongbuk": "경북",
+      "gyeongnam": "경남",
+      "jeju": "제주"
+    },
+    "roomLabelNearby": "내 동네 · {{label}}{{ageSuffix}}",
+    "roomLabelRegion": "{{label}} 지역방",
+    "writePlaceholderNearby": "내 동네 맘들과 나누고 싶은 이야기를 적어주세요...",
+    "writePlaceholderMonth": "같은 달 출산 맘들과 나누고 싶은 이야기를 적어주세요...",
+    "writePlaceholderRegion": "같은 지역 맘들과 나누고 싶은 이야기를 적어주세요...",
+    "noContent": "(내용 없음)",
+    "loadPostsError": "게시글을 불러오지 못했어요",
+    "titleRequired": "제목을 입력해주세요",
+    "contentRequired": "내용을 입력해주세요",
+    "bannedWordError": "부적절한 표현(욕설·비방 등)이 포함되어 있어 등록할 수 없습니다.",
+    "submitError": "작성에 실패했어요",
+    "deletePostTitle": "삭제",
+    "deletePostConfirm": "이 게시글을 삭제할까요?",
+    "deletePostError": "삭제에 실패했어요",
+    "reportReceivedTitle": "접수",
+    "reportReceivedDesc": "신고가 접수됐어요",
+    "reportError": "처리에 실패했어요",
+    "anonymousUser": "익명 사용자",
+    "thisUser": "이 사용자",
+    "blockDoneTitle": "차단 완료",
+    "blockDoneDesc": "해당 사용자의 글이 더 이상 보이지 않아요. 운영팀에도 검토 요청이 전달됐어요.",
+    "blockError": "차단 처리에 실패했어요",
+    "blockConfirmTitle": "{{name}}님을 차단할까요?",
+    "blockConfirmDesc": "차단하면 이 사용자의 글과 댓글이 피드에서 즉시 사라지고, 운영팀에 검토 요청이 접수됩니다.",
+    "block": "차단",
+    "reportReasonTitle": "신고 사유 선택",
+    "reportReasonMessage": "3회 이상 신고되면 자동 숨김 처리돼요",
+    "bookmarkError": "북마크 처리에 실패했어요",
+    "deleteCommentTitle": "삭제",
+    "deleteCommentConfirm": "이 댓글을 삭제할까요?",
+    "searchFieldAll": "전체",
+    "searchFieldTitle": "제목",
+    "searchFieldContent": "내용",
+    "searchFieldNickname": "작성자",
+    "searchPlaceholderTitle": "제목에서 검색",
+    "searchPlaceholderContent": "내용에서 검색",
+    "searchPlaceholderNickname": "작성자에서 검색",
+    "searchPlaceholderAll": "전체에서 검색",
+    "locationPrompt": "위치를 먼저 등록해주세요 — 탭하여 등록",
+    "locationCurrentLabel": "현재 등록:",
+    "locationRegisteredFallback": "위치 좌표 등록됨",
+    "ageDifferenceLabel": "아이 나이 차이",
+    "sameAge": "동갑",
+    "ageRangePlusMinus": "±{{n}}살",
+    "matchSameAge": "동갑 매칭: {{year}}년생",
+    "matchRange": "매칭 범위: {{from}}~{{to}}년생",
+    "groupLabel": "{{year}}년 {{month}}월 맘스톡",
+    "monthOnly": "{{month}}월",
+    "resetToMyMonth": "내 예정월로 ({{month}})",
+    "sortRecent": "최신",
+    "sortPopular": "인기",
+    "sortHonor": "명예",
+    "sortBookmark": "북마크",
+    "sortMine": "내 글",
+    "emptyBookmarks": "북마크한 글이 없어요",
+    "emptyMine": "아직 작성한 글이 없어요",
+    "emptySearchResult": "\"{{query}}\" 검색 결과가 없어요",
+    "emptyCategory": "이 카테고리에 아직 글이 없어요",
+    "emptyRadius": "{{area}}에 글이 없어요",
+    "radiusKmArea": "{{km}}km 안",
+    "emptyFirstPost": "첫 게시글을 남겨보세요!",
+    "expandViewLabel": "{{label}} 보기{{countSuffix}}",
+    "pagePrev": "이전",
+    "pageNext": "다음",
+    "pageTotalCount": "{{count}}개",
+    "writeButton": "글쓰기",
+    "editPostTitle": "글 수정",
+    "newPostTitle": "{{roomLabel}} · 새 글",
+    "titleLabel": "제목",
+    "titlePlaceholder": "제목을 입력해주세요",
+    "contentLabel": "내용",
+    "removePhoto": "사진 삭제",
+    "attachPhoto": "사진 첨부 (선택)",
+    "pinToTop": "상단 고정",
+    "pinToTopDesc": "피드 최상단에 고정 노출됩니다 (전체 공식 글 중 최신 3개까지만 적용)",
+    "editComplete": "수정 완료",
+    "publish": "게시",
+    "postDetailTitle": "게시글",
+    "editedSuffix": "(수정됨)",
+    "officialBadge": "공식",
+    "nationwidePopularBadge": "전국 인기",
+    "officialBannerText": "운영팀 안내 · 아맞다 공식 게시글입니다",
+    "anonymous": "익명",
+    "saved": "저장됨",
+    "bookmark": "북마크",
+    "report": "신고",
+    "emptyComments": "첫 댓글을 남겨주세요",
+    "commentPlaceholder": "댓글 작성...",
+    "send": "전송",
+    "badgeEvent": "이벤트",
+    "badgeRecommend": "추천",
+    "badgeNationwide": "전국",
+    "viewCount": "조회 {{count}}",
+    "likeCount": "공감 {{count}}",
+    "timeAgo": {
+      "justNow": "방금",
+      "minutes": "{{count}}분 전",
+      "hours": "{{count}}시간 전",
+      "days": "{{count}}일 전"
+    }
+  },
+  "birthBag": {
+    "headerTitle": "출산가방 체크리스트",
+    "shareBtn": "공유",
+    "heroTitle": "엄마·아빠가 같이 끝내요",
+    "heroSub": "분만 형태와 산후 계획에 맞춰, 엄마·아빠가 함께 챙겨요.",
+    "birthTypeLabel": "분만 형태",
+    "postpartumPlanLabel": "산후 준비",
+    "progressLabel": "진행률",
+    "progressDone": "준비 완료! 이제 마음 편히 기다려요",
+    "itemCount": "{{count}}개",
+    "essentialBadge": "필수",
+    "customBadge": "내가 추가",
+    "addStatusTag": "+ 상태",
+    "addOwnerTag": "+ 담당",
+    "ownerTag": "{{owner}} 담당",
+    "adLabel": "광고",
+    "addItemBtn": "+ 항목 추가",
+    "hiddenLink": "숨긴 항목 {{count}}개 보기",
+    "ownerLabelMom": "엄마",
+    "shareFailTitle": "공유 실패",
+    "shareFailDesc": "잠시 후 다시 시도해주세요.",
+    "shareSummary": "아맞다 출산가방 {{progressPct}}% 완료 · 남은 항목 {{remaining}}개. 가족과 함께 챙겨주세요!\n{{url}}",
+    "copyDoneTitle": "링크 복사 완료",
+    "copyDoneDesc": "카카오톡이나 문자에 붙여넣어 공유하세요.",
+    "owner": {
+      "mom": "엄마",
+      "dad": "아빠",
+      "both": "같이"
+    },
+    "status": {
+      "need": "구매 필요",
+      "ready": "준비 완료",
+      "packed": "가방에 넣음",
+      "na": "해당 없음"
+    },
+    "categoryLabel": {
+      "mom": "엄마 (산모) 가방",
+      "baby": "아기 가방",
+      "docs": "서류 가방"
+    },
+    "birthTypes": {
+      "natural": {
+        "label": "자연분만",
+        "sub": "회음 회복"
+      },
+      "csection": {
+        "label": "제왕절개",
+        "sub": "복부 회복"
+      }
+    },
+    "postpartumPlans": {
+      "sanhujowon": {
+        "label": "조리원 이용",
+        "sub": "입소 후 추가 준비"
+      },
+      "home": {
+        "label": "집으로 귀가",
+        "sub": "집에서 산후 관리"
+      }
+    },
+    "summaryChip": {
+      "total": "총",
+      "done": "완료",
+      "need": "구매필요",
+      "dad": "아빠담당"
+    },
+    "dadMode": {
+      "title": "아빠 모드",
+      "activeTitle": "아빠 모드 — 담당만 보는 중",
+      "sub": "아빠 담당 {{count}}개만 빠르게 챙기기",
+      "activeSub": "남은 {{count}}개 · 탭하면 일반 보기로",
+      "shareBtn": "남편에게 공유"
+    },
+    "filter": {
+      "all": "전체",
+      "need": "구매 필요",
+      "dad": "아빠 담당 {{count}}",
+      "unassigned": "미지정",
+      "hideDone": "완료 숨기기"
+    },
+    "recommend": {
+      "hygiene": {
+        "title": "출산 후 위생템 추천",
+        "desc": "마이비데 · 산모패드 · 수유패드"
+      },
+      "essential": {
+        "title": "출산가방 필수템",
+        "desc": "회음 방석 · 휴대용 비데 · 압박스타킹"
+      },
+      "baby": {
+        "title": "아기 용품 추천",
+        "desc": "신생아 기저귀·물티슈·가제수건"
+      }
+    },
+    "tip": {
+      "title": "같이 챙기는 팁",
+      "text": "담당 태그를 눌러 엄마·아빠로 나누면 누가 뭐 가져갈지 헷갈리지 않아요. 카시트는 퇴원 당일 차에 미리 설치해두세요."
+    },
+    "shareModal": {
+      "title": "가족에게 출산가방 공유",
+      "subtitle": "앱 설치 없이 웹 링크로 가족이 바로 확인할 수 있어요",
+      "loading": "링크 만드는 중...",
+      "optionNative": "카카오톡·문자로 보내기",
+      "optionCopy": "링크 복사",
+      "privacyNote": "아이 실명·예정일은 공유되지 않아요. 링크는 30일 후 자동 만료됩니다."
+    },
+    "picker": {
+      "ownerTitle": "담당 선택",
+      "statusTitle": "상태 선택",
+      "ownerUnset": "미정",
+      "statusClear": "상태 지우기"
+    },
+    "addModal": {
+      "title": "{{category}}에 항목 추가",
+      "nameLabel": "이름",
+      "namePlaceholder": "예) 휴대용 가습기",
+      "hintLabel": "설명 (선택)",
+      "hintPlaceholder": "예) 산후조리원 건조함 대비",
+      "submit": "추가"
+    },
+    "moreMenu": {
+      "title": "항목 옵션",
+      "hide": "이 항목 숨기기",
+      "deleteForever": "완전히 삭제"
+    },
+    "hiddenModal": {
+      "title": "숨긴 항목 ({{count}})",
+      "empty": "숨긴 항목이 없어요",
+      "restore": "복구"
+    },
+    "items": {
+      "m1": {
+        "label": "산모 패드 (대형 5-7장)"
+      },
+      "m2": {
+        "label": "수유 브라 2-3개"
+      },
+      "m3": {
+        "label": "편한 잠옷·가운 (앞트임)"
+      },
+      "m4": {
+        "label": "슬리퍼 (병동용)"
+      },
+      "m5": {
+        "label": "세면도구 (칫솔·치약·샴푸·수건)"
+      },
+      "m6": {
+        "label": "휴대폰 충전기 (긴 케이블)"
+      },
+      "m7": {
+        "label": "물병·빨대컵 (누워서 마시기 좋음)"
+      },
+      "m8": {
+        "label": "복대",
+        "hint": "제왕절개 회복 필수"
+      },
+      "m9": {
+        "label": "회음 방석·도넛 방석",
+        "hint": "자연분만 회복에 도움"
+      },
+      "m19": {
+        "label": "휴대용 비데 (산모용)",
+        "hint": "회음부·화장실 사용 후 자극 없이 세정. 제왕절개 산모도 몸 굽히기 힘들 때 유용"
+      },
+      "m10": {
+        "label": "입던 옷 (퇴원 시 입을 편한 옷)"
+      },
+      "m11": {
+        "label": "간단한 간식 (당 보충)"
+      },
+      "m12": {
+        "label": "안경·콘택트 케어 용품"
+      },
+      "m13": {
+        "label": "머리끈·헤어밴드"
+      },
+      "m14": {
+        "label": "수유 패드 (모유 새는 것 방지)"
+      },
+      "m15": {
+        "label": "조리원 입소 가운·실내복",
+        "hint": "조리원 입소 첫날 필요"
+      },
+      "m16": {
+        "label": "조리원 보습용품 (얼굴·바디)"
+      },
+      "m17": {
+        "label": "산후 영양제 (철분·종합비타민)",
+        "hint": "집에서 직접 챙겨야"
+      },
+      "m18": {
+        "label": "식사 준비 (밀키트·반찬)"
+      },
+      "b1": {
+        "label": "배냇저고리 2-3벌"
+      },
+      "b2": {
+        "label": "속싸개·겉싸개"
+      },
+      "b3": {
+        "label": "신생아 모자"
+      },
+      "b4": {
+        "label": "손싸개·발싸개"
+      },
+      "b5": {
+        "label": "신생아 기저귀 (1단계 1팩)"
+      },
+      "b6": {
+        "label": "물티슈 (무향)"
+      },
+      "b7": {
+        "label": "카시트 (퇴원 시 필수)",
+        "hint": "KC 인증 필수"
+      },
+      "b8": {
+        "label": "아기 수건·가제수건 5-6장"
+      },
+      "b9": {
+        "label": "퇴원복 (계절 맞춰)"
+      },
+      "b10": {
+        "label": "젖병·소량 분유 (혹시 모를 상황)"
+      },
+      "d1": {
+        "label": "산모수첩"
+      },
+      "d2": {
+        "label": "신분증 (산모·보호자)"
+      },
+      "d3": {
+        "label": "의료보험증"
+      },
+      "d4": {
+        "label": "입원·출산준비물 영수증"
+      },
+      "d5": {
+        "label": "출생신고용 도장 (선택)"
+      },
+      "d6": {
+        "label": "분만 병원 번호 등록",
+        "hint": "SOS / 진통 체크에서 즉시 전화 연결됨"
+      }
+    },
+    "productHints": {
+      "m1": "산모들이 가장 많이 챙기는 대형 패드",
+      "m2": "앞트임 + 사이즈 여유 — 수유 브라의 정석",
+      "m3": "병원에서 퇴원까지 이어 입는 가운형",
+      "m4": "굽 없는 미끄럼 방지 슬리퍼 (병동용)",
+      "m5": "미니 트래블 키트 — 한 손에 쏙",
+      "m6": "긴 케이블 + 보조배터리 세트",
+      "m7": "누워서 마시기 좋은 빨대 텀블러",
+      "m8": "제왕절개 산모 필수 — 골반 케어 복대",
+      "m9": "도넛 방석 — 자연분만 후 회복템",
+      "m19": "휴대용 비데 — 회음부 케어 끝판왕",
+      "m10": "편한 임부복 (퇴원복 그대로)",
+      "m11": "저혈당 대비 산모 간식 모음",
+      "m12": "안경/콘택트 미니 케어 키트",
+      "m13": "머리끈/헤어밴드 — 분만 중에도 OK",
+      "m14": "수유 패드 — 모유 새기 방지 5종",
+      "m15": "조리원 가운/실내복 (앞트임)",
+      "m16": "조리원 보습 케어 (저자극 라인)",
+      "m17": "산후 영양제 (철분/종합비타민)",
+      "m18": "산후 식사 밀키트/반찬 정기배송",
+      "b1": "면 100% 신생아 배냇저고리 세트",
+      "b2": "속싸개·겉싸개 세트 — 수면 안정",
+      "b3": "신생아 모자 — 보온 필수템",
+      "b4": "면 손싸개·발싸개 (긁힘 방지)",
+      "b5": "신생아 1단계 기저귀 (4kg 이하)",
+      "b6": "무향 물티슈 — 민감 피부 OK",
+      "b7": "KC 인증 신생아 카시트 — 퇴원 필수",
+      "b8": "아기 가제수건 100% 면 모음",
+      "b9": "계절 맞춤 퇴원복 (3-5kg)",
+      "b10": "신생아 분유 + 젖병 미니 세트"
+    }
   }
 }

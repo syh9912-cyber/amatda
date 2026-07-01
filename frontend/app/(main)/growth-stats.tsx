@@ -2,6 +2,8 @@ import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, TextInput,
 import { LineChart } from 'react-native-chart-kit';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Stack, router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
@@ -26,9 +28,11 @@ const IC_HAPPY = require('../../assets/mascot-happy.png') as ImageSourcePropType
 
 type TabKey = 'physical';
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'physical', label: '키/몸무게/성장' },
-];
+function getTabs(t: TFunction): { key: TabKey; label: string }[] {
+  return [
+    { key: 'physical', label: t('growthStats.tabPhysical') },
+  ];
+}
 
 /* ---- Milestone Types ---- */
 
@@ -113,13 +117,13 @@ function getLevelColor(level: string): { bg: string; text: string } {
   return LEVEL_COLORS[level] ?? { bg: '#F2F2F7', text: '#888888' };
 }
 
-function getLevelLabel(level: string): string {
+function getLevelLabel(level: string, t: TFunction): string {
   switch (level) {
-    case 'very_low': return '매우 낮음';
-    case 'low': return '낮음';
-    case 'normal': return '정상';
-    case 'high': return '높음';
-    case 'very_high': return '매우 높음';
+    case 'very_low': return t('growthStats.levelVeryLow');
+    case 'low': return t('growthStats.levelLow');
+    case 'normal': return t('growthStats.levelNormal');
+    case 'high': return t('growthStats.levelHigh');
+    case 'very_high': return t('growthStats.levelVeryHigh');
     default: return level;
   }
 }
@@ -208,19 +212,20 @@ function calculatePercentile(value: number, std: PercentileData): number {
   return Math.round(50 - ratio * 47);
 }
 
-function getPercentileLabel(percentile: number): string {
+function getPercentileLabel(percentile: number, t: TFunction): string {
   // calculatePercentile은 (100 - 실제백분위)를 반환(작을수록 큰 아이)하므로
   // 실제 백분위(p)로 환산해 또래 대비 위치를 정확히, 구간별로 표기한다.
   const p = Math.max(1, Math.min(99, 100 - percentile));
-  if (p >= 90) return `큰 편 · 상위 ${100 - p}%`;
-  if (p >= 60) return `살짝 큰 편 · 백분위 ${p}`;
-  if (p >= 40) return `또래 평균 · 백분위 ${p}`;
-  if (p >= 11) return `살짝 작은 편 · 백분위 ${p}`;
-  return `작은 편 · 하위 ${p}%`;
+  if (p >= 90) return t('growthStats.percentileLarge', { value: 100 - p });
+  if (p >= 60) return t('growthStats.percentileSlightlyLarge', { value: p });
+  if (p >= 40) return t('growthStats.percentileAverage', { value: p });
+  if (p >= 11) return t('growthStats.percentileSlightlySmall', { value: p });
+  return t('growthStats.percentileSmall', { value: p });
 }
 
 export default function GrowthStatsScreen() {
   // 기질 탭 제거됨: 키/몸무게/성장 단일 뷰
+  const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const isPregnant = selectedChild?.isPregnant === true;
 
@@ -237,13 +242,13 @@ export default function GrowthStatsScreen() {
       <View style={{ flex: 1 }}>
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
           <Stack.Screen options={{ headerShown: false }} />
-          <ScreenHeader title="주수별 발달" right={<GuideButton onPress={() => setGuideVisible(true)} />} />
+          <ScreenHeader title={t('growthStats.weeklyDevTitle')} right={<GuideButton onPress={() => setGuideVisible(true)} />} />
           <MedicalCitation
             compact
-            note="주차별 발달 정보는 일반 참고용이며, 개인별 상태는 산부인과 전문의와 상담하세요."
+            note={t('growthStats.weeklyDevCitationNote')}
             sources={[
-              { label: '보건복지부·임신육아종합포털 「아이사랑」 임신 주차별 정보', url: 'https://www.childcare.go.kr' },
-              { label: '대한산부인과학회 임신·출산 정보', url: 'https://www.ksog.org' },
+              { label: t('growthStats.citationSourceChildcare'), url: 'https://www.childcare.go.kr' },
+              { label: t('growthStats.citationSourceKsog'), url: 'https://www.ksog.org' },
             ]}
           />
           <PregnancyWeeklyDevelopment />
@@ -269,13 +274,13 @@ export default function GrowthStatsScreen() {
 
         <MedicalCitation
           compact
-          note="성장 백분위·통계는 표준 성장도표 기반 참고용이며, 개인별 평가는 소아과 전문의와 상담하세요."
+          note={t('growthStats.growthCitationNote')}
           sources={[
-            { label: '질병관리청·대한소아과학회 「2017 소아청소년 성장도표」', url: 'https://www.kdca.go.kr' },
-            { label: 'WHO Child Growth Standards (0–5세)', url: 'https://www.who.int/tools/child-growth-standards' },
+            { label: t('growthStats.citationSourceKdca'), url: 'https://www.kdca.go.kr' },
+            { label: t('growthStats.citationSourceWho'), url: 'https://www.who.int/tools/child-growth-standards' },
           ]}
         />
-        <PhysicalTab childName={selectedChild?.name ?? '아이'} />
+        <PhysicalTab childName={selectedChild?.name ?? t('growthStats.defaultChildName')} />
       </ScrollView>
       <AdSlot />
       <GuideCarousel visible={guideVisible} pages={GROWTH_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#7CA46E" />
@@ -284,8 +289,9 @@ export default function GrowthStatsScreen() {
 }
 
 function GrowthHeader({ onGuide }: { onGuide?: () => void }) {
+  const { t } = useTranslation();
   return (
-    <ScreenHeader title="성장 기록 & 변화" right={onGuide ? <GuideButton onPress={onGuide} /> : undefined} />
+    <ScreenHeader title={t('growthStats.growthHeaderTitle')} right={onGuide ? <GuideButton onPress={onGuide} /> : undefined} />
   );
 }
 
@@ -563,25 +569,27 @@ interface WeeklyTask {
   type: 'exam' | 'todo';
 }
 
-const WEEKLY_TASKS: WeeklyTask[] = [
-  { minWeek: 1, maxWeek: 12, emoji: '💊', title: '엽산 매일 복용 (400~800mcg)', type: 'todo' },
-  { minWeek: 6, maxWeek: 10, emoji: '🏥', title: '첫 산부인과 방문 + 심장소리 확인', type: 'exam' },
-  { minWeek: 11, maxWeek: 14, emoji: '🔬', title: '1차 기형아 검사 (NT, 목투명대)', type: 'exam' },
-  { minWeek: 14, maxWeek: 16, emoji: '🥬', title: '철분 섭취 시작 (시금치/붉은 고기)', type: 'todo' },
-  { minWeek: 15, maxWeek: 20, emoji: '🧪', title: '2차 기형아 검사 (쿼드/트리플)', type: 'exam' },
-  { minWeek: 18, maxWeek: 22, emoji: '📋', title: '정밀 초음파 (레벨 2)', type: 'exam' },
-  { minWeek: 20, maxWeek: 24, emoji: '🎀', title: '성별 확인 가능 시기', type: 'todo' },
-  { minWeek: 24, maxWeek: 28, emoji: '🩸', title: '임신성 당뇨 검사 (GCT)', type: 'exam' },
-  { minWeek: 28, maxWeek: 32, emoji: '📚', title: '출산 준비 교실 수강', type: 'todo' },
-  { minWeek: 28, maxWeek: 36, emoji: '🦶', title: '태동 카운터 매일 체크', type: 'todo' },
-  { minWeek: 32, maxWeek: 36, emoji: '🏥', title: 'NST (비수축검사)', type: 'exam' },
-  { minWeek: 35, maxWeek: 37, emoji: '🔬', title: 'GBS 검사 (B군 연쇄상구균)', type: 'exam' },
-  { minWeek: 32, maxWeek: 40, emoji: '🧳', title: '출산가방 준비', type: 'todo' },
-  { minWeek: 36, maxWeek: 40, emoji: '⏱️', title: '진통 간격 타이머 준비', type: 'todo' },
-];
+function getWeeklyTasks(t: TFunction): WeeklyTask[] {
+  return [
+    { minWeek: 1, maxWeek: 12, emoji: '💊', title: t('growthStats.task1'), type: 'todo' },
+    { minWeek: 6, maxWeek: 10, emoji: '🏥', title: t('growthStats.task2'), type: 'exam' },
+    { minWeek: 11, maxWeek: 14, emoji: '🔬', title: t('growthStats.task3'), type: 'exam' },
+    { minWeek: 14, maxWeek: 16, emoji: '🥬', title: t('growthStats.task4'), type: 'todo' },
+    { minWeek: 15, maxWeek: 20, emoji: '🧪', title: t('growthStats.task5'), type: 'exam' },
+    { minWeek: 18, maxWeek: 22, emoji: '📋', title: t('growthStats.task6'), type: 'exam' },
+    { minWeek: 20, maxWeek: 24, emoji: '🎀', title: t('growthStats.task7'), type: 'todo' },
+    { minWeek: 24, maxWeek: 28, emoji: '🩸', title: t('growthStats.task8'), type: 'exam' },
+    { minWeek: 28, maxWeek: 32, emoji: '📚', title: t('growthStats.task9'), type: 'todo' },
+    { minWeek: 28, maxWeek: 36, emoji: '🦶', title: t('growthStats.task10'), type: 'todo' },
+    { minWeek: 32, maxWeek: 36, emoji: '🏥', title: t('growthStats.task11'), type: 'exam' },
+    { minWeek: 35, maxWeek: 37, emoji: '🔬', title: t('growthStats.task12'), type: 'exam' },
+    { minWeek: 32, maxWeek: 40, emoji: '🧳', title: t('growthStats.task13'), type: 'todo' },
+    { minWeek: 36, maxWeek: 40, emoji: '⏱️', title: t('growthStats.task14'), type: 'todo' },
+  ];
+}
 
-function getTasksForWeek(week: number): WeeklyTask[] {
-  return WEEKLY_TASKS.filter((t) => week >= t.minWeek && week <= t.maxWeek);
+function getTasksForWeek(week: number, t: TFunction): WeeklyTask[] {
+  return getWeeklyTasks(t).filter((task) => week >= task.minWeek && week <= task.maxWeek);
 }
 
 function calculateDDay(dueDate?: string | null): number | null {
@@ -594,13 +602,14 @@ function calculateDDay(dueDate?: string | null): number | null {
   return Math.round((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function getTrimesterInfo(week: number) {
-  if (week <= 13) return { label: '1분기 (초기)', color: '#E8F5E9', textColor: '#2E7D32' };
-  if (week <= 27) return { label: '2분기 (안정기)', color: '#E3F2FD', textColor: '#1565C0' };
-  return { label: '3분기 (후기)', color: '#FCE4EC', textColor: '#C62828' };
+function getTrimesterInfo(week: number, t: TFunction) {
+  if (week <= 13) return { label: t('growthStats.trimester1'), color: '#E8F5E9', textColor: '#2E7D32' };
+  if (week <= 27) return { label: t('growthStats.trimester2'), color: '#E3F2FD', textColor: '#1565C0' };
+  return { label: t('growthStats.trimester3'), color: '#FCE4EC', textColor: '#C62828' };
 }
 
 function PregnancyWeeklyDevelopment() {
+  const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const weeks = WEEKLY_DEVELOPMENT;
   const [imagesByWeek, setImagesByWeek] = useState<Record<number, TimelineItem[]>>({});
@@ -611,7 +620,7 @@ function PregnancyWeeklyDevelopment() {
 
   const currentWeek = selectedChild?.pregnancyWeeks ?? 0;
   const dDay = calculateDDay(selectedChild?.dueDate);
-  const weeklyTasks = getTasksForWeek(currentWeek);
+  const weeklyTasks = getTasksForWeek(currentWeek, t);
 
   // 금기 검색
   const [showSafetyModal, setShowSafetyModal] = useState(false);
@@ -634,8 +643,8 @@ function PregnancyWeeklyDevelopment() {
       setSafetyResult(res.data.data);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-        ?? '검색에 실패했어요. 잠시 후 다시 시도해주세요.';
-      Alert.alert('알림', msg);
+        ?? t('growthStats.safetySearchFail');
+      Alert.alert(t('common.notice'), msg);
     }
     setSafetyLoading(false);
   };
@@ -697,8 +706,8 @@ function PregnancyWeeklyDevelopment() {
     ? weeks.filter((w) => w.week >= currentWeek)
     : weeks;
   const weekItems = visibleWeeks.map((dev, idx) => {
-    const tri = getTrimesterInfo(dev.week);
-    const prevTri = idx > 0 ? getTrimesterInfo(visibleWeeks[idx - 1].week) : null;
+    const tri = getTrimesterInfo(dev.week, t);
+    const prevTri = idx > 0 ? getTrimesterInfo(visibleWeeks[idx - 1].week, t) : null;
     return { dev, showTrimester: !prevTri || prevTri.label !== tri.label, trimester: tri };
   });
 
@@ -707,17 +716,17 @@ function PregnancyWeeklyDevelopment() {
       {/* 의료 disclaimer — 약물·증상·응급 신호 안내 시 의료기기성 위험 회피 (App Store/Play Store 심사) */}
       <View style={pwStyles.disclaimerCard}>
         <Text style={pwStyles.disclaimerText}>
-          ⓘ 이 정보는 일반 참고용이며 의료 진단·처방을 대체하지 않습니다. 약물·식이·증상에 관한 결정은 반드시 산부인과 전문의와 상담해주세요. 응급 신호(심한 출혈·복통·태동 급감·시야 이상·심한 부종 등)가 있으면 즉시 병원에 가세요.
+          {t('growthStats.medicalDisclaimer')}
         </Text>
       </View>
 
       {/* Current Week Summary Card */}
       {currentWeek > 0 && currentDev && (
         <View style={[pwStyles.currentCard, { backgroundColor: '#FF8C94' }]}>
-          <Text style={pwStyles.currentLabel}>현재 임신</Text>
-          <Text style={pwStyles.currentWeekText}>{currentWeek}주차</Text>
+          <Text style={pwStyles.currentLabel}>{t('growthStats.currentlyPregnant')}</Text>
+          <Text style={pwStyles.currentWeekText}>{t('growthStats.weekNumber', { week: currentWeek })}</Text>
           <Text style={pwStyles.currentSize}>
-            {SIZE_EMOJI[currentDev.size] ?? '🤰'} {currentDev.size} 크기
+            {SIZE_EMOJI[currentDev.size] ?? '🤰'} {t('growthStats.sizeOf', { size: currentDev.size })}
           </Text>
           <Text style={pwStyles.currentMeasure}>
             {currentDev.length} / {currentDev.weight}
@@ -729,11 +738,11 @@ function PregnancyWeeklyDevelopment() {
       {dDay !== null && (
         <View style={pwStyles.dDayCard}>
           <View style={pwStyles.dDayLeft}>
-            <Text style={pwStyles.dDayLabel}>출산예정일까지</Text>
+            <Text style={pwStyles.dDayLabel}>{t('growthStats.daysUntilDueDate')}</Text>
             <Text style={pwStyles.dDayValue}>
               {dDay > 0 ? `D-${dDay}` : dDay === 0 ? 'D-Day!' : `D+${Math.abs(dDay)}`}
             </Text>
-            <Text style={pwStyles.dDayHint}>📅 주요 검사·출산일 알림이 자동 등록돼요</Text>
+            <Text style={pwStyles.dDayHint}>{t('growthStats.dDayHint')}</Text>
           </View>
           <View style={pwStyles.dDayRight}>
             <Text style={pwStyles.dDayDate}>
@@ -746,20 +755,20 @@ function PregnancyWeeklyDevelopment() {
       {/* 이번 주 할 일 / 검사 */}
       {weeklyTasks.length > 0 && (
         <View style={pwStyles.tasksCard}>
-          <Text style={pwStyles.tasksTitle}>📋 이번 주 할 일 · 검사</Text>
-          {weeklyTasks.map((t, i) => (
-            <View key={`${t.type}-${i}`} style={pwStyles.taskRow}>
-              <Text style={pwStyles.taskEmoji}>{t.emoji}</Text>
-              <Text style={pwStyles.taskText}>{t.title}</Text>
+          <Text style={pwStyles.tasksTitle}>{t('growthStats.weeklyTasksTitle')}</Text>
+          {weeklyTasks.map((task, i) => (
+            <View key={`${task.type}-${i}`} style={pwStyles.taskRow}>
+              <Text style={pwStyles.taskEmoji}>{task.emoji}</Text>
+              <Text style={pwStyles.taskText}>{task.title}</Text>
               <View style={[
                 pwStyles.taskBadge,
-                t.type === 'exam' ? { backgroundColor: '#FCE4EC' } : { backgroundColor: '#E3F2FD' },
+                task.type === 'exam' ? { backgroundColor: '#FCE4EC' } : { backgroundColor: '#E3F2FD' },
               ]}>
                 <Text style={[
                   pwStyles.taskBadgeText,
-                  t.type === 'exam' ? { color: '#C2185B' } : { color: '#1565C0' },
+                  task.type === 'exam' ? { color: '#C2185B' } : { color: '#1565C0' },
                 ]}>
-                  {t.type === 'exam' ? '검사' : '할 일'}
+                  {task.type === 'exam' ? t('growthStats.taskTypeExam') : t('growthStats.taskTypeTodo')}
                 </Text>
               </View>
             </View>
@@ -771,8 +780,8 @@ function PregnancyWeeklyDevelopment() {
       <TouchableOpacity style={pwStyles.safetyBtn} onPress={() => setShowSafetyModal(true)}>
         <Text style={pwStyles.safetyBtnEmoji}>🔍</Text>
         <View style={{ flex: 1 }}>
-          <Text style={pwStyles.safetyBtnTitle}>임산부 금기 검색</Text>
-          <Text style={pwStyles.safetyBtnSub}>음식·약물·카페인 안전성 확인</Text>
+          <Text style={pwStyles.safetyBtnTitle}>{t('growthStats.safetySearchTitle')}</Text>
+          <Text style={pwStyles.safetyBtnSub}>{t('growthStats.safetySearchSub')}</Text>
         </View>
         <Text style={pwStyles.safetyBtnArrow}>{'>'}</Text>
       </TouchableOpacity>
@@ -809,7 +818,7 @@ function PregnancyWeeklyDevelopment() {
                 <View style={pwStyles.weekMeta}>
                   <View style={pwStyles.weekLabelRow}>
                     <Text style={[pwStyles.weekNum, isCurrent && pwStyles.weekNumCurrent]}>
-                      {dev.week}주
+                      {t('growthStats.weekLabel', { week: dev.week })}
                     </Text>
                     {isCurrent && (
                       <View style={pwStyles.nowBadge}>
@@ -817,7 +826,7 @@ function PregnancyWeeklyDevelopment() {
                       </View>
                     )}
                   </View>
-                  <Text style={pwStyles.weekSizeText}>{dev.size} 크기</Text>
+                  <Text style={pwStyles.weekSizeText}>{t('growthStats.sizeOf', { size: dev.size })}</Text>
                   <Text style={pwStyles.weekMeasure}>{dev.length} / {dev.weight}</Text>
                 </View>
                 <Text style={pwStyles.expandIcon}>{isExpanded ? '▲' : '▼'}</Text>
@@ -836,7 +845,7 @@ function PregnancyWeeklyDevelopment() {
 
                   {/* Features — 아기 발달 */}
                   <View style={pwStyles.featBox}>
-                    <Text style={pwStyles.featTitle}>👶 이번 주 아기 발달</Text>
+                    <Text style={pwStyles.featTitle}>{t('growthStats.featTitle')}</Text>
                     {dev.features.map((f, i) => (
                       <View key={i} style={pwStyles.featRow}>
                         <Text style={pwStyles.featDot}>{'•'}</Text>
@@ -848,7 +857,7 @@ function PregnancyWeeklyDevelopment() {
                   {/* 엄마 몸 변화 */}
                   {dev.momChange && (
                     <View style={pwStyles.momChangeBox}>
-                      <Text style={pwStyles.subSectionTitle}>🤰 엄마 몸 변화</Text>
+                      <Text style={pwStyles.subSectionTitle}>{t('growthStats.momChangeTitle')}</Text>
                       <Text style={pwStyles.subSectionText}>{dev.momChange}</Text>
                     </View>
                   )}
@@ -856,7 +865,7 @@ function PregnancyWeeklyDevelopment() {
                   {/* 추천 음식·영양 */}
                   {dev.foodTip && (
                     <View style={pwStyles.foodTipBox}>
-                      <Text style={pwStyles.subSectionTitle}>🍎 추천 음식·영양</Text>
+                      <Text style={pwStyles.subSectionTitle}>{t('growthStats.foodTipTitle')}</Text>
                       <Text style={pwStyles.subSectionText}>{dev.foodTip}</Text>
                     </View>
                   )}
@@ -864,7 +873,7 @@ function PregnancyWeeklyDevelopment() {
                   {/* 주의사항 */}
                   {dev.caution && (
                     <View style={pwStyles.cautionBox}>
-                      <Text style={pwStyles.cautionTitle}>⚠️ 주의</Text>
+                      <Text style={pwStyles.cautionTitle}>{t('growthStats.cautionTitle')}</Text>
                       <Text style={pwStyles.cautionText}>{dev.caution}</Text>
                     </View>
                   )}
@@ -880,7 +889,7 @@ function PregnancyWeeklyDevelopment() {
                     <View style={pwStyles.imgSection}>
                       <View style={pwStyles.imgTitleRow}>
                         <Image source={IC_CAMERA} style={pwStyles.imgTitleIconImg} resizeMode="contain" />
-                        <Text style={pwStyles.imgTitle}>{' 이 주의 기록 사진'}</Text>
+                        <Text style={pwStyles.imgTitle}>{t('growthStats.weekPhotosTitle')}</Text>
                       </View>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={pwStyles.imgScroll}>
                         {imgs.map((img) => (
@@ -904,7 +913,7 @@ function PregnancyWeeklyDevelopment() {
       {/* Bottom hint */}
       <View style={pwStyles.bottomHint}>
         <Text style={pwStyles.bottomHintText}>
-          임신앨범에서 사진을 올리면 해당 주수에 자동으로 표시돼요
+          {t('growthStats.bottomHint')}
         </Text>
       </View>
 
@@ -920,16 +929,16 @@ function PregnancyWeeklyDevelopment() {
                 <TouchableOpacity
                   onPress={() => { setShowSafetyModal(false); setSafetyResult(null); setSafetyQuery(''); }}
                 >
-                  <Text style={{ color: COLORS.primary, fontSize: FONT_SIZE.md, fontWeight: '600' }}>{'< 닫기'}</Text>
+                  <Text style={{ color: COLORS.primary, fontSize: FONT_SIZE.md, fontWeight: '600' }}>{`< ${t('common.close')}`}</Text>
                 </TouchableOpacity>
-                <Text style={{ fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text }}>금기 검색</Text>
+                <Text style={{ fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text }}>{t('growthStats.safetySearchTitle')}</Text>
                 <View style={{ width: 50 }} />
               </View>
 
               <View style={pwStyles.safetyInputRow}>
                 <TextInput
                   style={pwStyles.safetyInput}
-                  placeholder="예: 커피, 회, 타이레놀, 홍삼..."
+                  placeholder={t('growthStats.safetySearchPlaceholder')}
                   placeholderTextColor={COLORS.textLight}
                   value={safetyQuery}
                   onChangeText={setSafetyQuery}
@@ -941,14 +950,14 @@ function PregnancyWeeklyDevelopment() {
                   onPress={handleSafetyCheck}
                   disabled={safetyLoading || safetyQuery.trim().length === 0}
                 >
-                  <Text style={{ color: '#fff', fontWeight: '700' }}>검색</Text>
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>{t('growthStats.safetySearchButton')}</Text>
                 </TouchableOpacity>
               </View>
 
               {safetyLoading && (
                 <View style={{ paddingVertical: 40, alignItems: 'center' }}>
                   <ActivityIndicator size="large" color={COLORS.primary} />
-                  <Text style={{ marginTop: SPACING.md, color: COLORS.textSecondary }}>AI가 분석 중이에요...</Text>
+                  <Text style={{ marginTop: SPACING.md, color: COLORS.textSecondary }}>{t('growthStats.safetyAnalyzing')}</Text>
                 </View>
               )}
 
@@ -961,7 +970,7 @@ function PregnancyWeeklyDevelopment() {
                     safetyResult.level === 'avoid' && { backgroundColor: '#FFEBEE', borderColor: '#E53935' },
                   ]}>
                     <Text style={pwStyles.safetyLevelBadge}>
-                      {safetyResult.level === 'safe' ? '안전' : safetyResult.level === 'caution' ? '주의' : '피하세요'}
+                      {safetyResult.level === 'safe' ? t('growthStats.safetyLevelSafe') : safetyResult.level === 'caution' ? t('growthStats.safetyLevelCaution') : t('growthStats.safetyLevelAvoid')}
                     </Text>
                     <Text style={pwStyles.safetyResultTitle}>{safetyResult.title}</Text>
                     <Text style={pwStyles.safetyResultSummary}>{safetyResult.summary}</Text>
@@ -969,7 +978,7 @@ function PregnancyWeeklyDevelopment() {
 
                   {safetyResult.dos.length > 0 && (
                     <View style={pwStyles.safetyListCard}>
-                      <Text style={[pwStyles.safetyListTitle, { color: '#2E7D32' }]}>✓ 이렇게 드세요</Text>
+                      <Text style={[pwStyles.safetyListTitle, { color: '#2E7D32' }]}>{t('growthStats.safetyDosTitle')}</Text>
                       {safetyResult.dos.map((d, i) => (
                         <Text key={i} style={pwStyles.safetyListItem}>• {d}</Text>
                       ))}
@@ -978,7 +987,7 @@ function PregnancyWeeklyDevelopment() {
 
                   {safetyResult.donts.length > 0 && (
                     <View style={pwStyles.safetyListCard}>
-                      <Text style={[pwStyles.safetyListTitle, { color: '#C62828' }]}>✗ 주의사항</Text>
+                      <Text style={[pwStyles.safetyListTitle, { color: '#C62828' }]}>{t('growthStats.safetyDontsTitle')}</Text>
                       {safetyResult.donts.map((d, i) => (
                         <Text key={i} style={pwStyles.safetyListItem}>• {d}</Text>
                       ))}
@@ -1383,9 +1392,11 @@ function FilterTabs({
   activeTab: TabKey;
   onTabChange: (tab: TabKey) => void;
 }) {
+  const { t } = useTranslation();
+  const tabs = getTabs(t);
   return (
     <View style={styles.tabsRow}>
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const isActive = tab.key === activeTab;
         return (
           <TouchableOpacity
@@ -1406,6 +1417,7 @@ function FilterTabs({
 /* ---- Growth Analysis Section ---- */
 
 function GrowthAnalysisSection({ childId }: { childId: string }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GrowthAnalysisResult | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -1442,13 +1454,13 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
       const parsed = parseGrowthAnalysis(raw);
 
       if (!parsed) {
-        setError('분석 결과를 처리할 수 없습니다.');
+        setError(t('growthStats.analysisParseFail'));
         return;
       }
 
       setResult(parsed);
     } catch {
-      setError('성장 분석에 실패했습니다. 다시 시도해주세요.');
+      setError(t('growthStats.analysisRequestFail'));
     } finally {
       cleanup();
       setLoading(false);
@@ -1475,7 +1487,7 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
       >
         <View style={[gaStyles.analyzeBtnGradient, { backgroundColor: '#4ECDC4' }]}>
           <Image source={require('../../assets/quick-report.png')} style={gaStyles.analyzeBtnImg} resizeMode="contain" />
-          <Text style={gaStyles.analyzeBtnText}>성장 분석하기</Text>
+          <Text style={gaStyles.analyzeBtnText}>{t('growthStats.analyzeBtn')}</Text>
         </View>
       </TouchableOpacity>
 
@@ -1498,11 +1510,11 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
               disabled={loading}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               accessibilityRole="button"
-              accessibilityLabel="닫기"
+              accessibilityLabel={t('common.close')}
             >
               <Text style={[gaStyles.modalClose, loading && { opacity: 0.3 }]}>{'<'}</Text>
             </TouchableOpacity>
-            <Text style={gaStyles.modalTitle}>성장 분석</Text>
+            <Text style={gaStyles.modalTitle}>{t('growthStats.analysisModalTitle')}</Text>
             <View style={{ width: 24 }} />
           </View>
 
@@ -1517,10 +1529,10 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
                   <Image source={IC_REPORT} style={gaStyles.loadingSpinnerImg} resizeMode="contain" />
                 </Animated.View>
                 <Text style={gaStyles.loadingTitle}>
-                  아이의 성장 데이터를 분석하고 있어요...
+                  {t('growthStats.analysisLoadingTitle')}
                 </Text>
                 <Text style={gaStyles.loadingSubtitle}>
-                  AI가 성장 패턴을 꼼꼼히 살펴보고 있어요
+                  {t('growthStats.analysisLoadingSubtitle')}
                 </Text>
               </View>
             )}
@@ -1534,7 +1546,7 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
                   style={gaStyles.retryBtn}
                   onPress={handleAnalyze}
                 >
-                  <Text style={gaStyles.retryBtnText}>다시 시도</Text>
+                  <Text style={gaStyles.retryBtnText}>{t('common.retry')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -1547,14 +1559,14 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
                   {result.ageLabel ? (
                     <Text style={gaStyles.summaryAge}>{result.ageLabel}</Text>
                   ) : null}
-                  <Text style={gaStyles.summaryTitle}>종합 분석</Text>
+                  <Text style={gaStyles.summaryTitle}>{t('growthStats.overallAnalysisTitle')}</Text>
                   <Text style={gaStyles.summaryText}>{result.overallSummary}</Text>
                 </View>
 
                 {/* Metrics */}
                 {allMetrics.length > 0 && (
                   <View>
-                    <Text style={gaStyles.sectionTitle}>상세 항목</Text>
+                    <Text style={gaStyles.sectionTitle}>{t('growthStats.detailItemsTitle')}</Text>
                     {allMetrics.map((item, idx) => {
                       const levelColor = getLevelColor(item.level);
                       return (
@@ -1572,7 +1584,7 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
                             </View>
                             <View style={[gaStyles.levelBadge, { backgroundColor: levelColor.bg }]}>
                               <Text style={[gaStyles.levelBadgeText, { color: levelColor.text }]}>
-                                {getLevelLabel(item.level)}
+                                {getLevelLabel(item.level, t)}
                               </Text>
                             </View>
                           </View>
@@ -1813,6 +1825,7 @@ const gaStyles = StyleSheet.create({
 });
 
 function PhysicalTab({ childName }: { childName: string }) {
+  const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const updateChildInStore = useChildStore((s) => s.updateChild);
   const [height, setHeight] = useState('');
@@ -1861,17 +1874,17 @@ function PhysicalTab({ childName }: { childName: string }) {
     return calculatePercentile(initialWeight, standard.weight);
   }, [initialWeight, standard]);
 
-  const genderLabel = gender === 'M' ? '남아' : '여아';
+  const genderLabel = gender === 'M' ? t('growthStats.genderBoy') : t('growthStats.genderGirl');
 
   const handleSave = async () => {
     if (!height && !weight) {
-      Alert.alert('알림', '키 또는 몸무게를 입력해주세요');
+      Alert.alert(t('common.notice'), t('growthStats.heightWeightRequired'));
       return;
     }
     if (!selectedChild) return;
     // 공동육아: 성장 기록 저장은 editProfile 권한 필요 (열람 전용 멤버 차단)
     if (!(await canDo(selectedChild.id, 'editProfile'))) {
-      Alert.alert('열람 전용', '성장 기록 저장 권한이 없어요.\n보호자에게 "아이 프로필 수정" 권한을 요청해주세요.');
+      Alert.alert(t('growthStats.viewOnlyTitle'), t('growthStats.viewOnlyMessage'));
       return;
     }
     setSaving(true);
@@ -1904,11 +1917,11 @@ function PhysicalTab({ childName }: { childName: string }) {
           weight: parsedWeight ?? selectedChild.weight ?? null,
         });
       }
-      Alert.alert('저장 완료', `${recordDate} 성장 기록이 저장되었습니다`);
+      Alert.alert(t('growthStats.saveCompleteTitle'), t('growthStats.saveCompleteMessage', { date: recordDate }));
       setHeight('');
       setWeight('');
     } catch {
-      Alert.alert('오류', '저장에 실패했습니다. 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('growthStats.saveFailMessage'));
     } finally {
       setSaving(false);
     }
@@ -1919,15 +1932,15 @@ function PhysicalTab({ childName }: { childName: string }) {
       {/* Initial record from onboarding */}
       {(initialHeight || initialWeight) ? (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>첫 기록 ({ageLabel})</Text>
+          <Text style={styles.cardTitle}>{t('growthStats.firstRecordTitle', { ageLabel })}</Text>
           <View style={styles.statsRow}>
             <StatBox
-              label="키"
+              label={t('growthStats.heightLabel')}
               value={initialHeight ? `${initialHeight}cm` : '-- cm'}
               color={COLORS.secondary}
             />
             <StatBox
-              label="몸무게"
+              label={t('growthStats.weightLabel')}
               value={initialWeight ? `${initialWeight}kg` : '-- kg'}
               color={COLORS.primary}
             />
@@ -1937,14 +1950,14 @@ function PhysicalTab({ childName }: { childName: string }) {
           {(heightPercentile !== null || weightPercentile !== null) ? (
             <View style={pStyles.percentileWrap}>
               <Text style={pStyles.percentileHeader}>
-                동 개월 {genderLabel} 대비
+                {t('growthStats.percentileHeader', { genderLabel })}
               </Text>
               {heightPercentile !== null && initialHeight ? (
                 <View style={pStyles.percentileRow}>
                   <View style={pStyles.percentileTop}>
-                    <Text style={pStyles.percentileLabel}>키</Text>
+                    <Text style={pStyles.percentileLabel}>{t('growthStats.heightLabel')}</Text>
                     <Text style={pStyles.percentileValue}>
-                      {getPercentileLabel(heightPercentile)}
+                      {getPercentileLabel(heightPercentile, t)}
                     </Text>
                   </View>
                   <View style={pStyles.barBg}>
@@ -1960,9 +1973,9 @@ function PhysicalTab({ childName }: { childName: string }) {
               {weightPercentile !== null && initialWeight ? (
                 <View style={pStyles.percentileRow}>
                   <View style={pStyles.percentileTop}>
-                    <Text style={pStyles.percentileLabel}>몸무게</Text>
+                    <Text style={pStyles.percentileLabel}>{t('growthStats.weightLabel')}</Text>
                     <Text style={pStyles.percentileValue}>
-                      {getPercentileLabel(weightPercentile)}
+                      {getPercentileLabel(weightPercentile, t)}
                     </Text>
                   </View>
                   <View style={pStyles.barBg}>
@@ -2016,7 +2029,7 @@ function PhysicalTab({ childName }: { childName: string }) {
         return (
           <>
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>키 & 몸무게 변화</Text>
+              <Text style={styles.cardTitle}>{t('growthStats.heightWeightChangeTitle')}</Text>
               {hasChart ? (
                 <View style={{ marginTop: SPACING.xs }}>
                   {heightPoints.length > 0 && (
@@ -2076,40 +2089,44 @@ function PhysicalTab({ childName }: { childName: string }) {
                 <View style={styles.chartPlaceholder}>
                   <Image source={IC_REPORT} style={styles.chartIconImg} resizeMode="contain" />
                   <Text style={styles.chartPlaceholderText}>
-                    키 또는 몸무게를 기록하면 차트가 표시됩니다
+                    {t('growthStats.chartPlaceholder')}
                   </Text>
                 </View>
               )}
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>최신 기록{latest?.date ? ` (${latest.date})` : ''}</Text>
+              <Text style={styles.cardTitle}>
+                {latest?.date
+                  ? t('growthStats.latestRecordTitleWithDate', { date: latest.date })
+                  : t('growthStats.latestRecordTitle')}
+              </Text>
               <View style={styles.statsRow}>
                 <StatBox
-                  label="키"
+                  label={t('growthStats.heightLabel')}
                   value={latestHeight ? `${latestHeight}cm` : '-- cm'}
                   color={COLORS.secondary}
                 />
                 <StatBox
-                  label="몸무게"
+                  label={t('growthStats.weightLabel')}
                   value={latestWeight ? `${latestWeight}kg` : '-- kg'}
                   color={COLORS.primary}
                 />
-                <StatBox label="기록 수" value={String(merged.length)} color={COLORS.info} />
+                <StatBox label={t('growthStats.recordCountLabel')} value={String(merged.length)} color={COLORS.info} />
               </View>
 
               {/* Percentile display — 최신 기록 시점의 또래 비교 */}
               {(latestHeightPercentile !== null || latestWeightPercentile !== null) ? (
                 <View style={pStyles.percentileWrap}>
                   <Text style={pStyles.percentileHeader}>
-                    동 개월 {genderLabel} 대비
+                    {t('growthStats.percentileHeader', { genderLabel })}
                   </Text>
                   {latestHeightPercentile !== null && latestHeight ? (
                     <View style={pStyles.percentileRow}>
                       <View style={pStyles.percentileTop}>
-                        <Text style={pStyles.percentileLabel}>키</Text>
+                        <Text style={pStyles.percentileLabel}>{t('growthStats.heightLabel')}</Text>
                         <Text style={pStyles.percentileValue}>
-                          {getPercentileLabel(latestHeightPercentile)}
+                          {getPercentileLabel(latestHeightPercentile, t)}
                         </Text>
                       </View>
                       <View style={pStyles.barBg}>
@@ -2125,9 +2142,9 @@ function PhysicalTab({ childName }: { childName: string }) {
                   {latestWeightPercentile !== null && latestWeight ? (
                     <View style={pStyles.percentileRow}>
                       <View style={pStyles.percentileTop}>
-                        <Text style={pStyles.percentileLabel}>몸무게</Text>
+                        <Text style={pStyles.percentileLabel}>{t('growthStats.weightLabel')}</Text>
                         <Text style={pStyles.percentileValue}>
-                          {getPercentileLabel(latestWeightPercentile)}
+                          {getPercentileLabel(latestWeightPercentile, t)}
                         </Text>
                       </View>
                       <View style={pStyles.barBg}>
@@ -2148,10 +2165,10 @@ function PhysicalTab({ childName }: { childName: string }) {
       })()}
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>기록 입력</Text>
+        <Text style={styles.cardTitle}>{t('growthStats.recordInputTitle')}</Text>
         {/* 날짜 입력 */}
         <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>측정 날짜</Text>
+          <Text style={styles.inputLabel}>{t('growthStats.measureDateLabel')}</Text>
           <TextInput
             style={styles.input}
             placeholder="YYYY-MM-DD"
@@ -2163,7 +2180,7 @@ function PhysicalTab({ childName }: { childName: string }) {
         </View>
         <View style={styles.inputRow}>
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>키 (cm)</Text>
+            <Text style={styles.inputLabel}>{t('growthStats.heightCmLabel')}</Text>
             <TextInput
               style={styles.input}
               placeholder="0.0"
@@ -2174,7 +2191,7 @@ function PhysicalTab({ childName }: { childName: string }) {
             />
           </View>
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>몸무게 (kg)</Text>
+            <Text style={styles.inputLabel}>{t('growthStats.weightKgLabel')}</Text>
             <TextInput
               style={styles.input}
               placeholder="0.0"
@@ -2186,14 +2203,14 @@ function PhysicalTab({ childName }: { childName: string }) {
           </View>
         </View>
         <TouchableOpacity style={[styles.saveBtn, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
-          <Text style={styles.saveBtnText}>{saving ? '저장 중...' : '기록 저장'}</Text>
+          <Text style={styles.saveBtnText}>{saving ? t('growthStats.saving') : t('growthStats.saveRecord')}</Text>
         </TouchableOpacity>
       </View>
 
       {/* 기록 히스토리 */}
       {records.length > 0 && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>성장 기록 내역</Text>
+          <Text style={styles.cardTitle}>{t('growthStats.recordHistoryTitle')}</Text>
           {records.slice().reverse().map((rec) => (
             <View key={rec.date} style={styles.recordRow}>
               <Text style={styles.recordDate}>{rec.date}</Text>
@@ -2283,6 +2300,7 @@ interface TraitInsight {
 }
 
 function TraitTab() {
+  const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const dominantType = selectedChild?.innateData?.dominantType ?? '--';
   const [insights, setInsights] = useState<TraitInsight[]>([]);
@@ -2330,9 +2348,9 @@ function TraitTab() {
       });
       setResponseCount((c) => c + 1);
       setTraitAnswer('');
-      Alert.alert('저장 완료', '오늘의 기질 관찰이 기록되었습니다');
+      Alert.alert(t('growthStats.saveCompleteTitle'), t('growthStats.traitSaveCompleteMessage'));
     } catch {
-      Alert.alert('오류', '저장에 실패했습니다. 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('growthStats.saveFailMessage'));
     } finally {
       setSavingTrait(false);
     }
@@ -2341,15 +2359,15 @@ function TraitTab() {
   return (
     <View>
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>기질 변화 기록</Text>
+        <Text style={styles.cardTitle}>{t('growthStats.traitChangeRecordTitle')}</Text>
         <View style={styles.traitInfo}>
           <Image source={require('../../assets/trait-analyst-small.png')} style={styles.traitIconImg} resizeMode="contain" />
-          <Text style={styles.traitCurrentLabel}>현재 기질 유형</Text>
+          <Text style={styles.traitCurrentLabel}>{t('growthStats.currentTraitTypeLabel')}</Text>
           <Text style={styles.traitCurrentValue}>{dominantType}</Text>
         </View>
         <View style={styles.traitNotice}>
           <Text style={styles.traitNoticeText}>
-            응답 누적 {responseCount}개 · 첫 인사이트까지 {progressToInsight}/7
+            {t('growthStats.traitResponseProgress', { count: responseCount, progress: progressToInsight })}
           </Text>
           <View style={{ height: 6, backgroundColor: '#EFEFF4', borderRadius: 3, marginTop: 8, overflow: 'hidden' }}>
             <View
@@ -2367,7 +2385,7 @@ function TraitTab() {
       {dailyQuestion && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>
-            오늘의 질문 ({((responseCount % totalQuestions) + 1)}/{totalQuestions})
+            {t('growthStats.dailyQuestionTitle', { current: (responseCount % totalQuestions) + 1, total: totalQuestions })}
           </Text>
           <View style={styles.traitNotice}>
             <Text style={styles.traitNoticeText}>{dailyQuestion.question}</Text>
@@ -2375,7 +2393,7 @@ function TraitTab() {
           <Text style={styles.traitHintText}>{dailyQuestion.hint}</Text>
           <TextInput
             style={styles.traitInput}
-            placeholder="관찰 내용을 입력하세요..."
+            placeholder={t('growthStats.observationPlaceholder')}
             placeholderTextColor={COLORS.textLight}
             value={traitAnswer}
             onChangeText={setTraitAnswer}
@@ -2388,14 +2406,14 @@ function TraitTab() {
             disabled={!traitAnswer.trim() || savingTrait}
           >
             <Text style={styles.saveBtnText}>
-              {savingTrait ? '저장 중...' : '기질 관찰 저장'}
+              {savingTrait ? t('growthStats.saving') : t('growthStats.saveTraitObservation')}
             </Text>
           </TouchableOpacity>
         </View>
       )}
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>기질 변화 타임라인</Text>
+        <Text style={styles.cardTitle}>{t('growthStats.traitTimelineTitle')}</Text>
         {loadingTraits ? (
           <View style={styles.emptyState}>
             <ActivityIndicator size="small" color={COLORS.primary} />
@@ -2404,7 +2422,7 @@ function TraitTab() {
           <View style={styles.emptyState}>
             <Image source={IC_DIARY} style={styles.emptyIconImg} resizeMode="contain" />
             <Text style={styles.emptyText}>
-              7개 응답이 쌓이면 첫 기질 변화 인사이트가 생성됩니다
+              {t('growthStats.traitInsightEmptyHint')}
             </Text>
           </View>
         ) : (
@@ -2431,17 +2449,17 @@ function TraitTab() {
 /* Milestone Defaults                                                  */
 /* ------------------------------------------------------------------ */
 
-function getAgeLabel(months: number): string {
-  if (months <= 6) return '0~6개월';
-  if (months <= 12) return '7~12개월';
-  if (months <= 18) return '13~18개월';
-  if (months <= 24) return '19~24개월';
-  if (months <= 36) return '25~36개월';
-  if (months <= 48) return '3~4세';
-  if (months <= 60) return '4~5세';
-  if (months <= 72) return '5~6세';
-  if (months <= 96) return '초등 저학년';
-  return '초등 고학년';
+function getAgeLabel(months: number, t: TFunction): string {
+  if (months <= 6) return t('growthStats.age0to6m');
+  if (months <= 12) return t('growthStats.age7to12m');
+  if (months <= 18) return t('growthStats.age13to18m');
+  if (months <= 24) return t('growthStats.age19to24m');
+  if (months <= 36) return t('growthStats.age25to36m');
+  if (months <= 48) return t('growthStats.age3to4y');
+  if (months <= 60) return t('growthStats.age4to5y');
+  if (months <= 72) return t('growthStats.age5to6y');
+  if (months <= 96) return t('growthStats.ageElementaryLower');
+  return t('growthStats.ageElementaryUpper');
 }
 
 function getDefaultMilestones(months: number): MilestoneItem[] {
@@ -2553,6 +2571,7 @@ function getDefaultMilestones(months: number): MilestoneItem[] {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function MilestonesTab() {
+  const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const [loading, setLoading] = useState(false);
   const [milestones, setMilestones] = useState<MilestoneData | null>(null);
@@ -2584,7 +2603,7 @@ function MilestonesTab() {
           nextMilestone: typeof rawObj.nextMilestone === 'string' ? rawObj.nextMilestone : '',
           daysUntilNext: typeof rawObj.daysUntilNext === 'number' ? rawObj.daysUntilNext : 0,
         };
-        if (!parsed.ageLabel) parsed.ageLabel = getAgeLabel(months);
+        if (!parsed.ageLabel) parsed.ageLabel = getAgeLabel(months, t);
         setMilestones(parsed);
         const initial: Record<string, boolean> = {};
         parsed.items.forEach((item) => { initial[item.id] = item.completed; });
@@ -2594,7 +2613,7 @@ function MilestonesTab() {
         // API 실패 시 기본 체크리스트 표시
         const fallback = getDefaultMilestones(months);
         setMilestones({
-          ageLabel: getAgeLabel(months),
+          ageLabel: getAgeLabel(months, t),
           items: fallback,
           nextMilestone: '',
           daysUntilNext: 0,
@@ -2646,7 +2665,7 @@ function MilestonesTab() {
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>{'📋'}</Text>
           <Text style={styles.emptyText}>
-            발달 체크리스트를 불러올 수 없습니다
+            {t('growthStats.milestoneLoadFail')}
           </Text>
         </View>
       </View>
@@ -2672,7 +2691,7 @@ function MilestonesTab() {
   function getDomainTag(item: MilestoneItem) {
     const style = DOMAIN_STYLE[item.domain];
     if (style) return { ...style, label: item.domain };
-    return { emoji: '📋', label: item.domain || '발달', color: '#636366' };
+    return { emoji: '📋', label: item.domain || t('growthStats.domainFallbackLabel'), color: '#636366' };
   }
 
   // 발달 진행 요약 통계
@@ -2696,7 +2715,7 @@ function MilestonesTab() {
       {/* Current Milestone Card */}
       <View style={[msStyles.gradientCard, { backgroundColor: '#F4A98C' }]}>
         <Text style={msStyles.gradientTitle}>
-          {milestones.ageLabel} 발달 체크
+          {t('growthStats.milestoneCheckTitle', { ageLabel: milestones.ageLabel })}
         </Text>
         <View style={msStyles.progressRow}>
           <View style={msStyles.progressBarBg}>
@@ -2710,17 +2729,17 @@ function MilestonesTab() {
         </View>
         <Text style={msStyles.progressHint}>
           {progress >= 1
-            ? '모든 발달 항목을 달성했어요!'
+            ? t('growthStats.milestoneAllComplete')
             : progress >= 0.7
-            ? '순조롭게 발달하고 있어요!'
-            : '천천히 아이 속도에 맞춰주세요'}
+            ? t('growthStats.milestoneGoodProgress')
+            : t('growthStats.milestoneSlowPace')}
         </Text>
       </View>
 
       {/* 영역별 발달 현황 */}
       {domainSummary.length > 0 && (
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>영역별 발달 현황</Text>
+          <Text style={styles.cardTitle}>{t('growthStats.domainSummaryTitle')}</Text>
           <View style={msStyles.domainGrid}>
             {domainSummary.map((d) => {
               const domainProgress = d.total > 0 ? d.done / d.total : 0;
@@ -2748,8 +2767,8 @@ function MilestonesTab() {
 
       {/* Checklist */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>발달 체크리스트</Text>
-        <Text style={msStyles.checkHint}>항목을 눌러 체크하고, 다시 눌러 확인 방법을 보세요</Text>
+        <Text style={styles.cardTitle}>{t('growthStats.checklistTitle')}</Text>
+        <Text style={msStyles.checkHint}>{t('growthStats.checklistHint')}</Text>
         {items.map((item) => {
           const tag = getDomainTag(item);
           const done = toggled[item.id] ?? false;
@@ -2796,28 +2815,28 @@ function MilestonesTab() {
 
       {/* 발달 팁 카드 */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>{'발달 촉진 팁'}</Text>
+        <Text style={styles.cardTitle}>{t('growthStats.devTipCardTitle')}</Text>
         <View style={msStyles.tipCard}>
-          <Text style={msStyles.tipTitle}>{'이 시기에 중요한 것'}</Text>
+          <Text style={msStyles.tipTitle}>{t('growthStats.devTipImportantTitle')}</Text>
           <Text style={msStyles.tipBody}>
             {progress < 0.5
-              ? '아직 달성하지 못한 항목이 있어도 걱정하지 마세요. 아이마다 발달 속도가 달라요. 충분한 놀이와 상호작용이 가장 좋은 자극이에요.'
-              : '많은 항목을 달성했네요! 이 시기에는 다양한 경험을 제공해주는 것이 중요해요. 새로운 장난감, 바깥 활동, 또래 놀이를 시도해보세요.'}
+              ? t('growthStats.devTipImportantLow')
+              : t('growthStats.devTipImportantHigh')}
           </Text>
         </View>
         <View style={msStyles.tipCard}>
-          <Text style={msStyles.tipTitle}>{'부모가 도와줄 수 있는 것'}</Text>
+          <Text style={msStyles.tipTitle}>{t('growthStats.devTipParentTitle')}</Text>
           <Text style={msStyles.tipBody}>
             {completedCount < totalCount
-              ? '미달성 항목은 아이와 함께 놀이하면서 자연스럽게 연습해보세요. 강요하지 않고, 아이가 흥미를 보일 때 격려해주는 것이 효과적이에요.'
-              : '모든 항목을 달성했다면 다음 단계의 발달을 준비해보세요. 조금 더 도전적인 활동으로 자연스럽게 이어가면 좋아요.'}
+              ? t('growthStats.devTipParentIncomplete')
+              : t('growthStats.devTipParentComplete')}
           </Text>
         </View>
       </View>
 
       {/* Next Milestone */}
       <View style={[msStyles.nextCard, { backgroundColor: '#7DD3B8' }]}>
-        <Text style={msStyles.nextLabel}>다음 목표</Text>
+        <Text style={msStyles.nextLabel}>{t('growthStats.nextGoalLabel')}</Text>
         <Text style={msStyles.nextTitle}>{milestones.nextMilestone}</Text>
         <View style={msStyles.ddayBadge}>
           <Text style={msStyles.ddayText}>

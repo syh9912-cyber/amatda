@@ -19,6 +19,8 @@ import type { ImageSourcePropType } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 // DateTimePicker는 FastTimeInput 도입(숫자 키패드)으로 미사용 — import 제거
 import { sosApi } from '../../services/api';
 import {
@@ -104,6 +106,11 @@ interface MedicineBrand {
   icon: ImageSourcePropType;
 }
 
+/*
+ * brandName은 내부 안정 식별자(저장값·React key·동등비교용)로 한국어 원문을 그대로 유지한다.
+ * AsyncStorage에 이미 이 문자열로 저장된 기존 복용 기록과의 호환을 위함 (스키마 변경 없음).
+ * 실제 화면 표시는 getBrandDisplayName(t, brandName)을 통해 로캘별 문자열로 렌더링한다.
+ */
 const MEDICINE_BRANDS: MedicineBrand[] = [
   { brandName: '타이레놀',   type: 'acetaminophen', icon: IC_PILL },
   { brandName: '챔프',       type: 'acetaminophen', icon: IC_PILL },
@@ -111,6 +118,17 @@ const MEDICINE_BRANDS: MedicineBrand[] = [
   { brandName: '맥시부펜',   type: 'ibuprofen',     icon: IC_SYRINGE },
   { brandName: '기타',       type: 'other',         icon: IC_PILL },
 ];
+
+function getBrandDisplayName(t: TFunction, brandName: string): string {
+  switch (brandName) {
+    case '타이레놀': return t('fever.brand.tylenol');
+    case '챔프': return t('fever.brand.champ');
+    case '부루펜': return t('fever.brand.brufen');
+    case '맥시부펜': return t('fever.brand.maxibupen');
+    case '기타': return t('fever.brand.other');
+    default: return brandName;
+  }
+}
 
 const MED_INTERVAL_HR: Record<MedicineType, { min: number; recommended: number }> = {
   acetaminophen: { min: 4, recommended: 4 },
@@ -134,62 +152,68 @@ const COLOR = {
   accent: '#FF8C5A',
 };
 
-const FEVER_LEVEL: Record<FeverLevel, {
+interface FeverLevelConfig {
   color: string;
   bgColor: string;
   label: string;
   icon: ImageSourcePropType;
   advice: string;
-}> = {
-  normal: {
-    color: '#34C759',
-    bgColor: '#F0FFF4',
-    label: '정상',
-    icon: IC_HAPPY,
-    advice: '아이의 체온이 정상 범위입니다. 편안하게 지켜봐주세요.',
-  },
-  mild: {
-    color: '#FFD76E',
-    bgColor: '#FFFDF0',
-    label: '미열',
-    icon: IC_WORRIED,
-    advice: '미열이 있어요. 옷을 가볍게 입히고 수분 섭취를 해주세요. 미지근한 물수건으로 닦아주세요.',
-  },
-  moderate: {
-    color: '#FF9500',
-    bgColor: '#FFF8F0',
-    label: '중등도 발열',
-    icon: IC_WORRIED,
-    advice: '체온이 높아요. 해열제 복용을 고려해볼 수 있어요(용량·투약은 의사·약사 상담 권장). 30분 후 다시 체온을 확인해주세요.',
-  },
-  high: {
-    color: '#FF3B30',
-    bgColor: '#FFF0F0',
-    label: '고열',
-    icon: IC_THERMOMETER,
-    advice: '고열입니다. 해열제 복용을 고려해볼 수 있어요(용량·투약은 의사·약사 상담). 30분 후에도 열이 내리지 않으면 소아과를 방문하세요.',
-  },
-  danger: {
-    color: '#D32F2F',
-    bgColor: '#FFEBEE',
-    label: '즉시 병원 진료',
-    icon: IC_HOSPITAL,
-    advice: '위험한 고열 수준입니다. 해열제 효과를 기다리지 말고 지금 바로 소아과·응급실로 가세요. 경련·의식 저하가 있으면 즉시 119에 전화하세요.',
-  },
-  emergency: {
-    color: '#B71C1C',
-    bgColor: '#FFCDD2',
-    label: '응급 — 119 전화',
-    icon: IC_REDFLAG,
-    advice: '생명을 위협할 수 있는 초고열입니다. 지금 바로 119에 전화하거나 응급실로 가세요. 이동 중에도 옷을 얇게 하고 미지근한 물로 몸을 닦아 체온을 낮춰주세요.',
-  },
-};
+}
 
-const METHOD_LABELS: Record<MeasureMethod, string> = {
-  ear: '귀',
-  forehead: '이마',
-  armpit: '겨드랑이',
-};
+function getFeverLevel(t: TFunction): Record<FeverLevel, FeverLevelConfig> {
+  return {
+    normal: {
+      color: '#34C759',
+      bgColor: '#F0FFF4',
+      label: t('fever.level.normal.label'),
+      icon: IC_HAPPY,
+      advice: t('fever.level.normal.advice'),
+    },
+    mild: {
+      color: '#FFD76E',
+      bgColor: '#FFFDF0',
+      label: t('fever.level.mild.label'),
+      icon: IC_WORRIED,
+      advice: t('fever.level.mild.advice'),
+    },
+    moderate: {
+      color: '#FF9500',
+      bgColor: '#FFF8F0',
+      label: t('fever.level.moderate.label'),
+      icon: IC_WORRIED,
+      advice: t('fever.level.moderate.advice'),
+    },
+    high: {
+      color: '#FF3B30',
+      bgColor: '#FFF0F0',
+      label: t('fever.level.high.label'),
+      icon: IC_THERMOMETER,
+      advice: t('fever.level.high.advice'),
+    },
+    danger: {
+      color: '#D32F2F',
+      bgColor: '#FFEBEE',
+      label: t('fever.level.danger.label'),
+      icon: IC_HOSPITAL,
+      advice: t('fever.level.danger.advice'),
+    },
+    emergency: {
+      color: '#B71C1C',
+      bgColor: '#FFCDD2',
+      label: t('fever.level.emergency.label'),
+      icon: IC_REDFLAG,
+      advice: t('fever.level.emergency.advice'),
+    },
+  };
+}
+
+function getMethodLabels(t: TFunction): Record<MeasureMethod, string> {
+  return {
+    ear: t('fever.method.ear'),
+    forehead: t('fever.method.forehead'),
+    armpit: t('fever.method.armpit'),
+  };
+}
 
 const TYLENOL_COLOR = '#1565C0';
 const BRUFEN_COLOR = '#E65100';
@@ -239,6 +263,7 @@ function buildActionGuide(
   current: ActionGuideInput,
   history: HistoryEntry[],
   medLog: MedLogEntry[],
+  t: TFunction,
 ): ActionGuide {
   const adj = current.adjusted;
   // 1) 회복 추세 감지 (직전 기록 vs 현재)
@@ -255,9 +280,9 @@ function buildActionGuide(
   // 3) 분류별 행동 가이드
   if (current.level === 'emergency') {
     return {
-      label: '응급',
-      headline: '지금 바로 119로 전화하세요!',
-      emotion: '엄마, 침착하세요. 옷을 얇게 하고 미지근한 물수건으로 닦으며 응급실로 이동해 주세요.',
+      label: t('fever.actionGuide.emergency.label'),
+      headline: t('fever.actionGuide.emergency.headline'),
+      emotion: t('fever.actionGuide.emergency.emotion'),
       bgColor: '#FFEBEE',
       borderColor: '#C62828',
       accentColor: '#C62828',
@@ -269,9 +294,9 @@ function buildActionGuide(
 
   if (current.level === 'danger') {
     return {
-      label: '위험 고열',
-      headline: '지금 바로 응급실로 가세요!',
-      emotion: '엄마, 당황하지 마세요. 해열제 효과를 기다리지 말고 병원으로 이동하는 게 가장 안전해요.',
+      label: t('fever.actionGuide.danger.label'),
+      headline: t('fever.actionGuide.danger.headline'),
+      emotion: t('fever.actionGuide.danger.emotion'),
       bgColor: '#FFEBEE',
       borderColor: '#D84315',
       accentColor: '#D84315',
@@ -284,14 +309,14 @@ function buildActionGuide(
   // 회복 중 (열이 내리고 있음)
   if (recovering) {
     return {
-      label: '회복 중',
-      headline: '다행이에요! 열이 내리고 있어요',
-      emotion: '고생 많으셨어요, 엄마! 1시간 뒤에 한 번 더 재서 안정세인지 확인해 주세요.',
+      label: t('fever.actionGuide.recovering.label'),
+      headline: t('fever.actionGuide.recovering.headline'),
+      emotion: t('fever.actionGuide.recovering.emotion'),
       bgColor: '#E8F5E9',
       borderColor: '#43A047',
       accentColor: '#2E7D32',
       nextCheckMin: 60,
-      nextCheckLabel: formatRelativeFuture(60),
+      nextCheckLabel: formatRelativeFuture(60, t),
       dangerLevel: false,
     };
   }
@@ -301,26 +326,26 @@ function buildActionGuide(
     if (lastMed && minutesSinceMed < requiredIntervalMin) {
       const remain = requiredIntervalMin - minutesSinceMed;
       return {
-        label: '고열',
-        headline: `해열제는 ${remain}분 후 가능해요`,
-        emotion: '지금은 미지근한 물수건으로 몸을 닦고 시원한 환경을 만들어 주세요. 수분 보충도 잊지 마세요.',
+        label: t('fever.actionGuide.highWaiting.label'),
+        headline: t('fever.actionGuide.highWaiting.headline', { remain }),
+        emotion: t('fever.actionGuide.highWaiting.emotion'),
         bgColor: '#FFEBEE',
         borderColor: '#E53935',
         accentColor: '#C62828',
         nextCheckMin: 30,
-        nextCheckLabel: formatRelativeFuture(30),
+        nextCheckLabel: formatRelativeFuture(30, t),
         dangerLevel: false,
       };
     }
     return {
-      label: '고열',
-      headline: '해열제 복용을 고려해볼 수 있어요 (참고)',
-      emotion: '엄마, 당황하지 마세요. 투약 여부·용량은 참고용이며, 판단이 어려우면 소아과·약사와 상담하세요. 30분 뒤 다시 재볼게요.',
+      label: t('fever.actionGuide.high.label'),
+      headline: t('fever.actionGuide.high.headline'),
+      emotion: t('fever.actionGuide.high.emotion'),
       bgColor: '#FFEBEE',
       borderColor: '#E53935',
       accentColor: '#C62828',
       nextCheckMin: 30,
-      nextCheckLabel: formatRelativeFuture(30),
+      nextCheckLabel: formatRelativeFuture(30, t),
       dangerLevel: false,
     };
   }
@@ -328,49 +353,49 @@ function buildActionGuide(
   if (current.level === 'moderate') {
     if (lastMed && minutesSinceMed < requiredIntervalMin) {
       return {
-        label: '발열',
-        headline: '잠시 더 지켜봐 주세요',
-        emotion: '해열제가 작용하는 중이에요. 30분 뒤 다시 재면 효과를 확인할 수 있어요.',
+        label: t('fever.actionGuide.moderateWaiting.label'),
+        headline: t('fever.actionGuide.moderateWaiting.headline'),
+        emotion: t('fever.actionGuide.moderateWaiting.emotion'),
         bgColor: '#FFF3E0',
         borderColor: '#FB8C00',
         accentColor: '#E65100',
         nextCheckMin: 30,
-        nextCheckLabel: formatRelativeFuture(30),
+        nextCheckLabel: formatRelativeFuture(30, t),
         dangerLevel: false,
       };
     }
     return {
-      label: '발열',
-      headline: '해열제 복용을 고려해 주세요',
-      emotion: '체온이 올라가고 있어요. 옷을 가볍게 하고 수분을 충분히 주세요.',
+      label: t('fever.actionGuide.moderate.label'),
+      headline: t('fever.actionGuide.moderate.headline'),
+      emotion: t('fever.actionGuide.moderate.emotion'),
       bgColor: '#FFF3E0',
       borderColor: '#FB8C00',
       accentColor: '#E65100',
       nextCheckMin: 30,
-      nextCheckLabel: formatRelativeFuture(30),
+      nextCheckLabel: formatRelativeFuture(30, t),
       dangerLevel: false,
     };
   }
 
   if (current.level === 'mild') {
     return {
-      label: '미열',
-      headline: '조금 더 지켜봐도 괜찮아요',
-      emotion: '엄마, 너무 걱정 마세요. 수분 섭취에 신경 써주시고 1시간 뒤 다시 재봐요.',
+      label: t('fever.actionGuide.mild.label'),
+      headline: t('fever.actionGuide.mild.headline'),
+      emotion: t('fever.actionGuide.mild.emotion'),
       bgColor: '#FFF8E1',
       borderColor: '#FFA000',
       accentColor: '#F57C00',
       nextCheckMin: 60,
-      nextCheckLabel: formatRelativeFuture(60),
+      nextCheckLabel: formatRelativeFuture(60, t),
       dangerLevel: false,
     };
   }
 
   // normal
   return {
-    label: '정상',
-    headline: '지금은 괜찮아요',
-    emotion: '체온이 정상 범위예요. 편안하게 지켜봐 주세요.',
+    label: t('fever.actionGuide.normal.label'),
+    headline: t('fever.actionGuide.normal.headline'),
+    emotion: t('fever.actionGuide.normal.emotion'),
     bgColor: '#E8F5E9',
     borderColor: '#66BB6A',
     accentColor: '#2E7D32',
@@ -380,7 +405,7 @@ function buildActionGuide(
   };
 }
 
-function formatMeasureTime(d: Date): string {
+function formatMeasureTime(d: Date, t: TFunction): string {
   const now = new Date();
   const sameDay = d.getFullYear() === now.getFullYear() &&
     d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
@@ -388,18 +413,21 @@ function formatMeasureTime(d: Date): string {
   const mm = String(d.getMinutes()).padStart(2, '0');
   if (sameDay) {
     const diffMin = Math.round((now.getTime() - d.getTime()) / 60000);
-    if (diffMin < 2) return `방금 (${hh}:${mm})`;
-    if (diffMin < 60) return `${diffMin}분 전 (${hh}:${mm})`;
-    return `오늘 ${hh}:${mm}`;
+    if (diffMin < 2) return t('fever.time.justNowAt', { time: `${hh}:${mm}` });
+    if (diffMin < 60) return t('fever.time.minutesAgoAt', { diffMin, time: `${hh}:${mm}` });
+    return t('fever.time.todayAt', { time: `${hh}:${mm}` });
   }
   return `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`;
 }
 
-function formatRelativeFuture(minutes: number): string {
+function formatRelativeFuture(minutes: number, t: TFunction): string {
   const target = new Date(Date.now() + minutes * 60 * 1000);
   const hh = String(target.getHours()).padStart(2, '0');
   const mm = String(target.getMinutes()).padStart(2, '0');
-  return `${hh}:${mm} (약 ${minutes >= 60 ? `${Math.round(minutes / 60)}시간` : `${minutes}분`} 후)`;
+  const durationLabel = minutes >= 60
+    ? t('fever.time.hoursUnit', { hours: Math.round(minutes / 60) })
+    : t('fever.time.minutesUnit', { minutes });
+  return t('fever.time.atTimeIn', { time: `${hh}:${mm}`, duration: durationLabel });
 }
 
 function historyStorageKey(childId: string): string {
@@ -432,6 +460,7 @@ function isMedLogEntry(v: unknown): v is MedLogEntry {
 function calcNextDoseAt(
   log: MedLogEntry[],
   targetType: MedicineType,
+  t: TFunction,
 ): { nextAt: number; reason: string } | null {
   if (log.length === 0) return null;
   const sorted = [...log].sort((a, b) => b.timestamp - a.timestamp);
@@ -447,14 +476,20 @@ function calcNextDoseAt(
     const sameNext = sameLast.timestamp + MED_INTERVAL_HR[targetType].min * 60 * 60 * 1000;
     if (sameNext > nextAt) {
       nextAt = sameNext;
-      reason = `${sameLast.brandName} 복용 ${MED_INTERVAL_HR[targetType].min}시간 후`;
+      reason = t('fever.nextDose.reasonSame', {
+        brandName: getBrandDisplayName(t, sameLast.brandName),
+        hours: MED_INTERVAL_HR[targetType].min,
+      });
     }
   }
   if (diffLast) {
     const altNext = diffLast.timestamp + ALTERNATING_INTERVAL_HR * 60 * 60 * 1000;
     if (altNext > nextAt) {
       nextAt = altNext;
-      reason = `${diffLast.brandName}(교차) 복용 ${ALTERNATING_INTERVAL_HR}시간 후`;
+      reason = t('fever.nextDose.reasonAlternating', {
+        brandName: getBrandDisplayName(t, diffLast.brandName),
+        hours: ALTERNATING_INTERVAL_HR,
+      });
     }
   }
 
@@ -462,15 +497,17 @@ function calcNextDoseAt(
   return { nextAt, reason };
 }
 
-function formatRelative(ms: number): string {
+function formatRelative(ms: number, t: TFunction): string {
   const abs = Math.abs(ms);
   const totalMin = Math.floor(abs / (60 * 1000));
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
   const future = ms > 0;
-  if (h <= 0 && m <= 0) return future ? '곧' : '방금';
-  const label = h > 0 ? (m > 0 ? `${h}시간 ${m}분` : `${h}시간`) : `${m}분`;
-  return future ? `${label} 후` : `${label} 전`;
+  if (h <= 0 && m <= 0) return future ? t('fever.time.soon') : t('fever.time.justNow');
+  const label = h > 0
+    ? (m > 0 ? t('fever.time.hoursMinutes', { hours: h, minutes: m }) : t('fever.time.hoursUnit', { hours: h }))
+    : t('fever.time.minutesUnit', { minutes: m });
+  return future ? t('fever.time.in', { label }) : t('fever.time.agoLabel', { label });
 }
 
 function formatTime(timestamp: number): string {
@@ -507,6 +544,7 @@ function FastTimeInput({
   value: Date;
   onChange: (d: Date) => void;
 }) {
+  const { t } = useTranslation();
   const h24 = value.getHours();
   const min = value.getMinutes();
   const isPM = h24 >= 12;
@@ -545,7 +583,7 @@ function FastTimeInput({
 
   return (
     <View style={styles.fastTimeRow}>
-      <Text style={styles.fastTimeLabel}>📅 측정 시각</Text>
+      <Text style={styles.fastTimeLabel}>{'📅 ' + t('fever.measureTime.label')}</Text>
       <View style={styles.fastTimeInputs}>
         {/* 오전/오후 토글 */}
         <View style={styles.ampmGroup}>
@@ -554,14 +592,14 @@ function FastTimeInput({
             onPress={() => { setPm(false); commit(hourText, minText, false); }}
             activeOpacity={0.7}
           >
-            <Text style={[styles.ampmText, !pm && styles.ampmTextActive]}>오전</Text>
+            <Text style={[styles.ampmText, !pm && styles.ampmTextActive]}>{t('fever.measureTime.am')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.ampmBtn, pm && styles.ampmBtnActive]}
             onPress={() => { setPm(true); commit(hourText, minText, true); }}
             activeOpacity={0.7}
           >
-            <Text style={[styles.ampmText, pm && styles.ampmTextActive]}>오후</Text>
+            <Text style={[styles.ampmText, pm && styles.ampmTextActive]}>{t('fever.measureTime.pm')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -569,14 +607,14 @@ function FastTimeInput({
         <TextInput
           style={styles.timeField}
           value={hourText}
-          onChangeText={(t) => {
-            const cleaned = t.replace(/[^0-9]/g, '').slice(0, 2);
+          onChangeText={(txt) => {
+            const cleaned = txt.replace(/[^0-9]/g, '').slice(0, 2);
             setHourText(cleaned);
           }}
           onEndEditing={() => commit(hourText, minText, pm)}
           keyboardType="number-pad"
           maxLength={2}
-          placeholder="시"
+          placeholder={t('fever.measureTime.hourPlaceholder')}
           placeholderTextColor={COLOR.textLight}
           returnKeyType="done"
         />
@@ -585,14 +623,14 @@ function FastTimeInput({
         <TextInput
           style={styles.timeField}
           value={minText}
-          onChangeText={(t) => {
-            const cleaned = t.replace(/[^0-9]/g, '').slice(0, 2);
+          onChangeText={(txt) => {
+            const cleaned = txt.replace(/[^0-9]/g, '').slice(0, 2);
             setMinText(cleaned);
           }}
           onEndEditing={() => commit(hourText, minText, pm)}
           keyboardType="number-pad"
           maxLength={2}
-          placeholder="분"
+          placeholder={t('fever.measureTime.minutePlaceholder')}
           placeholderTextColor={COLOR.textLight}
           returnKeyType="done"
         />
@@ -603,7 +641,7 @@ function FastTimeInput({
           onPress={() => onChange(new Date())}
           activeOpacity={0.7}
         >
-          <Text style={styles.nowBtnText}>지금</Text>
+          <Text style={styles.nowBtnText}>{t('fever.measureTime.now')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -615,6 +653,7 @@ function FastTimeInput({
 /* ------------------------------------------------------------------ */
 
 export default function FeverScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { selectedChild } = useChildStore();
 
@@ -716,13 +755,13 @@ export default function FeverScreen() {
 
   const handleAddMedLog = useCallback(() => {
     if (!selectedChild) {
-      Alert.alert('아이 선택', '먼저 아이를 선택해주세요.');
+      Alert.alert(t('fever.alert.selectChildTitle'), t('fever.alert.selectChildMessage'));
       return;
     }
     if (!medModalBrand) return;
     const dose = parseFloat(medModalDose);
     if (isNaN(dose) || dose <= 0 || dose > 50) {
-      Alert.alert('용량 입력', '올바른 ml 용량을 입력해주세요 (0~50).');
+      Alert.alert(t('fever.alert.doseInputTitle'), t('fever.alert.doseInputMessage'));
       return;
     }
     const entry: MedLogEntry = {
@@ -740,29 +779,29 @@ export default function FeverScreen() {
     setMedModalBrand(null);
     setMedModalDose('');
     setMedModalNote('');
-  }, [selectedChild, medModalBrand, medModalDose, medModalNote, medLog, saveMedLog]);
+  }, [selectedChild, medModalBrand, medModalDose, medModalNote, medLog, saveMedLog, t]);
 
   const handleDeleteMedEntry = useCallback((id: string) => {
     if (!selectedChild) return;
-    Alert.alert('기록 삭제', '이 복용 기록을 삭제할까요?', [
-      { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: () => {
+    Alert.alert(t('fever.alert.deleteMedLogTitle'), t('fever.alert.deleteMedLogMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: () => {
         const next = medLog.filter((e) => e.id !== id);
         setMedLog(next);
         saveMedLog(selectedChild.id, next);
       }},
     ]);
-  }, [selectedChild, medLog, saveMedLog]);
+  }, [selectedChild, medLog, saveMedLog, t]);
 
   /* -- Check temperature -- */
   const handleCheck = useCallback(() => {
     const raw = parseFloat(temperature);
     if (isNaN(raw) || raw < 34.0 || raw > 43.0) {
-      Alert.alert('체온 입력 오류', '34.0 ~ 43.0 사이의 체온을 입력해주세요.');
+      Alert.alert(t('fever.alert.tempInputErrorTitle'), t('fever.alert.tempInputErrorMessage'));
       return;
     }
     if (!selectedChild) {
-      Alert.alert('아이 선택', '먼저 아이를 선택해주세요.');
+      Alert.alert(t('fever.alert.selectChildTitle'), t('fever.alert.selectChildMessage'));
       return;
     }
 
@@ -798,8 +837,8 @@ export default function FeverScreen() {
     if (adjusted >= 38.0) {
       scheduleFeverRecheckReminder(selectedChild.id, selectedChild.name).then(() => {
         Alert.alert(
-          '1시간 뒤 재측정 알림 설정',
-          '고열이 감지되었습니다. 1시간 뒤에 다시 재실 수 있도록 알림을 맞춰드렸어요. 걱정 마세요!',
+          t('fever.alert.recheckReminderTitle'),
+          t('fever.alert.recheckReminderMessage'),
         );
       }).catch(() => {});
     } else {
@@ -810,7 +849,7 @@ export default function FeverScreen() {
     // 측정 시각을 다시 현재로 리셋 (다음 측정 대비)
     setMeasureTime(new Date());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [temperature, method, measureTime, selectedChild, history, saveHistory]);
+  }, [temperature, method, measureTime, selectedChild, history, saveHistory, t]);
 
   /* -- Load medicine dosage -- */
   const loadMedicine = useCallback(async (temp?: number) => {
@@ -823,11 +862,11 @@ export default function FeverScreen() {
         setMedicineDose(data as MedicineDose);
       }
     } catch {
-      Alert.alert('오류', '해열제 정보를 불러올 수 없습니다.');
+      Alert.alert(t('common.error'), t('fever.alert.medicineLoadError'));
     } finally {
       setMedicineLoading(false);
     }
-  }, [selectedChild]);
+  }, [selectedChild, t]);
 
   /* -- Schedule notification -- */
   const scheduleNotification = useCallback(async (minutes: number, label: string) => {
@@ -835,13 +874,13 @@ export default function FeverScreen() {
       const Notifications = await import('expo-notifications');
       const { status } = await Notifications.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('권한 필요', '알림 권한을 허용해주세요.');
+        Alert.alert(t('fever.alert.permissionRequiredTitle'), t('fever.alert.permissionRequiredMessage'));
         return;
       }
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: '해열제 복용 시간',
-          body: `${label} 복용 시간입니다. 체온을 다시 확인해주세요.`,
+          title: t('fever.notification.doseTimeTitle'),
+          body: t('fever.notification.doseTimeBody', { label }),
           sound: true,
         },
         trigger: {
@@ -853,24 +892,24 @@ export default function FeverScreen() {
       const hours = Math.floor(minutes / 60);
       const mins = minutes % 60;
       const timeLabel = hours > 0
-        ? (mins > 0 ? `${hours}시간 ${mins}분` : `${hours}시간`)
-        : `${mins}분`;
-      Alert.alert('알림 설정 완료', `${timeLabel} 후 알림이 울립니다.`);
+        ? (mins > 0 ? t('fever.time.hoursMinutes', { hours, minutes: mins }) : t('fever.time.hoursUnit', { hours }))
+        : t('fever.time.minutesUnit', { minutes: mins });
+      Alert.alert(t('fever.alert.notificationSetTitle'), t('fever.alert.notificationSetMessage', { timeLabel }));
     } catch {
-      Alert.alert('알림 오류', '알림을 설정할 수 없습니다.');
+      Alert.alert(t('fever.alert.notificationErrorTitle'), t('fever.alert.notificationErrorMessage'));
     }
-  }, []);
+  }, [t]);
 
   /* -- Clear history -- */
   const clearHistory = useCallback(() => {
     if (!selectedChild) return;
     Alert.alert(
-      '기록 삭제',
-      '모든 체온 기록을 삭제할까요?',
+      t('fever.alert.clearHistoryTitle'),
+      t('fever.alert.clearHistoryMessage'),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '삭제',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             setHistory([]);
@@ -887,16 +926,18 @@ export default function FeverScreen() {
         },
       ],
     );
-  }, [selectedChild]);
+  }, [selectedChild, t]);
 
   /* -- Render -- */
-  const levelConfig = checkedResult ? FEVER_LEVEL[checkedResult.level] : null;
+  const feverLevel = getFeverLevel(t);
+  const methodLabels = getMethodLabels(t);
+  const levelConfig = checkedResult ? feverLevel[checkedResult.level] : null;
   const showMedicine = checkedResult && checkedResult.level !== 'normal';
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScreenHeader title="열나열나" right={<GuideButton onPress={() => setGuideVisible(true)} />} />
+      <ScreenHeader title={t('fever.screenTitle')} right={<GuideButton onPress={() => setGuideVisible(true)} />} />
 
       <ScrollView
         style={styles.scrollView}
@@ -907,7 +948,7 @@ export default function FeverScreen() {
         {/* == Subtitle (제목은 ScreenHeader로 이동) == */}
         {selectedChild && (
           <View style={[styles.titleBar, { justifyContent: 'center' }]}>
-            <Text style={styles.screenSubtitle}>{selectedChild.name}의 체온 케어</Text>
+            <Text style={styles.screenSubtitle}>{t('fever.subtitle', { name: selectedChild.name })}</Text>
           </View>
         )}
 
@@ -915,7 +956,7 @@ export default function FeverScreen() {
         {/* 행동 가이드 카드 (체온 입력 후 노출 — 결과보다 위) */}
         {/* ============================================ */}
         {checkedResult && (() => {
-          const guide = buildActionGuide(checkedResult, history, medLog);
+          const guide = buildActionGuide(checkedResult, history, medLog, t);
           return (
             <View style={[styles.actionCard, { backgroundColor: guide.bgColor, borderColor: guide.borderColor }]}>
               <Text style={[styles.actionLabel, { color: guide.accentColor }]}>{guide.label}</Text>
@@ -923,7 +964,7 @@ export default function FeverScreen() {
               <Text style={styles.actionEmotion}>{guide.emotion}</Text>
               {guide.nextCheckMin > 0 && (
                 <View style={styles.actionMetaRow}>
-                  <Text style={styles.actionMeta}>⏰ 다음 측정: {guide.nextCheckLabel}</Text>
+                  <Text style={styles.actionMeta}>{'⏰ ' + t('fever.actionGuide.nextCheck', { time: guide.nextCheckLabel })}</Text>
                 </View>
               )}
               {guide.dangerLevel && (
@@ -932,11 +973,11 @@ export default function FeverScreen() {
                   activeOpacity={0.85}
                   onPress={() => {
                     Linking.openURL('tel:119').catch(() => {
-                      Alert.alert('전화 연결 실패', '직접 119로 전화해주세요.');
+                      Alert.alert(t('fever.alert.callFailedTitle'), t('fever.alert.callFailedMessage'));
                     });
                   }}
                 >
-                  <Text style={styles.actionEmergencyText}>119 응급 전화</Text>
+                  <Text style={styles.actionEmergencyText}>{t('fever.emergencyCallShort')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -947,9 +988,9 @@ export default function FeverScreen() {
         {/* Section 1: Temperature Input                 */}
         {/* ============================================ */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>체온 입력</Text>
+          <Text style={styles.sectionTitle}>{t('fever.tempInput.title')}</Text>
           <Text style={styles.sectionDesc}>
-            체온을 입력하고 측정 부위를 선택해주세요
+            {t('fever.tempInput.desc')}
           </Text>
 
           {/* 측정 시각 — 숫자 키패드 + 오전/오후 토글 + '지금' 버튼 */}
@@ -995,7 +1036,7 @@ export default function FeverScreen() {
                       isSelected && styles.methodLabelSelected,
                     ]}
                   >
-                    {METHOD_LABELS[m]}
+                    {methodLabels[m]}
                   </Text>
                 </TouchableOpacity>
               );
@@ -1004,7 +1045,7 @@ export default function FeverScreen() {
 
           {method !== 'ear' && (
             <Text style={styles.adjustNote}>
-              * {METHOD_LABELS[method]} 측정 시 +0.5{'°C'} 보정하여 판단합니다
+              {t('fever.tempInput.adjustNote', { method: methodLabels[method] })}
             </Text>
           )}
 
@@ -1018,7 +1059,7 @@ export default function FeverScreen() {
             activeOpacity={0.8}
             disabled={!temperature}
           >
-            <Text style={styles.checkButtonText}>확인</Text>
+            <Text style={styles.checkButtonText}>{t('fever.tempInput.checkButton')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -1042,7 +1083,7 @@ export default function FeverScreen() {
             <Text style={styles.levelTemp}>
               {checkedResult.raw.toFixed(1)}{'°C'}
               {method !== 'ear' && (
-                ` (보정 ${checkedResult.adjusted.toFixed(1)}${'°C'})`
+                ` ${t('fever.levelResult.adjustedTemp', { temp: checkedResult.adjusted.toFixed(1) })}`
               )}
             </Text>
             <Text style={styles.levelAdvice}>{levelConfig.advice}</Text>
@@ -1052,11 +1093,11 @@ export default function FeverScreen() {
                 activeOpacity={0.85}
                 onPress={() => {
                   Linking.openURL('tel:119').catch(() => {
-                    Alert.alert('전화 연결 실패', '기기에서 전화 앱을 열 수 없습니다. 직접 119로 전화해주세요.');
+                    Alert.alert(t('fever.alert.callFailedTitle'), t('fever.alert.callFailedDeviceMessage'));
                   });
                 }}
               >
-                <Text style={styles.emergencyCallButtonText}>119에 전화하기</Text>
+                <Text style={styles.emergencyCallButtonText}>{t('fever.emergencyCallFull')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1069,18 +1110,16 @@ export default function FeverScreen() {
           <View style={styles.section}>
             <View style={styles.sectionTitleRow}>
               <Image source={IC_PILL} style={styles.sectionTitleIconImg} resizeMode="contain" />
-              <Text style={styles.sectionTitle}>해열제 복용량 (참고 정보)</Text>
+              <Text style={styles.sectionTitle}>{t('fever.medicine.sectionTitle')}</Text>
             </View>
             <Text style={styles.sectionDesc}>
-              아이 체중 기준 보수값(권장 최소치)으로 계산된 참고용 정보입니다
+              {t('fever.medicine.sectionDesc')}
             </Text>
 
             {/* 의료 disclaimer — 진단·치료 목적 아님 명시 (App Store 1.4.1 + 안전성) */}
             <View style={styles.medDisclaimer}>
               <Text style={styles.medDisclaimerText}>
-                ⚠️ 본 화면의 용량·복용 간격은 일반적인 참고 정보이며, 진단이나 치료를 목적으로 하는 의료행위에 해당하지 않습니다.{'\n'}
-                약마다 농도가 다르니 제품 라벨의 농도(예: 타이레놀 32mg/ml, 챔프 ER 48mg/ml)를 반드시 확인하세요.{'\n'}
-                실제 투약·복용·교차 복용은 반드시 소아과 의사·약사와 상담 후 결정하세요. 응급 증상이 의심되면 즉시 119에 연락하세요.
+                {t('fever.medicine.disclaimer')}
               </Text>
             </View>
 
@@ -1101,7 +1140,7 @@ export default function FeverScreen() {
               />
             ) : (
               <Text style={styles.noDataText}>
-                해열제 정보를 불러올 수 없습니다.
+                {t('fever.medicine.loadError')}
               </Text>
             )}
           </View>
@@ -1113,10 +1152,10 @@ export default function FeverScreen() {
         <View style={styles.section}>
           <View style={styles.sectionTitleRow}>
             <Image source={IC_DIARY} style={styles.sectionTitleIconImg} resizeMode="contain" />
-            <Text style={styles.sectionTitle}>해열제 복용 기록</Text>
+            <Text style={styles.sectionTitle}>{t('fever.medLog.sectionTitle')}</Text>
           </View>
           <Text style={styles.sectionDesc}>
-            먹인 해열제와 용량을 기록하면 다음 복용 가능 시간을 자동으로 알려드려요
+            {t('fever.medLog.sectionDesc')}
           </Text>
 
           {/* 빠른 기록 버튼 */}
@@ -1134,7 +1173,7 @@ export default function FeverScreen() {
                 activeOpacity={0.7}
               >
                 <Image source={b.icon} style={medLogStyles.brandIconImg} resizeMode="contain" />
-                <Text style={medLogStyles.brandLabel}>{b.brandName}</Text>
+                <Text style={medLogStyles.brandLabel}>{getBrandDisplayName(t, b.brandName)}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -1142,9 +1181,9 @@ export default function FeverScreen() {
           {/* 다음 행동 카드 — 가장 빠른 다음 복용 1건만 큰 글씨로 */}
           {medLog.length > 0 && (() => {
             const last = medLog[0];
-            const nextSame = calcNextDoseAt(medLog, last.type);
+            const nextSame = calcNextDoseAt(medLog, last.type, t);
             const otherType: MedicineType = last.type === 'acetaminophen' ? 'ibuprofen' : 'acetaminophen';
-            const nextOther = last.type !== 'other' ? calcNextDoseAt(medLog, otherType) : null;
+            const nextOther = last.type !== 'other' ? calcNextDoseAt(medLog, otherType, t) : null;
 
             // 가장 빠른 (= 가장 작은 nextAt) 다음 복용을 1건만 선택
             const candidates: { at: number; type: MedicineType; isAlt: boolean }[] = [];
@@ -1160,23 +1199,27 @@ export default function FeverScreen() {
             const hh = String(target.getHours()).padStart(2, '0');
             const mm = String(target.getMinutes()).padStart(2, '0');
             const typeLabel =
-              next.type === 'acetaminophen' ? '타이레놀류' :
-              next.type === 'ibuprofen' ? '부루펜류' : '해열제';
+              next.type === 'acetaminophen' ? t('fever.medType.acetaminophenGroup') :
+              next.type === 'ibuprofen' ? t('fever.medType.ibuprofenGroup') : t('fever.medType.antipyretic');
 
             return (
               <View style={medLogStyles.nextDoseCard}>
                 <Text style={medLogStyles.nextDoseLabel}>
-                  {ok ? '지금 복용 가능' : '다음 해열제'}
+                  {ok ? t('fever.medLog.availableNow') : t('fever.medLog.nextDose')}
                 </Text>
                 <Text style={medLogStyles.nextDoseHeadline}>
                   {ok
-                    ? `${typeLabel}${next.isAlt ? ' (교차)' : ''} 지금 OK`
-                    : `${hh}:${mm}에 ${typeLabel}${next.isAlt ? ' (교차)' : ''}`}
+                    ? t('fever.medLog.nowOk', { typeLabel, altSuffix: next.isAlt ? t('fever.medLog.altSuffix') : '' })
+                    : t('fever.medLog.atTimeType', { time: `${hh}:${mm}`, typeLabel, altSuffix: next.isAlt ? t('fever.medLog.altSuffix') : '' })}
                 </Text>
                 <Text style={medLogStyles.nextDoseSub}>
                   {ok
-                    ? `마지막: ${last.brandName} ${last.doseMl}ml · ${formatRelative(medNow - last.timestamp)}`
-                    : `약 ${formatRelative(deltaMs)} 후`}
+                    ? t('fever.medLog.lastDoseInfo', {
+                        brandName: getBrandDisplayName(t, last.brandName),
+                        doseMl: last.doseMl,
+                        relative: formatRelative(medNow - last.timestamp, t),
+                      })
+                    : t('fever.medLog.inAbout', { relative: formatRelative(deltaMs, t) })}
                 </Text>
               </View>
             );
@@ -1185,13 +1228,13 @@ export default function FeverScreen() {
           {/* 복용 이력 — 최근 1건 + 전체 보기 토글 */}
           {medLog.length > 0 && (
             <View style={medLogStyles.logList}>
-              <Text style={medLogStyles.logListTitle}>{'복용 이력'}</Text>
+              <Text style={medLogStyles.logListTitle}>{t('fever.medLog.historyTitle')}</Text>
               {(showAllMedLog ? medLog.slice(0, 5) : medLog.slice(0, 1)).map((entry) => (
                 <View key={entry.id} style={medLogStyles.logRow}>
                   <Text style={medLogStyles.logTime}>
                     {formatTime(entry.timestamp)}
                   </Text>
-                  <Text style={medLogStyles.logBrand}>{entry.brandName}</Text>
+                  <Text style={medLogStyles.logBrand}>{getBrandDisplayName(t, entry.brandName)}</Text>
                   <Text style={medLogStyles.logDose}>{entry.doseMl}ml</Text>
                   <TouchableOpacity
                     onPress={() => handleDeleteMedEntry(entry.id)}
@@ -1209,8 +1252,8 @@ export default function FeverScreen() {
                 >
                   <Text style={medLogStyles.toggleBtnText}>
                     {showAllMedLog
-                      ? '접기'
-                      : `전체 보기 (${Math.min(medLog.length, 5)}건)`}
+                      ? t('common.collapse')
+                      : t('fever.medLog.viewAll', { count: Math.min(medLog.length, 5) })}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -1219,7 +1262,7 @@ export default function FeverScreen() {
 
           {medLog.length === 0 && (
             <Text style={medLogStyles.empty}>
-              아직 기록이 없어요. 위 버튼으로 복용을 기록하면 다음 복용 시간을 자동 계산해드려요.
+              {t('fever.medLog.empty')}
             </Text>
           )}
         </View>
@@ -1232,18 +1275,18 @@ export default function FeverScreen() {
             <View style={styles.historyHeader}>
               <View style={styles.sectionTitleRow}>
                 <Image source={IC_DIARY} style={styles.sectionTitleIconImg} resizeMode="contain" />
-                <Text style={styles.sectionTitle}>체온 기록</Text>
+                <Text style={styles.sectionTitle}>{t('fever.history.sectionTitle')}</Text>
               </View>
               <TouchableOpacity
                 onPress={clearHistory}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Text style={styles.clearButton}>기록 삭제</Text>
+                <Text style={styles.clearButton}>{t('fever.history.clearButton')}</Text>
               </TouchableOpacity>
             </View>
 
             {(showAllHistory ? history : history.slice(0, 1)).map((entry, idx, arr) => {
-              const cfg = FEVER_LEVEL[entry.level];
+              const cfg = feverLevel[entry.level];
               return (
                 <View
                   key={`hist-${entry.timestamp}-${idx}`}
@@ -1265,7 +1308,7 @@ export default function FeverScreen() {
                     {entry.temperature.toFixed(1)}{'°C'}
                   </Text>
                   <Text style={styles.historyMethod}>
-                    {METHOD_LABELS[entry.method]}
+                    {methodLabels[entry.method]}
                   </Text>
                   <Text
                     style={[styles.historyLevel, { color: cfg.color }]}
@@ -1282,7 +1325,7 @@ export default function FeverScreen() {
                 hitSlop={6}
               >
                 <Text style={styles.historyToggleBtnText}>
-                  {showAllHistory ? '접기' : `전체 보기 (${history.length}건)`}
+                  {showAllHistory ? t('common.collapse') : t('fever.history.viewAll', { count: history.length })}
                 </Text>
               </TouchableOpacity>
             )}
@@ -1290,10 +1333,10 @@ export default function FeverScreen() {
         )}
 
         <MedicalCitation
-          note="해열제 용량·복용 간격은 일반 기준이며, 실제 투약은 반드시 소아과 의사·약사 지시를 따르세요."
+          note={t('fever.citation.note')}
           sources={[
-            { label: '대한소아과학회 어린이 건강정보 (발열·해열제)', url: 'https://www.pediatrics.or.kr' },
-            { label: '질병관리청 국가건강정보포털 (소아 발열)', url: 'https://health.kdca.go.kr' },
+            { label: t('fever.citation.source1'), url: 'https://www.pediatrics.or.kr' },
+            { label: t('fever.citation.source2'), url: 'https://health.kdca.go.kr' },
           ]}
         />
         <View style={{ height: 40 }} />
@@ -1323,15 +1366,17 @@ export default function FeverScreen() {
                 <Image source={medModalBrand.icon} style={medLogStyles.modalTitleIconImg} resizeMode="contain" />
               ) : null}
               <Text style={medLogStyles.modalTitle}>
-                {medModalBrand?.brandName ?? '해열제'} 기록
+                {t('fever.medModal.title', {
+                  brandName: medModalBrand ? getBrandDisplayName(t, medModalBrand.brandName) : t('fever.medModal.defaultBrand'),
+                })}
               </Text>
             </View>
             <Text style={medLogStyles.modalSub}>
-              지금 ({formatTime(medNow)}) 복용으로 기록됩니다
+              {t('fever.medModal.subLabel', { time: formatTime(medNow) })}
             </Text>
 
             {/* 약 종류 변경 (chip) */}
-            <Text style={medLogStyles.modalLabel}>약 선택</Text>
+            <Text style={medLogStyles.modalLabel}>{t('fever.medModal.selectMed')}</Text>
             <View style={medLogStyles.modalChipRow}>
               {MEDICINE_BRANDS.map((b) => (
                 <TouchableOpacity
@@ -1348,7 +1393,7 @@ export default function FeverScreen() {
                       medLogStyles.modalChipText,
                       medModalBrand?.brandName === b.brandName && medLogStyles.modalChipTextActive,
                     ]}>
-                      {b.brandName}
+                      {getBrandDisplayName(t, b.brandName)}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -1356,11 +1401,11 @@ export default function FeverScreen() {
             </View>
 
             {/* 용량 입력 */}
-            <Text style={medLogStyles.modalLabel}>용량 (ml)</Text>
+            <Text style={medLogStyles.modalLabel}>{t('fever.medModal.doseLabel')}</Text>
             <TextInput
               style={medLogStyles.modalInput}
               keyboardType="numeric"
-              placeholder="예: 5"
+              placeholder={t('fever.medModal.dosePlaceholder')}
               placeholderTextColor="#ABABAB"
               value={medModalDose}
               onChangeText={setMedModalDose}
@@ -1369,10 +1414,10 @@ export default function FeverScreen() {
             />
 
             {/* 메모 (옵션) */}
-            <Text style={medLogStyles.modalLabel}>메모 (선택)</Text>
+            <Text style={medLogStyles.modalLabel}>{t('fever.medModal.noteLabel')}</Text>
             <TextInput
               style={medLogStyles.modalInput}
-              placeholder="예: 38.5도 / 식후"
+              placeholder={t('fever.medModal.notePlaceholder')}
               placeholderTextColor="#ABABAB"
               value={medModalNote}
               onChangeText={setMedModalNote}
@@ -1384,13 +1429,13 @@ export default function FeverScreen() {
                 style={[medLogStyles.modalBtn, medLogStyles.modalBtnCancel]}
                 onPress={() => setMedModalVisible(false)}
               >
-                <Text style={medLogStyles.modalBtnCancelText}>취소</Text>
+                <Text style={medLogStyles.modalBtnCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[medLogStyles.modalBtn, medLogStyles.modalBtnSave]}
                 onPress={handleAddMedLog}
               >
-                <Text style={medLogStyles.modalBtnSaveText}>기록 저장</Text>
+                <Text style={medLogStyles.modalBtnSaveText}>{t('fever.medModal.saveButton')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1424,14 +1469,14 @@ export default function FeverScreen() {
 const ACET_MG_PER_KG = 10; // 보수값 (10~15 권장 중 최저)
 const IBU_MG_PER_KG = 5;   // 보수값 (5~10 권장 중 최저)
 
-function recalcSyrup(weight: number, acetConcMgPerMl = 32, ibuConcMgPerMl = 20) {
+function recalcSyrup(weight: number, t: TFunction, acetConcMgPerMl = 32, ibuConcMgPerMl = 20) {
   const acetaminophenMg = +(weight * ACET_MG_PER_KG).toFixed(0);
   const acetaminophenMl = +(weight * ACET_MG_PER_KG / acetConcMgPerMl).toFixed(1);
   const ibuprofenMg = +(weight * IBU_MG_PER_KG).toFixed(0);
   const ibuprofenMl = +(weight * IBU_MG_PER_KG / ibuConcMgPerMl).toFixed(1);
   return {
-    acetaminophen: { doseMg: `${acetaminophenMg}mg`, syrupMl: `시럽 약 ${acetaminophenMl}ml` },
-    ibuprofen: { doseMg: `${ibuprofenMg}mg`, syrupMl: `시럽 약 ${ibuprofenMl}ml` },
+    acetaminophen: { doseMg: `${acetaminophenMg}mg`, syrupMl: t('fever.syrupApprox', { ml: acetaminophenMl }) },
+    ibuprofen: { doseMg: `${ibuprofenMg}mg`, syrupMl: t('fever.syrupApprox', { ml: ibuprofenMl }) },
   };
 }
 
@@ -1450,12 +1495,13 @@ function MedicineSection({
   medLog: MedLogEntry[];
   medNow: number;
 }) {
+  const { t } = useTranslation();
   const parsedWeight = parseFloat(inputWeight);
   const useInput = !isNaN(parsedWeight) && parsedWeight > 0 && parsedWeight < 100;
   // 농도 결정 — 챔프 ER 선택 시 48mg/ml, 그 외 32mg/ml. 이부는 고정 20mg/ml.
   // selectedBrand / champType 는 아래에서 정의되지만 hooks 순서상 이 시점엔 stale 가능 →
   // 안전하게 useInput 시점에 일반(32/20)으로 일단 계산하고 hook 이후 override.
-  const recalc = useInput ? recalcSyrup(parsedWeight) : null;
+  const recalc = useInput ? recalcSyrup(parsedWeight, t) : null;
 
   // 부드러운 fade 애니메이션 (수치 변화 시 깜빡임 → 인지)
   const fade = useRef(new Animated.Value(1)).current;
@@ -1478,9 +1524,9 @@ function MedicineSection({
       return { type: 'acetaminophen' as MedicineType, available: true, deltaMs: 0 };
     }
     const last = medLog[0];
-    const sameNext = calcNextDoseAt(medLog, last.type);
+    const sameNext = calcNextDoseAt(medLog, last.type, t);
     const otherType: MedicineType = last.type === 'acetaminophen' ? 'ibuprofen' : 'acetaminophen';
-    const otherNext = last.type !== 'other' ? calcNextDoseAt(medLog, otherType) : null;
+    const otherNext = last.type !== 'other' ? calcNextDoseAt(medLog, otherType, t) : null;
     const sameAt = sameNext ? sameNext.nextAt : Infinity;
     const otherAt = otherNext ? otherNext.nextAt : Infinity;
     if (sameAt === Infinity && otherAt === Infinity) {
@@ -1526,16 +1572,16 @@ function MedicineSection({
   let selectedSyrupText = isAcet ? acetaminophenSyrup : ibuprofenSyrup;
   if (isChampER && useInput) {
     const acetMl = +(parsedWeight * ACET_MG_PER_KG / 48).toFixed(1);
-    selectedSyrupText = `시럽 약 ${acetMl}ml`;
+    selectedSyrupText = t('fever.syrupApprox', { ml: acetMl });
   }
   const mlMatch = selectedSyrupText.match(/(\d+(?:\.\d+)?)\s*ml/);
   const mlNumber = mlMatch ? mlMatch[1] : selectedSyrupText;
   const brandLabel = (() => {
-    if (selectedBrand === 'tylenol') return '타이레놀';
-    if (selectedBrand === 'brufen') return '부루펜';
-    if (selectedBrand === 'maxibupen') return '맥시부펜';
-    if (champType === 'red_er') return '챔프 ER';
-    return champType === 'red' ? '챔프(빨강)' : '챔프(파랑)';
+    if (selectedBrand === 'tylenol') return t('fever.brand.tylenol');
+    if (selectedBrand === 'brufen') return t('fever.brand.brufen');
+    if (selectedBrand === 'maxibupen') return t('fever.brand.maxibupen');
+    if (champType === 'red_er') return t('fever.brand.champER');
+    return champType === 'red' ? t('fever.brand.champRed') : t('fever.brand.champBlue');
   })();
   const drugColor = isAcet ? TYLENOL_COLOR : BRUFEN_COLOR;
   const interval = isAcet ? dose.acetaminophen.interval : dose.ibuprofen.interval;
@@ -1543,22 +1589,22 @@ function MedicineSection({
 
   // 동적 감성 헤드라인 — 선택한 약·용량 실시간 연동 (단일 행동 강조)
   const headline = recommendation.available
-    ? `참고 기준: ${brandLabel} 약 ${mlNumber}ml (의사·약사 상담 후 투약)`
-    : `${formatRelative(recommendation.deltaMs)} 후 ${brandLabel} 약 ${mlNumber}ml (참고)`;
+    ? t('fever.medGuide.headlineAvailable', { brandLabel, mlNumber })
+    : t('fever.medGuide.headlineWaiting', { relative: formatRelative(recommendation.deltaMs, t), brandLabel, mlNumber });
 
   // 4-브랜드 그리드 항목
   const grid: { key: BrandKey; label: string; icon: ImageSourcePropType; color: string }[] = [
-    { key: 'tylenol', label: '타이레놀', icon: IC_PILL, color: TYLENOL_COLOR },
-    { key: 'champ', label: '챔프', icon: IC_PILL, color: champType === 'red' ? TYLENOL_COLOR : BRUFEN_COLOR },
-    { key: 'brufen', label: '부루펜', icon: IC_SYRINGE, color: BRUFEN_COLOR },
-    { key: 'maxibupen', label: '맥시부펜', icon: IC_SYRINGE, color: BRUFEN_COLOR },
+    { key: 'tylenol', label: t('fever.brand.tylenol'), icon: IC_PILL, color: TYLENOL_COLOR },
+    { key: 'champ', label: t('fever.brand.champ'), icon: IC_PILL, color: champType === 'red' ? TYLENOL_COLOR : BRUFEN_COLOR },
+    { key: 'brufen', label: t('fever.brand.brufen'), icon: IC_SYRINGE, color: BRUFEN_COLOR },
+    { key: 'maxibupen', label: t('fever.brand.maxibupen'), icon: IC_SYRINGE, color: BRUFEN_COLOR },
   ];
 
   return (
     <View style={styles.medicineContainer}>
       {/* 몸무게 입력 (실시간 계산용) */}
       <View style={styles.weightInputCard}>
-        <Text style={styles.weightInputLabel}>현재 몸무게</Text>
+        <Text style={styles.weightInputLabel}>{t('fever.weightInput.label')}</Text>
         <View style={styles.weightInputRow}>
           <TextInput
             style={styles.weightInputField}
@@ -1573,15 +1619,15 @@ function MedicineSection({
         </View>
         <Text style={styles.weightInputHint}>
           {useInput
-            ? `입력값 ${parsedWeight}kg 기준 실시간 계산`
-            : `${dose.childWeight}kg 기준 (입력 시 즉시 변경)`}
+            ? t('fever.weightInput.liveCalc', { weight: parsedWeight })
+            : t('fever.weightInput.defaultCalc', { weight: dose.childWeight })}
         </Text>
       </View>
 
       {/* === 단일 행동 카드 — 가장 강하게 인지되는 화면 === */}
       <View style={[styles.medGuideCard, { borderColor: drugColor }]}>
         <Text style={[styles.medGuideStatus, { color: drugColor }]}>
-          {recommendation.available ? '참고 안내' : `다음 복용까지 ${formatRelative(recommendation.deltaMs)}`}
+          {recommendation.available ? t('fever.medGuide.referenceLabel') : t('fever.medGuide.untilNext', { relative: formatRelative(recommendation.deltaMs, t) })}
         </Text>
         <Text style={styles.medGuideHeadline}>{headline}</Text>
       </View>
@@ -1630,7 +1676,7 @@ function MedicineSection({
       {/* === 챔프 종류 토글 — 농도별 (오복용 방지) === */}
       {selectedBrand === 'champ' && (
         <View style={styles.champRow}>
-          <Text style={styles.champLabel}>챔프 종류 (농도 확인)</Text>
+          <Text style={styles.champLabel}>{t('fever.champToggle.label')}</Text>
           <View style={styles.champToggle}>
             <TouchableOpacity
               style={[
@@ -1642,7 +1688,7 @@ function MedicineSection({
             >
               <View style={[styles.champDot, { backgroundColor: '#E53935' }]} />
               <Text style={[styles.champBtnText, champType === 'red' && { color: TYLENOL_COLOR, fontWeight: '700' }]}>
-                빨강 (아세트 32mg/ml)
+                {t('fever.champToggle.red')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -1655,7 +1701,7 @@ function MedicineSection({
             >
               <View style={[styles.champDot, { backgroundColor: '#B71C1C' }]} />
               <Text style={[styles.champBtnText, champType === 'red_er' && { color: TYLENOL_COLOR, fontWeight: '700' }]}>
-                ER 고농도 (48mg/ml)
+                {t('fever.champToggle.redEr')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -1668,7 +1714,7 @@ function MedicineSection({
             >
               <View style={[styles.champDot, { backgroundColor: '#1E88E5' }]} />
               <Text style={[styles.champBtnText, champType === 'blue' && { color: BRUFEN_COLOR, fontWeight: '700' }]}>
-                파랑 (이부 20mg/ml)
+                {t('fever.champToggle.blue')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1683,7 +1729,7 @@ function MedicineSection({
       >
         <Image source={IC_BELL} style={styles.recPrimaryNotifyIconImg} resizeMode="contain" />
         <Text style={styles.recPrimaryNotifyText}>
-          {isAcet ? '4시간 후 알림' : '6시간 후 알림'}
+          {isAcet ? t('fever.notifyButton.in4h') : t('fever.notifyButton.in6h')}
         </Text>
       </TouchableOpacity>
 

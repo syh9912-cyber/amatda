@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   View,
   Text,
@@ -57,13 +59,15 @@ interface Post {
   isPinned?: boolean;
 }
 
-const REPORT_REASON_OPTIONS: { key: 'abuse' | 'ad' | 'privacy' | 'spam' | 'other'; label: string }[] = [
-  { key: 'abuse', label: '욕설·비방' },
-  { key: 'ad', label: '광고·홍보' },
-  { key: 'privacy', label: '개인정보 노출' },
-  { key: 'spam', label: '도배·스팸' },
-  { key: 'other', label: '기타' },
-];
+function getReportReasonOptions(t: TFunction): { key: 'abuse' | 'ad' | 'privacy' | 'spam' | 'other'; label: string }[] {
+  return [
+    { key: 'abuse', label: t('momGroup.reportReason.abuse') },
+    { key: 'ad', label: t('momGroup.reportReason.ad') },
+    { key: 'privacy', label: t('momGroup.reportReason.privacy') },
+    { key: 'spam', label: t('momGroup.reportReason.spam') },
+    { key: 'other', label: t('momGroup.reportReason.other') },
+  ];
+}
 
 interface Comment {
   id: string;
@@ -78,13 +82,15 @@ interface Comment {
 
 // 산뜻한 컬러 팔레트 — Material 400~500 (밝고 명도 높음)
 // 어두운 톤(800/900)은 옛 게시판 느낌이라 의도적으로 회피
-const CATEGORY_META: Record<MomGroupCategory, { label: string; emoji: string; color: string; bg: string }> = {
-  question:    { label: '질문', emoji: '❓', color: '#29B6F6', bg: '#E1F5FE' }, // 산뜻한 하늘
-  chat:        { label: '수다', emoji: '💬', color: '#EC407A', bg: '#FCE4EC' }, // 밝은 핑크
-  info:        { label: '정보', emoji: '📚', color: '#66BB6A', bg: '#E8F5E9' }, // 프레시 그린
-  worry:       { label: '고민', emoji: '😔', color: '#FFA726', bg: '#FFF3E0' }, // 따뜻한 오렌지
-  celebration: { label: '축하', emoji: '🎉', color: '#AB47BC', bg: '#F3E5F5' }, // 라벤더
-};
+function getCategoryMeta(t: TFunction): Record<MomGroupCategory, { label: string; emoji: string; color: string; bg: string }> {
+  return {
+    question:    { label: t('momGroup.category.question'), emoji: '❓', color: '#29B6F6', bg: '#E1F5FE' }, // 산뜻한 하늘
+    chat:        { label: t('momGroup.category.chat'), emoji: '💬', color: '#EC407A', bg: '#FCE4EC' }, // 밝은 핑크
+    info:        { label: t('momGroup.category.info'), emoji: '📚', color: '#66BB6A', bg: '#E8F5E9' }, // 프레시 그린
+    worry:       { label: t('momGroup.category.worry'), emoji: '😔', color: '#FFA726', bg: '#FFF3E0' }, // 따뜻한 오렌지
+    celebration: { label: t('momGroup.category.celebration'), emoji: '🎉', color: '#AB47BC', bg: '#F3E5F5' }, // 라벤더
+  };
+}
 const CATEGORY_KEYS: MomGroupCategory[] = ['question', 'chat', 'info', 'worry', 'celebration'];
 
 const PAGE_SIZE = 20;
@@ -96,9 +102,14 @@ function deriveGroupKey(isoDate?: string | null): string | null {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function formatGroupLabel(key: string): string {
+function formatGroupLabel(t: TFunction, key: string): string {
   const [y, m] = key.split('-');
-  return `${y}년 ${parseInt(m, 10)}월 맘스톡`;
+  return t('momGroup.groupLabel', { year: y, month: parseInt(m, 10) });
+}
+
+function formatMonthOnly(t: TFunction, key: string): string {
+  const [, m] = key.split('-');
+  return t('momGroup.monthOnly', { month: parseInt(m, 10) });
 }
 
 function shiftGroupKey(key: string, deltaMonths: number): string {
@@ -117,16 +128,16 @@ function monthsBetween(a: string, b: string): number {
   return (ay - by) * 12 + (am - bm);
 }
 
-function timeAgo(iso: string): string {
+function timeAgo(t: TFunction, iso: string): string {
   if (!iso) return '';
   const diff = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diff / 60000);
-  if (min < 1) return '방금';
-  if (min < 60) return `${min}분 전`;
+  if (min < 1) return t('momGroup.timeAgo.justNow');
+  if (min < 60) return t('momGroup.timeAgo.minutes', { count: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}시간 전`;
+  if (hr < 24) return t('momGroup.timeAgo.hours', { count: hr });
   const day = Math.floor(hr / 24);
-  if (day < 7) return `${day}일 전`;
+  if (day < 7) return t('momGroup.timeAgo.days', { count: day });
   return new Date(iso).toLocaleDateString('ko-KR');
 }
 
@@ -170,53 +181,58 @@ const HONOR_SCORE_THRESHOLD = 5;
 const GUIDE_SEEN_KEY = 'mom-group-guide-seen-v1';
 
 type RadiusKey = 5 | 10 | 50 | 100 | 0; // 0 = 전국
-const RADIUS_TABS: { key: RadiusKey; label: string; sub: string }[] = [
-  { key: 5,   label: '5km',  sub: '바로 옆' },
-  { key: 10,  label: '10km', sub: '우리 동네' },
-  { key: 50,  label: '50km', sub: '우리 도시' },
-  { key: 100, label: '100km', sub: '근교' },
-  { key: 0,   label: '전국', sub: '나이별' },
-];
+function getRadiusTabs(t: TFunction): { key: RadiusKey; label: string; sub: string }[] {
+  return [
+    { key: 5,   label: '5km',  sub: t('momGroup.radius.sub5') },
+    { key: 10,  label: '10km', sub: t('momGroup.radius.sub10') },
+    { key: 50,  label: '50km', sub: t('momGroup.radius.sub50') },
+    { key: 100, label: '100km', sub: t('momGroup.radius.sub100') },
+    { key: 0,   label: t('momGroup.radius.nationwide'), sub: t('momGroup.radius.subNationwide') },
+  ];
+}
 
-const REGIONS: { key: string; label: string }[] = [
-  { key: 'seoul', label: '서울' }, { key: 'busan', label: '부산' },
-  { key: 'daegu', label: '대구' }, { key: 'incheon', label: '인천' },
-  { key: 'gwangju', label: '광주' }, { key: 'daejeon', label: '대전' },
-  { key: 'ulsan', label: '울산' }, { key: 'sejong', label: '세종' },
-  { key: 'gyeonggi', label: '경기' }, { key: 'gangwon', label: '강원' },
-  { key: 'chungbuk', label: '충북' }, { key: 'chungnam', label: '충남' },
-  { key: 'jeonbuk', label: '전북' }, { key: 'jeonnam', label: '전남' },
-  { key: 'gyeongbuk', label: '경북' }, { key: 'gyeongnam', label: '경남' },
-  { key: 'jeju', label: '제주' },
-];
+function getRegions(t: TFunction): { key: string; label: string }[] {
+  return [
+    { key: 'seoul', label: t('momGroup.region.seoul') }, { key: 'busan', label: t('momGroup.region.busan') },
+    { key: 'daegu', label: t('momGroup.region.daegu') }, { key: 'incheon', label: t('momGroup.region.incheon') },
+    { key: 'gwangju', label: t('momGroup.region.gwangju') }, { key: 'daejeon', label: t('momGroup.region.daejeon') },
+    { key: 'ulsan', label: t('momGroup.region.ulsan') }, { key: 'sejong', label: t('momGroup.region.sejong') },
+    { key: 'gyeonggi', label: t('momGroup.region.gyeonggi') }, { key: 'gangwon', label: t('momGroup.region.gangwon') },
+    { key: 'chungbuk', label: t('momGroup.region.chungbuk') }, { key: 'chungnam', label: t('momGroup.region.chungnam') },
+    { key: 'jeonbuk', label: t('momGroup.region.jeonbuk') }, { key: 'jeonnam', label: t('momGroup.region.jeonnam') },
+    { key: 'gyeongbuk', label: t('momGroup.region.gyeongbuk') }, { key: 'gyeongnam', label: t('momGroup.region.gyeongnam') },
+    { key: 'jeju', label: t('momGroup.region.jeju') },
+  ];
+}
 
-function roomLabel(roomType: RoomType, groupKey: string, radiusKey?: number, ageRange?: number): string {
-  if (roomType === 'month') return formatGroupLabel(groupKey);
+function roomLabel(t: TFunction, roomType: RoomType, groupKey: string, radiusKey?: number, ageRange?: number): string {
+  if (roomType === 'month') return formatGroupLabel(t, groupKey);
   if (roomType === 'radius') {
-    const meta = RADIUS_TABS.find((r) => r.key === (radiusKey ?? 10));
-    const ageLabel = ageRange === 0 ? '동갑' : ageRange ? `±${ageRange}살` : '';
-    return `내 동네 · ${meta?.label ?? ''}${ageLabel ? ` · ${ageLabel}` : ''}`;
+    const meta = getRadiusTabs(t).find((r) => r.key === (radiusKey ?? 10));
+    const ageLabel = ageRange === 0 ? t('momGroup.sameAge') : ageRange ? t('momGroup.ageRangePlusMinus', { n: ageRange }) : '';
+    return t('momGroup.roomLabelNearby', { label: meta?.label ?? '', ageSuffix: ageLabel ? ` · ${ageLabel}` : '' });
   }
-  const r = REGIONS.find((x) => `region:${x.key}` === groupKey);
-  return `${r?.label ?? ''} 지역방`;
+  const r = getRegions(t).find((x) => `region:${x.key}` === groupKey);
+  return t('momGroup.roomLabelRegion', { label: r?.label ?? '' });
 }
 
-function writePlaceholder(roomType: RoomType): string {
-  if (roomType === 'radius') return '내 동네 맘들과 나누고 싶은 이야기를 적어주세요...';
-  if (roomType === 'month') return '같은 달 출산 맘들과 나누고 싶은 이야기를 적어주세요...';
-  return '같은 지역 맘들과 나누고 싶은 이야기를 적어주세요...';
+function writePlaceholder(t: TFunction, roomType: RoomType): string {
+  if (roomType === 'radius') return t('momGroup.writePlaceholderNearby');
+  if (roomType === 'month') return t('momGroup.writePlaceholderMonth');
+  return t('momGroup.writePlaceholderRegion');
 }
 
-function displayTitle(p: Post): string {
+function displayTitle(t: TFunction, p: Post): string {
   if (p.title) return p.title;
   // legacy fallback: derive from content
   const trimmed = p.content.trim().replace(/\s+/g, ' ');
-  if (!trimmed) return '(내용 없음)';
+  if (!trimmed) return t('momGroup.noContent');
   if (trimmed.length <= 40) return trimmed;
   return trimmed.slice(0, 40) + '…';
 }
 
 export default function MomGroupScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { selectedChild } = useChildStore();
   // 자녀 birthDate/dueDate 기반 월방. 자녀 없는 사용자(공식 계정 등)는 현재 월 fallback.
@@ -301,14 +317,14 @@ export default function MomGroupScreen() {
     [roomType, groupKey, myGroupKey],
   );
 
-  const switchRoomType = (t: RoomType) => {
-    setRoomType(t);
+  const switchRoomType = (roomTypeArg: RoomType) => {
+    setRoomType(roomTypeArg);
     setPage(1);
     // 정석: 방 전환 시 viewMode를 feed로 리셋 → 북마크/내 글 상태에서 방 바꾸는 모순 제거
     setViewMode('feed');
     setSearchQuery('');
     setSearchInput('');
-    if (t === 'month') setGroupKey(myGroupKey);
+    if (roomTypeArg === 'month') setGroupKey(myGroupKey);
     // 'region'은 deprecated — switchRoomType 호출처 모두 제거
     // radius 모드는 groupKey와 무관 (자체 radiusKey 사용)
   };
@@ -452,10 +468,10 @@ export default function MomGroupScreen() {
         setTotalCount(0);
       }
     } catch {
-      Alert.alert('오류', '게시글을 불러오지 못했어요');
+      Alert.alert(t('common.error'), t('momGroup.loadPostsError'));
     }
     setLoading(false);
-  }, [roomType, groupKey, radiusKey, hasLocation, targetBirthYears, categoryFilter, sortMode, page, searchQuery, searchField]);
+  }, [roomType, groupKey, radiusKey, hasLocation, targetBirthYears, categoryFilter, sortMode, page, searchQuery, searchField, t]);
 
   useEffect(() => { loadPosts(); }, [loadPosts]);
 
@@ -539,10 +555,10 @@ export default function MomGroupScreen() {
   const handleSubmitPost = async () => {
     const title = writeTitle.trim();
     const body = writeContent.trim();
-    if (!title) { Alert.alert('알림', '제목을 입력해주세요'); return; }
-    if (!body) { Alert.alert('알림', '내용을 입력해주세요'); return; }
+    if (!title) { Alert.alert(t('common.notice'), t('momGroup.titleRequired')); return; }
+    if (!body) { Alert.alert(t('common.notice'), t('momGroup.contentRequired')); return; }
     if (containsBannedWord(title) || containsBannedWord(body)) {
-      Alert.alert('알림', '부적절한 표현(욕설·비방 등)이 포함되어 있어 등록할 수 없습니다.');
+      Alert.alert(t('common.notice'), t('momGroup.bannedWordError'));
       return;
     }
 
@@ -591,23 +607,23 @@ export default function MomGroupScreen() {
       if (viewMode === 'mine') loadMinePosts();
       else loadPosts();
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? '작성에 실패했어요';
-      Alert.alert('알림', msg);
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? t('momGroup.submitError');
+      Alert.alert(t('common.notice'), msg);
     }
     setWriting(false);
   };
 
   const handleDeletePost = (post: Post) => {
-    Alert.alert('삭제', '이 게시글을 삭제할까요?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('momGroup.deletePostTitle'), t('momGroup.deletePostConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제', style: 'destructive', onPress: async () => {
+        text: t('common.delete'), style: 'destructive', onPress: async () => {
           try {
             await momGroupApi.deletePost(post.id);
             if (viewMode === 'mine') loadMinePosts();
             else loadPosts();
             setActivePost(null);
-          } catch { Alert.alert('오류', '삭제에 실패했어요'); }
+          } catch { Alert.alert(t('common.error'), t('momGroup.deletePostError')); }
         },
       },
     ]);
@@ -658,60 +674,61 @@ export default function MomGroupScreen() {
   const submitReport = async (post: Post, reason: 'abuse' | 'ad' | 'privacy' | 'spam' | 'other') => {
     try {
       await momGroupApi.reportPost(post.id, reason);
-      Alert.alert('접수', '신고가 접수됐어요');
-    } catch { Alert.alert('오류', '처리에 실패했어요'); }
+      Alert.alert(t('momGroup.reportReceivedTitle'), t('momGroup.reportReceivedDesc'));
+    } catch { Alert.alert(t('common.error'), t('momGroup.reportError')); }
   };
 
   // UGC 정책(Apple 1.2) — 사용자 차단: 즉시 피드에서 제거 + 운영팀(개발자) 통지(자동 신고).
   const handleBlockUser = (post: Post) => {
     if (post.isMine) return;
-    const name = post.anonymous ? '익명 사용자' : (post.nickname || '이 사용자');
+    const name = post.anonymous ? t('momGroup.anonymousUser') : (post.nickname || t('momGroup.thisUser'));
     const doBlock = async () => {
       try {
         await momGroupApi.blockUser(post.userId, post.id);
         // 즉시 제거: 이 사용자의 모든 글을 피드에서 빼고 상세를 닫는다.
         setPosts((prev) => prev.filter((p) => p.userId !== post.userId));
         setActivePost(null);
-        Alert.alert('차단 완료', '해당 사용자의 글이 더 이상 보이지 않아요. 운영팀에도 검토 요청이 전달됐어요.');
+        Alert.alert(t('momGroup.blockDoneTitle'), t('momGroup.blockDoneDesc'));
       } catch {
-        Alert.alert('오류', '차단 처리에 실패했어요');
+        Alert.alert(t('common.error'), t('momGroup.blockError'));
       }
     };
     Alert.alert(
-      `${name}님을 차단할까요?`,
-      '차단하면 이 사용자의 글과 댓글이 피드에서 즉시 사라지고, 운영팀에 검토 요청이 접수됩니다.',
+      t('momGroup.blockConfirmTitle', { name }),
+      t('momGroup.blockConfirmDesc'),
       [
-        { text: '취소', style: 'cancel' },
-        { text: '차단', style: 'destructive', onPress: doBlock },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('momGroup.block'), style: 'destructive', onPress: doBlock },
       ],
     );
   };
 
   const handleReport = (post: Post) => {
+    const reportReasonOptions = getReportReasonOptions(t);
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          title: '신고 사유 선택',
-          message: '3회 이상 신고되면 자동 숨김 처리돼요',
-          options: [...REPORT_REASON_OPTIONS.map((o) => o.label), '취소'],
-          cancelButtonIndex: REPORT_REASON_OPTIONS.length,
+          title: t('momGroup.reportReasonTitle'),
+          message: t('momGroup.reportReasonMessage'),
+          options: [...reportReasonOptions.map((o) => o.label), t('common.cancel')],
+          cancelButtonIndex: reportReasonOptions.length,
         },
         (idx) => {
-          if (idx < REPORT_REASON_OPTIONS.length) {
-            submitReport(post, REPORT_REASON_OPTIONS[idx].key);
+          if (idx < reportReasonOptions.length) {
+            submitReport(post, reportReasonOptions[idx].key);
           }
         },
       );
     } else {
       Alert.alert(
-        '신고 사유 선택',
-        '3회 이상 신고되면 자동 숨김 처리돼요',
+        t('momGroup.reportReasonTitle'),
+        t('momGroup.reportReasonMessage'),
         [
-          ...REPORT_REASON_OPTIONS.map((o) => ({
+          ...reportReasonOptions.map((o) => ({
             text: o.label,
             onPress: () => submitReport(post, o.key),
           })),
-          { text: '취소', style: 'cancel' as const },
+          { text: t('common.cancel'), style: 'cancel' as const },
         ],
       );
     }
@@ -746,7 +763,7 @@ export default function MomGroupScreen() {
         else next.delete(post.id);
         return next;
       });
-      Alert.alert('오류', '북마크 처리에 실패했어요');
+      Alert.alert(t('common.error'), t('momGroup.bookmarkError'));
     }
   };
 
@@ -765,7 +782,7 @@ export default function MomGroupScreen() {
     const body = commentContent.trim();
     if (!body) return;
     if (containsBannedWord(body)) {
-      Alert.alert('알림', '부적절한 표현(욕설·비방 등)이 포함되어 있어 등록할 수 없습니다.');
+      Alert.alert(t('common.notice'), t('momGroup.bannedWordError'));
       return;
     }
     setPosting(true);
@@ -778,17 +795,17 @@ export default function MomGroupScreen() {
         p.id === activePost.id ? { ...p, commentCount: p.commentCount + 1 } : p,
       ));
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? '작성에 실패했어요';
-      Alert.alert('알림', msg);
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? t('momGroup.submitError');
+      Alert.alert(t('common.notice'), msg);
     }
     setPosting(false);
   };
 
   const handleDeleteComment = (c: Comment) => {
-    Alert.alert('삭제', '이 댓글을 삭제할까요?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('momGroup.deleteCommentTitle'), t('momGroup.deleteCommentConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제', style: 'destructive', onPress: async () => {
+        text: t('common.delete'), style: 'destructive', onPress: async () => {
           try {
             await momGroupApi.deleteComment(c.id);
             setComments((prev) => prev.filter((x) => x.id !== c.id));
@@ -813,7 +830,8 @@ export default function MomGroupScreen() {
    */
   const renderBoardRow = (p: Post, _idx: number) => {
     const isBookmarked = bookmarkedIds.has(p.id);
-    const cat = CATEGORY_META[p.category] ?? CATEGORY_META.chat;
+    const categoryMeta = getCategoryMeta(t);
+    const cat = categoryMeta[p.category] ?? categoryMeta.chat;
     const isPinTop = p.isPinned && p.isOfficial;
     // 강조 배경은 공지(공식)·고정 글에만. 전국 폴백 글(isFallback)은 '전국' 칩만 달고 배경은 일반과 동일.
     const isHighlight = isPinTop || p.isOfficial;
@@ -840,25 +858,25 @@ export default function MomGroupScreen() {
         <View style={styles.billyRowMain}>
           {/* 1줄: 배지 + 제목 (한 줄 ellipsis) */}
           <View style={styles.boardTitleRow}>
-            {isPinTop ? <View style={[styles.chip, styles.chipEvent]}><Text style={styles.chipEventText}>이벤트</Text></View> : null}
-            {p.isOfficial && !isPinTop ? <View style={[styles.chip, styles.chipRecommend]}><Text style={styles.chipRecommendText}>추천</Text></View> : null}
-            {p.isFallback ? <View style={[styles.chip, styles.chipNation]}><Text style={styles.chipNationText}>전국</Text></View> : null}
+            {isPinTop ? <View style={[styles.chip, styles.chipEvent]}><Text style={styles.chipEventText}>{t('momGroup.badgeEvent')}</Text></View> : null}
+            {p.isOfficial && !isPinTop ? <View style={[styles.chip, styles.chipRecommend]}><Text style={styles.chipRecommendText}>{t('momGroup.badgeRecommend')}</Text></View> : null}
+            {p.isFallback ? <View style={[styles.chip, styles.chipNation]}><Text style={styles.chipNationText}>{t('momGroup.badgeNationwide')}</Text></View> : null}
             <Text style={styles.boardTitle} numberOfLines={1} ellipsizeMode="tail">
-              {displayTitle(p)}
+              {displayTitle(t, p)}
             </Text>
           </View>
 
           {/* 2줄: 작성자 · 카테고리 */}
           <Text style={styles.boardAuthor} numberOfLines={1}>
-            {p.anonymous ? '익명' : p.nickname}
+            {p.anonymous ? t('momGroup.anonymous') : p.nickname}
             <Text style={styles.boardCategory}> · {cat.label}</Text>
           </Text>
 
           {/* 3줄: 날짜 · 조회수 · 공감 */}
           <View style={styles.boardMetaRow}>
             <Text style={styles.boardMeta}>{compactDate(p.createdAt)}</Text>
-            {p.viewCount > 0 ? <Text style={styles.boardMeta}>  조회 {p.viewCount}</Text> : null}
-            {p.likeCount > 0 ? <Text style={styles.boardMeta}>  공감 {p.likeCount}</Text> : null}
+            {p.viewCount > 0 ? <Text style={styles.boardMeta}>  {t('momGroup.viewCount', { count: p.viewCount })}</Text> : null}
+            {p.likeCount > 0 ? <Text style={styles.boardMeta}>  {t('momGroup.likeCount', { count: p.likeCount })}</Text> : null}
             {isBookmarked ? <Text style={styles.boardMetaIcon}>  🔖</Text> : null}
           </View>
         </View>
@@ -916,7 +934,7 @@ export default function MomGroupScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <ScreenHeader
-        title="맘스톡"
+        title={t('momGroup.headerTitle')}
         right={
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <GuideButton onPress={() => setShowGuide(true)} />
@@ -937,10 +955,10 @@ export default function MomGroupScreen() {
           <View style={styles.searchFieldRow}>
             {(
               [
-                { key: 'all', label: '전체' },
-                { key: 'title', label: '제목' },
-                { key: 'content', label: '내용' },
-                { key: 'nickname', label: '작성자' },
+                { key: 'all', label: t('momGroup.searchFieldAll') },
+                { key: 'title', label: t('momGroup.searchFieldTitle') },
+                { key: 'content', label: t('momGroup.searchFieldContent') },
+                { key: 'nickname', label: t('momGroup.searchFieldNickname') },
               ] as { key: 'all' | 'title' | 'content' | 'nickname'; label: string }[]
             ).map((opt) => {
               const active = searchField === opt.key;
@@ -961,10 +979,10 @@ export default function MomGroupScreen() {
             <TextInput
               style={styles.searchInput}
               placeholder={
-                searchField === 'title' ? '제목에서 검색'
-                : searchField === 'content' ? '내용에서 검색'
-                : searchField === 'nickname' ? '작성자에서 검색'
-                : '전체에서 검색'
+                searchField === 'title' ? t('momGroup.searchPlaceholderTitle')
+                : searchField === 'content' ? t('momGroup.searchPlaceholderContent')
+                : searchField === 'nickname' ? t('momGroup.searchPlaceholderNickname')
+                : t('momGroup.searchPlaceholderAll')
               }
               placeholderTextColor={COLORS.textSecondary}
               value={searchInput}
@@ -993,17 +1011,17 @@ export default function MomGroupScreen() {
 
       {/* 방 타입 탭 (지역방 deprecated — 내 동네 radius 모드로 대체) */}
       <View style={styles.roomTabRow}>
-        {(['month', 'radius'] as const).map((t) => (
+        {(['month', 'radius'] as const).map((roomTypeItem) => (
           <TouchableOpacity
-            key={t}
-            style={[styles.roomTab, roomType === t && styles.roomTabActive]}
-            onPress={() => switchRoomType(t)}
+            key={roomTypeItem}
+            style={[styles.roomTab, roomType === roomTypeItem && styles.roomTabActive]}
+            onPress={() => switchRoomType(roomTypeItem)}
           >
             <Text
-              style={[styles.roomTabText, roomType === t && styles.roomTabTextActive]}
+              style={[styles.roomTabText, roomType === roomTypeItem && styles.roomTabTextActive]}
               numberOfLines={1}
             >
-              {t === 'month' ? '월방' : '내 동네'}
+              {roomTypeItem === 'month' ? t('momGroup.roomTypeMonth') : t('momGroup.roomTypeNearby')}
             </Text>
           </TouchableOpacity>
         ))}
@@ -1018,7 +1036,7 @@ export default function MomGroupScreen() {
             style={styles.roomPickerScroll}
             contentContainerStyle={styles.roomPickerRow}
           >
-            {RADIUS_TABS.map((r) => {
+            {getRadiusTabs(t).map((r) => {
               const active = radiusKey === r.key;
               const count = radiusCounts[String(r.key)] ?? 0;
               return (
@@ -1046,7 +1064,7 @@ export default function MomGroupScreen() {
               activeOpacity={0.85}
             >
               <Text style={styles.locationPromptText}>
-                위치를 먼저 등록해주세요 — 탭하여 등록
+                {t('momGroup.locationPrompt')}
               </Text>
             </TouchableOpacity>
           )}
@@ -1054,9 +1072,9 @@ export default function MomGroupScreen() {
           {radiusKey !== 0 && hasLocation === true && (
             <View style={styles.locationInfo}>
               <Text style={styles.locationInfoText} numberOfLines={1}>
-                {'현재 등록: '}
+                {t('momGroup.locationCurrentLabel')}
                 <Text style={styles.locationInfoStrong}>
-                  {locationLabel || '위치 좌표 등록됨'}
+                  {locationLabel || t('momGroup.locationRegisteredFallback')}
                 </Text>
               </Text>
               <TouchableOpacity
@@ -1064,18 +1082,18 @@ export default function MomGroupScreen() {
                 style={styles.locationChangeBtn}
                 hitSlop={8}
               >
-                <Text style={styles.locationChangeText}>변경</Text>
+                <Text style={styles.locationChangeText}>{t('common.change')}</Text>
               </TouchableOpacity>
             </View>
           )}
           {/* 동갑 ±N 살 선택 */}
           {myBabyBirthYear && (
             <View style={styles.ageRangeRow}>
-              <Text style={styles.ageRangeLabel}>아이 나이 차이</Text>
+              <Text style={styles.ageRangeLabel}>{t('momGroup.ageDifferenceLabel')}</Text>
               <View style={styles.ageRangeChips}>
                 {([0, 1, 2] as const).map((d) => {
                   const active = ageRange === d;
-                  const label = d === 0 ? '동갑' : `±${d}살`;
+                  const label = d === 0 ? t('momGroup.sameAge') : t('momGroup.ageRangePlusMinus', { n: d });
                   return (
                     <TouchableOpacity
                       key={d}
@@ -1096,8 +1114,8 @@ export default function MomGroupScreen() {
             <View style={styles.matchHint}>
               <Text style={styles.matchHintText}>
                 {ageRange === 0
-                  ? `동갑 매칭: ${myBabyBirthYear}년생`
-                  : `매칭 범위: ${targetBirthYears[0]}~${targetBirthYears[targetBirthYears.length - 1]}년생`}
+                  ? t('momGroup.matchSameAge', { year: myBabyBirthYear })
+                  : t('momGroup.matchRange', { from: targetBirthYears[0], to: targetBirthYears[targetBirthYears.length - 1] })}
               </Text>
             </View>
           )}
@@ -1112,10 +1130,10 @@ export default function MomGroupScreen() {
             <Text style={styles.monthArrowText}>{'‹'}</Text>
           </TouchableOpacity>
           <View style={styles.monthCenter}>
-            <Text style={styles.monthTitle}>{formatGroupLabel(groupKey)}</Text>
+            <Text style={styles.monthTitle}>{formatGroupLabel(t, groupKey)}</Text>
             {myGroupKey && groupKey !== myGroupKey && (
               <TouchableOpacity onPress={() => setGroupKey(myGroupKey)}>
-                <Text style={styles.monthReset}>내 예정월로 ({formatGroupLabel(myGroupKey).split(' ')[1]})</Text>
+                <Text style={styles.monthReset}>{t('momGroup.resetToMyMonth', { month: formatMonthOnly(t, myGroupKey) })}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1142,20 +1160,20 @@ export default function MomGroupScreen() {
           style={[styles.sortBtn, isFeed && sortMode === 'recent' && styles.sortBtnActive]}
           onPress={() => { setViewMode('feed'); setSortMode('recent'); }}
         >
-          <Text style={[styles.sortText, isFeed && sortMode === 'recent' && styles.sortTextActive]}>🕒 최신</Text>
+          <Text style={[styles.sortText, isFeed && sortMode === 'recent' && styles.sortTextActive]}>🕒 {t('momGroup.sortRecent')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.sortBtn, isFeed && sortMode === 'popular' && styles.sortBtnActive]}
           onPress={() => { setViewMode('feed'); setSortMode('popular'); }}
         >
-          <Text style={[styles.sortText, isFeed && sortMode === 'popular' && styles.sortTextActive]}>🔥 인기</Text>
+          <Text style={[styles.sortText, isFeed && sortMode === 'popular' && styles.sortTextActive]}>🔥 {t('momGroup.sortPopular')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.sortBtn, isHonorView && styles.sortBtnActive]}
           onPress={() => setViewMode(isHonorView ? 'feed' : 'honor')}
         >
           <Text style={[styles.sortText, isHonorView && styles.sortTextActive]}>
-            🏆 명예 {honorPosts.length > 0 ? `(${honorPosts.length})` : ''}
+            🏆 {t('momGroup.sortHonor')} {honorPosts.length > 0 ? `(${honorPosts.length})` : ''}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -1163,7 +1181,7 @@ export default function MomGroupScreen() {
           onPress={() => setViewMode(isBookmarkView ? 'feed' : 'bookmarks')}
         >
           <Text style={[styles.sortText, isBookmarkView && styles.sortTextActive]}>
-            🔖 북마크 {bookmarkedIds.size > 0 ? `(${bookmarkedIds.size})` : ''}
+            🔖 {t('momGroup.sortBookmark')} {bookmarkedIds.size > 0 ? `(${bookmarkedIds.size})` : ''}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -1171,7 +1189,7 @@ export default function MomGroupScreen() {
           onPress={() => setViewMode(isMineView ? 'feed' : 'mine')}
         >
           <Text style={[styles.sortText, isMineView && styles.sortTextActive]}>
-            👤 내 글 {minePosts.length > 0 ? `(${minePosts.length})` : ''}
+            👤 {t('momGroup.sortMine')} {minePosts.length > 0 ? `(${minePosts.length})` : ''}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -1190,16 +1208,16 @@ export default function MomGroupScreen() {
             </Text>
             <Text style={styles.emptyFeedText}>
               {isBookmarkView
-                ? '북마크한 글이 없어요'
+                ? t('momGroup.emptyBookmarks')
                 : isMineView
-                  ? '아직 작성한 글이 없어요'
+                  ? t('momGroup.emptyMine')
                   : searchQuery
-                    ? `"${searchQuery}" 검색 결과가 없어요`
+                    ? t('momGroup.emptySearchResult', { query: searchQuery })
                     : categoryFilter
-                      ? '이 카테고리에 아직 글이 없어요'
+                      ? t('momGroup.emptyCategory')
                       : roomType === 'radius' && hasLocation
-                        ? `${radiusKey === 0 ? '전국' : `${radiusKey}km 안`}에 글이 없어요`
-                        : '첫 게시글을 남겨보세요!'}
+                        ? t('momGroup.emptyRadius', { area: radiusKey === 0 ? t('momGroup.radius.nationwide') : t('momGroup.radiusKmArea', { km: radiusKey }) })
+                        : t('momGroup.emptyFirstPost')}
             </Text>
             {/* radius 모드에서 빈 화면이면 다음 반경 제안 */}
             {roomType === 'radius' && !isBookmarkView && !isMineView && !searchQuery && !categoryFilter && (
@@ -1209,7 +1227,7 @@ export default function MomGroupScreen() {
                   const idx = sequence.indexOf(radiusKey);
                   const nextOptions = sequence.slice(idx + 1);
                   return nextOptions.slice(0, 2).map((next) => {
-                    const meta = RADIUS_TABS.find((r) => r.key === next);
+                    const meta = getRadiusTabs(t).find((r) => r.key === next);
                     if (!meta) return null;
                     const count = radiusCounts[String(next)] ?? 0;
                     return (
@@ -1220,7 +1238,7 @@ export default function MomGroupScreen() {
                         activeOpacity={0.85}
                       >
                         <Text style={styles.expandBtnText}>
-                          {`${meta.label} 보기${count > 0 ? ` (${count})` : ''}`}
+                          {t('momGroup.expandViewLabel', { label: meta.label, countSuffix: count > 0 ? ` (${count})` : '' })}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -1242,18 +1260,18 @@ export default function MomGroupScreen() {
                   onPress={() => page > 1 && setPage(page - 1)}
                   disabled={page <= 1}
                 >
-                  <Text style={[styles.pageBtnText, page <= 1 && styles.pageBtnTextDisabled]}>‹ 이전</Text>
+                  <Text style={[styles.pageBtnText, page <= 1 && styles.pageBtnTextDisabled]}>‹ {t('momGroup.pagePrev')}</Text>
                 </TouchableOpacity>
                 <Text style={styles.pageInfo}>
                   {page} / {totalPages}
-                  {totalCount > 0 ? ` · ${totalCount}개` : ''}
+                  {totalCount > 0 ? ` · ${t('momGroup.pageTotalCount', { count: totalCount })}` : ''}
                 </Text>
                 <TouchableOpacity
                   style={[styles.pageBtn, page >= totalPages && styles.pageBtnDisabled]}
                   onPress={() => page < totalPages && setPage(page + 1)}
                   disabled={page >= totalPages}
                 >
-                  <Text style={[styles.pageBtnText, page >= totalPages && styles.pageBtnTextDisabled]}>다음 ›</Text>
+                  <Text style={[styles.pageBtnText, page >= totalPages && styles.pageBtnTextDisabled]}>{t('momGroup.pageNext')} ›</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -1269,7 +1287,7 @@ export default function MomGroupScreen() {
             setShowWriteModal(true);
           }}
         >
-          <Text style={styles.fabText}>✏️ 글쓰기</Text>
+          <Text style={styles.fabText}>✏️ {t('momGroup.writeButton')}</Text>
         </TouchableOpacity>
       )}
 
@@ -1287,10 +1305,10 @@ export default function MomGroupScreen() {
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => { setShowWriteModal(false); resetWriteForm(); }}>
-                <Text style={styles.backBtn}>{'< 닫기'}</Text>
+                <Text style={styles.backBtn}>{`< ${t('common.close')}`}</Text>
               </TouchableOpacity>
               <Text style={styles.modalTitle}>
-                {editingPostId ? '글 수정' : `${roomLabel(roomType, groupKey ?? '', radiusKey, ageRange)} · 새 글`}
+                {editingPostId ? t('momGroup.editPostTitle') : t('momGroup.newPostTitle', { roomLabel: roomLabel(t, roomType, groupKey ?? '', radiusKey, ageRange) })}
               </Text>
               <View style={{ width: 60 }} />
             </View>
@@ -1299,10 +1317,10 @@ export default function MomGroupScreen() {
               {/* 카테고리 UI 제거 — 내부적으로 'chat' 기본 */}
 
               {/* 제목 */}
-              <Text style={styles.writeLabel}>제목</Text>
+              <Text style={styles.writeLabel}>{t('momGroup.titleLabel')}</Text>
               <TextInput
                 style={styles.titleInput}
-                placeholder="제목을 입력해주세요"
+                placeholder={t('momGroup.titlePlaceholder')}
                 placeholderTextColor={COLORS.textSecondary}
                 value={writeTitle}
                 onChangeText={setWriteTitle}
@@ -1312,10 +1330,10 @@ export default function MomGroupScreen() {
               <Text style={styles.writeCount}>{writeTitle.length} / 50</Text>
 
               {/* 내용 */}
-              <Text style={styles.writeLabel}>내용</Text>
+              <Text style={styles.writeLabel}>{t('momGroup.contentLabel')}</Text>
               <TextInput
                 style={styles.writeInput}
-                placeholder={writePlaceholder(roomType)}
+                placeholder={writePlaceholder(t, roomType)}
                 placeholderTextColor={COLORS.textSecondary}
                 multiline
                 value={writeContent}
@@ -1333,12 +1351,12 @@ export default function MomGroupScreen() {
                     onPress={() => setPostImage(null)}
                     disabled={uploading}
                   >
-                    <Text style={styles.imageRemoveText}>✕ 사진 삭제</Text>
+                    <Text style={styles.imageRemoveText}>✕ {t('momGroup.removePhoto')}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 <TouchableOpacity style={styles.imagePickBtn} onPress={pickImage}>
-                  <Text style={styles.imagePickText}>📷 사진 첨부 (선택)</Text>
+                  <Text style={styles.imagePickText}>📷 {t('momGroup.attachPhoto')}</Text>
                 </TouchableOpacity>
               )}
 
@@ -1346,8 +1364,8 @@ export default function MomGroupScreen() {
               {isOfficialUser && (
                 <View style={styles.anonRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.anonTitle}>📌 상단 고정</Text>
-                    <Text style={styles.anonDesc}>피드 최상단에 고정 노출됩니다 (전체 공식 글 중 최신 3개까지만 적용)</Text>
+                    <Text style={styles.anonTitle}>📌 {t('momGroup.pinToTop')}</Text>
+                    <Text style={styles.anonDesc}>{t('momGroup.pinToTopDesc')}</Text>
                   </View>
                   <Switch
                     value={writePinned}
@@ -1369,7 +1387,7 @@ export default function MomGroupScreen() {
                 {writing || uploading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.submitBtnText}>{editingPostId ? '수정 완료' : '게시'}</Text>
+                  <Text style={styles.submitBtnText}>{editingPostId ? t('momGroup.editComplete') : t('momGroup.publish')}</Text>
                 )}
               </TouchableOpacity>
 
@@ -1393,9 +1411,9 @@ export default function MomGroupScreen() {
           <View style={[styles.modalCard, { height: '85%', flexDirection: 'column' }]}>
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => { setActivePost(null); setComments([]); }}>
-                <Text style={styles.backBtn}>{'< 닫기'}</Text>
+                <Text style={styles.backBtn}>{`< ${t('common.close')}`}</Text>
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>게시글</Text>
+              <Text style={styles.modalTitle}>{t('momGroup.postDetailTitle')}</Text>
               <View style={{ width: 60 }} />
             </View>
 
@@ -1407,32 +1425,32 @@ export default function MomGroupScreen() {
             {activePost && (
               <View style={styles.commentPostPreview}>
                 <View style={styles.postHeader}>
-                  <View style={[styles.postCatBadge, { backgroundColor: (CATEGORY_META[activePost.category] ?? CATEGORY_META.chat).bg }]}>
-                    <Text style={[styles.postCatText, { color: (CATEGORY_META[activePost.category] ?? CATEGORY_META.chat).color }]}>
-                      {(CATEGORY_META[activePost.category] ?? CATEGORY_META.chat).emoji} {(CATEGORY_META[activePost.category] ?? CATEGORY_META.chat).label}
+                  <View style={[styles.postCatBadge, { backgroundColor: (getCategoryMeta(t)[activePost.category] ?? getCategoryMeta(t).chat).bg }]}>
+                    <Text style={[styles.postCatText, { color: (getCategoryMeta(t)[activePost.category] ?? getCategoryMeta(t).chat).color }]}>
+                      {(getCategoryMeta(t)[activePost.category] ?? getCategoryMeta(t).chat).emoji} {(getCategoryMeta(t)[activePost.category] ?? getCategoryMeta(t).chat).label}
                     </Text>
                   </View>
                   <Text style={styles.postTime}>
-                    {timeAgo(activePost.createdAt)}
-                    {activePost.isEdited ? ' · (수정됨)' : ''}
+                    {timeAgo(t, activePost.createdAt)}
+                    {activePost.isEdited ? ` · ${t('momGroup.editedSuffix')}` : ''}
                   </Text>
                 </View>
                 {activePost.title ? (
                   <Text style={styles.detailTitle}>
-                    {activePost.isOfficial ? <Text style={styles.officialBadgeInline}>공식 </Text> : null}
-                    {activePost.isFallback ? <Text style={styles.fallbackBadgeInline}>전국 인기 </Text> : null}
+                    {activePost.isOfficial ? <Text style={styles.officialBadgeInline}>{t('momGroup.officialBadge')} </Text> : null}
+                    {activePost.isFallback ? <Text style={styles.fallbackBadgeInline}>{t('momGroup.nationwidePopularBadge')} </Text> : null}
                     {activePost.title}
                   </Text>
                 ) : null}
                 {activePost.isOfficial ? (
                   <View style={styles.officialBanner}>
-                    <Text style={styles.officialBannerText}>📌 운영팀 안내 · 아맞다 공식 게시글입니다</Text>
+                    <Text style={styles.officialBannerText}>📌 {t('momGroup.officialBannerText')}</Text>
                   </View>
                 ) : null}
                 <Text style={styles.postNickname}>
                   {activePost.nickname}
-                  {activePost.isOfficial ? <Text style={styles.officialCheck}> ✓ 공식</Text> : null}
-                  {activePost.anonymous ? ' · 익명' : ''}
+                  {activePost.isOfficial ? <Text style={styles.officialCheck}> ✓ {t('momGroup.officialBadge')}</Text> : null}
+                  {activePost.anonymous ? ` · ${t('momGroup.anonymous')}` : ''}
                 </Text>
                 <Text style={styles.postContent}>{activePost.content}</Text>
                 {activePost.imageUrl ? (
@@ -1458,7 +1476,7 @@ export default function MomGroupScreen() {
                   <TouchableOpacity style={styles.postActionWithIcon} onPress={() => handleToggleBookmark(activePost)}>
                     <Image source={IC_BOOKMARK} style={styles.actionIcon} contentFit="contain" />
                     <Text style={styles.postActionText}>
-                      {bookmarkedIds.has(activePost.id) ? '저장됨' : '북마크'}
+                      {bookmarkedIds.has(activePost.id) ? t('momGroup.saved') : t('momGroup.bookmark')}
                     </Text>
                   </TouchableOpacity>
                   {activePost.isMine ? (
@@ -1470,19 +1488,19 @@ export default function MomGroupScreen() {
                           openEditPost(activePost);
                         }}
                       >
-                        <Text style={styles.postActionText}>✏️ 수정</Text>
+                        <Text style={styles.postActionText}>✏️ {t('common.edit')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.postAction} onPress={() => handleDeletePost(activePost)}>
-                        <Text style={styles.postActionTextDanger}>삭제</Text>
+                        <Text style={styles.postActionTextDanger}>{t('common.delete')}</Text>
                       </TouchableOpacity>
                     </>
                   ) : (
                     <>
                       <TouchableOpacity style={styles.postAction} onPress={() => handleReport(activePost)}>
-                        <Text style={styles.postActionTextMuted}>🚩 신고</Text>
+                        <Text style={styles.postActionTextMuted}>🚩 {t('momGroup.report')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.postAction} onPress={() => handleBlockUser(activePost)}>
-                        <Text style={styles.postActionTextDanger}>🚫 차단</Text>
+                        <Text style={styles.postActionTextDanger}>🚫 {t('momGroup.block')}</Text>
                       </TouchableOpacity>
                     </>
                   )}
@@ -1494,21 +1512,21 @@ export default function MomGroupScreen() {
               {loadingComments ? (
                 <ActivityIndicator color={COLORS.primary} style={{ marginTop: 20 }} />
               ) : comments.length === 0 ? (
-                <Text style={styles.emptyComment}>첫 댓글을 남겨주세요</Text>
+                <Text style={styles.emptyComment}>{t('momGroup.emptyComments')}</Text>
               ) : (
                 comments.map((c) => (
                   <View key={c.id} style={styles.commentRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.commentNickname}>
                         {c.nickname}
-                        {c.isOfficial ? <Text style={styles.officialCheck}> ✓ 공식</Text> : null}
-                        {c.anonymous ? ' · 익명' : ''} · {timeAgo(c.createdAt)}
+                        {c.isOfficial ? <Text style={styles.officialCheck}> ✓ {t('momGroup.officialBadge')}</Text> : null}
+                        {c.anonymous ? ` · ${t('momGroup.anonymous')}` : ''} · {timeAgo(t, c.createdAt)}
                       </Text>
                       <Text style={styles.commentText}>{c.content}</Text>
                     </View>
                     {c.isMine && (
                       <TouchableOpacity onPress={() => handleDeleteComment(c)}>
-                        <Text style={styles.postActionTextDanger}>삭제</Text>
+                        <Text style={styles.postActionTextDanger}>{t('common.delete')}</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -1520,7 +1538,7 @@ export default function MomGroupScreen() {
             <View style={styles.commentInputRow}>
               <TextInput
                 style={styles.commentInput}
-                placeholder="댓글 작성..."
+                placeholder={t('momGroup.commentPlaceholder')}
                 placeholderTextColor={COLORS.textSecondary}
                 value={commentContent}
                 onChangeText={setCommentContent}
@@ -1531,7 +1549,7 @@ export default function MomGroupScreen() {
                 onPress={handleCreateComment}
                 disabled={!commentContent.trim() || posting}
               >
-                {posting ? <ActivityIndicator color="#fff" /> : <Text style={styles.commentSendText}>전송</Text>}
+                {posting ? <ActivityIndicator color="#fff" /> : <Text style={styles.commentSendText}>{t('momGroup.send')}</Text>}
               </TouchableOpacity>
             </View>
           </View>

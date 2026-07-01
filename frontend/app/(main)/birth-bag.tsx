@@ -18,6 +18,8 @@ import {
   TextInput, KeyboardAvoidingView, Platform, Share, Alert, ActivityIndicator,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { birthBagShareApi } from '../../services/api';
 import type { ImageSourcePropType } from 'react-native';
 import { Stack, router } from 'expo-router';
@@ -60,65 +62,65 @@ interface BagItem {
   hint?: string;
 }
 
-const BIRTH_TYPES: { key: BirthType; label: string; sub: string; icon: ImageSourcePropType }[] = [
-  { key: 'natural',  label: '자연분만', sub: '회음 회복',  icon: IC_FOOT },
-  { key: 'csection', label: '제왕절개', sub: '복부 회복',  icon: IC_STETH },
+const getBirthTypes = (t: TFunction): { key: BirthType; label: string; sub: string; icon: ImageSourcePropType }[] => [
+  { key: 'natural',  label: t('birthBag.birthTypes.natural.label'),  sub: t('birthBag.birthTypes.natural.sub'),  icon: IC_FOOT },
+  { key: 'csection', label: t('birthBag.birthTypes.csection.label'), sub: t('birthBag.birthTypes.csection.sub'), icon: IC_STETH },
 ];
 
-const POSTPARTUM_PLANS: { key: PostpartumPlan; label: string; sub: string; icon: ImageSourcePropType }[] = [
-  { key: 'sanhujowon', label: '조리원 이용', sub: '입소 후 추가 준비', icon: IC_BAG },
-  { key: 'home',       label: '집으로 귀가', sub: '집에서 산후 관리',  icon: IC_HOME },
+const getPostpartumPlans = (t: TFunction): { key: PostpartumPlan; label: string; sub: string; icon: ImageSourcePropType }[] => [
+  { key: 'sanhujowon', label: t('birthBag.postpartumPlans.sanhujowon.label'), sub: t('birthBag.postpartumPlans.sanhujowon.sub'), icon: IC_BAG },
+  { key: 'home',       label: t('birthBag.postpartumPlans.home.label'),       sub: t('birthBag.postpartumPlans.home.sub'),       icon: IC_HOME },
 ];
 
-const CATEGORY_LABEL: Record<Category, string> = {
-  mom:  '엄마 (산모) 가방',
-  baby: '아기 가방',
-  docs: '서류 가방',
-};
+const getCategoryLabel = (t: TFunction): Record<Category, string> => ({
+  mom:  t('birthBag.categoryLabel.mom'),
+  baby: t('birthBag.categoryLabel.baby'),
+  docs: t('birthBag.categoryLabel.docs'),
+});
 
-const ALL_ITEMS: BagItem[] = [
+const getAllItems = (t: TFunction): BagItem[] => [
   // ── 엄마 (산모) ──
-  { id: 'm1',  label: '산모 패드 (대형 5-7장)', category: 'mom' },
-  { id: 'm2',  label: '수유 브라 2-3개', category: 'mom' },
-  { id: 'm3',  label: '편한 잠옷·가운 (앞트임)', category: 'mom' },
-  { id: 'm4',  label: '슬리퍼 (병동용)', category: 'mom' },
-  { id: 'm5',  label: '세면도구 (칫솔·치약·샴푸·수건)', category: 'mom' },
-  { id: 'm6',  label: '휴대폰 충전기 (긴 케이블)', category: 'mom' },
-  { id: 'm7',  label: '물병·빨대컵 (누워서 마시기 좋음)', category: 'mom' },
-  { id: 'm8',  label: '복대', category: 'mom', forBirthTypes: ['csection'], hint: '제왕절개 회복 필수' },
-  { id: 'm9',  label: '회음 방석·도넛 방석', category: 'mom', forBirthTypes: ['natural'], hint: '자연분만 회복에 도움' },
-  { id: 'm19', label: '휴대용 비데 (산모용)', category: 'mom', hint: '회음부·화장실 사용 후 자극 없이 세정. 제왕절개 산모도 몸 굽히기 힘들 때 유용' },
-  { id: 'm10', label: '입던 옷 (퇴원 시 입을 편한 옷)', category: 'mom' },
-  { id: 'm11', label: '간단한 간식 (당 보충)', category: 'mom' },
-  { id: 'm12', label: '안경·콘택트 케어 용품', category: 'mom' },
-  { id: 'm13', label: '머리끈·헤어밴드', category: 'mom' },
-  { id: 'm14', label: '수유 패드 (모유 새는 것 방지)', category: 'mom' },
+  { id: 'm1',  label: t('birthBag.items.m1.label'), category: 'mom' },
+  { id: 'm2',  label: t('birthBag.items.m2.label'), category: 'mom' },
+  { id: 'm3',  label: t('birthBag.items.m3.label'), category: 'mom' },
+  { id: 'm4',  label: t('birthBag.items.m4.label'), category: 'mom' },
+  { id: 'm5',  label: t('birthBag.items.m5.label'), category: 'mom' },
+  { id: 'm6',  label: t('birthBag.items.m6.label'), category: 'mom' },
+  { id: 'm7',  label: t('birthBag.items.m7.label'), category: 'mom' },
+  { id: 'm8',  label: t('birthBag.items.m8.label'), category: 'mom', forBirthTypes: ['csection'], hint: t('birthBag.items.m8.hint') },
+  { id: 'm9',  label: t('birthBag.items.m9.label'), category: 'mom', forBirthTypes: ['natural'], hint: t('birthBag.items.m9.hint') },
+  { id: 'm19', label: t('birthBag.items.m19.label'), category: 'mom', hint: t('birthBag.items.m19.hint') },
+  { id: 'm10', label: t('birthBag.items.m10.label'), category: 'mom' },
+  { id: 'm11', label: t('birthBag.items.m11.label'), category: 'mom' },
+  { id: 'm12', label: t('birthBag.items.m12.label'), category: 'mom' },
+  { id: 'm13', label: t('birthBag.items.m13.label'), category: 'mom' },
+  { id: 'm14', label: t('birthBag.items.m14.label'), category: 'mom' },
   // 산후 계획별
-  { id: 'm15', label: '조리원 입소 가운·실내복', category: 'mom', forPostpartumPlans: ['sanhujowon'], hint: '조리원 입소 첫날 필요' },
-  { id: 'm16', label: '조리원 보습용품 (얼굴·바디)', category: 'mom', forPostpartumPlans: ['sanhujowon'] },
-  { id: 'm17', label: '산후 영양제 (철분·종합비타민)', category: 'mom', forPostpartumPlans: ['home'], hint: '집에서 직접 챙겨야' },
-  { id: 'm18', label: '식사 준비 (밀키트·반찬)', category: 'mom', forPostpartumPlans: ['home'] },
+  { id: 'm15', label: t('birthBag.items.m15.label'), category: 'mom', forPostpartumPlans: ['sanhujowon'], hint: t('birthBag.items.m15.hint') },
+  { id: 'm16', label: t('birthBag.items.m16.label'), category: 'mom', forPostpartumPlans: ['sanhujowon'] },
+  { id: 'm17', label: t('birthBag.items.m17.label'), category: 'mom', forPostpartumPlans: ['home'], hint: t('birthBag.items.m17.hint') },
+  { id: 'm18', label: t('birthBag.items.m18.label'), category: 'mom', forPostpartumPlans: ['home'] },
 
   // ── 아기 ──
-  { id: 'b1',  label: '배냇저고리 2-3벌', category: 'baby' },
-  { id: 'b2',  label: '속싸개·겉싸개', category: 'baby' },
-  { id: 'b3',  label: '신생아 모자', category: 'baby' },
-  { id: 'b4',  label: '손싸개·발싸개', category: 'baby' },
-  { id: 'b5',  label: '신생아 기저귀 (1단계 1팩)', category: 'baby' },
-  { id: 'b6',  label: '물티슈 (무향)', category: 'baby' },
-  { id: 'b7',  label: '카시트 (퇴원 시 필수)', category: 'baby', hint: 'KC 인증 필수' },
-  { id: 'b8',  label: '아기 수건·가제수건 5-6장', category: 'baby' },
-  { id: 'b9',  label: '퇴원복 (계절 맞춰)', category: 'baby' },
-  { id: 'b10', label: '젖병·소량 분유 (혹시 모를 상황)', category: 'baby' },
+  { id: 'b1',  label: t('birthBag.items.b1.label'), category: 'baby' },
+  { id: 'b2',  label: t('birthBag.items.b2.label'), category: 'baby' },
+  { id: 'b3',  label: t('birthBag.items.b3.label'), category: 'baby' },
+  { id: 'b4',  label: t('birthBag.items.b4.label'), category: 'baby' },
+  { id: 'b5',  label: t('birthBag.items.b5.label'), category: 'baby' },
+  { id: 'b6',  label: t('birthBag.items.b6.label'), category: 'baby' },
+  { id: 'b7',  label: t('birthBag.items.b7.label'), category: 'baby', hint: t('birthBag.items.b7.hint') },
+  { id: 'b8',  label: t('birthBag.items.b8.label'), category: 'baby' },
+  { id: 'b9',  label: t('birthBag.items.b9.label'), category: 'baby' },
+  { id: 'b10', label: t('birthBag.items.b10.label'), category: 'baby' },
 
   // ── 서류 ──
-  { id: 'd1', label: '산모수첩', category: 'docs' },
-  { id: 'd2', label: '신분증 (산모·보호자)', category: 'docs' },
-  { id: 'd3', label: '의료보험증', category: 'docs' },
-  { id: 'd4', label: '입원·출산준비물 영수증', category: 'docs' },
-  { id: 'd5', label: '출생신고용 도장 (선택)', category: 'docs' },
+  { id: 'd1', label: t('birthBag.items.d1.label'), category: 'docs' },
+  { id: 'd2', label: t('birthBag.items.d2.label'), category: 'docs' },
+  { id: 'd3', label: t('birthBag.items.d3.label'), category: 'docs' },
+  { id: 'd4', label: t('birthBag.items.d4.label'), category: 'docs' },
+  { id: 'd5', label: t('birthBag.items.d5.label'), category: 'docs' },
   // 분만 병원 번호 등록 — 등록 완료 시 자동 체크 (useEffect 가 동기화)
-  { id: 'd6', label: '분만 병원 번호 등록', category: 'docs', hint: 'SOS / 진통 체크에서 즉시 전화 연결됨' },
+  { id: 'd6', label: t('birthBag.items.d6.label'), category: 'docs', hint: t('birthBag.items.d6.hint') },
 ];
 
 interface SavedV3 {
@@ -151,62 +153,63 @@ const STORAGE_KEY_V3 = (childId: string) => `amatda_birthbag_v3_${childId}`;
 const STORAGE_KEY_V2 = (childId: string) => `amatda_birthbag_v2_${childId}`;
 const STORAGE_KEY_V1 = (childId: string) => `amatda_birthbag_${childId}`;
 
-const OWNER_META: Record<Exclude<Owner, null>, { label: string; bg: string; fg: string }> = {
-  mom:  { label: '엄마', bg: '#FCE4EC', fg: '#C2185B' },
-  dad:  { label: '아빠', bg: '#E3F2FD', fg: '#1565C0' },
-  both: { label: '같이', bg: '#EDE7F6', fg: '#6A1B9A' },
-};
+const getOwnerMeta = (t: TFunction): Record<Exclude<Owner, null>, { label: string; bg: string; fg: string }> => ({
+  mom:  { label: t('birthBag.owner.mom'),  bg: '#FCE4EC', fg: '#C2185B' },
+  dad:  { label: t('birthBag.owner.dad'),  bg: '#E3F2FD', fg: '#1565C0' },
+  both: { label: t('birthBag.owner.both'), bg: '#EDE7F6', fg: '#6A1B9A' },
+});
 
 /**
  * 항목별 추천 상품 한 줄 — '구매 필요' 상태일 때 카드 하단에 작은 슬롯으로 노출.
  * 톤: 위트 + 세련 + 압박감 X. 실제 쇼핑몰 연동은 추후 (현재는 디자인 자리잡기용).
  */
-const PRODUCT_HINTS: Record<string, string> = {
+const getProductHints = (t: TFunction): Record<string, string> => ({
   // ── 엄마 ──
-  m1: '산모들이 가장 많이 챙기는 대형 패드',
-  m2: '앞트임 + 사이즈 여유 — 수유 브라의 정석',
-  m3: '병원에서 퇴원까지 이어 입는 가운형',
-  m4: '굽 없는 미끄럼 방지 슬리퍼 (병동용)',
-  m5: '미니 트래블 키트 — 한 손에 쏙',
-  m6: '긴 케이블 + 보조배터리 세트',
-  m7: '누워서 마시기 좋은 빨대 텀블러',
-  m8: '제왕절개 산모 필수 — 골반 케어 복대',
-  m9: '도넛 방석 — 자연분만 후 회복템',
-  m19: '휴대용 비데 — 회음부 케어 끝판왕',
-  m10: '편한 임부복 (퇴원복 그대로)',
-  m11: '저혈당 대비 산모 간식 모음',
-  m12: '안경/콘택트 미니 케어 키트',
-  m13: '머리끈/헤어밴드 — 분만 중에도 OK',
-  m14: '수유 패드 — 모유 새기 방지 5종',
-  m15: '조리원 가운/실내복 (앞트임)',
-  m16: '조리원 보습 케어 (저자극 라인)',
-  m17: '산후 영양제 (철분/종합비타민)',
-  m18: '산후 식사 밀키트/반찬 정기배송',
+  m1: t('birthBag.productHints.m1'),
+  m2: t('birthBag.productHints.m2'),
+  m3: t('birthBag.productHints.m3'),
+  m4: t('birthBag.productHints.m4'),
+  m5: t('birthBag.productHints.m5'),
+  m6: t('birthBag.productHints.m6'),
+  m7: t('birthBag.productHints.m7'),
+  m8: t('birthBag.productHints.m8'),
+  m9: t('birthBag.productHints.m9'),
+  m19: t('birthBag.productHints.m19'),
+  m10: t('birthBag.productHints.m10'),
+  m11: t('birthBag.productHints.m11'),
+  m12: t('birthBag.productHints.m12'),
+  m13: t('birthBag.productHints.m13'),
+  m14: t('birthBag.productHints.m14'),
+  m15: t('birthBag.productHints.m15'),
+  m16: t('birthBag.productHints.m16'),
+  m17: t('birthBag.productHints.m17'),
+  m18: t('birthBag.productHints.m18'),
   // ── 아기 ──
-  b1: '면 100% 신생아 배냇저고리 세트',
-  b2: '속싸개·겉싸개 세트 — 수면 안정',
-  b3: '신생아 모자 — 보온 필수템',
-  b4: '면 손싸개·발싸개 (긁힘 방지)',
-  b5: '신생아 1단계 기저귀 (4kg 이하)',
-  b6: '무향 물티슈 — 민감 피부 OK',
-  b7: 'KC 인증 신생아 카시트 — 퇴원 필수',
-  b8: '아기 가제수건 100% 면 모음',
-  b9: '계절 맞춤 퇴원복 (3-5kg)',
-  b10: '신생아 분유 + 젖병 미니 세트',
-};
+  b1: t('birthBag.productHints.b1'),
+  b2: t('birthBag.productHints.b2'),
+  b3: t('birthBag.productHints.b3'),
+  b4: t('birthBag.productHints.b4'),
+  b5: t('birthBag.productHints.b5'),
+  b6: t('birthBag.productHints.b6'),
+  b7: t('birthBag.productHints.b7'),
+  b8: t('birthBag.productHints.b8'),
+  b9: t('birthBag.productHints.b9'),
+  b10: t('birthBag.productHints.b10'),
+});
 
-const STATUS_META: Record<Exclude<Status, null>, { label: string; bg: string; fg: string }> = {
-  need:   { label: '구매 필요', bg: '#FFF3E0', fg: '#E65100' },
-  ready:  { label: '준비 완료', bg: '#E8F5E9', fg: '#2E7D32' },
-  packed: { label: '가방에 넣음', bg: '#E3F2FD', fg: '#1565C0' },
-  na:     { label: '해당 없음', bg: '#ECEFF1', fg: '#546E7A' },
-};
+const getStatusMeta = (t: TFunction): Record<Exclude<Status, null>, { label: string; bg: string; fg: string }> => ({
+  need:   { label: t('birthBag.status.need'),   bg: '#FFF3E0', fg: '#E65100' },
+  ready:  { label: t('birthBag.status.ready'),  bg: '#E8F5E9', fg: '#2E7D32' },
+  packed: { label: t('birthBag.status.packed'), bg: '#E3F2FD', fg: '#1565C0' },
+  na:     { label: t('birthBag.status.na'),     bg: '#ECEFF1', fg: '#546E7A' },
+});
 
 /* ============================================================== */
 /*  Screen                                                         */
 /* ============================================================== */
 
 export default function BirthBagScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const child = useChildStore((s) => s.selectedChild);
 
@@ -310,16 +313,24 @@ export default function BirthBagScreen() {
     AsyncStorage.setItem(STORAGE_KEY_V3(child.id), JSON.stringify(data)).catch(() => {});
   }, [birthType, postpartumPlan, checked, owner, status, customItems, hiddenIds, child?.id, loaded]);
 
+  const allItems = useMemo(() => getAllItems(t), [t]);
+  const productHints = useMemo(() => getProductHints(t), [t]);
+  const ownerMeta = useMemo(() => getOwnerMeta(t), [t]);
+  const statusMeta = useMemo(() => getStatusMeta(t), [t]);
+  const categoryLabel = useMemo(() => getCategoryLabel(t), [t]);
+  const birthTypes = useMemo(() => getBirthTypes(t), [t]);
+  const postpartumPlans = useMemo(() => getPostpartumPlans(t), [t]);
+
   // 기본 + 커스텀 합치기 → 분만/산후 필터 + 숨김 제외
   const visibleItems = useMemo(() => {
-    const merged = [...ALL_ITEMS, ...customItems];
+    const merged = [...allItems, ...customItems];
     return merged.filter((it) => {
       if (hiddenIds.includes(it.id)) return false;
       if (it.forBirthTypes && !it.forBirthTypes.includes(birthType)) return false;
       if (it.forPostpartumPlans && !it.forPostpartumPlans.includes(postpartumPlan)) return false;
       return true;
     });
-  }, [customItems, hiddenIds, birthType, postpartumPlan]);
+  }, [allItems, customItems, hiddenIds, birthType, postpartumPlan]);
 
   // 분만/산후 특화 여부 — 현재 선택된 분만형/산후계획 전용 항목인지
   const isSpecialized = useCallback((it: BagItem): boolean => {
@@ -422,11 +433,11 @@ export default function BirthBagScreen() {
   }, []);
 
   const hiddenItemsResolved = useMemo(() => {
-    const merged = [...ALL_ITEMS, ...customItems];
+    const merged = [...allItems, ...customItems];
     return hiddenIds
       .map((id) => merged.find((m) => m.id === id))
       .filter((x): x is BagItem => !!x);
-  }, [hiddenIds, customItems]);
+  }, [allItems, hiddenIds, customItems]);
 
   /**
    * 공유 링크 생성 → 사용자가 선택한 채널(카카오톡/문자/링크 복사)로 전달.
@@ -435,7 +446,7 @@ export default function BirthBagScreen() {
   const generateShareLink = useCallback(async (): Promise<string | null> => {
     try {
       // hidden 제외, 분만/산후 필터 통과 항목만 보냄
-      const visible = [...ALL_ITEMS, ...customItems].filter((it) => {
+      const visible = [...allItems, ...customItems].filter((it) => {
         if (hiddenIds.includes(it.id)) return false;
         if (it.forBirthTypes && !it.forBirthTypes.includes(birthType)) return false;
         if (it.forPostpartumPlans && !it.forPostpartumPlans.includes(postpartumPlan)) return false;
@@ -451,7 +462,7 @@ export default function BirthBagScreen() {
         checked: !!checked[it.id],
       }));
       const res = await birthBagShareApi.create({
-        ownerLabel: '엄마',
+        ownerLabel: t('birthBag.ownerLabelMom'),
         birthType,
         postpartumPlan,
         items: itemsPayload,
@@ -461,7 +472,7 @@ export default function BirthBagScreen() {
     } catch {
       return null;
     }
-  }, [customItems, hiddenIds, birthType, postpartumPlan, owner, status, checked]);
+  }, [allItems, customItems, hiddenIds, birthType, postpartumPlan, owner, status, checked, t]);
 
   const handleShareNative = useCallback(async () => {
     if (sharing) return;
@@ -469,15 +480,15 @@ export default function BirthBagScreen() {
     try {
       const url = await generateShareLink();
       if (!url) {
-        Alert.alert('공유 실패', '잠시 후 다시 시도해주세요.');
+        Alert.alert(t('birthBag.shareFailTitle'), t('birthBag.shareFailDesc'));
         return;
       }
-      const summary = `아맞다 출산가방 ${progressPct}% 완료 · 남은 항목 ${totalCount - checkedCount}개. 가족과 함께 챙겨주세요!\n${url}`;
+      const summary = t('birthBag.shareSummary', { progressPct, remaining: totalCount - checkedCount, url });
       await Share.share({ message: summary });
       setShareModalVisible(false);
     } catch { /* 사용자가 취소한 경우 */ }
     finally { setSharing(false); }
-  }, [sharing, generateShareLink, progressPct, totalCount, checkedCount]);
+  }, [sharing, generateShareLink, progressPct, totalCount, checkedCount, t]);
 
   const handleShareCopy = useCallback(async () => {
     if (sharing) return;
@@ -485,14 +496,14 @@ export default function BirthBagScreen() {
     try {
       const url = await generateShareLink();
       if (!url) {
-        Alert.alert('공유 실패', '잠시 후 다시 시도해주세요.');
+        Alert.alert(t('birthBag.shareFailTitle'), t('birthBag.shareFailDesc'));
         return;
       }
       await Clipboard.setStringAsync(url);
-      Alert.alert('링크 복사 완료', '카카오톡이나 문자에 붙여넣어 공유하세요.');
+      Alert.alert(t('birthBag.copyDoneTitle'), t('birthBag.copyDoneDesc'));
       setShareModalVisible(false);
     } finally { setSharing(false); }
-  }, [sharing, generateShareLink]);
+  }, [sharing, generateShareLink, t]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -500,7 +511,7 @@ export default function BirthBagScreen() {
 
       {/* Top bar */}
       <ScreenHeader
-        title="출산가방 체크리스트"
+        title={t('birthBag.headerTitle')}
         right={
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <GuideButton onPress={() => setGuideVisible(true)} color="#7CA46E" />
@@ -510,7 +521,7 @@ export default function BirthBagScreen() {
               hitSlop={8}
               activeOpacity={0.7}
             >
-              <Text style={styles.shareBtnText}>공유</Text>
+              <Text style={styles.shareBtnText}>{t('birthBag.shareBtn')}</Text>
             </TouchableOpacity>
           </View>
         }
@@ -519,28 +530,28 @@ export default function BirthBagScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Hero */}
         <View style={styles.hero}>
-          <Text style={styles.heroTitle}>엄마·아빠가 같이 끝내요</Text>
+          <Text style={styles.heroTitle}>{t('birthBag.heroTitle')}</Text>
           <Text style={styles.heroSub}>
-            분만 형태와 산후 계획에 맞춰, 엄마·아빠가 함께 챙겨요.
+            {t('birthBag.heroSub')}
           </Text>
         </View>
 
         {/* Birth type */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>분만 형태</Text>
+          <Text style={styles.sectionLabel}>{t('birthBag.birthTypeLabel')}</Text>
           <View style={styles.typeRow}>
-            {BIRTH_TYPES.map((t) => {
-              const active = birthType === t.key;
+            {birthTypes.map((item) => {
+              const active = birthType === item.key;
               return (
                 <TouchableOpacity
-                  key={t.key}
+                  key={item.key}
                   style={[styles.typeCard, active && styles.typeCardActive]}
-                  onPress={() => setBirthType(t.key)}
+                  onPress={() => setBirthType(item.key)}
                   activeOpacity={0.85}
                 >
-                  <Image source={t.icon} style={styles.typeIcon} resizeMode="contain" />
-                  <Text style={[styles.typeLabel, active && styles.typeLabelActive]}>{t.label}</Text>
-                  <Text style={[styles.typeSub, active && styles.typeSubActive]}>{t.sub}</Text>
+                  <Image source={item.icon} style={styles.typeIcon} resizeMode="contain" />
+                  <Text style={[styles.typeLabel, active && styles.typeLabelActive]}>{item.label}</Text>
+                  <Text style={[styles.typeSub, active && styles.typeSubActive]}>{item.sub}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -549,9 +560,9 @@ export default function BirthBagScreen() {
 
         {/* Postpartum plan */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>산후 준비</Text>
+          <Text style={styles.sectionLabel}>{t('birthBag.postpartumPlanLabel')}</Text>
           <View style={styles.typeRow}>
-            {POSTPARTUM_PLANS.map((p) => {
+            {postpartumPlans.map((p) => {
               const active = postpartumPlan === p.key;
               return (
                 <TouchableOpacity
@@ -572,7 +583,7 @@ export default function BirthBagScreen() {
         {/* Progress + summary chips */}
         <View style={styles.progressCard}>
           <View style={styles.progressTopRow}>
-            <Text style={styles.progressLabel}>진행률</Text>
+            <Text style={styles.progressLabel}>{t('birthBag.progressLabel')}</Text>
             <Text style={styles.progressValue}>
               {checkedCount}/{totalCount}
               <Text style={styles.progressPct}>{`  (${progressPct}%)`}</Text>
@@ -582,15 +593,15 @@ export default function BirthBagScreen() {
             <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
           </View>
           <View style={styles.summaryChipsRow}>
-            <SummaryChip label="총" value={totalCount} bg="#F2E6DC" fg="#5D4037" />
-            <SummaryChip label="완료" value={checkedCount} bg="#E8F5E9" fg="#2E7D32" />
-            <SummaryChip label="구매필요" value={needCount} bg="#FFF3E0" fg="#E65100" />
-            <SummaryChip label="아빠담당" value={dadCount} bg="#E3F2FD" fg="#1565C0" />
+            <SummaryChip label={t('birthBag.summaryChip.total')} value={totalCount} bg="#F2E6DC" fg="#5D4037" />
+            <SummaryChip label={t('birthBag.summaryChip.done')} value={checkedCount} bg="#E8F5E9" fg="#2E7D32" />
+            <SummaryChip label={t('birthBag.summaryChip.need')} value={needCount} bg="#FFF3E0" fg="#E65100" />
+            <SummaryChip label={t('birthBag.summaryChip.dad')} value={dadCount} bg="#E3F2FD" fg="#1565C0" />
           </View>
           {progressPct === 100 && (
             <View style={styles.progressDoneRow}>
               <Image source={IC_RECO} style={styles.progressDoneIconImg} resizeMode="contain" />
-              <Text style={styles.progressDone}>{' 준비 완료! 이제 마음 편히 기다려요'}</Text>
+              <Text style={styles.progressDone}>{` ${t('birthBag.progressDone')}`}</Text>
             </View>
           )}
         </View>
@@ -604,12 +615,12 @@ export default function BirthBagScreen() {
           <Text style={[styles.dadModeIcon, filter === 'dad' && styles.dadModeIconActive]}>{'👨'}</Text>
           <View style={{ flex: 1 }}>
             <Text style={[styles.dadModeTitle, filter === 'dad' && styles.dadModeTitleActive]}>
-              {filter === 'dad' ? '아빠 모드 — 담당만 보는 중' : '아빠 모드'}
+              {filter === 'dad' ? t('birthBag.dadMode.activeTitle') : t('birthBag.dadMode.title')}
             </Text>
             <Text style={[styles.dadModeSub, filter === 'dad' && styles.dadModeSubActive]}>
               {filter === 'dad'
-                ? `남은 ${dadCount - checkedCountDad}개 · 탭하면 일반 보기로`
-                : `아빠 담당 ${dadCount}개만 빠르게 챙기기`}
+                ? t('birthBag.dadMode.activeSub', { count: dadCount - checkedCountDad })
+                : t('birthBag.dadMode.sub', { count: dadCount })}
             </Text>
           </View>
           {filter === 'dad' && dadCount > 0 ? (
@@ -619,7 +630,7 @@ export default function BirthBagScreen() {
               activeOpacity={0.85}
               hitSlop={6}
             >
-              <Text style={styles.dadShareBtnText}>남편에게 공유</Text>
+              <Text style={styles.dadShareBtnText}>{t('birthBag.dadMode.shareBtn')}</Text>
             </TouchableOpacity>
           ) : null}
         </TouchableOpacity>
@@ -633,11 +644,11 @@ export default function BirthBagScreen() {
           {(['all', 'need', 'dad', 'unassigned', 'hideDone'] as ViewFilter[]).map((f) => {
             const active = filter === f;
             const isDadChip = f === 'dad';
-            const label = f === 'all' ? '전체'
-              : f === 'need' ? '구매 필요'
-              : f === 'dad' ? `아빠 담당 ${dadCount > 0 ? dadCount : ''}`.trim()
-              : f === 'unassigned' ? '미지정'
-              : '완료 숨기기';
+            const label = f === 'all' ? t('birthBag.filter.all')
+              : f === 'need' ? t('birthBag.filter.need')
+              : f === 'dad' ? t('birthBag.filter.dad', { count: dadCount > 0 ? dadCount : '' }).trim()
+              : f === 'unassigned' ? t('birthBag.filter.unassigned')
+              : t('birthBag.filter.hideDone');
             return (
               <TouchableOpacity
                 key={f}
@@ -663,8 +674,8 @@ export default function BirthBagScreen() {
 
         {/* 추천 배너 1 (진행률 아래) */}
         <RecommendBanner
-          title="출산 후 위생템 추천"
-          desc="마이비데 · 산모패드 · 수유패드"
+          title={t('birthBag.recommend.hygiene.title')}
+          desc={t('birthBag.recommend.hygiene.desc')}
         />
 
         {/* Sections */}
@@ -679,9 +690,9 @@ export default function BirthBagScreen() {
                   onPress={() => toggleCollapsed(cat)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.itemSectionTitle}>{CATEGORY_LABEL[cat]}</Text>
+                  <Text style={styles.itemSectionTitle}>{categoryLabel[cat]}</Text>
                   <View style={styles.sectionHeaderRight}>
-                    <Text style={styles.sectionCount}>{list.length}개</Text>
+                    <Text style={styles.sectionCount}>{t('birthBag.itemCount', { count: list.length })}</Text>
                     <Text style={styles.sectionCaret}>{isCollapsed ? '∨' : '∧'}</Text>
                   </View>
                 </TouchableOpacity>
@@ -715,10 +726,10 @@ export default function BirthBagScreen() {
                           </Text>
                           {isSpecialized(it) ? (
                             <View style={styles.essentialBadge}>
-                              <Text style={styles.essentialBadgeText}>필수</Text>
+                              <Text style={styles.essentialBadgeText}>{t('birthBag.essentialBadge')}</Text>
                             </View>
                           ) : null}
-                          {custom ? <View style={styles.customBadge}><Text style={styles.customBadgeText}>내가 추가</Text></View> : null}
+                          {custom ? <View style={styles.customBadge}><Text style={styles.customBadgeText}>{t('birthBag.customBadge')}</Text></View> : null}
                           <TouchableOpacity
                             style={styles.moreBtn}
                             onPress={() => setMoreMenuId(it.id)}
@@ -733,16 +744,16 @@ export default function BirthBagScreen() {
                           (itemStatus || itemOwner) ? (
                             <View style={styles.tagRow}>
                               {itemStatus ? (
-                                <View style={[tagStyles.btn, { backgroundColor: STATUS_META[itemStatus].bg, paddingVertical: 2 }]}>
-                                  <Text style={[tagStyles.text, { color: STATUS_META[itemStatus].fg, fontSize: 10 }]}>
-                                    {STATUS_META[itemStatus].label}
+                                <View style={[tagStyles.btn, { backgroundColor: statusMeta[itemStatus].bg, paddingVertical: 2 }]}>
+                                  <Text style={[tagStyles.text, { color: statusMeta[itemStatus].fg, fontSize: 10 }]}>
+                                    {statusMeta[itemStatus].label}
                                   </Text>
                                 </View>
                               ) : null}
                               {itemOwner ? (
-                                <View style={[tagStyles.btn, { backgroundColor: OWNER_META[itemOwner].bg, paddingVertical: 2 }]}>
-                                  <Text style={[tagStyles.text, { color: OWNER_META[itemOwner].fg, fontSize: 10 }]}>
-                                    {OWNER_META[itemOwner].label}
+                                <View style={[tagStyles.btn, { backgroundColor: ownerMeta[itemOwner].bg, paddingVertical: 2 }]}>
+                                  <Text style={[tagStyles.text, { color: ownerMeta[itemOwner].fg, fontSize: 10 }]}>
+                                    {ownerMeta[itemOwner].label}
                                   </Text>
                                 </View>
                               ) : null}
@@ -752,27 +763,27 @@ export default function BirthBagScreen() {
                           <View style={styles.tagRow}>
                             <TagButton
                               onPress={() => openPicker(it.id, 'status')}
-                              label={itemStatus ? STATUS_META[itemStatus].label : '+ 상태'}
-                              bg={itemStatus ? STATUS_META[itemStatus].bg : '#FFF0E6'}
-                              fg={itemStatus ? STATUS_META[itemStatus].fg : '#FF8C5A'}
+                              label={itemStatus ? statusMeta[itemStatus].label : t('birthBag.addStatusTag')}
+                              bg={itemStatus ? statusMeta[itemStatus].bg : '#FFF0E6'}
+                              fg={itemStatus ? statusMeta[itemStatus].fg : '#FF8C5A'}
                             />
                             <TagButton
                               onPress={() => openPicker(it.id, 'owner')}
-                              label={itemOwner ? `${OWNER_META[itemOwner].label} 담당` : '+ 담당'}
-                              bg={itemOwner ? OWNER_META[itemOwner].bg : '#FFF0E6'}
-                              fg={itemOwner ? OWNER_META[itemOwner].fg : '#FF8C5A'}
+                              label={itemOwner ? t('birthBag.ownerTag', { owner: ownerMeta[itemOwner].label }) : t('birthBag.addOwnerTag')}
+                              bg={itemOwner ? ownerMeta[itemOwner].bg : '#FFF0E6'}
+                              fg={itemOwner ? ownerMeta[itemOwner].fg : '#FF8C5A'}
                             />
                           </View>
                         )}
                         {/* 네이티브 커머스 슬롯 — 구매 필요 상태일 때만 / 미체크 상태에서만 */}
-                        {!isChecked && itemStatus === 'need' && PRODUCT_HINTS[it.id] ? (
+                        {!isChecked && itemStatus === 'need' && productHints[it.id] ? (
                           <View style={styles.commerceSlot}>
                             <Text style={styles.commerceSlotIcon}>🛒</Text>
                             <Text style={styles.commerceSlotText} numberOfLines={1}>
-                              {PRODUCT_HINTS[it.id]}
+                              {productHints[it.id]}
                             </Text>
                             <Text style={styles.commerceSlotArrow}>{'›'}</Text>
-                            <Text style={styles.commerceSlotAd}>광고</Text>
+                            <Text style={styles.commerceSlotAd}>{t('birthBag.adLabel')}</Text>
                           </View>
                         ) : null}
                       </View>
@@ -786,15 +797,15 @@ export default function BirthBagScreen() {
                     onPress={() => setAddModalCategory(cat)}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.addItemBtnText}>{'+ 항목 추가'}</Text>
+                    <Text style={styles.addItemBtnText}>{t('birthBag.addItemBtn')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
 
               {idx === 0 && (
                 <RecommendBanner
-                  title="출산가방 필수템"
-                  desc="회음 방석 · 휴대용 비데 · 압박스타킹"
+                  title={t('birthBag.recommend.essential.title')}
+                  desc={t('birthBag.recommend.essential.desc')}
                 />
               )}
             </View>
@@ -808,23 +819,23 @@ export default function BirthBagScreen() {
             onPress={() => setHiddenViewOpen(true)}
             activeOpacity={0.7}
           >
-            <Text style={styles.hiddenLinkText}>{`숨긴 항목 ${hiddenIds.length}개 보기`}</Text>
+            <Text style={styles.hiddenLinkText}>{t('birthBag.hiddenLink', { count: hiddenIds.length })}</Text>
           </TouchableOpacity>
         )}
 
         {/* 추천 배너 3 (팁 위) */}
         <RecommendBanner
-          title="아기 용품 추천"
-          desc="신생아 기저귀·물티슈·가제수건"
+          title={t('birthBag.recommend.baby.title')}
+          desc={t('birthBag.recommend.baby.desc')}
         />
 
         {/* Tip */}
         <View style={styles.tipCard}>
           <Image source={IC_TIP} style={styles.tipIconImg} resizeMode="contain" />
           <View style={{ flex: 1 }}>
-            <Text style={styles.tipTitle}>같이 챙기는 팁</Text>
+            <Text style={styles.tipTitle}>{t('birthBag.tip.title')}</Text>
             <Text style={styles.tipText}>
-              담당 태그를 눌러 엄마·아빠로 나누면 누가 뭐 가져갈지 헷갈리지 않아요. 카시트는 퇴원 당일 차에 미리 설치해두세요.
+              {t('birthBag.tip.text')}
             </Text>
           </View>
         </View>
@@ -875,14 +886,14 @@ export default function BirthBagScreen() {
       <Modal visible={shareModalVisible} transparent animationType="fade" onRequestClose={() => setShareModalVisible(false)}>
         <Pressable style={shareStyles.backdrop} onPress={() => setShareModalVisible(false)}>
           <Pressable style={shareStyles.sheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={shareStyles.title}>가족에게 출산가방 공유</Text>
+            <Text style={shareStyles.title}>{t('birthBag.shareModal.title')}</Text>
             <Text style={shareStyles.subtitle}>
-              앱 설치 없이 웹 링크로 가족이 바로 확인할 수 있어요
+              {t('birthBag.shareModal.subtitle')}
             </Text>
             {sharing ? (
               <View style={shareStyles.loadingWrap}>
                 <ActivityIndicator color={COLOR.primary} />
-                <Text style={shareStyles.loadingText}>링크 만드는 중...</Text>
+                <Text style={shareStyles.loadingText}>{t('birthBag.shareModal.loading')}</Text>
               </View>
             ) : (
               <>
@@ -891,19 +902,19 @@ export default function BirthBagScreen() {
                   onPress={handleShareNative}
                   activeOpacity={0.85}
                 >
-                  <Text style={shareStyles.optionPrimaryText}>카카오톡·문자로 보내기</Text>
+                  <Text style={shareStyles.optionPrimaryText}>{t('birthBag.shareModal.optionNative')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={shareStyles.optionSecondary}
                   onPress={handleShareCopy}
                   activeOpacity={0.85}
                 >
-                  <Text style={shareStyles.optionSecondaryText}>링크 복사</Text>
+                  <Text style={shareStyles.optionSecondaryText}>{t('birthBag.shareModal.optionCopy')}</Text>
                 </TouchableOpacity>
               </>
             )}
             <Text style={shareStyles.privacyNote}>
-              아이 실명·예정일은 공유되지 않아요. 링크는 30일 후 자동 만료됩니다.
+              {t('birthBag.shareModal.privacyNote')}
             </Text>
             <TouchableOpacity
               style={shareStyles.cancelBtn}
@@ -911,7 +922,7 @@ export default function BirthBagScreen() {
               activeOpacity={0.7}
               disabled={sharing}
             >
-              <Text style={shareStyles.cancelText}>닫기</Text>
+              <Text style={shareStyles.cancelText}>{t('common.close')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>
@@ -976,38 +987,41 @@ function PickerSheet({
   onPickStatus: (v: Status) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
+  const ownerMeta = useMemo(() => getOwnerMeta(t), [t]);
+  const statusMeta = useMemo(() => getStatusMeta(t), [t]);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={pickerStyles.backdrop} onPress={onClose}>
         <Pressable style={pickerStyles.sheet} onPress={(e) => e.stopPropagation()}>
           <Text style={pickerStyles.title}>
-            {kind === 'owner' ? '담당 선택' : '상태 선택'}
+            {kind === 'owner' ? t('birthBag.picker.ownerTitle') : t('birthBag.picker.statusTitle')}
           </Text>
           {kind === 'owner' ? (
             <>
               <PickerOption
-                label="엄마"
+                label={ownerMeta.mom.label}
                 active={currentOwner === 'mom'}
-                bg={OWNER_META.mom.bg}
-                fg={OWNER_META.mom.fg}
+                bg={ownerMeta.mom.bg}
+                fg={ownerMeta.mom.fg}
                 onPress={() => onPickOwner('mom')}
               />
               <PickerOption
-                label="아빠"
+                label={ownerMeta.dad.label}
                 active={currentOwner === 'dad'}
-                bg={OWNER_META.dad.bg}
-                fg={OWNER_META.dad.fg}
+                bg={ownerMeta.dad.bg}
+                fg={ownerMeta.dad.fg}
                 onPress={() => onPickOwner('dad')}
               />
               <PickerOption
-                label="같이"
+                label={ownerMeta.both.label}
                 active={currentOwner === 'both'}
-                bg={OWNER_META.both.bg}
-                fg={OWNER_META.both.fg}
+                bg={ownerMeta.both.bg}
+                fg={ownerMeta.both.fg}
                 onPress={() => onPickOwner('both')}
               />
               <PickerOption
-                label="미정"
+                label={t('birthBag.picker.ownerUnset')}
                 active={currentOwner === null}
                 bg="#F2EFEC"
                 fg="#9A9A9F"
@@ -1017,35 +1031,35 @@ function PickerSheet({
           ) : (
             <>
               <PickerOption
-                label="구매 필요"
+                label={statusMeta.need.label}
                 active={currentStatus === 'need'}
-                bg={STATUS_META.need.bg}
-                fg={STATUS_META.need.fg}
+                bg={statusMeta.need.bg}
+                fg={statusMeta.need.fg}
                 onPress={() => onPickStatus('need')}
               />
               <PickerOption
-                label="준비 완료"
+                label={statusMeta.ready.label}
                 active={currentStatus === 'ready'}
-                bg={STATUS_META.ready.bg}
-                fg={STATUS_META.ready.fg}
+                bg={statusMeta.ready.bg}
+                fg={statusMeta.ready.fg}
                 onPress={() => onPickStatus('ready')}
               />
               <PickerOption
-                label="가방에 넣음"
+                label={statusMeta.packed.label}
                 active={currentStatus === 'packed'}
-                bg={STATUS_META.packed.bg}
-                fg={STATUS_META.packed.fg}
+                bg={statusMeta.packed.bg}
+                fg={statusMeta.packed.fg}
                 onPress={() => onPickStatus('packed')}
               />
               <PickerOption
-                label="해당 없음"
+                label={statusMeta.na.label}
                 active={currentStatus === 'na'}
-                bg={STATUS_META.na.bg}
-                fg={STATUS_META.na.fg}
+                bg={statusMeta.na.bg}
+                fg={statusMeta.na.fg}
                 onPress={() => onPickStatus('na')}
               />
               <PickerOption
-                label="상태 지우기"
+                label={t('birthBag.picker.statusClear')}
                 active={currentStatus === null}
                 bg="#F2EFEC"
                 fg="#9A9A9F"
@@ -1082,6 +1096,8 @@ function AddItemModal({
   onAdd: (label: string, hint: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
+  const categoryLabel = useMemo(() => getCategoryLabel(t), [t]);
   const [label, setLabel] = useState('');
   const [hint, setHint] = useState('');
   useEffect(() => { if (!visible) { setLabel(''); setHint(''); } }, [visible]);
@@ -1089,7 +1105,7 @@ function AddItemModal({
     if (!label.trim()) return;
     onAdd(label, hint);
   };
-  const catLabel = category ? CATEGORY_LABEL[category] : '';
+  const catLabel = category ? categoryLabel[category] : '';
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView
@@ -1098,29 +1114,29 @@ function AddItemModal({
       >
         <Pressable style={pickerStyles.backdrop} onPress={onClose}>
           <Pressable style={pickerStyles.sheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={pickerStyles.title}>{`${catLabel}에 항목 추가`}</Text>
-            <Text style={addStyles.label}>이름</Text>
+            <Text style={pickerStyles.title}>{t('birthBag.addModal.title', { category: catLabel })}</Text>
+            <Text style={addStyles.label}>{t('birthBag.addModal.nameLabel')}</Text>
             <TextInput
               value={label}
               onChangeText={setLabel}
-              placeholder="예) 휴대용 가습기"
+              placeholder={t('birthBag.addModal.namePlaceholder')}
               placeholderTextColor="#B8B0A6"
               style={addStyles.input}
               maxLength={40}
               autoFocus
             />
-            <Text style={addStyles.label}>설명 (선택)</Text>
+            <Text style={addStyles.label}>{t('birthBag.addModal.hintLabel')}</Text>
             <TextInput
               value={hint}
               onChangeText={setHint}
-              placeholder="예) 산후조리원 건조함 대비"
+              placeholder={t('birthBag.addModal.hintPlaceholder')}
               placeholderTextColor="#B8B0A6"
               style={addStyles.input}
               maxLength={60}
             />
             <View style={addStyles.btnRow}>
               <TouchableOpacity style={addStyles.cancelBtn} onPress={onClose} activeOpacity={0.8}>
-                <Text style={addStyles.cancelText}>취소</Text>
+                <Text style={addStyles.cancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[addStyles.submitBtn, !label.trim() && addStyles.submitBtnDisabled]}
@@ -1128,7 +1144,7 @@ function AddItemModal({
                 activeOpacity={0.85}
                 disabled={!label.trim()}
               >
-                <Text style={addStyles.submitText}>추가</Text>
+                <Text style={addStyles.submitText}>{t('birthBag.addModal.submit')}</Text>
               </TouchableOpacity>
             </View>
           </Pressable>
@@ -1147,17 +1163,18 @@ function MoreMenuModal({
   onDelete: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={pickerStyles.backdrop} onPress={onClose}>
         <Pressable style={pickerStyles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={pickerStyles.title}>항목 옵션</Text>
+          <Text style={pickerStyles.title}>{t('birthBag.moreMenu.title')}</Text>
           <TouchableOpacity
             style={[pickerStyles.option, { backgroundColor: '#FFF8E1' }]}
             onPress={onHide}
             activeOpacity={0.85}
           >
-            <Text style={[pickerStyles.optionText, { color: '#7E5400' }]}>이 항목 숨기기</Text>
+            <Text style={[pickerStyles.optionText, { color: '#7E5400' }]}>{t('birthBag.moreMenu.hide')}</Text>
           </TouchableOpacity>
           {isCustom && (
             <TouchableOpacity
@@ -1165,7 +1182,7 @@ function MoreMenuModal({
               onPress={onDelete}
               activeOpacity={0.85}
             >
-              <Text style={[pickerStyles.optionText, { color: '#C62828' }]}>완전히 삭제</Text>
+              <Text style={[pickerStyles.optionText, { color: '#C62828' }]}>{t('birthBag.moreMenu.deleteForever')}</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -1173,7 +1190,7 @@ function MoreMenuModal({
             onPress={onClose}
             activeOpacity={0.85}
           >
-            <Text style={[pickerStyles.optionText, { color: '#9A9A9F' }]}>닫기</Text>
+            <Text style={[pickerStyles.optionText, { color: '#9A9A9F' }]}>{t('common.close')}</Text>
           </TouchableOpacity>
         </Pressable>
       </Pressable>
@@ -1189,27 +1206,29 @@ function HiddenItemsModal({
   onRestore: (id: string) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
+  const categoryLabel = useMemo(() => getCategoryLabel(t), [t]);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={pickerStyles.backdrop} onPress={onClose}>
         <Pressable style={[pickerStyles.sheet, { maxHeight: '70%' }]} onPress={(e) => e.stopPropagation()}>
-          <Text style={pickerStyles.title}>{`숨긴 항목 (${items.length})`}</Text>
+          <Text style={pickerStyles.title}>{t('birthBag.hiddenModal.title', { count: items.length })}</Text>
           <ScrollView style={{ maxHeight: 360 }}>
             {items.length === 0 ? (
-              <Text style={hiddenStyles.empty}>숨긴 항목이 없어요</Text>
+              <Text style={hiddenStyles.empty}>{t('birthBag.hiddenModal.empty')}</Text>
             ) : (
               items.map((it) => (
                 <View key={it.id} style={hiddenStyles.row}>
                   <View style={{ flex: 1 }}>
                     <Text style={hiddenStyles.label}>{it.label}</Text>
-                    <Text style={hiddenStyles.cat}>{CATEGORY_LABEL[it.category]}</Text>
+                    <Text style={hiddenStyles.cat}>{categoryLabel[it.category]}</Text>
                   </View>
                   <TouchableOpacity
                     style={hiddenStyles.restoreBtn}
                     onPress={() => onRestore(it.id)}
                     activeOpacity={0.85}
                   >
-                    <Text style={hiddenStyles.restoreText}>복구</Text>
+                    <Text style={hiddenStyles.restoreText}>{t('birthBag.hiddenModal.restore')}</Text>
                   </TouchableOpacity>
                 </View>
               ))
@@ -1220,7 +1239,7 @@ function HiddenItemsModal({
             onPress={onClose}
             activeOpacity={0.85}
           >
-            <Text style={[pickerStyles.optionText, { color: '#9A9A9F', textAlign: 'center', flex: 1 }]}>닫기</Text>
+            <Text style={[pickerStyles.optionText, { color: '#9A9A9F', textAlign: 'center', flex: 1 }]}>{t('common.close')}</Text>
           </TouchableOpacity>
         </Pressable>
       </Pressable>

@@ -1504,7 +1504,7 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
             style={[modalStyles.saveBtn, { backgroundColor: currentDarkColor }]}
             onPress={handleSave}
           >
-            <Text style={modalStyles.saveBtnText}>기록 저장</Text>
+            <Text style={modalStyles.saveBtnText}>{t('babyTracker.saveRecord')}</Text>
           </TouchableOpacity>
         </Animated.View>
       </KeyboardAvoidingView>
@@ -2692,28 +2692,28 @@ function BabyTrackerInner() {
             onPress={() => router.push('/voice' as never)}
             activeOpacity={0.85}
           >
-            <Text style={summaryStyles.voiceInputText}>🎤 음성입력</Text>
+            <Text style={summaryStyles.voiceInputText}>🎤 {t('babyTracker.voiceInput')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={summaryStyles.voiceBtn}
             onPress={() => router.push('/(main)/voice-settings' as never)}
             activeOpacity={0.85}
           >
-            <Text style={summaryStyles.voiceBtnText}>음성설정</Text>
+            <Text style={summaryStyles.voiceBtnText}>{t('babyTracker.voiceSettings')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={summaryStyles.voiceBtn}
             onPress={() => setPhotoLogVisible(true)}
             activeOpacity={0.85}
           >
-            <Text style={summaryStyles.voiceBtnText}>📷 사진기록</Text>
+            <Text style={summaryStyles.voiceBtnText}>📷 {t('babyTracker.photoRecord')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={summaryStyles.voiceBtn}
             onPress={() => router.push('/(main)/alarm-settings' as never)}
             activeOpacity={0.85}
           >
-            <Text style={summaryStyles.voiceBtnText}>⏰ 알람설정</Text>
+            <Text style={summaryStyles.voiceBtnText}>⏰ {t('babyTracker.alarmSettings')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -2761,7 +2761,7 @@ function BabyTrackerInner() {
             </View>
             <View style={breastStyles.rightCol}>
               <Text style={breastStyles.timer}>{breastElapsed}</Text>
-              <Text style={breastStyles.stopHint}>탭하여 중지</Text>
+              <Text style={breastStyles.stopHint}>{t('babyTracker.tapToStop')}</Text>
             </View>
           </TouchableOpacity>
         )}
@@ -3041,8 +3041,8 @@ function BabyTrackerInner() {
           onPress={() => setBreastSidePickerVisible(false)}
         >
           <TouchableOpacity activeOpacity={1} style={pickerStyles.sheet}>
-            <Text style={pickerStyles.title}>모유 수유 · 어느 쪽부터?</Text>
-            <Text style={pickerStyles.subtitle}>선택 후 타이머가 시작됩니다. 다시 누르면 중지돼요.</Text>
+            <Text style={pickerStyles.title}>{t('babyTracker.breastPicker.title')}</Text>
+            <Text style={pickerStyles.subtitle}>{t('babyTracker.breastPicker.subtitle')}</Text>
             <View style={pickerStyles.row}>
               <TouchableOpacity
                 style={[pickerStyles.sideBtn, { backgroundColor: TRACKER_COLORS.feedingLight }]}
@@ -3050,7 +3050,7 @@ function BabyTrackerInner() {
                 activeOpacity={0.8}
               >
                 <Text style={[pickerStyles.sideEmoji, { color: TRACKER_COLORS.feedingDark }]}>{'\u25C0'}</Text>
-                <Text style={pickerStyles.sideLabel}>왼쪽</Text>
+                <Text style={pickerStyles.sideLabel}>{t('babyTracker.side.left')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[pickerStyles.sideBtn, { backgroundColor: TRACKER_COLORS.feedingLight }]}
@@ -3058,14 +3058,14 @@ function BabyTrackerInner() {
                 activeOpacity={0.8}
               >
                 <Text style={[pickerStyles.sideEmoji, { color: TRACKER_COLORS.feedingDark }]}>{'\u25B6'}</Text>
-                <Text style={pickerStyles.sideLabel}>오른쪽</Text>
+                <Text style={pickerStyles.sideLabel}>{t('babyTracker.side.right')}</Text>
               </TouchableOpacity>
             </View>
             <TouchableOpacity
               style={pickerStyles.cancelBtn}
               onPress={() => setBreastSidePickerVisible(false)}
             >
-              <Text style={pickerStyles.cancelText}>취소</Text>
+              <Text style={pickerStyles.cancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -3084,8 +3084,8 @@ function BabyTrackerInner() {
           onPress={() => setAnalyzerPickerVisible(false)}
         >
           <TouchableOpacity activeOpacity={1} style={pickerStyles.sheet}>
-            <Text style={pickerStyles.title}>아기 분석</Text>
-            <Text style={pickerStyles.subtitle}>무엇을 분석할까요?</Text>
+            <Text style={pickerStyles.title}>{t('babyTracker.analyzerPicker.title')}</Text>
+            <Text style={pickerStyles.subtitle}>{t('babyTracker.analyzerPicker.subtitle')}</Text>
             <View style={pickerStyles.row}>
               <TouchableOpacity
                 style={[pickerStyles.sideBtn, { backgroundColor: TRACKER_COLORS.diaperLight }]}
@@ -3096,8 +3096,8 @@ function BabyTrackerInner() {
                 activeOpacity={0.8}
               >
                 <Image source={IC_POOP} style={pickerStyles.sideIcon} resizeMode="contain" />
-                <Text style={pickerStyles.sideLabel}>대변 분석</Text>
-                <Text style={pickerStyles.sideSub}>사진 업로드</Text>
+                <Text style={pickerStyles.sideLabel}>{t('babyTracker.analyzerPicker.poopAnalysis')}</Text>
+                <Text style={pickerStyles.sideSub}>{t('babyTracker.analyzerPicker.photoUpload')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[pickerStyles.sideBtn, { backgroundColor: '#F7E8F0' }]}
@@ -3108,15 +3108,15 @@ function BabyTrackerInner() {
                 activeOpacity={0.8}
               >
                 <Image source={IC_MIC} style={pickerStyles.sideIcon} resizeMode="contain" />
-                <Text style={pickerStyles.sideLabel}>울음 분석</Text>
-                <Text style={pickerStyles.sideSub}>소리 업로드</Text>
+                <Text style={pickerStyles.sideLabel}>{t('babyTracker.analyzerPicker.cryAnalysis')}</Text>
+                <Text style={pickerStyles.sideSub}>{t('babyTracker.analyzerPicker.soundUpload')}</Text>
               </TouchableOpacity>
             </View>
             <TouchableOpacity
               style={pickerStyles.cancelBtn}
               onPress={() => setAnalyzerPickerVisible(false)}
             >
-              <Text style={pickerStyles.cancelText}>취소</Text>
+              <Text style={pickerStyles.cancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -3989,8 +3989,8 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete, onL
   if (expanded.length === 0) {
     return (
       <View style={simpleTlStyles.empty}>
-        <Text style={simpleTlStyles.emptyText}>아직 기록이 없어요</Text>
-        <Text style={simpleTlStyles.emptySub}>아래 버튼으로 수유·수면·기저귀를 기록해보세요</Text>
+        <Text style={simpleTlStyles.emptyText}>{t('babyTracker.noRecordsYet')}</Text>
+        <Text style={simpleTlStyles.emptySub}>{t('babyTracker.noRecordsHint')}</Text>
       </View>
     );
   }

@@ -495,5 +495,887 @@
     "monthN": "{{count}}月",
     "endingMessage": "愛你,<br/>珍貴的{{name}}",
     "endingSub": "你的每個瞬間<br/>都是我們的奇蹟"
+  },
+  "pregnancy": {
+    "defaultChildName": "寶寶",
+    "screenTitle": "孕期相簿",
+    "selectPregnantChild": "請選擇懷孕中的孩子",
+    "childAlbumLabel": "{{name}}的孕期相簿",
+    "currentWeekBadge": " 目前懷孕第{{week}}週",
+    "weeklyQuestion": {
+      "week6": "確認過{{name}}的第一次超音波了嗎？",
+      "week10": "聽到{{name}}的心跳聲了嗎？",
+      "week13": "{{name}}的頸部透明帶（NT）檢查做了嗎？",
+      "week16": "進入穩定期囉！{{name}}長得好嗎？",
+      "week20": "{{name}}是王子還是公主呢？",
+      "week24": "常常感覺到{{name}}的胎動嗎？",
+      "week28": "{{name}}長高不少了嗎？發育得順利嗎？",
+      "week32": "開始準備生產了嗎？",
+      "week36": "{{name}}的待產包準備好了嗎？",
+      "week39": "準備好迎接{{name}}了嗎？",
+      "week40plus": "見到{{name}}了嗎？"
+    },
+    "pdf": {
+      "coverCount": "{{count}}張珍貴的紀錄",
+      "monthUnit": "月",
+      "dividerCaption": "珍貴時刻 {{count}}張",
+      "imageLoadFailed": "無法載入照片",
+      "pageHeaderMonth": "{{month}}月",
+      "endingMessage": "我愛你，\n珍貴的{{name}}",
+      "endingSub": "等待你的每一刻\n都是我們的奇蹟"
+    },
+    "photoLoadFailed": "無法載入照片",
+    "diaryNoRecordToday": "今天還沒有紀錄，無法產生日記。",
+    "diaryGenerateFailed": "AI日記產生失敗。",
+    "noPhotos": "沒有照片",
+    "noPhotosInPeriod": "所選期間內沒有照片。\n請先新增照片。",
+    "albumDefaultTitleWithRange": "{{name}}的孕期相簿 {{from}}~{{to}}",
+    "pdfGenerateTimeout": "PDF產生時間過長，請稍後再試一次。",
+    "albumSaveDialogTitle": "儲存孕期相簿",
+    "saveComplete": "儲存完成",
+    "albumPdfGenerated": "孕期相簿PDF已產生。\n{{uri}}",
+    "somePhotosMissing": "部分照片遺漏",
+    "somePhotosMissingBody": "共{{total}}張中有{{failCount}}張因無法載入照片而未包含在PDF中。\n（暫存檔案已刪除或照片尚未上傳完成）",
+    "albumGenerateFailed": "相簿產生失敗。\n{{msg}}",
+    "composeEmptyInput": "請輸入照片、備註，或里程碑・症狀其中一項",
+    "photoUploadFailed": "照片上傳失敗",
+    "photoUploadFailedBody": "因網路或伺服器問題無法儲存照片。\n請稍後再試一次。（確認Wi-Fi連線可能有幫助）",
+    "saveFailed": "儲存失敗",
+    "permissionNeeded": "需要權限",
+    "cameraPermissionRequest": "請允許存取相機權限",
+    "mediaLoadFailed": "無法載入媒體檔案",
+    "addPhotoVideo": "新增照片／影片",
+    "howToAdd": "要如何新增呢？",
+    "takePhoto": "用相機拍攝",
+    "chooseFromAlbum": "從相簿選擇",
+    "atLeastOneItem": "請至少輸入一個項目",
+    "recordSaveFailed": "紀錄儲存失敗",
+    "editFailed": "編輯失敗",
+    "deleteFailed": "刪除失敗",
+    "recordManage": "紀錄管理",
+    "feedCount": "{{count}}筆紀錄",
+    "loadRecordsFailed": "無法載入紀錄",
+    "leaveFirstRecord": "留下第一則孕期相簿紀錄吧",
+    "checkNetworkRetry": "請確認網路後再試一次",
+    "emptyStateDesc": "可以一次記錄看診紀錄、超音波、里程碑和媽媽的狀態",
+    "createAlbumTitle": "建立孕期相簿",
+    "albumDefaultTitle": "{{name}}的孕期相簿",
+    "newAlbumBtn": "+ 新增相簿",
+    "albumSectionDesc": "選擇期間後即可在裝置上直接製作PDF。\n只有附照片的紀錄會以2×2網格輸出",
+    "albumTitleLabel": "相簿標題（可選填）",
+    "startMonthLabel": "起始月份",
+    "endMonthLabel": "結束月份",
+    "albumFormHint": "YYYY-MM格式・僅包含有照片的紀錄・每頁4張",
+    "coverImageLabel": "封面圖片（可選填）",
+    "defaultCoverHint": "預設封面・點擊變更",
+    "startGenerateAlbum": "開始產生相簿",
+    "citationChildcarePortal": "保健福祉部・孕產育兒綜合入口網站「愛心（아이사랑）」孕期各週資訊",
+    "citationKsog": "大韓婦產科學會 孕產資訊",
+    "backCancel": "< 取消",
+    "editRecordTitle": "編輯紀錄",
+    "changePhoto": "📷 變更照片",
+    "addPhoto": "📷 新增照片",
+    "memoInputPlaceholder": "請輸入備註",
+    "backToBack": "< 返回",
+    "weekRecordTitle": "懷孕第{{week}}週紀錄",
+    "doctorNoteLabel": " 醫師的話",
+    "doctorNotePlaceholder": "請寫下看診時聽到的內容",
+    "ultrasoundVideoLabel": " 超音波／影片",
+    "addPhotoVideoShort": "新增照片／影片",
+    "thisWeekMilestone": "本週里程碑",
+    "momStatusLabel": " 媽媽的狀態",
+    "severityLabel": "不適程度",
+    "freeInputPlaceholder": "自行輸入（請自由填寫症狀或心情）",
+    "saving": "儲存中...",
+    "addPhotoPrompt": "請新增照片",
+    "milestoneLabel": "里程碑",
+    "momMoodLabel": "媽媽的心情",
+    "composeMemoPlaceholder": "記錄想說的話或看診紀錄",
+    "shareToFamilyFeed": "也分享到家庭動態",
+    "aiTodayDiary": " AI今日日記",
+    "aiDiaryHeader": " AI日記－{{date}}",
+    "nextCheckupLabel": "下次產檢時間",
+    "tapToRegisterHint": "點擊登記（會顯示在首頁D-day）"
+  },
+  "growthStats": {
+    "tabPhysical": "身高/體重/成長",
+    "levelVeryLow": "非常低",
+    "levelLow": "偏低",
+    "levelNormal": "正常",
+    "levelHigh": "偏高",
+    "levelVeryHigh": "非常高",
+    "percentileLarge": "偏大・前{{value}}%",
+    "percentileSlightlyLarge": "稍大・百分位{{value}}",
+    "percentileAverage": "同齡平均・百分位{{value}}",
+    "percentileSlightlySmall": "稍小・百分位{{value}}",
+    "percentileSmall": "偏小・後{{value}}%",
+    "weeklyDevTitle": "每週發育",
+    "weeklyDevCitationNote": "每週發育資訊僅供一般參考，個別狀況請諮詢婦產科專科醫師。",
+    "citationSourceChildcare": "韓國保健福祉部・孕育綜合入口網站「愛心」孕期週數資訊",
+    "citationSourceKsog": "大韓婦產科學會 孕產資訊",
+    "growthCitationNote": "成長百分位／統計僅根據標準生長曲線供參考，個別評估請諮詢小兒科專科醫師。",
+    "citationSourceKdca": "韓國疾病管理廳・大韓小兒科學會「2017年 兒童青少年生長曲線」",
+    "citationSourceWho": "WHO兒童生長標準（0～5歲）",
+    "defaultChildName": "孩子",
+    "growthHeaderTitle": "成長紀錄與變化",
+    "task1": "每日服用葉酸（400～800mcg）",
+    "task2": "首次婦產科就診＋確認心跳",
+    "task3": "第一次唐氏症篩檢（NT、頸部透明帶）",
+    "task4": "開始補充鐵質（菠菜／紅肉）",
+    "task5": "第二次唐氏症篩檢（四指標／三指標）",
+    "task6": "精密超音波（第二級）",
+    "task7": "可確認性別的時期",
+    "task8": "妊娠糖尿病篩檢（GCT）",
+    "task9": "參加分娩準備課程",
+    "task10": "每日記錄胎動次數",
+    "task11": "NST（胎兒無壓力測試）",
+    "task12": "GBS篩檢（B型鏈球菌）",
+    "task13": "準備待產包",
+    "task14": "準備陣痛間隔計時器",
+    "trimester1": "第一孕期（初期）",
+    "trimester2": "第二孕期（穩定期）",
+    "trimester3": "第三孕期（後期）",
+    "safetySearchFail": "搜尋失敗，請稍後再試一次。",
+    "medicalDisclaimer": "ⓘ 此資訊僅供一般參考，並不能取代醫療診斷或處方。有關藥物、飲食、症狀的決定，請務必諮詢婦產科專科醫師。若出現緊急徵兆（大量出血、腹痛、胎動明顯減少、視力異常、嚴重水腫等），請立即就醫。",
+    "currentlyPregnant": "目前懷孕",
+    "weekNumber": "第{{week}}週",
+    "sizeOf": "{{size}}大小",
+    "daysUntilDueDate": "距離預產期",
+    "dDayHint": "📅 主要檢查與預產日提醒會自動建立",
+    "weeklyTasksTitle": "📋 本週待辦事項・檢查",
+    "taskTypeExam": "檢查",
+    "taskTypeTodo": "待辦",
+    "safetySearchTitle": "孕婦禁忌搜尋",
+    "safetySearchSub": "確認食物、藥物、咖啡因的安全性",
+    "weekLabel": "第{{week}}週",
+    "featTitle": "👶 本週寶寶發育",
+    "momChangeTitle": "🤰 媽媽的身體變化",
+    "foodTipTitle": "🍎 推薦飲食與營養",
+    "cautionTitle": "⚠️ 注意事項",
+    "weekPhotosTitle": " 本週紀錄照片",
+    "bottomHint": "在孕期相簿上傳照片後，會自動顯示在對應週數",
+    "safetySearchPlaceholder": "例如：咖啡、生魚片、普拿疼、紅蔘等",
+    "safetySearchButton": "搜尋",
+    "safetyAnalyzing": "AI分析中...",
+    "safetyLevelSafe": "安全",
+    "safetyLevelCaution": "注意",
+    "safetyLevelAvoid": "請避免",
+    "safetyDosTitle": "✓ 建議這樣食用",
+    "safetyDontsTitle": "✗ 注意事項",
+    "analysisParseFail": "無法處理分析結果。",
+    "analysisRequestFail": "成長分析失敗，請再試一次。",
+    "analyzeBtn": "進行成長分析",
+    "analysisModalTitle": "成長分析",
+    "analysisLoadingTitle": "正在分析孩子的成長數據...",
+    "analysisLoadingSubtitle": "AI正在仔細檢視成長模式",
+    "overallAnalysisTitle": "綜合分析",
+    "detailItemsTitle": "詳細項目",
+    "genderBoy": "男寶寶",
+    "genderGirl": "女寶寶",
+    "heightWeightRequired": "請輸入身高或體重",
+    "viewOnlyTitle": "僅限檢視",
+    "viewOnlyMessage": "您沒有儲存成長紀錄的權限。\n請向監護人申請「編輯孩子資料」的權限。",
+    "saveCompleteTitle": "儲存完成",
+    "saveCompleteMessage": "{{date}}的成長紀錄已儲存",
+    "saveFailMessage": "儲存失敗，請再試一次。",
+    "firstRecordTitle": "首次紀錄（{{ageLabel}}）",
+    "heightLabel": "身高",
+    "weightLabel": "體重",
+    "percentileHeader": "與同月齡{{genderLabel}}相比",
+    "heightWeightChangeTitle": "身高與體重變化",
+    "chartPlaceholder": "記錄身高或體重後即可顯示圖表",
+    "latestRecordTitleWithDate": "最新紀錄（{{date}}）",
+    "latestRecordTitle": "最新紀錄",
+    "recordCountLabel": "紀錄次數",
+    "recordInputTitle": "輸入紀錄",
+    "measureDateLabel": "測量日期",
+    "heightCmLabel": "身高（cm）",
+    "weightKgLabel": "體重（kg）",
+    "saving": "儲存中...",
+    "saveRecord": "儲存紀錄",
+    "recordHistoryTitle": "成長紀錄歷史",
+    "traitSaveCompleteMessage": "今日的氣質觀察已記錄",
+    "traitChangeRecordTitle": "氣質變化紀錄",
+    "currentTraitTypeLabel": "目前氣質類型",
+    "traitResponseProgress": "累計回答{{count}}則・距離首次洞察還差{{progress}}/7",
+    "dailyQuestionTitle": "今日的問題（{{current}}/{{total}}）",
+    "observationPlaceholder": "請輸入觀察內容...",
+    "saveTraitObservation": "儲存氣質觀察",
+    "traitTimelineTitle": "氣質變化時間軸",
+    "traitInsightEmptyHint": "累積7則回答後，將產生首次氣質變化洞察",
+    "age0to6m": "0～6個月",
+    "age7to12m": "7～12個月",
+    "age13to18m": "13～18個月",
+    "age19to24m": "19～24個月",
+    "age25to36m": "25～36個月",
+    "age3to4y": "3～4歲",
+    "age4to5y": "4～5歲",
+    "age5to6y": "5～6歲",
+    "ageElementaryLower": "國小低年級",
+    "ageElementaryUpper": "國小高年級",
+    "milestoneLoadFail": "無法載入發育檢核表",
+    "domainFallbackLabel": "發育",
+    "milestoneCheckTitle": "{{ageLabel}} 發育檢查",
+    "milestoneAllComplete": "已完成所有發育項目！",
+    "milestoneGoodProgress": "發育進展順利！",
+    "milestoneSlowPace": "請慢慢配合孩子的步調",
+    "domainSummaryTitle": "各領域發育現況",
+    "checklistTitle": "發育檢核表",
+    "checklistHint": "點選項目進行勾選，再次點選可查看確認方式",
+    "devTipCardTitle": "促進發育小提示",
+    "devTipImportantTitle": "這個時期的重點",
+    "devTipImportantLow": "即使還有未達成的項目也不用擔心，每個孩子的發育速度不同。充分的遊戲與互動就是最好的刺激。",
+    "devTipImportantHigh": "已經達成許多項目了！這個時期提供多元的經驗很重要，可以嘗試新玩具、戶外活動或與同齡玩伴一起玩耍。",
+    "devTipParentTitle": "家長可以幫忙的地方",
+    "devTipParentIncomplete": "對於尚未達成的項目，可以陪孩子一起玩耍自然練習。不要勉強，在孩子表現出興趣時給予鼓勵會更有效。",
+    "devTipParentComplete": "如果已達成所有項目，可以開始準備下一階段的發育。自然銜接一些更具挑戰性的活動會很不錯。",
+    "nextGoalLabel": "下一個目標"
+  },
+  "fever": {
+    "screenTitle": "發燒發燒",
+    "subtitle": "{{name}}的體溫照護",
+    "emergencyCallShort": "119緊急電話",
+    "emergencyCallFull": "撥打119",
+    "syrupApprox": "糖漿約{{ml}}ml",
+    "level": {
+      "normal": {
+        "label": "正常",
+        "advice": "孩子的體溫在正常範圍內，請放心觀察即可。"
+      },
+      "mild": {
+        "label": "微燒",
+        "advice": "有點微燒。請讓孩子穿輕便衣物並補充水分，用溫水毛巾擦拭身體。"
+      },
+      "moderate": {
+        "label": "中度發燒",
+        "advice": "體溫偏高。可考慮服用退燒藥（劑量與服用方式建議諮詢醫師或藥師）。請於30分鐘後再次量測體溫。"
+      },
+      "high": {
+        "label": "高燒",
+        "advice": "高燒。可考慮服用退燒藥（劑量與服用方式請諮詢醫師或藥師）。若30分鐘後仍未退燒，請至小兒科就診。"
+      },
+      "danger": {
+        "label": "立即就醫",
+        "advice": "屬於危險的高燒程度。請勿等待退燒藥見效，立即前往小兒科或急診室。若出現抽搐或意識不清，請立刻撥打119。"
+      },
+      "emergency": {
+        "label": "緊急 — 撥打119",
+        "advice": "這是可能危及生命的超高燒。請立即撥打119或前往急診室。移動途中也請讓孩子穿薄一點，用溫水擦拭身體以降溫。"
+      }
+    },
+    "method": {
+      "ear": "耳溫",
+      "forehead": "額溫",
+      "armpit": "腋溫"
+    },
+    "actionGuide": {
+      "emergency": {
+        "label": "緊急",
+        "headline": "請立刻撥打119！",
+        "emotion": "媽媽請保持冷靜，讓孩子穿薄一點，用溫水毛巾擦拭身體，同時前往急診室。"
+      },
+      "danger": {
+        "label": "危險高燒",
+        "headline": "請立刻前往急診室！",
+        "emotion": "媽媽請不要慌張。不要等待退燒藥見效，立即前往醫院最為安全。"
+      },
+      "recovering": {
+        "label": "恢復中",
+        "headline": "太好了！體溫正在下降",
+        "emotion": "辛苦了，媽媽！請在1小時後再量一次，確認體溫是否穩定。"
+      },
+      "highWaiting": {
+        "label": "高燒",
+        "headline": "退燒藥還要等{{remain}}分鐘後才能服用",
+        "emotion": "現在請用溫水毛巾擦拭身體，並保持涼爽環境，別忘了補充水分。"
+      },
+      "high": {
+        "label": "高燒",
+        "headline": "可考慮服用退燒藥（僅供參考）",
+        "emotion": "媽媽請不要慌張。是否服藥及劑量僅供參考，若難以判斷請諮詢小兒科或藥師。30分鐘後再量一次體溫。"
+      },
+      "moderateWaiting": {
+        "label": "發燒",
+        "headline": "請再稍微觀察一下",
+        "emotion": "退燒藥正在發揮作用。30分鐘後再量一次即可確認效果。"
+      },
+      "moderate": {
+        "label": "發燒",
+        "headline": "請考慮服用退燒藥",
+        "emotion": "體溫正在上升。請讓孩子穿輕便衣物並充分補充水分。"
+      },
+      "mild": {
+        "label": "微燒",
+        "headline": "可以再觀察一下沒關係",
+        "emotion": "媽媽不用太擔心。請留意水分補充，1小時後再量一次體溫。"
+      },
+      "normal": {
+        "label": "正常",
+        "headline": "目前狀況良好",
+        "emotion": "體溫在正常範圍內，請放心觀察即可。"
+      },
+      "nextCheck": "下次量測：{{time}}"
+    },
+    "time": {
+      "justNowAt": "剛剛（{{time}}）",
+      "minutesAgoAt": "{{diffMin}}分鐘前（{{time}}）",
+      "todayAt": "今天 {{time}}",
+      "hoursUnit": "{{hours}}小時",
+      "minutesUnit": "{{minutes}}分鐘",
+      "atTimeIn": "{{time}}（約{{duration}}後）",
+      "soon": "即將",
+      "justNow": "剛剛",
+      "hoursMinutes": "{{hours}}小時{{minutes}}分",
+      "in": "{{label}}後",
+      "agoLabel": "{{label}}前"
+    },
+    "nextDose": {
+      "reasonSame": "服用{{brandName}}後{{hours}}小時",
+      "reasonAlternating": "交叉服用{{brandName}}後{{hours}}小時"
+    },
+    "measureTime": {
+      "label": "量測時間",
+      "am": "上午",
+      "pm": "下午",
+      "hourPlaceholder": "時",
+      "minutePlaceholder": "分",
+      "now": "現在"
+    },
+    "alert": {
+      "selectChildTitle": "選擇孩子",
+      "selectChildMessage": "請先選擇孩子。",
+      "doseInputTitle": "輸入劑量",
+      "doseInputMessage": "請輸入正確的ml劑量（0～50）。",
+      "deleteMedLogTitle": "刪除記錄",
+      "deleteMedLogMessage": "是否要刪除這筆服用記錄？",
+      "tempInputErrorTitle": "體溫輸入錯誤",
+      "tempInputErrorMessage": "請輸入34.0～43.0之間的體溫。",
+      "recheckReminderTitle": "已設定1小時後再次量測提醒",
+      "recheckReminderMessage": "偵測到高燒。已為您設定1小時後的再次量測提醒，請不要擔心！",
+      "medicineLoadError": "無法載入退燒藥資訊。",
+      "permissionRequiredTitle": "需要權限",
+      "permissionRequiredMessage": "請允許通知權限。",
+      "notificationSetTitle": "通知設定完成",
+      "notificationSetMessage": "{{timeLabel}}後將發出通知。",
+      "notificationErrorTitle": "通知錯誤",
+      "notificationErrorMessage": "無法設定通知。",
+      "clearHistoryTitle": "刪除記錄",
+      "clearHistoryMessage": "是否要刪除所有體溫記錄？",
+      "callFailedTitle": "撥號失敗",
+      "callFailedMessage": "請直接撥打119。",
+      "callFailedDeviceMessage": "裝置無法開啟電話應用程式，請直接撥打119。"
+    },
+    "notification": {
+      "doseTimeTitle": "退燒藥服用時間",
+      "doseTimeBody": "現在是服用{{label}}的時間，請再次確認體溫。"
+    },
+    "tempInput": {
+      "title": "輸入體溫",
+      "desc": "請輸入體溫並選擇量測部位",
+      "adjustNote": "* 使用{{method}}量測時，將以+0.5°C校正後判斷",
+      "checkButton": "確認"
+    },
+    "levelResult": {
+      "adjustedTemp": "（校正{{temp}}°C）"
+    },
+    "medicine": {
+      "sectionTitle": "退燒藥服用劑量（僅供參考）",
+      "sectionDesc": "這是根據孩子體重、以保守數值（建議最小量）計算的參考資訊",
+      "disclaimer": "⚠️ 本畫面的劑量與服用間隔僅供一般參考，不屬於以診斷或治療為目的之醫療行為。\n各藥品濃度不同，請務必確認產品標籤上的濃度（例如：泰諾32mg/ml、Champ ER 48mg/ml）。\n實際用藥、服用及交叉服用請務必諮詢小兒科醫師或藥師後再決定。若懷疑有緊急症狀，請立即撥打119。",
+      "loadError": "無法載入退燒藥資訊。"
+    },
+    "medLog": {
+      "sectionTitle": "退燒藥服用記錄",
+      "sectionDesc": "記錄已服用的退燒藥與劑量，即可自動提示下次可服用的時間",
+      "availableNow": "現在可服用",
+      "nextDose": "下次退燒藥",
+      "nowOk": "{{typeLabel}}{{altSuffix}} 現在可服用",
+      "atTimeType": "{{time}}服用{{typeLabel}}{{altSuffix}}",
+      "altSuffix": "（交叉）",
+      "lastDoseInfo": "上次：{{brandName}} {{doseMl}}ml・{{relative}}",
+      "inAbout": "約{{relative}}後",
+      "historyTitle": "服用紀錄",
+      "viewAll": "查看全部（{{count}}筆）",
+      "empty": "目前尚無記錄。點選上方按鈕記錄服用情況，即可自動計算下次服用時間。"
+    },
+    "history": {
+      "sectionTitle": "體溫記錄",
+      "clearButton": "刪除記錄",
+      "viewAll": "查看全部（{{count}}筆）"
+    },
+    "citation": {
+      "note": "退燒藥劑量與服用間隔為一般標準，實際用藥請務必遵循小兒科醫師或藥師的指示。",
+      "source1": "大韓小兒科學會兒童健康資訊（發燒・退燒藥）",
+      "source2": "疾病管理廳國家健康資訊入口網站（小兒發燒）"
+    },
+    "medModal": {
+      "title": "{{brandName}}記錄",
+      "defaultBrand": "退燒藥",
+      "subLabel": "將記錄為現在（{{time}}）服用",
+      "selectMed": "選擇藥品",
+      "doseLabel": "劑量（ml）",
+      "dosePlaceholder": "例如：5",
+      "noteLabel": "備註（選填）",
+      "notePlaceholder": "例如：38.5度／飯後",
+      "saveButton": "儲存記錄"
+    },
+    "medType": {
+      "acetaminophenGroup": "泰諾類",
+      "ibuprofenGroup": "布洛芬類",
+      "antipyretic": "退燒藥"
+    },
+    "brand": {
+      "tylenol": "泰諾",
+      "champ": "Champ",
+      "brufen": "布洛芬",
+      "maxibupen": "麥克斯布洛芬",
+      "other": "其他",
+      "champER": "Champ ER",
+      "champRed": "Champ（紅色）",
+      "champBlue": "Champ（藍色）"
+    },
+    "weightInput": {
+      "label": "目前體重",
+      "liveCalc": "依輸入值{{weight}}kg即時計算",
+      "defaultCalc": "以{{weight}}kg為基準（輸入後立即變更）"
+    },
+    "medGuide": {
+      "referenceLabel": "參考資訊",
+      "untilNext": "距離下次服用還有{{relative}}",
+      "headlineAvailable": "參考標準：{{brandLabel}} 約{{mlNumber}}ml（請諮詢醫師或藥師後再服用）",
+      "headlineWaiting": "{{relative}}後可服用{{brandLabel}} 約{{mlNumber}}ml（僅供參考）"
+    },
+    "champToggle": {
+      "label": "Champ種類（確認濃度）",
+      "red": "紅色（乙醯胺酚32mg/ml）",
+      "redEr": "ER高濃度（48mg/ml）",
+      "blue": "藍色（布洛芬20mg/ml）"
+    },
+    "notifyButton": {
+      "in4h": "4小時後通知",
+      "in6h": "6小時後通知"
+    }
+  },
+  "momGroup": {
+    "headerTitle": "媽媽悄悄話",
+    "roomTypeMonth": "月份房",
+    "roomTypeNearby": "附近",
+    "category": {
+      "question": "提問",
+      "chat": "閒聊",
+      "info": "資訊",
+      "worry": "煩惱",
+      "celebration": "慶祝"
+    },
+    "reportReason": {
+      "abuse": "辱罵・誹謗",
+      "ad": "廣告・推銷",
+      "privacy": "個資外洩",
+      "spam": "洗版・垃圾訊息",
+      "other": "其他"
+    },
+    "radius": {
+      "sub5": "就在附近",
+      "sub10": "我的社區",
+      "sub50": "我的城市",
+      "sub100": "近郊",
+      "nationwide": "全國",
+      "subNationwide": "依年齡"
+    },
+    "region": {
+      "seoul": "首爾",
+      "busan": "釜山",
+      "daegu": "大邱",
+      "incheon": "仁川",
+      "gwangju": "光州",
+      "daejeon": "大田",
+      "ulsan": "蔚山",
+      "sejong": "世宗",
+      "gyeonggi": "京畿道",
+      "gangwon": "江原道",
+      "chungbuk": "忠清北道",
+      "chungnam": "忠清南道",
+      "jeonbuk": "全羅北道",
+      "jeonnam": "全羅南道",
+      "gyeongbuk": "慶尚北道",
+      "gyeongnam": "慶尚南道",
+      "jeju": "濟州"
+    },
+    "roomLabelNearby": "附近 ・{{label}}{{ageSuffix}}",
+    "roomLabelRegion": "{{label}}地區房",
+    "writePlaceholderNearby": "想跟附近的媽媽們分享什麼呢...",
+    "writePlaceholderMonth": "想跟同月生產的媽媽們分享什麼呢...",
+    "writePlaceholderRegion": "想跟同地區的媽媽們分享什麼呢...",
+    "noContent": "（無內容）",
+    "loadPostsError": "無法載入貼文",
+    "titleRequired": "請輸入標題",
+    "contentRequired": "請輸入內容",
+    "bannedWordError": "內容包含不當用語（辱罵、誹謗等），無法送出。",
+    "submitError": "發佈失敗",
+    "deletePostTitle": "刪除",
+    "deletePostConfirm": "要刪除這則貼文嗎？",
+    "deletePostError": "刪除失敗",
+    "reportReceivedTitle": "已受理",
+    "reportReceivedDesc": "已收到您的檢舉",
+    "reportError": "處理失敗",
+    "anonymousUser": "匿名使用者",
+    "thisUser": "此使用者",
+    "blockDoneTitle": "封鎖完成",
+    "blockDoneDesc": "已無法再看到此使用者的貼文，也已通知營運團隊審核。",
+    "blockError": "封鎖失敗",
+    "blockConfirmTitle": "要封鎖{{name}}嗎？",
+    "blockConfirmDesc": "封鎖後，此使用者的貼文與留言將立即從動態消失，並會通知營運團隊審核。",
+    "block": "封鎖",
+    "reportReasonTitle": "選擇檢舉原因",
+    "reportReasonMessage": "累計被檢舉3次以上將自動隱藏",
+    "bookmarkError": "收藏處理失敗",
+    "deleteCommentTitle": "刪除",
+    "deleteCommentConfirm": "要刪除這則留言嗎？",
+    "searchFieldAll": "全部",
+    "searchFieldTitle": "標題",
+    "searchFieldContent": "內容",
+    "searchFieldNickname": "發文者",
+    "searchPlaceholderTitle": "依標題搜尋",
+    "searchPlaceholderContent": "依內容搜尋",
+    "searchPlaceholderNickname": "依發文者搜尋",
+    "searchPlaceholderAll": "搜尋全部",
+    "locationPrompt": "請先設定所在位置－點擊即可設定",
+    "locationCurrentLabel": "目前設定：",
+    "locationRegisteredFallback": "已設定座標位置",
+    "ageDifferenceLabel": "孩子年齡差",
+    "sameAge": "同齡",
+    "ageRangePlusMinus": "±{{n}}歲",
+    "matchSameAge": "同齡配對：{{year}}年出生",
+    "matchRange": "配對範圍：{{from}}~{{to}}年出生",
+    "groupLabel": "{{year}}年{{month}}月媽媽悄悄話",
+    "monthOnly": "{{month}}月",
+    "resetToMyMonth": "回到我的預產月（{{month}}）",
+    "sortRecent": "最新",
+    "sortPopular": "熱門",
+    "sortHonor": "榮譽榜",
+    "sortBookmark": "收藏",
+    "sortMine": "我的貼文",
+    "emptyBookmarks": "尚無收藏的貼文",
+    "emptyMine": "尚未發佈任何貼文",
+    "emptySearchResult": "找不到「{{query}}」的搜尋結果",
+    "emptyCategory": "這個分類尚無貼文",
+    "emptyRadius": "{{area}}尚無貼文",
+    "radiusKmArea": "{{km}}公里內",
+    "emptyFirstPost": "來發第一篇貼文吧！",
+    "expandViewLabel": "查看{{label}}{{countSuffix}}",
+    "pagePrev": "上一頁",
+    "pageNext": "下一頁",
+    "pageTotalCount": "{{count}}則",
+    "writeButton": "發表貼文",
+    "editPostTitle": "編輯貼文",
+    "newPostTitle": "{{roomLabel}} ・新貼文",
+    "titleLabel": "標題",
+    "titlePlaceholder": "請輸入標題",
+    "contentLabel": "內容",
+    "removePhoto": "刪除照片",
+    "attachPhoto": "附加照片（選填）",
+    "pinToTop": "置頂",
+    "pinToTopDesc": "將固定顯示在動態最上方（僅限最新3則官方貼文適用）",
+    "editComplete": "編輯完成",
+    "publish": "發佈",
+    "postDetailTitle": "貼文",
+    "editedSuffix": "（已編輯）",
+    "officialBadge": "官方",
+    "nationwidePopularBadge": "全國熱門",
+    "officialBannerText": "營運團隊公告・A-matda官方貼文",
+    "anonymous": "匿名",
+    "saved": "已收藏",
+    "bookmark": "收藏",
+    "report": "檢舉",
+    "emptyComments": "來留下第一則留言吧",
+    "commentPlaceholder": "輸入留言...",
+    "send": "送出",
+    "badgeEvent": "活動",
+    "badgeRecommend": "推薦",
+    "badgeNationwide": "全國",
+    "viewCount": "瀏覽{{count}}",
+    "likeCount": "讚{{count}}",
+    "timeAgo": {
+      "justNow": "剛剛",
+      "minutes": "{{count}}分鐘前",
+      "hours": "{{count}}小時前",
+      "days": "{{count}}天前"
+    }
+  },
+  "birthBag": {
+    "headerTitle": "生產包清單",
+    "shareBtn": "分享",
+    "heroTitle": "媽媽和爸爸一起完成吧",
+    "heroSub": "依照分娩方式和產後計畫，讓爸媽一起準備吧。",
+    "birthTypeLabel": "分娩方式",
+    "postpartumPlanLabel": "產後準備",
+    "progressLabel": "進度",
+    "progressDone": "準備完成！安心等待寶寶到來吧",
+    "itemCount": "{{count}}項",
+    "essentialBadge": "必備",
+    "customBadge": "自行新增",
+    "addStatusTag": "+ 狀態",
+    "addOwnerTag": "+ 負責人",
+    "ownerTag": "{{owner}}負責",
+    "adLabel": "廣告",
+    "addItemBtn": "+ 新增項目",
+    "hiddenLink": "查看已隱藏的 {{count}} 個項目",
+    "ownerLabelMom": "媽媽",
+    "shareFailTitle": "分享失敗",
+    "shareFailDesc": "請稍後再試一次。",
+    "shareSummary": "Amatda 生產包清單已完成 {{progressPct}}%，剩餘 {{remaining}} 項。和家人一起準備吧！\n{{url}}",
+    "copyDoneTitle": "連結已複製",
+    "copyDoneDesc": "貼到 LINE 或簡訊中分享吧。",
+    "owner": {
+      "mom": "媽媽",
+      "dad": "爸爸",
+      "both": "一起"
+    },
+    "status": {
+      "need": "需要購買",
+      "ready": "準備完成",
+      "packed": "已放入包裡",
+      "na": "不適用"
+    },
+    "categoryLabel": {
+      "mom": "媽媽（產婦）用品袋",
+      "baby": "寶寶用品袋",
+      "docs": "文件袋"
+    },
+    "birthTypes": {
+      "natural": {
+        "label": "自然產",
+        "sub": "會陰恢復"
+      },
+      "csection": {
+        "label": "剖腹產",
+        "sub": "腹部恢復"
+      }
+    },
+    "postpartumPlans": {
+      "sanhujowon": {
+        "label": "產後護理中心",
+        "sub": "入住後需額外準備"
+      },
+      "home": {
+        "label": "回家休養",
+        "sub": "在家進行產後護理"
+      }
+    },
+    "summaryChip": {
+      "total": "總計",
+      "done": "已完成",
+      "need": "需購買",
+      "dad": "爸爸負責"
+    },
+    "dadMode": {
+      "title": "爸爸模式",
+      "activeTitle": "爸爸模式 — 只顯示負責項目",
+      "sub": "快速查看爸爸負責的 {{count}} 項",
+      "activeSub": "剩餘 {{count}} 項．點一下回到一般檢視",
+      "shareBtn": "分享給老公"
+    },
+    "filter": {
+      "all": "全部",
+      "need": "需要購買",
+      "dad": "爸爸負責 {{count}}",
+      "unassigned": "未指定",
+      "hideDone": "隱藏已完成"
+    },
+    "recommend": {
+      "hygiene": {
+        "title": "產後衛生用品推薦",
+        "desc": "攜帶式沖洗器・產褥墊・溢乳墊"
+      },
+      "essential": {
+        "title": "生產包必備用品",
+        "desc": "會陰坐墊・攜帶式沖洗器・彈性襪"
+      },
+      "baby": {
+        "title": "寶寶用品推薦",
+        "desc": "新生兒尿布・濕紙巾・紗布巾"
+      }
+    },
+    "tip": {
+      "title": "一起準備的小提醒",
+      "text": "點選負責標籤分配給媽媽或爸爸，就不會搞混誰要準備什麼。汽座請在出院當天前先裝好在車上。"
+    },
+    "shareModal": {
+      "title": "與家人分享生產包清單",
+      "subtitle": "不需安裝App，家人可透過網頁連結立即查看",
+      "loading": "連結產生中...",
+      "optionNative": "用 LINE・簡訊傳送",
+      "optionCopy": "複製連結",
+      "privacyNote": "不會分享寶寶的真實姓名與預產期。連結將於 30 天後自動失效。"
+    },
+    "picker": {
+      "ownerTitle": "選擇負責人",
+      "statusTitle": "選擇狀態",
+      "ownerUnset": "未定",
+      "statusClear": "清除狀態"
+    },
+    "addModal": {
+      "title": "新增項目到{{category}}",
+      "nameLabel": "名稱",
+      "namePlaceholder": "例）攜帶式加濕器",
+      "hintLabel": "說明（選填）",
+      "hintPlaceholder": "例）產後護理中心防乾燥用",
+      "submit": "新增"
+    },
+    "moreMenu": {
+      "title": "項目選項",
+      "hide": "隱藏此項目",
+      "deleteForever": "永久刪除"
+    },
+    "hiddenModal": {
+      "title": "已隱藏項目（{{count}}）",
+      "empty": "沒有已隱藏的項目",
+      "restore": "復原"
+    },
+    "items": {
+      "m1": {
+        "label": "產褥墊（大片5-7片）"
+      },
+      "m2": {
+        "label": "哺乳內衣2-3件"
+      },
+      "m3": {
+        "label": "舒適睡衣・罩衫（前開式）"
+      },
+      "m4": {
+        "label": "拖鞋（病房用）"
+      },
+      "m5": {
+        "label": "盥洗用品（牙刷・牙膏・洗髮精・毛巾）"
+      },
+      "m6": {
+        "label": "手機充電器（長線）"
+      },
+      "m7": {
+        "label": "水壺・吸管杯（躺著也方便喝水）"
+      },
+      "m8": {
+        "label": "束腹帶",
+        "hint": "剖腹產恢復必備"
+      },
+      "m9": {
+        "label": "會陰坐墊・甜甜圈坐墊",
+        "hint": "有助自然產恢復"
+      },
+      "m19": {
+        "label": "攜帶式沖洗器（產婦用）",
+        "hint": "會陰部・如廁後溫和清潔不刺激。剖腹產媽媽彎腰不便時也很實用"
+      },
+      "m10": {
+        "label": "換洗衣物（出院時穿的舒適衣服）"
+      },
+      "m11": {
+        "label": "簡單點心（補充糖分）"
+      },
+      "m12": {
+        "label": "眼鏡・隱形眼鏡保養用品"
+      },
+      "m13": {
+        "label": "髮圈・髮帶"
+      },
+      "m14": {
+        "label": "溢乳墊（防止溢奶）"
+      },
+      "m15": {
+        "label": "產後護理中心用罩衫・居家服",
+        "hint": "入住第一天就需要"
+      },
+      "m16": {
+        "label": "產後護理中心保濕用品（臉部・身體）"
+      },
+      "m17": {
+        "label": "產後保健品（鐵質・綜合維他命）",
+        "hint": "在家需自行準備"
+      },
+      "m18": {
+        "label": "餐食準備（調理包・小菜）"
+      },
+      "b1": {
+        "label": "新生兒包屁衣2-3件"
+      },
+      "b2": {
+        "label": "包巾・外層包巾"
+      },
+      "b3": {
+        "label": "新生兒帽子"
+      },
+      "b4": {
+        "label": "手套・腳套"
+      },
+      "b5": {
+        "label": "新生兒尿布（1號1包）"
+      },
+      "b6": {
+        "label": "濕紙巾（無香）"
+      },
+      "b7": {
+        "label": "汽車安全座椅（出院時必備）",
+        "hint": "須具備KC認證"
+      },
+      "b8": {
+        "label": "寶寶毛巾・紗布巾5-6條"
+      },
+      "b9": {
+        "label": "出院服（依季節準備）"
+      },
+      "b10": {
+        "label": "奶瓶・少量配方奶（以防萬一）"
+      },
+      "d1": {
+        "label": "孕婦健康手冊"
+      },
+      "d2": {
+        "label": "身分證件（產婦・監護人）"
+      },
+      "d3": {
+        "label": "健保卡"
+      },
+      "d4": {
+        "label": "住院・生產用品收據"
+      },
+      "d5": {
+        "label": "出生登記用印章（選填）"
+      },
+      "d6": {
+        "label": "登記分娩醫院電話",
+        "hint": "在SOS／陣痛紀錄中可立即撥打電話"
+      }
+    },
+    "productHints": {
+      "m1": "產婦最常準備的大片產褥墊",
+      "m2": "前開式＋加大尺寸 — 哺乳內衣首選",
+      "m3": "從住院到出院都能穿的罩衫式設計",
+      "m4": "無鞋跟防滑拖鞋（病房用）",
+      "m5": "迷你旅行組 — 單手掌握",
+      "m6": "長線＋行動電源組合",
+      "m7": "適合躺著喝水的吸管隨行杯",
+      "m8": "剖腹產媽媽必備 — 骨盆護理束腹帶",
+      "m9": "甜甜圈坐墊 — 自然產後恢復好物",
+      "m19": "攜帶式沖洗器 — 會陰護理首選",
+      "m10": "舒適孕婦裝（直接當出院服）",
+      "m11": "預防低血糖的產婦點心組合",
+      "m12": "眼鏡／隱形眼鏡迷你保養組",
+      "m13": "髮圈／髮帶 — 生產過程也能用",
+      "m14": "溢乳墊 — 防溢奶5件組",
+      "m15": "產後護理中心罩衫／居家服（前開式）",
+      "m16": "產後護理中心保濕保養（低刺激系列）",
+      "m17": "產後保健品（鐵質／綜合維他命）",
+      "m18": "產後餐食調理包／小菜定期配送",
+      "b1": "純棉新生兒包屁衣組",
+      "b2": "包巾・外層包巾組 — 助眠好幫手",
+      "b3": "新生兒帽子 — 保暖必備",
+      "b4": "純棉手套・腳套（防抓傷）",
+      "b5": "新生兒1號尿布（4kg以下）",
+      "b6": "無香濕紙巾 — 敏感肌適用",
+      "b7": "KC認證新生兒汽座 — 出院必備",
+      "b8": "寶寶紗布巾純棉組",
+      "b9": "依季節挑選的出院服（3-5kg）",
+      "b10": "新生兒配方奶＋奶瓶迷你組"
+    }
   }
 }

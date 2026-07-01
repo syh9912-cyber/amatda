@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   View,
   Text,
@@ -182,18 +184,18 @@ function getMilestonesForWeek(week: number): MilestoneOption[] {
 /*  Week-appropriate questions                                         */
 /* ================================================================== */
 
-function getWeeklyQuestion(name: string, week: number): { emoji: string; text: string } {
-  if (week <= 6) return { emoji: '🌱', text: `${name}의 첫 초음파, 확인하셨나요?` };
-  if (week <= 10) return { emoji: '💓', text: `${name} 심장소리는 들으셨나요?` };
-  if (week <= 13) return { emoji: '🔬', text: `${name} 목투명대(NT) 검사는 받으셨나요?` };
-  if (week <= 16) return { emoji: '🌿', text: `안정기에요! ${name}가 잘 크고 있나요?` };
-  if (week <= 20) return { emoji: '🎀', text: `${name}가 왕자인가요 공주인가요?` };
-  if (week <= 24) return { emoji: '🦶', text: `${name} 태동을 자주 느끼시나요?` };
-  if (week <= 28) return { emoji: '📋', text: `${name} 키는 많이 컸나요? 잘 크고 있나요?` };
-  if (week <= 32) return { emoji: '📚', text: `출산 준비는 시작하셨나요?` };
-  if (week <= 36) return { emoji: '🧳', text: `${name} 출산가방은 준비되었나요?` };
-  if (week <= 39) return { emoji: '🤰', text: `${name} 만날 준비 되셨나요?` };
-  return { emoji: '👶', text: `${name} 만나셨나요?` };
+function getWeeklyQuestion(name: string, week: number, t: TFunction): { emoji: string; text: string } {
+  if (week <= 6) return { emoji: '🌱', text: t('pregnancy.weeklyQuestion.week6', { name }) };
+  if (week <= 10) return { emoji: '💓', text: t('pregnancy.weeklyQuestion.week10', { name }) };
+  if (week <= 13) return { emoji: '🔬', text: t('pregnancy.weeklyQuestion.week13', { name }) };
+  if (week <= 16) return { emoji: '🌿', text: t('pregnancy.weeklyQuestion.week16', { name }) };
+  if (week <= 20) return { emoji: '🎀', text: t('pregnancy.weeklyQuestion.week20', { name }) };
+  if (week <= 24) return { emoji: '🦶', text: t('pregnancy.weeklyQuestion.week24', { name }) };
+  if (week <= 28) return { emoji: '📋', text: t('pregnancy.weeklyQuestion.week28', { name }) };
+  if (week <= 32) return { emoji: '📚', text: t('pregnancy.weeklyQuestion.week32') };
+  if (week <= 36) return { emoji: '🧳', text: t('pregnancy.weeklyQuestion.week36', { name }) };
+  if (week <= 39) return { emoji: '🤰', text: t('pregnancy.weeklyQuestion.week39', { name }) };
+  return { emoji: '👶', text: t('pregnancy.weeklyQuestion.week40plus', { name }) };
 }
 
 /* ================================================================== */
@@ -278,6 +280,7 @@ function generatePregnancyAlbumHTML(
   dateFrom: string,
   dateTo: string,
   coverUri: string | null,
+  t: TFunction,
 ): string {
   const sorted = [...photos].sort((a, b) => a.date.localeCompare(b.date));
 
@@ -314,7 +317,7 @@ function generatePregnancyAlbumHTML(
       `<div class="cover-title">${escapeHtml(title)}</div>` +
       `<div class="cover-period-alt">${escapeHtml(dateFrom)} ~ ${escapeHtml(dateTo)}</div>` +
       `<div class="cover-line"></div>` +
-      `<div class="cover-count">${sorted.length}장의 소중한 기록</div>` +
+      `<div class="cover-count">${escapeHtml(t('pregnancy.pdf.coverCount', { count: sorted.length }))}</div>` +
       `</div>`;
 
   let pageCounter = 0;
@@ -329,9 +332,9 @@ function generatePregnancyAlbumHTML(
         `<div class="divider-inner">` +
         `<div class="divider-deco">&#10047;</div>` +
         `<div class="divider-year">${y}</div>` +
-        `<div class="divider-month">${monthNum}<span class="divider-month-unit">월</span></div>` +
+        `<div class="divider-month">${monthNum}<span class="divider-month-unit">${escapeHtml(t('pregnancy.pdf.monthUnit'))}</span></div>` +
         `<div class="divider-rule"></div>` +
-        `<div class="divider-caption">&#10084; 소중한 순간 ${ps.length}장 &#10084;</div>` +
+        `<div class="divider-caption">&#10084; ${escapeHtml(t('pregnancy.pdf.dividerCaption', { count: ps.length }))} &#10084;</div>` +
         `</div></div>`;
 
       const photoPagesHTML: string[] = [];
@@ -359,7 +362,7 @@ function generatePregnancyAlbumHTML(
                 `</div>`
               : `<div class="photo-img-wrap photo-img-placeholder">` +
                 `<div class="placeholder-icon">📷</div>` +
-                `<div class="placeholder-text">사진을 불러올 수 없어요</div>` +
+                `<div class="placeholder-text">${escapeHtml(t('pregnancy.pdf.imageLoadFailed'))}</div>` +
                 `</div>`;
             return (
               `<div class="photo-cell">` +
@@ -379,7 +382,7 @@ function generatePregnancyAlbumHTML(
         photoPagesHTML.push(
           `<div class="photo-page">` +
             cornerDeco +
-            `<div class="page-header">${monthNum}월 &middot; ${pageCounter} / ${totalPhotoPages}</div>` +
+            `<div class="page-header">${escapeHtml(t('pregnancy.pdf.pageHeaderMonth', { month: monthNum }))} &middot; ${pageCounter} / ${totalPhotoPages}</div>` +
             `<div class="photo-grid">${cellsHTML}${emptyCells}</div>` +
             `</div>`,
         );
@@ -392,9 +395,9 @@ function generatePregnancyAlbumHTML(
     `<div class="ending-page">` +
     cornerDeco +
     `<div class="ending-heart">&#10084;</div>` +
-    `<div class="ending-msg">사랑해,<br/>소중한 ${escapeHtml(childName)}</div>` +
+    `<div class="ending-msg">${escapeHtml(t('pregnancy.pdf.endingMessage', { name: childName })).replace(/\n/g, '<br/>')}</div>` +
     `<div class="ending-rule"></div>` +
-    `<div class="ending-sub">너를 기다리는 모든 순간이<br/>우리의 기적이야</div>` +
+    `<div class="ending-sub">${escapeHtml(t('pregnancy.pdf.endingSub')).replace(/\n/g, '<br/>')}</div>` +
     `<div class="ending-period">${escapeHtml(dateFrom)} ~ ${escapeHtml(dateTo)}</div>` +
     `</div>`;
 
@@ -477,6 +480,7 @@ ${endingHTML}
 /* ================================================================== */
 
 function NextCheckupSection({ childId }: { childId: string }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [iso, setIso] = useState<string | null>(null);
   const ver = useCheckupStore((s) => s.version);
@@ -506,14 +510,14 @@ function NextCheckupSection({ childId }: { childId: string }) {
       >
         <EmojiOrIcon emoji={'🏥'} size={26} textStyle={checkupStyles.icon} />
         <View style={{ flex: 1 }}>
-          <Text style={checkupStyles.label}>다음 검진 일정</Text>
+          <Text style={checkupStyles.label}>{t('pregnancy.nextCheckupLabel')}</Text>
           {iso ? (
             <Text style={checkupStyles.value}>
               {formatKoreanDate(iso)}
               <Text style={checkupStyles.dday}>{`  ${dday}`}</Text>
             </Text>
           ) : (
-            <Text style={checkupStyles.placeholder}>탭해서 등록 (홈에 D-day 표시)</Text>
+            <Text style={checkupStyles.placeholder}>{t('pregnancy.tapToRegisterHint')}</Text>
           )}
         </View>
         <Text style={checkupStyles.arrow}>{'>'}</Text>
@@ -576,11 +580,12 @@ const checkupStyles = StyleSheet.create({
 /* ================================================================== */
 
 export default function PregnancyScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const child = useChildStore((s) => s.selectedChild);
   const childId = child?.id ?? '';
   const currentWeek = child?.pregnancyWeeks ?? 0;
-  const childName = child?.name ?? '아가';
+  const childName = child?.name ?? t('pregnancy.defaultChildName');
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -667,9 +672,9 @@ export default function PregnancyScreen() {
         setComposePhoto(result.assets[0].uri);
       }
     } catch {
-      Alert.alert('오류', '사진을 불러오지 못했습니다');
+      Alert.alert(t('common.error'), t('pregnancy.photoLoadFailed'));
     }
-  }, []);
+  }, [t]);
 
   const generateDiary = useCallback(async () => {
     if (!childId) return;
@@ -681,14 +686,14 @@ export default function PregnancyScreen() {
         setDiaryText(data.diary);
         setDiaryDate(data.date ?? new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(0, 10));
       } else {
-        Alert.alert('알림', '오늘의 기록이 아직 없어서 일기를 생성할 수 없어요.');
+        Alert.alert(t('common.notice'), t('pregnancy.diaryNoRecordToday'));
       }
     } catch {
-      Alert.alert('오류', 'AI 일기 생성에 실패했습니다.');
+      Alert.alert(t('common.error'), t('pregnancy.diaryGenerateFailed'));
     } finally {
       setDiaryLoading(false);
     }
-  }, [childId]);
+  }, [childId, t]);
 
   /* ── 앨범 표지 이미지 선택 ── */
   const pickCoverImage = useCallback(async () => {
@@ -705,9 +710,9 @@ export default function PregnancyScreen() {
         setAlbumCoverUri(result.assets[0].uri);
       }
     } catch {
-      Alert.alert('오류', '사진을 불러오지 못했습니다');
+      Alert.alert(t('common.error'), t('pregnancy.photoLoadFailed'));
     }
-  }, []);
+  }, [t]);
 
   /* ── 임신앨범 PDF 생성 ── */
   const handleGeneratePregnancyAlbum = useCallback(async () => {
@@ -734,13 +739,13 @@ export default function PregnancyScreen() {
         .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
       if (filtered.length === 0) {
-        Alert.alert('사진 없음', '선택한 기간에 사진이 없어요.\n먼저 사진을 추가해주세요.');
+        Alert.alert(t('pregnancy.noPhotos'), t('pregnancy.noPhotosInPeriod'));
         return;
       }
 
       const title =
         albumTitle.trim() ||
-        `${childName} 임신앨범 ${albumDateFrom}~${albumDateTo}`;
+        t('pregnancy.albumDefaultTitleWithRange', { name: childName, from: albumDateFrom, to: albumDateTo });
 
       // 이미지 → base64 변환. 변환 실패 시 PDF 에 빈 이미지로 들어가지 않도록 skip.
       // 옛 글의 file:// 임시 경로는 시간 지나면 invalid (expo-image-picker 임시 파일 삭제) →
@@ -794,11 +799,12 @@ export default function PregnancyScreen() {
         albumDateFrom,
         albumDateTo,
         coverDataUri,
+        t,
       );
       const printPromise = Print.printToFileAsync({ html, base64: false });
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(
-          () => reject(new Error('PDF 생성이 너무 오래 걸립니다. 잠시 후 다시 시도해주세요.')),
+          () => reject(new Error(t('pregnancy.pdfGenerateTimeout'))),
           90_000,
         ),
       );
@@ -808,28 +814,27 @@ export default function PregnancyScreen() {
       if (canShare) {
         await Sharing.shareAsync(uri, {
           mimeType: 'application/pdf',
-          dialogTitle: '임신앨범 저장',
+          dialogTitle: t('pregnancy.albumSaveDialogTitle'),
           UTI: 'com.adobe.pdf',
         });
       } else {
-        Alert.alert('저장 완료', `임신앨범 PDF가 생성됐어요.\n${uri}`);
+        Alert.alert(t('pregnancy.saveComplete'), t('pregnancy.albumPdfGenerated', { uri }));
       }
       if (failCount > 0) {
         Alert.alert(
-          '일부 사진 누락',
-          `${filtered.length}장 중 ${failCount}장은 사진을 불러올 수 없어 PDF 에 포함되지 않았어요.\n` +
-          `(임시 파일이 삭제됐거나 업로드가 완료되지 않은 사진)`,
+          t('pregnancy.somePhotosMissing'),
+          t('pregnancy.somePhotosMissingBody', { total: filtered.length, failCount }),
         );
       }
       setShowAlbumForm(false);
       setAlbumTitle('');
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      Alert.alert('오류', `앨범 생성에 실패했습니다.\n${msg}`);
+      Alert.alert(t('common.error'), t('pregnancy.albumGenerateFailed', { msg }));
     } finally {
       setAlbumGenerating(false);
     }
-  }, [albumDateFrom, albumDateTo, albumTitle, albumCoverUri, timeline, childName]);
+  }, [albumDateFrom, albumDateTo, albumTitle, albumCoverUri, timeline, childName, t]);
 
   /* ── Load data ── */
   const loadTimeline = useCallback(async () => {
@@ -864,7 +869,7 @@ export default function PregnancyScreen() {
   const handleSaveUnified = useCallback(async () => {
     if (!childId) return;
     if (!composePhoto && !composeMemo.trim() && !composeMilestoneChip && !composeSymptomChip) {
-      Alert.alert('알림', '사진, 메모, 또는 마일스톤·증상 중 하나는 입력해주세요');
+      Alert.alert(t('common.notice'), t('pregnancy.composeEmptyInput'));
       return;
     }
     setSaving(true);
@@ -896,9 +901,8 @@ export default function PregnancyScreen() {
             childId,
           });
           Alert.alert(
-            '사진 업로드 실패',
-            '네트워크 또는 서버 문제로 사진을 저장할 수 없어요.\n' +
-            '잠시 후 다시 시도해주세요. (Wi-Fi 연결을 확인하시면 도움이 됩니다)',
+            t('pregnancy.photoUploadFailed'),
+            t('pregnancy.photoUploadFailedBody'),
           );
           setSaving(false);
           return;
@@ -953,11 +957,11 @@ export default function PregnancyScreen() {
       setShareToFamily(false);
       await Promise.all([loadTimeline(), loadHealth()]);
     } catch {
-      Alert.alert('오류', '저장에 실패했습니다');
+      Alert.alert(t('common.error'), t('pregnancy.saveFailed'));
     } finally {
       setSaving(false);
     }
-  }, [childId, composePhoto, composeMemo, composeMilestoneChip, composeSymptomChip, currentWeek, loadTimeline, loadHealth, shareToFamily]);
+  }, [childId, composePhoto, composeMemo, composeMilestoneChip, composeSymptomChip, currentWeek, loadTimeline, loadHealth, shareToFamily, t]);
 
   useEffect(() => {
     loadTimeline();
@@ -982,7 +986,7 @@ export default function PregnancyScreen() {
       if (mode === 'camera') {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('권한 필요', '카메라 접근 권한을 허용해주세요');
+          Alert.alert(t('pregnancy.permissionNeeded'), t('pregnancy.cameraPermissionRequest'));
           return;
         }
         const result = await ImagePicker.launchCameraAsync({
@@ -1008,15 +1012,15 @@ export default function PregnancyScreen() {
         }
       }
     } catch {
-      Alert.alert('오류', '미디어를 불러올 수 없습니다');
+      Alert.alert(t('common.error'), t('pregnancy.mediaLoadFailed'));
     }
   };
 
   const pickImage = () => {
-    Alert.alert('사진/영상 추가', '어떻게 추가할까요?', [
-      { text: '카메라로 촬영', onPress: () => launchPicker('camera') },
-      { text: '앨범에서 선택', onPress: () => launchPicker('gallery') },
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('pregnancy.addPhotoVideo'), t('pregnancy.howToAdd'), [
+      { text: t('pregnancy.takePhoto'), onPress: () => launchPicker('camera') },
+      { text: t('pregnancy.chooseFromAlbum'), onPress: () => launchPicker('gallery') },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
   };
 
@@ -1030,7 +1034,7 @@ export default function PregnancyScreen() {
     const hasHealth = selectedSymptoms.length > 0 || healthMemo.trim().length > 0;
 
     if (!hasDoctorNote && !hasMedia && !hasMilestones && !hasHealth) {
-      Alert.alert('알림', '하나 이상의 항목을 입력해주세요');
+      Alert.alert(t('common.notice'), t('pregnancy.atLeastOneItem'));
       return;
     }
 
@@ -1095,7 +1099,7 @@ export default function PregnancyScreen() {
       loadTimeline();
       loadHealth();
     } catch {
-      Alert.alert('오류', '기록 저장에 실패했습니다');
+      Alert.alert(t('common.error'), t('pregnancy.recordSaveFailed'));
     }
     setSaving(false);
   };
@@ -1119,11 +1123,11 @@ export default function PregnancyScreen() {
       setEditingItem(null);
       loadTimeline();
     } catch {
-      Alert.alert('오류', '수정에 실패했습니다');
+      Alert.alert(t('common.error'), t('pregnancy.editFailed'));
     } finally {
       setEditSaving(false);
     }
-  }, [editingItem, editMemo, editNewImage, loadTimeline]);
+  }, [editingItem, editMemo, editNewImage, loadTimeline, t]);
 
   const pickEditImage = useCallback(async () => {
     try {
@@ -1131,17 +1135,17 @@ export default function PregnancyScreen() {
       // Photo Picker 사용 — 미디어 권한 요청 불필요 (Google Play 정책 준수)
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [4, 3] });
       if (!result.canceled && result.assets[0]) setEditNewImage(result.assets[0].uri);
-    } catch { Alert.alert('오류', '사진을 불러오지 못했습니다'); }
-  }, []);
+    } catch { Alert.alert(t('common.error'), t('pregnancy.photoLoadFailed')); }
+  }, [t]);
 
   /* ── 길게 누르기 → 수정/삭제 ── */
   const handleLongPress = (item: { id: string; source: string; title: string; content?: string; emoji?: string; mediaUri?: string }) => {
     if (item.id.startsWith('dev-')) return;
     const canEdit = item.source !== 'health';
     const buttons: import('react-native').AlertButton[] = [
-      { text: '취소', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
@@ -1152,14 +1156,14 @@ export default function PregnancyScreen() {
             }
             loadTimeline();
           } catch {
-            Alert.alert('오류', '삭제에 실패했습니다');
+            Alert.alert(t('common.error'), t('pregnancy.deleteFailed'));
           }
         },
       },
     ];
     if (canEdit) {
       buttons.unshift({
-        text: '수정',
+        text: t('common.edit'),
         onPress: () => {
           setEditNewImage(null);
           setEditingItem(item);
@@ -1167,7 +1171,7 @@ export default function PregnancyScreen() {
         },
       });
     }
-    Alert.alert('기록 관리', item.title, buttons);
+    Alert.alert(t('pregnancy.recordManage'), item.title, buttons);
   };
 
   const toggleSymptom = (sid: string) => {
@@ -1185,22 +1189,22 @@ export default function PregnancyScreen() {
   if (!child?.isPregnant) {
     return (
       <View style={styles.container}>
-        <Stack.Screen options={{ title: '임신앨범' }} />
+        <Stack.Screen options={{ title: t('pregnancy.screenTitle') }} />
         <View style={styles.emptyCenter}>
-          <Text style={styles.emptyText}>임신 중인 아이를 선택해주세요</Text>
+          <Text style={styles.emptyText}>{t('pregnancy.selectPregnantChild')}</Text>
         </View>
       </View>
     );
   }
 
-  const weekQuestion = getWeeklyQuestion(childName, currentWeek);
+  const weekQuestion = getWeeklyQuestion(childName, currentWeek, t);
   const availableMilestones = getMilestonesForWeek(currentWeek);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScreenHeader title="임신앨범" right={<GuideButton onPress={() => setGuideVisible(true)} color="#E91E63" />} />
+      <ScreenHeader title={t('pregnancy.screenTitle')} right={<GuideButton onPress={() => setGuideVisible(true)} color="#E91E63" />} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -1208,13 +1212,13 @@ export default function PregnancyScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── 부제목 (제목은 ScreenHeader로 이동) ── */}
-        <Text style={styles.albumChildLabel}>{childName}의 임신앨범</Text>
+        <Text style={styles.albumChildLabel}>{t('pregnancy.childAlbumLabel', { name: childName })}</Text>
 
         {/* ── 현재 임신 주차 배지 (성장앨범 currentBadge와 동일) ── */}
         {currentWeek > 0 && (
           <View style={styles.currentBadge}>
             <EmojiOrIcon emoji={'🤰'} size={18} />
-            <Text style={styles.currentBadgeText}>{` 현재 임신 ${currentWeek}주차`}</Text>
+            <Text style={styles.currentBadgeText}>{t('pregnancy.currentWeekBadge', { week: currentWeek })}</Text>
           </View>
         )}
 
@@ -1233,18 +1237,18 @@ export default function PregnancyScreen() {
             <View>
               <Image source={{ uri: composePhoto }} style={styles.composePhoto} resizeMode="cover" />
               <TouchableOpacity style={styles.composePhotoChange} onPress={composePickPhoto} activeOpacity={0.7}>
-                <Text style={styles.composePhotoChangeText}>변경</Text>
+                <Text style={styles.composePhotoChangeText}>{t('common.change')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <TouchableOpacity style={styles.composePhotoPlaceholder} onPress={composePickPhoto} activeOpacity={0.7}>
               <EmojiOrIcon emoji={'📷'} size={32} textStyle={styles.composePlaceholderEmoji} />
-              <Text style={styles.composePlaceholderText}>사진을 추가하세요</Text>
+              <Text style={styles.composePlaceholderText}>{t('pregnancy.addPhotoPrompt')}</Text>
             </TouchableOpacity>
           )}
 
           {/* 마일스톤 칩 (한 줄) */}
-          <Text style={styles.composeChipGroupLabel}>마일스톤</Text>
+          <Text style={styles.composeChipGroupLabel}>{t('pregnancy.milestoneLabel')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.composeChipScroll}>
             {availableMilestones.map((ms) => {
               const isActive = composeMilestoneChip?.id === ms.type;
@@ -1267,7 +1271,7 @@ export default function PregnancyScreen() {
           </ScrollView>
 
           {/* 엄마 기분 칩 (한 줄) */}
-          <Text style={styles.composeChipGroupLabel}>엄마 기분</Text>
+          <Text style={styles.composeChipGroupLabel}>{t('pregnancy.momMoodLabel')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.composeChipScroll}>
             {symptomPresets.map((s) => {
               const isActive = composeSymptomChip?.id === s.id;
@@ -1292,7 +1296,7 @@ export default function PregnancyScreen() {
           {/* 메모 입력 */}
           <TextInput
             style={styles.composeInput}
-            placeholder="하고싶은 이야기나 진료기록을 메모하세요"
+            placeholder={t('pregnancy.composeMemoPlaceholder')}
             placeholderTextColor={COLORS.textLight}
             value={composeMemo}
             onChangeText={setComposeMemo}
@@ -1308,7 +1312,7 @@ export default function PregnancyScreen() {
             <View style={[styles.composeShareCheck, shareToFamily && styles.composeShareCheckActive]}>
               {shareToFamily && <Text style={styles.composeShareCheckMark}>✓</Text>}
             </View>
-            <Text style={styles.composeShareText}>가족피드에도 공유하기</Text>
+            <Text style={styles.composeShareText}>{t('pregnancy.shareToFamilyFeed')}</Text>
           </TouchableOpacity>
 
           {/* 저장 버튼 */}
@@ -1321,7 +1325,7 @@ export default function PregnancyScreen() {
             {saving ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.composeSaveBtnText}>저장</Text>
+              <Text style={styles.composeSaveBtnText}>{t('common.save')}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -1338,7 +1342,7 @@ export default function PregnancyScreen() {
           ) : (
             <>
               <EmojiOrIcon emoji={'📝'} size={18} textStyle={styles.aiDiaryBtnEmoji} />
-              <Text style={styles.aiDiaryBtnText}> AI 오늘 일기</Text>
+              <Text style={styles.aiDiaryBtnText}>{t('pregnancy.aiTodayDiary')}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -1349,7 +1353,7 @@ export default function PregnancyScreen() {
             <View style={styles.diaryHeader}>
               <View style={styles.diaryHeaderRow}>
                 <EmojiOrIcon emoji={'📝'} size={16} />
-                <Text style={styles.diaryHeaderText}>{` AI 일기 - ${diaryDate}`}</Text>
+                <Text style={styles.diaryHeaderText}>{t('pregnancy.aiDiaryHeader', { date: diaryDate })}</Text>
               </View>
               <TouchableOpacity onPress={() => setDiaryText(null)}>
                 <Text style={styles.diaryClose}>{'✕'}</Text>
@@ -1367,7 +1371,7 @@ export default function PregnancyScreen() {
           if (flatItems.length === 0) return null;
           return (
             <>
-              <Text style={styles.feedCount}>{flatItems.length}장의 기록</Text>
+              <Text style={styles.feedCount}>{t('pregnancy.feedCount', { count: flatItems.length })}</Text>
               {flatItems.map((item) => {
                 const stripColor = item.type === 'milestone' ? '#FF8C5A' : item.source === 'health' ? '#E91E63' : '#FF8C5A';
                 // 기존 기록 emoji null 보완: 증상 이름으로 역추적
@@ -1427,17 +1431,17 @@ export default function PregnancyScreen() {
           <View style={styles.emptyCenter}>
             <EmojiOrIcon emoji={timelineError ? '⚠️' : '📝'} size={48} textStyle={styles.emptyIcon} />
             <Text style={styles.emptyText}>
-              {timelineError ? '기록을 불러오지 못했어요' : '첫 임신앨범 기록을 남겨보세요'}
+              {timelineError ? t('pregnancy.loadRecordsFailed') : t('pregnancy.leaveFirstRecord')}
             </Text>
             <Text style={styles.emptySubText}>
-              {timelineError ? '네트워크 확인 후 다시 시도해주세요' : '진료기록, 초음파, 마일스톤, 엄마상태를 한번에 기록할 수 있어요'}
+              {timelineError ? t('pregnancy.checkNetworkRetry') : t('pregnancy.emptyStateDesc')}
             </Text>
             {timelineError && (
               <TouchableOpacity
                 style={{ marginTop: 16, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 12, backgroundColor: '#E91E63' }}
                 onPress={loadTimeline}
               >
-                <Text style={{ color: '#FFF', fontWeight: '700' }}>다시 시도</Text>
+                <Text style={{ color: '#FFF', fontWeight: '700' }}>{t('common.retry')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1446,7 +1450,7 @@ export default function PregnancyScreen() {
         {/* ── 임신앨범 만들기 (성장앨범과 동일 구조) ── */}
         <View style={styles.albumSection}>
           <View style={styles.albumSectionHeader}>
-            <Text style={styles.albumSectionTitle}>{'임신앨범 만들기'}</Text>
+            <Text style={styles.albumSectionTitle}>{t('pregnancy.createAlbumTitle')}</Text>
             <TouchableOpacity
               onPress={() => {
                 setShowAlbumForm((v) => {
@@ -1462,7 +1466,7 @@ export default function PregnancyScreen() {
                     const fromYM = userItems[0] ?? toYM;
                     if (!albumDateFrom) setAlbumDateFrom(fromYM);
                     if (!albumDateTo) setAlbumDateTo(toYM);
-                    if (!albumTitle) setAlbumTitle(`${childName} 임신앨범`);
+                    if (!albumTitle) setAlbumTitle(t('pregnancy.albumDefaultTitle', { name: childName }));
                   }
                   return !v;
                 });
@@ -1470,19 +1474,19 @@ export default function PregnancyScreen() {
               style={styles.albumNewBtn}
               activeOpacity={0.8}
             >
-              <Text style={styles.albumNewBtnText}>{showAlbumForm ? '닫기' : '+ 새 앨범'}</Text>
+              <Text style={styles.albumNewBtnText}>{showAlbumForm ? t('common.close') : t('pregnancy.newAlbumBtn')}</Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.albumSectionDesc}>
-            {'기간을 선택하면 기기에서 바로 PDF를 만들어요.\n사진이 있는 기록만 2×2 그리드로 출력돼요'}
+            {t('pregnancy.albumSectionDesc')}
           </Text>
 
           {showAlbumForm && (
             <View style={styles.albumForm}>
-              <Text style={styles.albumFormLabel}>앨범 제목 (선택)</Text>
+              <Text style={styles.albumFormLabel}>{t('pregnancy.albumTitleLabel')}</Text>
               <TextInput
                 style={styles.albumFormInput}
-                placeholder={`${childName} 임신앨범`}
+                placeholder={t('pregnancy.albumDefaultTitle', { name: childName })}
                 value={albumTitle}
                 onChangeText={setAlbumTitle}
                 maxLength={30}
@@ -1490,7 +1494,7 @@ export default function PregnancyScreen() {
               />
               <View style={styles.albumDateRow}>
                 <View style={styles.albumDateField}>
-                  <Text style={styles.albumFormLabel}>시작 월</Text>
+                  <Text style={styles.albumFormLabel}>{t('pregnancy.startMonthLabel')}</Text>
                   <TextInput
                     style={styles.albumFormInput}
                     placeholder="2024-01"
@@ -1503,7 +1507,7 @@ export default function PregnancyScreen() {
                 </View>
                 <Text style={styles.albumDateSep}>{'~'}</Text>
                 <View style={styles.albumDateField}>
-                  <Text style={styles.albumFormLabel}>종료 월</Text>
+                  <Text style={styles.albumFormLabel}>{t('pregnancy.endMonthLabel')}</Text>
                   <TextInput
                     style={styles.albumFormInput}
                     placeholder="2024-12"
@@ -1516,10 +1520,10 @@ export default function PregnancyScreen() {
                 </View>
               </View>
               <Text style={styles.albumFormHint}>
-                {'YYYY-MM 형식 · 사진이 있는 기록만 포함 · 페이지당 4장'}
+                {t('pregnancy.albumFormHint')}
               </Text>
 
-              <Text style={styles.albumFormLabel}>표지 이미지 (선택)</Text>
+              <Text style={styles.albumFormLabel}>{t('pregnancy.coverImageLabel')}</Text>
               <TouchableOpacity
                 style={styles.albumCoverPicker}
                 onPress={pickCoverImage}
@@ -1548,7 +1552,7 @@ export default function PregnancyScreen() {
                       resizeMode="cover"
                     />
                     <View style={styles.albumCoverDefaultOverlay}>
-                      <Text style={styles.albumCoverDefaultText}>{'기본 표지 · 탭하여 변경'}</Text>
+                      <Text style={styles.albumCoverDefaultText}>{t('pregnancy.defaultCoverHint')}</Text>
                     </View>
                   </>
                 )}
@@ -1562,7 +1566,7 @@ export default function PregnancyScreen() {
               >
                 {albumGenerating
                   ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={styles.albumGenerateBtnText}>{'앨범 생성 시작'}</Text>
+                  : <Text style={styles.albumGenerateBtnText}>{t('pregnancy.startGenerateAlbum')}</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -1571,8 +1575,8 @@ export default function PregnancyScreen() {
 
         <MedicalCitation
           sources={[
-            { label: '보건복지부·임신육아종합포털 「아이사랑」 임신 주차별 정보', url: 'https://www.childcare.go.kr' },
-            { label: '대한산부인과학회 임신·출산 정보', url: 'https://www.ksog.org' },
+            { label: t('pregnancy.citationChildcarePortal'), url: 'https://www.childcare.go.kr' },
+            { label: t('pregnancy.citationKsog'), url: 'https://www.ksog.org' },
           ]}
         />
         <View style={{ height: 40 }} />
@@ -1591,9 +1595,9 @@ export default function PregnancyScreen() {
             <View style={[styles.modalCard, { paddingBottom: 24 }]}>
               <View style={styles.modalHeader}>
                 <TouchableOpacity onPress={() => setEditingItem(null)} style={styles.modalBackBtn}>
-                  <Text style={styles.modalBackText}>{'< 취소'}</Text>
+                  <Text style={styles.modalBackText}>{t('pregnancy.backCancel')}</Text>
                 </TouchableOpacity>
-                <Text style={styles.modalTitle}>기록 수정</Text>
+                <Text style={styles.modalTitle}>{t('pregnancy.editRecordTitle')}</Text>
                 <View style={{ width: 50 }} />
               </View>
               {editingItem && (
@@ -1614,12 +1618,12 @@ export default function PregnancyScreen() {
                 onPress={pickEditImage}
               >
                 <Text style={{ fontSize: FONT_SIZE.sm, color: COLORS.primary, fontWeight: '700' }}>
-                  {(editNewImage ?? editingItem?.mediaUri) ? '📷 사진 변경' : '📷 사진 추가'}
+                  {(editNewImage ?? editingItem?.mediaUri) ? t('pregnancy.changePhoto') : t('pregnancy.addPhoto')}
                 </Text>
               </TouchableOpacity>
               <TextInput
                 style={[styles.formInput, { minHeight: 100, textAlignVertical: 'top' }]}
-                placeholder="메모를 입력하세요"
+                placeholder={t('pregnancy.memoInputPlaceholder')}
                 placeholderTextColor={COLORS.textLight}
                 value={editMemo}
                 onChangeText={setEditMemo}
@@ -1634,7 +1638,7 @@ export default function PregnancyScreen() {
               >
                 {editSaving
                   ? <ActivityIndicator color="#FFF" />
-                  : <Text style={styles.composeSaveBtnText}>저장</Text>
+                  : <Text style={styles.composeSaveBtnText}>{t('common.save')}</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -1667,9 +1671,9 @@ export default function PregnancyScreen() {
                     }}
                     style={styles.modalBackBtn}
                   >
-                    <Text style={styles.modalBackText}>{'< 뒤로'}</Text>
+                    <Text style={styles.modalBackText}>{t('pregnancy.backToBack')}</Text>
                   </TouchableOpacity>
-                  <Text style={styles.modalTitle}>임신 {currentWeek}주차 기록</Text>
+                  <Text style={styles.modalTitle}>{t('pregnancy.weekRecordTitle', { week: currentWeek })}</Text>
                   <View style={{ width: 50 }} />
                 </View>
 
@@ -1677,11 +1681,11 @@ export default function PregnancyScreen() {
                 <View style={styles.formSection}>
                   <View style={styles.formLabelRow}>
                     <EmojiOrIcon emoji={'🏥'} size={18} />
-                    <Text style={styles.formLabel}> 선생님 이야기</Text>
+                    <Text style={styles.formLabel}>{t('pregnancy.doctorNoteLabel')}</Text>
                   </View>
                   <TextInput
                     style={[styles.formInput, { minHeight: 80, textAlignVertical: 'top' }]}
-                    placeholder="진료 시 들은 이야기를 적어주세요"
+                    placeholder={t('pregnancy.doctorNotePlaceholder')}
                     placeholderTextColor={COLORS.textLight}
                     value={doctorNote}
                     onChangeText={setDoctorNote}
@@ -1693,7 +1697,7 @@ export default function PregnancyScreen() {
                 <View style={styles.formSection}>
                   <View style={styles.formLabelRow}>
                     <EmojiOrIcon emoji={'📸'} size={18} />
-                    <Text style={styles.formLabel}> 초음파 / 영상</Text>
+                    <Text style={styles.formLabel}>{t('pregnancy.ultrasoundVideoLabel')}</Text>
                   </View>
                   <TouchableOpacity style={styles.mediaPickerBtn} onPress={pickImage} activeOpacity={0.7}>
                     {mediaUri ? (
@@ -1701,13 +1705,13 @@ export default function PregnancyScreen() {
                     ) : (
                       <View style={styles.mediaPlaceholder}>
                         <Text style={styles.mediaPlaceholderIcon}>{'+'}</Text>
-                        <Text style={styles.mediaPlaceholderText}>사진/영상 추가</Text>
+                        <Text style={styles.mediaPlaceholderText}>{t('pregnancy.addPhotoVideoShort')}</Text>
                       </View>
                     )}
                   </TouchableOpacity>
                   {mediaUri && (
                     <TouchableOpacity onPress={() => setMediaUri(null)} style={styles.mediaRemoveBtn}>
-                      <Text style={styles.mediaRemoveText}>삭제</Text>
+                      <Text style={styles.mediaRemoveText}>{t('common.delete')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -1716,7 +1720,7 @@ export default function PregnancyScreen() {
                 {availableMilestones.length > 0 && (
                   <View style={styles.formSection}>
                     <View style={styles.formLabelRow}>
-                      <Text style={styles.formLabel}>{'★'} 이번 주 마일스톤</Text>
+                      <Text style={styles.formLabel}>{'★'} {t('pregnancy.thisWeekMilestone')}</Text>
                     </View>
                     <View style={styles.chipGrid}>
                       {availableMilestones.map((ms) => {
@@ -1742,7 +1746,7 @@ export default function PregnancyScreen() {
                 <View style={styles.formSection}>
                   <View style={styles.formLabelRow}>
                     <EmojiOrIcon emoji={'🤰'} size={18} />
-                    <Text style={styles.formLabel}> 엄마 상태</Text>
+                    <Text style={styles.formLabel}>{t('pregnancy.momStatusLabel')}</Text>
                   </View>
                   <View style={styles.chipGrid}>
                     {symptomPresets.map((preset) => {
@@ -1764,7 +1768,7 @@ export default function PregnancyScreen() {
 
                   {selectedSymptoms.length > 0 && (
                     <>
-                      <Text style={styles.subLabel}>힘든 정도</Text>
+                      <Text style={styles.subLabel}>{t('pregnancy.severityLabel')}</Text>
                       <View style={styles.severityRow}>
                         {[1, 2, 3, 4, 5].map((level) => (
                           <TouchableOpacity
@@ -1783,7 +1787,7 @@ export default function PregnancyScreen() {
 
                   <TextInput
                     style={[styles.formInput, { minHeight: 60, textAlignVertical: 'top' }]}
-                    placeholder="직접 입력 (증상이나 기분을 자유롭게 적어주세요)"
+                    placeholder={t('pregnancy.freeInputPlaceholder')}
                     placeholderTextColor={COLORS.textLight}
                     value={healthMemo}
                     onChangeText={setHealthMemo}
@@ -1805,7 +1809,7 @@ export default function PregnancyScreen() {
                       setHealthMemo('');
                     }}
                   >
-                    <Text style={styles.modalCancelText}>취소</Text>
+                    <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.modalSaveBtn, saving && styles.saveBtnDisabled]}
@@ -1813,7 +1817,7 @@ export default function PregnancyScreen() {
                     disabled={saving}
                   >
                     <Text style={styles.modalSaveText}>
-                      {saving ? '저장 중...' : '저장'}
+                      {saving ? t('pregnancy.saving') : t('common.save')}
                     </Text>
                   </TouchableOpacity>
                 </View>

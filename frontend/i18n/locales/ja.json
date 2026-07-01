@@ -495,5 +495,887 @@
     "monthN": "{{count}}月",
     "endingMessage": "大好きだよ、<br/>大切な{{name}}",
     "endingSub": "あなたのすべての瞬間が<br/>私たちの奇跡だよ"
+  },
+  "pregnancy": {
+    "defaultChildName": "赤ちゃん",
+    "screenTitle": "マタニティアルバム",
+    "selectPregnantChild": "妊娠中のお子さまを選択してください",
+    "childAlbumLabel": "{{name}}のマタニティアルバム",
+    "currentWeekBadge": " 現在妊娠{{week}}週目",
+    "weeklyQuestion": {
+      "week6": "{{name}}の最初のエコー、確認しましたか？",
+      "week10": "{{name}}の心音は聞こえましたか？",
+      "week13": "{{name}}のNT（後頸部浮腫）検査は受けましたか？",
+      "week16": "安定期ですね！{{name}}はすくすく育っていますか？",
+      "week20": "{{name}}は王子さまですか、お姫さまですか？",
+      "week24": "{{name}}の胎動をよく感じますか？",
+      "week28": "{{name}}の身長はだいぶ伸びましたか？順調に育っていますか？",
+      "week32": "出産準備は始めましたか？",
+      "week36": "{{name}}の入院バッグは準備できましたか？",
+      "week39": "{{name}}に会う準備はできましたか？",
+      "week40plus": "{{name}}に会えましたか？"
+    },
+    "pdf": {
+      "coverCount": "{{count}}枚の大切な記録",
+      "monthUnit": "月",
+      "dividerCaption": "大切な瞬間 {{count}}枚",
+      "imageLoadFailed": "写真を読み込めませんでした",
+      "pageHeaderMonth": "{{month}}月",
+      "endingMessage": "愛してるよ、\n大切な{{name}}",
+      "endingSub": "あなたを待つすべての瞬間が\n私たちの奇跡だよ"
+    },
+    "photoLoadFailed": "写真を読み込めませんでした",
+    "diaryNoRecordToday": "今日の記録がまだないため、日記を作成できません。",
+    "diaryGenerateFailed": "AI日記の生成に失敗しました。",
+    "noPhotos": "写真がありません",
+    "noPhotosInPeriod": "選択した期間に写真がありません。\nまず写真を追加してください。",
+    "albumDefaultTitleWithRange": "{{name}}のマタニティアルバム {{from}}〜{{to}}",
+    "pdfGenerateTimeout": "PDFの生成に時間がかかりすぎています。しばらくしてからもう一度お試しください。",
+    "albumSaveDialogTitle": "マタニティアルバムを保存",
+    "saveComplete": "保存完了",
+    "albumPdfGenerated": "マタニティアルバムのPDFが作成されました。\n{{uri}}",
+    "somePhotosMissing": "一部の写真が欠落しています",
+    "somePhotosMissingBody": "全{{total}}枚のうち{{failCount}}枚は写真を読み込めず、PDFに含まれませんでした。\n（一時ファイルが削除されたか、アップロードが完了していない写真です）",
+    "albumGenerateFailed": "アルバムの作成に失敗しました。\n{{msg}}",
+    "composeEmptyInput": "写真、メモ、またはマイルストーン・症状のいずれかを入力してください",
+    "photoUploadFailed": "写真のアップロードに失敗しました",
+    "photoUploadFailedBody": "ネットワークまたはサーバーの問題で写真を保存できませんでした。\nしばらくしてからもう一度お試しください。（Wi-Fi接続をご確認いただくと解決する場合があります）",
+    "saveFailed": "保存に失敗しました",
+    "permissionNeeded": "権限が必要です",
+    "cameraPermissionRequest": "カメラへのアクセス権限を許可してください",
+    "mediaLoadFailed": "メディアを読み込めませんでした",
+    "addPhotoVideo": "写真・動画を追加",
+    "howToAdd": "どのように追加しますか？",
+    "takePhoto": "カメラで撮影",
+    "chooseFromAlbum": "アルバムから選択",
+    "atLeastOneItem": "1つ以上の項目を入力してください",
+    "recordSaveFailed": "記録の保存に失敗しました",
+    "editFailed": "編集に失敗しました",
+    "deleteFailed": "削除に失敗しました",
+    "recordManage": "記録の管理",
+    "feedCount": "{{count}}件の記録",
+    "loadRecordsFailed": "記録を読み込めませんでした",
+    "leaveFirstRecord": "最初のマタニティアルバムの記録を残してみましょう",
+    "checkNetworkRetry": "ネットワークをご確認の上、もう一度お試しください",
+    "emptyStateDesc": "診察記録、エコー、マイルストーン、ママの体調をまとめて記録できます",
+    "createAlbumTitle": "マタニティアルバムを作る",
+    "albumDefaultTitle": "{{name}}のマタニティアルバム",
+    "newAlbumBtn": "+ 新しいアルバム",
+    "albumSectionDesc": "期間を選択すると端末上ですぐにPDFを作成します。\n写真がある記録のみ2×2グリッドで出力されます",
+    "albumTitleLabel": "アルバムタイトル（任意）",
+    "startMonthLabel": "開始月",
+    "endMonthLabel": "終了月",
+    "albumFormHint": "YYYY-MM形式 ・ 写真がある記録のみ含む ・ 1ページ4枚",
+    "coverImageLabel": "表紙画像（任意）",
+    "defaultCoverHint": "デフォルト表紙 ・ タップして変更",
+    "startGenerateAlbum": "アルバム作成を開始",
+    "citationChildcarePortal": "保健福祉部・妊娠育児総合ポータル「アイサラン」妊娠週数別情報",
+    "citationKsog": "大韓産婦人科学会 妊娠・出産情報",
+    "backCancel": "< キャンセル",
+    "editRecordTitle": "記録を編集",
+    "changePhoto": "📷 写真を変更",
+    "addPhoto": "📷 写真を追加",
+    "memoInputPlaceholder": "メモを入力してください",
+    "backToBack": "< 戻る",
+    "weekRecordTitle": "妊娠{{week}}週目の記録",
+    "doctorNoteLabel": " 先生からのお話",
+    "doctorNotePlaceholder": "診察で聞いたお話を記入してください",
+    "ultrasoundVideoLabel": " エコー・動画",
+    "addPhotoVideoShort": "写真・動画を追加",
+    "thisWeekMilestone": "今週のマイルストーン",
+    "momStatusLabel": " ママの状態",
+    "severityLabel": "つらさの程度",
+    "freeInputPlaceholder": "自由入力（症状や気分を自由に記入してください）",
+    "saving": "保存中...",
+    "addPhotoPrompt": "写真を追加してください",
+    "milestoneLabel": "マイルストーン",
+    "momMoodLabel": "ママの気分",
+    "composeMemoPlaceholder": "伝えたいことや診察記録をメモしてください",
+    "shareToFamilyFeed": "家族フィードにも共有する",
+    "aiTodayDiary": " AI今日の日記",
+    "aiDiaryHeader": " AI日記 - {{date}}",
+    "nextCheckupLabel": "次の検診予定",
+    "tapToRegisterHint": "タップして登録（ホームにD-dayを表示）"
+  },
+  "growthStats": {
+    "tabPhysical": "身長・体重・成長",
+    "levelVeryLow": "非常に低い",
+    "levelLow": "低い",
+    "levelNormal": "正常",
+    "levelHigh": "高い",
+    "levelVeryHigh": "非常に高い",
+    "percentileLarge": "大きめ・上位{{value}}%",
+    "percentileSlightlyLarge": "やや大きめ・パーセンタイル{{value}}",
+    "percentileAverage": "同年齢平均・パーセンタイル{{value}}",
+    "percentileSlightlySmall": "やや小さめ・パーセンタイル{{value}}",
+    "percentileSmall": "小さめ・下位{{value}}%",
+    "weeklyDevTitle": "週数別発達",
+    "weeklyDevCitationNote": "週数別の発達情報は一般的な参考用です。個々の状態については産婦人科の専門医にご相談ください。",
+    "citationSourceChildcare": "保健福祉部・妊娠育児総合ポータル「アイサラン」妊娠週数別情報",
+    "citationSourceKsog": "大韓産婦人科学会 妊娠・出産情報",
+    "growthCitationNote": "成長パーセンタイル・統計は標準成長曲線に基づく参考用です。個々の評価は小児科の専門医にご相談ください。",
+    "citationSourceKdca": "疾病管理庁・大韓小児科学会「2017年 小児青少年成長曲線」",
+    "citationSourceWho": "WHO Child Growth Standards（0〜5歳）",
+    "defaultChildName": "お子さま",
+    "growthHeaderTitle": "成長記録＆変化",
+    "task1": "葉酸を毎日摂取（400〜800mcg）",
+    "task2": "初めての産婦人科受診＋心音確認",
+    "task3": "1次奇形児検査（NT、頸部浮腫）",
+    "task4": "鉄分摂取を開始（ほうれん草／赤身肉）",
+    "task5": "2次奇形児検査（クアッド／トリプル）",
+    "task6": "精密超音波検査（レベル2）",
+    "task7": "性別が確認できる時期",
+    "task8": "妊娠糖尿病検査（GCT）",
+    "task9": "出産準備クラスの受講",
+    "task10": "胎動カウントを毎日チェック",
+    "task11": "NST（ノンストレステスト）",
+    "task12": "GBS検査（B群溶血性連鎖球菌）",
+    "task13": "入院バッグの準備",
+    "task14": "陣痛間隔タイマーの準備",
+    "trimester1": "妊娠初期（第1トリメスター）",
+    "trimester2": "妊娠中期（安定期）",
+    "trimester3": "妊娠後期（第3トリメスター）",
+    "safetySearchFail": "検索に失敗しました。しばらくしてからもう一度お試しください。",
+    "medicalDisclaimer": "ⓘ この情報は一般的な参考用であり、医療診断・処方に代わるものではありません。薬・食事・症状に関する判断は必ず産婦人科の専門医にご相談ください。緊急の兆候（激しい出血・腹痛・胎動の急減・視野異常・強いむくみなど）がある場合は、すぐに病院を受診してください。",
+    "currentlyPregnant": "現在の妊娠週数",
+    "weekNumber": "妊娠{{week}}週",
+    "sizeOf": "{{size}}くらいの大きさ",
+    "daysUntilDueDate": "出産予定日まで",
+    "dDayHint": "📅 主要な検査・出産日のお知らせが自動で登録されます",
+    "weeklyTasksTitle": "📋 今週のToDo・検査",
+    "taskTypeExam": "検査",
+    "taskTypeTodo": "やること",
+    "safetySearchTitle": "妊婦の禁忌検索",
+    "safetySearchSub": "食品・薬・カフェインの安全性を確認",
+    "weekLabel": "{{week}}週",
+    "featTitle": "👶 今週の赤ちゃんの発達",
+    "momChangeTitle": "🤰 ママの体の変化",
+    "foodTipTitle": "🍎 おすすめの食事・栄養",
+    "cautionTitle": "⚠️ 注意",
+    "weekPhotosTitle": " 今週の記録写真",
+    "bottomHint": "妊娠アルバムに写真をアップロードすると、該当する週数に自動で表示されます",
+    "safetySearchPlaceholder": "例：コーヒー、刺身、タイレノール、高麗人参など",
+    "safetySearchButton": "検索",
+    "safetyAnalyzing": "AIが分析中です...",
+    "safetyLevelSafe": "安全",
+    "safetyLevelCaution": "注意",
+    "safetyLevelAvoid": "避けてください",
+    "safetyDosTitle": "✓ このように摂取してください",
+    "safetyDontsTitle": "✗ 注意事項",
+    "analysisParseFail": "分析結果を処理できませんでした。",
+    "analysisRequestFail": "成長分析に失敗しました。もう一度お試しください。",
+    "analyzeBtn": "成長を分析する",
+    "analysisModalTitle": "成長分析",
+    "analysisLoadingTitle": "お子さまの成長データを分析しています...",
+    "analysisLoadingSubtitle": "AIが成長パターンを丁寧に確認しています",
+    "overallAnalysisTitle": "総合分析",
+    "detailItemsTitle": "詳細項目",
+    "genderBoy": "男の子",
+    "genderGirl": "女の子",
+    "heightWeightRequired": "身長または体重を入力してください",
+    "viewOnlyTitle": "閲覧のみ",
+    "viewOnlyMessage": "成長記録を保存する権限がありません。\n保護者に「子どものプロフィール編集」権限を依頼してください。",
+    "saveCompleteTitle": "保存完了",
+    "saveCompleteMessage": "{{date}}の成長記録を保存しました",
+    "saveFailMessage": "保存に失敗しました。もう一度お試しください。",
+    "firstRecordTitle": "最初の記録（{{ageLabel}}）",
+    "heightLabel": "身長",
+    "weightLabel": "体重",
+    "percentileHeader": "同月齢の{{genderLabel}}との比較",
+    "heightWeightChangeTitle": "身長＆体重の変化",
+    "chartPlaceholder": "身長または体重を記録するとグラフが表示されます",
+    "latestRecordTitleWithDate": "最新の記録（{{date}}）",
+    "latestRecordTitle": "最新の記録",
+    "recordCountLabel": "記録数",
+    "recordInputTitle": "記録を入力",
+    "measureDateLabel": "測定日",
+    "heightCmLabel": "身長（cm）",
+    "weightKgLabel": "体重（kg）",
+    "saving": "保存中...",
+    "saveRecord": "記録を保存",
+    "recordHistoryTitle": "成長記録の履歴",
+    "traitSaveCompleteMessage": "今日の気質観察を記録しました",
+    "traitChangeRecordTitle": "気質の変化記録",
+    "currentTraitTypeLabel": "現在の気質タイプ",
+    "traitResponseProgress": "回答累計{{count}}件・最初のインサイトまで{{progress}}/7",
+    "dailyQuestionTitle": "今日の質問（{{current}}/{{total}}）",
+    "observationPlaceholder": "観察内容を入力してください...",
+    "saveTraitObservation": "気質観察を保存",
+    "traitTimelineTitle": "気質変化タイムライン",
+    "traitInsightEmptyHint": "回答が7件たまると、最初の気質変化インサイトが生成されます",
+    "age0to6m": "0〜6ヶ月",
+    "age7to12m": "7〜12ヶ月",
+    "age13to18m": "13〜18ヶ月",
+    "age19to24m": "19〜24ヶ月",
+    "age25to36m": "25〜36ヶ月",
+    "age3to4y": "3〜4歳",
+    "age4to5y": "4〜5歳",
+    "age5to6y": "5〜6歳",
+    "ageElementaryLower": "小学校低学年",
+    "ageElementaryUpper": "小学校高学年",
+    "milestoneLoadFail": "発達チェックリストを読み込めませんでした",
+    "domainFallbackLabel": "発達",
+    "milestoneCheckTitle": "{{ageLabel}} 発達チェック",
+    "milestoneAllComplete": "すべての発達項目を達成しました！",
+    "milestoneGoodProgress": "順調に発達しています！",
+    "milestoneSlowPace": "ゆっくりお子さまのペースに合わせてあげてください",
+    "domainSummaryTitle": "領域別の発達状況",
+    "checklistTitle": "発達チェックリスト",
+    "checklistHint": "項目をタップしてチェックし、もう一度タップすると確認方法が見られます",
+    "devTipCardTitle": "発達を促すヒント",
+    "devTipImportantTitle": "この時期に大切なこと",
+    "devTipImportantLow": "まだ達成できていない項目があっても心配いりません。発達のペースは子どもによって異なります。十分な遊びと関わり合いが一番の刺激になります。",
+    "devTipImportantHigh": "たくさんの項目を達成しましたね！この時期はさまざまな経験をさせてあげることが大切です。新しいおもちゃや外遊び、お友達との遊びを試してみましょう。",
+    "devTipParentTitle": "保護者ができるサポート",
+    "devTipParentIncomplete": "未達成の項目は、お子さまと一緒に遊びながら自然に練習してみましょう。無理強いせず、お子さまが興味を示したときに励ましてあげるのが効果的です。",
+    "devTipParentComplete": "すべての項目を達成したら、次の発達段階の準備をしてみましょう。もう少し挑戦的な活動へ自然につなげていくとよいです。",
+    "nextGoalLabel": "次の目標"
+  },
+  "fever": {
+    "screenTitle": "ねつねつ",
+    "subtitle": "{{name}}の体温ケア",
+    "emergencyCallShort": "119緊急通報",
+    "emergencyCallFull": "119に電話する",
+    "syrupApprox": "シロップ約{{ml}}ml",
+    "level": {
+      "normal": {
+        "label": "正常",
+        "advice": "お子さまの体温は正常範囲です。安心して様子を見てあげてください。"
+      },
+      "mild": {
+        "label": "微熱",
+        "advice": "少し熱があります。服を軽くして水分を摂らせてあげてください。ぬるめの濡れタオルで体を拭いてあげましょう。"
+      },
+      "moderate": {
+        "label": "中等度の発熱",
+        "advice": "体温が高めです。解熱剤の服用を検討してもよいでしょう（用量・服用方法は医師・薬剤師にご相談ください）。30分後に体温を再確認してください。"
+      },
+      "high": {
+        "label": "高熱",
+        "advice": "高熱です。解熱剤の服用を検討してもよいでしょう（用量・服用方法は医師・薬剤師にご相談ください）。30分後も熱が下がらない場合は小児科を受診してください。"
+      },
+      "danger": {
+        "label": "至急受診してください",
+        "advice": "危険な高熱レベルです。解熱剤の効果を待たず、今すぐ小児科・救急外来へ向かってください。けいれんや意識低下がある場合は直ちに119へ通報してください。"
+      },
+      "emergency": {
+        "label": "緊急 — 119へ通報",
+        "advice": "命に関わる危険性のある超高熱です。今すぐ119へ通報するか、救急外来へ向かってください。移動中も服を薄くし、ぬるま湯で体を拭いて体温を下げてあげてください。"
+      }
+    },
+    "method": {
+      "ear": "耳",
+      "forehead": "額",
+      "armpit": "わき"
+    },
+    "actionGuide": {
+      "emergency": {
+        "label": "緊急",
+        "headline": "今すぐ119へ通報してください！",
+        "emotion": "お母さん、落ち着いてください。服を薄くし、ぬるめの濡れタオルで体を拭きながら救急外来へ向かってください。"
+      },
+      "danger": {
+        "label": "危険な高熱",
+        "headline": "今すぐ救急外来へ向かってください！",
+        "emotion": "お母さん、慌てないでください。解熱剤の効果を待たず、病院へ向かうのが最も安全です。"
+      },
+      "recovering": {
+        "label": "回復中",
+        "headline": "よかったです！熱が下がってきています",
+        "emotion": "お疲れさまでした、お母さん！1時間後にもう一度測って、安定しているか確認してください。"
+      },
+      "highWaiting": {
+        "label": "高熱",
+        "headline": "解熱剤はあと{{remain}}分で服用できます",
+        "emotion": "今はぬるめの濡れタオルで体を拭き、涼しい環境を作ってあげてください。水分補給も忘れずに。"
+      },
+      "high": {
+        "label": "高熱",
+        "headline": "解熱剤の服用を検討してもよいでしょう（参考）",
+        "emotion": "お母さん、慌てないでください。服用の可否・用量は参考情報です。判断が難しい場合は小児科・薬剤師にご相談ください。30分後にもう一度測りましょう。"
+      },
+      "moderateWaiting": {
+        "label": "発熱",
+        "headline": "もう少し様子を見てあげてください",
+        "emotion": "解熱剤が効き始めています。30分後に再度測ると効果を確認できます。"
+      },
+      "moderate": {
+        "label": "発熱",
+        "headline": "解熱剤の服用を検討してください",
+        "emotion": "体温が上がってきています。服を軽くして、水分を十分に与えてください。"
+      },
+      "mild": {
+        "label": "微熱",
+        "headline": "もう少し様子を見ても大丈夫です",
+        "emotion": "お母さん、あまり心配しないでください。水分補給に気をつけて、1時間後にもう一度測ってみましょう。"
+      },
+      "normal": {
+        "label": "正常",
+        "headline": "今は大丈夫です",
+        "emotion": "体温は正常範囲です。安心して様子を見てあげてください。"
+      },
+      "nextCheck": "次の測定：{{time}}"
+    },
+    "time": {
+      "justNowAt": "たった今（{{time}}）",
+      "minutesAgoAt": "{{diffMin}}分前（{{time}}）",
+      "todayAt": "本日 {{time}}",
+      "hoursUnit": "{{hours}}時間",
+      "minutesUnit": "{{minutes}}分",
+      "atTimeIn": "{{time}}（約{{duration}}後）",
+      "soon": "まもなく",
+      "justNow": "たった今",
+      "hoursMinutes": "{{hours}}時間{{minutes}}分",
+      "in": "{{label}}後",
+      "agoLabel": "{{label}}前"
+    },
+    "nextDose": {
+      "reasonSame": "{{brandName}}服用から{{hours}}時間後",
+      "reasonAlternating": "{{brandName}}（交互）服用から{{hours}}時間後"
+    },
+    "measureTime": {
+      "label": "測定時刻",
+      "am": "午前",
+      "pm": "午後",
+      "hourPlaceholder": "時",
+      "minutePlaceholder": "分",
+      "now": "今"
+    },
+    "alert": {
+      "selectChildTitle": "お子さまを選択",
+      "selectChildMessage": "まずお子さまを選択してください。",
+      "doseInputTitle": "用量の入力",
+      "doseInputMessage": "正しいml単位の用量を入力してください（0〜50）。",
+      "deleteMedLogTitle": "記録を削除",
+      "deleteMedLogMessage": "この服用記録を削除しますか？",
+      "tempInputErrorTitle": "体温入力エラー",
+      "tempInputErrorMessage": "34.0〜43.0の範囲で体温を入力してください。",
+      "recheckReminderTitle": "1時間後の再測定通知を設定しました",
+      "recheckReminderMessage": "高熱が検知されました。1時間後に再測定できるよう通知を設定しました。心配しないでください！",
+      "medicineLoadError": "解熱剤の情報を読み込めませんでした。",
+      "permissionRequiredTitle": "権限が必要です",
+      "permissionRequiredMessage": "通知の権限を許可してください。",
+      "notificationSetTitle": "通知設定が完了しました",
+      "notificationSetMessage": "{{timeLabel}}後に通知が届きます。",
+      "notificationErrorTitle": "通知エラー",
+      "notificationErrorMessage": "通知を設定できませんでした。",
+      "clearHistoryTitle": "記録を削除",
+      "clearHistoryMessage": "すべての体温記録を削除しますか？",
+      "callFailedTitle": "発信できませんでした",
+      "callFailedMessage": "直接119へお電話ください。",
+      "callFailedDeviceMessage": "端末で電話アプリを開けませんでした。直接119へお電話ください。"
+    },
+    "notification": {
+      "doseTimeTitle": "解熱剤の服用時間",
+      "doseTimeBody": "{{label}}の服用時間です。体温を再確認してください。"
+    },
+    "tempInput": {
+      "title": "体温入力",
+      "desc": "体温を入力し、測定部位を選択してください",
+      "adjustNote": "* {{method}}測定時は+0.5°C補正して判定します",
+      "checkButton": "確認"
+    },
+    "levelResult": {
+      "adjustedTemp": "（補正{{temp}}°C）"
+    },
+    "medicine": {
+      "sectionTitle": "解熱剤の服用量（参考情報）",
+      "sectionDesc": "お子さまの体重を基準に、保守的な数値（推奨最小量）で計算した参考情報です",
+      "disclaimer": "⚠️ この画面の用量・服用間隔は一般的な参考情報であり、診断や治療を目的とした医療行為には該当しません。\n薬によって濃度が異なるため、製品ラベルの濃度（例：タイレノール32mg/ml、チャンプER 48mg/ml）を必ずご確認ください。\n実際の投薬・服用・交互服用は必ず小児科医・薬剤師にご相談の上で決定してください。緊急症状が疑われる場合は直ちに119へご連絡ください。",
+      "loadError": "解熱剤の情報を読み込めませんでした。"
+    },
+    "medLog": {
+      "sectionTitle": "解熱剤服用記録",
+      "sectionDesc": "服用させた解熱剤と用量を記録すると、次に服用できる時間を自動でお知らせします",
+      "availableNow": "今すぐ服用可能",
+      "nextDose": "次の解熱剤",
+      "nowOk": "{{typeLabel}}{{altSuffix}} 今すぐOK",
+      "atTimeType": "{{time}}に{{typeLabel}}{{altSuffix}}",
+      "altSuffix": "（交互）",
+      "lastDoseInfo": "最終服用：{{brandName}} {{doseMl}}ml・{{relative}}",
+      "inAbout": "約{{relative}}後",
+      "historyTitle": "服用履歴",
+      "viewAll": "すべて表示（{{count}}件）",
+      "empty": "まだ記録がありません。上のボタンで服用を記録すると、次の服用時間を自動計算します。"
+    },
+    "history": {
+      "sectionTitle": "体温記録",
+      "clearButton": "記録を削除",
+      "viewAll": "すべて表示（{{count}}件）"
+    },
+    "citation": {
+      "note": "解熱剤の用量・服用間隔は一般的な基準です。実際の投薬は必ず小児科医・薬剤師の指示に従ってください。",
+      "source1": "大韓小児科学会 子どもの健康情報（発熱・解熱剤）",
+      "source2": "疾病管理庁 国家健康情報ポータル（小児の発熱）"
+    },
+    "medModal": {
+      "title": "{{brandName}}の記録",
+      "defaultBrand": "解熱剤",
+      "subLabel": "今（{{time}}）の服用として記録されます",
+      "selectMed": "薬を選択",
+      "doseLabel": "用量（ml）",
+      "dosePlaceholder": "例：5",
+      "noteLabel": "メモ（任意）",
+      "notePlaceholder": "例：38.5度／食後",
+      "saveButton": "記録を保存"
+    },
+    "medType": {
+      "acetaminophenGroup": "タイレノール系",
+      "ibuprofenGroup": "ブルフェン系",
+      "antipyretic": "解熱剤"
+    },
+    "brand": {
+      "tylenol": "タイレノール",
+      "champ": "チャンプ",
+      "brufen": "ブルフェン",
+      "maxibupen": "マキシブペン",
+      "other": "その他",
+      "champER": "チャンプER",
+      "champRed": "チャンプ（赤）",
+      "champBlue": "チャンプ（青）"
+    },
+    "weightInput": {
+      "label": "現在の体重",
+      "liveCalc": "入力値{{weight}}kgでリアルタイム計算",
+      "defaultCalc": "{{weight}}kg基準（入力すると即時変更）"
+    },
+    "medGuide": {
+      "referenceLabel": "参考情報",
+      "untilNext": "次の服用まで{{relative}}",
+      "headlineAvailable": "参考基準：{{brandLabel}} 約{{mlNumber}}ml（医師・薬剤師に相談の上で服用）",
+      "headlineWaiting": "{{relative}}後に{{brandLabel}} 約{{mlNumber}}ml（参考）"
+    },
+    "champToggle": {
+      "label": "チャンプの種類（濃度確認）",
+      "red": "赤（アセトアミノフェン32mg/ml）",
+      "redEr": "ER高濃度（48mg/ml）",
+      "blue": "青（イブプロフェン20mg/ml）"
+    },
+    "notifyButton": {
+      "in4h": "4時間後に通知",
+      "in6h": "6時間後に通知"
+    }
+  },
+  "momGroup": {
+    "headerTitle": "ママトーク",
+    "roomTypeMonth": "月別ルーム",
+    "roomTypeNearby": "近所",
+    "category": {
+      "question": "質問",
+      "chat": "おしゃべり",
+      "info": "情報",
+      "worry": "悩み",
+      "celebration": "お祝い"
+    },
+    "reportReason": {
+      "abuse": "暴言・誹謗",
+      "ad": "広告・宣伝",
+      "privacy": "個人情報の露出",
+      "spam": "荒らし・スパム",
+      "other": "その他"
+    },
+    "radius": {
+      "sub5": "すぐ近く",
+      "sub10": "地元",
+      "sub50": "同じ市内",
+      "sub100": "近郊",
+      "nationwide": "全国",
+      "subNationwide": "年齢別"
+    },
+    "region": {
+      "seoul": "ソウル",
+      "busan": "釜山",
+      "daegu": "大邱",
+      "incheon": "仁川",
+      "gwangju": "光州",
+      "daejeon": "大田",
+      "ulsan": "蔚山",
+      "sejong": "世宗",
+      "gyeonggi": "京畿道",
+      "gangwon": "江原道",
+      "chungbuk": "忠清北道",
+      "chungnam": "忠清南道",
+      "jeonbuk": "全羅北道",
+      "jeonnam": "全羅南道",
+      "gyeongbuk": "慶尚北道",
+      "gyeongnam": "慶尚南道",
+      "jeju": "済州"
+    },
+    "roomLabelNearby": "近所 ・{{label}}{{ageSuffix}}",
+    "roomLabelRegion": "{{label}}地域ルーム",
+    "writePlaceholderNearby": "近所のママたちと話したいことを書いてください...",
+    "writePlaceholderMonth": "同じ月に出産するママたちと話したいことを書いてください...",
+    "writePlaceholderRegion": "同じ地域のママたちと話したいことを書いてください...",
+    "noContent": "（内容なし）",
+    "loadPostsError": "投稿を読み込めませんでした",
+    "titleRequired": "タイトルを入力してください",
+    "contentRequired": "内容を入力してください",
+    "bannedWordError": "不適切な表現（暴言・誹謗など）が含まれているため登録できません。",
+    "submitError": "投稿に失敗しました",
+    "deletePostTitle": "削除",
+    "deletePostConfirm": "この投稿を削除しますか？",
+    "deletePostError": "削除に失敗しました",
+    "reportReceivedTitle": "受付完了",
+    "reportReceivedDesc": "通報を受け付けました",
+    "reportError": "処理に失敗しました",
+    "anonymousUser": "匿名ユーザー",
+    "thisUser": "このユーザー",
+    "blockDoneTitle": "ブロック完了",
+    "blockDoneDesc": "このユーザーの投稿は今後表示されません。運営チームにも確認依頼が送信されました。",
+    "blockError": "ブロック処理に失敗しました",
+    "blockConfirmTitle": "{{name}}さんをブロックしますか？",
+    "blockConfirmDesc": "ブロックすると、このユーザーの投稿とコメントはすぐにフィードから消え、運営チームに確認依頼が送信されます。",
+    "block": "ブロック",
+    "reportReasonTitle": "通報理由を選択",
+    "reportReasonMessage": "3回以上通報されると自動的に非表示になります",
+    "bookmarkError": "ブックマーク処理に失敗しました",
+    "deleteCommentTitle": "削除",
+    "deleteCommentConfirm": "このコメントを削除しますか？",
+    "searchFieldAll": "すべて",
+    "searchFieldTitle": "タイトル",
+    "searchFieldContent": "内容",
+    "searchFieldNickname": "投稿者",
+    "searchPlaceholderTitle": "タイトルで検索",
+    "searchPlaceholderContent": "内容で検索",
+    "searchPlaceholderNickname": "投稿者で検索",
+    "searchPlaceholderAll": "すべてで検索",
+    "locationPrompt": "まず位置情報を登録してください — タップして登録",
+    "locationCurrentLabel": "現在の登録地:",
+    "locationRegisteredFallback": "位置情報登録済み",
+    "ageDifferenceLabel": "子どもの年齢差",
+    "sameAge": "同い年",
+    "ageRangePlusMinus": "±{{n}}歳",
+    "matchSameAge": "同い年マッチング：{{year}}年生まれ",
+    "matchRange": "マッチング範囲：{{from}}〜{{to}}年生まれ",
+    "groupLabel": "{{year}}年{{month}}月ママトーク",
+    "monthOnly": "{{month}}月",
+    "resetToMyMonth": "予定月に戻る（{{month}}）",
+    "sortRecent": "最新",
+    "sortPopular": "人気",
+    "sortHonor": "殿堂",
+    "sortBookmark": "ブックマーク",
+    "sortMine": "自分の投稿",
+    "emptyBookmarks": "ブックマークした投稿がありません",
+    "emptyMine": "まだ投稿がありません",
+    "emptySearchResult": "「{{query}}」の検索結果がありません",
+    "emptyCategory": "このカテゴリーにはまだ投稿がありません",
+    "emptyRadius": "{{area}}に投稿がありません",
+    "radiusKmArea": "{{km}}km圏内",
+    "emptyFirstPost": "最初の投稿をしてみましょう！",
+    "expandViewLabel": "{{label}}を見る{{countSuffix}}",
+    "pagePrev": "前へ",
+    "pageNext": "次へ",
+    "pageTotalCount": "{{count}}件",
+    "writeButton": "投稿する",
+    "editPostTitle": "投稿を編集",
+    "newPostTitle": "{{roomLabel}} ・新規投稿",
+    "titleLabel": "タイトル",
+    "titlePlaceholder": "タイトルを入力してください",
+    "contentLabel": "内容",
+    "removePhoto": "写真を削除",
+    "attachPhoto": "写真を添付（任意）",
+    "pinToTop": "上部固定",
+    "pinToTopDesc": "フィードの最上部に固定表示されます（公式投稿のうち最新3件まで適用）",
+    "editComplete": "編集完了",
+    "publish": "投稿する",
+    "postDetailTitle": "投稿",
+    "editedSuffix": "（編集済み）",
+    "officialBadge": "公式",
+    "nationwidePopularBadge": "全国人気",
+    "officialBannerText": "運営チームからのお知らせ・アマッタ公式投稿です",
+    "anonymous": "匿名",
+    "saved": "保存済み",
+    "bookmark": "ブックマーク",
+    "report": "通報",
+    "emptyComments": "最初のコメントを残しましょう",
+    "commentPlaceholder": "コメントを入力...",
+    "send": "送信",
+    "badgeEvent": "イベント",
+    "badgeRecommend": "おすすめ",
+    "badgeNationwide": "全国",
+    "viewCount": "閲覧{{count}}",
+    "likeCount": "共感{{count}}",
+    "timeAgo": {
+      "justNow": "たった今",
+      "minutes": "{{count}}分前",
+      "hours": "{{count}}時間前",
+      "days": "{{count}}日前"
+    }
+  },
+  "birthBag": {
+    "headerTitle": "出産準備リスト",
+    "shareBtn": "共有",
+    "heroTitle": "ママとパパで一緒に準備しましょう",
+    "heroSub": "分娩方法と産後の計画に合わせて、ママとパパで一緒に準備しましょう。",
+    "birthTypeLabel": "分娩方法",
+    "postpartumPlanLabel": "産後の準備",
+    "progressLabel": "進捗率",
+    "progressDone": "準備完了！あとは安心して待つだけです",
+    "itemCount": "{{count}}点",
+    "essentialBadge": "必須",
+    "customBadge": "自分で追加",
+    "addStatusTag": "+ ステータス",
+    "addOwnerTag": "+ 担当",
+    "ownerTag": "{{owner}}担当",
+    "adLabel": "広告",
+    "addItemBtn": "+ 項目を追加",
+    "hiddenLink": "非表示の項目{{count}}件を見る",
+    "ownerLabelMom": "ママ",
+    "shareFailTitle": "共有に失敗しました",
+    "shareFailDesc": "しばらくしてからもう一度お試しください。",
+    "shareSummary": "Amatda 出産準備リスト {{progressPct}}%完了・残り{{remaining}}件。ご家族と一緒に準備してくださいね！\n{{url}}",
+    "copyDoneTitle": "リンクをコピーしました",
+    "copyDoneDesc": "LINEやメッセージに貼り付けて共有してください。",
+    "owner": {
+      "mom": "ママ",
+      "dad": "パパ",
+      "both": "一緒に"
+    },
+    "status": {
+      "need": "購入が必要",
+      "ready": "準備完了",
+      "packed": "バッグに入れた",
+      "na": "該当なし"
+    },
+    "categoryLabel": {
+      "mom": "ママ（産後ママ）用バッグ",
+      "baby": "赤ちゃん用バッグ",
+      "docs": "書類バッグ"
+    },
+    "birthTypes": {
+      "natural": {
+        "label": "自然分娩",
+        "sub": "会陰の回復"
+      },
+      "csection": {
+        "label": "帝王切開",
+        "sub": "腹部の回復"
+      }
+    },
+    "postpartumPlans": {
+      "sanhujowon": {
+        "label": "産後ケアセンター利用",
+        "sub": "入所後に追加準備"
+      },
+      "home": {
+        "label": "自宅に帰る",
+        "sub": "自宅で産後ケア"
+      }
+    },
+    "summaryChip": {
+      "total": "合計",
+      "done": "完了",
+      "need": "購入必要",
+      "dad": "パパ担当"
+    },
+    "dadMode": {
+      "title": "パパモード",
+      "activeTitle": "パパモード — 担当分のみ表示中",
+      "sub": "パパ担当の{{count}}件だけサクッと準備",
+      "activeSub": "残り{{count}}件・タップで通常表示に戻ります",
+      "shareBtn": "夫に共有"
+    },
+    "filter": {
+      "all": "すべて",
+      "need": "購入が必要",
+      "dad": "パパ担当 {{count}}",
+      "unassigned": "未指定",
+      "hideDone": "完了を非表示"
+    },
+    "recommend": {
+      "hygiene": {
+        "title": "産後の衛生グッズおすすめ",
+        "desc": "携帯ビデ・産褥パッド・母乳パッド"
+      },
+      "essential": {
+        "title": "出産準備バッグの必須アイテム",
+        "desc": "会陰クッション・携帯ビデ・着圧ストッキング"
+      },
+      "baby": {
+        "title": "赤ちゃん用品おすすめ",
+        "desc": "新生児用おむつ・おしりふき・ガーゼタオル"
+      }
+    },
+    "tip": {
+      "title": "一緒に準備するコツ",
+      "text": "担当タグをタップしてママ・パパで分担すれば、誰が何を用意するか迷いません。チャイルドシートは退院当日までに車に取り付けておきましょう。"
+    },
+    "shareModal": {
+      "title": "家族に出産準備リストを共有",
+      "subtitle": "アプリのインストールなしで、Webリンクからご家族がすぐに確認できます",
+      "loading": "リンクを作成中...",
+      "optionNative": "LINE・メッセージで送る",
+      "optionCopy": "リンクをコピー",
+      "privacyNote": "お子さまの本名・出産予定日は共有されません。リンクは30日後に自動的に無効になります。"
+    },
+    "picker": {
+      "ownerTitle": "担当を選択",
+      "statusTitle": "ステータスを選択",
+      "ownerUnset": "未定",
+      "statusClear": "ステータスを解除"
+    },
+    "addModal": {
+      "title": "{{category}}に項目を追加",
+      "nameLabel": "名前",
+      "namePlaceholder": "例）携帯用加湿器",
+      "hintLabel": "説明（任意）",
+      "hintPlaceholder": "例）産後ケアセンターの乾燥対策",
+      "submit": "追加"
+    },
+    "moreMenu": {
+      "title": "項目オプション",
+      "hide": "この項目を非表示にする",
+      "deleteForever": "完全に削除"
+    },
+    "hiddenModal": {
+      "title": "非表示の項目（{{count}}）",
+      "empty": "非表示の項目はありません",
+      "restore": "復元"
+    },
+    "items": {
+      "m1": {
+        "label": "産褥パッド（大判5〜7枚）"
+      },
+      "m2": {
+        "label": "授乳ブラ2〜3枚"
+      },
+      "m3": {
+        "label": "楽なパジャマ・ガウン（前開き）"
+      },
+      "m4": {
+        "label": "スリッパ（病棟用）"
+      },
+      "m5": {
+        "label": "洗面用具（歯ブラシ・歯磨き粉・シャンプー・タオル）"
+      },
+      "m6": {
+        "label": "携帯電話の充電器（長めのケーブル）"
+      },
+      "m7": {
+        "label": "水筒・ストローカップ（横になったまま飲みやすい）"
+      },
+      "m8": {
+        "label": "腹帯",
+        "hint": "帝王切開の回復に必須"
+      },
+      "m9": {
+        "label": "会陰クッション・ドーナツクッション",
+        "hint": "自然分娩の回復に役立つ"
+      },
+      "m19": {
+        "label": "携帯用ビデ（産後ママ用）",
+        "hint": "会陰部・トイレ使用後に刺激なく洗浄。帝王切開のママも体を曲げにくいときに便利"
+      },
+      "m10": {
+        "label": "着替え（退院時に着る楽な服）"
+      },
+      "m11": {
+        "label": "簡単な軽食（糖分補給）"
+      },
+      "m12": {
+        "label": "メガネ・コンタクトケア用品"
+      },
+      "m13": {
+        "label": "ヘアゴム・ヘアバンド"
+      },
+      "m14": {
+        "label": "母乳パッド（母乳漏れ防止）"
+      },
+      "m15": {
+        "label": "産後ケアセンター入所用ガウン・部屋着",
+        "hint": "入所初日に必要"
+      },
+      "m16": {
+        "label": "産後ケアセンター用保湿ケア用品（顔・ボディ）"
+      },
+      "m17": {
+        "label": "産後サプリ（鉄分・マルチビタミン）",
+        "hint": "自宅では自分で用意する必要あり"
+      },
+      "m18": {
+        "label": "食事準備（ミールキット・おかず）"
+      },
+      "b1": {
+        "label": "新生児肌着2〜3枚"
+      },
+      "b2": {
+        "label": "おくるみ・アウターおくるみ"
+      },
+      "b3": {
+        "label": "新生児用帽子"
+      },
+      "b4": {
+        "label": "ミトン・レッグウォーマー"
+      },
+      "b5": {
+        "label": "新生児用おむつ（1段階1パック）"
+      },
+      "b6": {
+        "label": "おしりふき（無香料）"
+      },
+      "b7": {
+        "label": "チャイルドシート（退院時に必須）",
+        "hint": "KC認証必須"
+      },
+      "b8": {
+        "label": "赤ちゃん用タオル・ガーゼタオル5〜6枚"
+      },
+      "b9": {
+        "label": "退院着（季節に合わせて）"
+      },
+      "b10": {
+        "label": "哺乳瓶・少量の粉ミルク（念のため）"
+      },
+      "d1": {
+        "label": "母子手帳"
+      },
+      "d2": {
+        "label": "身分証明書（産後ママ・保護者）"
+      },
+      "d3": {
+        "label": "健康保険証"
+      },
+      "d4": {
+        "label": "入院・出産準備品の領収書"
+      },
+      "d5": {
+        "label": "出生届用の印鑑（任意）"
+      },
+      "d6": {
+        "label": "分娩病院の電話番号登録",
+        "hint": "SOS／陣痛チェックからすぐに電話がかけられます"
+      }
+    },
+    "productHints": {
+      "m1": "ママたちが一番よく用意する大判パッド",
+      "m2": "前開き＋ゆとりサイズ — 授乳ブラの定番",
+      "m3": "病院から退院まで着られるガウンタイプ",
+      "m4": "ヒールなしの滑り止めスリッパ（病棟用）",
+      "m5": "ミニトラベルキット — 片手にすっぽり",
+      "m6": "長めのケーブル＋モバイルバッテリーセット",
+      "m7": "横になったまま飲みやすいストロータンブラー",
+      "m8": "帝王切開ママ必須 — 骨盤ケア腹帯",
+      "m9": "ドーナツクッション — 自然分娩後の回復グッズ",
+      "m19": "携帯用ビデ — 会陰部ケアの決定版",
+      "m10": "楽なマタニティウェア（退院着そのまま）",
+      "m11": "低血糖対策のママ用おやつセット",
+      "m12": "メガネ／コンタクトミニケアキット",
+      "m13": "ヘアゴム／ヘアバンド — 分娩中もOK",
+      "m14": "母乳パッド — 母乳漏れ防止5種",
+      "m15": "産後ケアセンター用ガウン／部屋着（前開き）",
+      "m16": "産後ケアセンター用保湿ケア（低刺激ライン）",
+      "m17": "産後サプリ（鉄分／マルチビタミン）",
+      "m18": "産後の食事ミールキット／おかず定期便",
+      "b1": "綿100%新生児肌着セット",
+      "b2": "おくるみ・アウターおくるみセット — 快眠サポート",
+      "b3": "新生児用帽子 — 保温必須アイテム",
+      "b4": "綿製ミトン・レッグウォーマー（引っかき防止）",
+      "b5": "新生児1段階おむつ（4kg以下）",
+      "b6": "無香料おしりふき — 敏感肌もOK",
+      "b7": "KC認証新生児用チャイルドシート — 退院必須",
+      "b8": "赤ちゃん用ガーゼタオル綿100%セット",
+      "b9": "季節に合わせた退院着（3〜5kg）",
+      "b10": "新生児用粉ミルク＋哺乳瓶ミニセット"
+    }
   }
 }
