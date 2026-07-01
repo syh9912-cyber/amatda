@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { BackButton } from '../../components/common/BackButton';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 import { useChildStore } from '../../stores/childStore';
@@ -26,6 +27,7 @@ const CATEGORIES: PostCategory[] = ['일상', '학습', '여행', '기념일', '
 const CORAL = '#FF6B6B';
 
 export default function MomstagramPostScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{
     prefillContent?: string;
     prefillImage?: string;
@@ -43,7 +45,7 @@ export default function MomstagramPostScreen() {
   const addPrivatePost = useMomstagramStore((s) => s.addPrivatePost);
 
   const childAge = selectedChild
-    ? `${selectedChild.ageInfo.months}개월`
+    ? t('momstagramPost.childAgeMonths', { count: selectedChild.ageInfo.months })
     : '';
   const dominantType = selectedChild?.innateData?.dominantType ?? '';
 
@@ -63,7 +65,7 @@ export default function MomstagramPostScreen() {
 
   const handleSubmit = async () => {
     if (!content.trim()) {
-      Alert.alert('알림', '내용을 입력해주세요.');
+      Alert.alert(t('common.notice'), t('momstagramPost.contentRequiredAlert.desc'));
       return;
     }
 
@@ -71,7 +73,7 @@ export default function MomstagramPostScreen() {
       // Private posts are local-only
       const newPost: MomstagramPost = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-        userName: '나',
+        userName: t('momstagramPost.me'),
         childGender: (selectedChild?.gender ?? 'M') as 'M' | 'F',
         childAge,
         dominantType,
@@ -88,8 +90,8 @@ export default function MomstagramPostScreen() {
       };
       addPrivatePost(newPost);
       resetForm();
-      Alert.alert('완료', '나만보기 게시물이 저장되었습니다.', [
-        { text: '확인', onPress: () => router.back() },
+      Alert.alert(t('common.complete'), t('momstagramPost.privateSavedAlert.desc'), [
+        { text: t('common.confirm'), onPress: () => router.back() },
       ]);
       return;
     }
@@ -104,7 +106,7 @@ export default function MomstagramPostScreen() {
           const uploaded = await uploadApi.upload(imageUri, 'momstagram');
           uploadedImageUrl = uploaded.url;
         } catch {
-          Alert.alert('오류', '이미지 업로드에 실패했습니다. 다시 시도해주세요.');
+          Alert.alert(t('common.error'), t('momstagramPost.imageUploadFailAlert.desc'));
           setSubmitting(false);
           return;
         }
@@ -124,7 +126,7 @@ export default function MomstagramPostScreen() {
 
       const newPost: MomstagramPost = {
         id: apiPost?.id ?? Date.now().toString(36),
-        userName: apiPost?.userName ?? apiPost?.authorName ?? '나',
+        userName: apiPost?.userName ?? apiPost?.authorName ?? t('momstagramPost.me'),
         childGender: (selectedChild?.gender ?? 'M') as 'M' | 'F',
         childAge,
         dominantType,
@@ -141,11 +143,11 @@ export default function MomstagramPostScreen() {
       };
       addPost(newPost);
       resetForm();
-      Alert.alert('완료', '게시물이 공유되었습니다.', [
-        { text: '확인', onPress: () => router.back() },
+      Alert.alert(t('common.complete'), t('momstagramPost.sharedAlert.desc'), [
+        { text: t('common.confirm'), onPress: () => router.back() },
       ]);
     } catch {
-      Alert.alert('오류', '게시물 업로드에 실패했습니다. 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('momstagramPost.uploadFailAlert.desc'));
     } finally {
       setSubmitting(false);
     }
@@ -156,7 +158,7 @@ export default function MomstagramPostScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <Stack.Screen options={{ title: '새 게시물', headerShown: true, headerLeft: () => <BackButton /> }} />
+      <Stack.Screen options={{ title: t('momstagramPost.screenTitle'), headerShown: true, headerLeft: () => <BackButton /> }} />
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
@@ -177,11 +179,11 @@ export default function MomstagramPostScreen() {
         <View style={styles.inputCard}>
           <TextInput
             style={styles.textInput}
-            placeholder="가족과 아이의 성장 이야기를 공유해보세요..."
+            placeholder={t('momstagramPost.contentPlaceholder')}
             placeholderTextColor="#A0A0B0"
             value={content}
-            onChangeText={(t) => {
-              if (t.length <= MAX_CONTENT) setContent(t);
+            onChangeText={(text) => {
+              if (text.length <= MAX_CONTENT) setContent(text);
             }}
             multiline
             textAlignVertical="top"
@@ -213,13 +215,13 @@ export default function MomstagramPostScreen() {
             activeOpacity={0.7}
           >
             <Text style={styles.addPhotoIcon}>{'📷'}</Text>
-            <Text style={styles.addPhotoText}>사진 추가 (선택)</Text>
+            <Text style={styles.addPhotoText}>{t('momstagramPost.addPhoto')}</Text>
           </TouchableOpacity>
         )}
 
         {/* Category selector */}
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionLabel}>카테고리</Text>
+          <Text style={styles.sectionLabel}>{t('momstagramPost.categoryLabel')}</Text>
           <View style={styles.categoryRow}>
             {CATEGORIES.map((cat) => {
               const isActive = category === cat;
@@ -254,11 +256,11 @@ export default function MomstagramPostScreen() {
               {isPrivate ? '🔒' : '🔓'}
             </Text>
             <View>
-              <Text style={styles.privateLabel}>나만보기</Text>
+              <Text style={styles.privateLabel}>{t('momstagramPost.privateOnly')}</Text>
               <Text style={styles.privateHint}>
                 {isPrivate
-                  ? '이 게시물은 나에게만 보입니다'
-                  : '가족에게 공유됩니다'}
+                  ? t('momstagramPost.privateHintOn')
+                  : t('momstagramPost.privateHintOff')}
               </Text>
             </View>
           </View>
@@ -284,7 +286,7 @@ export default function MomstagramPostScreen() {
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <Text style={styles.submitBtnText}>
-              {isPrivate ? '저장하기' : '공유하기'}
+              {isPrivate ? t('momstagramPost.saveBtn') : t('momstagramPost.shareBtn')}
             </Text>
           )}
         </TouchableOpacity>

@@ -3429,5 +3429,197 @@
       "analysisFailed": "분석에 실패했습니다. 다시 시도해주세요."
     },
     "historyDefaultSummary": "울음 분석 완료"
+  },
+  "momstagram": {
+    "shareAlert": {
+      "title": "공유",
+      "desc": "이 게시물의 링크가 복사되었습니다."
+    },
+    "reportAlert": {
+      "title": "이 게시글을 신고하시겠어요?",
+      "desc": "사유를 선택해주세요"
+    },
+    "reportReasons": {
+      "abuse": "욕설/혐오",
+      "ad": "광고/홍보",
+      "privacy": "개인정보 노출",
+      "sexual": "음란/선정성",
+      "spam": "도배/스팸",
+      "other": "기타"
+    },
+    "reportDoneAlert": {
+      "title": "신고 완료",
+      "desc": "신고가 접수되었습니다. 24시간 내 검토합니다."
+    },
+    "reportFailAlert": {
+      "desc": "신고 처리에 실패했습니다. 다시 시도해주세요."
+    },
+    "blockConfirmAlert": {
+      "title": "{{userName}}님을 차단하시겠어요?",
+      "desc": "차단한 사용자의 게시글이 피드에 보이지 않습니다."
+    },
+    "block": "차단",
+    "blockDoneAlert": {
+      "title": "차단 완료",
+      "desc": "해당 사용자의 게시글이 더 이상 보이지 않습니다."
+    },
+    "blockFailAlert": {
+      "desc": "차단 처리에 실패했습니다."
+    },
+    "postMenu": {
+      "title": "게시글 메뉴"
+    },
+    "deletePostAlert": {
+      "title": "게시글 삭제",
+      "desc": "정말 삭제하시겠습니까?"
+    },
+    "deletePostFailAlert": {
+      "desc": "삭제에 실패했습니다. 다시 시도해주세요."
+    },
+    "blockUserMenuItem": "{{userName}}님 차단",
+    "reportMenuItem": "신고하기",
+    "contentRequiredAlert": {
+      "desc": "내용을 입력해주세요."
+    },
+    "imageUploadFailAlert": {
+      "desc": "이미지 업로드에 실패했습니다."
+    },
+    "editFailAlert": {
+      "desc": "수정에 실패했습니다. 다시 시도해주세요."
+    },
+    "loadingFeed": "게시물을 불러오는 중...",
+    "emptyTitle": "아직 게시물이 없습니다",
+    "emptyHint": "가족과 소중한 순간을 공유해보세요",
+    "loadingMore": "더 불러오는 중...",
+    "headerTitle": "가족 피드",
+    "editModal": {
+      "title": "게시글 수정",
+      "contentLabel": "내용",
+      "contentPlaceholder": "내용을 입력하세요",
+      "photoLabel": "사진",
+      "changePhoto": "📷 사진 변경",
+      "removePhoto": "✕ 삭제",
+      "addPhoto": "📷 사진 추가",
+      "categoryLabel": "카테고리",
+      "cancelA11y": "수정 취소",
+      "saveA11y": "수정 저장",
+      "saving": "저장 중..."
+    }
+  },
+  "momstagramPost": {
+    "childAgeMonths": "{{count}}개월",
+    "contentRequiredAlert": {
+      "desc": "내용을 입력해주세요."
+    },
+    "me": "나",
+    "privateSavedAlert": {
+      "desc": "나만보기 게시물이 저장되었습니다."
+    },
+    "imageUploadFailAlert": {
+      "desc": "이미지 업로드에 실패했습니다. 다시 시도해주세요."
+    },
+    "sharedAlert": {
+      "desc": "게시물이 공유되었습니다."
+    },
+    "uploadFailAlert": {
+      "desc": "게시물 업로드에 실패했습니다. 다시 시도해주세요."
+    },
+    "screenTitle": "새 게시물",
+    "contentPlaceholder": "가족과 아이의 성장 이야기를 공유해보세요...",
+    "addPhoto": "사진 추가 (선택)",
+    "categoryLabel": "카테고리",
+    "privateOnly": "나만보기",
+    "privateHintOn": "이 게시물은 나에게만 보입니다",
+    "privateHintOff": "가족에게 공유됩니다",
+    "saveBtn": "저장하기",
+    "shareBtn": "공유하기"
+  },
+  "aiAnalysis": {
+    "screenTitle": "AI 분석",
+    "tabs": {
+      "pattern": {
+        "label": "육아패턴",
+        "description": "오늘 기록된 배변·수유·수면을 종합 분석합니다",
+        "cta": "육아패턴 분석 시작"
+      },
+      "poop": {
+        "label": "대변",
+        "description": "사진으로 건강 상태를 확인합니다",
+        "cta": "대변 분석 시작"
+      },
+      "cry": {
+        "label": "울음",
+        "description": "울음 소리로 원인을 추정합니다",
+        "cta": "울음 분석 시작"
+      }
+    },
+    "alert": {
+      "deleteTitle": "분석 기록 삭제",
+      "deleteMessage": "이 분석 기록을 삭제할까요? 삭제 후에는 복구할 수 없어요."
+    },
+    "error": {
+      "selectChildFirst": "아이를 먼저 선택해주세요.",
+      "loadResultFailed": "분석 결과를 불러올 수 없습니다.",
+      "analysisFailed": "분석 중 오류가 발생했습니다. 다시 시도해주세요."
+    },
+    "patternAnalysisComplete": "육아패턴 분석 완료",
+    "fullText": {
+      "standardRange": "표준 범위: {{range}}",
+      "currentStatus": "현재 상태: {{comment}}",
+      "advice": "✅ 해결책: {{advice}}"
+    },
+    "startTitle": "{{label}} 분석",
+    "analyzing": "분석 중...",
+    "recentHistory": "최근 분석 기록",
+    "empty": {
+      "title": "아직 분석 기록이 없어요",
+      "subtitle": "위 버튼으로 첫 분석을 시작해보세요"
+    },
+    "detailTitle": "{{label}} 분석 상세",
+    "section": {
+      "summary": "요약",
+      "fullAnalysis": "종합 분석",
+      "metrics": "세부 지표",
+      "recommendations": "해결책 · 추천 가이드"
+    },
+    "metric": {
+      "standardRangeSuffix": "  (표준: {{range}})",
+      "tryThis": "이렇게 해보세요"
+    }
+  },
+  "chatbot": {
+    "medicalSource": {
+      "kdca": "질병관리청 국가건강정보포털",
+      "pediatrics": "대한소아청소년과학회"
+    },
+    "parentSuffix": {
+      "dad": "아빠",
+      "mom": "맘",
+      "grandma": "할머니",
+      "grandpa": "할아버지",
+      "auntie": "이모",
+      "uncle": "삼촌"
+    },
+    "defaultChildName": "아이",
+    "disclaimer": "상담이모 답변은 일반 정보 제공용이며 의료 진단·처방을 대체하지 않습니다.",
+    "sourceLabel": "정보 출처:  ",
+    "openSource": "{{label}} 출처 열기",
+    "childInfoLoading": "아이 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.",
+    "noPermissionMessage": "상담 사용 권한이 없어요. 보호자에게 \"상담이모 사용\" 권한을 요청해주세요.",
+    "answerPreparing": "답변을 준비하고 있어요.",
+    "responseFailed": "응답을 가져오지 못했어요. 다시 시도해주세요.",
+    "categoryPromptPregnant": "임신 중 {{label}} 관련해서 고민이 있어요",
+    "categoryPromptChild": "아이가 {{label}} 관련해서 고민이 있어요",
+    "unknownError": "알 수 없는 오류",
+    "autoSendFailTitle": "메시지 전송 실패",
+    "autoSendFailDesc": "자동 전송 중 오류가 발생했어요.\n({{reason}})",
+    "categoryClose": "카테고리 닫기",
+    "categorySelect": "카테고리 선택",
+    "greeting": "안녕하세요, {{name}} :) 무엇이 궁금하세요?",
+    "answerPreparingLoading": "답변 준비 중...",
+    "photoAttached": "사진 첨부됨",
+    "poopAnalysis": "대변 분석",
+    "cryAnalysis": "울음 분석",
+    "noPermissionPlaceholder": "상담 사용 권한이 없어요 (열람 전용)"
   }
 }

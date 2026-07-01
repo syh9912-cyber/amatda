@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { Stack, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { FONT_SIZE, SPACING } from '../../constants/theme';
 import {
   useMomstagramStore,
@@ -36,6 +37,7 @@ const CATEGORIES: PostCategory[] = ['일상', '학습', '여행', '기념일', '
 const CORAL = '#FF6B6B';
 
 export default function MomstagramScreen() {
+  const { t } = useTranslation();
   const {
     posts, privatePosts, hasMore, loading,
     toggleLike, addCommentViaApi, loadMore, refresh,
@@ -79,20 +81,20 @@ export default function MomstagramScreen() {
   }, [refresh]);
 
   const handleShare = useCallback((_postId: string) => {
-    Alert.alert('공유', '이 게시물의 링크가 복사되었습니다.');
-  }, []);
+    Alert.alert(t('momstagram.shareAlert.title'), t('momstagram.shareAlert.desc'));
+  }, [t]);
 
   const handleReportPost = useCallback((postId: string) => {
-    Alert.alert('이 게시글을 신고하시겠어요?', '사유를 선택해주세요', [
-      { text: '욕설/혐오', onPress: () => sendReport(postId, 'abuse') },
-      { text: '광고/홍보', onPress: () => sendReport(postId, 'ad') },
-      { text: '개인정보 노출', onPress: () => sendReport(postId, 'privacy') },
-      { text: '음란/선정성', onPress: () => sendReport(postId, 'sexual') },
-      { text: '도배/스팸', onPress: () => sendReport(postId, 'spam') },
-      { text: '기타', onPress: () => sendReport(postId, 'other') },
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('momstagram.reportAlert.title'), t('momstagram.reportAlert.desc'), [
+      { text: t('momstagram.reportReasons.abuse'), onPress: () => sendReport(postId, 'abuse') },
+      { text: t('momstagram.reportReasons.ad'), onPress: () => sendReport(postId, 'ad') },
+      { text: t('momstagram.reportReasons.privacy'), onPress: () => sendReport(postId, 'privacy') },
+      { text: t('momstagram.reportReasons.sexual'), onPress: () => sendReport(postId, 'sexual') },
+      { text: t('momstagram.reportReasons.spam'), onPress: () => sendReport(postId, 'spam') },
+      { text: t('momstagram.reportReasons.other'), onPress: () => sendReport(postId, 'other') },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
-  }, []);
+  }, [t]);
 
   const sendReport = async (
     postId: string,
@@ -100,35 +102,35 @@ export default function MomstagramScreen() {
   ) => {
     try {
       await momstagramApi.reportPost(postId, reason);
-      Alert.alert('신고 완료', '신고가 접수되었습니다. 24시간 내 검토합니다.');
+      Alert.alert(t('momstagram.reportDoneAlert.title'), t('momstagram.reportDoneAlert.desc'));
       refresh();
     } catch {
-      Alert.alert('오류', '신고 처리에 실패했습니다. 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('momstagram.reportFailAlert.desc'));
     }
   };
 
   const handleBlockUser = useCallback((targetUserId: string, userName: string) => {
     Alert.alert(
-      `${userName}님을 차단하시겠어요?`,
-      '차단한 사용자의 게시글이 피드에 보이지 않습니다.',
+      t('momstagram.blockConfirmAlert.title', { userName }),
+      t('momstagram.blockConfirmAlert.desc'),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '차단',
+          text: t('momstagram.block'),
           style: 'destructive',
           onPress: async () => {
             try {
               await momstagramApi.blockUser(targetUserId);
-              Alert.alert('차단 완료', '해당 사용자의 게시글이 더 이상 보이지 않습니다.');
+              Alert.alert(t('momstagram.blockDoneAlert.title'), t('momstagram.blockDoneAlert.desc'));
               refresh();
             } catch {
-              Alert.alert('오류', '차단 처리에 실패했습니다.');
+              Alert.alert(t('common.error'), t('momstagram.blockFailAlert.desc'));
             }
           },
         },
       ],
     );
-  }, [refresh]);
+  }, [refresh, t]);
 
   const handleMore = useCallback((postId: string) => {
     const post = allPosts.find((p) => p.id === postId);
@@ -137,9 +139,9 @@ export default function MomstagramScreen() {
 
     if (isOwner) {
       // 본인 글 — 수정/삭제
-      Alert.alert('게시글 메뉴', undefined, [
+      Alert.alert(t('momstagram.postMenu.title'), undefined, [
         {
-          text: '수정',
+          text: t('common.edit'),
           onPress: () => {
             setEditContent(post.content);
             setEditCategory((post.category as PostCategory) ?? '일상');
@@ -149,47 +151,47 @@ export default function MomstagramScreen() {
           },
         },
         {
-          text: '삭제',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => {
-            Alert.alert('게시글 삭제', '정말 삭제하시겠습니까?', [
-              { text: '취소', style: 'cancel' },
+            Alert.alert(t('momstagram.deletePostAlert.title'), t('momstagram.deletePostAlert.desc'), [
+              { text: t('common.cancel'), style: 'cancel' },
               {
-                text: '삭제',
+                text: t('common.delete'),
                 style: 'destructive',
                 onPress: async () => {
                   try {
                     await deletePost(postId);
                   } catch {
-                    Alert.alert('오류', '삭제에 실패했습니다. 다시 시도해주세요.');
+                    Alert.alert(t('common.error'), t('momstagram.deletePostFailAlert.desc'));
                   }
                 },
               },
             ]);
           },
         },
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
       ]);
     } else {
       // 타인 글 — 신고/차단 (UGC 정책)
       const targetUserId = post.userId;
       const blockButton = targetUserId
         ? [{
-            text: `${post.userName}님 차단`,
+            text: t('momstagram.blockUserMenuItem', { userName: post.userName }),
             style: 'destructive' as const,
             onPress: () => handleBlockUser(targetUserId, post.userName),
           }]
         : [];
-      Alert.alert('게시글 메뉴', undefined, [
+      Alert.alert(t('momstagram.postMenu.title'), undefined, [
         {
-          text: '신고하기',
+          text: t('momstagram.reportMenuItem'),
           onPress: () => handleReportPost(postId),
         },
         ...blockButton,
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
       ]);
     }
-  }, [allPosts, deletePost, currentUserId, handleReportPost, handleBlockUser]);
+  }, [allPosts, deletePost, currentUserId, handleReportPost, handleBlockUser, t]);
 
   const handleEditPickImage = useCallback(async () => {
     const picked = await pickImageFromLibrary({ quality: 0.8 });
@@ -208,7 +210,7 @@ export default function MomstagramScreen() {
     if (!editingPost) return;
     const trimmed = editContent.trim();
     if (!trimmed) {
-      Alert.alert('알림', '내용을 입력해주세요.');
+      Alert.alert(t('common.notice'), t('momstagram.contentRequiredAlert.desc'));
       return;
     }
     setEditSaving(true);
@@ -236,7 +238,7 @@ export default function MomstagramScreen() {
             const uploaded = await uploadApi.upload(editImage, 'momstagram');
             payload.imageUrl = uploaded.url;
           } catch {
-            Alert.alert('오류', '이미지 업로드에 실패했습니다.');
+            Alert.alert(t('common.error'), t('momstagram.imageUploadFailAlert.desc'));
             setEditSaving(false);
             return;
           }
@@ -249,11 +251,11 @@ export default function MomstagramScreen() {
       setEditImage(null);
       setEditImageChanged(false);
     } catch {
-      Alert.alert('오류', '수정에 실패했습니다. 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('momstagram.editFailAlert.desc'));
     } finally {
       setEditSaving(false);
     }
-  }, [editingPost, editContent, editCategory, editImage, editImageChanged, updatePost]);
+  }, [editingPost, editContent, editCategory, editImage, editImageChanged, updatePost, t]);
 
   const handleCommentSubmit = useCallback(
     (text: string) => {
@@ -284,16 +286,16 @@ export default function MomstagramScreen() {
       return (
         <View style={styles.emptyWrap}>
           <ActivityIndicator size="large" color={CORAL} />
-          <Text style={styles.emptyHint}>게시물을 불러오는 중...</Text>
+          <Text style={styles.emptyHint}>{t('momstagram.loadingFeed')}</Text>
         </View>
       );
     }
     return (
       <View style={styles.emptyWrap}>
         <Image source={require('../../assets/icon-camera.png')} style={styles.emptyIcon} resizeMode="contain" />
-        <Text style={styles.emptyTitle}>아직 게시물이 없습니다</Text>
+        <Text style={styles.emptyTitle}>{t('momstagram.emptyTitle')}</Text>
         <Text style={styles.emptyHint}>
-          가족과 소중한 순간을 공유해보세요
+          {t('momstagram.emptyHint')}
         </Text>
       </View>
     );
@@ -305,7 +307,7 @@ export default function MomstagramScreen() {
     return (
       <View style={styles.footerWrap}>
         <ActivityIndicator size="small" color={CORAL} />
-        <Text style={styles.footerText}>더 불러오는 중...</Text>
+        <Text style={styles.footerText}>{t('momstagram.loadingMore')}</Text>
       </View>
     );
   };
@@ -316,7 +318,7 @@ export default function MomstagramScreen() {
 
       {/* Instagram-style header */}
       <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
-        <Text style={styles.headerLogo}>가족 피드</Text>
+        <Text style={styles.headerLogo}>{t('momstagram.headerTitle')}</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.headerBtn}
@@ -375,24 +377,24 @@ export default function MomstagramScreen() {
           style={styles.editOverlay}
         >
           <View style={styles.editCard}>
-            <Text style={styles.editTitle}>게시글 수정</Text>
+            <Text style={styles.editTitle}>{t('momstagram.editModal.title')}</Text>
             <ScrollView
               style={styles.editScroll}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
-              <Text style={styles.editLabel}>내용</Text>
+              <Text style={styles.editLabel}>{t('momstagram.editModal.contentLabel')}</Text>
               <TextInput
                 style={styles.editInput}
                 value={editContent}
                 onChangeText={setEditContent}
                 multiline
-                placeholder="내용을 입력하세요"
+                placeholder={t('momstagram.editModal.contentPlaceholder')}
                 placeholderTextColor="#A0A0A0"
                 maxLength={1000}
               />
 
-              <Text style={styles.editLabel}>사진</Text>
+              <Text style={styles.editLabel}>{t('momstagram.editModal.photoLabel')}</Text>
               {editImage ? (
                 <View style={styles.editImageWrap}>
                   <Image source={{ uri: editImage }} style={styles.editImagePreview} resizeMode="cover" />
@@ -402,14 +404,14 @@ export default function MomstagramScreen() {
                       onPress={handleEditPickImage}
                       disabled={editSaving}
                     >
-                      <Text style={styles.editImageBtnText}>📷 사진 변경</Text>
+                      <Text style={styles.editImageBtnText}>{t('momstagram.editModal.changePhoto')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.editImageBtn, styles.editImageBtnRemove]}
                       onPress={handleEditRemoveImage}
                       disabled={editSaving}
                     >
-                      <Text style={styles.editImageBtnRemoveText}>✕ 삭제</Text>
+                      <Text style={styles.editImageBtnRemoveText}>{t('momstagram.editModal.removePhoto')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -419,11 +421,11 @@ export default function MomstagramScreen() {
                   onPress={handleEditPickImage}
                   disabled={editSaving}
                 >
-                  <Text style={styles.editImagePickText}>📷 사진 추가</Text>
+                  <Text style={styles.editImagePickText}>{t('momstagram.editModal.addPhoto')}</Text>
                 </TouchableOpacity>
               )}
 
-              <Text style={styles.editLabel}>카테고리</Text>
+              <Text style={styles.editLabel}>{t('momstagram.editModal.categoryLabel')}</Text>
               <View style={styles.editCatRow}>
                 {CATEGORIES.map((cat) => {
                   const active = editCategory === cat;
@@ -454,18 +456,18 @@ export default function MomstagramScreen() {
                 }}
                 disabled={editSaving}
                 accessibilityRole="button"
-                accessibilityLabel="수정 취소"
+                accessibilityLabel={t('momstagram.editModal.cancelA11y')}
               >
-                <Text style={styles.editBtnCancelText}>취소</Text>
+                <Text style={styles.editBtnCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.editBtn, styles.editBtnSave, editSaving && { opacity: 0.6 }]}
                 onPress={handleEditSave}
                 disabled={editSaving}
                 accessibilityRole="button"
-                accessibilityLabel="수정 저장"
+                accessibilityLabel={t('momstagram.editModal.saveA11y')}
               >
-                <Text style={styles.editBtnSaveText}>{editSaving ? '저장 중...' : '저장'}</Text>
+                <Text style={styles.editBtnSaveText}>{editSaving ? t('momstagram.editModal.saving') : t('common.save')}</Text>
               </TouchableOpacity>
             </View>
           </View>

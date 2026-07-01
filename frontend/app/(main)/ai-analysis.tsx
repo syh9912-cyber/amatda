@@ -11,6 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { router, useFocusEffect, Stack } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import {
   loadAnalysisHistory,
   saveAnalysisHistory,
@@ -42,12 +43,12 @@ type TabKey = AnalysisType;
 
 interface TabConfig {
   key: TabKey;
-  label: string;
+  labelKey: string;
   icon: ImageSourcePropType;
   accent: string;
   bg: string;
-  description: string;
-  cta: string;
+  descriptionKey: string;
+  ctaKey: string;
   // 인라인 실행(pattern)인지, 외부 화면으로 이동(poop/cry)인지
   inline: boolean;
   route?: string;
@@ -56,33 +57,33 @@ interface TabConfig {
 const TABS: TabConfig[] = [
   {
     key: 'pattern',
-    label: '육아패턴',
+    labelKey: 'aiAnalysis.tabs.pattern.label',
     icon: IC_REPORT,
     accent: '#7C83EC',
     bg: '#EEEDFC',
-    description: '오늘 기록된 배변·수유·수면을 종합 분석합니다',
-    cta: '육아패턴 분석 시작',
+    descriptionKey: 'aiAnalysis.tabs.pattern.description',
+    ctaKey: 'aiAnalysis.tabs.pattern.cta',
     inline: true,
   },
   {
     key: 'poop',
-    label: '대변',
+    labelKey: 'aiAnalysis.tabs.poop.label',
     icon: IC_POOP,
     accent: '#D4A373',
     bg: '#FBF3E6',
-    description: '사진으로 건강 상태를 확인합니다',
-    cta: '대변 분석 시작',
+    descriptionKey: 'aiAnalysis.tabs.poop.description',
+    ctaKey: 'aiAnalysis.tabs.poop.cta',
     inline: false,
     route: '/(main)/poop-analyzer',
   },
   {
     key: 'cry',
-    label: '울음',
+    labelKey: 'aiAnalysis.tabs.cry.label',
     icon: IC_LULLABY,
     accent: '#D88FB8',
     bg: '#FCEAF3',
-    description: '울음 소리로 원인을 추정합니다',
-    cta: '울음 분석 시작',
+    descriptionKey: 'aiAnalysis.tabs.cry.description',
+    ctaKey: 'aiAnalysis.tabs.cry.cta',
     inline: false,
     route: '/(main)/cry-analyzer',
   },
@@ -94,6 +95,7 @@ function formatShortDate(ts: number): string {
 }
 
 export default function AIAnalysisScreen() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<TabKey>('pattern');
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<AnalysisHistoryItem | null>(null);
@@ -117,12 +119,12 @@ export default function AIAnalysisScreen() {
   const handleDeleteItem = useCallback(
     (item: AnalysisHistoryItem) => {
       Alert.alert(
-        '분석 기록 삭제',
-        '이 분석 기록을 삭제할까요? 삭제 후에는 복구할 수 없어요.',
+        t('aiAnalysis.alert.deleteTitle'),
+        t('aiAnalysis.alert.deleteMessage'),
         [
-          { text: '취소', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: '삭제',
+            text: t('common.delete'),
             style: 'destructive',
             onPress: async () => {
               await deleteAnalysisHistoryItem(item.type, item.id);
@@ -133,7 +135,7 @@ export default function AIAnalysisScreen() {
         ],
       );
     },
-    [activeTab, reload],
+    [activeTab, reload, t],
   );
 
   useEffect(() => {
@@ -147,13 +149,13 @@ export default function AIAnalysisScreen() {
     }, [activeTab, reload]),
   );
 
-  const current = TABS.find((t) => t.key === activeTab) ?? TABS[0];
+  const current = TABS.find((tab) => tab.key === activeTab) ?? TABS[0];
 
   async function runPatternAnalysis() {
     if (patternLoading) return;
     const childId = selectedChild?.id;
     if (!childId) {
-      setPatternError('아이를 먼저 선택해주세요.');
+      setPatternError(t('aiAnalysis.error.selectChildFirst'));
       return;
     }
     setPatternLoading(true);
@@ -193,16 +195,16 @@ export default function AIAnalysisScreen() {
         data.trackerMetrics.forEach((m) => {
           const chunk: string[] = [];
           chunk.push(`${m.emoji ?? ''} ${m.title} (${m.value})`);
-          if (m.standardRange) chunk.push(`표준 범위: ${m.standardRange}`);
-          if (m.comment) chunk.push(`현재 상태: ${m.comment}`);
-          if (m.advice) chunk.push(`✅ 해결책: ${m.advice}`);
+          if (m.standardRange) chunk.push(t('aiAnalysis.fullText.standardRange', { range: m.standardRange }));
+          if (m.comment) chunk.push(t('aiAnalysis.fullText.currentStatus', { comment: m.comment }));
+          if (m.advice) chunk.push(t('aiAnalysis.fullText.advice', { advice: m.advice }));
           fullTextParts.push(chunk.join('\n'));
         });
         const fullText = fullTextParts.join('\n\n');
 
         await saveAnalysisHistory({
           type: 'pattern',
-          summary: data.overallSummary?.slice(0, 120) ?? '육아패턴 분석 완료',
+          summary: data.overallSummary?.slice(0, 120) ?? t('aiAnalysis.patternAnalysisComplete'),
           details: data.trackerMetrics
             .slice(0, 5)
             .map((m) => `${m.title}: ${m.value}`)
@@ -226,10 +228,10 @@ export default function AIAnalysisScreen() {
         const latest = await loadAnalysisHistory('pattern');
         if (latest[0]) setSelectedItem(latest[0]);
       } else {
-        setPatternError('분석 결과를 불러올 수 없습니다.');
+        setPatternError(t('aiAnalysis.error.loadResultFailed'));
       }
     } catch {
-      setPatternError('분석 중 오류가 발생했습니다. 다시 시도해주세요.');
+      setPatternError(t('aiAnalysis.error.analysisFailed'));
     } finally {
       setPatternLoading(false);
     }
@@ -245,27 +247,27 @@ export default function AIAnalysisScreen() {
 
   return (
     <View style={styles.root}>
-      <Stack.Screen options={{ title: 'AI 분석', headerShown: true, headerLeft: () => <BackButton />, headerRight: () => <View style={{ marginRight: 14 }}><GuideButton onPress={() => setGuideVisible(true)} color="#9D8CC6" /></View> }} />
+      <Stack.Screen options={{ title: t('aiAnalysis.screenTitle'), headerShown: true, headerLeft: () => <BackButton />, headerRight: () => <View style={{ marginRight: 14 }}><GuideButton onPress={() => setGuideVisible(true)} color="#9D8CC6" /></View> }} />
 
       {/* Tab Switcher */}
       <View style={styles.tabRow}>
-        {TABS.map((t) => {
-          const active = t.key === activeTab;
+        {TABS.map((tab) => {
+          const active = tab.key === activeTab;
           return (
             <TouchableOpacity
-              key={t.key}
-              style={[styles.tab, active && { backgroundColor: t.bg }]}
-              onPress={() => setActiveTab(t.key)}
+              key={tab.key}
+              style={[styles.tab, active && { backgroundColor: tab.bg }]}
+              onPress={() => setActiveTab(tab.key)}
               activeOpacity={0.8}
             >
-              <Image source={t.icon} style={styles.tabIconImg} resizeMode="contain" />
+              <Image source={tab.icon} style={styles.tabIconImg} resizeMode="contain" />
               <Text
                 style={[
                   styles.tabLabel,
-                  active && { color: t.accent, fontWeight: '600' },
+                  active && { color: tab.accent, fontWeight: '600' },
                 ]}
               >
-                {t.label}
+                {t(tab.labelKey)}
               </Text>
             </TouchableOpacity>
           );
@@ -280,8 +282,8 @@ export default function AIAnalysisScreen() {
         {/* Start Card */}
         <View style={[styles.startCard, { backgroundColor: current.bg }]}>
           <Image source={current.icon} style={styles.startIconImg} resizeMode="contain" />
-          <Text style={styles.startTitle}>{current.label} 분석</Text>
-          <Text style={styles.startDesc}>{current.description}</Text>
+          <Text style={styles.startTitle}>{t('aiAnalysis.startTitle', { label: t(current.labelKey) })}</Text>
+          <Text style={styles.startDesc}>{t(current.descriptionKey)}</Text>
           <TouchableOpacity
             style={[
               styles.startBtn,
@@ -295,10 +297,10 @@ export default function AIAnalysisScreen() {
             {patternLoading && current.inline ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <ActivityIndicator color="#FFFFFF" size="small" />
-                <Text style={styles.startBtnText}>분석 중...</Text>
+                <Text style={styles.startBtnText}>{t('aiAnalysis.analyzing')}</Text>
               </View>
             ) : (
-              <Text style={styles.startBtnText}>{current.cta}</Text>
+              <Text style={styles.startBtnText}>{t(current.ctaKey)}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -317,15 +319,15 @@ export default function AIAnalysisScreen() {
 
         {/* History Section */}
         <View style={styles.historyHeader}>
-          <Text style={styles.historyTitle}>최근 분석 기록</Text>
+          <Text style={styles.historyTitle}>{t('aiAnalysis.recentHistory')}</Text>
           <Text style={styles.historyCount}>{history.length}/10</Text>
         </View>
 
         {history.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>아직 분석 기록이 없어요</Text>
+            <Text style={styles.emptyText}>{t('aiAnalysis.empty.title')}</Text>
             <Text style={styles.emptySubText}>
-              위 버튼으로 첫 분석을 시작해보세요
+              {t('aiAnalysis.empty.subtitle')}
             </Text>
           </View>
         ) : (
@@ -359,7 +361,7 @@ export default function AIAnalysisScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 activeOpacity={0.7}
               >
-                <Text style={styles.deleteBtnText}>삭제</Text>
+                <Text style={styles.deleteBtnText}>{t('common.delete')}</Text>
               </TouchableOpacity>
             </View>
           ))
@@ -380,7 +382,12 @@ export default function AIAnalysisScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {selectedItem
-                  ? `${TABS.find((t) => t.key === selectedItem.type)?.label ?? ''} 분석 상세`
+                  ? t('aiAnalysis.detailTitle', {
+                      label: t(
+                        TABS.find((tab) => tab.key === selectedItem.type)?.labelKey ??
+                          TABS[0].labelKey,
+                      ),
+                    })
                   : ''}
               </Text>
               <TouchableOpacity
@@ -408,19 +415,19 @@ export default function AIAnalysisScreen() {
                       resizeMode="cover"
                     />
                   ) : null}
-                  <Text style={styles.modalSectionTitle}>요약</Text>
+                  <Text style={styles.modalSectionTitle}>{t('aiAnalysis.section.summary')}</Text>
                   <Text style={styles.modalSummary}>{selectedItem.summary}</Text>
 
                   {selectedItem.fullText ? (
                     <>
-                      <Text style={styles.modalSectionTitle}>종합 분석</Text>
+                      <Text style={styles.modalSectionTitle}>{t('aiAnalysis.section.fullAnalysis')}</Text>
                       <Text style={styles.modalBody}>{selectedItem.fullText}</Text>
                     </>
                   ) : null}
 
                   {selectedItem.metrics && selectedItem.metrics.length > 0 ? (
                     <>
-                      <Text style={styles.modalSectionTitle}>세부 지표</Text>
+                      <Text style={styles.modalSectionTitle}>{t('aiAnalysis.section.metrics')}</Text>
                       {selectedItem.metrics.map((m, idx) => (
                         <View key={`${m.title}_${idx}`} style={styles.metricRow}>
                           <Text style={styles.metricTitle}>
@@ -429,7 +436,7 @@ export default function AIAnalysisScreen() {
                           </Text>
                           <Text style={styles.metricValue}>
                             {m.value}
-                            {m.standardRange ? `  (표준: ${m.standardRange})` : ''}
+                            {m.standardRange ? t('aiAnalysis.metric.standardRangeSuffix', { range: m.standardRange }) : ''}
                           </Text>
                           {m.comment ? (
                             <Text style={styles.metricComment}>
@@ -438,7 +445,7 @@ export default function AIAnalysisScreen() {
                           ) : null}
                           {m.advice ? (
                             <View style={styles.adviceBox}>
-                              <Text style={styles.adviceLabel}>이렇게 해보세요</Text>
+                              <Text style={styles.adviceLabel}>{t('aiAnalysis.metric.tryThis')}</Text>
                               <Text style={styles.adviceText}>{m.advice}</Text>
                             </View>
                           ) : null}
@@ -450,7 +457,7 @@ export default function AIAnalysisScreen() {
                   {selectedItem.recommendations &&
                   selectedItem.recommendations.length > 0 ? (
                     <>
-                      <Text style={styles.modalSectionTitle}>해결책 · 추천 가이드</Text>
+                      <Text style={styles.modalSectionTitle}>{t('aiAnalysis.section.recommendations')}</Text>
                       {selectedItem.recommendations.map((r, idx) => (
                         <View key={idx} style={styles.recRow}>
                           <Text style={styles.recBullet}>✓</Text>
@@ -473,7 +480,7 @@ export default function AIAnalysisScreen() {
                   onPress={() => handleDeleteItem(selectedItem)}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.modalDeleteBtnText}>삭제</Text>
+                  <Text style={styles.modalDeleteBtnText}>{t('common.delete')}</Text>
                 </TouchableOpacity>
               ) : null}
               <TouchableOpacity
@@ -481,7 +488,7 @@ export default function AIAnalysisScreen() {
                 onPress={() => setSelectedItem(null)}
                 activeOpacity={0.85}
               >
-                <Text style={styles.modalCloseBtnText}>닫기</Text>
+                <Text style={styles.modalCloseBtnText}>{t('common.close')}</Text>
               </TouchableOpacity>
             </View>
           </View>

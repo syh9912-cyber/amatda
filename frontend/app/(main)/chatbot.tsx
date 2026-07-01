@@ -13,6 +13,8 @@ import {
   Linking,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { coachingApi, memoriesApi, authApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { scheduleCoachingFollowup } from '../../services/pushNotifications';
@@ -35,25 +37,28 @@ import { CHATBOT_GUIDE } from '../../features/guide/chatbotGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
 // 의료/건강 정보 출처 (App Store Guideline 1.4.1) — 신뢰 가능한 공신력 있는 기관.
-const MEDICAL_SOURCES: { label: string; url: string }[] = [
-  { label: '질병관리청 국가건강정보포털', url: 'https://health.kdca.go.kr' },
-  { label: '대한소아청소년과학회', url: 'https://www.pediatrics.or.kr' },
-];
+function getMedicalSources(t: TFunction): { label: string; url: string }[] {
+  return [
+    { label: t('chatbot.medicalSource.kdca'), url: 'https://health.kdca.go.kr' },
+    { label: t('chatbot.medicalSource.pediatrics'), url: 'https://www.pediatrics.or.kr' },
+  ];
+}
 
 /** 부모 역할별 호칭 접미사 (아이 이름 + 접미사). 아버지면 "아빠", 어머니면 "맘" 등 */
-function parentGreetingSuffix(role?: string): string {
+function parentGreetingSuffix(t: TFunction, role?: string): string {
   switch (role) {
-    case '아빠': return '아빠';
-    case '엄마': return '맘';
-    case '할머니': return '할머니';
-    case '할아버지': return '할아버지';
-    case '고모이모': return '이모';
-    case '삼촌': return '삼촌';
-    default: return '맘';
+    case '아빠': return t('chatbot.parentSuffix.dad');
+    case '엄마': return t('chatbot.parentSuffix.mom');
+    case '할머니': return t('chatbot.parentSuffix.grandma');
+    case '할아버지': return t('chatbot.parentSuffix.grandpa');
+    case '고모이모': return t('chatbot.parentSuffix.auntie');
+    case '삼촌': return t('chatbot.parentSuffix.uncle');
+    default: return t('chatbot.parentSuffix.mom');
   }
 }
 
 export default function CoachingScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { firstMessage } = useLocalSearchParams<{ firstMessage?: string }>();
   const child = useChildStore((s) => s.selectedChild);
@@ -207,7 +212,7 @@ export default function CoachingScreen() {
         const noChildMsg: CoachingMessage = {
           id: `e-${Date.now()}`,
           isCoach: true,
-          text: '아이 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.',
+          text: t('chatbot.childInfoLoading'),
           createdAt: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, noChildMsg]);
@@ -218,7 +223,7 @@ export default function CoachingScreen() {
         setMessages((prev) => [...prev, {
           id: `e-${Date.now()}`,
           isCoach: true,
-          text: '상담 사용 권한이 없어요. 보호자에게 "상담이모 사용" 권한을 요청해주세요.',
+          text: t('chatbot.noPermissionMessage'),
           createdAt: new Date().toISOString(),
         }]);
         return;
@@ -252,7 +257,7 @@ export default function CoachingScreen() {
         const coachMsg: CoachingMessage = {
           id: `c-${Date.now()}`,
           isCoach: true,
-          text: (reply?.answer as string | undefined) ?? (reply?.text as string | undefined) ?? (reply?.reply as string | undefined) ?? '답변을 준비하고 있어요.',
+          text: (reply?.answer as string | undefined) ?? (reply?.text as string | undefined) ?? (reply?.reply as string | undefined) ?? t('chatbot.answerPreparing'),
           reason: reply?.reason as string | undefined,
           solutions: Array.isArray(reply?.solutions) ? (reply.solutions as string[]) : undefined,
           source: (reply?.source as CoachingMessage['source']) ?? 'ai',
@@ -283,7 +288,7 @@ export default function CoachingScreen() {
         const errMsg: CoachingMessage = {
           id: `e-${Date.now()}`,
           isCoach: true,
-          text: `응답을 가져오지 못했어요. 다시 시도해주세요.${errDetail}`,
+          text: `${t('chatbot.responseFailed')}${errDetail}`,
           createdAt: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, errMsg]);
@@ -292,7 +297,7 @@ export default function CoachingScreen() {
         scrollToBottom();
       }
     },
-    [sending, child, photoUri, scrollToBottom, canUseCoaching]
+    [sending, child, photoUri, scrollToBottom, canUseCoaching, t]
   );
 
   const handleFirstTalkSelect = useCallback(
@@ -310,12 +315,12 @@ export default function CoachingScreen() {
   const handleCategorySelect = useCallback(
     (key: string, label: string) => {
       const text = isPregnant
-        ? `임신 중 ${label} 관련해서 고민이 있어요`
-        : `아이가 ${label} 관련해서 고민이 있어요`;
+        ? t('chatbot.categoryPromptPregnant', { label })
+        : t('chatbot.categoryPromptChild', { label });
       setInput(text);
       setShowCategories(false);
     },
-    [isPregnant]
+    [isPregnant, t]
   );
 
   const handleSend = useCallback(() => {
@@ -364,14 +369,14 @@ export default function CoachingScreen() {
       } catch (e) {
         // 자동 전송 실패 시 사용자에게 명확히 안내 + 재시도 옵션 제공
         // (CLAUDE.md: 에러를 조용히 삼키지 말 것)
-        const reason = e instanceof Error ? e.message : '알 수 없는 오류';
+        const reason = e instanceof Error ? e.message : t('chatbot.unknownError');
         Alert.alert(
-          '메시지 전송 실패',
-          `자동 전송 중 오류가 발생했어요.\n(${reason})`,
+          t('chatbot.autoSendFailTitle'),
+          t('chatbot.autoSendFailDesc', { reason }),
           [
-            { text: '취소', style: 'cancel', onPress: () => firstMessageHandled.current = false },
+            { text: t('common.cancel'), style: 'cancel', onPress: () => firstMessageHandled.current = false },
             {
-              text: '다시 시도',
+              text: t('common.retry'),
               onPress: () => {
                 sendMessage(messageToSend).catch(() => {
                   // 두 번째 실패는 입력창에 채워 사용자가 직접 보낼 수 있도록
@@ -386,9 +391,10 @@ export default function CoachingScreen() {
     return () => clearTimeout(timer);
   }, [firstMessage, child?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const childName = child?.name ?? '아이';
+  const childName = child?.name ?? t('chatbot.defaultChildName');
   const isEmpty = messages.length === 0;
   const showFirstTalk = isEmpty && !firstTalkDone && !!child && !firstMessage;
+  const medicalSources = getMedicalSources(t);
 
   return (
     <KeyboardAvoidingView
@@ -402,7 +408,7 @@ export default function CoachingScreen() {
       <View style={styles.header}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Text style={styles.headerTitle}>
-            {'상담이모'}
+            {t('tabs.coach')}
           </Text>
           <GuideButton onPress={() => setGuideVisible(true)} />
         </View>
@@ -426,20 +432,20 @@ export default function CoachingScreen() {
       {/* 의료 면책 고지 + 정보 출처 — Apple Guideline 1.4.1 (의료 정보 출처 표기) */}
       <View style={styles.disclaimer}>
         <Text style={styles.disclaimerText}>
-          ⚠️ 상담이모 답변은 일반 정보 제공용이며 의료 진단·처방을 대체하지 않습니다.
+          {`⚠️ ${t('chatbot.disclaimer')}`}
         </Text>
         <View style={styles.citationRow}>
-          <Text style={styles.citationLabel}>정보 출처: </Text>
-          {MEDICAL_SOURCES.map((src, i) => (
+          <Text style={styles.citationLabel}>{t('chatbot.sourceLabel')}</Text>
+          {medicalSources.map((src, i) => (
             <TouchableOpacity
               key={src.url}
               onPress={() => Linking.openURL(src.url).catch(() => {})}
               activeOpacity={0.7}
               accessibilityRole="link"
-              accessibilityLabel={`${src.label} 출처 열기`}
+              accessibilityLabel={t('chatbot.openSource', { label: src.label })}
             >
               <Text style={styles.citationLink}>
-                {src.label}{i < MEDICAL_SOURCES.length - 1 ? ' · ' : ''}
+                {src.label}{i < medicalSources.length - 1 ? ' · ' : ''}
               </Text>
             </TouchableOpacity>
           ))}
@@ -455,10 +461,10 @@ export default function CoachingScreen() {
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityState={{ expanded: showCategories }}
-            accessibilityLabel={showCategories ? '카테고리 닫기' : '카테고리 선택'}
+            accessibilityLabel={showCategories ? t('chatbot.categoryClose') : t('chatbot.categorySelect')}
           >
             <Text style={styles.categoryToggleText}>
-              {showCategories ? '카테고리 닫기' : '카테고리 선택'}
+              {showCategories ? t('chatbot.categoryClose') : t('chatbot.categorySelect')}
             </Text>
           </TouchableOpacity>
           {showCategories && <CategoryBar onSelect={handleCategorySelect} ageGroup={child?.ageInfo?.group} />}
@@ -480,7 +486,7 @@ export default function CoachingScreen() {
             message={{
               id: 'greeting',
               isCoach: true,
-              text: `안녕하세요, ${childName}${parentGreetingSuffix(parentRole)} :) 무엇이 궁금하세요?`,
+              text: t('chatbot.greeting', { name: `${childName}${parentGreetingSuffix(t, parentRole)}` }),
               createdAt: new Date().toISOString(),
               source: 'ai',
             }}
@@ -531,7 +537,7 @@ export default function CoachingScreen() {
                 color={COACHING_COLORS.accent}
               />
               <Text style={styles.typingText}>
-                {'답변 준비 중...'}
+                {t('chatbot.answerPreparingLoading')}
               </Text>
             </View>
           </View>
@@ -543,7 +549,7 @@ export default function CoachingScreen() {
         <View style={styles.photoPreview}>
           <Image source={{ uri: photoUri }} style={styles.photoThumb} />
           <Text style={styles.photoLabel}>
-            {'사진 첨부됨'}
+            {t('chatbot.photoAttached')}
           </Text>
         </View>
       ) : null}
@@ -555,21 +561,21 @@ export default function CoachingScreen() {
             style={styles.analyzerPill}
             onPress={() => router.push('/(main)/poop-analyzer')}
             accessibilityRole="button"
-            accessibilityLabel="대변 분석"
+            accessibilityLabel={t('chatbot.poopAnalysis')}
             activeOpacity={0.7}
           >
             <Image source={require('../../assets/trait-analyst-small.png')} style={styles.analyzerPillIcon} resizeMode="contain" />
-            <Text style={styles.analyzerPillText}>{'대변 분석'}</Text>
+            <Text style={styles.analyzerPillText}>{t('chatbot.poopAnalysis')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.analyzerPill}
             onPress={() => router.push('/(main)/cry-analyzer')}
             accessibilityRole="button"
-            accessibilityLabel="울음 분석"
+            accessibilityLabel={t('chatbot.cryAnalysis')}
             activeOpacity={0.7}
           >
             <Image source={require('../../assets/trait-analyst-small.png')} style={styles.analyzerPillIcon} resizeMode="contain" />
-            <Text style={styles.analyzerPillText}>{'울음 분석'}</Text>
+            <Text style={styles.analyzerPillText}>{t('chatbot.cryAnalysis')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -582,7 +588,7 @@ export default function CoachingScreen() {
           onSend={handleSend}
           onPhoto={handlePhoto}
           disabled={sending || !canUseCoaching}
-          placeholder={!canUseCoaching ? '상담 사용 권한이 없어요 (열람 전용)' : undefined}
+          placeholder={!canUseCoaching ? t('chatbot.noPermissionPlaceholder') : undefined}
         />
       )}
 

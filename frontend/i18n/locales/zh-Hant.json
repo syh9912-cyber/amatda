@@ -3429,5 +3429,197 @@
       "analysisFailed": "分析失敗，請重新嘗試。"
     },
     "historyDefaultSummary": "哭聲分析完成"
+  },
+  "momstagram": {
+    "shareAlert": {
+      "title": "分享",
+      "desc": "這則貼文的連結已複製。"
+    },
+    "reportAlert": {
+      "title": "您要檢舉這則貼文嗎？",
+      "desc": "請選擇原因"
+    },
+    "reportReasons": {
+      "abuse": "辱罵／仇恨言論",
+      "ad": "廣告／推銷",
+      "privacy": "個人資訊外洩",
+      "sexual": "色情／煽情內容",
+      "spam": "洗版／垃圾訊息",
+      "other": "其他"
+    },
+    "reportDoneAlert": {
+      "title": "檢舉完成",
+      "desc": "檢舉已受理，將於24小時內審核。"
+    },
+    "reportFailAlert": {
+      "desc": "檢舉處理失敗，請重新嘗試。"
+    },
+    "blockConfirmAlert": {
+      "title": "您要封鎖 {{userName}} 嗎？",
+      "desc": "已封鎖使用者的貼文將不會出現在動態消息中。"
+    },
+    "block": "封鎖",
+    "blockDoneAlert": {
+      "title": "封鎖完成",
+      "desc": "該使用者的貼文將不再顯示。"
+    },
+    "blockFailAlert": {
+      "desc": "封鎖處理失敗。"
+    },
+    "postMenu": {
+      "title": "貼文選單"
+    },
+    "deletePostAlert": {
+      "title": "刪除貼文",
+      "desc": "確定要刪除嗎？"
+    },
+    "deletePostFailAlert": {
+      "desc": "刪除失敗，請重新嘗試。"
+    },
+    "blockUserMenuItem": "封鎖 {{userName}}",
+    "reportMenuItem": "檢舉",
+    "contentRequiredAlert": {
+      "desc": "請輸入內容。"
+    },
+    "imageUploadFailAlert": {
+      "desc": "圖片上傳失敗。"
+    },
+    "editFailAlert": {
+      "desc": "編輯失敗，請重新嘗試。"
+    },
+    "loadingFeed": "正在載入貼文...",
+    "emptyTitle": "目前還沒有貼文",
+    "emptyHint": "與家人分享珍貴的時刻吧",
+    "loadingMore": "正在載入更多...",
+    "headerTitle": "家庭動態",
+    "editModal": {
+      "title": "編輯貼文",
+      "contentLabel": "內容",
+      "contentPlaceholder": "請輸入內容",
+      "photoLabel": "照片",
+      "changePhoto": "📷 更換照片",
+      "removePhoto": "✕ 刪除",
+      "addPhoto": "📷 新增照片",
+      "categoryLabel": "分類",
+      "cancelA11y": "取消編輯",
+      "saveA11y": "儲存編輯",
+      "saving": "儲存中..."
+    }
+  },
+  "momstagramPost": {
+    "childAgeMonths": "{{count}}個月",
+    "contentRequiredAlert": {
+      "desc": "請輸入內容。"
+    },
+    "me": "我",
+    "privateSavedAlert": {
+      "desc": "僅自己可見的貼文已儲存。"
+    },
+    "imageUploadFailAlert": {
+      "desc": "圖片上傳失敗，請重新嘗試。"
+    },
+    "sharedAlert": {
+      "desc": "貼文已分享。"
+    },
+    "uploadFailAlert": {
+      "desc": "貼文上傳失敗，請重新嘗試。"
+    },
+    "screenTitle": "新貼文",
+    "contentPlaceholder": "分享家人與孩子的成長故事吧...",
+    "addPhoto": "新增照片（選填）",
+    "categoryLabel": "分類",
+    "privateOnly": "僅自己可見",
+    "privateHintOn": "這則貼文僅自己可見",
+    "privateHintOff": "將分享給家人",
+    "saveBtn": "儲存",
+    "shareBtn": "分享"
+  },
+  "aiAnalysis": {
+    "screenTitle": "AI分析",
+    "tabs": {
+      "pattern": {
+        "label": "育兒模式",
+        "description": "綜合分析今日記錄的排便、餵食、睡眠",
+        "cta": "開始育兒模式分析"
+      },
+      "poop": {
+        "label": "大便",
+        "description": "透過照片確認健康狀態",
+        "cta": "開始大便分析"
+      },
+      "cry": {
+        "label": "哭聲",
+        "description": "透過哭聲推測原因",
+        "cta": "開始哭聲分析"
+      }
+    },
+    "alert": {
+      "deleteTitle": "刪除分析記錄",
+      "deleteMessage": "要刪除這筆分析記錄嗎？刪除後將無法復原。"
+    },
+    "error": {
+      "selectChildFirst": "請先選擇孩子。",
+      "loadResultFailed": "無法載入分析結果。",
+      "analysisFailed": "分析過程中發生錯誤，請再試一次。"
+    },
+    "patternAnalysisComplete": "育兒模式分析完成",
+    "fullText": {
+      "standardRange": "標準範圍：{{range}}",
+      "currentStatus": "目前狀態：{{comment}}",
+      "advice": "✅ 解決方法：{{advice}}"
+    },
+    "startTitle": "{{label}}分析",
+    "analyzing": "分析中...",
+    "recentHistory": "最近的分析記錄",
+    "empty": {
+      "title": "目前還沒有分析記錄",
+      "subtitle": "請點擊上方按鈕開始第一次分析"
+    },
+    "detailTitle": "{{label}}分析詳情",
+    "section": {
+      "summary": "摘要",
+      "fullAnalysis": "綜合分析",
+      "metrics": "詳細指標",
+      "recommendations": "解決方法．推薦指南"
+    },
+    "metric": {
+      "standardRangeSuffix": "  （標準：{{range}}）",
+      "tryThis": "請試試這樣做"
+    }
+  },
+  "chatbot": {
+    "medicalSource": {
+      "kdca": "疾病管理廳 國家健康資訊入口網站",
+      "pediatrics": "大韓小兒青少年科學會"
+    },
+    "parentSuffix": {
+      "dad": "爸爸",
+      "mom": "媽咪",
+      "grandma": "奶奶",
+      "grandpa": "爺爺",
+      "auntie": "阿姨",
+      "uncle": "叔叔"
+    },
+    "defaultChildName": "孩子",
+    "disclaimer": "諮詢阿姨的回答僅供一般資訊參考,並不能替代醫療診斷或處方。",
+    "sourceLabel": "資訊來源: ",
+    "openSource": "開啟{{label}}來源",
+    "childInfoLoading": "正在載入孩子的資訊,請稍後再試一次。",
+    "noPermissionMessage": "您沒有使用諮詢功能的權限。請向監護人申請「使用諮詢阿姨」的權限。",
+    "answerPreparing": "正在準備回答。",
+    "responseFailed": "無法取得回應,請再試一次。",
+    "categoryPromptPregnant": "懷孕期間有關於{{label}}的煩惱",
+    "categoryPromptChild": "孩子有關於{{label}}的煩惱",
+    "unknownError": "未知的錯誤",
+    "autoSendFailTitle": "訊息傳送失敗",
+    "autoSendFailDesc": "自動傳送過程中發生錯誤。\n({{reason}})",
+    "categoryClose": "關閉分類",
+    "categorySelect": "選擇分類",
+    "greeting": "您好,{{name}} :) 有什麼想問的嗎?",
+    "answerPreparingLoading": "正在準備回答...",
+    "photoAttached": "已附加照片",
+    "poopAnalysis": "大便分析",
+    "cryAnalysis": "哭聲分析",
+    "noPermissionPlaceholder": "您沒有使用諮詢功能的權限(僅供檢視)"
   }
 }

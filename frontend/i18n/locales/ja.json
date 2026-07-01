@@ -3429,5 +3429,197 @@
       "analysisFailed": "分析に失敗しました。もう一度お試しください。"
     },
     "historyDefaultSummary": "泣き声分析完了"
+  },
+  "momstagram": {
+    "shareAlert": {
+      "title": "シェア",
+      "desc": "この投稿のリンクがコピーされました。"
+    },
+    "reportAlert": {
+      "title": "この投稿を通報しますか？",
+      "desc": "理由を選択してください"
+    },
+    "reportReasons": {
+      "abuse": "暴言・嫌悪表現",
+      "ad": "広告・宣伝",
+      "privacy": "個人情報の露出",
+      "sexual": "わいせつ・扇情的",
+      "spam": "荒らし・スパム",
+      "other": "その他"
+    },
+    "reportDoneAlert": {
+      "title": "通報完了",
+      "desc": "通報を受け付けました。24時間以内に確認します。"
+    },
+    "reportFailAlert": {
+      "desc": "通報の処理に失敗しました。もう一度お試しください。"
+    },
+    "blockConfirmAlert": {
+      "title": "{{userName}}さんをブロックしますか？",
+      "desc": "ブロックしたユーザーの投稿はフィードに表示されません。"
+    },
+    "block": "ブロック",
+    "blockDoneAlert": {
+      "title": "ブロック完了",
+      "desc": "このユーザーの投稿は今後表示されません。"
+    },
+    "blockFailAlert": {
+      "desc": "ブロック処理に失敗しました。"
+    },
+    "postMenu": {
+      "title": "投稿メニュー"
+    },
+    "deletePostAlert": {
+      "title": "投稿の削除",
+      "desc": "本当に削除しますか？"
+    },
+    "deletePostFailAlert": {
+      "desc": "削除に失敗しました。もう一度お試しください。"
+    },
+    "blockUserMenuItem": "{{userName}}さんをブロック",
+    "reportMenuItem": "通報する",
+    "contentRequiredAlert": {
+      "desc": "内容を入力してください。"
+    },
+    "imageUploadFailAlert": {
+      "desc": "画像のアップロードに失敗しました。"
+    },
+    "editFailAlert": {
+      "desc": "編集に失敗しました。もう一度お試しください。"
+    },
+    "loadingFeed": "投稿を読み込み中...",
+    "emptyTitle": "まだ投稿がありません",
+    "emptyHint": "家族と大切な瞬間を共有してみましょう",
+    "loadingMore": "追加読み込み中...",
+    "headerTitle": "家族フィード",
+    "editModal": {
+      "title": "投稿の編集",
+      "contentLabel": "内容",
+      "contentPlaceholder": "内容を入力してください",
+      "photoLabel": "写真",
+      "changePhoto": "📷 写真を変更",
+      "removePhoto": "✕ 削除",
+      "addPhoto": "📷 写真を追加",
+      "categoryLabel": "カテゴリー",
+      "cancelA11y": "編集をキャンセル",
+      "saveA11y": "編集を保存",
+      "saving": "保存中..."
+    }
+  },
+  "momstagramPost": {
+    "childAgeMonths": "生後{{count}}か月",
+    "contentRequiredAlert": {
+      "desc": "内容を入力してください。"
+    },
+    "me": "自分",
+    "privateSavedAlert": {
+      "desc": "自分だけ見る投稿として保存されました。"
+    },
+    "imageUploadFailAlert": {
+      "desc": "画像のアップロードに失敗しました。もう一度お試しください。"
+    },
+    "sharedAlert": {
+      "desc": "投稿がシェアされました。"
+    },
+    "uploadFailAlert": {
+      "desc": "投稿のアップロードに失敗しました。もう一度お試しください。"
+    },
+    "screenTitle": "新規投稿",
+    "contentPlaceholder": "家族と子どもの成長のお話をシェアしてみましょう...",
+    "addPhoto": "写真を追加（任意）",
+    "categoryLabel": "カテゴリー",
+    "privateOnly": "自分だけ見る",
+    "privateHintOn": "この投稿は自分だけに表示されます",
+    "privateHintOff": "家族にシェアされます",
+    "saveBtn": "保存する",
+    "shareBtn": "シェアする"
+  },
+  "aiAnalysis": {
+    "screenTitle": "AI分析",
+    "tabs": {
+      "pattern": {
+        "label": "育児パターン",
+        "description": "今日記録された排便・授乳・睡眠を総合分析します",
+        "cta": "育児パターン分析を開始"
+      },
+      "poop": {
+        "label": "うんち",
+        "description": "写真で健康状態を確認します",
+        "cta": "うんち分析を開始"
+      },
+      "cry": {
+        "label": "泣き声",
+        "description": "泣き声から原因を推定します",
+        "cta": "泣き声分析を開始"
+      }
+    },
+    "alert": {
+      "deleteTitle": "分析記録の削除",
+      "deleteMessage": "この分析記録を削除しますか？削除後は復元できません。"
+    },
+    "error": {
+      "selectChildFirst": "先にお子さまを選択してください。",
+      "loadResultFailed": "分析結果を読み込めません。",
+      "analysisFailed": "分析中にエラーが発生しました。もう一度お試しください。"
+    },
+    "patternAnalysisComplete": "育児パターン分析完了",
+    "fullText": {
+      "standardRange": "標準範囲: {{range}}",
+      "currentStatus": "現在の状態: {{comment}}",
+      "advice": "✅ 解決策: {{advice}}"
+    },
+    "startTitle": "{{label}}分析",
+    "analyzing": "分析中...",
+    "recentHistory": "最近の分析記録",
+    "empty": {
+      "title": "まだ分析記録がありません",
+      "subtitle": "上のボタンから最初の分析を始めてみましょう"
+    },
+    "detailTitle": "{{label}}分析詳細",
+    "section": {
+      "summary": "要約",
+      "fullAnalysis": "総合分析",
+      "metrics": "詳細指標",
+      "recommendations": "解決策・おすすめガイド"
+    },
+    "metric": {
+      "standardRangeSuffix": "  (標準: {{range}})",
+      "tryThis": "こうしてみましょう"
+    }
+  },
+  "chatbot": {
+    "medicalSource": {
+      "kdca": "疾病管理庁 国家健康情報ポータル",
+      "pediatrics": "大韓小児青少年科学会"
+    },
+    "parentSuffix": {
+      "dad": "パパ",
+      "mom": "ママ",
+      "grandma": "おばあちゃん",
+      "grandpa": "おじいちゃん",
+      "auntie": "おばさん",
+      "uncle": "おじさん"
+    },
+    "defaultChildName": "お子さま",
+    "disclaimer": "相談イモの回答は一般情報の提供を目的としており、医療診断・処方に代わるものではありません。",
+    "sourceLabel": "情報出典: ",
+    "openSource": "{{label}}の出典を開く",
+    "childInfoLoading": "お子さまの情報を読み込み中です。しばらくしてからもう一度お試しください。",
+    "noPermissionMessage": "相談機能の利用権限がありません。保護者に「相談イモ利用」権限をリクエストしてください。",
+    "answerPreparing": "回答を準備しています。",
+    "responseFailed": "応答を取得できませんでした。もう一度お試しください。",
+    "categoryPromptPregnant": "妊娠中の{{label}}に関して悩みがあります",
+    "categoryPromptChild": "子どもの{{label}}に関して悩みがあります",
+    "unknownError": "不明なエラー",
+    "autoSendFailTitle": "メッセージ送信失敗",
+    "autoSendFailDesc": "自動送信中にエラーが発生しました。\n({{reason}})",
+    "categoryClose": "カテゴリーを閉じる",
+    "categorySelect": "カテゴリー選択",
+    "greeting": "こんにちは、{{name}} :) 何が気になりますか?",
+    "answerPreparingLoading": "回答準備中...",
+    "photoAttached": "写真添付済み",
+    "poopAnalysis": "うんち分析",
+    "cryAnalysis": "泣き声分析",
+    "noPermissionPlaceholder": "相談機能の利用権限がありません(閲覧専用)"
   }
 }
