@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   View,
   Text,
@@ -88,59 +90,59 @@ interface SymptomItem {
   label: string;
 }
 
-const SYMPTOMS: SymptomItem[] = [
-  { id: 'fever', icon: IC_THERMOMETER, label: '38도+ 발열' },
-  { id: 'vomiting', icon: IC_NAUSEA, label: '구토/설사' },
-  { id: 'seizure', icon: IC_REDFLAG, label: '경련' },
-  { id: 'breathing', icon: IC_TIRED, label: '호흡곤란' },
-  { id: 'bleeding', icon: IC_BLOOD, label: '출혈/상처' },
-  { id: 'rash', icon: IC_REDFLAG, label: '발진/두드러기' },
+const getSymptoms = (t: TFunction): SymptomItem[] => [
+  { id: 'fever', icon: IC_THERMOMETER, label: t('sos.symptom.fever') },
+  { id: 'vomiting', icon: IC_NAUSEA, label: t('sos.symptom.vomiting') },
+  { id: 'seizure', icon: IC_REDFLAG, label: t('sos.symptom.seizure') },
+  { id: 'breathing', icon: IC_TIRED, label: t('sos.symptom.breathing') },
+  { id: 'bleeding', icon: IC_BLOOD, label: t('sos.symptom.bleedingWound') },
+  { id: 'rash', icon: IC_REDFLAG, label: t('sos.symptom.rash') },
 ];
 
-const PREGNANCY_SYMPTOMS: SymptomItem[] = [
-  { id: 'bleeding', icon: IC_BLOOD, label: '출혈' },
-  { id: 'severe_pain', icon: IC_PAIN, label: '심한 복통' },
-  { id: 'headache', icon: IC_PAIN, label: '심한 두통' },
-  { id: 'swelling', icon: IC_FOOT, label: '심한 부종' },
-  { id: 'vision', icon: IC_REDFLAG, label: '시야 흐림' },
-  { id: 'leaking', icon: IC_WATER, label: '양수 파수' },
-  { id: 'no_movement', icon: IC_PREG, label: '태동 감소' },
-  { id: 'fever', icon: IC_THERMOMETER, label: '발열 38+' },
-  { id: 'breathing', icon: IC_TIRED, label: '호흡곤란' },
-  { id: 'contractions', icon: IC_CONTRACTION, label: '규칙적 수축' },
+const getPregnancySymptoms = (t: TFunction): SymptomItem[] => [
+  { id: 'bleeding', icon: IC_BLOOD, label: t('sos.symptom.bleeding') },
+  { id: 'severe_pain', icon: IC_PAIN, label: t('sos.symptom.severePain') },
+  { id: 'headache', icon: IC_PAIN, label: t('sos.symptom.severeHeadache') },
+  { id: 'swelling', icon: IC_FOOT, label: t('sos.symptom.severeSwelling') },
+  { id: 'vision', icon: IC_REDFLAG, label: t('sos.symptom.blurryVision') },
+  { id: 'leaking', icon: IC_WATER, label: t('sos.symptom.waterBreaking') },
+  { id: 'no_movement', icon: IC_PREG, label: t('sos.symptom.reducedMovement') },
+  { id: 'fever', icon: IC_THERMOMETER, label: t('sos.symptom.fever38') },
+  { id: 'breathing', icon: IC_TIRED, label: t('sos.symptom.breathing') },
+  { id: 'contractions', icon: IC_CONTRACTION, label: t('sos.symptom.regularContractions') },
 ];
 
-const SEVERITY_CONFIG: Record<SeverityLevel, {
+const getSeverityConfig = (t: TFunction): Record<SeverityLevel, {
   bg: string;
   border: string;
   textColor: string;
   title: string;
-}> = {
+}> => ({
   EMERGENCY: {
     bg: '#FFF0F0',
     border: EMERGENCY_RED,
     textColor: EMERGENCY_RED,
-    title: '즉시 119 전화하세요',
+    title: t('sos.severity.emergencyTitle'),
   },
   HOSPITAL: {
     bg: '#FFF8F0',
     border: HOSPITAL_ORANGE,
     textColor: HOSPITAL_ORANGE,
-    title: '병원 방문을 권합니다',
+    title: t('sos.severity.hospitalTitle'),
   },
   URGENT: {
     bg: '#FFFDF0',
     border: URGENT_YELLOW,
     textColor: '#B8860B',
-    title: '조치가 필요합니다',
+    title: t('sos.severity.urgentTitle'),
   },
   MONITOR: {
     bg: '#F0FFF4',
     border: MONITOR_GREEN,
     textColor: MONITOR_GREEN,
-    title: '관찰하세요',
+    title: t('sos.severity.monitorTitle'),
   },
-};
+});
 
 /* ------------------------------------------------------------------ */
 /* Emergency Guide Data                                                */
@@ -188,11 +190,11 @@ const STEP_IMAGE_ASPECTS: Record<string, number[]> = {
   foreign:  [941 / 456, 941 / 441, 941 / 412, 941 / 363],
 };
 
-const EMERGENCY_GUIDES = [
-  { key: 'heimlich', icon: IC_HEIMLICH, label: '기도막힘', sublabel: '4단계 대처', color: '#D32F2F', bg: '#FFEBEE' },
-  { key: 'cpr', icon: IC_CPR, label: 'CPR', sublabel: '심폐소생술', color: '#C62828', bg: '#FCE4EC' },
-  { key: 'burn_fall', icon: IC_BURN, label: '화상/낙상', sublabel: '응급 처치', color: '#E65100', bg: '#FFF3E0' },
-  { key: 'foreign', icon: IC_FOREIGN, label: '이물질 삼킴', sublabel: '코/귀/입', color: '#F57F17', bg: '#FFFDE7' },
+const getEmergencyGuides = (t: TFunction) => [
+  { key: 'heimlich', icon: IC_HEIMLICH, label: t('sos.guide.heimlichLabel'), sublabel: t('sos.guide.heimlichSublabel'), color: '#D32F2F', bg: '#FFEBEE' },
+  { key: 'cpr', icon: IC_CPR, label: 'CPR', sublabel: t('sos.guide.cprSublabel'), color: '#C62828', bg: '#FCE4EC' },
+  { key: 'burn_fall', icon: IC_BURN, label: t('sos.guide.burnFallLabel'), sublabel: t('sos.guide.burnFallSublabel'), color: '#E65100', bg: '#FFF3E0' },
+  { key: 'foreign', icon: IC_FOREIGN, label: t('sos.guide.foreignLabel'), sublabel: t('sos.guide.foreignSublabel'), color: '#F57F17', bg: '#FFFDE7' },
 ] as const;
 
 type AgeKey = 'infant' | 'child' | 'adult';
@@ -212,129 +214,130 @@ interface GuideData {
 }
 
 /** heimlich/cpr 은 연령별로 분기 */
-const HEIMLICH_BY_AGE: Record<AgeKey, GuideData> = {
+const getHeimlichByAge = (t: TFunction): Record<AgeKey, GuideData> => ({
   infant: {
-    title: '기도막힘 (12개월 미만)',
-    subtitle: '영아 - 등 두드리기 + 가슴 압박',
+    title: t('sos.heimlich.infant.title'),
+    subtitle: t('sos.heimlich.infant.subtitle'),
     headerColor: '#D32F2F',
     quickSteps: [
-      '아이를 한 팔에 엎드리게 두고 머리를 가슴보다 낮게',
-      '등 가운데를 손바닥 아래쪽으로 5번 강하게 두드리기',
-      '뒤집어서 머리 낮추고, 가슴 중앙(젖꼭지 사이)을 손가락 2개로 5번 압박',
-      '나올 때까지 등 두드리기 ↔ 가슴 압박 반복',
-      '의식을 잃으면 즉시 CPR 시작 + 119 신고',
+      t('sos.heimlich.infant.step1'),
+      t('sos.heimlich.infant.step2'),
+      t('sos.heimlich.infant.step3'),
+      t('sos.heimlich.infant.step4'),
+      t('sos.heimlich.infant.step5'),
     ],
-    warning: '입속을 손가락으로 후비지 마세요. 더 깊이 들어갈 수 있어요.',
+    warning: t('sos.heimlich.infant.warning'),
   },
   child: {
-    title: '기도막힘 (만 1세 ~ 사춘기 전)',
-    subtitle: '소아 - 하임리히 (복부 밀어올리기)',
+    title: t('sos.heimlich.child.title'),
+    subtitle: t('sos.heimlich.child.subtitle'),
     headerColor: '#D32F2F',
     quickSteps: [
-      '아이 뒤에 무릎 꿇거나 서기 (눈높이 맞춰)',
-      '한 손은 주먹, 엄지 안쪽을 배꼽 위·명치 아래에 위치',
-      '다른 손으로 주먹을 감싸 안쪽·위쪽으로 5번 빠르게 당기듯 밀기',
-      '나올 때까지 반복',
-      '의식 잃으면 눕히고 CPR + 119 신고',
+      t('sos.heimlich.child.step1'),
+      t('sos.heimlich.child.step2'),
+      t('sos.heimlich.child.step3'),
+      t('sos.heimlich.child.step4'),
+      t('sos.heimlich.child.step5'),
     ],
-    warning: '명치 위(가슴뼈)는 누르지 마세요. 갈비뼈 손상 위험.',
+    warning: t('sos.heimlich.child.warning'),
   },
   adult: {
-    title: '기도막힘 (성인 / 보호자)',
-    subtitle: '청소년·성인 하임리히',
+    title: t('sos.heimlich.adult.title'),
+    subtitle: t('sos.heimlich.adult.subtitle'),
     headerColor: '#D32F2F',
     quickSteps: [
-      '뒤에서 양팔로 명치 아래·배꼽 위 부위를 감싸안기',
-      '한 손은 주먹, 다른 손은 그 위에 포개기',
-      '안쪽·위쪽 방향으로 빠르게 5번 당기듯 밀기',
-      '나올 때까지 반복',
-      '혼자라면 의자 등받이에 명치 부위 대고 압박',
+      t('sos.heimlich.adult.step1'),
+      t('sos.heimlich.adult.step2'),
+      t('sos.heimlich.adult.step3'),
+      t('sos.heimlich.adult.step4'),
+      t('sos.heimlich.adult.step5'),
     ],
-    warning: '임산부·비만인은 명치 아래 대신 가슴 중앙을 압박하세요.',
+    warning: t('sos.heimlich.adult.warning'),
   },
-};
+});
 
-const CPR_BY_AGE: Record<AgeKey, GuideData> = {
+const getCprByAge = (t: TFunction): Record<AgeKey, GuideData> => ({
   infant: {
-    title: 'CPR (12개월 미만)',
-    subtitle: '영아 - 손가락 2개로 가슴 압박',
+    title: t('sos.cpr.infant.title'),
+    subtitle: t('sos.cpr.infant.subtitle'),
     headerColor: '#C62828',
     quickSteps: [
-      '반응·호흡 확인 (10초 이내)',
-      '먼저 119 신고 (스피커폰으로 지시 받으며 진행)',
-      '평평한 곳에 눕히고 머리 살짝 뒤로 젖히기',
-      '가슴 중앙(젖꼭지 사이)을 손가락 2개로 깊이 4cm 압박',
-      '분당 100~120회로 30회 압박 → 입·코 동시에 가볍게 인공호흡 2회',
-      '구급대 올 때까지 30:2 반복, 절대 멈추지 말기',
+      t('sos.cpr.infant.step1'),
+      t('sos.cpr.infant.step2'),
+      t('sos.cpr.infant.step3'),
+      t('sos.cpr.infant.step4'),
+      t('sos.cpr.infant.step5'),
+      t('sos.cpr.infant.step6'),
     ],
-    warning: '인공호흡이 어렵다면 가슴 압박만이라도 계속하세요.',
+    warning: t('sos.cpr.infant.warning'),
   },
   child: {
-    title: 'CPR (만 1세 ~ 사춘기 전)',
-    subtitle: '소아 - 한 손 또는 양손 압박',
+    title: t('sos.cpr.child.title'),
+    subtitle: t('sos.cpr.child.subtitle'),
     headerColor: '#C62828',
     quickSteps: [
-      '어깨 두드리며 반응 확인, 호흡 확인 (10초 이내)',
-      '먼저 119 신고 (스피커폰)',
-      '평평한 곳에 눕히고 머리 젖혀 기도 열기',
-      '가슴 중앙을 한 손바닥(작은 아이) 또는 양손으로 깊이 5cm 압박',
-      '분당 100~120회로 30회 압박 → 입 대 입 인공호흡 2회',
-      '30:2 반복, AED 도착하면 즉시 사용',
+      t('sos.cpr.child.step1'),
+      t('sos.cpr.child.step2'),
+      t('sos.cpr.child.step3'),
+      t('sos.cpr.child.step4'),
+      t('sos.cpr.child.step5'),
+      t('sos.cpr.child.step6'),
     ],
-    warning: '구급대가 올 때까지 멈추지 마세요. 갈비뼈가 부러져도 계속.',
+    warning: t('sos.cpr.child.warning'),
   },
   adult: {
-    title: 'CPR (성인 / 보호자)',
-    subtitle: '청소년·성인 - 양손 가슴 압박',
+    title: t('sos.cpr.adult.title'),
+    subtitle: t('sos.cpr.adult.subtitle'),
     headerColor: '#C62828',
     quickSteps: [
-      '의식·호흡 확인 후 119 신고 (스피커폰)',
-      '가슴 중앙(흉골 아래쪽)에 양손 포개고 팔꿈치 펴기',
-      '체중 실어 깊이 5~6cm로 압박',
-      '분당 100~120회로 30회 압박',
-      '인공호흡 2회 (가능할 때) → 30:2 반복',
-      'AED 도착하면 즉시 사용, 구급대 올 때까지 멈추지 말기',
+      t('sos.cpr.adult.step1'),
+      t('sos.cpr.adult.step2'),
+      t('sos.cpr.adult.step3'),
+      t('sos.cpr.adult.step4'),
+      t('sos.cpr.adult.step5'),
+      t('sos.cpr.adult.step6'),
     ],
-    warning: '갈비뼈가 부러져도 멈추지 마세요. 생명이 우선입니다.',
+    warning: t('sos.cpr.adult.warning'),
   },
-};
+});
 
-const GUIDE_CONTENT: Record<string, GuideData> = {
+const getGuideContent = (t: TFunction): Record<string, GuideData> => ({
   burn_fall: {
-    title: '화상/낙상 대처',
-    subtitle: '데이거나 떨어졌을 때',
+    title: t('sos.burnFall.title'),
+    subtitle: t('sos.burnFall.subtitle'),
     headerColor: '#E65100',
     quickSteps: [
-      '화상: 흐르는 찬물 10분 이상 (얼음 금지!)',
-      '연고/된장/치약 바르지 않기, 물집 터뜨리지 않기',
-      '낙상: 바로 일으키지 말고 그 자리에서 안정',
-      '머리 부딪혔으면 24시간 관찰 (구토/경련 시 응급실)',
+      t('sos.burnFall.step1'),
+      t('sos.burnFall.step2'),
+      t('sos.burnFall.step3'),
+      t('sos.burnFall.step4'),
     ],
-    warning: '2도 이상 화상/넓은 범위/의식 변화 → 즉시 119',
+    warning: t('sos.burnFall.warning'),
   },
   foreign: {
-    title: '이물질 삼킴/삽입',
-    subtitle: '아이가 이물질을 삼키거나 넣었을 때',
+    title: t('sos.foreign.title'),
+    subtitle: t('sos.foreign.subtitle'),
     headerColor: '#F57F17',
     quickSteps: [
-      '억지로 빼내지 않기 (더 깊이 들어감)',
-      '코: 반대쪽 막고 훌! 불기, 안 나오면 병원',
-      '귀: 면봉/핀셋 금지, 병원으로',
-      '배터리/자석 삼킴 → 즉시 응급실! (구토 유도 금지)',
+      t('sos.foreign.step1'),
+      t('sos.foreign.step2'),
+      t('sos.foreign.step3'),
+      t('sos.foreign.step4'),
     ],
-    warning: '배터리/자석은 2시간 내 장 천공 가능! 즉시 응급실',
+    warning: t('sos.foreign.warning'),
   },
-};
+});
 
 /* ------------------------------------------------------------------ */
 /* Main Screen                                                         */
 /* ------------------------------------------------------------------ */
 
 export default function SOSScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { selectedChild } = useChildStore();
   const isPregnant = selectedChild?.isPregnant === true;
-  const activeSymptoms = isPregnant ? PREGNANCY_SYMPTOMS : SYMPTOMS;
+  const activeSymptoms = isPregnant ? getPregnancySymptoms(t) : getSymptoms(t);
 
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [temperature, setTemperature] = useState('');
@@ -377,11 +380,11 @@ export default function SOSScreen() {
     if (!picked) {
       // 등록된 번호 없음 → 등록 모달 열기
       Alert.alert(
-        '병원 번호 등록 필요',
-        '먼저 분만 예정 병원의 전화번호를 등록해 주세요.',
+        t('sos.alert.hospitalPhoneRequiredTitle'),
+        t('sos.alert.hospitalPhoneRequiredMessage'),
         [
-          { text: '취소', style: 'cancel' },
-          { text: '등록하기', onPress: () => setHospitalModalOpen(true) },
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('sos.alert.registerAction'), onPress: () => setHospitalModalOpen(true) },
         ],
       );
       return;
@@ -390,9 +393,9 @@ export default function SOSScreen() {
     const cleaned = picked.phone.replace(/[^0-9+]/g, '');
     Linking.openURL(`tel:${cleaned}`).catch((e) => {
       captureError(e, { ctx: 'sos/dialDelivery', phoneLast4: picked.phone.slice(-4) });
-      Alert.alert('전화 연결 실패', `직접 전화해 주세요: ${picked.phone}`);
+      Alert.alert(t('sos.alert.callFailedTitle'), t('sos.alert.callFailedWithPhone', { phone: picked.phone }));
     });
-  }, [selectedChild?.id]);
+  }, [selectedChild?.id, t]);
 
   /* -- Symptom toggle -- */
   const toggleSymptom = useCallback((id: string) => {
@@ -406,18 +409,18 @@ export default function SOSScreen() {
   const call119 = useCallback(() => {
     Linking.openURL('tel:119').catch((e) => {
       captureError(e, { ctx: 'sos/call119' });
-      Alert.alert('전화 연결 실패', '전화 앱을 열 수 없습니다. 직접 119를 눌러주세요.');
+      Alert.alert(t('sos.alert.callFailedTitle'), t('sos.alert.callFailedOpenApp'));
     });
-  }, []);
+  }, [t]);
 
   /* -- Check symptoms -- */
   const checkSymptoms = useCallback(async () => {
     if (selectedSymptoms.length === 0) {
-      Alert.alert('증상 선택', '하나 이상의 증상을 선택해주세요.');
+      Alert.alert(t('sos.alert.symptomSelectTitle'), t('sos.alert.symptomSelectMessage'));
       return;
     }
     if (!selectedChild) {
-      Alert.alert('아이 선택', '먼저 아이를 선택해주세요.');
+      Alert.alert(t('sos.alert.childSelectTitle'), t('sos.alert.childSelectMessage'));
       return;
     }
 
@@ -434,14 +437,14 @@ export default function SOSScreen() {
       if (data) {
         setResult(data);
       } else {
-        Alert.alert('오류', '증상 확인 결과를 받지 못했습니다. 다시 시도해주세요.');
+        Alert.alert(t('common.error'), t('sos.alert.checkResultMissing'));
       }
     } catch {
-      Alert.alert('오류', '증상 확인 중 오류가 발생했습니다. 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('sos.alert.checkError'));
     } finally {
       setChecking(false);
     }
-  }, [selectedSymptoms, selectedChild, temperature]);
+  }, [selectedSymptoms, selectedChild, temperature, t]);
 
   /* -- Notify family -- */
   const notifyFamily = useCallback(async () => {
@@ -452,17 +455,17 @@ export default function SOSScreen() {
         .map((id) => activeSymptoms.find((s) => s.id === id)?.label ?? id)
         .join(', ');
       const situation = temperature
-        ? `${symptomLabels} (체온 ${temperature}도)`
+        ? t('sos.familyNotify.situationWithTemp', { symptoms: symptomLabels, temp: temperature })
         : symptomLabels;
       await sosApi.notifyFamily(selectedChild.id, situation);
-      Alert.alert('알림 완료', '가족에게 알림을 보냈습니다.');
+      Alert.alert(t('sos.alert.notifyDoneTitle'), t('sos.alert.notifyDoneMessage'));
     } catch {
-      Alert.alert('오류', '가족 알림에 실패했습니다.');
+      Alert.alert(t('common.error'), t('sos.alert.notifyError'));
     } finally {
       setNotifyingFamily(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChild, selectedSymptoms, temperature]);
+  }, [selectedChild, selectedSymptoms, temperature, t]);
 
   /* -- Open hospital map --
    * 2026-05-08: 사용자 피드백 — 기존 '산부인과+응급'/'소아과+응급' 키워드는 카카오맵에서
@@ -485,9 +488,9 @@ export default function SOSScreen() {
       ? '대학병원 응급실'
       : `${trimmedRegion} 대학병원 응급실`;
     Linking.openURL(`https://map.kakao.com/link/search/${encodeURIComponent(query)}`).catch(() => {
-      Alert.alert('오류', '지도 앱을 열 수 없습니다.');
+      Alert.alert(t('common.error'), t('sos.alert.mapOpenError'));
     });
-  }, [regionName]);
+  }, [regionName, t]);
 
   /* -- Render -- */
   return (
@@ -503,7 +506,7 @@ export default function SOSScreen() {
         {/* == Subtitle (child / 응급 도우미) == */}
         <View style={[styles.titleBar, { justifyContent: 'center' }]}>
           <Text style={styles.screenSubtitle}>
-            {selectedChild ? (isPregnant ? `${selectedChild.name} 엄마` : selectedChild.name) : '응급 도우미'}
+            {selectedChild ? (isPregnant ? t('sos.subtitleMom', { name: selectedChild.name }) : selectedChild.name) : t('sos.subtitleDefault')}
           </Text>
         </View>
 
@@ -511,7 +514,7 @@ export default function SOSScreen() {
         {/* Section 1: 위급하면 먼저 119 — 안전 상징 영역 */}
         {/* ============================================ */}
         <View style={styles.priorityCard}>
-          <Text style={styles.priorityTitle}>위급하면 먼저 119</Text>
+          <Text style={styles.priorityTitle}>{t('sos.priorityTitle')}</Text>
           <View style={styles.priorityBtnRow}>
             <TouchableOpacity
               style={[styles.priorityBtn, styles.priorityBtnRed]}
@@ -519,7 +522,7 @@ export default function SOSScreen() {
               activeOpacity={0.85}
             >
               <Image source={IC_REDFLAG} style={styles.priorityBtnIconImg} resizeMode="contain" />
-              <Text style={styles.priorityBtnText}>119 전화하기</Text>
+              <Text style={styles.priorityBtnText}>{t('sos.call119Button')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.priorityBtn, styles.priorityBtnBlue]}
@@ -527,7 +530,7 @@ export default function SOSScreen() {
               activeOpacity={0.85}
             >
               <Image source={IC_HOSPITAL} style={styles.priorityBtnIconImg} resizeMode="contain" />
-              <Text style={styles.priorityBtnText}>응급실 찾기</Text>
+              <Text style={styles.priorityBtnText}>{t('sos.findErButton')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.priorityBtn, styles.priorityBtnPurple]}
@@ -540,7 +543,7 @@ export default function SOSScreen() {
               ) : (
                 <>
                   <Image source={IC_FAMILY} style={styles.priorityBtnIconImg} resizeMode="contain" />
-                  <Text style={styles.priorityBtnText}>가족에게 알리기</Text>
+                  <Text style={styles.priorityBtnText}>{t('sos.notifyFamilyButton')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -548,7 +551,7 @@ export default function SOSScreen() {
           <View style={styles.priorityNote}>
             <Image source={IC_REDFLAG} style={styles.priorityNoteIconImg} resizeMode="contain" />
             <Text style={styles.priorityNoteText}>
-              호흡곤란, 의식저하, 경련, 심한 출혈, 입술이 파래짐 등 위급상황은 앱 확인보다 119에 먼저 전화하세요.
+              {t('sos.priorityNote')}
             </Text>
           </View>
         </View>
@@ -558,12 +561,12 @@ export default function SOSScreen() {
         {/* ============================================ */}
         {!isPregnant && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>응급 상황 빠른 대처</Text>
+          <Text style={styles.sectionTitle}>{t('sos.quickHelpTitle')}</Text>
           <Text style={styles.sectionDesc}>
-            위급하면 119, 애매하면 증상부터 빠르게 확인하세요
+            {t('sos.quickHelpDesc')}
           </Text>
           <View style={styles.guideGrid}>
-            {EMERGENCY_GUIDES.map((g) => (
+            {getEmergencyGuides(t).map((g) => (
               <TouchableOpacity
                 key={g.key}
                 style={[styles.guideBtn, { backgroundColor: g.bg }]}
@@ -591,11 +594,11 @@ export default function SOSScreen() {
         {/* Section 3: Symptom Quick Checker             */}
         {/* ============================================ */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>증상 빠른 확인</Text>
+          <Text style={styles.sectionTitle}>{t('sos.symptomCheckTitle')}</Text>
           <Text style={styles.sectionDesc}>
             {isPregnant
-              ? '바로 119급인지 애매할 때 — 엄마·태아 증상을 선택해주세요'
-              : '바로 119급인지 애매할 때 — 증상부터 빠르게 확인하세요'}
+              ? t('sos.symptomCheckDescPregnant')
+              : t('sos.symptomCheckDesc')}
           </Text>
 
           <View style={styles.symptomGrid}>
@@ -627,7 +630,7 @@ export default function SOSScreen() {
 
           {/* Temperature input */}
           <View style={styles.tempRow}>
-            <Text style={styles.tempLabel}>체온 (선택사항)</Text>
+            <Text style={styles.tempLabel}>{t('sos.tempLabel')}</Text>
             <View style={styles.tempInputWrap}>
               <TextInput
                 style={styles.tempInput}
@@ -655,7 +658,7 @@ export default function SOSScreen() {
             {checking ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
-              <Text style={styles.checkButtonText}>증상 확인</Text>
+              <Text style={styles.checkButtonText}>{t('sos.checkButton')}</Text>
             )}
           </TouchableOpacity>
 
@@ -676,11 +679,11 @@ export default function SOSScreen() {
             >
               <Image source={IC_REDFLAG} style={styles.megaCallIconImg} resizeMode="contain" />
               <View style={{ flex: 1 }}>
-                <Text style={styles.megaCallText}>분만실 전화하기</Text>
+                <Text style={styles.megaCallText}>{t('sos.callDeliveryWardButton')}</Text>
                 <Text style={styles.megaCallSub}>
                   {deliveryHospital
                     ? `${deliveryHospital.name} · ${deliveryHospital.deliveryWardPhone || deliveryHospital.mainPhone}`
-                    : '터치하여 병원 번호 등록'}
+                    : t('sos.touchToRegisterPhone')}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -691,18 +694,18 @@ export default function SOSScreen() {
               hitSlop={10}
             >
               <Text style={styles.editHospitalText}>
-                분만/진료 병원 정보 {deliveryHospital ? '수정' : '등록'}
+                {t('sos.hospitalInfoEditOrRegister', { action: deliveryHospital ? t('common.edit') : t('sos.registerAction') })}
               </Text>
             </TouchableOpacity>
           </>
         )}
 
         <MedicalCitation
-          note="응급처치 안내는 참고용입니다. 위급 시 즉시 119에 신고하고 의료진 지시를 따르세요."
+          note={t('sos.medicalCitationNote')}
           sources={[
-            { label: '소방청 119 응급처치 안내', url: 'https://www.nfa.go.kr' },
-            { label: '질병관리청 국가건강정보포털 (응급처치)', url: 'https://health.kdca.go.kr' },
-            { label: '대한적십자사 응급처치 가이드', url: 'https://www.redcross.or.kr' },
+            { label: t('sos.citationSource.nfa'), url: 'https://www.nfa.go.kr' },
+            { label: t('sos.citationSource.kdca'), url: 'https://health.kdca.go.kr' },
+            { label: t('sos.citationSource.redcross'), url: 'https://www.redcross.or.kr' },
           ]}
         />
         <View style={{ height: 40 }} />
@@ -737,7 +740,8 @@ function ResultCard({
   onCall119: () => void;
   onOpenMap: () => void;
 }) {
-  const config = SEVERITY_CONFIG[result.urgency];
+  const { t } = useTranslation();
+  const config = getSeverityConfig(t)[result.urgency];
 
   return (
     <View
@@ -753,7 +757,7 @@ function ResultCard({
 
       {result.actions.length > 0 && (
         <View style={styles.resultActions}>
-          <Text style={{ fontSize: 13, fontWeight: '800', color: config.textColor, marginBottom: 4 }}>{'👉 지금 할 일'}</Text>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: config.textColor, marginBottom: 4 }}>{t('sos.doNowLabel')}</Text>
           {result.actions.map((action, idx) => (
             <View key={`action-${idx}`} style={styles.resultActionRow}>
               <Text style={[styles.resultBullet, { color: config.border }]}>
@@ -771,7 +775,7 @@ function ResultCard({
           onPress={onCall119}
           activeOpacity={0.8}
         >
-          <Text style={styles.resultBtnText}>119 전화하기</Text>
+          <Text style={styles.resultBtnText}>{t('sos.call119Button')}</Text>
         </TouchableOpacity>
       )}
 
@@ -781,12 +785,12 @@ function ResultCard({
           onPress={onOpenMap}
           activeOpacity={0.8}
         >
-          <Text style={styles.resultBtnText}>가까운 병원 찾기</Text>
+          <Text style={styles.resultBtnText}>{t('sos.findNearbyHospitalButton')}</Text>
         </TouchableOpacity>
       )}
 
       <Text style={{ fontSize: 11, color: '#888', marginTop: 10, lineHeight: 16 }}>
-        ⚠️ 본 안내는 참고용 정보이며 의학적 진단이 아닙니다. 판단이 어렵거나 증상이 악화되면 즉시 119 또는 응급실을 이용하세요.
+        {t('sos.resultDisclaimer')}
       </Text>
     </View>
   );
@@ -799,24 +803,25 @@ function ResultCard({
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; onClose: () => void }) {
+  const { t } = useTranslation();
   const [pageIdx, setPageIdx] = useState(0);
 
   if (!guideKey) return null;
 
   const stepImages = SOS_STEP_IMAGES[guideKey];
-  const guideMeta = EMERGENCY_GUIDES.find((g) => g.key === guideKey);
+  const guideMeta = getEmergencyGuides(t).find((g) => g.key === guideKey);
   const headerColor = guideMeta?.color ?? '#D32F2F';
   const guideTitle = guideMeta?.label ?? '';
   // warning text — heimlich/cpr 은 연령별 데이터에서, 나머지는 GUIDE_CONTENT에서
   const warningText =
-    guideKey === 'heimlich' ? HEIMLICH_BY_AGE.infant.warning
-    : guideKey === 'cpr'    ? CPR_BY_AGE.infant.warning
-    : GUIDE_CONTENT[guideKey]?.warning ?? '';
+    guideKey === 'heimlich' ? getHeimlichByAge(t).infant.warning
+    : guideKey === 'cpr'    ? getCprByAge(t).infant.warning
+    : getGuideContent(t)[guideKey]?.warning ?? '';
   // 각 단계 설명 (이미지 인덱스에 대응)
   const stepDescriptions: string[] =
-    guideKey === 'heimlich' ? HEIMLICH_BY_AGE.infant.quickSteps
-    : guideKey === 'cpr'    ? CPR_BY_AGE.infant.quickSteps
-    : GUIDE_CONTENT[guideKey]?.quickSteps ?? [];
+    guideKey === 'heimlich' ? getHeimlichByAge(t).infant.quickSteps
+    : guideKey === 'cpr'    ? getCprByAge(t).infant.quickSteps
+    : getGuideContent(t)[guideKey]?.quickSteps ?? [];
 
   if (!stepImages) return null;
 
@@ -846,14 +851,14 @@ function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; o
         <View style={[guideStyles.simpleTopBar, { backgroundColor: headerColor }]}>
           <Text style={guideStyles.simpleTopText}>{guideTitle}</Text>
           <Text style={guideStyles.simplePageText}>
-            {pageIdx < stepImages.length ? `${pageIdx + 1} / ${stepImages.length}` : '경고'}
+            {pageIdx < stepImages.length ? `${pageIdx + 1} / ${stepImages.length}` : t('sos.warningPageLabel')}
           </Text>
         </View>
 
         {/* 의료 disclaimer — 응급처치 가이드는 일반 참고용임을 항상 표시 */}
         <View style={guideStyles.disclaimerBar}>
           <Text style={guideStyles.disclaimerBarText}>
-            ⓘ 일반 응급처치 참고용 · 의료 행위 대체 아님 · 위급 시 즉시 119
+            {t('sos.disclaimerBar')}
           </Text>
         </View>
 
@@ -880,12 +885,12 @@ function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; o
                 </View>
                 {stepText ? (
                   <View style={guideStyles.stepDescBox}>
-                    <Text style={guideStyles.stepDescNum}>{`STEP ${idx + 1}`}</Text>
+                    <Text style={guideStyles.stepDescNum}>{t('sos.stepNumLabel', { num: idx + 1 })}</Text>
                     <Text style={guideStyles.stepDescText}>{stepText}</Text>
                   </View>
                 ) : null}
                 {idx === 0 ? (
-                  <Text style={guideStyles.swipeHint}>옆으로 넘기면 다음 단계</Text>
+                  <Text style={guideStyles.swipeHint}>{t('sos.swipeHint')}</Text>
                 ) : null}
               </View>
             );
@@ -895,7 +900,7 @@ function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; o
           <View style={[guideStyles.cardPage, { width: SCREEN_WIDTH }]}>
             <View style={guideStyles.warningCardLarge}>
               <Image source={IC_REDFLAG} style={guideStyles.warningIconImg} resizeMode="contain" />
-              <Text style={guideStyles.warningTitleLarge}>이럴 땐 즉시 119</Text>
+              <Text style={guideStyles.warningTitleLarge}>{t('sos.call119Immediately')}</Text>
               <Text style={guideStyles.warningTextLarge}>{warningText}</Text>
             </View>
           </View>
@@ -921,12 +926,12 @@ function EmergencyGuideModal({ guideKey, onClose }: { guideKey: string | null; o
             onPress={() =>
               Linking.openURL('tel:119').catch((err) => {
                 captureError(err, { ctx: 'sos/call119-bottom' });
-                Alert.alert('전화 연결 실패', '직접 119로 전화해주세요.');
+                Alert.alert(t('sos.alert.callFailedTitle'), t('sos.alert.callFailedDialDirectly'));
               })
             }
             activeOpacity={0.8}
           >
-            <Text style={guideStyles.call119Text}>{'119 응급전화'}</Text>
+            <Text style={guideStyles.call119Text}>{t('sos.emergencyCall119')}</Text>
           </TouchableOpacity>
         </View>
       </View>

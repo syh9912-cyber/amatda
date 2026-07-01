@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useChildStore } from '../../stores/childStore';
 import { pregnancyApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
@@ -53,6 +54,7 @@ function getCurrentWeek(dueDate?: string | null): number {
 }
 
 export default function LaborMonitorScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { selectedChild } = useChildStore();
   const childId = selectedChild?.id ?? '';
@@ -64,7 +66,7 @@ export default function LaborMonitorScreen() {
 
   const params = useLocalSearchParams<{ tab?: string }>();
   const tab: Tab = params.tab === 'contraction' ? 'contraction' : 'kick';
-  const headerTitle = tab === 'contraction' ? '진통 체크' : '태동 체크';
+  const headerTitle = tab === 'contraction' ? t('laborMonitor.headerTitleContraction') : t('laborMonitor.headerTitleKick');
 
   // 태동
   const [kickCount, setKickCount] = useState(0);
@@ -99,14 +101,14 @@ export default function LaborMonitorScreen() {
     let week7Count = 0;
     for (const r of kickHistory) {
       if (!r.createdAt) continue;
-      const t = toMillis(r.createdAt);
-      if (isNaN(t)) continue;
-      if (t >= todayStart.getTime()) {
+      const ms = toMillis(r.createdAt);
+      if (isNaN(ms)) continue;
+      if (ms >= todayStart.getTime()) {
         todayCount += r.count;
-      } else if (t >= yestStart.getTime()) {
+      } else if (ms >= yestStart.getTime()) {
         yestCount += r.count;
       }
-      if (t >= week7Start.getTime()) {
+      if (ms >= week7Start.getTime()) {
         week7Count += r.count;
       }
     }
@@ -149,12 +151,12 @@ export default function LaborMonitorScreen() {
 
   // 호흡법 가이드 — 측정 중 회전 노출 (5~7초마다)
   const BREATHING_TIPS = [
-    '🌬 깊게 숨을 들이마시고, 천천히 내뱉으세요',
-    '💆‍♀️ 어깨 힘을 빼고 편안한 자세를 유지하세요',
-    '👐 남편이 허리를 지그시 눌러주면 도움이 돼요',
-    '😌 통증 사이에는 편하게 쉬어 두세요',
-    '💧 물을 한 모금씩 천천히 마셔도 좋아요',
-    '🌬 코로 들이쉬고 입으로 후~ 길게 내쉬세요',
+    t('laborMonitor.breathingTips.0'),
+    t('laborMonitor.breathingTips.1'),
+    t('laborMonitor.breathingTips.2'),
+    t('laborMonitor.breathingTips.3'),
+    t('laborMonitor.breathingTips.4'),
+    t('laborMonitor.breathingTips.5'),
   ];
   const [breathingIdx, setBreathingIdx] = useState(0);
   useEffect(() => {
@@ -180,7 +182,7 @@ export default function LaborMonitorScreen() {
 
   useEffect(() => {
     if (currentContraction === null) return;
-    const id = setInterval(() => setContractionTick((t) => t + 1), 1000);
+    const id = setInterval(() => setContractionTick((v) => v + 1), 1000);
     return () => clearInterval(id);
   }, [currentContraction]);
 
@@ -200,7 +202,7 @@ export default function LaborMonitorScreen() {
     setKickRunning(false);
     if (kickTimerRef.current) clearInterval(kickTimerRef.current);
     if (kickCount === 0 || kickElapsed < 10) {
-      Alert.alert('기록 없음', '측정 시간이 너무 짧거나 태동이 기록되지 않았어요.');
+      Alert.alert(t('laborMonitor.noRecordTitle'), t('laborMonitor.noRecordDesc'));
       return;
     }
     setKickSaving(true);
@@ -209,14 +211,14 @@ export default function LaborMonitorScreen() {
         childId, count: kickCount, durationSec: kickElapsed, week: currentWeek,
       });
       // 작은 토스트만 — 큰 Alert 제거 (반복 기록 시 피로도 ↓)
-      setToastMsg(`태동 ${kickCount}회 기록 완료했어요 👣`);
+      setToastMsg(t('laborMonitor.kickSavedToast', { count: kickCount }));
       setKickCount(0);
       setKickElapsed(0);
       // 누적 기록 갱신 (fire-and-forget)
       reloadKickHistory();
     } catch (e) {
       captureError(e, { ctx: 'labor-monitor/saveKickSession', childId, count: kickCount });
-      Alert.alert('오류', '태동 기록 저장에 실패했습니다');
+      Alert.alert(t('common.error'), t('laborMonitor.kickSaveFailed'));
     }
     setKickSaving(false);
   };
@@ -230,7 +232,7 @@ export default function LaborMonitorScreen() {
       setCurrentContraction(null);
       setContractionTick(0);
       // 작은 토스트 — 진통 1회 기록 완료
-      setToastMsg('진통 간격 기록했어요 ⏱️');
+      setToastMsg(t('laborMonitor.contractionSavedToast'));
     }
   };
 
@@ -255,17 +257,16 @@ export default function LaborMonitorScreen() {
     // 양수 파수는 즉시 EMERGENCY
     if (diagAnswers.ruptured) {
       return {
-        label: '🚨 즉시 분만실 연락',
-        message:
-          '양수가 터졌거나 이슬이 비치면 즉시 분만실에 전화하시고 병원으로 이동하세요. 출산이 가까울 수 있습니다.',
+        label: t('laborMonitor.guide.emergency.label'),
+        message: t('laborMonitor.guide.emergency.message'),
         tone: 'emergency' as const,
         score: 99,
       };
     }
     if (contractions.length < 3) {
       return {
-        label: '데이터 수집 중',
-        message: '진통 3회 이상 기록되면 패턴 분석을 시작합니다. 측정 중에는 깊은 호흡으로 편하게 쉬세요.',
+        label: t('laborMonitor.guide.collecting.label'),
+        message: t('laborMonitor.guide.collecting.message'),
         tone: 'info' as const,
         score: 0,
       };
@@ -305,33 +306,33 @@ export default function LaborMonitorScreen() {
     // 결론 분기
     if (score >= 4) {
       return {
-        label: '병원 방문 권장 수치',
-        message:
-          `현재 기록된 간격은 평균 ${avgMin.toFixed(1)}분이며, 종합 분석상 진진통일 가능성이 높습니다. ` +
-          '담당 의사나 분만실에 문의하여 정확한 진단을 받으시길 권장합니다.',
+        label: t('laborMonitor.guide.hospitalRecommended.label'),
+        message: t('laborMonitor.guide.hospitalRecommended.message', { avgMin: avgMin.toFixed(1) }),
         tone: 'danger' as const,
         score,
       };
     }
     if (score >= 2 || pattern === 'shortening') {
       return {
-        label: '간격이 짧아지고 있어요',
-        message:
-          `평균 ${avgMin.toFixed(1)}분에서 마지막 ${(intervals[intervals.length - 1] / 60).toFixed(1)}분으로 변화가 보여요. ` +
-          '점점 가까워지고 있을 가능성이 있으니 다음 몇 회 더 지켜봐 주세요.',
+        label: t('laborMonitor.guide.shortening.label'),
+        message: t('laborMonitor.guide.shortening.message', {
+          avgMin: avgMin.toFixed(1),
+          lastMin: (intervals[intervals.length - 1] / 60).toFixed(1),
+        }),
         tone: 'watch' as const,
         score,
       };
     }
     return {
-      label: '가진통일 가능성이 높습니다',
-      message:
-        `간격이 ${Math.round(min / 60)}~${Math.round(max / 60)}분으로 불규칙합니다. ` +
-        '현재 패턴은 가진통일 가능성이 높습니다. 편안한 자세로 휴식을 취하며 경과를 조금 더 지켜보세요.',
+      label: t('laborMonitor.guide.falseLabor.label'),
+      message: t('laborMonitor.guide.falseLabor.message', {
+        minMin: Math.round(min / 60),
+        maxMin: Math.round(max / 60),
+      }),
       tone: 'info' as const,
       score,
     };
-  }, [contractions, currentContraction, diagAnswers]);
+  }, [contractions, currentContraction, diagAnswers, t]);
 
   /** 진진통 판정 (배경 빨강 + 분만실 전화 노출) */
   const isLaborImminent = contractionGuide.tone === 'danger' || contractionGuide.tone === 'emergency';
@@ -362,9 +363,9 @@ export default function LaborMonitorScreen() {
     const cleaned = phone.replace(/[^0-9+]/g, '');
     Linking.openURL(`tel:${cleaned}`).catch((e) => {
       captureError(e, { ctx: 'labor-monitor/dialPhone', phoneLast4: phone.slice(-4) });
-      Alert.alert('전화 연결 실패', `직접 전화해 주세요: ${phone}`);
+      Alert.alert(t('laborMonitor.callFailedTitle'), t('laborMonitor.callFailedDescDirect', { phone }));
     });
-  }, []);
+  }, [t]);
 
   /** 분만실 전화하기 — 번호 1개면 바로 전화, 여러 개면 선택 모달, 미등록이면 등록 모달.
    *  양수파수/출혈 등 위급 증상 시(isEmergency) 외래 후보 자동 제외 → MFICU/분만실/119 만 노출. */
@@ -376,24 +377,24 @@ export default function LaborMonitorScreen() {
     if (all.length === 0) {
       // 미등록 — 진통 위급 상황에서 119로 안내 + 즉시 등록 가능한 모달
       Alert.alert(
-        '병원 번호 등록 필요',
-        '분만 예정 병원이 등록되어 있지 않아요.\n지금 등록하시겠어요?\n\n급한 상황이면 먼저 119에 전화하세요.',
+        t('laborMonitor.hospitalRegisterRequiredTitle'),
+        t('laborMonitor.hospitalRegisterRequiredDesc'),
         [
           {
-            text: '119 전화',
+            text: t('laborMonitor.call119'),
             onPress: () => {
               Linking.openURL('tel:119').catch((e) => {
                 captureError(e, { ctx: 'labor-monitor/119-fallback' });
-                Alert.alert('전화 연결 실패', '직접 119에 전화해 주세요.');
+                Alert.alert(t('laborMonitor.callFailedTitle'), t('laborMonitor.callFailedDesc119'));
               });
             },
           },
           {
-            text: '병원 등록',
+            text: t('laborMonitor.registerHospital'),
             style: 'default',
             onPress: () => setHospitalRegisterOpen(true),
           },
-          { text: '취소', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
         ],
       );
       return;
@@ -405,7 +406,7 @@ export default function LaborMonitorScreen() {
     // 여러 개 등록 — 시간대 우선순위에 맞는 첫 번호가 위에 표시되는 선택 모달
     setPhoneChoices(all);
     setPhoneChoiceOpen(true);
-  }, [childId, dialPhone, diagAnswers.ruptured]);
+  }, [childId, dialPhone, diagAnswers.ruptured, t]);
 
   if (!selectedChild?.isPregnant) {
     return (
@@ -413,7 +414,7 @@ export default function LaborMonitorScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <ScreenHeader title={headerTitle} />
         <View style={styles.emptyCenter}>
-          <Text style={styles.emptyText}>임신 중인 아이를 선택해주세요</Text>
+          <Text style={styles.emptyText}>{t('laborMonitor.selectPregnantChild')}</Text>
         </View>
       </View>
     );
@@ -433,8 +434,8 @@ export default function LaborMonitorScreen() {
           <>
             <View style={styles.hintBox}>
               <Text style={styles.hintBoxText}>
-                태동이 느껴질 때마다 <Text style={styles.hintBoxStrong}>아래 버튼을 탭</Text>하세요{'\n'}
-                <Text style={styles.hintBoxStrong}>30분에 3~5회 이상</Text>이면 건강한 신호예요
+                {t('laborMonitor.kickHintPrefix')} <Text style={styles.hintBoxStrong}>{t('laborMonitor.kickHintTapButton')}</Text>{t('laborMonitor.kickHintSuffix')}{'\n'}
+                <Text style={styles.hintBoxStrong}>{t('laborMonitor.kickHintThreshold')}</Text>{t('laborMonitor.kickHintHealthySignal')}
               </Text>
             </View>
 
@@ -446,24 +447,24 @@ export default function LaborMonitorScreen() {
             >
               <Text style={styles.guideLinkLargeIcon}>❓</Text>
               <Text style={styles.guideLinkLargeText}>
-                태동이 평소보다{'\n'}안 느껴지나요?
+                {t('laborMonitor.kickLessThanUsualQuestion')}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.bigBtn} onPress={handleKickTap} activeOpacity={0.8}>
               <Text style={styles.bigCount}>{kickCount}</Text>
-              <Text style={styles.bigLabel}>회</Text>
+              <Text style={styles.bigLabel}>{t('laborMonitor.countUnit')}</Text>
             </TouchableOpacity>
 
             <View style={styles.statsRow}>
               <View style={styles.statBox}>
-                <Text style={styles.statLabel}>경과</Text>
-                <Text style={styles.statValue}>{Math.floor(kickElapsed / 60)}분 {kickElapsed % 60}초</Text>
+                <Text style={styles.statLabel}>{t('laborMonitor.elapsed')}</Text>
+                <Text style={styles.statValue}>{t('laborMonitor.minSec', { min: Math.floor(kickElapsed / 60), sec: kickElapsed % 60 })}</Text>
               </View>
               <View style={styles.statBox}>
-                <Text style={styles.statLabel}>시간당</Text>
+                <Text style={styles.statLabel}>{t('laborMonitor.perHour')}</Text>
                 <Text style={styles.statValue}>
-                  {kickElapsed > 0 ? Math.round((kickCount / kickElapsed) * 3600) : 0}회
+                  {t('laborMonitor.countValue', { count: kickElapsed > 0 ? Math.round((kickCount / kickElapsed) * 3600) : 0 })}
                 </Text>
               </View>
             </View>
@@ -473,7 +474,7 @@ export default function LaborMonitorScreen() {
                 style={styles.secondaryBtn}
                 onPress={() => { setKickCount(0); setKickElapsed(0); kickStartRef.current = Date.now(); }}
               >
-                <Text style={styles.secondaryBtnText}>초기화</Text>
+                <Text style={styles.secondaryBtnText}>{t('laborMonitor.reset')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.primaryBtn, kickSaving && { opacity: 0.5 }]}
@@ -483,32 +484,32 @@ export default function LaborMonitorScreen() {
                 {kickSaving ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.primaryBtnText}>측정 종료 · 저장</Text>
+                  <Text style={styles.primaryBtnText}>{t('laborMonitor.stopAndSave')}</Text>
                 )}
               </TouchableOpacity>
             </View>
 
             {/* 누적 태동 기록 */}
             <View style={kickStyles.historyCard}>
-              <Text style={kickStyles.historyTitle}>📊 태동 누적 기록</Text>
+              <Text style={kickStyles.historyTitle}>{t('laborMonitor.kickHistoryTitle')}</Text>
               <View style={kickStyles.historyRow}>
                 <View style={kickStyles.historyItem}>
-                  <Text style={kickStyles.historyLabel}>오늘</Text>
-                  <Text style={kickStyles.historyValue}>{kickStats.todayCount}회</Text>
+                  <Text style={kickStyles.historyLabel}>{t('laborMonitor.today')}</Text>
+                  <Text style={kickStyles.historyValue}>{t('laborMonitor.countValue', { count: kickStats.todayCount })}</Text>
                 </View>
                 <View style={kickStyles.historyDivider} />
                 <View style={kickStyles.historyItem}>
-                  <Text style={kickStyles.historyLabel}>어제</Text>
-                  <Text style={kickStyles.historyValue}>{kickStats.yestCount}회</Text>
+                  <Text style={kickStyles.historyLabel}>{t('laborMonitor.yesterday')}</Text>
+                  <Text style={kickStyles.historyValue}>{t('laborMonitor.countValue', { count: kickStats.yestCount })}</Text>
                 </View>
                 <View style={kickStyles.historyDivider} />
                 <View style={kickStyles.historyItem}>
-                  <Text style={kickStyles.historyLabel}>최근 7일</Text>
-                  <Text style={kickStyles.historyValue}>{kickStats.week7Count}회</Text>
+                  <Text style={kickStyles.historyLabel}>{t('laborMonitor.last7Days')}</Text>
+                  <Text style={kickStyles.historyValue}>{t('laborMonitor.countValue', { count: kickStats.week7Count })}</Text>
                 </View>
               </View>
               <Text style={kickStyles.historyFoot}>
-                지금까지 측정한 세션: {kickStats.totalSessions}회
+                {t('laborMonitor.kickHistoryFoot', { count: kickStats.totalSessions })}
               </Text>
             </View>
           </>
@@ -525,20 +526,20 @@ export default function LaborMonitorScreen() {
             ]}>
               <Text style={[styles.emergencyBannerTitle, isHighRiskPregnancy && styles.emergencyBannerTitleHighRisk]}>
                 {diagAnswers.ruptured
-                  ? '🚨 양수 파수 확인 — 골든타임'
+                  ? t('laborMonitor.emergencyBanner.titleRuptured')
                   : isHighRiskPregnancy
-                  ? '🚨 고위험 임신 — 위험 신호 시 즉시 119'
-                  : '🚨 이런 증상은 119 먼저!'}
+                  ? t('laborMonitor.emergencyBanner.titleHighRisk')
+                  : t('laborMonitor.emergencyBanner.titleDefault')}
               </Text>
               <Text style={styles.emergencyBannerText}>
-                양수 파수 · 다량 출혈 · 태동 감소·느껴지지 않음 · 극심한 복통
+                {t('laborMonitor.emergencyBanner.symptoms')}
               </Text>
               <Text style={styles.emergencyBannerSub}>
                 {diagAnswers.ruptured
-                  ? '대낮이라도 외래는 응급 안 받습니다. 분만실 직통 또는 119로 즉시 연락하세요.'
+                  ? t('laborMonitor.emergencyBanner.subRuptured')
                   : isHighRiskPregnancy
-                  ? '고위험 임신은 합병증 위험이 더 큽니다. 애매해도 망설이지 말고 119를 먼저 부르세요.'
-                  : '앱 확인보다 119가 먼저입니다. 애매하거나 불안하면 지금 바로 병원에 전화하세요.'}
+                  ? t('laborMonitor.emergencyBanner.subHighRisk')
+                  : t('laborMonitor.emergencyBanner.subDefault')}
               </Text>
               <View style={styles.emergencyBtnRow}>
                 <TouchableOpacity
@@ -546,7 +547,7 @@ export default function LaborMonitorScreen() {
                   onPress={() => {
                     Linking.openURL('tel:119').catch((e) => {
                       captureError(e, { ctx: 'labor-monitor/119-banner', urgent: diagAnswers.ruptured });
-                      Alert.alert('전화 연결 실패', '직접 119에 전화해 주세요.');
+                      Alert.alert(t('laborMonitor.callFailedTitle'), t('laborMonitor.callFailedDesc119'));
                     });
                   }}
                   activeOpacity={0.8}
@@ -559,7 +560,7 @@ export default function LaborMonitorScreen() {
                   activeOpacity={0.8}
                 >
                   <Text style={[styles.emergencyHospitalText, diagAnswers.ruptured && styles.emergencyHospitalTextUrgent]}>
-                    {diagAnswers.ruptured ? '🏥 분만실 직통' : '🏥 병원'}
+                    {diagAnswers.ruptured ? t('laborMonitor.deliveryWardDirect') : t('laborMonitor.hospital')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -571,7 +572,7 @@ export default function LaborMonitorScreen() {
                   activeOpacity={0.85}
                 >
                   <Text style={styles.emergencyRegisterText}>
-                    🏥 분만 병원이 아직 등록되지 않았어요 — 지금 등록하기 ›
+                    {t('laborMonitor.emergencyRegisterHospital')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -580,20 +581,20 @@ export default function LaborMonitorScreen() {
             {currentWeek < 36 && (
               <View style={styles.noticeBox}>
                 <Text style={styles.noticeText}>
-                  ℹ️ 현재 {currentWeek}주차예요. 36주 전이라도 규칙적인 진통이나 복통이 느껴지면 기록보다 병원에 먼저 연락해 주세요.
+                  {t('laborMonitor.weekNotice', { week: currentWeek })}
                 </Text>
               </View>
             )}
             <View style={styles.hintBox}>
               <Text style={styles.hintBoxText}>
-                <Text style={styles.hintBoxStrong}>진통 시작</Text> 시{' '}
-                <Text style={styles.hintBoxAccent}>버튼 탭</Text>{' '}
+                <Text style={styles.hintBoxStrong}>{t('laborMonitor.contractionStart')}</Text> {t('laborMonitor.when')}{' '}
+                <Text style={styles.hintBoxAccent}>{t('laborMonitor.tapButton')}</Text>{' '}
                 <Text style={styles.hintBoxArrow}>➔</Text>{' '}
-                <Text style={styles.hintBoxStrong}>진통 종료</Text> 시{' '}
-                <Text style={styles.hintBoxAccent}>다시 탭</Text>
+                <Text style={styles.hintBoxStrong}>{t('laborMonitor.contractionEnd')}</Text> {t('laborMonitor.when')}{' '}
+                <Text style={styles.hintBoxAccent}>{t('laborMonitor.tapAgain')}</Text>
               </Text>
               <Text style={styles.hintBoxAlert}>
-                🚨 5분 간격이 1시간 이상 지속되면 병원에 연락하세요
+                {t('laborMonitor.fiveMinuteAlert')}
               </Text>
             </View>
 
@@ -604,15 +605,15 @@ export default function LaborMonitorScreen() {
             >
               {currentContraction !== null ? (
                 <>
-                  <Text style={[styles.bigLabel, { color: '#fff', marginBottom: 4 }]}>참는 중...</Text>
+                  <Text style={[styles.bigLabel, { color: '#fff', marginBottom: 4 }]}>{t('laborMonitor.enduring')}</Text>
                   <Text style={[styles.bigCount, { color: '#fff' }]}>{contractionTick}</Text>
-                  <Text style={[styles.bigLabel, { color: '#fff' }]}>초 진행 중</Text>
+                  <Text style={[styles.bigLabel, { color: '#fff' }]}>{t('laborMonitor.secondsInProgress')}</Text>
                 </>
               ) : (
                 <>
                   <Text style={styles.bigCount}>{contractions.length}</Text>
                   <Text style={styles.bigLabel}>
-                    {contractions.length === 0 ? '진통 시작' : '회'}
+                    {contractions.length === 0 ? t('laborMonitor.contractionStart') : t('laborMonitor.countUnit')}
                   </Text>
                 </>
               )}
@@ -664,7 +665,7 @@ export default function LaborMonitorScreen() {
                   hitSlop={8}
                 >
                   <Text style={styles.directCallIcon}>📞</Text>
-                  <Text style={styles.directCallText}>분만실 바로 전화하기</Text>
+                  <Text style={styles.directCallText}>{t('laborMonitor.directCallDeliveryWard')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -673,8 +674,7 @@ export default function LaborMonitorScreen() {
             {contractions.length >= 3 && (
               <View style={styles.disclaimerBoxInline}>
                 <Text style={styles.disclaimer}>
-                  본 안내는 입력된 데이터를 바탕으로 한 일반 정보이며 의료적 진단을 대신할 수 없습니다.
-                  위급 상황 시 반드시 의료기관의 도움을 받으세요.
+                  {t('laborMonitor.medicalDisclaimer')}
                 </Text>
               </View>
             )}
@@ -684,13 +684,12 @@ export default function LaborMonitorScreen() {
               <View style={styles.midwifeBubble}>
                 <Text style={styles.midwifeAvatar}>👩‍⚕️</Text>
                 <View style={styles.midwifeContent}>
-                  <Text style={styles.midwifeName}>조산사 선생님</Text>
+                  <Text style={styles.midwifeName}>{t('laborMonitor.midwifeName')}</Text>
 
                   {diagStep === 'posture' && (
                     <>
                       <Text style={styles.midwifeQuestion}>
-                        잠시 일어나 걷거나 자세를 바꿔보세요.{'\n'}
-                        그래도 계속 아픈가요?
+                        {t('laborMonitor.diag.postureQuestion')}
                       </Text>
                       <View style={styles.midwifeChoices}>
                         <TouchableOpacity
@@ -700,7 +699,7 @@ export default function LaborMonitorScreen() {
                             setDiagStep('painSite');
                           }}
                         >
-                          <Text style={styles.midwifeChoiceText}>통증이 줄거나 사라졌어요</Text>
+                          <Text style={styles.midwifeChoiceText}>{t('laborMonitor.diag.postureImproved')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[styles.midwifeChoice, styles.midwifeChoiceFirm]}
@@ -710,7 +709,7 @@ export default function LaborMonitorScreen() {
                           }}
                         >
                           <Text style={[styles.midwifeChoiceText, styles.midwifeChoiceTextFirm]}>
-                            자세 바꿔도 똑같이 아파요
+                            {t('laborMonitor.diag.postureStillHurts')}
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -720,7 +719,7 @@ export default function LaborMonitorScreen() {
                   {diagStep === 'painSite' && (
                     <>
                       <Text style={styles.midwifeQuestion}>
-                        지금 통증은 어디가 가장 심하세요?
+                        {t('laborMonitor.diag.painSiteQuestion')}
                       </Text>
                       <View style={styles.midwifeChoices}>
                         <TouchableOpacity
@@ -730,7 +729,7 @@ export default function LaborMonitorScreen() {
                             setDiagStep('ruptured');
                           }}
                         >
-                          <Text style={styles.midwifeChoiceText}>아랫배 위주로 아파요</Text>
+                          <Text style={styles.midwifeChoiceText}>{t('laborMonitor.diag.painLowerAbdomen')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[styles.midwifeChoice, styles.midwifeChoiceFirm]}
@@ -740,7 +739,7 @@ export default function LaborMonitorScreen() {
                           }}
                         >
                           <Text style={[styles.midwifeChoiceText, styles.midwifeChoiceTextFirm]}>
-                            허리·배 전체가 쥐어짜요
+                            {t('laborMonitor.diag.painWholeBackAbdomen')}
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -750,7 +749,7 @@ export default function LaborMonitorScreen() {
                   {diagStep === 'ruptured' && (
                     <>
                       <Text style={styles.midwifeQuestion}>
-                        혹시 이슬이 비쳤거나{'\n'}양수가 터졌나요?
+                        {t('laborMonitor.diag.rupturedQuestion')}
                       </Text>
                       <View style={styles.midwifeChoices}>
                         <TouchableOpacity
@@ -760,7 +759,7 @@ export default function LaborMonitorScreen() {
                             setDiagStep('done');
                           }}
                         >
-                          <Text style={styles.midwifeChoiceText}>아니요</Text>
+                          <Text style={styles.midwifeChoiceText}>{t('laborMonitor.diag.no')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[styles.midwifeChoice, styles.midwifeChoiceEmergency]}
@@ -770,7 +769,7 @@ export default function LaborMonitorScreen() {
                           }}
                         >
                           <Text style={[styles.midwifeChoiceText, styles.midwifeChoiceTextFirm]}>
-                            네, 보였어요/터졌어요
+                            {t('laborMonitor.diag.yesRuptured')}
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -782,7 +781,7 @@ export default function LaborMonitorScreen() {
 
             {contractions.length > 0 && (
               <View style={styles.historyCard}>
-                <Text style={styles.historyTitle}>측정 기록</Text>
+                <Text style={styles.historyTitle}>{t('laborMonitor.measurementRecord')}</Text>
                 {contractions.slice().reverse().map((c, i) => {
                   const duration = Math.round((c.end! - c.start) / 1000);
                   const prev = contractions[contractions.length - 2 - i];
@@ -790,8 +789,17 @@ export default function LaborMonitorScreen() {
                   return (
                     <View key={c.start} style={styles.historyRow}>
                       <Text style={styles.historyText}>
-                        {contractions.length - i}회차 · 지속 {duration}초
-                        {interval !== null ? ` · 간격 ${Math.floor(interval / 60)}분 ${interval % 60}초` : ''}
+                        {interval !== null
+                          ? t('laborMonitor.historyRowWithInterval', {
+                              seq: contractions.length - i,
+                              duration,
+                              min: Math.floor(interval / 60),
+                              sec: interval % 60,
+                            })
+                          : t('laborMonitor.historyRow', {
+                              seq: contractions.length - i,
+                              duration,
+                            })}
                       </Text>
                     </View>
                   );
@@ -800,24 +808,23 @@ export default function LaborMonitorScreen() {
             )}
 
             <TouchableOpacity style={styles.secondaryBtn} onPress={handleContractionReset}>
-              <Text style={styles.secondaryBtnText}>전체 초기화</Text>
+              <Text style={styles.secondaryBtnText}>{t('laborMonitor.resetAll')}</Text>
             </TouchableOpacity>
           </>
         )}
 
         {/* 의료 면책 고지 — 모든 측정 화면 하단에 항상 노출 */}
         <View style={styles.disclaimerBox}>
-          <Text style={styles.disclaimerStrong}>⚕️ 의료 면책 고지</Text>
+          <Text style={styles.disclaimerStrong}>{t('laborMonitor.medicalDisclaimerTitle')}</Text>
           <Text style={styles.disclaimer}>
-            본 안내는 입력된 데이터를 바탕으로 한 일반 정보이며 의료적 진단을 대신할 수 없습니다.
-            위급 상황 시에는 반드시 의료기관의 도움을 받으세요.
+            {t('laborMonitor.medicalDisclaimerFooter')}
           </Text>
         </View>
 
         <MedicalCitation
           sources={[
-            { label: '대한산부인과학회 임신·출산 정보 (진통·태동)', url: 'https://www.ksog.org' },
-            { label: '보건복지부·임신육아종합포털 「아이사랑」', url: 'https://www.childcare.go.kr' },
+            { label: t('laborMonitor.citationKsog'), url: 'https://www.ksog.org' },
+            { label: t('laborMonitor.citationChildcare'), url: 'https://www.childcare.go.kr' },
           ]}
         />
       </ScrollView>
@@ -832,55 +839,55 @@ export default function LaborMonitorScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalTitle}>태동이 평소보다 안 느껴지나요?</Text>
-              <Text style={styles.modalSub}>아래 방법을 시도해 보세요 👇</Text>
+              <Text style={styles.modalTitle}>{t('laborMonitor.kickGuideModal.title')}</Text>
+              <Text style={styles.modalSub}>{t('laborMonitor.kickGuideModal.subtitle')}</Text>
 
               <View style={styles.tipRow}>
                 <Text style={styles.tipEmoji}>🧃</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.tipTitle}>당분 섭취</Text>
-                  <Text style={styles.tipText}>초코우유나 주스를 마시고 아기를 깨워 보세요.</Text>
+                  <Text style={styles.tipTitle}>{t('laborMonitor.kickGuideModal.sugarTitle')}</Text>
+                  <Text style={styles.tipText}>{t('laborMonitor.kickGuideModal.sugarText')}</Text>
                 </View>
               </View>
               <View style={styles.tipRow}>
                 <Text style={styles.tipEmoji}>🛌</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.tipTitle}>왼쪽으로 눕기</Text>
-                  <Text style={styles.tipText}>왼쪽으로 누우면 아기에게 혈액 공급이 더 잘 돼요.</Text>
+                  <Text style={styles.tipTitle}>{t('laborMonitor.kickGuideModal.leftSideTitle')}</Text>
+                  <Text style={styles.tipText}>{t('laborMonitor.kickGuideModal.leftSideText')}</Text>
                 </View>
               </View>
               <View style={styles.tipRow}>
                 <Text style={styles.tipEmoji}>🧘</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.tipTitle}>집중 태동</Text>
-                  <Text style={styles.tipText}>조용한 곳에서 배에 손을 얹고 30분만 지켜보세요.</Text>
+                  <Text style={styles.tipTitle}>{t('laborMonitor.kickGuideModal.focusTitle')}</Text>
+                  <Text style={styles.tipText}>{t('laborMonitor.kickGuideModal.focusText')}</Text>
                 </View>
               </View>
               <View style={styles.tipRow}>
                 <Text style={styles.tipEmoji}>💤</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.tipTitle}>잠자는 중일 수 있음</Text>
-                  <Text style={styles.tipText}>아기는 20~40분 단위로 자고 일어날 수 있어요.</Text>
+                  <Text style={styles.tipTitle}>{t('laborMonitor.kickGuideModal.sleepingTitle')}</Text>
+                  <Text style={styles.tipText}>{t('laborMonitor.kickGuideModal.sleepingText')}</Text>
                 </View>
               </View>
 
               {/* 위험 박스 */}
               <View style={styles.dangerBox}>
-                <Text style={styles.dangerTitle}>🚨 이럴 땐 병원에 문의하세요!</Text>
-                <Text style={styles.dangerItem}>• 1시간 동안 태동이 3회 미만일 때</Text>
-                <Text style={styles.dangerItem}>• 평소보다 횟수가 절반 이하로 줄었을 때</Text>
-                <Text style={styles.dangerItem}>• 반나절(12시간) 동안 태동이 10번 미만일 때</Text>
+                <Text style={styles.dangerTitle}>{t('laborMonitor.kickGuideModal.dangerTitle')}</Text>
+                <Text style={styles.dangerItem}>{t('laborMonitor.kickGuideModal.dangerItem1')}</Text>
+                <Text style={styles.dangerItem}>{t('laborMonitor.kickGuideModal.dangerItem2')}</Text>
+                <Text style={styles.dangerItem}>{t('laborMonitor.kickGuideModal.dangerItem3')}</Text>
               </View>
 
               <Text style={styles.disclaimerSm}>
-                본 안내는 일반 정보이며 의료적 진단을 대신할 수 없습니다.
+                {t('laborMonitor.kickGuideModal.disclaimer')}
               </Text>
 
               <TouchableOpacity
                 style={styles.modalCloseBtn}
                 onPress={() => setKickGuideOpen(false)}
               >
-                <Text style={styles.modalCloseBtnText}>닫기</Text>
+                <Text style={styles.modalCloseBtnText}>{t('common.close')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -901,9 +908,9 @@ export default function LaborMonitorScreen() {
           onPress={() => setPhoneChoiceOpen(false)}
         >
           <TouchableOpacity activeOpacity={1} style={styles.phoneChoiceSheet}>
-            <Text style={styles.phoneChoiceTitle}>어디로 전화할까요?</Text>
+            <Text style={styles.phoneChoiceTitle}>{t('laborMonitor.phoneChoice.title')}</Text>
             <Text style={styles.phoneChoiceSub}>
-              지금 시간대에 권장되는 번호가 위에 있어요
+              {t('laborMonitor.phoneChoice.subtitle')}
             </Text>
             {phoneChoices.map((c, i) => (
               <TouchableOpacity
@@ -942,7 +949,7 @@ export default function LaborMonitorScreen() {
               style={styles.phoneChoiceCancel}
               onPress={() => setPhoneChoiceOpen(false)}
             >
-              <Text style={styles.phoneChoiceCancelText}>취소</Text>
+              <Text style={styles.phoneChoiceCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>

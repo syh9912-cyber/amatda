@@ -1377,5 +1377,770 @@
       "b9": "季節に合わせた退院着（3〜5kg）",
       "b10": "新生児用粉ミルク＋哺乳瓶ミニセット"
     }
+  },
+  "pregnancyJourneyDetail": {
+    "citationChildcarePortal": "保健福祉部・妊娠育児総合ポータル「アイサラン」",
+    "citationKsog": "大韓産婦人科学会 妊娠・出産情報",
+    "disclaimer": "⚠️ この情報は一般的なご案内です。医療に関する判断は必ず産婦人科の専門医にご相談ください。",
+    "stageLabels": {
+      "early": "初期（1〜12週）",
+      "wk12": "12週健診",
+      "stable": "安定期（13〜24週）",
+      "late": "後期（25〜37週）",
+      "birth": "出産（38週以降）"
+    },
+    "stage": {
+      "early": {
+        "label": "初期",
+        "weeks": "1〜12週",
+        "hero": "ママ、いよいよ始まりですね",
+        "heroSub": "体が最も敏感な時期です。無理せずゆっくり過ごしましょう。",
+        "sections": {
+          "supplements": {
+            "title": "💊 サプリメント",
+            "items": {
+              "folicAcid": {
+                "title": "葉酸（必須）",
+                "body": "1日400〜800μg。神経管欠損の予防に。妊娠1週間前から12週まで特に重要です。"
+              },
+              "vitaminD": {
+                "title": "ビタミンD",
+                "body": "1日600〜1000IU。骨と免疫の形成に不可欠です。"
+              },
+              "omega3": {
+                "title": "オメガ3（DHA）",
+                "body": "週2回、青魚またはサプリメントで摂取を。胎児の脳の発達に役立ちます。"
+              }
+            }
+          },
+          "diet": {
+            "title": "🍽️ 食事",
+            "items": {
+              "folateFoods": {
+                "title": "葉酸を含む食品",
+                "body": "ほうれん草、ブロッコリー、アスパラガス、豆類、アボカド、オレンジ"
+              },
+              "proteinCalcium": {
+                "title": "たんぱく質＋カルシウム",
+                "body": "卵、豆腐、赤身肉、牛乳、ヨーグルト"
+              },
+              "avoid": {
+                "title": "避けるべきもの",
+                "body": "生もの、カフェイン200mg以上、飲酒、喫煙、非殺菌の牛乳・チーズ"
+              }
+            }
+          },
+          "exercise": {
+            "title": "🚶 運動",
+            "items": {
+              "walking": {
+                "title": "ウォーキング",
+                "body": "1日20〜30分の軽い散歩を。無理はしないで。"
+              },
+              "yoga": {
+                "title": "マタニティヨガ",
+                "body": "週1〜2回。呼吸と骨盤のリラックス動作を中心に。"
+              },
+              "caution": {
+                "title": "注意",
+                "body": "お腹に衝撃が加わる運動や激しいトレーニングは避けましょう"
+              }
+            }
+          },
+          "checkups": {
+            "title": "🩺 検査",
+            "items": {
+              "firstVisit": {
+                "title": "初めての産婦人科受診",
+                "body": "妊娠6〜8週での受診がおすすめです。子宮内妊娠の確認と心拍のチェックを行います。"
+              },
+              "bloodTest": {
+                "title": "初期血液検査",
+                "body": "風疹免疫、B型肝炎、貧血、甲状腺の検査"
+              },
+              "firstUltrasound": {
+                "title": "初めての精密超音波検査",
+                "body": "11〜13週に実施。NT検査（項部透明帯の厚さ）を行います。"
+              }
+            }
+          },
+          "cautions": {
+            "title": "💗 注意事項",
+            "items": {
+              "morningSickness": {
+                "title": "つわり",
+                "body": "6〜12週頃がピークです。少量を頻回に、温かい飲み物、ビタミンB6が助けになります。"
+              },
+              "fatigue": {
+                "title": "強い疲労感",
+                "body": "体からのサインです。十分な睡眠（7〜9時間）を取りましょう。"
+              },
+              "emergency": {
+                "title": "すぐに病院へ連絡",
+                "body": "激しい出血、38℃以上の発熱、激しい腹痛がある場合"
+              }
+            }
+          }
+        }
+      },
+      "wk12": {
+        "label": "12週健診",
+        "weeks": "12週前後",
+        "hero": "初めての精密超音波の時期",
+        "heroSub": "NT検査で胎児の健康を初めて確認する大切な時期です。",
+        "sections": {
+          "keyTests": {
+            "title": "🩺 主要な検査",
+            "items": {
+              "nt": {
+                "title": "NT検査（項部透明帯）",
+                "body": "11週〜13週6日の間に実施。ダウン症候群など染色体異常の一次スクリーニングです。"
+              },
+              "integratedScreening": {
+                "title": "統合スクリーニング検査",
+                "body": "NT検査と血液検査を組み合わせ、精度が高くなります。"
+              },
+              "nipt": {
+                "title": "NIPT（任意）",
+                "body": "非侵襲的な出生前遺伝子検査です。35歳以上の方におすすめです。"
+              }
+            }
+          },
+          "changes": {
+            "title": "💗 知っておきたい変化",
+            "items": {
+              "sicknessEasing": {
+                "title": "つわりが落ち着く",
+                "body": "12週頃から徐々に落ち着いてきます。"
+              },
+              "weightGain": {
+                "title": "体重増加が始まる",
+                "body": "週あたり0.4〜0.5kgの増加が目安です。栄養バランスが大切です。"
+              },
+              "uterusPosition": {
+                "title": "子宮の位置",
+                "body": "恥骨より上に上がってきて、お腹が少しずつ目立ち始めます。"
+              }
+            }
+          },
+          "thisPeriodChecklist": {
+            "title": "✅ この時期のチェックリスト",
+            "items": {
+              "regularCheckup": {
+                "title": "産婦人科の定期検診",
+                "body": "4週間に1回のペースで（28週まで）。"
+              },
+              "workNotice": {
+                "title": "職場への報告（任意）",
+                "body": "安定期に入るタイミングです。産休の日程を早めに確認しておきましょう。"
+              },
+              "learning": {
+                "title": "妊娠関連の本・動画",
+                "body": "信頼できる医療情報で学びましょう。"
+              }
+            }
+          }
+        }
+      },
+      "stable": {
+        "label": "安定期",
+        "weeks": "13〜24週",
+        "hero": "ママ、いちばん体調が良い時期ですよ",
+        "heroSub": "つわりが落ち着き、初めて胎動を感じる時期です。",
+        "sections": {
+          "supplements": {
+            "title": "💊 サプリメント",
+            "items": {
+              "calcium": {
+                "title": "カルシウム",
+                "body": "1日1000mg。胎児の骨形成が本格化する時期です。"
+              },
+              "iron": {
+                "title": "鉄分",
+                "body": "1日30mg。貧血予防に。ビタミンCと一緒に摂ると吸収率が上がります。"
+              },
+              "dha": {
+                "title": "DHAを継続摂取",
+                "body": "胎児の脳が発達する重要な時期です。"
+              }
+            }
+          },
+          "diet": {
+            "title": "🍽️ 食事",
+            "items": {
+              "moreProtein": {
+                "title": "たんぱく質を増やす",
+                "body": "1日75〜100g。赤身肉、魚、豆類、豆腐、卵を中心に。"
+              },
+              "vitaminA": {
+                "title": "ビタミンA",
+                "body": "にんじん、ほうれん草、さつまいも、ブロッコリー。"
+              },
+              "sodium": {
+                "title": "塩分の調整",
+                "body": "むくみ予防のため、塩分の多い食事は控えめに。"
+              }
+            }
+          },
+          "exercise": {
+            "title": "🚶 運動",
+            "items": {
+              "swimming": {
+                "title": "マタニティスイミング",
+                "body": "関節への負担が少なく、むくみの緩和にも。週2〜3回が目安です。"
+              },
+              "yogaPilates": {
+                "title": "マタニティヨガ・ピラティス",
+                "body": "週2〜3回。骨盤まわりの筋肉と呼吸を鍛えましょう。"
+              },
+              "moreWalking": {
+                "title": "ウォーキングを増やす",
+                "body": "1日30〜45分。出産に向けた体力づくりに。"
+              }
+            }
+          },
+          "checkups": {
+            "title": "🩺 検査",
+            "items": {
+              "quadTest": {
+                "title": "クアトロテスト",
+                "body": "15〜20週に実施。4つのホルモン値で先天異常をスクリーニングします。"
+              },
+              "detailedUltrasound": {
+                "title": "精密超音波検査",
+                "body": "20〜24週に実施。胎児の臓器の発達を詳しく確認します。性別もわかることがあります。"
+              },
+              "glucoseTest1": {
+                "title": "妊娠糖尿病検査（1回目）",
+                "body": "24〜28週に実施。1時間の経口ブドウ糖負荷試験です。"
+              }
+            }
+          },
+          "enjoy": {
+            "title": "✨ 楽しんでほしいこと",
+            "items": {
+              "firstKick": {
+                "title": "初めての胎動",
+                "body": "16〜22週の間に感じることが多く、最初はガスのような感覚です。"
+              },
+              "prenatalEducation": {
+                "title": "胎教を始める",
+                "body": "音楽を聴いたり、絵本を読んだり、話しかけたりしてみましょう。"
+              },
+              "maternityPhoto": {
+                "title": "マタニティフォト（任意）",
+                "body": "20週頃に最初の妊娠記念写真を撮ってみては。"
+              }
+            }
+          }
+        }
+      },
+      "late": {
+        "label": "後期",
+        "weeks": "25〜37週",
+        "hero": "出産が近づいてきました",
+        "heroSub": "体は重くなりますが、胎教のゴールデンタイムです。",
+        "sections": {
+          "supplements": {
+            "title": "💊 サプリメント",
+            "items": {
+              "calciumVitaminD": {
+                "title": "カルシウム＋ビタミンD",
+                "body": "胎児の骨格が完成する時期です。母体の骨粗しょう症予防にも。"
+              },
+              "ironBoost": {
+                "title": "鉄分を強化",
+                "body": "出産時の出血に備えて。1日30〜60mgが目安です。"
+              },
+              "magnesium": {
+                "title": "マグネシウム",
+                "body": "足のつり（こむら返り）予防に。"
+              }
+            }
+          },
+          "diet": {
+            "title": "🍽️ 食事",
+            "items": {
+              "smallFrequentMeals": {
+                "title": "少量を頻回に",
+                "body": "胃が圧迫されて一度にたくさん食べられないので、5〜6回に分けて食べましょう。"
+              },
+              "fiber": {
+                "title": "食物繊維",
+                "body": "便秘予防に。全粒穀物、果物、野菜を摂りましょう。"
+              },
+              "hydration": {
+                "title": "水分をしっかり",
+                "body": "1日2L以上を目安に。むくみと便秘の予防になります。"
+              }
+            }
+          },
+          "exercise": {
+            "title": "🚶 運動",
+            "items": {
+              "kegel": {
+                "title": "骨盤底筋体操（ケーゲル体操）",
+                "body": "骨盤底筋を鍛えます。出産と産後の回復に大切な運動です。"
+              },
+              "breathingPractice": {
+                "title": "呼吸トレーニング",
+                "body": "陣痛時の呼吸法を練習しましょう（1秒吸って2秒吐く）。"
+              },
+              "lightWalking": {
+                "title": "軽いウォーキング",
+                "body": "1日20〜30分。骨盤を刺激して出産に備えましょう。"
+              }
+            }
+          },
+          "checkups": {
+            "title": "🩺 検査",
+            "items": {
+              "growthUltrasound": {
+                "title": "胎児の発育超音波検査",
+                "body": "28〜32週に実施。体重や胎位を確認します。"
+              },
+              "gbsTest": {
+                "title": "GBS検査",
+                "body": "35〜37週に実施。産道の細菌検査で、陽性の場合は抗生剤を使用します。"
+              },
+              "tdap": {
+                "title": "Tdapワクチン",
+                "body": "27〜36週に接種。新生児の百日咳予防のためです。"
+              }
+            }
+          },
+          "birthPrep": {
+            "title": "🧳 出産準備",
+            "items": {
+              "birthBag": {
+                "title": "入院バッグ",
+                "body": "32週頃までに準備を。ママ・赤ちゃん用品と書類をまとめておきましょう。"
+              },
+              "hospitalRegistration": {
+                "title": "病院への登録",
+                "body": "分娩する病院、緊急連絡先、移動ルートを確認しておきましょう。"
+              },
+              "nurserySetup": {
+                "title": "赤ちゃんの部屋づくり",
+                "body": "ベビーベッド、チャイルドシート、おむつ、ミルク・授乳用品などを準備しましょう。"
+              }
+            }
+          },
+          "warningSigns": {
+            "title": "⚠️ 注意すべきサイン",
+            "items": {
+              "severeSwelling": {
+                "title": "強いむくみ",
+                "body": "顔や手のむくみに頭痛を伴う場合は、妊娠高血圧腎症の疑いがあります。すぐに病院へ。"
+              },
+              "reducedMovement": {
+                "title": "胎動の減少",
+                "body": "いつもより明らかに少ないと感じたら、すぐに病院へ連絡してください。"
+              },
+              "fluidLeak": {
+                "title": "羊水漏れ",
+                "body": "透明な水が流れる場合は前期破水の可能性があります。すぐに病院へ。"
+              }
+            }
+          }
+        }
+      },
+      "birth": {
+        "label": "出産",
+        "weeks": "38週以降",
+        "hero": "もうすぐ会えますね！",
+        "heroSub": "陣痛が始まったら、落ち着いて病院へ向かいましょう。",
+        "sections": {
+          "contractionSigns": {
+            "title": "⏱️ 陣痛のサイン",
+            "items": {
+              "regularContractions": {
+                "title": "規則的な陣痛",
+                "body": "5分間隔で1分続く陣痛が1時間続いたら病院へ向かいましょう。"
+              },
+              "showSpotting": {
+                "title": "おしるし",
+                "body": "粘り気のあるおりもの（血が混じることもあります）。数日以内に陣痛が来ることが多いです。"
+              },
+              "waterBreaking": {
+                "title": "破水",
+                "body": "透明な水が流れ出ます。時刻を記録し、すぐに病院へ向かいましょう。"
+              }
+            }
+          },
+          "finalBagCheck": {
+            "title": "🧳 入院バッグ最終チェック",
+            "items": {
+              "documents": {
+                "title": "書類",
+                "body": "身分証明書、母子手帳、保険証、出産準備リスト"
+              },
+              "momItems": {
+                "title": "ママ用品",
+                "body": "マタニティウェア、授乳服、スリッパ、洗面用具、生理用ナプキン"
+              },
+              "babyItems": {
+                "title": "赤ちゃん用品",
+                "body": "新生児用肌着、ミトン、帽子、靴下、チャイルドシート"
+              }
+            }
+          },
+          "breathing": {
+            "title": "🫁 呼吸法",
+            "items": {
+              "earlyLabor": {
+                "title": "陣痛初期",
+                "body": "ゆっくり深く - 鼻から吸って口から吐く"
+              },
+              "strongContractions": {
+                "title": "強い陣痛",
+                "body": "短く速く - 「フー・フー・フー」と喘ぐように"
+              },
+              "pushing": {
+                "title": "いきみ",
+                "body": "医療スタッフの指示に従いましょう。息を止めて5秒ずつ3回。"
+              }
+            }
+          },
+          "atHospital": {
+            "title": "🏥 病院到着後",
+            "items": {
+              "admission": {
+                "title": "入院手続き",
+                "body": "救急外来または分娩室へ → 子宮口の開大を確認"
+              },
+              "epidural": {
+                "title": "無痛分娩（任意）",
+                "body": "子宮口が4〜5cm開いた時点から開始できます。"
+              },
+              "support": {
+                "title": "付き添ってくれる人",
+                "body": "夫や家族の付き添いを。マッサージや水分補給を手伝ってくれる人がいると安心です。"
+              }
+            }
+          },
+          "rightAfterBirth": {
+            "title": "💖 出産直後",
+            "items": {
+              "kangarooCare": {
+                "title": "カンガルーケア",
+                "body": "出産直後の1時間、肌と肌の触れ合いを。初めての母乳授乳もこのタイミングで。"
+              },
+              "colostrum": {
+                "title": "初乳",
+                "body": "免疫抗体がたっぷり含まれています。早く与えるほど良いとされています。"
+              },
+              "postpartumStay": {
+                "title": "産後の入院期間",
+                "body": "自然分娩の場合は2〜3日、帝王切開の場合は5〜7日が目安です。"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "laborMonitor": {
+    "headerTitleContraction": "陣痛チェック",
+    "headerTitleKick": "胎動チェック",
+    "breathingTips": {
+      "0": "🌬 深く息を吸って、ゆっくり吐き出しましょう",
+      "1": "💆‍♀️ 肩の力を抜いて楽な姿勢を保ちましょう",
+      "2": "👐 パートナーに腰をそっと押してもらうと楽になります",
+      "3": "😌 陣痛の合間はゆったり休みましょう",
+      "4": "💧 水を少しずつゆっくり飲むのもおすすめです",
+      "5": "🌬 鼻から吸って口からゆっくり長く吐きましょう"
+    },
+    "noRecordTitle": "記録なし",
+    "noRecordDesc": "測定時間が短すぎるか、胎動が記録されませんでした。",
+    "kickSavedToast": "胎動{{count}}回を記録しました 👣",
+    "kickSaveFailed": "胎動の記録の保存に失敗しました",
+    "contractionSavedToast": "陣痛の間隔を記録しました ⏱️",
+    "guide": {
+      "emergency": {
+        "label": "🚨 すぐに分娩室へ連絡",
+        "message": "破水したりおしるしが見られた場合は、すぐに分娩室に電話して病院へ向かってください。出産が近い可能性があります。"
+      },
+      "collecting": {
+        "label": "データ収集中",
+        "message": "陣痛が3回以上記録されるとパターン分析を開始します。測定中は深呼吸をして楽に過ごしてください。"
+      },
+      "hospitalRecommended": {
+        "label": "病院受診が推奨される数値です",
+        "message": "現在記録されている間隔は平均{{avgMin}}分で、総合分析の結果、本陣痛の可能性が高いです。担当医または分娩室に連絡して正確な診断を受けることをおすすめします。"
+      },
+      "shortening": {
+        "label": "間隔が短くなってきています",
+        "message": "平均{{avgMin}}分から直近{{lastMin}}分へと変化しています。徐々に近づいている可能性があるので、あと数回様子を見てください。"
+      },
+      "falseLabor": {
+        "label": "前駆陣痛の可能性が高いです",
+        "message": "間隔が{{minMin}}〜{{maxMin}}分と不規則です。現在のパターンは前駆陣痛の可能性が高いです。楽な姿勢で休みながらもう少し様子を見てください。"
+      }
+    },
+    "callFailedTitle": "発信に失敗しました",
+    "callFailedDescDirect": "こちらに直接お電話ください: {{phone}}",
+    "callFailedDesc119": "直接119番へお電話ください。",
+    "hospitalRegisterRequiredTitle": "病院の電話番号登録が必要です",
+    "hospitalRegisterRequiredDesc": "分娩予定の病院が登録されていません。\n今すぐ登録しますか？\n\n緊急の場合はまず119番へお電話ください。",
+    "call119": "119番へ電話",
+    "registerHospital": "病院を登録",
+    "selectPregnantChild": "妊娠中のお子さまを選択してください",
+    "kickHintPrefix": "胎動を感じるたびに",
+    "kickHintTapButton": "下のボタンをタップ",
+    "kickHintSuffix": "してください",
+    "kickHintThreshold": "30分間に3〜5回以上",
+    "kickHintHealthySignal": "あれば健康的なサインです",
+    "kickLessThanUsualQuestion": "胎動がいつもより\n感じられませんか？",
+    "countUnit": "回",
+    "elapsed": "経過時間",
+    "minSec": "{{min}}分{{sec}}秒",
+    "perHour": "1時間あたり",
+    "countValue": "{{count}}回",
+    "reset": "リセット",
+    "stopAndSave": "測定終了・保存",
+    "kickHistoryTitle": "📊 胎動の累積記録",
+    "today": "今日",
+    "yesterday": "昨日",
+    "last7Days": "直近7日間",
+    "kickHistoryFoot": "これまで測定したセッション数：{{count}}回",
+    "emergencyBanner": {
+      "titleRuptured": "🚨 破水を確認 — ゴールデンタイム",
+      "titleHighRisk": "🚨 ハイリスク妊娠 — 危険な兆候があればすぐに119番",
+      "titleDefault": "🚨 このような症状はまず119番へ！",
+      "symptoms": "破水・大量出血・胎動の減少や消失・激しい腹痛",
+      "subRuptured": "昼間でも外来では救急対応できません。分娩室直通または119番にすぐご連絡ください。",
+      "subHighRisk": "ハイリスク妊娠は合併症のリスクがより高くなります。迷わずまず119番へ連絡してください。",
+      "subDefault": "アプリの確認より119番が優先です。少しでも不安なら今すぐ病院にお電話ください。"
+    },
+    "deliveryWardDirect": "🏥 分娩室直通",
+    "hospital": "🏥 病院",
+    "emergencyRegisterHospital": "🏥 分娩予定の病院がまだ登録されていません — 今すぐ登録する ›",
+    "weekNotice": "ℹ️ 現在{{week}}週目です。36週未満でも規則的な陣痛や腹痛を感じたら、記録より先に病院へご連絡ください。",
+    "contractionStart": "陣痛開始",
+    "contractionEnd": "陣痛終了",
+    "when": "時",
+    "tapButton": "ボタンをタップ",
+    "tapAgain": "もう一度タップ",
+    "fiveMinuteAlert": "🚨 5分間隔が1時間以上続く場合は病院にご連絡ください",
+    "enduring": "我慢中...",
+    "secondsInProgress": "秒経過中",
+    "directCallDeliveryWard": "分娩室にすぐ電話する",
+    "medicalDisclaimer": "本ガイドは入力データに基づく一般情報であり、医学的診断に代わるものではありません。緊急時は必ず医療機関の助けを受けてください。",
+    "midwifeName": "助産師さん",
+    "diag": {
+      "postureQuestion": "少し立って歩いたり、姿勢を変えてみてください。\nそれでも痛みは続きますか？",
+      "postureImproved": "痛みが軽くなったか、なくなりました",
+      "postureStillHurts": "姿勢を変えても同じように痛いです",
+      "painSiteQuestion": "今、痛みはどこが一番強いですか？",
+      "painLowerAbdomen": "下腹部が中心に痛みます",
+      "painWholeBackAbdomen": "腰とお腹全体が締め付けられるように痛みます",
+      "rupturedQuestion": "もしかしておしるしがあったり、\n破水しましたか？",
+      "no": "いいえ",
+      "yesRuptured": "はい、見られました／破水しました"
+    },
+    "measurementRecord": "測定記録",
+    "historyRow": "第{{seq}}回・持続{{duration}}秒",
+    "historyRowWithInterval": "第{{seq}}回・持続{{duration}}秒・間隔{{min}}分{{sec}}秒",
+    "resetAll": "すべてリセット",
+    "medicalDisclaimerTitle": "⚕️ 医療免責事項",
+    "medicalDisclaimerFooter": "本ガイドは入力データに基づく一般情報であり、医学的診断に代わるものではありません。緊急時には必ず医療機関の助けを受けてください。",
+    "citationKsog": "大韓産婦人科学会 妊娠・出産情報（陣痛・胎動）",
+    "citationChildcare": "保健福祉部・妊娠育児総合ポータル「アイサラン」",
+    "kickGuideModal": {
+      "title": "胎動がいつもより感じられませんか？",
+      "subtitle": "下記の方法を試してみてください 👇",
+      "sugarTitle": "糖分を摂る",
+      "sugarText": "チョコレート牛乳やジュースを飲んで赤ちゃんを起こしてみましょう。",
+      "leftSideTitle": "左側を下にして横になる",
+      "leftSideText": "左側を下にして横になると、赤ちゃんへの血流がよくなります。",
+      "focusTitle": "集中胎動チェック",
+      "focusText": "静かな場所でお腹に手を当てて30分だけ様子を見てください。",
+      "sleepingTitle": "眠っている可能性があります",
+      "sleepingText": "赤ちゃんは20〜40分周期で眠ったり起きたりします。",
+      "dangerTitle": "🚨 こんな時は病院にご相談ください！",
+      "dangerItem1": "• 1時間で胎動が3回未満のとき",
+      "dangerItem2": "• いつもより回数が半分以下に減ったとき",
+      "dangerItem3": "• 半日（12時間）で胎動が10回未満のとき",
+      "disclaimer": "本ガイドは一般情報であり、医学的診断に代わるものではありません。"
+    },
+    "phoneChoice": {
+      "title": "どこに電話しますか？",
+      "subtitle": "現在の時間帯に推奨される番号が上に表示されています"
+    }
+  },
+  "sos": {
+    "symptom": {
+      "fever": "38度以上の発熱",
+      "vomiting": "嘔吐・下痢",
+      "seizure": "けいれん",
+      "breathing": "呼吸困難",
+      "bleedingWound": "出血・けが",
+      "rash": "発疹・じんましん",
+      "bleeding": "出血",
+      "severePain": "激しい腹痛",
+      "severeHeadache": "激しい頭痛",
+      "severeSwelling": "強いむくみ",
+      "blurryVision": "視界がぼやける",
+      "waterBreaking": "破水",
+      "reducedMovement": "胎動減少",
+      "fever38": "発熱38度以上",
+      "regularContractions": "規則的な陣痛"
+    },
+    "severity": {
+      "emergencyTitle": "すぐに119番へ電話してください",
+      "hospitalTitle": "病院受診をおすすめします",
+      "urgentTitle": "対応が必要です",
+      "monitorTitle": "様子を見てください"
+    },
+    "guide": {
+      "heimlichLabel": "気道閉塞",
+      "heimlichSublabel": "4段階対応",
+      "cprSublabel": "心肺蘇生（CPR）",
+      "burnFallLabel": "やけど・転落",
+      "burnFallSublabel": "応急処置",
+      "foreignLabel": "異物誤飲",
+      "foreignSublabel": "鼻・耳・口"
+    },
+    "heimlich": {
+      "infant": {
+        "title": "気道閉塞（生後12か月未満）",
+        "subtitle": "乳児 - 背部叩打＋胸部圧迫",
+        "step1": "赤ちゃんをうつぶせにして片腕にのせ、頭を胸より低くします",
+        "step2": "手のひらの付け根で背中の中央を5回強く叩きます",
+        "step3": "仰向けにして頭を低くし、胸の中央（両乳頭の間）を指2本で5回圧迫します",
+        "step4": "異物が出るまで背部叩打と胸部圧迫を繰り返します",
+        "step5": "意識を失ったら直ちにCPRを開始し、119番へ通報してください",
+        "warning": "指で口の中を探らないでください。異物がさらに奥に入る恐れがあります。"
+      },
+      "child": {
+        "title": "気道閉塞（満1歳～思春期前）",
+        "subtitle": "小児 - ハイムリック法（腹部突き上げ）",
+        "step1": "子どもの後ろにひざまずくか立ち、目線を合わせます",
+        "step2": "片手で握りこぶしを作り、親指側をおへその上・みぞおちの下に当てます",
+        "step3": "もう一方の手でこぶしを包み、内側・上向きに素早く5回引き上げるように押します",
+        "step4": "異物が出るまで繰り返します",
+        "step5": "意識を失ったら仰向けに寝かせ、CPRを行いながら119番へ通報してください",
+        "warning": "みぞおちより上（胸骨）は押さないでください。肋骨損傷の危険があります。"
+      },
+      "adult": {
+        "title": "気道閉塞（成人／保護者）",
+        "subtitle": "青少年・成人のハイムリック法",
+        "step1": "後ろから両腕でみぞおちの下・おへその上のあたりを抱えます",
+        "step2": "片手で握りこぶしを作り、もう一方の手をその上に重ねます",
+        "step3": "内側・上向きに素早く5回引き上げるように押します",
+        "step4": "異物が出るまで繰り返します",
+        "step5": "一人の場合は椅子の背もたれにみぞおちを当てて圧迫します",
+        "warning": "妊娠中や肥満の方は、みぞおちの下ではなく胸の中央を圧迫してください。"
+      }
+    },
+    "cpr": {
+      "infant": {
+        "title": "CPR（生後12か月未満）",
+        "subtitle": "乳児 - 指2本で胸部圧迫",
+        "step1": "反応・呼吸を確認します（10秒以内）",
+        "step2": "まず119番へ通報し、スピーカーホンで指示を受けながら進めます",
+        "step3": "平らな場所に寝かせ、頭を軽く後ろに傾けます",
+        "step4": "胸の中央（両乳頭の間）を指2本で深さ4cm圧迫します",
+        "step5": "1分間に100～120回のペースで30回圧迫→口と鼻を同時に軽く覆い人工呼吸を2回",
+        "step6": "救急隊が到着するまで30:2を繰り返し、絶対に中断しないでください",
+        "warning": "人工呼吸が難しい場合は、胸部圧迫だけでも続けてください。"
+      },
+      "child": {
+        "title": "CPR（満1歳～思春期前）",
+        "subtitle": "小児 - 片手または両手で圧迫",
+        "step1": "肩を叩いて反応を確認し、呼吸を確認します（10秒以内）",
+        "step2": "まず119番へ通報します（スピーカーホン）",
+        "step3": "平らな場所に寝かせ、頭を後ろに傾けて気道を確保します",
+        "step4": "胸の中央を片手のひら（小さい子どもの場合）または両手で深さ5cm圧迫します",
+        "step5": "1分間に100～120回のペースで30回圧迫→口対口人工呼吸を2回",
+        "step6": "30:2を繰り返し、AEDが到着次第すぐに使用してください",
+        "warning": "救急隊が到着するまで中断しないでください。肋骨が折れても続けてください。"
+      },
+      "adult": {
+        "title": "CPR（成人／保護者）",
+        "subtitle": "青少年・成人 - 両手で胸部圧迫",
+        "step1": "意識・呼吸を確認後、119番へ通報します（スピーカーホン）",
+        "step2": "胸の中央（胸骨の下側）に両手を重ね、ひじを伸ばします",
+        "step3": "体重をかけて深さ5～6cm圧迫します",
+        "step4": "1分間に100～120回のペースで30回圧迫します",
+        "step5": "可能であれば人工呼吸を2回→30:2を繰り返します",
+        "step6": "AEDが到着次第すぐに使用し、救急隊が来るまで中断しないでください",
+        "warning": "肋骨が折れても中断しないでください。命が最優先です。"
+      }
+    },
+    "burnFall": {
+      "title": "やけど・転落への対応",
+      "subtitle": "やけどをした時・転落した時",
+      "step1": "やけど：流水で10分以上冷やします（氷は使用しないでください！）",
+      "step2": "軟膏・味噌・歯磨き粉などを塗らず、水ぶくれを潰さないでください",
+      "step3": "転落：すぐに起こさず、その場で安静にさせてください",
+      "step4": "頭を打った場合は24時間経過観察してください（嘔吐・けいれんがあれば救急外来へ）",
+      "warning": "2度以上のやけど・広範囲のやけど・意識の変化がある場合は直ちに119番へ"
+    },
+    "foreign": {
+      "title": "異物の誤飲・挿入",
+      "subtitle": "子どもが異物を飲み込んだ、または入れてしまった時",
+      "step1": "無理に取り出そうとしないでください（さらに奥に入る恐れがあります）",
+      "step2": "鼻：反対側の鼻を塞いで力強く鼻をかませ、出てこなければ病院へ",
+      "step3": "耳：綿棒やピンセットは使用せず、病院を受診してください",
+      "step4": "電池・磁石を飲み込んだ場合は直ちに救急外来へ！（無理に吐かせないでください）",
+      "warning": "電池・磁石は2時間以内に腸に穴が開く恐れがあります！直ちに救急外来へ"
+    },
+    "alert": {
+      "hospitalPhoneRequiredTitle": "病院の電話番号の登録が必要です",
+      "hospitalPhoneRequiredMessage": "まず分娩予定の病院の電話番号を登録してください。",
+      "registerAction": "登録する",
+      "callFailedTitle": "発信に失敗しました",
+      "callFailedWithPhone": "お手数ですが直接お電話ください：{{phone}}",
+      "callFailedOpenApp": "電話アプリを開けません。直接119番を押してください。",
+      "callFailedDialDirectly": "直接119番へお電話ください。",
+      "symptomSelectTitle": "症状を選択してください",
+      "symptomSelectMessage": "1つ以上の症状を選択してください。",
+      "childSelectTitle": "子どもを選択してください",
+      "childSelectMessage": "まず子どもを選択してください。",
+      "checkResultMissing": "症状確認の結果を取得できませんでした。もう一度お試しください。",
+      "checkError": "症状確認中にエラーが発生しました。もう一度お試しください。",
+      "notifyDoneTitle": "通知を送信しました",
+      "notifyDoneMessage": "ご家族に通知を送信しました。",
+      "notifyError": "家族への通知に失敗しました。",
+      "mapOpenError": "地図アプリを開けません。"
+    },
+    "familyNotify": {
+      "situationWithTemp": "{{symptoms}}（体温{{temp}}度）"
+    },
+    "subtitleMom": "{{name}}ママ",
+    "subtitleDefault": "応急ヘルパー",
+    "priorityTitle": "緊急時はまず119番へ",
+    "call119Button": "119番へ電話",
+    "findErButton": "救急外来を探す",
+    "notifyFamilyButton": "家族に知らせる",
+    "priorityNote": "呼吸困難、意識低下、けいれん、激しい出血、唇が青くなるなどの緊急事態では、アプリで確認するより先に119番へ電話してください。",
+    "quickHelpTitle": "緊急事態のクイック対応",
+    "quickHelpDesc": "危険な場合は119番へ、判断に迷う場合はまず症状を素早く確認してください",
+    "symptomCheckTitle": "症状クイックチェック",
+    "symptomCheckDescPregnant": "119番レベルかどうか判断に迷う時 — お母さんと赤ちゃんの症状を選択してください",
+    "symptomCheckDesc": "119番レベルかどうか判断に迷う時 — まず症状を素早く確認してください",
+    "tempLabel": "体温（任意）",
+    "checkButton": "症状を確認",
+    "callDeliveryWardButton": "分娩室へ電話",
+    "touchToRegisterPhone": "タップして病院の電話番号を登録",
+    "hospitalInfoEditOrRegister": "分娩・診療病院情報を{{action}}",
+    "registerAction": "登録",
+    "medicalCitationNote": "応急処置の案内は参考情報です。緊急時は直ちに119番へ通報し、医療スタッフの指示に従ってください。",
+    "citationSource": {
+      "nfa": "消防庁119応急処置ガイド",
+      "kdca": "疾病管理庁 国家健康情報ポータル（応急処置）",
+      "redcross": "大韓赤十字社 応急処置ガイド"
+    },
+    "doNowLabel": "👉 今すぐすべきこと",
+    "findNearbyHospitalButton": "近くの病院を探す",
+    "resultDisclaimer": "⚠️ 本案内は参考情報であり、医学的診断ではありません。判断が難しい場合や症状が悪化した場合は、直ちに119番または救急外来をご利用ください。",
+    "warningPageLabel": "警告",
+    "disclaimerBar": "ⓘ 一般的な応急処置の参考情報です・医療行為の代替ではありません・緊急時は直ちに119番へ",
+    "stepNumLabel": "STEP {{num}}",
+    "swipeHint": "横にスワイプすると次のステップへ",
+    "call119Immediately": "このような時はすぐに119番へ",
+    "emergencyCall119": "119緊急電話"
   }
 }

@@ -8,10 +8,12 @@
  * 모든 정보는 일반 안내 — 의료적 결정은 산부인과 권유.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ScrollView, View, Text, StyleSheet } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { BackButton } from '../../components/common/BackButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
@@ -51,261 +53,264 @@ const COLOR = {
 /* ────────────────────────────────────────────────────────────────────
  * 단계별 콘텐츠 (임신 일반 안내 — 한국 가이드라인 기반)
  * ──────────────────────────────────────────────────────────────────── */
-const STAGE_CONTENT: Record<Stage, StageContent> = {
+const getStageContent = (t: TFunction): Record<Stage, StageContent> => ({
   early: {
-    label: '초기',
-    weeks: '1-12주',
-    hero: '엄마, 첫 시작이에요',
-    heroSub: '몸이 가장 예민한 시기. 무리하지 말고 천천히.',
+    label: t('pregnancyJourneyDetail.stage.early.label'),
+    weeks: t('pregnancyJourneyDetail.stage.early.weeks'),
+    hero: t('pregnancyJourneyDetail.stage.early.hero'),
+    heroSub: t('pregnancyJourneyDetail.stage.early.heroSub'),
     sections: [
       {
-        title: '💊 영양제',
+        title: t('pregnancyJourneyDetail.stage.early.sections.supplements.title'),
         items: [
-          { emoji: '🌿', title: '엽산 (필수)', body: '하루 400-800㎍. 신경관 결손 예방. 임신 1주 전부터 12주까지 핵심.' },
-          { emoji: '💊', title: '비타민 D', body: '하루 600-1000IU. 뼈와 면역 형성에 필수.' },
-          { emoji: '🐟', title: '오메가-3 (DHA)', body: '주 2회 등푸른 생선 또는 보충제. 태아 뇌 발달.' },
+          { emoji: '🌿', title: t('pregnancyJourneyDetail.stage.early.sections.supplements.items.folicAcid.title'), body: t('pregnancyJourneyDetail.stage.early.sections.supplements.items.folicAcid.body') },
+          { emoji: '💊', title: t('pregnancyJourneyDetail.stage.early.sections.supplements.items.vitaminD.title'), body: t('pregnancyJourneyDetail.stage.early.sections.supplements.items.vitaminD.body') },
+          { emoji: '🐟', title: t('pregnancyJourneyDetail.stage.early.sections.supplements.items.omega3.title'), body: t('pregnancyJourneyDetail.stage.early.sections.supplements.items.omega3.body') },
         ],
       },
       {
-        title: '🍽️ 식단',
+        title: t('pregnancyJourneyDetail.stage.early.sections.diet.title'),
         items: [
-          { emoji: '🥬', title: '엽산 식품', body: '시금치, 브로콜리, 아스파라거스, 콩, 아보카도, 오렌지' },
-          { emoji: '🥛', title: '단백질 + 칼슘', body: '계란, 두부, 살코기, 우유, 요거트' },
-          { emoji: '🚫', title: '피해야 할 것', body: '날 음식, 카페인 200mg 이상, 술, 흡연, 비살균 우유/치즈' },
+          { emoji: '🥬', title: t('pregnancyJourneyDetail.stage.early.sections.diet.items.folateFoods.title'), body: t('pregnancyJourneyDetail.stage.early.sections.diet.items.folateFoods.body') },
+          { emoji: '🥛', title: t('pregnancyJourneyDetail.stage.early.sections.diet.items.proteinCalcium.title'), body: t('pregnancyJourneyDetail.stage.early.sections.diet.items.proteinCalcium.body') },
+          { emoji: '🚫', title: t('pregnancyJourneyDetail.stage.early.sections.diet.items.avoid.title'), body: t('pregnancyJourneyDetail.stage.early.sections.diet.items.avoid.body') },
         ],
       },
       {
-        title: '🚶 운동',
+        title: t('pregnancyJourneyDetail.stage.early.sections.exercise.title'),
         items: [
-          { emoji: '🚶‍♀️', title: '걷기', body: '하루 20-30분 가벼운 산책. 무리하지 말 것.' },
-          { emoji: '🧘', title: '임산부 요가', body: '주 1-2회. 호흡과 골반 이완 동작 위주.' },
-          { emoji: '⛔', title: '주의', body: '복부에 충격 가는 운동 / 격렬한 트레이닝 금지' },
+          { emoji: '🚶‍♀️', title: t('pregnancyJourneyDetail.stage.early.sections.exercise.items.walking.title'), body: t('pregnancyJourneyDetail.stage.early.sections.exercise.items.walking.body') },
+          { emoji: '🧘', title: t('pregnancyJourneyDetail.stage.early.sections.exercise.items.yoga.title'), body: t('pregnancyJourneyDetail.stage.early.sections.exercise.items.yoga.body') },
+          { emoji: '⛔', title: t('pregnancyJourneyDetail.stage.early.sections.exercise.items.caution.title'), body: t('pregnancyJourneyDetail.stage.early.sections.exercise.items.caution.body') },
         ],
       },
       {
-        title: '🩺 검사',
+        title: t('pregnancyJourneyDetail.stage.early.sections.checkups.title'),
         items: [
-          { emoji: '📅', title: '첫 산부인과 방문', body: '임신 6-8주 권장. 자궁 내 임신 확인 + 심장박동.' },
-          { emoji: '🩸', title: '초기 혈액 검사', body: '풍진 면역 / B형간염 / 빈혈 / 갑상선' },
-          { emoji: '📸', title: '첫 정밀 초음파', body: '11-13주. NT 검사 (목 투명대 두께).' },
+          { emoji: '📅', title: t('pregnancyJourneyDetail.stage.early.sections.checkups.items.firstVisit.title'), body: t('pregnancyJourneyDetail.stage.early.sections.checkups.items.firstVisit.body') },
+          { emoji: '🩸', title: t('pregnancyJourneyDetail.stage.early.sections.checkups.items.bloodTest.title'), body: t('pregnancyJourneyDetail.stage.early.sections.checkups.items.bloodTest.body') },
+          { emoji: '📸', title: t('pregnancyJourneyDetail.stage.early.sections.checkups.items.firstUltrasound.title'), body: t('pregnancyJourneyDetail.stage.early.sections.checkups.items.firstUltrasound.body') },
         ],
       },
       {
-        title: '💗 주의사항',
+        title: t('pregnancyJourneyDetail.stage.early.sections.cautions.title'),
         items: [
-          { emoji: '🤢', title: '입덧', body: '6-12주에 절정. 자주 적게 먹기, 따뜻한 음료, 비타민 B6 도움.' },
-          { emoji: '😴', title: '극심한 피로', body: '몸이 보내는 신호. 충분한 수면 (7-9시간).' },
-          { emoji: '⚠️', title: '병원 즉시 연락', body: '심한 출혈 / 38℃ 이상 발열 / 격렬한 복통' },
+          { emoji: '🤢', title: t('pregnancyJourneyDetail.stage.early.sections.cautions.items.morningSickness.title'), body: t('pregnancyJourneyDetail.stage.early.sections.cautions.items.morningSickness.body') },
+          { emoji: '😴', title: t('pregnancyJourneyDetail.stage.early.sections.cautions.items.fatigue.title'), body: t('pregnancyJourneyDetail.stage.early.sections.cautions.items.fatigue.body') },
+          { emoji: '⚠️', title: t('pregnancyJourneyDetail.stage.early.sections.cautions.items.emergency.title'), body: t('pregnancyJourneyDetail.stage.early.sections.cautions.items.emergency.body') },
         ],
       },
     ],
   },
 
   wk12: {
-    label: '12주 검진',
-    weeks: '12주 전후',
-    hero: '첫 정밀 초음파 시기',
-    heroSub: 'NT 검사로 태아 건강 처음 확인하는 중요한 시점.',
+    label: t('pregnancyJourneyDetail.stage.wk12.label'),
+    weeks: t('pregnancyJourneyDetail.stage.wk12.weeks'),
+    hero: t('pregnancyJourneyDetail.stage.wk12.hero'),
+    heroSub: t('pregnancyJourneyDetail.stage.wk12.heroSub'),
     sections: [
       {
-        title: '🩺 핵심 검사',
+        title: t('pregnancyJourneyDetail.stage.wk12.sections.keyTests.title'),
         items: [
-          { emoji: '📸', title: 'NT 검사 (목 투명대)', body: '11-13주 6일 사이. 다운증후군 등 염색체 이상 1차 선별.' },
-          { emoji: '🩸', title: '통합 선별 검사', body: 'NT + 혈액 검사 결합. 정확도 높음.' },
-          { emoji: '🧬', title: 'NIPT (선택)', body: '비침습 산전 유전 검사. 35세 이상 권장.' },
+          { emoji: '📸', title: t('pregnancyJourneyDetail.stage.wk12.sections.keyTests.items.nt.title'), body: t('pregnancyJourneyDetail.stage.wk12.sections.keyTests.items.nt.body') },
+          { emoji: '🩸', title: t('pregnancyJourneyDetail.stage.wk12.sections.keyTests.items.integratedScreening.title'), body: t('pregnancyJourneyDetail.stage.wk12.sections.keyTests.items.integratedScreening.body') },
+          { emoji: '🧬', title: t('pregnancyJourneyDetail.stage.wk12.sections.keyTests.items.nipt.title'), body: t('pregnancyJourneyDetail.stage.wk12.sections.keyTests.items.nipt.body') },
         ],
       },
       {
-        title: '💗 알아둘 변화',
+        title: t('pregnancyJourneyDetail.stage.wk12.sections.changes.title'),
         items: [
-          { emoji: '🌅', title: '입덧 진정', body: '12주 즈음부터 점차 가라앉음.' },
-          { emoji: '⚖️', title: '체중 증가 시작', body: '주당 0.4-0.5kg 권장. 영양 균형 중요.' },
-          { emoji: '🤰', title: '자궁 위치', body: '치골 위로 올라옴. 배가 살짝 나오기 시작.' },
+          { emoji: '🌅', title: t('pregnancyJourneyDetail.stage.wk12.sections.changes.items.sicknessEasing.title'), body: t('pregnancyJourneyDetail.stage.wk12.sections.changes.items.sicknessEasing.body') },
+          { emoji: '⚖️', title: t('pregnancyJourneyDetail.stage.wk12.sections.changes.items.weightGain.title'), body: t('pregnancyJourneyDetail.stage.wk12.sections.changes.items.weightGain.body') },
+          { emoji: '🤰', title: t('pregnancyJourneyDetail.stage.wk12.sections.changes.items.uterusPosition.title'), body: t('pregnancyJourneyDetail.stage.wk12.sections.changes.items.uterusPosition.body') },
         ],
       },
       {
-        title: '✅ 이번 시기 체크',
+        title: t('pregnancyJourneyDetail.stage.wk12.sections.thisPeriodChecklist.title'),
         items: [
-          { emoji: '🏥', title: '산부인과 정기 체크', body: '4주마다 1회 (28주까지).' },
-          { emoji: '👔', title: '회사 보고 (선택)', body: '안정기 진입 시점. 출산휴가 일정 미리 확인.' },
-          { emoji: '📚', title: '임신 책/유튜브', body: '믿을 만한 의료 콘텐츠로 학습.' },
+          { emoji: '🏥', title: t('pregnancyJourneyDetail.stage.wk12.sections.thisPeriodChecklist.items.regularCheckup.title'), body: t('pregnancyJourneyDetail.stage.wk12.sections.thisPeriodChecklist.items.regularCheckup.body') },
+          { emoji: '👔', title: t('pregnancyJourneyDetail.stage.wk12.sections.thisPeriodChecklist.items.workNotice.title'), body: t('pregnancyJourneyDetail.stage.wk12.sections.thisPeriodChecklist.items.workNotice.body') },
+          { emoji: '📚', title: t('pregnancyJourneyDetail.stage.wk12.sections.thisPeriodChecklist.items.learning.title'), body: t('pregnancyJourneyDetail.stage.wk12.sections.thisPeriodChecklist.items.learning.body') },
         ],
       },
     ],
   },
 
   stable: {
-    label: '안정기',
-    weeks: '13-24주',
-    hero: '엄마, 가장 컨디션 좋은 시기예요',
-    heroSub: '입덧이 가라앉고 태동을 처음 느끼는 시기.',
+    label: t('pregnancyJourneyDetail.stage.stable.label'),
+    weeks: t('pregnancyJourneyDetail.stage.stable.weeks'),
+    hero: t('pregnancyJourneyDetail.stage.stable.hero'),
+    heroSub: t('pregnancyJourneyDetail.stage.stable.heroSub'),
     sections: [
       {
-        title: '💊 영양제',
+        title: t('pregnancyJourneyDetail.stage.stable.sections.supplements.title'),
         items: [
-          { emoji: '🦴', title: '칼슘', body: '하루 1000mg. 태아 뼈 형성 본격화.' },
-          { emoji: '🩸', title: '철분', body: '하루 30mg. 빈혈 예방. 비타민 C와 함께 흡수율 ↑.' },
-          { emoji: '🐟', title: 'DHA 지속', body: '태아 뇌 발달 핵심 시기.' },
+          { emoji: '🦴', title: t('pregnancyJourneyDetail.stage.stable.sections.supplements.items.calcium.title'), body: t('pregnancyJourneyDetail.stage.stable.sections.supplements.items.calcium.body') },
+          { emoji: '🩸', title: t('pregnancyJourneyDetail.stage.stable.sections.supplements.items.iron.title'), body: t('pregnancyJourneyDetail.stage.stable.sections.supplements.items.iron.body') },
+          { emoji: '🐟', title: t('pregnancyJourneyDetail.stage.stable.sections.supplements.items.dha.title'), body: t('pregnancyJourneyDetail.stage.stable.sections.supplements.items.dha.body') },
         ],
       },
       {
-        title: '🍽️ 식단',
+        title: t('pregnancyJourneyDetail.stage.stable.sections.diet.title'),
         items: [
-          { emoji: '🥩', title: '단백질 늘리기', body: '하루 75-100g. 살코기, 생선, 콩, 두부, 계란.' },
-          { emoji: '🥕', title: '비타민 A', body: '당근, 시금치, 고구마, 브로콜리.' },
-          { emoji: '🧂', title: '나트륨 조절', body: '부종 예방을 위해 짠 음식 줄이기.' },
+          { emoji: '🥩', title: t('pregnancyJourneyDetail.stage.stable.sections.diet.items.moreProtein.title'), body: t('pregnancyJourneyDetail.stage.stable.sections.diet.items.moreProtein.body') },
+          { emoji: '🥕', title: t('pregnancyJourneyDetail.stage.stable.sections.diet.items.vitaminA.title'), body: t('pregnancyJourneyDetail.stage.stable.sections.diet.items.vitaminA.body') },
+          { emoji: '🧂', title: t('pregnancyJourneyDetail.stage.stable.sections.diet.items.sodium.title'), body: t('pregnancyJourneyDetail.stage.stable.sections.diet.items.sodium.body') },
         ],
       },
       {
-        title: '🚶 운동',
+        title: t('pregnancyJourneyDetail.stage.stable.sections.exercise.title'),
         items: [
-          { emoji: '🏊', title: '임산부 수영', body: '관절 부담 적고 부종 완화. 주 2-3회.' },
-          { emoji: '🧘', title: '임산부 요가/필라테스', body: '주 2-3회. 골반 근육과 호흡 강화.' },
-          { emoji: '🚶‍♀️', title: '걷기 늘리기', body: '하루 30-45분. 출산 체력 준비.' },
+          { emoji: '🏊', title: t('pregnancyJourneyDetail.stage.stable.sections.exercise.items.swimming.title'), body: t('pregnancyJourneyDetail.stage.stable.sections.exercise.items.swimming.body') },
+          { emoji: '🧘', title: t('pregnancyJourneyDetail.stage.stable.sections.exercise.items.yogaPilates.title'), body: t('pregnancyJourneyDetail.stage.stable.sections.exercise.items.yogaPilates.body') },
+          { emoji: '🚶‍♀️', title: t('pregnancyJourneyDetail.stage.stable.sections.exercise.items.moreWalking.title'), body: t('pregnancyJourneyDetail.stage.stable.sections.exercise.items.moreWalking.body') },
         ],
       },
       {
-        title: '🩺 검사',
+        title: t('pregnancyJourneyDetail.stage.stable.sections.checkups.title'),
         items: [
-          { emoji: '🧪', title: '쿼드 검사', body: '15-20주. 4가지 호르몬으로 기형 선별.' },
-          { emoji: '📸', title: '정밀 초음파', body: '20-24주. 태아 장기 발달 정밀 확인. 성별도 확인 가능.' },
-          { emoji: '🩸', title: '임당 1차 검사', body: '24-28주. 1시간 포도당 검사.' },
+          { emoji: '🧪', title: t('pregnancyJourneyDetail.stage.stable.sections.checkups.items.quadTest.title'), body: t('pregnancyJourneyDetail.stage.stable.sections.checkups.items.quadTest.body') },
+          { emoji: '📸', title: t('pregnancyJourneyDetail.stage.stable.sections.checkups.items.detailedUltrasound.title'), body: t('pregnancyJourneyDetail.stage.stable.sections.checkups.items.detailedUltrasound.body') },
+          { emoji: '🩸', title: t('pregnancyJourneyDetail.stage.stable.sections.checkups.items.glucoseTest1.title'), body: t('pregnancyJourneyDetail.stage.stable.sections.checkups.items.glucoseTest1.body') },
         ],
       },
       {
-        title: '✨ 즐길 것들',
+        title: t('pregnancyJourneyDetail.stage.stable.sections.enjoy.title'),
         items: [
-          { emoji: '🦶', title: '첫 태동', body: '16-22주 사이. 처음엔 가스 같은 감각.' },
-          { emoji: '🎵', title: '태교 시작', body: '음악 듣기 / 책 읽어주기 / 대화하기.' },
-          { emoji: '📷', title: '만삭 사진 (선택)', body: '20주 즈음 첫 임신 사진 기록.' },
+          { emoji: '🦶', title: t('pregnancyJourneyDetail.stage.stable.sections.enjoy.items.firstKick.title'), body: t('pregnancyJourneyDetail.stage.stable.sections.enjoy.items.firstKick.body') },
+          { emoji: '🎵', title: t('pregnancyJourneyDetail.stage.stable.sections.enjoy.items.prenatalEducation.title'), body: t('pregnancyJourneyDetail.stage.stable.sections.enjoy.items.prenatalEducation.body') },
+          { emoji: '📷', title: t('pregnancyJourneyDetail.stage.stable.sections.enjoy.items.maternityPhoto.title'), body: t('pregnancyJourneyDetail.stage.stable.sections.enjoy.items.maternityPhoto.body') },
         ],
       },
     ],
   },
 
   late: {
-    label: '후기',
-    weeks: '25-37주',
-    hero: '출산이 가까워지고 있어요',
-    heroSub: '몸이 무거워지지만 태교의 황금기.',
+    label: t('pregnancyJourneyDetail.stage.late.label'),
+    weeks: t('pregnancyJourneyDetail.stage.late.weeks'),
+    hero: t('pregnancyJourneyDetail.stage.late.hero'),
+    heroSub: t('pregnancyJourneyDetail.stage.late.heroSub'),
     sections: [
       {
-        title: '💊 영양제',
+        title: t('pregnancyJourneyDetail.stage.late.sections.supplements.title'),
         items: [
-          { emoji: '🦴', title: '칼슘 + 비타민 D', body: '태아 골격 완성기. 산모 골다공증 예방.' },
-          { emoji: '🩸', title: '철분 강화', body: '출산 시 출혈 대비. 하루 30-60mg.' },
-          { emoji: '🥥', title: '마그네슘', body: '쥐남(다리 경련) 예방.' },
+          { emoji: '🦴', title: t('pregnancyJourneyDetail.stage.late.sections.supplements.items.calciumVitaminD.title'), body: t('pregnancyJourneyDetail.stage.late.sections.supplements.items.calciumVitaminD.body') },
+          { emoji: '🩸', title: t('pregnancyJourneyDetail.stage.late.sections.supplements.items.ironBoost.title'), body: t('pregnancyJourneyDetail.stage.late.sections.supplements.items.ironBoost.body') },
+          { emoji: '🥥', title: t('pregnancyJourneyDetail.stage.late.sections.supplements.items.magnesium.title'), body: t('pregnancyJourneyDetail.stage.late.sections.supplements.items.magnesium.body') },
         ],
       },
       {
-        title: '🍽️ 식단',
+        title: t('pregnancyJourneyDetail.stage.late.sections.diet.title'),
         items: [
-          { emoji: '🍚', title: '소량 자주', body: '위가 눌려 한 번에 많이 못 먹음. 5-6끼로 나누기.' },
-          { emoji: '🌾', title: '식이섬유', body: '변비 예방. 통곡물, 과일, 채소.' },
-          { emoji: '💧', title: '수분 충분히', body: '하루 2L 이상. 부종 + 변비 예방.' },
+          { emoji: '🍚', title: t('pregnancyJourneyDetail.stage.late.sections.diet.items.smallFrequentMeals.title'), body: t('pregnancyJourneyDetail.stage.late.sections.diet.items.smallFrequentMeals.body') },
+          { emoji: '🌾', title: t('pregnancyJourneyDetail.stage.late.sections.diet.items.fiber.title'), body: t('pregnancyJourneyDetail.stage.late.sections.diet.items.fiber.body') },
+          { emoji: '💧', title: t('pregnancyJourneyDetail.stage.late.sections.diet.items.hydration.title'), body: t('pregnancyJourneyDetail.stage.late.sections.diet.items.hydration.body') },
         ],
       },
       {
-        title: '🚶 운동',
+        title: t('pregnancyJourneyDetail.stage.late.sections.exercise.title'),
         items: [
-          { emoji: '🤸‍♀️', title: '케겔 운동', body: '골반저 근육 강화. 출산 + 산후 회복에 핵심.' },
-          { emoji: '🧘', title: '호흡 훈련', body: '진통 호흡법 연습 (1초 들숨, 2초 날숨).' },
-          { emoji: '🚶‍♀️', title: '가벼운 걷기', body: '하루 20-30분. 골반 자극으로 출산 준비.' },
+          { emoji: '🤸‍♀️', title: t('pregnancyJourneyDetail.stage.late.sections.exercise.items.kegel.title'), body: t('pregnancyJourneyDetail.stage.late.sections.exercise.items.kegel.body') },
+          { emoji: '🧘', title: t('pregnancyJourneyDetail.stage.late.sections.exercise.items.breathingPractice.title'), body: t('pregnancyJourneyDetail.stage.late.sections.exercise.items.breathingPractice.body') },
+          { emoji: '🚶‍♀️', title: t('pregnancyJourneyDetail.stage.late.sections.exercise.items.lightWalking.title'), body: t('pregnancyJourneyDetail.stage.late.sections.exercise.items.lightWalking.body') },
         ],
       },
       {
-        title: '🩺 검사',
+        title: t('pregnancyJourneyDetail.stage.late.sections.checkups.title'),
         items: [
-          { emoji: '👶', title: '태아 성장 초음파', body: '28-32주. 체중·자세 확인.' },
-          { emoji: '🦠', title: 'GBS 검사', body: '35-37주. 산도 세균 검사. 양성이면 항생제.' },
-          { emoji: '💉', title: 'Tdap 백신', body: '27-36주. 신생아 백일해 예방.' },
+          { emoji: '👶', title: t('pregnancyJourneyDetail.stage.late.sections.checkups.items.growthUltrasound.title'), body: t('pregnancyJourneyDetail.stage.late.sections.checkups.items.growthUltrasound.body') },
+          { emoji: '🦠', title: t('pregnancyJourneyDetail.stage.late.sections.checkups.items.gbsTest.title'), body: t('pregnancyJourneyDetail.stage.late.sections.checkups.items.gbsTest.body') },
+          { emoji: '💉', title: t('pregnancyJourneyDetail.stage.late.sections.checkups.items.tdap.title'), body: t('pregnancyJourneyDetail.stage.late.sections.checkups.items.tdap.body') },
         ],
       },
       {
-        title: '🧳 출산 준비',
+        title: t('pregnancyJourneyDetail.stage.late.sections.birthPrep.title'),
         items: [
-          { emoji: '🧳', title: '출산가방', body: '32주 즈음 미리 준비. 산모/아기 용품 + 서류.' },
-          { emoji: '🏥', title: '병원 등록', body: '분만 병원 + 응급 연락처 / 이동 경로 확인.' },
-          { emoji: '🏠', title: '아기방 세팅', body: '아기 침대, 카시트, 기저귀, 분유/모유용품.' },
+          { emoji: '🧳', title: t('pregnancyJourneyDetail.stage.late.sections.birthPrep.items.birthBag.title'), body: t('pregnancyJourneyDetail.stage.late.sections.birthPrep.items.birthBag.body') },
+          { emoji: '🏥', title: t('pregnancyJourneyDetail.stage.late.sections.birthPrep.items.hospitalRegistration.title'), body: t('pregnancyJourneyDetail.stage.late.sections.birthPrep.items.hospitalRegistration.body') },
+          { emoji: '🏠', title: t('pregnancyJourneyDetail.stage.late.sections.birthPrep.items.nurserySetup.title'), body: t('pregnancyJourneyDetail.stage.late.sections.birthPrep.items.nurserySetup.body') },
         ],
       },
       {
-        title: '⚠️ 주의 신호',
+        title: t('pregnancyJourneyDetail.stage.late.sections.warningSigns.title'),
         items: [
-          { emoji: '🦵', title: '심한 부종', body: '얼굴/손 부종 + 두통은 전자간증 의심. 즉시 병원.' },
-          { emoji: '👶', title: '태동 감소', body: '평소보다 현저히 줄면 즉시 병원 연락.' },
-          { emoji: '💧', title: '양수 누출', body: '맑은 물 흐르면 조기 양막 파수. 즉시 병원.' },
+          { emoji: '🦵', title: t('pregnancyJourneyDetail.stage.late.sections.warningSigns.items.severeSwelling.title'), body: t('pregnancyJourneyDetail.stage.late.sections.warningSigns.items.severeSwelling.body') },
+          { emoji: '👶', title: t('pregnancyJourneyDetail.stage.late.sections.warningSigns.items.reducedMovement.title'), body: t('pregnancyJourneyDetail.stage.late.sections.warningSigns.items.reducedMovement.body') },
+          { emoji: '💧', title: t('pregnancyJourneyDetail.stage.late.sections.warningSigns.items.fluidLeak.title'), body: t('pregnancyJourneyDetail.stage.late.sections.warningSigns.items.fluidLeak.body') },
         ],
       },
     ],
   },
 
   birth: {
-    label: '출산',
-    weeks: '38주+',
-    hero: '곧 만나요!',
-    heroSub: '진통이 시작되면 침착하게 병원으로.',
+    label: t('pregnancyJourneyDetail.stage.birth.label'),
+    weeks: t('pregnancyJourneyDetail.stage.birth.weeks'),
+    hero: t('pregnancyJourneyDetail.stage.birth.hero'),
+    heroSub: t('pregnancyJourneyDetail.stage.birth.heroSub'),
     sections: [
       {
-        title: '⏱️ 진통 신호',
+        title: t('pregnancyJourneyDetail.stage.birth.sections.contractionSigns.title'),
         items: [
-          { emoji: '🌊', title: '규칙적 진통', body: '5분 간격 1분 지속이 1시간 → 병원으로.' },
-          { emoji: '🩸', title: '이슬', body: '점액성 분비물 (피 섞일 수 있음). 며칠 안에 진통.' },
-          { emoji: '💦', title: '양수 파열', body: '맑은 물 흐름. 시간 기록 후 즉시 병원.' },
+          { emoji: '🌊', title: t('pregnancyJourneyDetail.stage.birth.sections.contractionSigns.items.regularContractions.title'), body: t('pregnancyJourneyDetail.stage.birth.sections.contractionSigns.items.regularContractions.body') },
+          { emoji: '🩸', title: t('pregnancyJourneyDetail.stage.birth.sections.contractionSigns.items.showSpotting.title'), body: t('pregnancyJourneyDetail.stage.birth.sections.contractionSigns.items.showSpotting.body') },
+          { emoji: '💦', title: t('pregnancyJourneyDetail.stage.birth.sections.contractionSigns.items.waterBreaking.title'), body: t('pregnancyJourneyDetail.stage.birth.sections.contractionSigns.items.waterBreaking.body') },
         ],
       },
       {
-        title: '🧳 출산가방 최종 체크',
+        title: t('pregnancyJourneyDetail.stage.birth.sections.finalBagCheck.title'),
         items: [
-          { emoji: '📋', title: '서류', body: '신분증, 산모수첩, 보험증, 출산준비물 리스트' },
-          { emoji: '👕', title: '산모 용품', body: '산모복, 수유복, 슬리퍼, 세면도구, 생리대' },
-          { emoji: '👶', title: '아기 용품', body: '배냇저고리, 손싸개, 모자, 양말, 카시트' },
+          { emoji: '📋', title: t('pregnancyJourneyDetail.stage.birth.sections.finalBagCheck.items.documents.title'), body: t('pregnancyJourneyDetail.stage.birth.sections.finalBagCheck.items.documents.body') },
+          { emoji: '👕', title: t('pregnancyJourneyDetail.stage.birth.sections.finalBagCheck.items.momItems.title'), body: t('pregnancyJourneyDetail.stage.birth.sections.finalBagCheck.items.momItems.body') },
+          { emoji: '👶', title: t('pregnancyJourneyDetail.stage.birth.sections.finalBagCheck.items.babyItems.title'), body: t('pregnancyJourneyDetail.stage.birth.sections.finalBagCheck.items.babyItems.body') },
         ],
       },
       {
-        title: '🫁 호흡법',
+        title: t('pregnancyJourneyDetail.stage.birth.sections.breathing.title'),
         items: [
-          { emoji: '🌬️', title: '초기 진통', body: '천천히 깊게 - 코로 들이쉬고 입으로 내쉬기' },
-          { emoji: '😤', title: '강한 진통', body: '짧고 빠르게 - "후-후-후" 헐떡이듯' },
-          { emoji: '💪', title: '밀어내기', body: '의료진 지시 따라. 숨 참고 5초씩 3번.' },
+          { emoji: '🌬️', title: t('pregnancyJourneyDetail.stage.birth.sections.breathing.items.earlyLabor.title'), body: t('pregnancyJourneyDetail.stage.birth.sections.breathing.items.earlyLabor.body') },
+          { emoji: '😤', title: t('pregnancyJourneyDetail.stage.birth.sections.breathing.items.strongContractions.title'), body: t('pregnancyJourneyDetail.stage.birth.sections.breathing.items.strongContractions.body') },
+          { emoji: '💪', title: t('pregnancyJourneyDetail.stage.birth.sections.breathing.items.pushing.title'), body: t('pregnancyJourneyDetail.stage.birth.sections.breathing.items.pushing.body') },
         ],
       },
       {
-        title: '🏥 병원 도착 후',
+        title: t('pregnancyJourneyDetail.stage.birth.sections.atHospital.title'),
         items: [
-          { emoji: '📝', title: '입원 절차', body: '응급실 또는 분만실 → 자궁 개대 확인' },
-          { emoji: '💉', title: '무통 분만 (선택)', body: '자궁 개대 4-5cm에서 시작 가능.' },
-          { emoji: '🤝', title: '도와줄 사람', body: '남편/가족 동행. 마사지/물 챙겨줄 사람 필요.' },
+          { emoji: '📝', title: t('pregnancyJourneyDetail.stage.birth.sections.atHospital.items.admission.title'), body: t('pregnancyJourneyDetail.stage.birth.sections.atHospital.items.admission.body') },
+          { emoji: '💉', title: t('pregnancyJourneyDetail.stage.birth.sections.atHospital.items.epidural.title'), body: t('pregnancyJourneyDetail.stage.birth.sections.atHospital.items.epidural.body') },
+          { emoji: '🤝', title: t('pregnancyJourneyDetail.stage.birth.sections.atHospital.items.support.title'), body: t('pregnancyJourneyDetail.stage.birth.sections.atHospital.items.support.body') },
         ],
       },
       {
-        title: '💖 출산 직후',
+        title: t('pregnancyJourneyDetail.stage.birth.sections.rightAfterBirth.title'),
         items: [
-          { emoji: '👶', title: '캥거루 케어', body: '출산 직후 1시간 피부 접촉. 모유 첫수유.' },
-          { emoji: '🤱', title: '초유', body: '면역 항체 가득. 빠를수록 좋음.' },
-          { emoji: '🏥', title: '산후 입원', body: '자연분만 2-3일 / 제왕절개 5-7일.' },
+          { emoji: '👶', title: t('pregnancyJourneyDetail.stage.birth.sections.rightAfterBirth.items.kangarooCare.title'), body: t('pregnancyJourneyDetail.stage.birth.sections.rightAfterBirth.items.kangarooCare.body') },
+          { emoji: '🤱', title: t('pregnancyJourneyDetail.stage.birth.sections.rightAfterBirth.items.colostrum.title'), body: t('pregnancyJourneyDetail.stage.birth.sections.rightAfterBirth.items.colostrum.body') },
+          { emoji: '🏥', title: t('pregnancyJourneyDetail.stage.birth.sections.rightAfterBirth.items.postpartumStay.title'), body: t('pregnancyJourneyDetail.stage.birth.sections.rightAfterBirth.items.postpartumStay.body') },
         ],
       },
     ],
   },
-};
+});
 
-const STAGE_LABELS: Record<Stage, string> = {
-  early: '초기 (1-12주)',
-  wk12: '12주 검진',
-  stable: '안정기 (13-24주)',
-  late: '후기 (25-37주)',
-  birth: '출산 (38주+)',
-};
+const getStageLabels = (t: TFunction): Record<Stage, string> => ({
+  early: t('pregnancyJourneyDetail.stageLabels.early'),
+  wk12: t('pregnancyJourneyDetail.stageLabels.wk12'),
+  stable: t('pregnancyJourneyDetail.stageLabels.stable'),
+  late: t('pregnancyJourneyDetail.stageLabels.late'),
+  birth: t('pregnancyJourneyDetail.stageLabels.birth'),
+});
 
 export default function PregnancyJourneyDetailScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const stageParam = (params.stage as string) ?? 'stable';
   const stage: Stage = (['early', 'wk12', 'stable', 'late', 'birth'].includes(stageParam)
     ? stageParam
     : 'stable') as Stage;
-  const content = STAGE_CONTENT[stage];
+  const stageContent = useMemo(() => getStageContent(t), [t]);
+  const stageLabels = useMemo(() => getStageLabels(t), [t]);
+  const content = stageContent[stage];
 
   // 사용 가이드 (첫 진입 1회 자동표시 + ? 버튼 재열람)
   const [guideVisible, setGuideVisible] = useState(false);
@@ -319,7 +324,7 @@ export default function PregnancyJourneyDetailScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          title: STAGE_LABELS[stage],
+          title: stageLabels[stage],
           headerStyle: { backgroundColor: COLOR.bg },
           headerTitleStyle: { fontSize: 16, fontWeight: '700', color: COLOR.text },
           headerTintColor: COLOR.pink,
@@ -368,14 +373,14 @@ export default function PregnancyJourneyDetailScreen() {
         {/* Disclaimer */}
         <View style={styles.disclaimer}>
           <Text style={styles.disclaimerText}>
-            ⚠️ 이 정보는 일반 안내입니다. 모든 의료적 결정은 산부인과 전문의와 상담하세요.
+            {t('pregnancyJourneyDetail.disclaimer')}
           </Text>
         </View>
 
         <MedicalCitation
           sources={[
-            { label: '보건복지부·임신육아종합포털 「아이사랑」', url: 'https://www.childcare.go.kr' },
-            { label: '대한산부인과학회 임신·출산 정보', url: 'https://www.ksog.org' },
+            { label: t('pregnancyJourneyDetail.citationChildcarePortal'), url: 'https://www.childcare.go.kr' },
+            { label: t('pregnancyJourneyDetail.citationKsog'), url: 'https://www.ksog.org' },
           ]}
         />
       </ScrollView>

@@ -1377,5 +1377,770 @@
       "b9": "依季節挑選的出院服（3-5kg）",
       "b10": "新生兒配方奶＋奶瓶迷你組"
     }
+  },
+  "pregnancyJourneyDetail": {
+    "citationChildcarePortal": "韓國保健福祉部・懷孕育兒綜合入口網站「아이사랑」",
+    "citationKsog": "大韓婦產科學會 懷孕・生產資訊",
+    "disclaimer": "⚠️ 此資訊僅供一般參考。所有醫療決定請務必諮詢婦產科專科醫師。",
+    "stageLabels": {
+      "early": "初期（1-12週）",
+      "wk12": "12週產檢",
+      "stable": "穩定期（13-24週）",
+      "late": "後期（25-37週）",
+      "birth": "生產（38週以上）"
+    },
+    "stage": {
+      "early": {
+        "label": "初期",
+        "weeks": "1-12週",
+        "hero": "媽媽，這是最初的開始",
+        "heroSub": "身體最敏感的時期，別勉強，慢慢來就好。",
+        "sections": {
+          "supplements": {
+            "title": "💊 營養補充品",
+            "items": {
+              "folicAcid": {
+                "title": "葉酸（必須）",
+                "body": "每日400-800㎍。預防神經管缺陷。從懷孕前1週到12週最為關鍵。"
+              },
+              "vitaminD": {
+                "title": "維生素D",
+                "body": "每日600-1000IU。是骨骼與免疫形成的必需品。"
+              },
+              "omega3": {
+                "title": "Omega-3（DHA）",
+                "body": "每週2次青背魚或補充品，有助胎兒腦部發育。"
+              }
+            }
+          },
+          "diet": {
+            "title": "🍽️ 飲食",
+            "items": {
+              "folateFoods": {
+                "title": "葉酸食物",
+                "body": "菠菜、花椰菜、蘆筍、豆類、酪梨、柳橙"
+              },
+              "proteinCalcium": {
+                "title": "蛋白質＋鈣質",
+                "body": "雞蛋、豆腐、瘦肉、牛奶、優格"
+              },
+              "avoid": {
+                "title": "應避免的食物",
+                "body": "生食、咖啡因超過200mg、飲酒、吸菸、未殺菌牛奶／起司"
+              }
+            }
+          },
+          "exercise": {
+            "title": "🚶 運動",
+            "items": {
+              "walking": {
+                "title": "散步",
+                "body": "每日20-30分鐘輕鬆散步，切勿勉強。"
+              },
+              "yoga": {
+                "title": "孕婦瑜伽",
+                "body": "每週1-2次，以呼吸與骨盆放鬆動作為主。"
+              },
+              "caution": {
+                "title": "注意事項",
+                "body": "禁止對腹部造成衝擊的運動／劇烈訓練"
+              }
+            }
+          },
+          "checkups": {
+            "title": "🩺 檢查",
+            "items": {
+              "firstVisit": {
+                "title": "第一次產檢",
+                "body": "建議懷孕6-8週進行。確認子宮內懷孕與胎心搏動。"
+              },
+              "bloodTest": {
+                "title": "初期血液檢查",
+                "body": "德國麻疹免疫力／B型肝炎／貧血／甲狀腺"
+              },
+              "firstUltrasound": {
+                "title": "第一次詳細超音波檢查",
+                "body": "11-13週進行。NT檢查（頸部透明帶厚度）。"
+              }
+            }
+          },
+          "cautions": {
+            "title": "💗 注意事項",
+            "items": {
+              "morningSickness": {
+                "title": "孕吐",
+                "body": "6-12週達到高峰。少量多餐、溫熱飲品、維生素B6有幫助。"
+              },
+              "fatigue": {
+                "title": "極度疲勞",
+                "body": "這是身體發出的訊號，請保持充足睡眠（7-9小時）。"
+              },
+              "emergency": {
+                "title": "立即聯絡醫院",
+                "body": "嚴重出血／發燒38℃以上／劇烈腹痛"
+              }
+            }
+          }
+        }
+      },
+      "wk12": {
+        "label": "12週產檢",
+        "weeks": "約12週",
+        "hero": "第一次詳細超音波檢查時期",
+        "heroSub": "透過NT檢查首次確認胎兒健康的重要時刻。",
+        "sections": {
+          "keyTests": {
+            "title": "🩺 重點檢查",
+            "items": {
+              "nt": {
+                "title": "NT檢查（頸部透明帶）",
+                "body": "11週至13週6天之間進行，初步篩檢唐氏症等染色體異常。"
+              },
+              "integratedScreening": {
+                "title": "整合篩檢",
+                "body": "結合NT檢查與血液檢查，準確度較高。"
+              },
+              "nipt": {
+                "title": "NIPT（選擇性）",
+                "body": "非侵入性產前基因檢測，建議35歲以上孕婦考慮。"
+              }
+            }
+          },
+          "changes": {
+            "title": "💗 值得留意的變化",
+            "items": {
+              "sicknessEasing": {
+                "title": "孕吐緩解",
+                "body": "約12週開始逐漸緩解。"
+              },
+              "weightGain": {
+                "title": "體重開始增加",
+                "body": "建議每週增加0.4-0.5公斤，營養均衡很重要。"
+              },
+              "uterusPosition": {
+                "title": "子宮位置",
+                "body": "子宮上升至恥骨上方，肚子開始微微隆起。"
+              }
+            }
+          },
+          "thisPeriodChecklist": {
+            "title": "✅ 本階段檢查清單",
+            "items": {
+              "regularCheckup": {
+                "title": "定期產檢",
+                "body": "每4週檢查一次（至28週為止）。"
+              },
+              "workNotice": {
+                "title": "告知公司（選擇性）",
+                "body": "進入穩定期的時機，建議提前確認產假安排。"
+              },
+              "learning": {
+                "title": "孕期書籍／影片",
+                "body": "透過可信賴的醫療內容學習。"
+              }
+            }
+          }
+        }
+      },
+      "stable": {
+        "label": "穩定期",
+        "weeks": "13-24週",
+        "hero": "媽媽，這是狀態最好的時期",
+        "heroSub": "孕吐緩解，也是初次感受到胎動的時期。",
+        "sections": {
+          "supplements": {
+            "title": "💊 營養補充品",
+            "items": {
+              "calcium": {
+                "title": "鈣質",
+                "body": "每日1000mg，胎兒骨骼開始加速形成。"
+              },
+              "iron": {
+                "title": "鐵質",
+                "body": "每日30mg，預防貧血，搭配維生素C可提升吸收率。"
+              },
+              "dha": {
+                "title": "持續補充DHA",
+                "body": "胎兒腦部發育的關鍵時期。"
+              }
+            }
+          },
+          "diet": {
+            "title": "🍽️ 飲食",
+            "items": {
+              "moreProtein": {
+                "title": "增加蛋白質攝取",
+                "body": "每日75-100克，瘦肉、魚類、豆類、豆腐、雞蛋。"
+              },
+              "vitaminA": {
+                "title": "維生素A",
+                "body": "紅蘿蔔、菠菜、地瓜、花椰菜。"
+              },
+              "sodium": {
+                "title": "控制鈉攝取",
+                "body": "為預防水腫，請減少攝取重鹹食物。"
+              }
+            }
+          },
+          "exercise": {
+            "title": "🚶 運動",
+            "items": {
+              "swimming": {
+                "title": "孕婦游泳",
+                "body": "對關節負擔小，有助緩解水腫，每週2-3次。"
+              },
+              "yogaPilates": {
+                "title": "孕婦瑜伽／皮拉提斯",
+                "body": "每週2-3次，強化骨盆肌群與呼吸。"
+              },
+              "moreWalking": {
+                "title": "增加散步時間",
+                "body": "每日30-45分鐘，為生產儲備體力。"
+              }
+            }
+          },
+          "checkups": {
+            "title": "🩺 檢查",
+            "items": {
+              "quadTest": {
+                "title": "四指標唐氏症篩檢",
+                "body": "15-20週進行，透過4種荷爾蒙數值篩檢異常。"
+              },
+              "detailedUltrasound": {
+                "title": "詳細超音波檢查",
+                "body": "20-24週進行，詳細確認胎兒器官發育，也可能確認性別。"
+              },
+              "glucoseTest1": {
+                "title": "妊娠糖尿病初步篩檢",
+                "body": "24-28週進行，1小時葡萄糖檢測。"
+              }
+            }
+          },
+          "enjoy": {
+            "title": "✨ 值得享受的事",
+            "items": {
+              "firstKick": {
+                "title": "第一次胎動",
+                "body": "約16-22週之間，一開始感覺像脹氣。"
+              },
+              "prenatalEducation": {
+                "title": "開始胎教",
+                "body": "聽音樂／唸故事書／和寶寶說說話。"
+              },
+              "maternityPhoto": {
+                "title": "孕婦寫真（選擇性）",
+                "body": "約20週留下第一張孕期紀念照。"
+              }
+            }
+          }
+        }
+      },
+      "late": {
+        "label": "後期",
+        "weeks": "25-37週",
+        "hero": "即將迎接生產",
+        "heroSub": "身體漸感沉重，卻是胎教的黃金時期。",
+        "sections": {
+          "supplements": {
+            "title": "💊 營養補充品",
+            "items": {
+              "calciumVitaminD": {
+                "title": "鈣質＋維生素D",
+                "body": "胎兒骨骼發育完成期，也預防媽媽骨質疏鬆。"
+              },
+              "ironBoost": {
+                "title": "加強補鐵",
+                "body": "為生產時失血預作準備，每日30-60mg。"
+              },
+              "magnesium": {
+                "title": "鎂",
+                "body": "預防抽筋（腿部痙攣）。"
+              }
+            }
+          },
+          "diet": {
+            "title": "🍽️ 飲食",
+            "items": {
+              "smallFrequentMeals": {
+                "title": "少量多餐",
+                "body": "胃部受壓，一次吃不多，建議分成5-6餐進食。"
+              },
+              "fiber": {
+                "title": "膳食纖維",
+                "body": "預防便秘，攝取全穀類、水果、蔬菜。"
+              },
+              "hydration": {
+                "title": "充分補充水分",
+                "body": "每日2公升以上，預防水腫與便秘。"
+              }
+            }
+          },
+          "exercise": {
+            "title": "🚶 運動",
+            "items": {
+              "kegel": {
+                "title": "凱格爾運動",
+                "body": "強化骨盆底肌，是生產與產後恢復的關鍵。"
+              },
+              "breathingPractice": {
+                "title": "呼吸訓練",
+                "body": "練習陣痛呼吸法（吸氣1秒、吐氣2秒）。"
+              },
+              "lightWalking": {
+                "title": "輕鬆散步",
+                "body": "每日20-30分鐘，刺激骨盆為生產做準備。"
+              }
+            }
+          },
+          "checkups": {
+            "title": "🩺 檢查",
+            "items": {
+              "growthUltrasound": {
+                "title": "胎兒生長超音波",
+                "body": "28-32週進行，確認體重與胎位。"
+              },
+              "gbsTest": {
+                "title": "B型鏈球菌篩檢",
+                "body": "35-37週進行，檢測產道細菌，陽性者需使用抗生素。"
+              },
+              "tdap": {
+                "title": "Tdap疫苗",
+                "body": "27-36週接種，預防新生兒百日咳。"
+              }
+            }
+          },
+          "birthPrep": {
+            "title": "🧳 生產準備",
+            "items": {
+              "birthBag": {
+                "title": "待產包",
+                "body": "約32週前先準備好，包含媽媽／寶寶用品與相關文件。"
+              },
+              "hospitalRegistration": {
+                "title": "醫院登記",
+                "body": "確認生產醫院、緊急聯絡方式與前往路線。"
+              },
+              "nurserySetup": {
+                "title": "佈置嬰兒房",
+                "body": "嬰兒床、汽車安全座椅、尿布、奶粉／哺乳用品。"
+              }
+            }
+          },
+          "warningSigns": {
+            "title": "⚠️ 警訊",
+            "items": {
+              "severeSwelling": {
+                "title": "嚴重水腫",
+                "body": "臉部／手部水腫合併頭痛，恐為子癲前症，請立即就醫。"
+              },
+              "reducedMovement": {
+                "title": "胎動減少",
+                "body": "若明顯少於平時，請立即聯絡醫院。"
+              },
+              "fluidLeak": {
+                "title": "羊水滲漏",
+                "body": "若流出清澈液體恐為早期破水，請立即就醫。"
+              }
+            }
+          }
+        }
+      },
+      "birth": {
+        "label": "生產",
+        "weeks": "38週以上",
+        "hero": "很快就能見面囉！",
+        "heroSub": "陣痛開始時，請冷靜前往醫院。",
+        "sections": {
+          "contractionSigns": {
+            "title": "⏱️ 陣痛徵兆",
+            "items": {
+              "regularContractions": {
+                "title": "規律陣痛",
+                "body": "每5分鐘一次、每次持續1分鐘，若持續1小時，請前往醫院。"
+              },
+              "showSpotting": {
+                "title": "落紅",
+                "body": "黏稠分泌物（可能帶血絲），通常數日內會開始陣痛。"
+              },
+              "waterBreaking": {
+                "title": "破水",
+                "body": "流出清澈液體，請記錄時間並立即前往醫院。"
+              }
+            }
+          },
+          "finalBagCheck": {
+            "title": "🧳 待產包最終確認",
+            "items": {
+              "documents": {
+                "title": "文件",
+                "body": "身分證、孕婦健康手冊、健保卡、待產物品清單"
+              },
+              "momItems": {
+                "title": "媽媽用品",
+                "body": "孕婦服、哺乳衣、拖鞋、盥洗用具、產褥墊"
+              },
+              "babyItems": {
+                "title": "寶寶用品",
+                "body": "新生兒包屁衣、手套、帽子、襪子、汽車安全座椅"
+              }
+            }
+          },
+          "breathing": {
+            "title": "🫁 呼吸法",
+            "items": {
+              "earlyLabor": {
+                "title": "初期陣痛",
+                "body": "緩慢深呼吸－用鼻子吸氣、用嘴巴吐氣"
+              },
+              "strongContractions": {
+                "title": "強烈陣痛",
+                "body": "短而快－像喘氣一樣「呼－呼－呼」"
+              },
+              "pushing": {
+                "title": "用力娩出",
+                "body": "依照醫療人員指示，憋氣5秒，重複3次。"
+              }
+            }
+          },
+          "atHospital": {
+            "title": "🏥 抵達醫院後",
+            "items": {
+              "admission": {
+                "title": "住院手續",
+                "body": "急診室或產房→確認子宮頸開指狀況"
+              },
+              "epidural": {
+                "title": "無痛分娩（選擇性）",
+                "body": "子宮頸開4-5公分時即可開始施打。"
+              },
+              "support": {
+                "title": "陪產人員",
+                "body": "由先生／家人陪同，需要有人幫忙按摩、遞水。"
+              }
+            }
+          },
+          "rightAfterBirth": {
+            "title": "💖 生產後",
+            "items": {
+              "kangarooCare": {
+                "title": "袋鼠式護理",
+                "body": "生產後1小時內進行肌膚接觸，並開始第一次哺乳。"
+              },
+              "colostrum": {
+                "title": "初乳",
+                "body": "富含免疫抗體，越早哺餵越好。"
+              },
+              "postpartumStay": {
+                "title": "產後住院",
+                "body": "自然產2-3天／剖腹產5-7天。"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "laborMonitor": {
+    "headerTitleContraction": "陣痛檢查",
+    "headerTitleKick": "胎動檢查",
+    "breathingTips": {
+      "0": "🌬 深深吸一口氣，慢慢吐出來",
+      "1": "💆‍♀️ 放鬆肩膀，保持舒服的姿勢",
+      "2": "👐 讓另一半輕輕按壓腰部會更舒服",
+      "3": "😌 陣痛間隔時請放鬆休息",
+      "4": "💧 也可以小口慢慢喝水",
+      "5": "🌬 用鼻子吸氣，再用嘴巴長長吐出"
+    },
+    "noRecordTitle": "沒有紀錄",
+    "noRecordDesc": "測量時間太短，或沒有記錄到胎動。",
+    "kickSavedToast": "已記錄胎動{{count}}次 👣",
+    "kickSaveFailed": "胎動紀錄儲存失敗",
+    "contractionSavedToast": "已記錄陣痛間隔 ⏱️",
+    "guide": {
+      "emergency": {
+        "label": "🚨 立即聯絡產房",
+        "message": "如果破水或出現落紅，請立即致電產房並前往醫院。分娩可能已經接近。"
+      },
+      "collecting": {
+        "label": "資料收集中",
+        "message": "記錄3次以上陣痛後將開始分析模式。測量期間請深呼吸放鬆休息。"
+      },
+      "hospitalRecommended": {
+        "label": "建議前往醫院的數值",
+        "message": "目前記錄的間隔平均為{{avgMin}}分鐘，綜合分析顯示很可能是真陣痛。建議聯絡主治醫師或產房以獲得準確診斷。"
+      },
+      "shortening": {
+        "label": "間隔正在縮短",
+        "message": "從平均{{avgMin}}分鐘變化到最近{{lastMin}}分鐘。間隔可能正在縮短，請再觀察幾次。"
+      },
+      "falseLabor": {
+        "label": "很可能是假性陣痛",
+        "message": "間隔為{{minMin}}~{{maxMin}}分鐘，不太規律。目前的模式很可能是假性陣痛，請以舒服的姿勢休息並再觀察一下。"
+      }
+    },
+    "callFailedTitle": "撥號失敗",
+    "callFailedDescDirect": "請直接撥打電話：{{phone}}",
+    "callFailedDesc119": "請直接撥打119。",
+    "hospitalRegisterRequiredTitle": "需要註冊醫院電話",
+    "hospitalRegisterRequiredDesc": "尚未註冊預定分娩的醫院。\n要現在註冊嗎？\n\n如果情況緊急，請先撥打119。",
+    "call119": "撥打119",
+    "registerHospital": "註冊醫院",
+    "selectPregnantChild": "請選擇懷孕中的孩子",
+    "kickHintPrefix": "每次感覺到胎動時",
+    "kickHintTapButton": "請點擊下方按鈕",
+    "kickHintSuffix": "",
+    "kickHintThreshold": "30分鐘內3~5次以上",
+    "kickHintHealthySignal": "就是健康的訊號",
+    "kickLessThanUsualQuestion": "胎動比平常\n感覺得少嗎？",
+    "countUnit": "次",
+    "elapsed": "經過時間",
+    "minSec": "{{min}}分{{sec}}秒",
+    "perHour": "每小時",
+    "countValue": "{{count}}次",
+    "reset": "重置",
+    "stopAndSave": "結束測量・儲存",
+    "kickHistoryTitle": "📊 胎動累計紀錄",
+    "today": "今天",
+    "yesterday": "昨天",
+    "last7Days": "最近7天",
+    "kickHistoryFoot": "目前為止已測量的次數：{{count}}次",
+    "emergencyBanner": {
+      "titleRuptured": "🚨 確認破水 — 黃金時間",
+      "titleHighRisk": "🚨 高風險妊娠 — 出現危險訊號請立即撥打119",
+      "titleDefault": "🚨 出現這些症狀請先打119！",
+      "symptoms": "破水・大量出血・胎動減少或消失・劇烈腹痛",
+      "subRuptured": "即使是白天，門診也無法處理緊急狀況。請立即撥打產房直通電話或119。",
+      "subHighRisk": "高風險妊娠併發症風險更高。即使不確定也別猶豫，請先撥打119。",
+      "subDefault": "比起確認App，119更優先。若感到不確定或不安，請立即致電醫院。"
+    },
+    "deliveryWardDirect": "🏥 產房直通",
+    "hospital": "🏥 醫院",
+    "emergencyRegisterHospital": "🏥 尚未註冊分娩醫院 — 立即註冊 ›",
+    "weekNotice": "ℹ️ 目前為第{{week}}週。即使未滿36週，若感覺到規律陣痛或腹痛，請先聯絡醫院再記錄。",
+    "contractionStart": "陣痛開始",
+    "contractionEnd": "陣痛結束",
+    "when": "時",
+    "tapButton": "點擊按鈕",
+    "tapAgain": "再次點擊",
+    "fiveMinuteAlert": "🚨 若5分鐘間隔持續1小時以上，請聯絡醫院",
+    "enduring": "忍耐中...",
+    "secondsInProgress": "秒進行中",
+    "directCallDeliveryWard": "立即撥打產房電話",
+    "medicalDisclaimer": "本指引僅為根據輸入資料提供的一般資訊，不能取代醫療診斷。緊急狀況請務必尋求醫療機構協助。",
+    "midwifeName": "助產士",
+    "diag": {
+      "postureQuestion": "請起身走動或換個姿勢看看。\n這樣還是持續疼痛嗎？",
+      "postureImproved": "疼痛減輕或消失了",
+      "postureStillHurts": "換姿勢還是一樣痛",
+      "painSiteQuestion": "現在哪裡最痛？",
+      "painLowerAbdomen": "主要是下腹部疼痛",
+      "painWholeBackAbdomen": "整個腰部和腹部像被擰緊一樣痛",
+      "rupturedQuestion": "是否有落紅\n或破水了呢？",
+      "no": "沒有",
+      "yesRuptured": "有，出現了／破水了"
+    },
+    "measurementRecord": "測量紀錄",
+    "historyRow": "第{{seq}}次・持續{{duration}}秒",
+    "historyRowWithInterval": "第{{seq}}次・持續{{duration}}秒・間隔{{min}}分{{sec}}秒",
+    "resetAll": "全部重置",
+    "medicalDisclaimerTitle": "⚕️ 醫療免責聲明",
+    "medicalDisclaimerFooter": "本指引僅為根據輸入資料提供的一般資訊，不能取代醫療診斷。緊急狀況時請務必尋求醫療機構協助。",
+    "citationKsog": "大韓婦產科學會 懷孕・生產資訊（陣痛・胎動）",
+    "citationChildcare": "保健福祉部・懷孕育兒綜合入口網站「愛我寶貝(아이사랑)」",
+    "kickGuideModal": {
+      "title": "胎動比平常感覺得少嗎？",
+      "subtitle": "請試試以下方法 👇",
+      "sugarTitle": "攝取糖分",
+      "sugarText": "喝點巧克力牛奶或果汁，試著喚醒寶寶。",
+      "leftSideTitle": "向左側躺",
+      "leftSideText": "向左側躺可以讓寶寶獲得更好的血液供應。",
+      "focusTitle": "專注胎動",
+      "focusText": "在安靜的地方把手放在肚子上，觀察30分鐘就好。",
+      "sleepingTitle": "可能寶寶正在睡覺",
+      "sleepingText": "寶寶可能以20~40分鐘為週期睡睡醒醒。",
+      "dangerTitle": "🚨 這些情況請諮詢醫院！",
+      "dangerItem1": "• 1小時內胎動少於3次時",
+      "dangerItem2": "• 次數比平常減少一半以下時",
+      "dangerItem3": "• 半天（12小時）內胎動少於10次時",
+      "disclaimer": "本指引僅為一般資訊，不能取代醫療診斷。"
+    },
+    "phoneChoice": {
+      "title": "要打電話到哪裡？",
+      "subtitle": "目前時段建議的號碼會顯示在上方"
+    }
+  },
+  "sos": {
+    "symptom": {
+      "fever": "38度以上發燒",
+      "vomiting": "嘔吐/腹瀉",
+      "seizure": "抽搐",
+      "breathing": "呼吸困難",
+      "bleedingWound": "出血/傷口",
+      "rash": "疹子/蕁麻疹",
+      "bleeding": "出血",
+      "severePain": "劇烈腹痛",
+      "severeHeadache": "劇烈頭痛",
+      "severeSwelling": "嚴重水腫",
+      "blurryVision": "視線模糊",
+      "waterBreaking": "破水",
+      "reducedMovement": "胎動減少",
+      "fever38": "發燒38度以上",
+      "regularContractions": "規律宮縮"
+    },
+    "severity": {
+      "emergencyTitle": "請立即撥打119",
+      "hospitalTitle": "建議前往醫院就診",
+      "urgentTitle": "需要採取措施",
+      "monitorTitle": "請持續觀察"
+    },
+    "guide": {
+      "heimlichLabel": "呼吸道阻塞",
+      "heimlichSublabel": "4步驟處理",
+      "cprSublabel": "心肺復甦術",
+      "burnFallLabel": "燒燙傷/跌倒",
+      "burnFallSublabel": "緊急處理",
+      "foreignLabel": "誤吞異物",
+      "foreignSublabel": "鼻/耳/口"
+    },
+    "heimlich": {
+      "infant": {
+        "title": "呼吸道阻塞（未滿12個月）",
+        "subtitle": "嬰兒－拍背＋胸部按壓",
+        "step1": "讓寶寶趴在您的前臂上，頭部低於胸部",
+        "step2": "用手掌根用力拍打背部中央5次",
+        "step3": "翻身讓頭部放低，用兩指按壓胸部中央（兩乳頭連線中點）5次",
+        "step4": "重複拍背與胸部按壓直到異物排出",
+        "step5": "若失去意識，立即開始CPR並撥打119",
+        "warning": "請勿用手指挖口腔，可能讓異物更深入。"
+      },
+      "child": {
+        "title": "呼吸道阻塞（滿1歲至青春期前）",
+        "subtitle": "兒童－哈姆立克法（腹部推擠）",
+        "step1": "跪或站在孩子背後，配合視線高度",
+        "step2": "一手握拳，拇指側置於肚臍上方、胸骨下方",
+        "step3": "另一手包住拳頭，快速向內、向上推擠5次",
+        "step4": "重複直到異物排出",
+        "step5": "若失去意識，讓其平躺並進行CPR，同時撥打119",
+        "warning": "請勿按壓胸骨（胸口正中骨頭），有肋骨受傷風險。"
+      },
+      "adult": {
+        "title": "呼吸道阻塞（成人／照顧者）",
+        "subtitle": "青少年・成人哈姆立克法",
+        "step1": "從背後用雙臂環抱胸骨下方、肚臍上方部位",
+        "step2": "一手握拳，另一手覆蓋其上",
+        "step3": "快速向內、向上推擠5次",
+        "step4": "重複直到異物排出",
+        "step5": "若獨自一人，可將胸骨下方部位靠在椅背上按壓",
+        "warning": "孕婦或肥胖者請改按壓胸部中央，而非胸骨下方。"
+      }
+    },
+    "cpr": {
+      "infant": {
+        "title": "CPR（未滿12個月）",
+        "subtitle": "嬰兒－以兩指按壓胸部",
+        "step1": "確認反應與呼吸（10秒內）",
+        "step2": "先撥打119，開擴音接受指示並進行",
+        "step3": "讓寶寶平躺於平面，頭部稍微後仰",
+        "step4": "用兩指按壓胸部中央（兩乳頭連線中點），深度約4公分",
+        "step5": "每分鐘100~120次速度按壓30次→口鼻同時輕輕人工呼吸2次",
+        "step6": "反覆30:2直到救護人員抵達，絕對不要中斷",
+        "warning": "若人工呼吸有困難，請至少持續胸部按壓。"
+      },
+      "child": {
+        "title": "CPR（滿1歲至青春期前）",
+        "subtitle": "兒童－單手或雙手按壓",
+        "step1": "拍打肩膀確認反應，並確認呼吸（10秒內）",
+        "step2": "先撥打119（開擴音）",
+        "step3": "讓孩子平躺於平面，頭部後仰以打開呼吸道",
+        "step4": "用單手掌（較小的孩子）或雙手按壓胸部中央，深度約5公分",
+        "step5": "每分鐘100~120次速度按壓30次→口對口人工呼吸2次",
+        "step6": "反覆30:2，AED送達後立即使用",
+        "warning": "請持續至救護人員抵達，即使肋骨骨折也要繼續。"
+      },
+      "adult": {
+        "title": "CPR（成人／照顧者）",
+        "subtitle": "青少年・成人－雙手胸部按壓",
+        "step1": "確認意識與呼吸後撥打119（開擴音）",
+        "step2": "雙手交疊置於胸部中央（胸骨下半部），手肘打直",
+        "step3": "利用體重按壓，深度約5~6公分",
+        "step4": "每分鐘100~120次速度按壓30次",
+        "step5": "若可行，進行人工呼吸2次→反覆30:2",
+        "step6": "AED送達後立即使用，持續至救護人員抵達為止",
+        "warning": "即使肋骨骨折也不要停止。生命安全優先。"
+      }
+    },
+    "burnFall": {
+      "title": "燒燙傷/跌倒處理",
+      "subtitle": "燙傷或跌落時",
+      "step1": "燒燙傷：以流動冷水沖洗10分鐘以上（禁用冰塊！）",
+      "step2": "不要塗抹藥膏/醬類/牙膏，也不要弄破水泡",
+      "step3": "跌倒：不要馬上扶起，先讓其原地保持穩定",
+      "step4": "若撞到頭，需觀察24小時（若出現嘔吐/抽搐請立即送急診）",
+      "warning": "二度以上燒燙傷／範圍大／意識改變 → 請立即撥打119"
+    },
+    "foreign": {
+      "title": "誤吞／塞入異物",
+      "subtitle": "孩子誤吞或塞入異物時",
+      "step1": "不要強行取出（可能讓異物更深入）",
+      "step2": "鼻子：按住另一側鼻孔用力擤出，若無法排出請就醫",
+      "step3": "耳朵：禁用棉花棒/鑷子，請就醫處理",
+      "step4": "誤吞電池／磁鐵 → 請立即送急診！（禁止催吐）",
+      "warning": "電池／磁鐵可能在2小時內造成腸穿孔！請立即送急診"
+    },
+    "alert": {
+      "hospitalPhoneRequiredTitle": "需要註冊醫院電話",
+      "hospitalPhoneRequiredMessage": "請先註冊預計生產醫院的電話號碼。",
+      "registerAction": "前往註冊",
+      "callFailedTitle": "電話撥打失敗",
+      "callFailedWithPhone": "請直接撥打電話：{{phone}}",
+      "callFailedOpenApp": "無法開啟電話應用程式，請直接撥打119。",
+      "callFailedDialDirectly": "請直接撥打119。",
+      "symptomSelectTitle": "選擇症狀",
+      "symptomSelectMessage": "請至少選擇一項症狀。",
+      "childSelectTitle": "選擇孩子",
+      "childSelectMessage": "請先選擇孩子。",
+      "checkResultMissing": "未能取得症狀確認結果，請再試一次。",
+      "checkError": "症狀確認過程發生錯誤，請再試一次。",
+      "notifyDoneTitle": "通知已完成",
+      "notifyDoneMessage": "已通知家人。",
+      "notifyError": "通知家人失敗。",
+      "mapOpenError": "無法開啟地圖應用程式。"
+    },
+    "familyNotify": {
+      "situationWithTemp": "{{symptoms}}（體溫{{temp}}度）"
+    },
+    "subtitleMom": "{{name}}的媽媽",
+    "subtitleDefault": "緊急救助小幫手",
+    "priorityTitle": "危急時請先撥打119",
+    "call119Button": "撥打119",
+    "findErButton": "尋找急診室",
+    "notifyFamilyButton": "通知家人",
+    "priorityNote": "若出現呼吸困難、意識不清、抽搐、大量出血、嘴唇發紫等危急狀況，請先撥打119，不要只依賴本應用程式確認。",
+    "quickHelpTitle": "緊急狀況快速應對",
+    "quickHelpDesc": "危急時請撥打119，若不確定請先快速確認症狀",
+    "symptomCheckTitle": "快速確認症狀",
+    "symptomCheckDescPregnant": "難以判斷是否需撥打119時 — 請選擇媽媽與胎兒的症狀",
+    "symptomCheckDesc": "難以判斷是否需撥打119時 — 請先快速確認症狀",
+    "tempLabel": "體溫（選填）",
+    "checkButton": "確認症狀",
+    "callDeliveryWardButton": "撥打產房電話",
+    "touchToRegisterPhone": "點擊註冊醫院電話",
+    "hospitalInfoEditOrRegister": "{{action}}生產／看診醫院資訊",
+    "registerAction": "註冊",
+    "medicalCitationNote": "急救指引僅供參考。危急時請立即撥打119並遵循醫護人員指示。",
+    "citationSource": {
+      "nfa": "消防廳119急救指南",
+      "kdca": "疾病管理廳國家健康資訊入口網（急救）",
+      "redcross": "大韓紅十字會急救指南"
+    },
+    "doNowLabel": "👉 現在該做的事",
+    "findNearbyHospitalButton": "尋找附近醫院",
+    "resultDisclaimer": "⚠️ 本指引僅供參考，並非醫療診斷。若難以判斷或症狀惡化，請立即撥打119或前往急診室。",
+    "warningPageLabel": "警告",
+    "disclaimerBar": "ⓘ 一般急救參考資訊．非醫療行為替代．危急時請立即撥打119",
+    "stepNumLabel": "STEP {{num}}",
+    "swipeHint": "向旁滑動查看下一步驟",
+    "call119Immediately": "遇到這種情況請立即撥打119",
+    "emergencyCall119": "119緊急電話"
   }
 }

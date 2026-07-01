@@ -1377,5 +1377,770 @@
       "b9": "계절 맞춤 퇴원복 (3-5kg)",
       "b10": "신생아 분유 + 젖병 미니 세트"
     }
+  },
+  "pregnancyJourneyDetail": {
+    "citationChildcarePortal": "보건복지부·임신육아종합포털 「아이사랑」",
+    "citationKsog": "대한산부인과학회 임신·출산 정보",
+    "disclaimer": "⚠️ 이 정보는 일반 안내입니다. 모든 의료적 결정은 산부인과 전문의와 상담하세요.",
+    "stageLabels": {
+      "early": "초기 (1-12주)",
+      "wk12": "12주 검진",
+      "stable": "안정기 (13-24주)",
+      "late": "후기 (25-37주)",
+      "birth": "출산 (38주+)"
+    },
+    "stage": {
+      "early": {
+        "label": "초기",
+        "weeks": "1-12주",
+        "hero": "엄마, 첫 시작이에요",
+        "heroSub": "몸이 가장 예민한 시기. 무리하지 말고 천천히.",
+        "sections": {
+          "supplements": {
+            "title": "💊 영양제",
+            "items": {
+              "folicAcid": {
+                "title": "엽산 (필수)",
+                "body": "하루 400-800㎍. 신경관 결손 예방. 임신 1주 전부터 12주까지 핵심."
+              },
+              "vitaminD": {
+                "title": "비타민 D",
+                "body": "하루 600-1000IU. 뼈와 면역 형성에 필수."
+              },
+              "omega3": {
+                "title": "오메가-3 (DHA)",
+                "body": "주 2회 등푸른 생선 또는 보충제. 태아 뇌 발달."
+              }
+            }
+          },
+          "diet": {
+            "title": "🍽️ 식단",
+            "items": {
+              "folateFoods": {
+                "title": "엽산 식품",
+                "body": "시금치, 브로콜리, 아스파라거스, 콩, 아보카도, 오렌지"
+              },
+              "proteinCalcium": {
+                "title": "단백질 + 칼슘",
+                "body": "계란, 두부, 살코기, 우유, 요거트"
+              },
+              "avoid": {
+                "title": "피해야 할 것",
+                "body": "날 음식, 카페인 200mg 이상, 술, 흡연, 비살균 우유/치즈"
+              }
+            }
+          },
+          "exercise": {
+            "title": "🚶 운동",
+            "items": {
+              "walking": {
+                "title": "걷기",
+                "body": "하루 20-30분 가벼운 산책. 무리하지 말 것."
+              },
+              "yoga": {
+                "title": "임산부 요가",
+                "body": "주 1-2회. 호흡과 골반 이완 동작 위주."
+              },
+              "caution": {
+                "title": "주의",
+                "body": "복부에 충격 가는 운동 / 격렬한 트레이닝 금지"
+              }
+            }
+          },
+          "checkups": {
+            "title": "🩺 검사",
+            "items": {
+              "firstVisit": {
+                "title": "첫 산부인과 방문",
+                "body": "임신 6-8주 권장. 자궁 내 임신 확인 + 심장박동."
+              },
+              "bloodTest": {
+                "title": "초기 혈액 검사",
+                "body": "풍진 면역 / B형간염 / 빈혈 / 갑상선"
+              },
+              "firstUltrasound": {
+                "title": "첫 정밀 초음파",
+                "body": "11-13주. NT 검사 (목 투명대 두께)."
+              }
+            }
+          },
+          "cautions": {
+            "title": "💗 주의사항",
+            "items": {
+              "morningSickness": {
+                "title": "입덧",
+                "body": "6-12주에 절정. 자주 적게 먹기, 따뜻한 음료, 비타민 B6 도움."
+              },
+              "fatigue": {
+                "title": "극심한 피로",
+                "body": "몸이 보내는 신호. 충분한 수면 (7-9시간)."
+              },
+              "emergency": {
+                "title": "병원 즉시 연락",
+                "body": "심한 출혈 / 38℃ 이상 발열 / 격렬한 복통"
+              }
+            }
+          }
+        }
+      },
+      "wk12": {
+        "label": "12주 검진",
+        "weeks": "12주 전후",
+        "hero": "첫 정밀 초음파 시기",
+        "heroSub": "NT 검사로 태아 건강 처음 확인하는 중요한 시점.",
+        "sections": {
+          "keyTests": {
+            "title": "🩺 핵심 검사",
+            "items": {
+              "nt": {
+                "title": "NT 검사 (목 투명대)",
+                "body": "11-13주 6일 사이. 다운증후군 등 염색체 이상 1차 선별."
+              },
+              "integratedScreening": {
+                "title": "통합 선별 검사",
+                "body": "NT + 혈액 검사 결합. 정확도 높음."
+              },
+              "nipt": {
+                "title": "NIPT (선택)",
+                "body": "비침습 산전 유전 검사. 35세 이상 권장."
+              }
+            }
+          },
+          "changes": {
+            "title": "💗 알아둘 변화",
+            "items": {
+              "sicknessEasing": {
+                "title": "입덧 진정",
+                "body": "12주 즈음부터 점차 가라앉음."
+              },
+              "weightGain": {
+                "title": "체중 증가 시작",
+                "body": "주당 0.4-0.5kg 권장. 영양 균형 중요."
+              },
+              "uterusPosition": {
+                "title": "자궁 위치",
+                "body": "치골 위로 올라옴. 배가 살짝 나오기 시작."
+              }
+            }
+          },
+          "thisPeriodChecklist": {
+            "title": "✅ 이번 시기 체크",
+            "items": {
+              "regularCheckup": {
+                "title": "산부인과 정기 체크",
+                "body": "4주마다 1회 (28주까지)."
+              },
+              "workNotice": {
+                "title": "회사 보고 (선택)",
+                "body": "안정기 진입 시점. 출산휴가 일정 미리 확인."
+              },
+              "learning": {
+                "title": "임신 책/유튜브",
+                "body": "믿을 만한 의료 콘텐츠로 학습."
+              }
+            }
+          }
+        }
+      },
+      "stable": {
+        "label": "안정기",
+        "weeks": "13-24주",
+        "hero": "엄마, 가장 컨디션 좋은 시기예요",
+        "heroSub": "입덧이 가라앉고 태동을 처음 느끼는 시기.",
+        "sections": {
+          "supplements": {
+            "title": "💊 영양제",
+            "items": {
+              "calcium": {
+                "title": "칼슘",
+                "body": "하루 1000mg. 태아 뼈 형성 본격화."
+              },
+              "iron": {
+                "title": "철분",
+                "body": "하루 30mg. 빈혈 예방. 비타민 C와 함께 흡수율 ↑."
+              },
+              "dha": {
+                "title": "DHA 지속",
+                "body": "태아 뇌 발달 핵심 시기."
+              }
+            }
+          },
+          "diet": {
+            "title": "🍽️ 식단",
+            "items": {
+              "moreProtein": {
+                "title": "단백질 늘리기",
+                "body": "하루 75-100g. 살코기, 생선, 콩, 두부, 계란."
+              },
+              "vitaminA": {
+                "title": "비타민 A",
+                "body": "당근, 시금치, 고구마, 브로콜리."
+              },
+              "sodium": {
+                "title": "나트륨 조절",
+                "body": "부종 예방을 위해 짠 음식 줄이기."
+              }
+            }
+          },
+          "exercise": {
+            "title": "🚶 운동",
+            "items": {
+              "swimming": {
+                "title": "임산부 수영",
+                "body": "관절 부담 적고 부종 완화. 주 2-3회."
+              },
+              "yogaPilates": {
+                "title": "임산부 요가/필라테스",
+                "body": "주 2-3회. 골반 근육과 호흡 강화."
+              },
+              "moreWalking": {
+                "title": "걷기 늘리기",
+                "body": "하루 30-45분. 출산 체력 준비."
+              }
+            }
+          },
+          "checkups": {
+            "title": "🩺 검사",
+            "items": {
+              "quadTest": {
+                "title": "쿼드 검사",
+                "body": "15-20주. 4가지 호르몬으로 기형 선별."
+              },
+              "detailedUltrasound": {
+                "title": "정밀 초음파",
+                "body": "20-24주. 태아 장기 발달 정밀 확인. 성별도 확인 가능."
+              },
+              "glucoseTest1": {
+                "title": "임당 1차 검사",
+                "body": "24-28주. 1시간 포도당 검사."
+              }
+            }
+          },
+          "enjoy": {
+            "title": "✨ 즐길 것들",
+            "items": {
+              "firstKick": {
+                "title": "첫 태동",
+                "body": "16-22주 사이. 처음엔 가스 같은 감각."
+              },
+              "prenatalEducation": {
+                "title": "태교 시작",
+                "body": "음악 듣기 / 책 읽어주기 / 대화하기."
+              },
+              "maternityPhoto": {
+                "title": "만삭 사진 (선택)",
+                "body": "20주 즈음 첫 임신 사진 기록."
+              }
+            }
+          }
+        }
+      },
+      "late": {
+        "label": "후기",
+        "weeks": "25-37주",
+        "hero": "출산이 가까워지고 있어요",
+        "heroSub": "몸이 무거워지지만 태교의 황금기.",
+        "sections": {
+          "supplements": {
+            "title": "💊 영양제",
+            "items": {
+              "calciumVitaminD": {
+                "title": "칼슘 + 비타민 D",
+                "body": "태아 골격 완성기. 산모 골다공증 예방."
+              },
+              "ironBoost": {
+                "title": "철분 강화",
+                "body": "출산 시 출혈 대비. 하루 30-60mg."
+              },
+              "magnesium": {
+                "title": "마그네슘",
+                "body": "쥐남(다리 경련) 예방."
+              }
+            }
+          },
+          "diet": {
+            "title": "🍽️ 식단",
+            "items": {
+              "smallFrequentMeals": {
+                "title": "소량 자주",
+                "body": "위가 눌려 한 번에 많이 못 먹음. 5-6끼로 나누기."
+              },
+              "fiber": {
+                "title": "식이섬유",
+                "body": "변비 예방. 통곡물, 과일, 채소."
+              },
+              "hydration": {
+                "title": "수분 충분히",
+                "body": "하루 2L 이상. 부종 + 변비 예방."
+              }
+            }
+          },
+          "exercise": {
+            "title": "🚶 운동",
+            "items": {
+              "kegel": {
+                "title": "케겔 운동",
+                "body": "골반저 근육 강화. 출산 + 산후 회복에 핵심."
+              },
+              "breathingPractice": {
+                "title": "호흡 훈련",
+                "body": "진통 호흡법 연습 (1초 들숨, 2초 날숨)."
+              },
+              "lightWalking": {
+                "title": "가벼운 걷기",
+                "body": "하루 20-30분. 골반 자극으로 출산 준비."
+              }
+            }
+          },
+          "checkups": {
+            "title": "🩺 검사",
+            "items": {
+              "growthUltrasound": {
+                "title": "태아 성장 초음파",
+                "body": "28-32주. 체중·자세 확인."
+              },
+              "gbsTest": {
+                "title": "GBS 검사",
+                "body": "35-37주. 산도 세균 검사. 양성이면 항생제."
+              },
+              "tdap": {
+                "title": "Tdap 백신",
+                "body": "27-36주. 신생아 백일해 예방."
+              }
+            }
+          },
+          "birthPrep": {
+            "title": "🧳 출산 준비",
+            "items": {
+              "birthBag": {
+                "title": "출산가방",
+                "body": "32주 즈음 미리 준비. 산모/아기 용품 + 서류."
+              },
+              "hospitalRegistration": {
+                "title": "병원 등록",
+                "body": "분만 병원 + 응급 연락처 / 이동 경로 확인."
+              },
+              "nurserySetup": {
+                "title": "아기방 세팅",
+                "body": "아기 침대, 카시트, 기저귀, 분유/모유용품."
+              }
+            }
+          },
+          "warningSigns": {
+            "title": "⚠️ 주의 신호",
+            "items": {
+              "severeSwelling": {
+                "title": "심한 부종",
+                "body": "얼굴/손 부종 + 두통은 전자간증 의심. 즉시 병원."
+              },
+              "reducedMovement": {
+                "title": "태동 감소",
+                "body": "평소보다 현저히 줄면 즉시 병원 연락."
+              },
+              "fluidLeak": {
+                "title": "양수 누출",
+                "body": "맑은 물 흐르면 조기 양막 파수. 즉시 병원."
+              }
+            }
+          }
+        }
+      },
+      "birth": {
+        "label": "출산",
+        "weeks": "38주+",
+        "hero": "곧 만나요!",
+        "heroSub": "진통이 시작되면 침착하게 병원으로.",
+        "sections": {
+          "contractionSigns": {
+            "title": "⏱️ 진통 신호",
+            "items": {
+              "regularContractions": {
+                "title": "규칙적 진통",
+                "body": "5분 간격 1분 지속이 1시간 → 병원으로."
+              },
+              "showSpotting": {
+                "title": "이슬",
+                "body": "점액성 분비물 (피 섞일 수 있음). 며칠 안에 진통."
+              },
+              "waterBreaking": {
+                "title": "양수 파열",
+                "body": "맑은 물 흐름. 시간 기록 후 즉시 병원."
+              }
+            }
+          },
+          "finalBagCheck": {
+            "title": "🧳 출산가방 최종 체크",
+            "items": {
+              "documents": {
+                "title": "서류",
+                "body": "신분증, 산모수첩, 보험증, 출산준비물 리스트"
+              },
+              "momItems": {
+                "title": "산모 용품",
+                "body": "산모복, 수유복, 슬리퍼, 세면도구, 생리대"
+              },
+              "babyItems": {
+                "title": "아기 용품",
+                "body": "배냇저고리, 손싸개, 모자, 양말, 카시트"
+              }
+            }
+          },
+          "breathing": {
+            "title": "🫁 호흡법",
+            "items": {
+              "earlyLabor": {
+                "title": "초기 진통",
+                "body": "천천히 깊게 - 코로 들이쉬고 입으로 내쉬기"
+              },
+              "strongContractions": {
+                "title": "강한 진통",
+                "body": "짧고 빠르게 - \"후-후-후\" 헐떡이듯"
+              },
+              "pushing": {
+                "title": "밀어내기",
+                "body": "의료진 지시 따라. 숨 참고 5초씩 3번."
+              }
+            }
+          },
+          "atHospital": {
+            "title": "🏥 병원 도착 후",
+            "items": {
+              "admission": {
+                "title": "입원 절차",
+                "body": "응급실 또는 분만실 → 자궁 개대 확인"
+              },
+              "epidural": {
+                "title": "무통 분만 (선택)",
+                "body": "자궁 개대 4-5cm에서 시작 가능."
+              },
+              "support": {
+                "title": "도와줄 사람",
+                "body": "남편/가족 동행. 마사지/물 챙겨줄 사람 필요."
+              }
+            }
+          },
+          "rightAfterBirth": {
+            "title": "💖 출산 직후",
+            "items": {
+              "kangarooCare": {
+                "title": "캥거루 케어",
+                "body": "출산 직후 1시간 피부 접촉. 모유 첫수유."
+              },
+              "colostrum": {
+                "title": "초유",
+                "body": "면역 항체 가득. 빠를수록 좋음."
+              },
+              "postpartumStay": {
+                "title": "산후 입원",
+                "body": "자연분만 2-3일 / 제왕절개 5-7일."
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "laborMonitor": {
+    "headerTitleContraction": "진통 체크",
+    "headerTitleKick": "태동 체크",
+    "breathingTips": {
+      "0": "🌬 깊게 숨을 들이마시고, 천천히 내뱉으세요",
+      "1": "💆‍♀️ 어깨 힘을 빼고 편안한 자세를 유지하세요",
+      "2": "👐 남편이 허리를 지그시 눌러주면 도움이 돼요",
+      "3": "😌 통증 사이에는 편하게 쉬어 두세요",
+      "4": "💧 물을 한 모금씩 천천히 마셔도 좋아요",
+      "5": "🌬 코로 들이쉬고 입으로 후~ 길게 내쉬세요"
+    },
+    "noRecordTitle": "기록 없음",
+    "noRecordDesc": "측정 시간이 너무 짧거나 태동이 기록되지 않았어요.",
+    "kickSavedToast": "태동 {{count}}회 기록 완료했어요 👣",
+    "kickSaveFailed": "태동 기록 저장에 실패했습니다",
+    "contractionSavedToast": "진통 간격 기록했어요 ⏱️",
+    "guide": {
+      "emergency": {
+        "label": "🚨 즉시 분만실 연락",
+        "message": "양수가 터졌거나 이슬이 비치면 즉시 분만실에 전화하시고 병원으로 이동하세요. 출산이 가까울 수 있습니다."
+      },
+      "collecting": {
+        "label": "데이터 수집 중",
+        "message": "진통 3회 이상 기록되면 패턴 분석을 시작합니다. 측정 중에는 깊은 호흡으로 편하게 쉬세요."
+      },
+      "hospitalRecommended": {
+        "label": "병원 방문 권장 수치",
+        "message": "현재 기록된 간격은 평균 {{avgMin}}분이며, 종합 분석상 진진통일 가능성이 높습니다. 담당 의사나 분만실에 문의하여 정확한 진단을 받으시길 권장합니다."
+      },
+      "shortening": {
+        "label": "간격이 짧아지고 있어요",
+        "message": "평균 {{avgMin}}분에서 마지막 {{lastMin}}분으로 변화가 보여요. 점점 가까워지고 있을 가능성이 있으니 다음 몇 회 더 지켜봐 주세요."
+      },
+      "falseLabor": {
+        "label": "가진통일 가능성이 높습니다",
+        "message": "간격이 {{minMin}}~{{maxMin}}분으로 불규칙합니다. 현재 패턴은 가진통일 가능성이 높습니다. 편안한 자세로 휴식을 취하며 경과를 조금 더 지켜보세요."
+      }
+    },
+    "callFailedTitle": "전화 연결 실패",
+    "callFailedDescDirect": "직접 전화해 주세요: {{phone}}",
+    "callFailedDesc119": "직접 119에 전화해 주세요.",
+    "hospitalRegisterRequiredTitle": "병원 번호 등록 필요",
+    "hospitalRegisterRequiredDesc": "분만 예정 병원이 등록되어 있지 않아요.\n지금 등록하시겠어요?\n\n급한 상황이면 먼저 119에 전화하세요.",
+    "call119": "119 전화",
+    "registerHospital": "병원 등록",
+    "selectPregnantChild": "임신 중인 아이를 선택해주세요",
+    "kickHintPrefix": "태동이 느껴질 때마다",
+    "kickHintTapButton": "아래 버튼을 탭",
+    "kickHintSuffix": "하세요",
+    "kickHintThreshold": "30분에 3~5회 이상",
+    "kickHintHealthySignal": "이면 건강한 신호예요",
+    "kickLessThanUsualQuestion": "태동이 평소보다\n안 느껴지나요?",
+    "countUnit": "회",
+    "elapsed": "경과",
+    "minSec": "{{min}}분 {{sec}}초",
+    "perHour": "시간당",
+    "countValue": "{{count}}회",
+    "reset": "초기화",
+    "stopAndSave": "측정 종료 · 저장",
+    "kickHistoryTitle": "📊 태동 누적 기록",
+    "today": "오늘",
+    "yesterday": "어제",
+    "last7Days": "최근 7일",
+    "kickHistoryFoot": "지금까지 측정한 세션: {{count}}회",
+    "emergencyBanner": {
+      "titleRuptured": "🚨 양수 파수 확인 — 골든타임",
+      "titleHighRisk": "🚨 고위험 임신 — 위험 신호 시 즉시 119",
+      "titleDefault": "🚨 이런 증상은 119 먼저!",
+      "symptoms": "양수 파수 · 다량 출혈 · 태동 감소·느껴지지 않음 · 극심한 복통",
+      "subRuptured": "대낮이라도 외래는 응급 안 받습니다. 분만실 직통 또는 119로 즉시 연락하세요.",
+      "subHighRisk": "고위험 임신은 합병증 위험이 더 큽니다. 애매해도 망설이지 말고 119를 먼저 부르세요.",
+      "subDefault": "앱 확인보다 119가 먼저입니다. 애매하거나 불안하면 지금 바로 병원에 전화하세요."
+    },
+    "deliveryWardDirect": "🏥 분만실 직통",
+    "hospital": "🏥 병원",
+    "emergencyRegisterHospital": "🏥 분만 병원이 아직 등록되지 않았어요 — 지금 등록하기 ›",
+    "weekNotice": "ℹ️ 현재 {{week}}주차예요. 36주 전이라도 규칙적인 진통이나 복통이 느껴지면 기록보다 병원에 먼저 연락해 주세요.",
+    "contractionStart": "진통 시작",
+    "contractionEnd": "진통 종료",
+    "when": "시",
+    "tapButton": "버튼 탭",
+    "tapAgain": "다시 탭",
+    "fiveMinuteAlert": "🚨 5분 간격이 1시간 이상 지속되면 병원에 연락하세요",
+    "enduring": "참는 중...",
+    "secondsInProgress": "초 진행 중",
+    "directCallDeliveryWard": "분만실 바로 전화하기",
+    "medicalDisclaimer": "본 안내는 입력된 데이터를 바탕으로 한 일반 정보이며 의료적 진단을 대신할 수 없습니다. 위급 상황 시 반드시 의료기관의 도움을 받으세요.",
+    "midwifeName": "조산사 선생님",
+    "diag": {
+      "postureQuestion": "잠시 일어나 걷거나 자세를 바꿔보세요.\n그래도 계속 아픈가요?",
+      "postureImproved": "통증이 줄거나 사라졌어요",
+      "postureStillHurts": "자세 바꿔도 똑같이 아파요",
+      "painSiteQuestion": "지금 통증은 어디가 가장 심하세요?",
+      "painLowerAbdomen": "아랫배 위주로 아파요",
+      "painWholeBackAbdomen": "허리·배 전체가 쥐어짜요",
+      "rupturedQuestion": "혹시 이슬이 비쳤거나\n양수가 터졌나요?",
+      "no": "아니요",
+      "yesRuptured": "네, 보였어요/터졌어요"
+    },
+    "measurementRecord": "측정 기록",
+    "historyRow": "{{seq}}회차 · 지속 {{duration}}초",
+    "historyRowWithInterval": "{{seq}}회차 · 지속 {{duration}}초 · 간격 {{min}}분 {{sec}}초",
+    "resetAll": "전체 초기화",
+    "medicalDisclaimerTitle": "⚕️ 의료 면책 고지",
+    "medicalDisclaimerFooter": "본 안내는 입력된 데이터를 바탕으로 한 일반 정보이며 의료적 진단을 대신할 수 없습니다. 위급 상황 시에는 반드시 의료기관의 도움을 받으세요.",
+    "citationKsog": "대한산부인과학회 임신·출산 정보 (진통·태동)",
+    "citationChildcare": "보건복지부·임신육아종합포털 「아이사랑」",
+    "kickGuideModal": {
+      "title": "태동이 평소보다 안 느껴지나요?",
+      "subtitle": "아래 방법을 시도해 보세요 👇",
+      "sugarTitle": "당분 섭취",
+      "sugarText": "초코우유나 주스를 마시고 아기를 깨워 보세요.",
+      "leftSideTitle": "왼쪽으로 눕기",
+      "leftSideText": "왼쪽으로 누우면 아기에게 혈액 공급이 더 잘 돼요.",
+      "focusTitle": "집중 태동",
+      "focusText": "조용한 곳에서 배에 손을 얹고 30분만 지켜보세요.",
+      "sleepingTitle": "잠자는 중일 수 있음",
+      "sleepingText": "아기는 20~40분 단위로 자고 일어날 수 있어요.",
+      "dangerTitle": "🚨 이럴 땐 병원에 문의하세요!",
+      "dangerItem1": "• 1시간 동안 태동이 3회 미만일 때",
+      "dangerItem2": "• 평소보다 횟수가 절반 이하로 줄었을 때",
+      "dangerItem3": "• 반나절(12시간) 동안 태동이 10번 미만일 때",
+      "disclaimer": "본 안내는 일반 정보이며 의료적 진단을 대신할 수 없습니다."
+    },
+    "phoneChoice": {
+      "title": "어디로 전화할까요?",
+      "subtitle": "지금 시간대에 권장되는 번호가 위에 있어요"
+    }
+  },
+  "sos": {
+    "symptom": {
+      "fever": "38도+ 발열",
+      "vomiting": "구토/설사",
+      "seizure": "경련",
+      "breathing": "호흡곤란",
+      "bleedingWound": "출혈/상처",
+      "rash": "발진/두드러기",
+      "bleeding": "출혈",
+      "severePain": "심한 복통",
+      "severeHeadache": "심한 두통",
+      "severeSwelling": "심한 부종",
+      "blurryVision": "시야 흐림",
+      "waterBreaking": "양수 파수",
+      "reducedMovement": "태동 감소",
+      "fever38": "발열 38+",
+      "regularContractions": "규칙적 수축"
+    },
+    "severity": {
+      "emergencyTitle": "즉시 119 전화하세요",
+      "hospitalTitle": "병원 방문을 권합니다",
+      "urgentTitle": "조치가 필요합니다",
+      "monitorTitle": "관찰하세요"
+    },
+    "guide": {
+      "heimlichLabel": "기도막힘",
+      "heimlichSublabel": "4단계 대처",
+      "cprSublabel": "심폐소생술",
+      "burnFallLabel": "화상/낙상",
+      "burnFallSublabel": "응급 처치",
+      "foreignLabel": "이물질 삼킴",
+      "foreignSublabel": "코/귀/입"
+    },
+    "heimlich": {
+      "infant": {
+        "title": "기도막힘 (12개월 미만)",
+        "subtitle": "영아 - 등 두드리기 + 가슴 압박",
+        "step1": "아이를 한 팔에 엎드리게 두고 머리를 가슴보다 낮게",
+        "step2": "등 가운데를 손바닥 아래쪽으로 5번 강하게 두드리기",
+        "step3": "뒤집어서 머리 낮추고, 가슴 중앙(젖꼭지 사이)을 손가락 2개로 5번 압박",
+        "step4": "나올 때까지 등 두드리기 ↔ 가슴 압박 반복",
+        "step5": "의식을 잃으면 즉시 CPR 시작 + 119 신고",
+        "warning": "입속을 손가락으로 후비지 마세요. 더 깊이 들어갈 수 있어요."
+      },
+      "child": {
+        "title": "기도막힘 (만 1세 ~ 사춘기 전)",
+        "subtitle": "소아 - 하임리히 (복부 밀어올리기)",
+        "step1": "아이 뒤에 무릎 꿇거나 서기 (눈높이 맞춰)",
+        "step2": "한 손은 주먹, 엄지 안쪽을 배꼽 위·명치 아래에 위치",
+        "step3": "다른 손으로 주먹을 감싸 안쪽·위쪽으로 5번 빠르게 당기듯 밀기",
+        "step4": "나올 때까지 반복",
+        "step5": "의식 잃으면 눕히고 CPR + 119 신고",
+        "warning": "명치 위(가슴뼈)는 누르지 마세요. 갈비뼈 손상 위험."
+      },
+      "adult": {
+        "title": "기도막힘 (성인 / 보호자)",
+        "subtitle": "청소년·성인 하임리히",
+        "step1": "뒤에서 양팔로 명치 아래·배꼽 위 부위를 감싸안기",
+        "step2": "한 손은 주먹, 다른 손은 그 위에 포개기",
+        "step3": "안쪽·위쪽 방향으로 빠르게 5번 당기듯 밀기",
+        "step4": "나올 때까지 반복",
+        "step5": "혼자라면 의자 등받이에 명치 부위 대고 압박",
+        "warning": "임산부·비만인은 명치 아래 대신 가슴 중앙을 압박하세요."
+      }
+    },
+    "cpr": {
+      "infant": {
+        "title": "CPR (12개월 미만)",
+        "subtitle": "영아 - 손가락 2개로 가슴 압박",
+        "step1": "반응·호흡 확인 (10초 이내)",
+        "step2": "먼저 119 신고 (스피커폰으로 지시 받으며 진행)",
+        "step3": "평평한 곳에 눕히고 머리 살짝 뒤로 젖히기",
+        "step4": "가슴 중앙(젖꼭지 사이)을 손가락 2개로 깊이 4cm 압박",
+        "step5": "분당 100~120회로 30회 압박 → 입·코 동시에 가볍게 인공호흡 2회",
+        "step6": "구급대 올 때까지 30:2 반복, 절대 멈추지 말기",
+        "warning": "인공호흡이 어렵다면 가슴 압박만이라도 계속하세요."
+      },
+      "child": {
+        "title": "CPR (만 1세 ~ 사춘기 전)",
+        "subtitle": "소아 - 한 손 또는 양손 압박",
+        "step1": "어깨 두드리며 반응 확인, 호흡 확인 (10초 이내)",
+        "step2": "먼저 119 신고 (스피커폰)",
+        "step3": "평평한 곳에 눕히고 머리 젖혀 기도 열기",
+        "step4": "가슴 중앙을 한 손바닥(작은 아이) 또는 양손으로 깊이 5cm 압박",
+        "step5": "분당 100~120회로 30회 압박 → 입 대 입 인공호흡 2회",
+        "step6": "30:2 반복, AED 도착하면 즉시 사용",
+        "warning": "구급대가 올 때까지 멈추지 마세요. 갈비뼈가 부러져도 계속."
+      },
+      "adult": {
+        "title": "CPR (성인 / 보호자)",
+        "subtitle": "청소년·성인 - 양손 가슴 압박",
+        "step1": "의식·호흡 확인 후 119 신고 (스피커폰)",
+        "step2": "가슴 중앙(흉골 아래쪽)에 양손 포개고 팔꿈치 펴기",
+        "step3": "체중 실어 깊이 5~6cm로 압박",
+        "step4": "분당 100~120회로 30회 압박",
+        "step5": "인공호흡 2회 (가능할 때) → 30:2 반복",
+        "step6": "AED 도착하면 즉시 사용, 구급대 올 때까지 멈추지 말기",
+        "warning": "갈비뼈가 부러져도 멈추지 마세요. 생명이 우선입니다."
+      }
+    },
+    "burnFall": {
+      "title": "화상/낙상 대처",
+      "subtitle": "데이거나 떨어졌을 때",
+      "step1": "화상: 흐르는 찬물 10분 이상 (얼음 금지!)",
+      "step2": "연고/된장/치약 바르지 않기, 물집 터뜨리지 않기",
+      "step3": "낙상: 바로 일으키지 말고 그 자리에서 안정",
+      "step4": "머리 부딪혔으면 24시간 관찰 (구토/경련 시 응급실)",
+      "warning": "2도 이상 화상/넓은 범위/의식 변화 → 즉시 119"
+    },
+    "foreign": {
+      "title": "이물질 삼킴/삽입",
+      "subtitle": "아이가 이물질을 삼키거나 넣었을 때",
+      "step1": "억지로 빼내지 않기 (더 깊이 들어감)",
+      "step2": "코: 반대쪽 막고 훌! 불기, 안 나오면 병원",
+      "step3": "귀: 면봉/핀셋 금지, 병원으로",
+      "step4": "배터리/자석 삼킴 → 즉시 응급실! (구토 유도 금지)",
+      "warning": "배터리/자석은 2시간 내 장 천공 가능! 즉시 응급실"
+    },
+    "alert": {
+      "hospitalPhoneRequiredTitle": "병원 번호 등록 필요",
+      "hospitalPhoneRequiredMessage": "먼저 분만 예정 병원의 전화번호를 등록해 주세요.",
+      "registerAction": "등록하기",
+      "callFailedTitle": "전화 연결 실패",
+      "callFailedWithPhone": "직접 전화해 주세요: {{phone}}",
+      "callFailedOpenApp": "전화 앱을 열 수 없습니다. 직접 119를 눌러주세요.",
+      "callFailedDialDirectly": "직접 119로 전화해 주세요.",
+      "symptomSelectTitle": "증상 선택",
+      "symptomSelectMessage": "하나 이상의 증상을 선택해주세요.",
+      "childSelectTitle": "아이 선택",
+      "childSelectMessage": "먼저 아이를 선택해주세요.",
+      "checkResultMissing": "증상 확인 결과를 받지 못했습니다. 다시 시도해주세요.",
+      "checkError": "증상 확인 중 오류가 발생했습니다. 다시 시도해주세요.",
+      "notifyDoneTitle": "알림 완료",
+      "notifyDoneMessage": "가족에게 알림을 보냈습니다.",
+      "notifyError": "가족 알림에 실패했습니다.",
+      "mapOpenError": "지도 앱을 열 수 없습니다."
+    },
+    "familyNotify": {
+      "situationWithTemp": "{{symptoms}} (체온 {{temp}}도)"
+    },
+    "subtitleMom": "{{name}} 엄마",
+    "subtitleDefault": "응급 도우미",
+    "priorityTitle": "위급하면 먼저 119",
+    "call119Button": "119 전화하기",
+    "findErButton": "응급실 찾기",
+    "notifyFamilyButton": "가족에게 알리기",
+    "priorityNote": "호흡곤란, 의식저하, 경련, 심한 출혈, 입술이 파래짐 등 위급상황은 앱 확인보다 119에 먼저 전화하세요.",
+    "quickHelpTitle": "응급 상황 빠른 대처",
+    "quickHelpDesc": "위급하면 119, 애매하면 증상부터 빠르게 확인하세요",
+    "symptomCheckTitle": "증상 빠른 확인",
+    "symptomCheckDescPregnant": "바로 119급인지 애매할 때 — 엄마·태아 증상을 선택해주세요",
+    "symptomCheckDesc": "바로 119급인지 애매할 때 — 증상부터 빠르게 확인하세요",
+    "tempLabel": "체온 (선택사항)",
+    "checkButton": "증상 확인",
+    "callDeliveryWardButton": "분만실 전화하기",
+    "touchToRegisterPhone": "터치하여 병원 번호 등록",
+    "hospitalInfoEditOrRegister": "분만/진료 병원 정보 {{action}}",
+    "registerAction": "등록",
+    "medicalCitationNote": "응급처치 안내는 참고용입니다. 위급 시 즉시 119에 신고하고 의료진 지시를 따르세요.",
+    "citationSource": {
+      "nfa": "소방청 119 응급처치 안내",
+      "kdca": "질병관리청 국가건강정보포털 (응급처치)",
+      "redcross": "대한적십자사 응급처치 가이드"
+    },
+    "doNowLabel": "👉 지금 할 일",
+    "findNearbyHospitalButton": "가까운 병원 찾기",
+    "resultDisclaimer": "⚠️ 본 안내는 참고용 정보이며 의학적 진단이 아닙니다. 판단이 어렵거나 증상이 악화되면 즉시 119 또는 응급실을 이용하세요.",
+    "warningPageLabel": "경고",
+    "disclaimerBar": "ⓘ 일반 응급처치 참고용 · 의료 행위 대체 아님 · 위급 시 즉시 119",
+    "stepNumLabel": "STEP {{num}}",
+    "swipeHint": "옆으로 넘기면 다음 단계",
+    "call119Immediately": "이럴 땐 즉시 119",
+    "emergencyCall119": "119 응급전화"
   }
 }
