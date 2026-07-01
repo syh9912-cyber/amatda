@@ -1,5 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
@@ -11,25 +13,26 @@ const ELEMENT_COLORS: Record<string, string> = {
   water: COLORS.water,
 };
 
-const ELEMENT_LABELS: Record<string, string> = {
-  wood: '탐구',
-  fire: '활동',
-  earth: '안정',
-  metal: '분석',
-  water: '감성',
-};
+const getElementLabels = (t: TFunction): Record<string, string> => ({
+  wood: t('onboardingResult.element.wood'),
+  fire: t('onboardingResult.element.fire'),
+  earth: t('onboardingResult.element.earth'),
+  metal: t('onboardingResult.element.metal'),
+  water: t('onboardingResult.element.water'),
+});
 
 // dominantType이 만약 내부 키(wood 등)로 저장돼 있어도 화면엔 성향명만 노출.
 // (오행/영문 키 노출 방지 — 이미 한글 성향형이면 그대로 통과)
-const DOMINANT_LABELS: Record<string, string> = {
-  wood: '탐구형',
-  fire: '활동형',
-  earth: '안정형',
-  metal: '분석형',
-  water: '감성형',
-};
+const getDominantLabels = (t: TFunction): Record<string, string> => ({
+  wood: t('onboardingResult.dominant.wood'),
+  fire: t('onboardingResult.dominant.fire'),
+  earth: t('onboardingResult.dominant.earth'),
+  metal: t('onboardingResult.dominant.metal'),
+  water: t('onboardingResult.dominant.water'),
+});
 
 export default function ResultScreen() {
+  const { t } = useTranslation();
   const { childId } = useLocalSearchParams<{ childId: string }>();
   const children = useChildStore((s) => s.children);
   const child = children.find((c) => c.id === childId);
@@ -37,7 +40,7 @@ export default function ResultScreen() {
   if (!child) {
     return (
       <View style={styles.container}>
-        <Text>자녀 정보를 찾을 수 없습니다</Text>
+        <Text>{t('onboardingResult.childNotFound')}</Text>
       </View>
     );
   }
@@ -46,28 +49,30 @@ export default function ResultScreen() {
   if (!innateData) {
     return (
       <View style={styles.container}>
-        <Text>기질 분석 데이터가 없습니다</Text>
+        <Text>{t('onboardingResult.analysisDataNotFound')}</Text>
       </View>
     );
   }
   const { fiveElements, dominantType, label } = innateData;
   const maxVal = Math.max(...Object.values(fiveElements));
+  const elementLabels = getElementLabels(t);
+  const dominantLabels = getDominantLabels(t);
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: '기질 분석 결과' }} />
+      <Stack.Screen options={{ title: t('onboardingResult.screenTitle') }} />
 
       <View style={styles.card}>
         <Text style={styles.childName}>{child.name}</Text>
-        <Text style={styles.dominant}>{DOMINANT_LABELS[dominantType] ?? dominantType}</Text>
+        <Text style={styles.dominant}>{dominantLabels[dominantType] ?? dominantType}</Text>
         <Text style={styles.label}>{label}</Text>
       </View>
 
       <View style={styles.chartCard}>
-        <Text style={styles.chartTitle}>에너지 분포</Text>
+        <Text style={styles.chartTitle}>{t('onboardingResult.energyDistribution')}</Text>
         {Object.entries(fiveElements).map(([key, val]) => (
           <View key={key} style={styles.barRow}>
-            <Text style={styles.barLabel}>{ELEMENT_LABELS[key]}</Text>
+            <Text style={styles.barLabel}>{elementLabels[key]}</Text>
             <View style={styles.barBg}>
               <View
                 style={[
@@ -93,14 +98,14 @@ export default function ResultScreen() {
           })
         }
       >
-        <Text style={styles.buttonText}>성향 질문 시작</Text>
+        <Text style={styles.buttonText}>{t('onboardingResult.startQuestions')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.skipLink}
         onPress={() => router.replace('/(main)/home')}
       >
-        <Text style={styles.skipText}>건너뛰고 홈으로</Text>
+        <Text style={styles.skipText}>{t('onboardingResult.skipToHome')}</Text>
       </TouchableOpacity>
     </View>
   );

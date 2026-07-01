@@ -12,6 +12,7 @@ import { Stack, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { captureRef } from 'react-native-view-shot';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useChildStore, AnalysisReport } from '../../stores/childStore';
 import { AdSlot } from '../../components/ads/AdSlot';
 // (useShowAds 제거 — 스크롤형 전환으로 compact 분기 불필요)
@@ -30,6 +31,7 @@ import { EditorialCover, TYPE_GRADIENT } from '../../components/report/Editorial
 
 export default function TraitDetailScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const child = useChildStore((s) => s.selectedChild);
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TraitTab>('summary');
@@ -48,17 +50,17 @@ export default function TraitDetailScreen() {
         </View>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
           <Text style={{ fontSize: 18, fontWeight: '700', color: '#5B4636', marginBottom: 8 }}>
-            등록된 아이가 없어요
+            {t('traitDetail.noChild.title')}
           </Text>
           <Text style={{ fontSize: 14, color: '#9B8579', textAlign: 'center', marginBottom: 24, lineHeight: 21 }}>
-            아이를 등록하고 기질 분석을 완료하면{'\n'}결과를 확인할 수 있어요
+            {t('traitDetail.noChild.description')}
           </Text>
           <TouchableOpacity
             onPress={() => router.replace('/(main)/home')}
             style={{ backgroundColor: '#FF8C5A', paddingHorizontal: 28, paddingVertical: 14, borderRadius: 24 }}
             activeOpacity={0.85}
           >
-            <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>홈으로 가기</Text>
+            <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>{t('traitDetail.noChild.goHome')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -87,15 +89,15 @@ export default function TraitDetailScreen() {
       if (canShare) {
         await Sharing.shareAsync(uri, {
           mimeType: 'image/jpeg',
-          dialogTitle: `${child.name}의 기질 분석 리포트`,
+          dialogTitle: t('traitDetail.shareDialogTitle', { name: child.name }),
           UTI: 'public.jpeg',
         });
       } else {
-        Alert.alert('저장 완료', `이미지가 생성됐어요.\n${uri}`);
+        Alert.alert(t('traitDetail.saveComplete'), t('traitDetail.imageGenerated', { uri }));
       }
     } catch (e: unknown) {
-      const errorMessage = e instanceof Error ? e.message : '이미지 생성에 실패했습니다';
-      Alert.alert('오류', errorMessage);
+      const errorMessage = e instanceof Error ? e.message : t('traitDetail.imageGenerationFailed');
+      Alert.alert(t('common.error'), errorMessage);
     } finally {
       setSharing(false);
     }
@@ -125,7 +127,7 @@ export default function TraitDetailScreen() {
           {sharing ? (
             <ActivityIndicator size="small" color="#FFD2A8" />
           ) : (
-            <Text style={styles.darkShareIcon}>{'공유'}</Text>
+            <Text style={styles.darkShareIcon}>{t('traitDetail.share')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -182,7 +184,7 @@ export default function TraitDetailScreen() {
             }
             activeOpacity={0.7}
           >
-            <Text style={styles.darkReAnalyzeBtnText}>다시 분석하기</Text>
+            <Text style={styles.darkReAnalyzeBtnText}>{t('traitDetail.reAnalyze')}</Text>
           </TouchableOpacity>
         </View>
         </View>

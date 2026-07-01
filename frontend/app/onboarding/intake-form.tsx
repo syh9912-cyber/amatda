@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { questionApi, childApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
@@ -21,6 +22,7 @@ interface Question {
 }
 
 export default function IntakeFormScreen() {
+  const { t } = useTranslation();
   const { childId } = useLocalSearchParams<{ childId: string }>();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, number>>({});
@@ -62,7 +64,7 @@ export default function IntakeFormScreen() {
   const handleSubmit = async () => {
     if (!childId) return;
     if (Object.keys(answers).length < questions.length) {
-      Alert.alert('알림', '모든 질문에 답해주세요');
+      Alert.alert(t('common.notice'), t('onboardingIntakeForm.answerAllRequired'));
       return;
     }
     setSubmitting(true);
@@ -72,10 +74,10 @@ export default function IntakeFormScreen() {
         selectedOption: answers[q.id],
       }));
       await childApi.saveBaseline(childId, answerList);
-      Alert.alert('완료', '기초 성향 설정이 완료되었습니다');
+      Alert.alert(t('common.complete'), t('onboardingIntakeForm.saveSuccess'));
       router.replace('/(main)/home');
     } catch {
-      Alert.alert('오류', '저장에 실패했습니다');
+      Alert.alert(t('common.error'), t('onboardingIntakeForm.saveFail'));
     } finally {
       setSubmitting(false);
     }
@@ -84,7 +86,7 @@ export default function IntakeFormScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <Stack.Screen options={{ title: '성향 질문' }} />
+        <Stack.Screen options={{ title: t('onboardingIntakeForm.pageTitle') }} />
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
@@ -92,13 +94,13 @@ export default function IntakeFormScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: '성향 질문' }} />
+      <Stack.Screen options={{ title: t('onboardingIntakeForm.pageTitle') }} />
 
       <Text style={styles.heading}>
-        {child?.name}에게 맞는 질문이에요
+        {t('onboardingIntakeForm.heading', { name: child?.name })}
       </Text>
       <Text style={styles.desc}>
-        아이의 평소 모습을 떠올리며 답해주세요 ({questions.length}문항)
+        {t('onboardingIntakeForm.desc', { count: questions.length })}
       </Text>
 
       {questions.map((q, qIdx) => (
@@ -131,34 +133,34 @@ export default function IntakeFormScreen() {
           disabled={submitting}
         >
           <Text style={styles.submitText}>
-            {submitting ? '저장 중...' : '완료'}
+            {submitting ? t('onboardingIntakeForm.saving') : t('common.complete')}
           </Text>
         </TouchableOpacity>
       )}
 
       {questions.length === 0 && loadError && (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyText}>질문을 불러오지 못했어요.{'\n'}네트워크 확인 후 다시 시도해주세요.</Text>
+          <Text style={styles.emptyText}>{t('onboardingIntakeForm.loadFailText')}</Text>
           <TouchableOpacity style={styles.skipBtn} onPress={loadQuestions}>
-            <Text style={styles.skipText}>다시 시도</Text>
+            <Text style={styles.skipText}>{t('common.retry')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.skipLink}
             onPress={() => router.replace('/(main)/home')}
           >
-            <Text style={styles.skipLinkText}>건너뛰기</Text>
+            <Text style={styles.skipLinkText}>{t('onboardingIntakeForm.skip')}</Text>
           </TouchableOpacity>
         </View>
       )}
 
       {questions.length === 0 && !loadError && (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyText}>해당 연령/기질의 질문이 아직 없습니다</Text>
+          <Text style={styles.emptyText}>{t('onboardingIntakeForm.noQuestions')}</Text>
           <TouchableOpacity
             style={styles.skipBtn}
             onPress={() => router.replace('/(main)/home')}
           >
-            <Text style={styles.skipText}>건너뛰기</Text>
+            <Text style={styles.skipText}>{t('onboardingIntakeForm.skip')}</Text>
           </TouchableOpacity>
         </View>
       )}

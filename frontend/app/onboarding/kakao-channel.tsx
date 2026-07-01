@@ -13,6 +13,8 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Platform, Linking, AppState,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 // 카카오톡 채널 URL — 비즈니스 채널 "아맞다" (검색용 ID: _xnxjFxjX).
 //   채널 추가 페이지: /friend, 채팅: /chat
@@ -22,6 +24,7 @@ const CHANNEL_URLS = [
 ];
 
 export default function KakaoChannelScreen() {
+  const { t } = useTranslation();
   const [submitting, setSubmitting] = useState(false);
   // 카카오톡으로 전환됐다가 앱에 복귀(AppState active)하면 다음 단계로 진행.
   // 즉시 라우팅하면 카카오 앱 전환과 화면 전환이 경쟁하므로 복귀 시점에 진행한다.
@@ -85,21 +88,21 @@ export default function KakaoChannelScreen() {
           />
         </View>
 
-        <Text style={styles.title}>아맞다 카톡 채널 추가</Text>
+        <Text style={styles.title}>{t('onboardingKakaoChannel.title')}</Text>
         <Text style={styles.subtitle}>
-          채널 친구가 되면{'\n'}새벽에도 도움받을 수 있어요
+          {t('onboardingKakaoChannel.subtitleLine1')}{'\n'}{t('onboardingKakaoChannel.subtitleLine2')}
         </Text>
 
         <View style={styles.benefitList}>
-          <Benefit emoji="🆘" title="새벽 응급 핫라인" desc="119 안내 + 즉시 코칭" />
-          <Benefit emoji="📚" title="육아 꿀팁 콘텐츠" desc="월령별 육아 정보를 카톡으로" />
-          <Benefit emoji="📰" title="신기능 가장 먼저" desc="새 기능 소식 우선 안내" />
-          <Benefit emoji="💬" title="1:1 운영팀 채널" desc="문의 카톡으로 바로" />
+          <Benefit t={t} emoji="🆘" titleKey="onboardingKakaoChannel.benefit.hotline.title" descKey="onboardingKakaoChannel.benefit.hotline.desc" />
+          <Benefit t={t} emoji="📚" titleKey="onboardingKakaoChannel.benefit.tips.title" descKey="onboardingKakaoChannel.benefit.tips.desc" />
+          <Benefit t={t} emoji="📰" titleKey="onboardingKakaoChannel.benefit.newFeatures.title" descKey="onboardingKakaoChannel.benefit.newFeatures.desc" />
+          <Benefit t={t} emoji="💬" titleKey="onboardingKakaoChannel.benefit.support.title" descKey="onboardingKakaoChannel.benefit.support.desc" />
         </View>
 
         <View style={styles.note}>
           <Text style={styles.noteText}>
-            ⓘ 카카오톡 친구 추가 후 자동 환영 메시지를 받게 돼요. 언제든 채널을 차단할 수 있어요.
+            {t('onboardingKakaoChannel.note')}
           </Text>
         </View>
 
@@ -109,10 +112,10 @@ export default function KakaoChannelScreen() {
           disabled={submitting}
           activeOpacity={0.85}
           accessibilityRole="button"
-          accessibilityLabel="카카오 채널 추가"
+          accessibilityLabel={t('onboardingKakaoChannel.addChannel')}
         >
           <Text style={styles.addBtnText}>
-            {submitting ? '카카오톡 여는 중...' : '카카오 채널 추가'}
+            {submitting ? t('onboardingKakaoChannel.opening') : t('onboardingKakaoChannel.addChannel')}
           </Text>
         </TouchableOpacity>
 
@@ -122,22 +125,22 @@ export default function KakaoChannelScreen() {
           disabled={submitting}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="나중에"
+          accessibilityLabel={t('onboardingKakaoChannel.later')}
         >
-          <Text style={styles.skipText}>나중에</Text>
+          <Text style={styles.skipText}>{t('onboardingKakaoChannel.later')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
   );
 }
 
-function Benefit({ emoji, title, desc }: { emoji: string; title: string; desc: string }) {
+function Benefit({ t, emoji, titleKey, descKey }: { t: TFunction; emoji: string; titleKey: string; descKey: string }) {
   return (
     <View style={styles.benefitRow}>
       <Text style={styles.benefitEmoji}>{emoji}</Text>
       <View style={{ flex: 1 }}>
-        <Text style={styles.benefitTitle}>{title}</Text>
-        <Text style={styles.benefitDesc}>{desc}</Text>
+        <Text style={styles.benefitTitle}>{t(titleKey)}</Text>
+        <Text style={styles.benefitDesc}>{t(descKey)}</Text>
       </View>
     </View>
   );

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useChildStore, AnalysisReport } from '../../stores/childStore';
 import { childApi } from '../../services/api';
 import { captureError } from '../../services/sentry';
@@ -23,6 +24,7 @@ function safeString(value: unknown): string {
 }
 
 export default function AnalysisReportScreen() {
+  const { t } = useTranslation();
   const { childId } = useLocalSearchParams<{ childId: string }>();
   const children = useChildStore((s) => s.children);
   const updateChild = useChildStore((s) => s.updateChild);
@@ -71,9 +73,9 @@ export default function AnalysisReportScreen() {
   if (loading) {
     return (
       <View style={styles.emptyContainer}>
-        <Stack.Screen options={{ title: '분석 결과', headerShown: false }} />
+        <Stack.Screen options={{ title: t('onboardingAnalysisReport.screenTitle'), headerShown: false }} />
         <ActivityIndicator size="large" color="#FF8C5A" />
-        <Text style={[styles.emptyText, { marginTop: 16 }]}>분석 결과를 불러오는 중...</Text>
+        <Text style={[styles.emptyText, { marginTop: 16 }]}>{t('onboardingAnalysisReport.loadingResult')}</Text>
       </View>
     );
   }
@@ -81,9 +83,9 @@ export default function AnalysisReportScreen() {
   if (!child || !report) {
     return (
       <View style={styles.emptyContainer}>
-        <Stack.Screen options={{ title: '분석 결과', headerShown: false }} />
+        <Stack.Screen options={{ title: t('onboardingAnalysisReport.screenTitle'), headerShown: false }} />
         <Text style={styles.emptyText}>
-          {loadError ? '분석 결과를 불러오지 못했어요.\n네트워크 확인 후 다시 시도해주세요.' : '분석 결과를 불러올 수 없습니다'}
+          {loadError ? t('onboardingAnalysisReport.loadErrorMessage') : t('onboardingAnalysisReport.loadFailed')}
         </Text>
         {loadError && (
           <TouchableOpacity
@@ -94,20 +96,20 @@ export default function AnalysisReportScreen() {
               setLocalReport(null);
             }}
           >
-            <Text style={styles.homeBtnText}>다시 시도</Text>
+            <Text style={styles.homeBtnText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
           style={[styles.homeBtn, { marginTop: SPACING.sm }]}
           onPress={() => router.replace({ pathname: '/onboarding/questions', params: { childId: childId ?? '' } })}
         >
-          <Text style={styles.homeBtnText}>다시 분석하기</Text>
+          <Text style={styles.homeBtnText}>{t('onboardingAnalysisReport.reAnalyze')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.homeLink}
           onPress={() => router.replace('/(main)/home')}
         >
-          <Text style={styles.homeLinkText}>홈으로 이동</Text>
+          <Text style={styles.homeLinkText}>{t('onboardingAnalysisReport.goHome')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -122,7 +124,7 @@ export default function AnalysisReportScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: rootBg }]}>
-      <Stack.Screen options={{ title: '분석 결과', headerShown: false }} />
+      <Stack.Screen options={{ title: t('onboardingAnalysisReport.screenTitle'), headerShown: false }} />
       <ScrollView
         contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 16, flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
@@ -139,14 +141,14 @@ export default function AnalysisReportScreen() {
         />
         <View style={styles.bottomActions}>
           <TouchableOpacity style={styles.fullReportBtn} onPress={handleSeeDetail} activeOpacity={0.85}>
-            <Text style={styles.fullReportBtnText}>{'READ THE FULL REPORT  →'}</Text>
+            <Text style={styles.fullReportBtnText}>{t('onboardingAnalysisReport.readFullReport')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.reAnalyzeBtn}
             onPress={() => router.push({ pathname: '/onboarding/questions', params: { childId: childId ?? '' } })}
             activeOpacity={0.7}
           >
-            <Text style={styles.reAnalyzeBtnText}>다시 분석하기</Text>
+            <Text style={styles.reAnalyzeBtnText}>{t('onboardingAnalysisReport.reAnalyze')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

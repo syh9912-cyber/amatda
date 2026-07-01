@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { childApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS } from '../../constants/theme';
@@ -18,6 +19,7 @@ import {
 import { calculateTemperament } from '../../constants/onboardingQuestions';
 import { AnalyzingScreen } from '../../components/onboarding/AnalyzingScreen';
 import { captureError } from '../../services/sentry';
+import type { TFunction } from 'i18next';
 
 /**
  * 5 기질 옵션 — 사용자가 질문에 가장 가까운 기질 1개를 선택.
@@ -26,13 +28,15 @@ import { captureError } from '../../services/sentry';
  */
 type TraitKey = 'explorer' | 'active' | 'harmony' | 'analyst' | 'sensitive';
 
-const TRAIT_META: Record<TraitKey, { main: string; sub: string; icon: ImageSourcePropType }> = {
-  analyst:   { main: '관찰형', sub: '신중함', icon: require('../../assets/quick-report.png') },
-  explorer:  { main: '탐구형', sub: '적극적', icon: require('../../assets/quick-sprout.png') },
-  harmony:   { main: '안정형', sub: '의존적', icon: require('../../assets/icon-heart.png') },
-  active:    { main: '결단형', sub: '호기심', icon: require('../../assets/academy-sports.png') },
-  sensitive: { main: '감성형', sub: '공감적', icon: require('../../assets/preg-leaf.png') },
-};
+const getTraitMeta = (
+  t: TFunction,
+): Record<TraitKey, { main: string; sub: string; icon: ImageSourcePropType }> => ({
+  analyst:   { main: t('onboardingQuestions.trait.analyst.main'), sub: t('onboardingQuestions.trait.analyst.sub'), icon: require('../../assets/quick-report.png') },
+  explorer:  { main: t('onboardingQuestions.trait.explorer.main'), sub: t('onboardingQuestions.trait.explorer.sub'), icon: require('../../assets/quick-sprout.png') },
+  harmony:   { main: t('onboardingQuestions.trait.harmony.main'), sub: t('onboardingQuestions.trait.harmony.sub'), icon: require('../../assets/icon-heart.png') },
+  active:    { main: t('onboardingQuestions.trait.active.main'), sub: t('onboardingQuestions.trait.active.sub'), icon: require('../../assets/academy-sports.png') },
+  sensitive: { main: t('onboardingQuestions.trait.sensitive.main'), sub: t('onboardingQuestions.trait.sensitive.sub'), icon: require('../../assets/preg-leaf.png') },
+});
 
 /** 기본 옵션 순서 — question.options 가 없을 때 fallback */
 const DEFAULT_TRAIT_ORDER: TraitKey[] = ['analyst', 'explorer', 'harmony', 'active', 'sensitive'];
@@ -41,6 +45,7 @@ const DEFAULT_TRAIT_ORDER: TraitKey[] = ['analyst', 'explorer', 'harmony', 'acti
 void LIKERT_OPTIONS;
 
 export default function QuestionsScreen() {
+  const { t } = useTranslation();
   const { childId } = useLocalSearchParams<{ childId: string }>();
   const children = useChildStore((s) => s.children);
   const updateChild = useChildStore((s) => s.updateChild);
@@ -148,9 +153,9 @@ export default function QuestionsScreen() {
   if (questions.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <Stack.Screen options={{ title: '질문 준비', headerShown: false }} />
+        <Stack.Screen options={{ title: t('onboardingQuestions.preparingTitle'), headerShown: false }} />
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>질문을 준비하고 있어요...</Text>
+        <Text style={styles.loadingText}>{t('onboardingQuestions.preparingQuestions')}</Text>
       </View>
     );
   }
@@ -163,20 +168,22 @@ export default function QuestionsScreen() {
   if (isInfantSkip) {
     return (
       <View style={es.wrap}>
-        <Stack.Screen options={{ title: '기질 분석', headerShown: false }} />
+        <Stack.Screen options={{ title: t('onboardingQuestions.temperamentAnalysisTitle'), headerShown: false }} />
         <View style={es.card}>
           <Text style={es.emoji}>👶</Text>
-          <Text style={es.title}>아직 6개월 미만이에요</Text>
+          <Text style={es.title}>{t('onboardingQuestions.infantSkip.title')}</Text>
           <Text style={es.body}>
-            이 시기엔 아이의 행동 패턴이 뚜렷이 나타나기 전이라,{'\n'}
-            행동 설문 대신 <Text style={es.em}>생년월일과 태어난 시간</Text>으로{'\n'}
-            우리 아이의 타고난 기질을 분석해드려요.
+            {t('onboardingQuestions.infantSkip.bodyBefore')}{'\n'}
+            {t('onboardingQuestions.infantSkip.bodyMiddlePrefix')}
+            <Text style={es.em}>{t('onboardingQuestions.infantSkip.bodyEmphasis')}</Text>
+            {t('onboardingQuestions.infantSkip.bodyMiddleSuffix')}{'\n'}
+            {t('onboardingQuestions.infantSkip.bodyAfter')}
           </Text>
           <Text style={es.sub}>
-            백일이 지나 아이만의 행동이 보이기 시작하면,{'\n'}행동 설문으로 더 정밀하게 분석할 수 있어요.
+            {t('onboardingQuestions.infantSkip.subBefore')}{'\n'}{t('onboardingQuestions.infantSkip.subAfter')}
           </Text>
           <TouchableOpacity style={es.btn} onPress={runInfantAnalyze} activeOpacity={0.85}>
-            <Text style={es.btnText}>기질 분석 보기</Text>
+            <Text style={es.btnText}>{t('onboardingQuestions.infantSkip.button')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -187,7 +194,7 @@ export default function QuestionsScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: '성향 질문', headerShown: false }} />
+      <Stack.Screen options={{ title: t('onboardingQuestions.screenTitle'), headerShown: false }} />
 
       {/* Top row: back arrow + progress */}
       <View style={styles.topRow}>
@@ -221,9 +228,9 @@ export default function QuestionsScreen() {
           <View style={styles.optionsWrap}>
             {(current.options
               ? current.options.map((o) => ({ trait: o.trait as TraitKey, behavior: o.text }))
-              : DEFAULT_TRAIT_ORDER.map((t) => ({ trait: t, behavior: '' }))
+              : DEFAULT_TRAIT_ORDER.map((trait) => ({ trait, behavior: '' }))
             ).map((opt) => {
-              const meta = TRAIT_META[opt.trait];
+              const meta = getTraitMeta(t)[opt.trait];
               const selected = currentPicked === opt.trait;
               // 시나리오 행동 텍스트만 표시 — 기질 라벨(관찰형/신중함 등)은 사용자 혼란 유발해 제거 (2026-05-08)
               const mainText = opt.behavior || meta.main;
@@ -257,7 +264,7 @@ export default function QuestionsScreen() {
           onPress={() => router.replace('/(main)/home')}
           activeOpacity={0.7}
         >
-          <Text style={styles.skipText}>건너뛰고 홈으로</Text>
+          <Text style={styles.skipText}>{t('onboardingQuestions.skipToHome')}</Text>
         </TouchableOpacity>
       </View>
     </View>

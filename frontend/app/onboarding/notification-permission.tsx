@@ -22,11 +22,13 @@ import { router, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import { useTranslation } from 'react-i18next';
 
 // v4: 가입 흐름 간소화 (consent → priming → home) + primed key bump 으로 강제 재노출.
 const PRIMED_KEY = 'notif_primed_v4';
 
 export default function NotificationPermissionScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ next?: string }>();
   const next = params.next; // 'kakao-channel' | 'home' | undefined
   const [submitting, setSubmitting] = useState(false);
@@ -79,21 +81,21 @@ export default function NotificationPermissionScreen() {
           />
         </View>
 
-        <Text style={styles.title}>알림으로 코칭 받기</Text>
+        <Text style={styles.title}>{t('onboardingNotificationPermission.title')}</Text>
         <Text style={styles.subtitle}>
-          아이 발달 단계별 팁과 일일 리마인더를{'\n'}제때 받아보세요
+          {t('onboardingNotificationPermission.subtitle')}
         </Text>
 
         <View style={styles.benefitList}>
-          <Benefit emoji="🌙" title="모닝 팔로업" desc="간밤 수면·수유 한 줄 요약" />
-          <Benefit emoji="🍼" title="발달 단계 알림" desc="월령별 꼭 챙길 포인트" />
-          <Benefit emoji="🏥" title="병원·접종 리마인더" desc="놓치기 쉬운 일정 미리 안내" />
-          <Benefit emoji="💛" title="AI 응답 도착" desc="상담 답변 즉시 알림" />
+          <Benefit emoji="🌙" title={t('onboardingNotificationPermission.benefitMorningTitle')} desc={t('onboardingNotificationPermission.benefitMorningDesc')} />
+          <Benefit emoji="🍼" title={t('onboardingNotificationPermission.benefitDevelopmentTitle')} desc={t('onboardingNotificationPermission.benefitDevelopmentDesc')} />
+          <Benefit emoji="🏥" title={t('onboardingNotificationPermission.benefitHospitalTitle')} desc={t('onboardingNotificationPermission.benefitHospitalDesc')} />
+          <Benefit emoji="💛" title={t('onboardingNotificationPermission.benefitAiReplyTitle')} desc={t('onboardingNotificationPermission.benefitAiReplyDesc')} />
         </View>
 
         <View style={styles.note}>
           <Text style={styles.noteText}>
-            ⓘ 광고/마케팅 알림은 별도 동의 시에만 발송되며, 모든 알림은 [더보기 &gt; 알림 설정]에서 끌 수 있어요.
+            {t('onboardingNotificationPermission.note')}
           </Text>
         </View>
       </ScrollView>
@@ -106,10 +108,10 @@ export default function NotificationPermissionScreen() {
           disabled={submitting}
           activeOpacity={0.85}
           accessibilityRole="button"
-          accessibilityLabel="알림 허용"
+          accessibilityLabel={t('onboardingNotificationPermission.allowLabel')}
         >
           <Text style={styles.allowBtnText}>
-            {submitting ? '요청 중...' : '알림 허용'}
+            {submitting ? t('onboardingNotificationPermission.requesting') : t('onboardingNotificationPermission.allowLabel')}
           </Text>
         </TouchableOpacity>
 
@@ -119,9 +121,9 @@ export default function NotificationPermissionScreen() {
           disabled={submitting}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="나중에"
+          accessibilityLabel={t('onboardingNotificationPermission.later')}
         >
-          <Text style={styles.laterText}>나중에</Text>
+          <Text style={styles.laterText}>{t('onboardingNotificationPermission.later')}</Text>
         </TouchableOpacity>
       </View>
     </View>

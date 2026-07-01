@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   View,
   Text,
@@ -54,12 +56,14 @@ type FilterKey = 'upcoming' | 'overdue' | 'completed' | 'all';
 /*  Helpers                                                            */
 /* ================================================================== */
 
-function ageLabel(months: number): string {
-  if (months === 0) return '출생';
-  if (months < 12) return `${months}개월`;
+function ageLabel(months: number, t: TFunction): string {
+  if (months === 0) return t('vaccination.ageBirth');
+  if (months < 12) return t('vaccination.ageMonths', { months });
   const y = Math.floor(months / 12);
   const m = months % 12;
-  return m > 0 ? `만 ${y}세 ${m}개월` : `만 ${y}세`;
+  return m > 0
+    ? t('vaccination.ageYearsMonths', { years: y, months: m })
+    : t('vaccination.ageYears', { years: y });
 }
 
 function dDayLabel(dDay: number): string {
@@ -117,6 +121,7 @@ async function saveRegistrationAge(childId: string, months: number): Promise<voi
 }
 
 export default function VaccinationScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const child = useChildStore((s) => s.selectedChild);
   const childId = child?.id ?? '';
@@ -169,11 +174,11 @@ export default function VaccinationScreen() {
         setRegistrationAgeMonths(existing);
       }
     } catch {
-      Alert.alert('오류', '접종 일정을 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침해주세요.');
+      Alert.alert(t('common.error'), t('vaccination.loadScheduleErrorMessage'));
     } finally {
       setLoading(false);
     }
-  }, [childId, child?.isPregnant]);
+  }, [childId, child?.isPregnant, t]);
 
   useEffect(() => { loadSchedule(); }, [loadSchedule]);
 
@@ -200,13 +205,13 @@ export default function VaccinationScreen() {
       if (completedDate.trim()) {
         const m = completedDate.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
         if (!m) {
-          Alert.alert('날짜 형식 오류', 'YYYY-MM-DD 형식으로 입력해주세요 (예: 2026-04-22)');
+          Alert.alert(t('vaccination.dateFormatErrorTitle'), t('vaccination.dateFormatErrorMessage'));
           setCompleting(false);
           return;
         }
         const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
         if (isNaN(d.getTime())) {
-          Alert.alert('날짜 형식 오류', '올바른 날짜를 입력해주세요');
+          Alert.alert(t('vaccination.dateFormatErrorTitle'), t('vaccination.invalidDateMessage'));
           setCompleting(false);
           return;
         }
@@ -220,7 +225,7 @@ export default function VaccinationScreen() {
       // 알림 재스케줄링
       vaccinationApi.scheduleAlerts(childId).catch(() => {});
     } catch {
-      Alert.alert('오류', '접종 완료 기록에 실패했습니다');
+      Alert.alert(t('common.error'), t('vaccination.completeRecordErrorMessage'));
     }
     setCompleting(false);
   };
@@ -241,7 +246,7 @@ export default function VaccinationScreen() {
 
   // 연령 그룹별로 묶기
   const grouped = filtered.reduce<Record<string, VaccineItem[]>>((acc, v) => {
-    const label = ageLabel(v.ageMonths);
+    const label = ageLabel(v.ageMonths, t);
     if (!acc[label]) acc[label] = [];
     acc[label].push(v);
     return acc;
@@ -264,7 +269,7 @@ export default function VaccinationScreen() {
         <View style={styles.emptyCenter}>
           <Image source={require('../../assets/quick-syringe.png')} style={styles.emptyIconImg} resizeMode="contain" />
           <Text style={styles.emptyText}>
-            {child?.isPregnant ? '출산 후 이용 가능합니다' : '아이를 선택해주세요'}
+            {child?.isPregnant ? t('vaccination.availableAfterBirth') : t('vaccination.selectChildPrompt')}
           </Text>
         </View>
       </View>
@@ -300,10 +305,10 @@ export default function VaccinationScreen() {
         {/* ── Filter Tabs ── */}
         <View style={styles.filterRow}>
           {([
-            { key: 'upcoming' as FilterKey, label: '다가오는' },
-            { key: 'overdue' as FilterKey, label: '놓친 접종' },
-            { key: 'completed' as FilterKey, label: '완료' },
-            { key: 'all' as FilterKey, label: '전체' },
+            { key: 'upcoming' as FilterKey, label: t('vaccination.filterUpcoming') },
+            { key: 'overdue' as FilterKey, label: t('vaccination.filterOverdue') },
+            { key: 'completed' as FilterKey, label: t('common.complete') },
+            { key: 'all' as FilterKey, label: t('vaccination.filterAll') },
           ]).map((f) => (
             <TouchableOpacity
               key={f.key}
@@ -363,16 +368,16 @@ export default function VaccinationScreen() {
                     <Text style={[styles.vaccineName, v.completed && styles.vaccineNameDone]}>
                       {v.name} {v.dose}
                     </Text>
-                    {v.required && <View style={styles.requiredBadge}><Text style={styles.requiredText}>필수</Text></View>}
+                    {v.required && <View style={styles.requiredBadge}><Text style={styles.requiredText}>{t('vaccination.required')}</Text></View>}
                   </View>
                   {v.completed ? (
                     <Text style={styles.vaccineCompleted}>
-                      {v.completedAt ? new Date(v.completedAt).toLocaleDateString('ko-KR') : ''} 접종 완료
+                      {t('vaccination.completedOn', { date: v.completedAt ? new Date(v.completedAt).toLocaleDateString('ko-KR') : '' })}
                       {v.hospitalName ? ` · ${v.hospitalName}` : ` · ${v.disease}`}
                     </Text>
                   ) : (
                     <Text style={styles.vaccineSchedule} numberOfLines={1}>
-                      {v.scheduledDate} 예정 · {v.disease}
+                      {t('vaccination.scheduledOn', { date: v.scheduledDate })} · {v.disease}
                     </Text>
                   )}
                 </View>
@@ -404,18 +409,18 @@ export default function VaccinationScreen() {
               resizeMode="contain"
             />
             <Text style={styles.emptyText}>
-              {filter === 'completed' ? '아직 완료한 접종이 없어요' :
-               filter === 'overdue' ? '놓친 접종이 없어요!' :
-               '예정된 접종이 없어요'}
+              {filter === 'completed' ? t('vaccination.emptyCompleted') :
+               filter === 'overdue' ? t('vaccination.emptyOverdue') :
+               t('vaccination.emptyUpcoming')}
             </Text>
           </View>
         )}
 
         <MedicalCitation
-          note="접종 일정은 국가예방접종 표준 일정 기준이며, 실제 접종은 소아과 의사와 상담 후 진행하세요."
+          note={t('vaccination.citationNote')}
           sources={[
-            { label: '질병관리청 예방접종도우미 (표준 예방접종 일정)', url: 'https://nip.kdca.go.kr' },
-            { label: '대한소아과학회 예방접종 지침', url: 'https://www.pediatrics.or.kr' },
+            { label: t('vaccination.citationSourceKdca'), url: 'https://nip.kdca.go.kr' },
+            { label: t('vaccination.citationSourcePediatrics'), url: 'https://www.pediatrics.or.kr' },
           ]}
         />
       </ScrollView>
@@ -431,7 +436,7 @@ export default function VaccinationScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>접종 완료 기록</Text>
+            <Text style={styles.modalTitle}>{t('vaccination.completeModalTitle')}</Text>
             {showComplete && (
               <>
                 <View style={styles.modalInfoBox}>
@@ -441,10 +446,10 @@ export default function VaccinationScreen() {
                   <Text style={styles.modalVaccineDisease}>{showComplete.disease}</Text>
                 </View>
 
-                <Text style={styles.modalLabel}>접종 날짜</Text>
+                <Text style={styles.modalLabel}>{t('vaccination.vaccinationDateLabel')}</Text>
                 <TextInput
                   style={styles.modalInput}
-                  placeholder={`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')} (비우면 오늘)`}
+                  placeholder={t('vaccination.datePlaceholder', { date: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}` })}
                   placeholderTextColor={COLORS.textLight}
                   value={completedDate}
                   onChangeText={setCompletedDate}
@@ -452,10 +457,10 @@ export default function VaccinationScreen() {
                   maxLength={10}
                 />
 
-                <Text style={styles.modalLabel}>접종 병원 (선택)</Text>
+                <Text style={styles.modalLabel}>{t('vaccination.hospitalLabelOptional')}</Text>
                 <TextInput
                   style={styles.modalInput}
-                  placeholder="예: OO소아과"
+                  placeholder={t('vaccination.hospitalPlaceholder')}
                   placeholderTextColor={COLORS.textLight}
                   value={hospitalName}
                   onChangeText={setHospitalName}
@@ -466,7 +471,7 @@ export default function VaccinationScreen() {
                     style={styles.modalCancelBtn}
                     onPress={() => { setShowComplete(null); setHospitalName(''); setCompletedDate(''); }}
                   >
-                    <Text style={styles.modalCancelText}>취소</Text>
+                    <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.modalSaveBtn, completing && { opacity: 0.5 }]}
@@ -474,7 +479,7 @@ export default function VaccinationScreen() {
                     disabled={completing}
                   >
                     <Text style={styles.modalSaveText}>
-                      {completing ? '기록 중...' : '접종 완료!'}
+                      {completing ? t('vaccination.recordingInProgress') : t('vaccination.completeExclaim')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -497,34 +502,34 @@ export default function VaccinationScreen() {
                     {showDetail.name} {showDetail.dose}
                   </Text>
                   {showDetail.required && (
-                    <View style={styles.requiredBadge}><Text style={styles.requiredText}>필수</Text></View>
+                    <View style={styles.requiredBadge}><Text style={styles.requiredText}>{t('vaccination.required')}</Text></View>
                   )}
                 </View>
-                <Text style={styles.detailDisease}>{showDetail.disease} 예방</Text>
+                <Text style={styles.detailDisease}>{t('vaccination.diseasePrevention', { disease: showDetail.disease })}</Text>
 
                 <View style={styles.detailSection}>
-                  <Text style={styles.detailSectionTitle}>접종 시기</Text>
+                  <Text style={styles.detailSectionTitle}>{t('vaccination.vaccinationTimingTitle')}</Text>
                   <Text style={styles.detailSectionBody}>
-                    권장: {ageLabel(showDetail.ageMonths)}{'\n'}
-                    허용 범위: {ageLabel(showDetail.rangeStart)} ~ {ageLabel(showDetail.rangeEnd)}{'\n'}
-                    예정일: {showDetail.scheduledDate}
+                    {t('vaccination.recommendedLabel', { age: ageLabel(showDetail.ageMonths, t) })}{'\n'}
+                    {t('vaccination.allowedRangeLabel', { start: ageLabel(showDetail.rangeStart, t), end: ageLabel(showDetail.rangeEnd, t) })}{'\n'}
+                    {t('vaccination.scheduledDateLabel', { date: showDetail.scheduledDate })}
                   </Text>
                 </View>
 
                 <View style={styles.detailSection}>
-                  <Text style={styles.detailSectionTitle}>참고사항</Text>
+                  <Text style={styles.detailSectionTitle}>{t('vaccination.notesTitle')}</Text>
                   <Text style={styles.detailSectionBody}>{showDetail.notes}</Text>
                 </View>
 
                 <View style={styles.detailSection}>
-                  <Text style={styles.detailSectionTitle}>준비물 & 주의사항</Text>
+                  <Text style={styles.detailSectionTitle}>{t('vaccination.preparationTitle')}</Text>
                   <Text style={styles.detailSectionBody}>{showDetail.preparation}</Text>
                 </View>
 
                 {showDetail.completed ? (
                   <View style={styles.detailDoneBox}>
                     <Text style={styles.detailDoneText}>
-                      ✓ {showDetail.completedAt ? new Date(showDetail.completedAt).toLocaleDateString('ko-KR') : ''} 접종 완료
+                      {t('vaccination.completedOnCheck', { date: showDetail.completedAt ? new Date(showDetail.completedAt).toLocaleDateString('ko-KR') : '' })}
                       {showDetail.hospitalName ? ` (${showDetail.hospitalName})` : ''}
                     </Text>
                   </View>
@@ -533,12 +538,12 @@ export default function VaccinationScreen() {
                     style={styles.detailCompleteBtn}
                     onPress={() => { setShowDetail(null); setShowComplete(showDetail); }}
                   >
-                    <Text style={styles.detailCompleteBtnText}>접종 완료 기록하기</Text>
+                    <Text style={styles.detailCompleteBtnText}>{t('vaccination.recordCompletionButton')}</Text>
                   </TouchableOpacity>
                 )}
 
                 <TouchableOpacity style={styles.detailCloseBtn} onPress={() => setShowDetail(null)}>
-                  <Text style={styles.detailCloseText}>닫기</Text>
+                  <Text style={styles.detailCloseText}>{t('common.close')}</Text>
                 </TouchableOpacity>
               </>
             )}

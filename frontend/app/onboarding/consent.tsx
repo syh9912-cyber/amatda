@@ -25,6 +25,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
+import { useTranslation } from 'react-i18next';
 import { authApi } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
 import { analytics } from '../../services/analytics';
@@ -40,6 +41,7 @@ export default function ConsentScreen() {
   //   reauth=1 → 재동의 (saveConsent)
   //   signup=email → 이메일 신규 가입 (register API 호출)
   //   기본(소셜) → saveConsent
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ reauth?: string; signup?: string }>();
   const isEmailSignup = params.signup === 'email';
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -79,13 +81,13 @@ export default function ConsentScreen() {
     try {
       await WebBrowser.openBrowserAsync(url);
     } catch {
-      Alert.alert('오류', '브라우저를 열 수 없습니다');
+      Alert.alert(t('common.error'), t('onboardingConsent.browserOpenFail'));
     }
   };
 
   const handleSubmit = async () => {
     if (!requiredAgreed) {
-      Alert.alert('알림', '필수 약관에 모두 동의해주세요');
+      Alert.alert(t('common.notice'), t('onboardingConsent.requireAllRequired'));
       return;
     }
     setSubmitting(true);
@@ -104,7 +106,7 @@ export default function ConsentScreen() {
         // 이메일 가입 모드: register API 호출 (자격증명 + 약관 동의 한 번에)
         const creds = pendingSignup.get();
         if (!creds) {
-          Alert.alert('오류', '가입 정보가 만료되었습니다. 다시 시도해주세요.');
+          Alert.alert(t('common.error'), t('onboardingConsent.signupExpired'));
           router.replace('/(auth)/register');
           return;
         }
@@ -126,7 +128,7 @@ export default function ConsentScreen() {
     } catch {
       // 가입/저장 실패 시 자격증명 임시 보관도 비움 — stale 방지.
       if (isEmailSignup) pendingSignup.clear();
-      Alert.alert('오류', '약관 동의 저장에 실패했습니다. 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('onboardingConsent.saveFail'));
     } finally {
       setSubmitting(false);
     }
@@ -143,9 +145,9 @@ export default function ConsentScreen() {
         <View style={[styles.card, { paddingTop: insets.top + 16 }]}>
           <View style={styles.header}>
             <Image source={require('../../assets/preg-leaf.png')} style={styles.emojiImg} resizeMode="contain" />
-            <Text style={styles.title}>약관 동의</Text>
+            <Text style={styles.title}>{t('onboardingConsent.title')}</Text>
             <Text style={styles.subtitle}>
-              서비스 이용을 위해 약관에 동의해주세요
+              {t('onboardingConsent.subtitle')}
             </Text>
           </View>
 
@@ -164,7 +166,7 @@ export default function ConsentScreen() {
                 <View style={[styles.checkbox, allAgreed && styles.checkboxOn]}>
                   {allAgreed && <Text style={styles.checkMark}>✓</Text>}
                 </View>
-                <Text style={[styles.consentText, styles.consentAll]}>전체 동의</Text>
+                <Text style={[styles.consentText, styles.consentAll]}>{t('onboardingConsent.agreeAll')}</Text>
               </TouchableOpacity>
               <View style={styles.consentDivider} />
 
@@ -172,54 +174,54 @@ export default function ConsentScreen() {
                 checked={agreeTerms}
                 onToggle={() => setAgreeTerms((v) => !v)}
                 required
-                label="이용약관 동의"
+                label={t('onboardingConsent.termsLabel')}
                 onLink={() => openLink(TERMS_URL)}
               />
               <ConsentItem
                 checked={agreePrivacy}
                 onToggle={() => setAgreePrivacy((v) => !v)}
                 required
-                label="개인정보 수집 및 이용 동의"
+                label={t('onboardingConsent.privacyLabel')}
                 onLink={() => openLink(PRIVACY_URL)}
               />
               <ConsentItem
                 checked={agreeCommunity}
                 onToggle={() => setAgreeCommunity((v) => !v)}
                 required
-                label="커뮤니티 이용약관 동의"
+                label={t('onboardingConsent.communityLabel')}
                 onLink={() => openLink(COMMUNITY_URL)}
               />
               <ConsentItem
                 checked={agreeAge}
                 onToggle={() => setAgreeAge((v) => !v)}
                 required
-                label="만 14세 이상입니다"
+                label={t('onboardingConsent.ageLabel')}
               />
               <ConsentItem
                 checked={agreeMarketing}
                 onToggle={() => setAgreeMarketing((v) => !v)}
                 required={false}
-                label="마케팅 정보 수신 동의"
+                label={t('onboardingConsent.marketingLabel')}
               />
               <ConsentItem
                 checked={agreeMarketingData}
                 onToggle={() => setAgreeMarketingData((v) => !v)}
                 required={false}
-                label="개인정보 마케팅 활용 동의"
+                label={t('onboardingConsent.marketingDataLabel')}
               />
               <ConsentItem
                 checked={agreeNightAd}
                 onToggle={() => setAgreeNightAd((v) => !v)}
                 required={false}
-                label="야간(21:00~08:00) 광고성 정보 수신 동의"
+                label={t('onboardingConsent.nightAdLabel')}
               />
               <View style={styles.consentDivider} />
               <Text style={styles.ugcNote}>
-                ⚠️ 커뮤니티(맘스톡·가족피드)는 욕설·혐오·음란·불법 등 부적절한 콘텐츠와 타인을 괴롭히는 행위에 대해 무관용 원칙을 적용합니다. 위반 시 사전 통지 없이 게시물이 삭제되고 이용이 제한될 수 있으며, 부적절한 콘텐츠 신고 및 사용자 차단 기능을 제공합니다.
+                {t('onboardingConsent.ugcNote')}
               </Text>
               <View style={styles.consentDivider} />
               <Text style={styles.dormantNote}>
-                ⓘ 1년 이상 미접속 시 사전 안내 후 계정과 사진이 자동 파기됩니다 (정보통신망법 시행령 16조). 다시 접속하면 자동 연장됩니다.
+                {t('onboardingConsent.dormantNote')}
               </Text>
             </View>
           </ScrollView>
@@ -236,7 +238,7 @@ export default function ConsentScreen() {
               activeOpacity={0.8}
             >
               <Text style={styles.buttonText}>
-                {submitting ? '저장 중...' : '동의하고 시작'}
+                {submitting ? t('onboardingConsent.saving') : t('onboardingConsent.agreeAndStart')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -255,6 +257,7 @@ function ConsentItem({
   label: string;
   onLink?: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.consentRow}>
       <TouchableOpacity onPress={onToggle} activeOpacity={0.7} style={styles.checkboxTouch}>
@@ -264,13 +267,13 @@ function ConsentItem({
       </TouchableOpacity>
       <Text style={styles.consentText}>
         <Text style={required ? styles.consentRequired : styles.consentOptional}>
-          {required ? '(필수) ' : '(선택) '}
+          {required ? t('onboardingConsent.requiredPrefix') : t('onboardingConsent.optionalPrefix')}
         </Text>
         {label}
       </Text>
       {onLink && (
         <TouchableOpacity onPress={onLink} activeOpacity={0.7} style={styles.consentLinkBtn}>
-          <Text style={styles.consentLink}>보기</Text>
+          <Text style={styles.consentLink}>{t('common.view')}</Text>
         </TouchableOpacity>
       )}
     </View>

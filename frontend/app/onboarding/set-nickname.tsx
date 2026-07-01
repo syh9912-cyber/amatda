@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import apiInstance from '../../services/api';
 
 export default function OnboardingSetNicknameScreen() {
+  const { t } = useTranslation();
   useEffect(() => {
     console.log('[OnboardingSetNickname] mounted');
     return () => console.log('[OnboardingSetNickname] unmounted');
@@ -15,14 +17,24 @@ export default function OnboardingSetNicknameScreen() {
   const userId = useAuthStore((s) => s.userId);
   const setUser = useAuthStore((s) => s.setUser);
 
+  const parentRoles: { value: string; labelKey: string }[] = [
+    { value: '엄마', labelKey: 'onboardingSetNickname.roleMom' },
+    { value: '아빠', labelKey: 'onboardingSetNickname.roleDad' },
+    { value: '할머니', labelKey: 'onboardingSetNickname.roleGrandma' },
+    { value: '할아버지', labelKey: 'onboardingSetNickname.roleGrandpa' },
+    { value: '고모/이모', labelKey: 'onboardingSetNickname.roleAunt' },
+    { value: '삼촌', labelKey: 'onboardingSetNickname.roleUncle' },
+    { value: '기타', labelKey: 'onboardingSetNickname.roleOther' },
+  ];
+
   const handleSubmit = async () => {
     const trimmed = nickname.trim();
     if (!trimmed) {
-      Alert.alert('알림', '별명을 입력해주세요');
+      Alert.alert(t('common.notice'), t('onboardingSetNickname.enterNickname'));
       return;
     }
     if (trimmed.length < 2 || trimmed.length > 10) {
-      Alert.alert('알림', '별명은 2~10자로 입력해주세요');
+      Alert.alert(t('common.notice'), t('onboardingSetNickname.nicknameLength'));
       return;
     }
 
@@ -33,7 +45,7 @@ export default function OnboardingSetNicknameScreen() {
       // 자녀 등록은 선택사항 — 홈에서 둘러보다가 등록 유도. EmptyState 가 자녀 없음 케이스 처리.
       router.replace('/(main)/home');
     } catch {
-      Alert.alert('오류', '별명 설정에 실패했습니다. 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('onboardingSetNickname.setNicknameFailed'));
     } finally {
       setLoading(false);
     }
@@ -46,12 +58,12 @@ export default function OnboardingSetNicknameScreen() {
     >
       <View style={styles.content}>
         <Image source={require('../../assets/mascot-waving.png')} style={styles.emojiImg} resizeMode="contain" />
-        <Text style={styles.title}>환영합니다!</Text>
-        <Text style={styles.subtitle}>앱에서 사용할 별명을 정해주세요</Text>
+        <Text style={styles.title}>{t('onboardingSetNickname.welcome')}</Text>
+        <Text style={styles.subtitle}>{t('onboardingSetNickname.subtitle')}</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="별명 (2~10자)"
+          placeholder={t('onboardingSetNickname.nicknamePlaceholder')}
           placeholderTextColor="#B0A090"
           value={nickname}
           onChangeText={setNickname}
@@ -59,17 +71,17 @@ export default function OnboardingSetNicknameScreen() {
           autoFocus
         />
 
-        <Text style={styles.roleLabel}>누구로 가입하시나요?</Text>
+        <Text style={styles.roleLabel}>{t('onboardingSetNickname.roleQuestion')}</Text>
         <View style={styles.roleWrap}>
-          {['엄마', '아빠', '할머니', '할아버지', '고모/이모', '삼촌', '기타'].map((role) => (
+          {parentRoles.map(({ value, labelKey }) => (
             <TouchableOpacity
-              key={role}
-              style={[styles.roleBtn, parentRole === role && styles.roleBtnActive]}
-              onPress={() => setParentRole(role)}
+              key={value}
+              style={[styles.roleBtn, parentRole === value && styles.roleBtnActive]}
+              onPress={() => setParentRole(value)}
               activeOpacity={0.8}
             >
-              <Text style={[styles.roleBtnText, parentRole === role && styles.roleBtnTextActive]}>
-                {role}
+              <Text style={[styles.roleBtnText, parentRole === value && styles.roleBtnTextActive]}>
+                {t(labelKey)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -82,7 +94,7 @@ export default function OnboardingSetNicknameScreen() {
           activeOpacity={0.8}
         >
           <Text style={styles.buttonText}>
-            {loading ? '설정 중...' : '시작하기'}
+            {loading ? t('onboardingSetNickname.settingUp') : t('onboardingSetNickname.startButton')}
           </Text>
         </TouchableOpacity>
       </View>

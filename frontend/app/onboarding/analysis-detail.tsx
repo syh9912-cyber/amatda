@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import * as Print from 'expo-print';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { buildFullReportHtml } from '../../utils/traitReportHtml';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useChildStore, AnalysisReport, ReportReasons } from '../../stores/childStore';
@@ -39,13 +41,15 @@ function stripAgePrefix(s: string): string {
 }
 
 /** dominantType → 표지/상세 공통 아키타입 라벨 (짧고 알아보기 쉬움) */
-const TYPE_ARCHETYPE: Record<string, string> = {
-  탐구형: '탐구형 활동가',
-  활동형: '활동형 도전자',
-  조화형: '안정형 협력가',
-  분석형: '지혜형 연구가',
-  감성형: '감성형 공감가',
-};
+function getTypeArchetype(t: TFunction): Record<string, string> {
+  return {
+    탐구형: t('onboardingAnalysisDetail.archetypeExplorer'),
+    활동형: t('onboardingAnalysisDetail.archetypeActive'),
+    조화형: t('onboardingAnalysisDetail.archetypeHarmony'),
+    분석형: t('onboardingAnalysisDetail.archetypeAnalytic'),
+    감성형: t('onboardingAnalysisDetail.archetypeEmotional'),
+  };
+}
 
 interface FirstTalkData {
   intro: string;
@@ -71,22 +75,25 @@ interface SectionConfig {
   type: 'text' | 'list';
 }
 
-const SECTIONS: SectionConfig[] = [
-  { icon: require('../../assets/cat-behavior.png'),    title: '성격 특성', key: 'personality', type: 'list' },
-  { icon: require('../../assets/quick-learning.png'),  title: '학습 스타일', key: 'studyStyle', type: 'text' },
-  { icon: require('../../assets/mascot-happy.png'),    title: '잘하는 분야', key: 'bestSubjects', type: 'list' },
-  { icon: require('../../assets/quick-report.png'),    title: '보완할 분야', key: 'weakAreas', type: 'list' },
-  { icon: require('../../assets/quick-baby.png'),      title: '미래 진로', key: 'futureFields', type: 'list' },
-  { icon: require('../../assets/academy-sports.png'),  title: '잘 맞는 운동', key: 'sportsMatch', type: 'list' },
-  { icon: require('../../assets/cat-social.png'),      title: '학원 스타일', key: 'academyStyle', type: 'text' },
-  { icon: require('../../assets/cat-eating.png'),      title: '좋은 음식', key: 'goodFoods', type: 'list' },
-  { icon: require('../../assets/mascot-worried.png'),  title: '피할 음식', key: 'badFoods', type: 'list' },
-  { icon: require('../../assets/academy-math.png'),    title: '교육 방향', key: 'educationDirection', type: 'text' },
-  { icon: require('../../assets/mascot-happy.png'),    title: '특출난 재능', key: 'specialTalent', type: 'text' },
-  { icon: require('../../assets/mascot-thinking.png'), title: '양육 팁', key: 'parentingTip', type: 'text' },
-];
+function getSections(t: TFunction): SectionConfig[] {
+  return [
+    { icon: require('../../assets/cat-behavior.png'),    title: t('onboardingAnalysisDetail.sectionPersonality'), key: 'personality', type: 'list' },
+    { icon: require('../../assets/quick-learning.png'),  title: t('onboardingAnalysisDetail.sectionStudyStyle'), key: 'studyStyle', type: 'text' },
+    { icon: require('../../assets/mascot-happy.png'),    title: t('onboardingAnalysisDetail.sectionBestSubjects'), key: 'bestSubjects', type: 'list' },
+    { icon: require('../../assets/quick-report.png'),    title: t('onboardingAnalysisDetail.sectionWeakAreas'), key: 'weakAreas', type: 'list' },
+    { icon: require('../../assets/quick-baby.png'),      title: t('onboardingAnalysisDetail.sectionFutureFields'), key: 'futureFields', type: 'list' },
+    { icon: require('../../assets/academy-sports.png'),  title: t('onboardingAnalysisDetail.sectionSportsMatch'), key: 'sportsMatch', type: 'list' },
+    { icon: require('../../assets/cat-social.png'),      title: t('onboardingAnalysisDetail.sectionAcademyStyle'), key: 'academyStyle', type: 'text' },
+    { icon: require('../../assets/cat-eating.png'),      title: t('onboardingAnalysisDetail.sectionGoodFoods'), key: 'goodFoods', type: 'list' },
+    { icon: require('../../assets/mascot-worried.png'),  title: t('onboardingAnalysisDetail.sectionBadFoods'), key: 'badFoods', type: 'list' },
+    { icon: require('../../assets/academy-math.png'),    title: t('onboardingAnalysisDetail.sectionEducationDirection'), key: 'educationDirection', type: 'text' },
+    { icon: require('../../assets/mascot-happy.png'),    title: t('onboardingAnalysisDetail.sectionSpecialTalent'), key: 'specialTalent', type: 'text' },
+    { icon: require('../../assets/mascot-thinking.png'), title: t('onboardingAnalysisDetail.sectionParentingTip'), key: 'parentingTip', type: 'text' },
+  ];
+}
 
 export default function AnalysisDetailScreen() {
+  const { t } = useTranslation();
   const { childId } = useLocalSearchParams<{ childId: string }>();
   const children = useChildStore((s) => s.children);
   const selectChild = useChildStore((s) => s.selectChild);
@@ -128,15 +135,15 @@ export default function AnalysisDetailScreen() {
       if (canShare) {
         await Sharing.shareAsync(uri, {
           mimeType: 'application/pdf',
-          dialogTitle: `${safeString(child.name)}의 기질 리포트`,
+          dialogTitle: t('onboardingAnalysisDetail.shareDialogTitle', { name: safeString(child.name) }),
           UTI: 'com.adobe.pdf',
         });
       } else {
-        Alert.alert('저장 완료', `리포트 PDF 가 생성됐어요.\n${uri}`);
+        Alert.alert(t('onboardingAnalysisDetail.saveCompleteTitle'), t('onboardingAnalysisDetail.savedPdfMessage', { uri }));
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : '리포트 생성에 실패했습니다';
-      Alert.alert('오류', msg);
+      const msg = e instanceof Error ? e.message : t('onboardingAnalysisDetail.reportGenerationFailed');
+      Alert.alert(t('common.error'), msg);
     } finally {
       setSharing(false);
     }
@@ -196,14 +203,14 @@ export default function AnalysisDetailScreen() {
       })
       .catch(() => {
         setFirstTalk({
-          intro: '상담이모가 준비되었어요!',
+          intro: t('onboardingAnalysisDetail.coachReadyFallback'),
           traitSummary: '',
-          suggestedQuestion: '아이에 대해 궁금한 점을 물어보세요',
+          suggestedQuestion: t('onboardingAnalysisDetail.suggestedQuestionFallback'),
           quickOptions: [],
         });
       })
       .finally(() => setFirstTalkLoading(false));
-  }, [childId, report, firstTalk, firstTalkLoading]);
+  }, [childId, report, firstTalk, firstTalkLoading, t]);
 
   const handleFirstTalkOption = (option: string) => {
     if (!childId) return;
@@ -217,9 +224,9 @@ export default function AnalysisDetailScreen() {
   if (loading) {
     return (
       <View style={styles.emptyContainer}>
-        <Stack.Screen options={{ title: '리포트 상세', headerShown: false }} />
+        <Stack.Screen options={{ title: t('onboardingAnalysisDetail.screenTitle'), headerShown: false }} />
         <ActivityIndicator size="large" color="#FF8C5A" />
-        <Text style={[styles.emptyText, { marginTop: 16 }]}>리포트를 불러오는 중...</Text>
+        <Text style={[styles.emptyText, { marginTop: 16 }]}>{t('onboardingAnalysisDetail.loadingReport')}</Text>
       </View>
     );
   }
@@ -227,13 +234,13 @@ export default function AnalysisDetailScreen() {
   if (!child || !report) {
     return (
       <View style={styles.emptyContainer}>
-        <Stack.Screen options={{ title: '리포트 상세', headerShown: false }} />
-        <Text style={styles.emptyText}>리포트를 불러올 수 없습니다</Text>
+        <Stack.Screen options={{ title: t('onboardingAnalysisDetail.screenTitle'), headerShown: false }} />
+        <Text style={styles.emptyText}>{t('onboardingAnalysisDetail.loadFailed')}</Text>
         <TouchableOpacity
           style={styles.homeBtn}
           onPress={() => router.replace('/(main)/home')}
         >
-          <Text style={styles.homeBtnText}>홈으로 이동</Text>
+          <Text style={styles.homeBtnText}>{t('onboardingAnalysisDetail.goHome')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -241,10 +248,12 @@ export default function AnalysisDetailScreen() {
 
   const dominantType = safeString(child.innateData?.dominantType ?? '');
   // 표지와 통일된 아키타입 라벨 ("탐구형 활동가" 등). 백엔드 라벨이 길면 그것도 fallback으로 사용.
+  const typeArchetype = getTypeArchetype(t);
   const headerTitle =
-    TYPE_ARCHETYPE[dominantType] ||
+    typeArchetype[dominantType] ||
     stripAgePrefix(safeString(child.innateData?.label ?? '')) ||
     dominantType;
+  const sections = getSections(t);
 
   return (
     <KeyboardAvoidingView
@@ -258,7 +267,7 @@ export default function AnalysisDetailScreen() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      <Stack.Screen options={{ title: '리포트 상세', headerShown: false }} />
+      <Stack.Screen options={{ title: t('onboardingAnalysisDetail.screenTitle'), headerShown: false }} />
 
       {/* 상단 네비 바 (뒤로 + 타이틀 + 공유) */}
       <View style={styles.topBar}>
@@ -281,7 +290,7 @@ export default function AnalysisDetailScreen() {
           {sharing ? (
             <ActivityIndicator size="small" color="#FF8C5A" />
           ) : (
-            <Text style={styles.shareTopBtn}>{'공유'}</Text>
+            <Text style={styles.shareTopBtn}>{t('onboardingAnalysisDetail.share')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -301,7 +310,7 @@ export default function AnalysisDetailScreen() {
       </View>
 
       {/* Sections */}
-      {SECTIONS.map((section) => {
+      {sections.map((section) => {
         const rawValue = report[section.key];
         if (!rawValue) return null;
 
@@ -339,7 +348,7 @@ export default function AnalysisDetailScreen() {
       {report.strengthsDetail && report.strengthsDetail.length > 0 && (
         <DetailSection
           emoji="✨"
-          title="이런 점이 뛰어나요"
+          title={t('onboardingAnalysisDetail.strengthsTitle')}
           items={report.strengthsDetail.map((d) => ({
             item: safeString(d.item),
             reason: safeString(d.reason),
@@ -351,7 +360,7 @@ export default function AnalysisDetailScreen() {
       {report.weaknessesDetail && report.weaknessesDetail.length > 0 && (
         <DetailSection
           emoji="⚠️"
-          title="이런 점은 주의하세요"
+          title={t('onboardingAnalysisDetail.weaknessesTitle')}
           items={report.weaknessesDetail.map((d) => ({
             item: safeString(d.item),
             reason: safeString(d.reason),
@@ -363,7 +372,7 @@ export default function AnalysisDetailScreen() {
       {report.doList && report.doList.length > 0 && (
         <SimpleListSection
           emoji="✅"
-          title="이렇게 해주세요"
+          title={t('onboardingAnalysisDetail.doListTitle')}
           items={safeStringArray(report.doList)}
           bulletColor="#4CAF50"
         />
@@ -372,27 +381,27 @@ export default function AnalysisDetailScreen() {
       {report.dontList && report.dontList.length > 0 && (
         <SimpleListSection
           emoji="❌"
-          title="이건 피해주세요"
+          title={t('onboardingAnalysisDetail.dontListTitle')}
           items={safeStringArray(report.dontList)}
           bulletColor="#F44336"
         />
       )}
 
       {report.dailyRoutineTip ? (
-        <TextTipSection emoji="🕐" title="하루 루틴 제안" text={safeString(report.dailyRoutineTip)} />
+        <TextTipSection emoji="🕐" title={t('onboardingAnalysisDetail.dailyRoutineTipTitle')} text={safeString(report.dailyRoutineTip)} />
       ) : null}
 
       {report.socialTip ? (
-        <TextTipSection emoji="👫" title="친구 관계 팁" text={safeString(report.socialTip)} />
+        <TextTipSection emoji="👫" title={t('onboardingAnalysisDetail.socialTipTitle')} text={safeString(report.socialTip)} />
       ) : null}
 
       {report.emotionalTip ? (
-        <TextTipSection emoji="💕" title="감정 관리 팁" text={safeString(report.emotionalTip)} />
+        <TextTipSection emoji="💕" title={t('onboardingAnalysisDetail.emotionalTipTitle')} text={safeString(report.emotionalTip)} />
       ) : null}
 
       <View style={styles.disclaimerCard}>
         <Text style={styles.disclaimerText}>
-          이 분석은 아이의 생년월일시 기질 분석과 부모님의 응답을 종합한 결과입니다
+          {t('onboardingAnalysisDetail.disclaimer')}
         </Text>
       </View>
 
@@ -400,7 +409,7 @@ export default function AnalysisDetailScreen() {
         <View style={[styles.firstTalkCard, { backgroundColor: '#F4A98C' }]}>
           <View style={styles.ftLoadingWrap}>
             <ActivityIndicator size="small" color="#FFFFFF" />
-            <Text style={styles.ftLoadingText}>상담이모가 준비 중이에요...</Text>
+            <Text style={styles.ftLoadingText}>{t('onboardingAnalysisDetail.coachPreparing')}</Text>
           </View>
         </View>
       ) : firstTalk ? (
@@ -409,7 +418,7 @@ export default function AnalysisDetailScreen() {
             <View style={styles.ftAvatar}>
               <Text style={styles.ftAvatarEmoji}>{'🤖'}</Text>
             </View>
-            <Text style={styles.ftCoachLabel}>상담이모</Text>
+            <Text style={styles.ftCoachLabel}>{t('onboardingAnalysisDetail.coachLabel')}</Text>
           </View>
           {firstTalk.intro ? <Text style={styles.ftIntro}>{firstTalk.intro}</Text> : null}
           {firstTalk.traitSummary ? (
@@ -423,7 +432,7 @@ export default function AnalysisDetailScreen() {
           <View style={styles.ftInputRow}>
             <TextInput
               style={styles.ftTextInput}
-              placeholder="고민이나 궁금한 점을 적어주세요..."
+              placeholder={t('onboardingAnalysisDetail.answerPlaceholder')}
               placeholderTextColor="rgba(255,255,255,0.5)"
               value={answer}
               onChangeText={setAnswer}
@@ -448,7 +457,7 @@ export default function AnalysisDetailScreen() {
               )}
             </TouchableOpacity>
           </View>
-          <Text style={styles.ftHint}>첫 질문에 답변하시면 맞춤 코칭이 시작됩니다</Text>
+          <Text style={styles.ftHint}>{t('onboardingAnalysisDetail.ftHint')}</Text>
         </View>
       ) : null}
 

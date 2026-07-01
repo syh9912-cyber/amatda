@@ -12,6 +12,7 @@ import {
   Image,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { childApi, uploadApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
@@ -22,6 +23,7 @@ import { PhotoPicker } from '../../components/onboarding/PhotoPicker';
 type ChildType = 'born' | 'pregnant';
 
 export default function ChildInfoScreen() {
+  const { t } = useTranslation();
   const [childType, setChildType] = useState<ChildType>('born');
   const [name, setName] = useState('');
   const [gender, setGender] = useState<'M' | 'F' | null>(null);
@@ -44,15 +46,15 @@ export default function ChildInfoScreen() {
 
   const handleSubmitBorn = async () => {
     if (!name || !gender || !birthDate || !birthTime) {
-      Alert.alert('알림', '모든 항목을 입력해주세요');
+      Alert.alert(t('common.notice'), t('onboardingChildInfo.fillAllFields'));
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) {
-      Alert.alert('알림', '생년월일을 YYYY-MM-DD 형식으로 입력해주세요');
+      Alert.alert(t('common.notice'), t('onboardingChildInfo.birthDateFormat'));
       return;
     }
     if (!/^\d{2}:\d{2}$/.test(birthTime)) {
-      Alert.alert('알림', '출생시각을 HH:MM 형식으로 입력해주세요');
+      Alert.alert(t('common.notice'), t('onboardingChildInfo.birthTimeFormat'));
       return;
     }
 
@@ -79,7 +81,7 @@ export default function ChildInfoScreen() {
         params: { childId: res.data.data.id },
       });
     } catch {
-      Alert.alert('오류', '자녀 등록에 실패했습니다');
+      Alert.alert(t('common.error'), t('onboardingChildInfo.registerChildFailed'));
     } finally {
       setLoading(false);
     }
@@ -87,11 +89,11 @@ export default function ChildInfoScreen() {
 
   const handleSubmitPregnant = async () => {
     if (!name || !dueDate) {
-      Alert.alert('알림', '태명과 출산예정일을 입력해주세요');
+      Alert.alert(t('common.notice'), t('onboardingChildInfo.fillNameAndDueDate'));
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
-      Alert.alert('알림', '출산예정일을 YYYY-MM-DD 형식으로 입력해주세요');
+      Alert.alert(t('common.notice'), t('onboardingChildInfo.dueDateFormat'));
       return;
     }
 
@@ -119,7 +121,7 @@ export default function ChildInfoScreen() {
       // 임산부는 기질분석 없이 바로 홈으로. 알림 priming 은 (main)/_layout 게이트가 처리.
       router.replace('/(main)/home');
     } catch {
-      Alert.alert('오류', '임신 등록에 실패했습니다');
+      Alert.alert(t('common.error'), t('onboardingChildInfo.registerPregnancyFailed'));
     } finally {
       setLoading(false);
     }
@@ -143,11 +145,11 @@ export default function ChildInfoScreen() {
             // 좌상단 뒤로 버튼 + 엣지 스와이프 + 안전영역(노치) 처리를 일괄 확보.
             // 헤더 배경/색을 앱 톤(크림)에 맞춰 이질감 제거.
             headerShown: true,
-            title: childType === 'pregnant' ? '임신 등록' : '자녀 정보 입력',
+            title: childType === 'pregnant' ? t('onboardingChildInfo.titlePregnant') : t('onboardingChildInfo.titleBorn'),
             headerStyle: { backgroundColor: COLORS.background },
             headerShadowVisible: false,
             headerTintColor: COLORS.text,
-            headerBackTitle: '뒤로',
+            headerBackTitle: t('onboardingChildInfo.headerBack'),
             // 이 화면은 onboarding 스택의 첫 화면이라 네이티브 자동 뒤로버튼이 안 뜸 →
             // headerLeft 로 명시적 뒤로 버튼 강제(router.back 은 루트 history 로 복귀: 홈 등).
             headerLeft: () => (
@@ -155,30 +157,30 @@ export default function ChildInfoScreen() {
                 onPress={() => router.back()}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 accessibilityRole="button"
-                accessibilityLabel="뒤로"
+                accessibilityLabel={t('onboardingChildInfo.headerBack')}
               >
-                <Text style={{ color: COLORS.text, fontSize: 17, fontWeight: '600' }}>{'‹ 뒤로'}</Text>
+                <Text style={{ color: COLORS.text, fontSize: 17, fontWeight: '600' }}>{`‹ ${t('onboardingChildInfo.headerBack')}`}</Text>
               </TouchableOpacity>
             ),
           }}
         />
 
         {/* ── 임신 중 / 태어남 선택 ── */}
-        <Text style={styles.heading}>어떤 상황인가요?</Text>
+        <Text style={styles.heading}>{t('onboardingChildInfo.whatSituation')}</Text>
         <View style={styles.typeRow}>
           <TouchableOpacity
             style={[styles.typeBtn, childType === 'pregnant' && styles.typeBtnActive]}
             onPress={() => setChildType('pregnant')}
           >
             <Image source={require('../../assets/preg-test.png')} style={styles.typeIcon} resizeMode="contain" />
-            <Text style={[styles.typeText, childType === 'pregnant' && styles.typeTextActive]}>임신 중</Text>
+            <Text style={[styles.typeText, childType === 'pregnant' && styles.typeTextActive]}>{t('onboardingChildInfo.typePregnant')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.typeBtn, childType === 'born' && styles.typeBtnActive]}
             onPress={() => setChildType('born')}
           >
             <Image source={require('../../assets/quick-baby.png')} style={styles.typeIcon} resizeMode="contain" />
-            <Text style={[styles.typeText, childType === 'born' && styles.typeTextActive]}>태어난 아이</Text>
+            <Text style={[styles.typeText, childType === 'born' && styles.typeTextActive]}>{t('onboardingChildInfo.typeBorn')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -186,23 +188,23 @@ export default function ChildInfoScreen() {
         {childType === 'pregnant' && (
           <>
             <PhotoPicker photoUri={photoUri} onChangePhoto={setPhotoUri} />
-            <Text style={styles.subHeading}>배 속 아기 정보</Text>
-            <Text style={styles.desc}>태명을 지어주고, 출산예정일을 알려주세요</Text>
+            <Text style={styles.subHeading}>{t('onboardingChildInfo.pregnantInfoHeading')}</Text>
+            <Text style={styles.desc}>{t('onboardingChildInfo.pregnantInfoDesc')}</Text>
 
             <View style={styles.form}>
-              <Text style={styles.label}>태명</Text>
+              <Text style={styles.label}>{t('onboardingChildInfo.taemyeongLabel')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="예: 콩순이, 복덩이"
+                placeholder={t('onboardingChildInfo.taemyeongPlaceholder')}
                 placeholderTextColor={COLORS.textLight}
                 value={name}
                 onChangeText={setName}
               />
 
-              <Text style={styles.label}>출산예정일</Text>
-              <BirthDatePicker birthDate={dueDate} onChangeBirthDate={setDueDate} allowFuture placeholder="출산예정일을 선택해주세요" />
+              <Text style={styles.label}>{t('onboardingChildInfo.dueDateLabel')}</Text>
+              <BirthDatePicker birthDate={dueDate} onChangeBirthDate={setDueDate} allowFuture placeholder={t('onboardingChildInfo.dueDatePlaceholder')} />
 
-              <Text style={styles.label}>성별 (모르면 건너뛰기)</Text>
+              <Text style={styles.label}>{t('onboardingChildInfo.genderSkippableLabel')}</Text>
               <View style={styles.genderRow}>
                 {(['F', 'M'] as const).map((g) => (
                   <TouchableOpacity
@@ -211,46 +213,46 @@ export default function ChildInfoScreen() {
                     onPress={() => setGender(gender === g ? null : g)}
                   >
                     <Text style={[styles.genderText, gender === g && styles.genderTextActive]}>
-                      {g === 'F' ? '여아' : '남아'}
+                      {g === 'F' ? t('onboardingChildInfo.genderGirl') : t('onboardingChildInfo.genderBoy')}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <Text style={styles.label}>임신 특이사항 - 선택</Text>
+              <Text style={styles.label}>{t('onboardingChildInfo.pregnancyNotesLabel')}</Text>
               <TextInput
                 style={[styles.input, { minHeight: 60 }]}
-                placeholder="예: 쌍둥이, 고위험 임신 등"
+                placeholder={t('onboardingChildInfo.pregnancyNotesPlaceholder')}
                 placeholderTextColor={COLORS.textLight}
                 value={pregnancyNotes}
                 onChangeText={setPregnancyNotes}
                 multiline
               />
 
-              <Text style={[styles.subHeading, { marginTop: SPACING.lg }]}>산모 건강 정보</Text>
-              <Text style={styles.desc}>임당관리 등 맞춤 건강 관리를 위해 입력해주세요</Text>
+              <Text style={[styles.subHeading, { marginTop: SPACING.lg }]}>{t('onboardingChildInfo.momHealthHeading')}</Text>
+              <Text style={styles.desc}>{t('onboardingChildInfo.momHealthDesc')}</Text>
 
-              <Text style={styles.label}>산모 키 (cm) - 선택</Text>
+              <Text style={styles.label}>{t('onboardingChildInfo.momHeightLabel')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="예: 163"
+                placeholder={t('onboardingChildInfo.momHeightPlaceholder')}
                 placeholderTextColor={COLORS.textLight}
                 value={momHeight}
                 onChangeText={setMomHeight}
                 keyboardType="decimal-pad"
               />
 
-              <Text style={styles.label}>산모 몸무게 (kg) - 선택</Text>
+              <Text style={styles.label}>{t('onboardingChildInfo.momWeightLabel')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="예: 58.5"
+                placeholder={t('onboardingChildInfo.momWeightPlaceholder')}
                 placeholderTextColor={COLORS.textLight}
                 value={momWeight}
                 onChangeText={setMomWeight}
                 keyboardType="decimal-pad"
               />
 
-              <Text style={styles.label}>산모 혈액형 - 선택</Text>
+              <Text style={styles.label}>{t('onboardingChildInfo.momBloodTypeLabel')}</Text>
               <View style={styles.genderRow}>
                 {['A', 'B', 'O', 'AB'].map((bt) => (
                   <TouchableOpacity
@@ -258,15 +260,15 @@ export default function ChildInfoScreen() {
                     style={[styles.genderBtn, momBloodType === bt && styles.genderActive]}
                     onPress={() => setMomBloodType(momBloodType === bt ? '' : bt)}
                   >
-                    <Text style={[styles.genderText, momBloodType === bt && styles.genderTextActive]}>{bt}형</Text>
+                    <Text style={[styles.genderText, momBloodType === bt && styles.genderTextActive]}>{t('onboardingChildInfo.bloodTypeSuffix', { type: bt })}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <Text style={styles.label}>산모 특이사항 - 선택</Text>
+              <Text style={styles.label}>{t('onboardingChildInfo.momSpecialNotesLabel')}</Text>
               <TextInput
                 style={[styles.input, { minHeight: 60 }]}
-                placeholder="예: 알레르기, 복용 중인 약, 기저질환 등"
+                placeholder={t('onboardingChildInfo.momSpecialNotesPlaceholder')}
                 placeholderTextColor={COLORS.textLight}
                 value={momSpecialNotes}
                 onChangeText={setMomSpecialNotes}
@@ -279,7 +281,7 @@ export default function ChildInfoScreen() {
                 disabled={loading}
               >
                 <Text style={styles.buttonText}>
-                  {loading ? '등록 중...' : '임신 등록하기'}
+                  {loading ? t('onboardingChildInfo.registeringPregnancy') : t('onboardingChildInfo.registerPregnancyButton')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -290,20 +292,20 @@ export default function ChildInfoScreen() {
         {childType === 'born' && (
           <>
             <PhotoPicker photoUri={photoUri} onChangePhoto={setPhotoUri} />
-            <Text style={styles.subHeading}>아이의 정보를 알려주세요</Text>
-            <Text style={styles.desc}>생년월일시를 기반으로 고유한 기질을 분석합니다</Text>
+            <Text style={styles.subHeading}>{t('onboardingChildInfo.bornInfoHeading')}</Text>
+            <Text style={styles.desc}>{t('onboardingChildInfo.bornInfoDesc')}</Text>
 
             <View style={styles.form}>
-              <Text style={styles.label}>이름</Text>
+              <Text style={styles.label}>{t('onboardingChildInfo.nameLabel')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="아이 이름"
+                placeholder={t('onboardingChildInfo.namePlaceholder')}
                 placeholderTextColor={COLORS.textLight}
                 value={name}
                 onChangeText={setName}
               />
 
-              <Text style={styles.label}>성별</Text>
+              <Text style={styles.label}>{t('onboardingChildInfo.genderLabel')}</Text>
               <View style={styles.genderRow}>
                 {(['F', 'M'] as const).map((g) => (
                   <TouchableOpacity
@@ -312,39 +314,39 @@ export default function ChildInfoScreen() {
                     onPress={() => setGender(g)}
                   >
                     <Text style={[styles.genderText, gender === g && styles.genderTextActive]}>
-                      {g === 'F' ? '여아' : '남아'}
+                      {g === 'F' ? t('onboardingChildInfo.genderGirl') : t('onboardingChildInfo.genderBoy')}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <Text style={styles.label}>생년월일</Text>
+              <Text style={styles.label}>{t('onboardingChildInfo.birthDateLabel')}</Text>
               <BirthDatePicker birthDate={birthDate} onChangeBirthDate={setBirthDate} />
 
-              <Text style={styles.label}>출생 시각</Text>
+              <Text style={styles.label}>{t('onboardingChildInfo.birthTimeLabel')}</Text>
               <BirthTimePicker birthTime={birthTime} onChangeBirthTime={setBirthTime} />
 
-              <Text style={styles.label}>키 (cm) - 선택</Text>
+              <Text style={styles.label}>{t('onboardingChildInfo.heightLabel')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="예: 85"
+                placeholder={t('onboardingChildInfo.heightPlaceholder')}
                 placeholderTextColor={COLORS.textLight}
                 value={height}
                 onChangeText={setHeight}
                 keyboardType="decimal-pad"
               />
 
-              <Text style={styles.label}>몸무게 (kg) - 선택</Text>
+              <Text style={styles.label}>{t('onboardingChildInfo.weightLabel')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="예: 11.5"
+                placeholder={t('onboardingChildInfo.weightPlaceholder')}
                 placeholderTextColor={COLORS.textLight}
                 value={weight}
                 onChangeText={setWeight}
                 keyboardType="decimal-pad"
               />
 
-              <Text style={styles.label}>혈액형 - 선택</Text>
+              <Text style={styles.label}>{t('onboardingChildInfo.bloodTypeLabel')}</Text>
               <View style={styles.genderRow}>
                 {['A', 'B', 'O', 'AB'].map((bt) => (
                   <TouchableOpacity
@@ -352,15 +354,15 @@ export default function ChildInfoScreen() {
                     style={[styles.genderBtn, bloodType === bt && styles.genderActive]}
                     onPress={() => setBloodType(bloodType === bt ? '' : bt)}
                   >
-                    <Text style={[styles.genderText, bloodType === bt && styles.genderTextActive]}>{bt}형</Text>
+                    <Text style={[styles.genderText, bloodType === bt && styles.genderTextActive]}>{t('onboardingChildInfo.bloodTypeSuffix', { type: bt })}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <Text style={styles.label}>특이사항 - 선택</Text>
+              <Text style={styles.label}>{t('onboardingChildInfo.specialNotesLabel')}</Text>
               <TextInput
                 style={[styles.input, { minHeight: 60 }]}
-                placeholder="예: 알레르기, 조심해야 하는 약 등"
+                placeholder={t('onboardingChildInfo.specialNotesPlaceholder')}
                 placeholderTextColor={COLORS.textLight}
                 value={specialNotes}
                 onChangeText={setSpecialNotes}
@@ -373,7 +375,7 @@ export default function ChildInfoScreen() {
                 disabled={loading}
               >
                 <Text style={styles.buttonText}>
-                  {loading ? '분석 중...' : '기질 분석하기'}
+                  {loading ? t('onboardingChildInfo.analyzing') : t('onboardingChildInfo.analyzeTemperamentButton')}
                 </Text>
               </TouchableOpacity>
             </View>
