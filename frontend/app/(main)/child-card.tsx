@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { Stack, router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useChildStore } from '../../stores/childStore';
 import { memoriesApi } from '../../services/api';
 import { captureRef } from 'react-native-view-shot';
@@ -35,6 +36,7 @@ interface ChildCardData {
 /* ── Screen ── */
 
 export default function ChildCardScreen() {
+  const { t } = useTranslation();
   const child = useChildStore((s) => s.selectedChild);
   const [loading, setLoading] = useState(true);
   const [card, setCard] = useState<ChildCardData | null>(null);
@@ -59,7 +61,7 @@ export default function ChildCardScreen() {
         const r = res.data?.data as Record<string, unknown> | undefined;
         if (!r) return;
         const g = r.growth as Record<string, unknown> | undefined;
-        const t = r.temperamentDetail as Record<string, unknown> | undefined;
+        const td = r.temperamentDetail as Record<string, unknown> | undefined;
         setCard({
           name: String(r.childName ?? r.name ?? ''),
           ageLabel: String(r.ageInfo ?? r.ageLabel ?? ''),
@@ -70,7 +72,7 @@ export default function ChildCardScreen() {
           favoriteActivities: Array.isArray(r.favorites) ? r.favorites as string[] : Array.isArray(r.favoriteActivities) ? r.favoriteActivities as string[] : [],
           shareCode: String(r.shareCode ?? ''),
           growth: g ? { height: (g.height as number | null) ?? null, weight: (g.weight as number | null) ?? null, birthDate: String(g.birthDate ?? ''), months: (g.months as number) ?? 0 } : null,
-          temperamentDetail: t ? { dominantType: String(t.dominantType ?? ''), dominantLabel: (t.dominantLabel as string | null) ?? null, subType: (t.subType as string | null) ?? null, energyRatios: (t.energyRatios as Record<string, number> | null) ?? null } : null,
+          temperamentDetail: td ? { dominantType: String(td.dominantType ?? ''), dominantLabel: (td.dominantLabel as string | null) ?? null, subType: (td.subType as string | null) ?? null, energyRatios: (td.energyRatios as Record<string, number> | null) ?? null } : null,
         });
       })
       .catch(() => setError(true))
@@ -86,8 +88,8 @@ export default function ChildCardScreen() {
       const uri = await captureRef(passportRef, { format: 'png', quality: 1 });
       const S = require('expo-sharing') as { isAvailableAsync: () => Promise<boolean>; shareAsync: (u: string, o?: Record<string, unknown>) => Promise<void> };
       if (!(await S.isAvailableAsync())) throw new Error('no');
-      await S.shareAsync(uri, { mimeType: 'image/png', dialogTitle: '여권 공유' });
-    } catch { Alert.alert('공유 불가', '공유 기능을 사용할 수 없어요. 잠시 후 다시 시도해주세요.'); }
+      await S.shareAsync(uri, { mimeType: 'image/png', dialogTitle: t('childCard.shareDialogTitle') });
+    } catch { Alert.alert(t('childCard.shareUnavailableTitle'), t('childCard.shareUnavailableMessage')); }
     finally { setSharing(false); }
   };
 
@@ -120,17 +122,17 @@ export default function ChildCardScreen() {
         </View>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
           <Text style={{ fontSize: 18, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 }}>
-            등록된 아이가 없어요
+            {t('childCard.noChildRegisteredTitle')}
           </Text>
           <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginBottom: 24, lineHeight: 21 }}>
-            아이를 먼저 등록하면{'\n'}디지털 카드를 만들 수 있어요
+            {t('childCard.noChildRegisteredMessage')}
           </Text>
           <TouchableOpacity
             onPress={() => router.replace('/(main)/home')}
             style={{ backgroundColor: SKIN_ACCENT, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 24 }}
             activeOpacity={0.85}
           >
-            <Text style={{ color: SKIN_PRIMARY, fontSize: 15, fontWeight: '700' }}>홈으로 가기</Text>
+            <Text style={{ color: SKIN_PRIMARY, fontSize: 15, fontWeight: '700' }}>{t('childCard.goHome')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -157,14 +159,14 @@ export default function ChildCardScreen() {
       {loading ? (
         <View style={s.center}>
           <ActivityIndicator size="large" color="#D4AF37" />
-          <Text style={s.loadTxt}>{'여권을 발급하고 있어요...'}</Text>
+          <Text style={s.loadTxt}>{t('childCard.issuingPassport')}</Text>
         </View>
       ) : error || !card ? (
         <View style={s.center}>
           <Image source={child.gender === 'F' ? IC_GIRL : IC_BOY} style={{ width: 56, height: 56, borderRadius: 28 }} />
-          <Text style={s.loadTxt}>{'여권을 발급할 수 없습니다'}</Text>
+          <Text style={s.loadTxt}>{t('childCard.issueFailed')}</Text>
           <TouchableOpacity style={s.retryBtn} onPress={fetchCard}>
-            <Text style={s.retryTxt}>{'다시 시도'}</Text>
+            <Text style={s.retryTxt}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -177,7 +179,7 @@ export default function ChildCardScreen() {
               <View style={s.page}>
                 {/* Dark header — skin-colored */}
                 <View style={[s.header, { backgroundColor: SKIN_PRIMARY }]}>
-                  <Text style={[s.headerKr, { color: SKIN_ACCENT }]}>{'어 린 이  공 화 국'}</Text>
+                  <Text style={[s.headerKr, { color: SKIN_ACCENT }]}>{t('childCard.headerCountryName')}</Text>
                   <Text style={[s.headerSub, { color: SKIN_ACCENT }]}>REPUBLIC OF CHILDHOOD</Text>
                   <Text style={[s.headerTitle, { color: SKIN_ACCENT }]}>PASSPORT</Text>
                 </View>
@@ -186,16 +188,16 @@ export default function ChildCardScreen() {
                   {/* Type / Country / No. */}
                   <View style={s.compactRow}>
                     <View style={s.compactField}>
-                      <Text style={s.fl}>{'종류/Type'}</Text>
+                      <Text style={s.fl}>{t('childCard.fieldType')}</Text>
                       <Text style={s.fvBold}>P</Text>
                     </View>
                     <View style={s.compactField}>
-                      <Text style={s.fl}>{'발행국/Country'}</Text>
+                      <Text style={s.fl}>{t('childCard.fieldCountry')}</Text>
                       <Text style={s.fvBold}>CHD</Text>
                     </View>
                   </View>
                   <View style={{ marginBottom: 6 }}>
-                    <Text style={s.fl}>{'여권번호/Passport No.'}</Text>
+                    <Text style={s.fl}>{t('childCard.fieldPassportNo')}</Text>
                     <Text style={s.fvBold}>{card.shareCode?.toUpperCase() || 'AMATDA001'}</Text>
                   </View>
 
@@ -222,11 +224,11 @@ export default function ChildCardScreen() {
                     </View>
 
                     <View style={s.nameFieldsS}>
-                      <Text style={s.fl}>{'성/Surname'}</Text>
+                      <Text style={s.fl}>{t('childCard.fieldSurname')}</Text>
                       <Text style={s.fvName}>{card.name.charAt(0)}</Text>
-                      <Text style={s.fl}>{'이름/Given names'}</Text>
+                      <Text style={s.fl}>{t('childCard.fieldGivenNames')}</Text>
                       <Text style={s.fvName}>{card.name.slice(1)}</Text>
-                      <Text style={s.fl}>{'국적/Nationality'}</Text>
+                      <Text style={s.fl}>{t('childCard.fieldNationality')}</Text>
                       <Text style={[s.fvBold, { fontSize: 8 }]}>REPUBLIC OF CHILDHOOD</Text>
                     </View>
                   </View>
@@ -236,24 +238,24 @@ export default function ChildCardScreen() {
                   {/* DOB / Age */}
                   <View style={s.compactRow}>
                     <View style={s.compactField}>
-                      <Text style={s.fl}>{'생년월일/DOB'}</Text>
+                      <Text style={s.fl}>{t('childCard.fieldDob')}</Text>
                       <Text style={s.fvBold}>{birthFmt}</Text>
                     </View>
                     <View style={s.compactField}>
-                      <Text style={s.fl}>{'나이/Age'}</Text>
-                      <Text style={s.fvBold}>{`${card.growth?.months ?? ''}개월`}</Text>
+                      <Text style={s.fl}>{t('childCard.fieldAge')}</Text>
+                      <Text style={s.fvBold}>{t('childCard.monthsOldValue', { count: card.growth?.months ?? 0 })}</Text>
                     </View>
                   </View>
 
                   {/* Sex / D+day */}
                   <View style={s.compactRow}>
                     <View style={s.compactField}>
-                      <Text style={s.fl}>{'성별/Sex'}</Text>
+                      <Text style={s.fl}>{t('childCard.fieldSex')}</Text>
                       <Text style={s.fvBold}>{child.gender === 'F' ? 'F' : 'M'}</Text>
                     </View>
                     <View style={s.compactField}>
                       <Text style={s.fl}>{`D+${dDays}`}</Text>
-                      <Text style={[s.fvBold, { color: GOLD }]}>{'이 세상에 온 날'}</Text>
+                      <Text style={[s.fvBold, { color: GOLD }]}>{t('childCard.dayCameToWorld')}</Text>
                     </View>
                   </View>
 
@@ -262,16 +264,16 @@ export default function ChildCardScreen() {
                   {/* Issue / Expiry / Authority — stacked */}
                   <View style={s.compactRow}>
                     <View style={s.compactField}>
-                      <Text style={s.fl}>{'발급일/Issue'}</Text>
+                      <Text style={s.fl}>{t('childCard.fieldIssue')}</Text>
                       <Text style={s.fvBold}>{issueFmt}</Text>
                     </View>
                     <View style={s.compactField}>
-                      <Text style={s.fl}>{'만료일/Expiry'}</Text>
+                      <Text style={s.fl}>{t('childCard.fieldExpiry')}</Text>
                       <Text style={[s.fvBold, { color: GOLD }]}>FOREVER</Text>
                     </View>
                   </View>
                   <View style={{ marginTop: 2 }}>
-                    <Text style={s.fl}>{'발행관청/Authority'}</Text>
+                    <Text style={s.fl}>{t('childCard.fieldAuthority')}</Text>
                     <Text style={s.fvBold}>A-MATDA</Text>
                   </View>
                 </View>
@@ -288,20 +290,20 @@ export default function ChildCardScreen() {
               <View style={s.page}>
                 {/* Same header as page 1 — skin-colored */}
                 <View style={[s.header, { backgroundColor: SKIN_PRIMARY }]}>
-                  <Text style={[s.headerKr, { color: SKIN_ACCENT }]}>{'어 린 이  공 화 국'}</Text>
+                  <Text style={[s.headerKr, { color: SKIN_ACCENT }]}>{t('childCard.headerCountryName')}</Text>
                   <Text style={[s.headerSub, { color: SKIN_ACCENT }]}>REPUBLIC OF CHILDHOOD</Text>
                   <Text style={[s.headerTitle, { color: SKIN_ACCENT }]}>PASSPORT</Text>
                 </View>
 
                 <View style={s.pageBody}>
                   {/* 한글성명 */}
-                  <Text style={s.fl}>{'한글성명'}</Text>
+                  <Text style={s.fl}>{t('childCard.fieldNativeName')}</Text>
                   <Text style={s.fvName}>{card.name}</Text>
 
                   <View style={s.thinDivider} />
 
                   {/* 기질유형 */}
-                  <Text style={s.fl}>{'기질유형/Temperament'}</Text>
+                  <Text style={s.fl}>{t('childCard.fieldTemperament')}</Text>
                   <Text style={s.temperamentS}>{temperamentDesc}</Text>
 
                   <View style={s.thinDivider} />
@@ -309,11 +311,11 @@ export default function ChildCardScreen() {
                   {/* Personality chips */}
                   {card.traits.length > 0 && (
                     <>
-                      <Text style={s.fl}>{'성격/Personality'}</Text>
+                      <Text style={s.fl}>{t('childCard.fieldPersonality')}</Text>
                       <View style={s.chipRowS}>
-                        {card.traits.slice(0, 4).map((t) => (
-                          <View key={t} style={s.chipS}>
-                            <Text style={s.chipTextS}>{t}</Text>
+                        {card.traits.slice(0, 4).map((trait) => (
+                          <View key={trait} style={s.chipS}>
+                            <Text style={s.chipTextS}>{trait}</Text>
                           </View>
                         ))}
                       </View>
@@ -326,15 +328,15 @@ export default function ChildCardScreen() {
                   {card.growth && (
                     <View style={s.growthTableS}>
                       <View style={s.growthCellS}>
-                        <Text style={s.growthLabelS}>{'키/Height'}</Text>
+                        <Text style={s.growthLabelS}>{t('childCard.fieldHeight')}</Text>
                         <Text style={s.growthValueS}>{card.growth.height ? `${card.growth.height}cm` : '-'}</Text>
                       </View>
                       <View style={[s.growthCellS, s.growthCellBorderS]}>
-                        <Text style={s.growthLabelS}>{'몸무게/Weight'}</Text>
+                        <Text style={s.growthLabelS}>{t('childCard.fieldWeight')}</Text>
                         <Text style={s.growthValueS}>{card.growth.weight ? `${card.growth.weight}kg` : '-'}</Text>
                       </View>
                       <View style={s.growthCellS}>
-                        <Text style={s.growthLabelS}>{'개월/Months'}</Text>
+                        <Text style={s.growthLabelS}>{t('childCard.fieldMonths')}</Text>
                         <Text style={s.growthValueS}>{String(card.growth.months)}</Text>
                       </View>
                     </View>
@@ -353,7 +355,7 @@ export default function ChildCardScreen() {
                     </View>
                     <View>
                       <Text style={s.footerBrandS}>A-matda</Text>
-                      <Text style={s.footerDescS}>{'상담이모'}</Text>
+                      <Text style={s.footerDescS}>{t('childCard.footerTagline')}</Text>
                     </View>
                   </View>
                 </View>
@@ -372,11 +374,11 @@ export default function ChildCardScreen() {
               {sharing ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
-                <Text style={s.shareBtnText}>SNS에 여권 공유하기</Text>
+                <Text style={s.shareBtnText}>{t('childCard.sharePassportButton')}</Text>
               )}
             </View>
           </TouchableOpacity>
-          <Text style={s.hintText}>{'카카오톡, 인스타그램 등에 바로 공유할 수 있어요'}</Text>
+          <Text style={s.hintText}>{t('childCard.shareHint')}</Text>
         </>
       )}
     </ScrollView>

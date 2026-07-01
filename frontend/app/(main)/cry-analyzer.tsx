@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useChildStore } from '../../stores/childStore';
 import { canDo } from '../../features/coparenting/permissions';
@@ -78,23 +79,24 @@ function resolveLikelihoodConfig(likelihood: string): { color: string; bg: strin
 export default function CryAnalyzerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
 
   // 연령 제한: 영아(0-24개월)만 접근 가능 (임신부 모드는 조용히 뒤로)
   useEffect(() => {
     if (selectedChild?.isPregnant) {
-      Alert.alert('안내', '출산 후 이용 가능합니다.', [
-        { text: '확인', onPress: () => router.back() },
+      Alert.alert(t('common.notice'), t('cryAnalyzer.alert.postpartumOnly'), [
+        { text: t('common.confirm'), onPress: () => router.back() },
       ]);
       return;
     }
     const ageGroup = selectedChild?.ageInfo?.group ?? 'infant';
     if (!isScreenAvailable('cry-analyzer', ageGroup)) {
-      Alert.alert('안내', '울음 분석은 영아(0~24개월) 전용 기능이에요.', [
-        { text: '확인', onPress: () => router.back() },
+      Alert.alert(t('common.notice'), t('cryAnalyzer.alert.infantOnly'), [
+        { text: t('common.confirm'), onPress: () => router.back() },
       ]);
     }
-  }, [selectedChild, router]);
+  }, [selectedChild, router, t]);
 
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileUri, setFileUri] = useState<string | null>(null);
@@ -109,7 +111,7 @@ export default function CryAnalyzerScreen() {
       const DocumentPicker = await import('expo-document-picker');
       // 네이티브 모듈 존재 확인 (Expo Go에서는 없음)
       if (!DocumentPicker.getDocumentAsync) {
-        Alert.alert('알림', '파일 선택 기능은 빌드된 앱에서만 사용 가능합니다.');
+        Alert.alert(t('common.notice'), t('cryAnalyzer.alert.filePickerUnavailable'));
         return;
       }
       const pickerResult = await DocumentPicker.getDocumentAsync({
@@ -128,30 +130,30 @@ export default function CryAnalyzerScreen() {
       const msg = e instanceof Error ? e.message : '';
       if (msg.includes('native module')) {
         Alert.alert(
-          '사용할 수 없어요',
-          '녹음 파일 선택 기능을 현재 사용할 수 없어요. 잠시 후 다시 시도해주세요.',
+          t('cryAnalyzer.alert.featureUnavailableTitle'),
+          t('cryAnalyzer.alert.featureUnavailableMessage'),
         );
       } else {
-        Alert.alert('파일 선택 오류', `파일을 열 수 없습니다.\n${msg}`);
+        Alert.alert(t('cryAnalyzer.alert.filePickErrorTitle'), t('cryAnalyzer.alert.filePickErrorMessage', { message: msg }));
       }
     }
-  }, []);
+  }, [t]);
 
   /* ── 분석 ── */
   const handleAnalyze = useCallback(async () => {
     if (!fileUri) {
-      Alert.alert('안내', '먼저 울음 소리를 녹음하거나 파일을 선택해주세요.');
+      Alert.alert(t('common.notice'), t('cryAnalyzer.alert.selectFileFirst'));
       return;
     }
     if (!selectedChild) {
-      Alert.alert('안내', '먼저 아이를 등록하거나 선택해주세요.');
+      Alert.alert(t('common.notice'), t('cryAnalyzer.alert.selectChildFirst'));
       return;
     }
     setAnalyzing(true);
     try {
       // 공동육아: AI 분석은 useCoaching 권한 필요 (열람 전용 멤버 차단)
       if (!(await canDo(selectedChild.id, 'useCoaching'))) {
-        Alert.alert('열람 전용', '분석 기능 사용 권한이 없어요.\n보호자에게 "상담이모 사용" 권한을 요청해주세요.');
+        Alert.alert(t('cryAnalyzer.alert.viewOnlyTitle'), t('cryAnalyzer.alert.viewOnlyMessage'));
         return;
       }
       const base64 = await FileSystem.readAsStringAsync(fileUri, {
@@ -169,7 +171,7 @@ export default function CryAnalyzerScreen() {
         setResult(data);
         void saveAnalysisHistory({
           type: 'cry',
-          summary: data.analysis?.slice(0, 80) ?? '울음 분석 완료',
+          summary: data.analysis?.slice(0, 80) ?? t('cryAnalyzer.historyDefaultSummary'),
           details: data.recommendations?.join(' · '),
           childId: selectedChild.id,
           childName: selectedChild.name,
@@ -189,7 +191,7 @@ export default function CryAnalyzerScreen() {
         } else {
           const usage = axiosErr.response.data?.usage;
           setResult({
-            analysis: axiosErr.response.data?.error ?? '이번 달 분석 횟수를 모두 사용했습니다.',
+            analysis: axiosErr.response.data?.error ?? t('cryAnalyzer.alert.monthlyLimitReached'),
             possibilities: [],
             recommendations: [],
             needsDoctor: false,
@@ -198,7 +200,7 @@ export default function CryAnalyzerScreen() {
         }
       } else {
         setResult({
-          analysis: '분석에 실패했습니다. 다시 시도해주세요.',
+          analysis: t('cryAnalyzer.alert.analysisFailed'),
           possibilities: [],
           recommendations: [],
           needsDoctor: false,
@@ -207,7 +209,7 @@ export default function CryAnalyzerScreen() {
     } finally {
       setAnalyzing(false);
     }
-  }, [fileUri, fileMime, selectedChild]);
+  }, [fileUri, fileMime, selectedChild, t]);
 
   const handleReset = useCallback(() => {
     setResult(null);
@@ -218,7 +220,7 @@ export default function CryAnalyzerScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScreenHeader title="울음소리 분석기" />
+      <ScreenHeader title={t('cryAnalyzer.screenTitle')} />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {result ? (
@@ -228,9 +230,9 @@ export default function CryAnalyzerScreen() {
             {/* 안내 카드 */}
             <View style={styles.guideCard}>
               <Image source={require('../../assets/mascot-worried.png')} style={styles.guideImage} resizeMode="contain" />
-              <Text style={styles.guideTitle}>{'울음소리를 분석해요'}</Text>
+              <Text style={styles.guideTitle}>{t('cryAnalyzer.guideTitle')}</Text>
               <Text style={styles.guideDesc}>
-                {'아이의 울음소리 녹음 파일을 선택하면\nAI가 울음의 원인을 분석해 드려요.'}
+                {t('cryAnalyzer.guideDesc')}
               </Text>
             </View>
 
@@ -239,14 +241,14 @@ export default function CryAnalyzerScreen() {
               {fileUri ? (
                 <>
                   <Image source={IC_LULLABY} style={styles.fileDoneIconImg} resizeMode="contain" />
-                  <Text style={styles.fileDoneText}>{fileName ?? '녹음 파일 선택됨'}</Text>
+                  <Text style={styles.fileDoneText}>{fileName ?? t('cryAnalyzer.fileSelectedDefault')}</Text>
                   <View style={styles.fileBtnRow}>
                     <TouchableOpacity
                       style={styles.reSelectBtn}
                       onPress={() => { setFileUri(null); setFileName(null); }}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.reSelectBtnText}>{'다른 파일 선택'}</Text>
+                      <Text style={styles.reSelectBtnText}>{t('cryAnalyzer.reselectFile')}</Text>
                     </TouchableOpacity>
                   </View>
                 </>
@@ -258,9 +260,9 @@ export default function CryAnalyzerScreen() {
                     activeOpacity={0.7}
                   >
                     <Image source={IC_DIARY} style={styles.selectBtnIconImg} resizeMode="contain" />
-                    <Text style={styles.selectBtnText}>{'녹음 파일 선택하기'}</Text>
+                    <Text style={styles.selectBtnText}>{t('cryAnalyzer.selectFile')}</Text>
                   </TouchableOpacity>
-                  <Text style={styles.selectHint}>{'mp3, m4a, wav 등 오디오 파일'}</Text>
+                  <Text style={styles.selectHint}>{t('cryAnalyzer.selectHint')}</Text>
                 </>
               )}
             </View>
@@ -275,27 +277,27 @@ export default function CryAnalyzerScreen() {
               {analyzing ? (
                 <View style={styles.analyzingRow}>
                   <ActivityIndicator size="small" color={COLORS.white} />
-                  <Text style={styles.analyzeBtnText}>{'AI 분석 중...'}</Text>
+                  <Text style={styles.analyzeBtnText}>{t('cryAnalyzer.analyzing')}</Text>
                 </View>
               ) : (
                 <Text style={styles.analyzeBtnText}>
-                  {fileUri ? '울음소리 분석하기' : '파일을 먼저 선택해주세요'}
+                  {fileUri ? t('cryAnalyzer.analyzeButton') : t('cryAnalyzer.selectFileFirstButton')}
                 </Text>
               )}
             </TouchableOpacity>
 
             <View style={styles.tipCard}>
-              <Text style={styles.tipTitle}>{'녹음 팁'}</Text>
+              <Text style={styles.tipTitle}>{t('cryAnalyzer.recordingTipTitle')}</Text>
               <Text style={styles.tipText}>
-                {'- 스마트폰 기본 녹음 앱으로 5~15초 정도 녹음해주세요\n- 아이 가까이에서 녹음하면 정확도가 높아요\n- 주변 소음이 적을수록 좋아요\n- 녹음 후 이 화면에서 파일을 선택하세요'}
+                {t('cryAnalyzer.recordingTipText')}
               </Text>
             </View>
 
             <MedicalCitation
-              note="울음 분석 결과는 참고용 추정이며 의학적 진단이 아닙니다. 평소와 다른 울음·증상이 지속되면 소아과 진료를 받으세요."
+              note={t('cryAnalyzer.citation.note')}
               sources={[
-                { label: '대한소아과학회 어린이 건강정보 (영아 울음)', url: 'https://www.pediatrics.or.kr' },
-                { label: '질병관리청 국가건강정보포털', url: 'https://health.kdca.go.kr' },
+                { label: t('cryAnalyzer.citation.source1'), url: 'https://www.pediatrics.or.kr' },
+                { label: t('cryAnalyzer.citation.source2'), url: 'https://health.kdca.go.kr' },
               ]}
             />
           </>
@@ -308,28 +310,29 @@ export default function CryAnalyzerScreen() {
 
 /* ── 결과 뷰 ── */
 function ResultView({ result, onReset }: { result: AnalysisResult; onReset: () => void }) {
+  const { t } = useTranslation();
   return (
     <View style={resultStyles.container}>
       {result.needsDoctor && (
         <View style={resultStyles.warningBanner}>
           <Image source={IC_HOSPITAL} style={resultStyles.warningIconImg} resizeMode="contain" />
           <View style={resultStyles.warningTextWrap}>
-            <Text style={resultStyles.warningTitle}>{'병원 확인이 필요해요'}</Text>
+            <Text style={resultStyles.warningTitle}>{t('cryAnalyzer.hospitalCheckTitle')}</Text>
             <Text style={resultStyles.warningDesc}>
-              {'평소와 다른 울음이 지속된다면 소아과 방문을 권장합니다.'}
+              {t('cryAnalyzer.hospitalCheckDesc')}
             </Text>
           </View>
         </View>
       )}
 
       <View style={resultStyles.analysisCard}>
-        <Text style={resultStyles.analysisTitle}>{'분석 결과'}</Text>
+        <Text style={resultStyles.analysisTitle}>{t('cryAnalyzer.analysisResultTitle')}</Text>
         <Text style={resultStyles.analysisText}>{result.analysis}</Text>
       </View>
 
       {result.possibilities.length > 0 && (
         <View style={resultStyles.sectionCard}>
-          <Text style={resultStyles.sectionTitle}>{'가능성 분석 (참고 추정)'}</Text>
+          <Text style={resultStyles.sectionTitle}>{t('cryAnalyzer.possibilitiesTitle')}</Text>
           {result.possibilities.map((p, i) => {
             const cfg = resolveLikelihoodConfig(p.likelihood);
             return (
@@ -346,7 +349,7 @@ function ResultView({ result, onReset }: { result: AnalysisResult; onReset: () =
 
       {result.recommendations.length > 0 && (
         <View style={[resultStyles.sectionCard, { backgroundColor: COLORS.normalBg }]}>
-          <Text style={resultStyles.sectionTitle}>{'달래는 방법'}</Text>
+          <Text style={resultStyles.sectionTitle}>{t('cryAnalyzer.recommendationsTitle')}</Text>
           {result.recommendations.map((rec, i) => (
             <View key={i} style={resultStyles.bulletRow}>
               <Text style={resultStyles.bulletNum}>{`${i + 1}`}</Text>
@@ -359,19 +362,23 @@ function ResultView({ result, onReset }: { result: AnalysisResult; onReset: () =
       {result.usage && (
         <View style={resultStyles.usageBox}>
           <Text style={resultStyles.usageText}>
-            {'이번 달 분석 '}{result.usage.used}{'/'}{result.usage.limit}{'회 사용 (남은 횟수: '}{result.usage.remaining}{'회)'}
+            {t('cryAnalyzer.usageSummary', {
+              used: result.usage.used,
+              limit: result.usage.limit,
+              remaining: result.usage.remaining,
+            })}
           </Text>
         </View>
       )}
 
       <View style={resultStyles.disclaimerBox}>
         <Text style={resultStyles.disclaimerText}>
-          {'이 분석은 참고용 추정 정보이며, 진단이나 치료를 목적으로 하는 의료행위가 아닙니다. 정확한 진단은 소아과 의사와 상담하세요.'}
+          {t('cryAnalyzer.disclaimer')}
         </Text>
       </View>
 
       <TouchableOpacity style={resultStyles.resetBtn} onPress={onReset} activeOpacity={0.7}>
-        <Text style={resultStyles.resetBtnText}>{'다시 분석하기'}</Text>
+        <Text style={resultStyles.resetBtnText}>{t('cryAnalyzer.analyzeAgain')}</Text>
       </TouchableOpacity>
     </View>
   );

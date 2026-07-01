@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
-import '../i18n'; // i18n 초기화 (기기 언어 감지 → ko/ja/zh-Hant, 미지원은 ko fallback)
+import i18n from '../i18n'; // i18n 초기화 (기기 언어 감지 → ko/ja/zh-Hant, 미지원은 ko fallback)
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useSiriVoiceLaunch } from '../hooks/useSiriVoiceLaunch';
 
 import { View, ActivityIndicator, Text, TextInput, Image, Animated, Easing, StyleSheet, Dimensions, AppState, AppStateStatus, TouchableOpacity } from 'react-native';
@@ -321,13 +323,16 @@ function useLocationSetup() {
 const { width: SCREEN_W } = Dimensions.get('window');
 const PROGRESS_BAR_W = SCREEN_W * 0.65;
 
-const STATUS_TEXT: Record<UpdateStatus, string> = {
-  idle: '',
-  checking: '새로운 버전을 확인하고 있어요',
-  downloading: '업데이트를 다운로드하고 있어요',
-  ready: '다운로드 완료!',
-  restarting: '새 버전을 적용하고 있어요',
-};
+function getStatusText(t: TFunction, status: UpdateStatus): string {
+  const map: Record<UpdateStatus, string> = {
+    idle: '',
+    checking: t('rootLayout.update.checking'),
+    downloading: t('rootLayout.update.downloading'),
+    ready: t('rootLayout.update.ready'),
+    restarting: t('rootLayout.update.restarting'),
+  };
+  return map[status];
+}
 
 function UpdateScreen({ status, progress, canSkip, onSkip }: {
   status: UpdateStatus;
@@ -335,6 +340,7 @@ function UpdateScreen({ status, progress, canSkip, onSkip }: {
   canSkip: boolean;
   onSkip: () => void;
 }) {
+  const { t } = useTranslation();
   const bounce = useRef(new Animated.Value(0)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
   const checkScale = useRef(new Animated.Value(0)).current;
@@ -407,17 +413,17 @@ function UpdateScreen({ status, progress, canSkip, onSkip }: {
         </View>
 
         {/* 상태 텍스트 */}
-        <Text style={upS.statusText}>{STATUS_TEXT[status]}</Text>
+        <Text style={upS.statusText}>{getStatusText(t, status)}</Text>
 
         {/* 하단 안내 */}
         <Text style={upS.footer}>
-          {isComplete ? '잠시 후 자동으로 시작됩니다' : '잠시만 기다려주세요'}
+          {isComplete ? t('rootLayout.update.autoStart') : t('rootLayout.update.pleaseWait')}
         </Text>
 
         {/* 15초 이상 대기 시 건너뛰기 버튼 노출 */}
         {canSkip && !isComplete && (
           <TouchableOpacity style={upS.skipBtn} onPress={onSkip} activeOpacity={0.7}>
-            <Text style={upS.skipText}>건너뛰기 (현재 버전 사용)</Text>
+            <Text style={upS.skipText}>{t('rootLayout.update.skip')}</Text>
           </TouchableOpacity>
         )}
       </Animated.View>
@@ -517,7 +523,7 @@ class ErrorBoundary extends Component<
       return (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: COLORS.background }}>
           <Text style={{ fontSize: 18, fontWeight: '600', marginBottom: 8 }}>
-            {'오류가 발생했습니다'}
+            {i18n.t('rootLayout.errorBoundary.title')}
           </Text>
           <Text style={{ fontSize: 13, color: '#888', textAlign: 'center' }}>
             {this.state.error?.message ?? 'Unknown error'}
