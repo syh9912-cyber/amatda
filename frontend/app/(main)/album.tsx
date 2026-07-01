@@ -40,6 +40,8 @@ import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { ALBUM_GUIDE } from '../../features/guide/albumGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import type { ImageSourcePropType } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 const IC_PREG_TEST = require('../../assets/preg-test.png') as ImageSourcePropType;
 const IC_DIARY = require('../../assets/child-diary.png') as ImageSourcePropType;
@@ -422,12 +424,11 @@ function getMonthKey(months: number): string {
   return '6세 이상';
 }
 
-function getMonthLabel(months: number): string {
-  if (months <= 24) return `${months}개월`;
-  if (months <= 36) return `${months}개월`;
-  if (months <= 48) return `4세 (${months}개월)`;
-  if (months <= 60) return `5세 (${months}개월)`;
-  return `6세+ (${months}개월)`;
+function getMonthLabel(months: number, t: TFunction): string {
+  if (months <= 36) return t('album.monthsCount', { count: months });
+  if (months <= 48) return t('album.yearsWithMonths', { years: 4, count: months });
+  if (months <= 60) return t('album.yearsWithMonths', { years: 5, count: months });
+  return t('album.yearsPlusWithMonths', { years: 6, count: months });
 }
 
 interface MilestonePhoto {
@@ -654,6 +655,7 @@ function generateAlbumHTML(
   dateTo: string,
   coverImageUri: string | null = null,
   milestoneDataUriMap: Record<string, string> = {},
+  t: TFunction = ((k: string) => k) as TFunction,
 ): string {
   const sorted = [...albumPhotos].sort((a, b) => a.date.localeCompare(b.date));
 
@@ -695,7 +697,7 @@ function generateAlbumHTML(
       `<div class="cover-title">${escapeHtml(title)}</div>` +
       `<div class="cover-period-alt">${escapeHtml(dateFrom)} ~ ${escapeHtml(dateTo)}</div>` +
       `<div class="cover-line"></div>` +
-      `<div class="cover-count">${sorted.length}&#51109;&#51032; &#49548;&#51473;&#54620; &#49688;&#44036;</div>` +
+      `<div class="cover-count">${escapeHtml(t('album.preciousMoments', { count: sorted.length }))}</div>` +
       `</div>`;
 
   // ─── 월별 섹션 (디바이더 + 사진 페이지) ───────────────────────
@@ -714,9 +716,9 @@ function generateAlbumHTML(
         `<div class="divider-inner">` +
         `<div class="divider-deco">&#10047;</div>` +
         `<div class="divider-year">${yearText}</div>` +
-        `<div class="divider-month">${monthText}<span class="divider-month-unit">월</span></div>` +
+        `<div class="divider-month">${monthText}<span class="divider-month-unit">${escapeHtml(t('album.monthUnit'))}</span></div>` +
         `<div class="divider-rule"></div>` +
-        `<div class="divider-caption">&#128155; 소중한 순간 ${photos.length}장 &#128155;</div>` +
+        `<div class="divider-caption">&#128155; ${escapeHtml(t('album.preciousMomentsCount', { count: photos.length }))} &#128155;</div>` +
         `</div>` +
         `</div>`;
 
@@ -782,7 +784,7 @@ function generateAlbumHTML(
           photoPagesHTML.push(
             `<div class="photo-page">` +
               cornerDeco +
-              `<div class="page-header">${monthNum}월 &middot; ${pageCounter} / ${totalPhotoPages}</div>` +
+              `<div class="page-header">${escapeHtml(t('album.monthN', { count: monthNum }))} &middot; ${pageCounter} / ${totalPhotoPages}</div>` +
               `<div class="photo-grid">${cellsHTML}${emptyCells}</div>` +
               `</div>`,
           );
@@ -797,9 +799,9 @@ function generateAlbumHTML(
     `<div class="ending-page">` +
     cornerDeco +
     `<div class="ending-heart">&#128155;</div>` + // 💛
-    `<div class="ending-msg">사랑해,<br/>소중한 ${escapeHtml(childName)}</div>` +
+    `<div class="ending-msg">${escapeHtml(t('album.endingMessage', { name: childName }))}</div>` +
     `<div class="ending-rule"></div>` +
-    `<div class="ending-sub">너의 모든 순간이<br/>우리의 기적이야</div>` +
+    `<div class="ending-sub">${escapeHtml(t('album.endingSub'))}</div>` +
     `<div class="ending-period">${escapeHtml(dateFrom)} ~ ${escapeHtml(dateTo)}</div>` +
     `</div>`;
 
@@ -1160,6 +1162,7 @@ const PREG_EMOJI_IMGS: Record<string, ImageSourcePropType> = {
 };
 
 function PregnancyTimeline() {
+  const { t } = useTranslation();
   const child = useChildStore((s) => s.selectedChild);
   const childId = child?.id ?? '';
   const currentWeek = child?.pregnancyWeeks ?? 0;
@@ -1205,8 +1208,8 @@ function PregnancyTimeline() {
       // Photo Picker 사용 — 미디어 권한 요청 불필요 (Google Play 정책 준수)
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [4, 3] });
       if (!result.canceled && result.assets[0]) setEditItemNewImage(result.assets[0].uri);
-    } catch { Alert.alert('오류', '사진을 불러오지 못했습니다'); }
-  }, []);
+    } catch { Alert.alert(t('common.error'), t('album.photoLoadFail')); }
+  }, [t]);
 
   const handleEditSavePT = useCallback(async () => {
     if (!editItem) return;
@@ -1226,34 +1229,34 @@ function PregnancyTimeline() {
       setEditItem(null);
       loadTimeline();
     } catch {
-      Alert.alert('오류', '수정에 실패했습니다');
+      Alert.alert(t('common.error'), t('album.editFail'));
     } finally {
       setEditItemSaving(false);
     }
-  }, [editItem, editItemNewImage, loadTimeline]);
+  }, [editItem, editItemNewImage, loadTimeline, t]);
 
   const handleDelete = (item: { id: string; title: string; content?: string; mediaUri?: string }) => {
     if (item.id.startsWith('dev-')) return;
     const buttons: Parameters<typeof Alert.alert>[2] = [
-      { text: '취소', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: async () => {
           try {
             await pregnancyApi.deleteRecord(item.id);
             loadTimeline();
-          } catch { Alert.alert('오류', '삭제에 실패했습니다'); }
+          } catch { Alert.alert(t('common.error'), t('album.deleteFail')); }
         },
       },
     ];
     buttons.unshift({
-      text: '수정',
+      text: t('common.edit'),
       onPress: () => {
         setEditItemNewImage(null);
         setEditItem({ id: item.id, label: item.title, value: item.content ?? '', imageUri: item.mediaUri });
       },
     });
-    Alert.alert('기록 관리', item.title, buttons);
+    Alert.alert(t('album.manageRecord'), item.title, buttons);
   };
 
   /* -- AI Diary -- */
@@ -1267,29 +1270,29 @@ function PregnancyTimeline() {
         setDiaryText(data.diary);
         setDiaryDate(data.date ?? new Date().toISOString().slice(0, 10));
       } else {
-        Alert.alert('알림', '오늘의 기록이 아직 없어서 일기를 생성할 수 없어요.');
+        Alert.alert(t('common.notice'), t('album.noTodayRecordForDiary'));
       }
     } catch {
-      Alert.alert('오류', 'AI 일기 생성에 실패했습니다.');
+      Alert.alert(t('common.error'), t('album.aiDiaryFail'));
     } finally {
       setDiaryLoading(false);
     }
-  }, [childId]);
+  }, [childId, t]);
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: `${child?.name ?? '아가'} 임신 성장앨범`, headerShown: true, headerLeft: () => <BackButton /> }} />
+      <Stack.Screen options={{ title: t('album.pregnancyAlbumTitle', { name: child?.name ?? t('album.defaultBabyName') }), headerShown: true, headerLeft: () => <BackButton /> }} />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <Text style={styles.childLabel}>{child?.name ?? '아가'}의 임신 성장앨범</Text>
+        <Text style={styles.childLabel}>{t('album.pregnancyAlbumOf', { name: child?.name ?? t('album.defaultBabyName') })}</Text>
 
         {/* Current week badge */}
         {currentWeek > 0 && (
           <View style={pStyles.currentBadge}>
             <Image source={IC_PREG_TEST} style={pStyles.currentBadgeIconImg} contentFit="contain" />
-            <Text style={pStyles.currentBadgeText}>{` 현재 임신 ${currentWeek}주차`}</Text>
+            <Text style={pStyles.currentBadgeText}>{` ${t('album.currentPregnancyWeek', { week: currentWeek })}`}</Text>
           </View>
         )}
 
@@ -1305,7 +1308,7 @@ function PregnancyTimeline() {
           ) : (
             <>
               <Image source={IC_DIARY} style={styles.aiDiaryBtnIconImg} contentFit="contain" />
-              <Text style={styles.aiDiaryBtnText}>AI 오늘 일기</Text>
+              <Text style={styles.aiDiaryBtnText}>{t('album.aiTodayDiary')}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -1316,7 +1319,7 @@ function PregnancyTimeline() {
             <View style={styles.diaryHeader}>
               <View style={styles.diaryHeaderRow}>
                 <Image source={IC_DIARY} style={styles.diaryHeaderIconImg} contentFit="contain" />
-                <Text style={styles.diaryHeaderText}>{` AI 일기 - ${diaryDate}`}</Text>
+                <Text style={styles.diaryHeaderText}>{` ${t('album.aiDiaryDated', { date: diaryDate })}`}</Text>
               </View>
               <TouchableOpacity onPress={() => setDiaryText(null)}>
                 <Text style={styles.diaryClose}>{'✕'}</Text>
@@ -1374,9 +1377,9 @@ function PregnancyTimeline() {
         {!loading && timeline.length === 0 && (
           <View style={{ alignItems: 'center', paddingVertical: 60 }}>
             <Image source={IC_DIARY} style={{ width: 64, height: 64, marginBottom: 12 }} contentFit="contain" />
-            <Text style={{ fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.text }}>아직 기록이 없어요</Text>
+            <Text style={{ fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.text }}>{t('album.noRecordsYet')}</Text>
             <Text style={{ fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 4, textAlign: 'center' }}>
-              임신앨범에서 초음파, 마일스톤, 엄마 상태를 기록하면{'\n'}성장앨범에 자동으로 나타나요
+              {t('album.pregnancyAlbumEmptyHint')}
             </Text>
           </View>
         )}
@@ -1391,13 +1394,13 @@ function PregnancyTimeline() {
             <View style={styles.editCard}>
               <View style={styles.editHeader}>
                 <TouchableOpacity onPress={() => setEditItem(null)}>
-                  <Text style={styles.editCancel}>취소</Text>
+                  <Text style={styles.editCancel}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
-                <Text style={styles.editTitle}>메모 수정</Text>
+                <Text style={styles.editTitle}>{t('album.editMemo')}</Text>
                 <TouchableOpacity onPress={handleEditSavePT} disabled={editItemSaving}>
                   {editItemSaving
                     ? <ActivityIndicator color={COLORS.primary} size="small" />
-                    : <Text style={styles.editDone}>저장</Text>
+                    : <Text style={styles.editDone}>{t('common.save')}</Text>
                   }
                 </TouchableOpacity>
               </View>
@@ -1411,11 +1414,11 @@ function PregnancyTimeline() {
                 />
               ) : null}
               <TouchableOpacity style={pStyles.editImgBtn} onPress={pickEditImagePT}>
-                <Text style={pStyles.editImgBtnText}>{(editItemNewImage ?? editItem?.imageUri) ? '📷 사진 변경' : '📷 사진 추가'}</Text>
+                <Text style={pStyles.editImgBtnText}>{(editItemNewImage ?? editItem?.imageUri) ? `📷 ${t('album.changePhoto')}` : `📷 ${t('album.addPhoto')}`}</Text>
               </TouchableOpacity>
               <TextInput
                 style={styles.editInput}
-                placeholder="메모를 입력하세요"
+                placeholder={t('album.enterMemo')}
                 placeholderTextColor={COLORS.textLight}
                 value={editItem?.value ?? ''}
                 onChangeText={(v) => setEditItem((s) => s ? { ...s, value: v } : s)}
@@ -1470,6 +1473,7 @@ const pStyles = StyleSheet.create({
 /* ------------------------------------------------------------------ */
 
 function PregnancyMemoriesSection({ childId }: { childId: string }) {
+  const { t } = useTranslation();
   const [timeline, setTimeline] = useState<PregnancyTimelineWeek[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -1506,8 +1510,8 @@ function PregnancyMemoriesSection({ childId }: { childId: string }) {
       >
         <Image source={IC_PREG_TEST} style={pmStyles.headerIconImg} contentFit="contain" />
         <View style={{ flex: 1 }}>
-          <Text style={pmStyles.headerTitle}>임신앨범 기록</Text>
-          <Text style={pmStyles.headerSub}>출산 전 {totalCount}건 · 탭해서 {expanded ? '접기' : '보기'}</Text>
+          <Text style={pmStyles.headerTitle}>{t('album.pregnancyAlbumRecords')}</Text>
+          <Text style={pmStyles.headerSub}>{t('album.beforeBirthCount', { count: totalCount })} · {t('album.tapToToggle', { action: expanded ? t('common.collapse') : t('common.view') })}</Text>
         </View>
         <Text style={pmStyles.headerArrow}>{expanded ? '▲' : '▼'}</Text>
       </TouchableOpacity>
@@ -1592,6 +1596,7 @@ export default function AlbumScreen() {
 
 
 function BabyAlbum() {
+  const { t } = useTranslation();
   const [photos, setPhotos] = useState<MilestonePhoto[]>([]);
   const [guideVisible, setGuideVisible] = useState(false);
   useEffect(() => { shouldAutoShowGuide('album').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
@@ -1636,7 +1641,7 @@ function BabyAlbum() {
     : 12;
   const [viewMonth, setViewMonth] = useState(childMonths);
   const monthKey = getMonthKey(viewMonth);
-  const monthLabel = getMonthLabel(viewMonth);
+  const monthLabel = getMonthLabel(viewMonth, t);
   const presets = MILESTONE_PRESETS[monthKey] ?? MILESTONE_PRESETS['12개월'];
 
   // 사진 + 앨범 목록 로드 (cache-first SWR)
@@ -1715,11 +1720,11 @@ function BabyAlbum() {
         setDiaryDate(data.date ?? new Date().toISOString().slice(0, 10));
       }
     } catch {
-      Alert.alert('오류', 'AI 일기 생성에 실패했습니다.');
+      Alert.alert(t('common.error'), t('album.aiDiaryFail'));
     } finally {
       setDiaryLoading(false);
     }
-  }, [selectedChild]);
+  }, [selectedChild, t]);
 
   /* -- "하고 싶은 이야기" 메모란에 AI 오늘 일기 채우기 --
      그날의 아기시간 기록·상담 내용으로 일기를 생성해 메모에 삽입.
@@ -1734,21 +1739,21 @@ function BabyAlbum() {
       if (diary) {
         setMemo((prev) => (prev.trim() ? `${prev.trim()}\n\n${diary}` : diary));
       } else {
-        Alert.alert('알림', '오늘은 아직 기록이 없어서 일기를 만들 수 없어요. 아기시간을 먼저 기록해보세요.');
+        Alert.alert(t('common.notice'), t('album.noTodayRecordForMemoDiary'));
       }
     } catch {
-      Alert.alert('오류', 'AI 일기 생성에 실패했습니다.');
+      Alert.alert(t('common.error'), t('album.aiDiaryFail'));
     } finally {
       setMemoDiaryLoading(false);
     }
-  }, [selectedChild, memoDiaryLoading]);
+  }, [selectedChild, memoDiaryLoading, t]);
 
   /* -- Save entry (thumb 400px + print 1800px 두 버전 저장) -- */
   const saveEntry = useCallback(async () => {
     if (!pendingUri || !selectedChild) return;
     // 공동육아: 사진 추가는 editTimeline 권한 필요 (열람 전용 멤버 차단)
     if (!(await canDo(selectedChild.id, 'editTimeline'))) {
-      Alert.alert('열람 전용', '사진 추가 권한이 없어요.\n보호자에게 "타임라인 사진 추가" 권한을 요청해주세요.');
+      Alert.alert(t('album.viewOnly'), t('album.noAddPhotoPermission'));
       return;
     }
     setSaving(true);
@@ -1767,10 +1772,10 @@ function BabyAlbum() {
         const fallback = await uploadApi.upload(pendingUri, 'album');
         thumbUrl = fallback.url;
         printUrl = fallback.url;
-        Alert.alert('알림', '일반 화질로 저장됐어요. 인쇄용 앨범 생성 시 화질이 낮을 수 있어요.');
+        Alert.alert(t('common.notice'), t('album.savedLowQuality'));
       } catch {
         // 완전 실패 시 로컬 URI 유지 + 사용자 안내
-        Alert.alert('저장 알림', '사진을 서버에 업로드하지 못했어요. 앨범 PDF 생성 시 이 사진은 포함되지 않을 수 있어요.');
+        Alert.alert(t('album.saveNoticeTitle'), t('album.photoUploadFailNotice'));
       }
     }
 
@@ -1813,12 +1818,12 @@ function BabyAlbum() {
     if (shareToMomstagram && selectedChild) {
       const milestoneText = selectedMilestone
         ? `${selectedMilestone.emoji} ${selectedMilestone.label}`
-        : '성장 기록';
+        : t('album.growthRecord');
       const content = memo.trim()
         ? `${milestoneText}\n${memo.trim()}`
-        : `${milestoneText} - ${selectedChild.name}의 성장앨범`;
+        : `${milestoneText} - ${t('album.growthAlbumOf', { name: selectedChild.name })}`;
       const childAge = selectedChild.ageInfo?.months
-        ? `${selectedChild.ageInfo.months}개월`
+        ? t('album.monthsAge', { count: selectedChild.ageInfo.months })
         : '';
       try {
         let cloudUrl: string | undefined;
@@ -1848,7 +1853,7 @@ function BabyAlbum() {
         const apiPost = data.data ?? data.post ?? data;
         addPost({
           id: apiPost?.id ?? Date.now().toString(36),
-          userName: apiPost?.userName ?? '나',
+          userName: apiPost?.userName ?? t('album.meDefaultName'),
           childGender: (selectedChild.gender ?? 'M') as 'M' | 'F',
           childAge,
           dominantType: selectedChild.innateData?.dominantType ?? '',
@@ -1864,12 +1869,12 @@ function BabyAlbum() {
           createdAt: apiPost?.createdAt ?? new Date().toISOString(),
           isPrivate: false,
         });
-        Alert.alert('공유 완료', '가족피드에도 게시되었습니다.');
+        Alert.alert(t('album.shareComplete'), t('album.sharedToFamilyFeed'));
       } catch {
-        Alert.alert('알림', '성장앨범은 저장되었지만, 사진 업로드 실패로 가족피드 공유가 되지 않았어요. 잠시 후 다시 시도해주세요.');
+        Alert.alert(t('common.notice'), t('album.feedShareFailNotice'));
       }
     }
-  }, [pendingUri, selectedMilestone, memo, shareToMomstagram, selectedChild, addPost]);
+  }, [pendingUri, selectedMilestone, memo, shareToMomstagram, selectedChild, addPost, t]);
 
   /* -- 여러 장 일괄 추가 (갤러리 다중선택 → 확인 화면 → 일괄 저장) -- */
   const [batchUris, setBatchUris] = useState<string[]>([]);
@@ -1894,13 +1899,13 @@ function BabyAlbum() {
     if (!selectedChild) return;
     // 공동육아: 사진 추가는 editTimeline 권한 필요 (열람 전용 멤버 차단)
     if (!(await canDo(selectedChild.id, 'editTimeline'))) {
-      Alert.alert('열람 전용', '사진 추가 권한이 없어요.\n보호자에게 "타임라인 사진 추가" 권한을 요청해주세요.');
+      Alert.alert(t('album.viewOnly'), t('album.noAddPhotoPermission'));
       return;
     }
     setBatchSaving(true);
     setBatchProgress({ done: 0, total: selections.length });
     const dateStr = formatDate(new Date());
-    const childAge = selectedChild.ageInfo?.months ? `${selectedChild.ageInfo.months}개월` : '';
+    const childAge = selectedChild.ageInfo?.months ? t('album.monthsAge', { count: selectedChild.ageInfo.months }) : '';
     let feedFailCount = 0; // 피드 공유 토글했지만 사진 업로드 실패로 게시 못한 수
 
     for (let i = 0; i < selections.length; i++) {
@@ -1940,7 +1945,7 @@ function BabyAlbum() {
 
       // 3) 가족피드 공유 — 토글된 사진만 (linkedAlbumId 로 cascade delete 연동)
       if (sel.share) {
-        const content = sel.memo.trim() ? sel.memo.trim() : `${selectedChild.name}의 성장앨범`;
+        const content = sel.memo.trim() ? sel.memo.trim() : t('album.growthAlbumOf', { name: selectedChild.name });
         // 클라우드 이미지 확보: step1 성공분 재사용, 없으면 1회 재시도
         let feedImageUrl: string | null = cloudThumb;
         if (!feedImageUrl) {
@@ -1962,7 +1967,7 @@ function BabyAlbum() {
             const apiPost = data.data ?? data.post ?? data;
             addPost({
               id: apiPost?.id ?? `${Date.now().toString(36)}_${i}`,
-              userName: apiPost?.userName ?? '나',
+              userName: apiPost?.userName ?? t('album.meDefaultName'),
               childGender: (selectedChild.gender ?? 'M') as 'M' | 'F',
               childAge,
               dominantType: selectedChild.innateData?.dominantType ?? '',
@@ -1992,14 +1997,14 @@ function BabyAlbum() {
     const sharedN = selections.filter((s) => s.share).length;
     const sharedOk = sharedN - feedFailCount;
     Alert.alert(
-      '완료',
-      `${selections.length}장 저장 완료`
-        + (sharedN > 0 ? ` · ${sharedOk}장 가족피드 공유` : '')
+      t('common.complete'),
+      t('album.batchSaveComplete', { count: selections.length })
+        + (sharedN > 0 ? ` · ${t('album.batchSharedCount', { count: sharedOk })}` : '')
         + (feedFailCount > 0
-          ? `\n\n${feedFailCount}장은 사진 업로드 실패로 공유되지 않았어요. 네트워크 확인 후 다시 시도해주세요.`
+          ? `\n\n${t('album.batchFeedShareFail', { count: feedFailCount })}`
           : ''),
     );
-  }, [selectedChild, addPost]);
+  }, [selectedChild, addPost, t]);
 
   // ─── 앨범 생성 핸들러 (expo-print 기기 내 생성) ─────────────
   const handleGenerateAlbum = useCallback(async () => {
@@ -2017,7 +2022,7 @@ function BabyAlbum() {
         .sort((a, b) => a.date.localeCompare(b.date));
 
       if (filtered.length === 0) {
-        Alert.alert('사진 없음', '선택한 기간에 사진이 없어요.\n먼저 사진을 추가해주세요.');
+        Alert.alert(t('album.noPhotos'), t('album.noPhotosInPeriod'));
         return;
       }
 
@@ -2025,8 +2030,8 @@ function BabyAlbum() {
       const MAX_PDF_PHOTOS = 200;
       if (filtered.length > MAX_PDF_PHOTOS) {
         Alert.alert(
-          '사진이 많아요',
-          `이 기간에 사진이 ${filtered.length}장이에요.\n한 번에 ${MAX_PDF_PHOTOS}장까지 권장돼요. 기간을 나눠서 만들어주세요.`,
+          t('album.tooManyPhotos'),
+          t('album.tooManyPhotosDetail', { count: filtered.length, max: MAX_PDF_PHOTOS }),
         );
         return;
       }
@@ -2039,7 +2044,7 @@ function BabyAlbum() {
 
       const title =
         albumTitle.trim() ||
-        `${selectedChild.name} 성장앨범 ${albumDateFrom}~${albumDateTo}`;
+        t('album.defaultAlbumTitle', { name: selectedChild.name, from: albumDateFrom, to: albumDateTo });
 
       // expo-print WebView는 외부 URL을 PDF 스냅샷 전에 로드 못함 → base64 embed
       console.log('[album] 🔁 변환 시작: 총', filtered.length, '장');
@@ -2080,34 +2085,34 @@ function BabyAlbum() {
       );
       console.log('[album] 마일스톤 변환 성공:', Object.keys(milestoneDataUriMap).length, '/', uniqueMilestones.length);
 
-      const html = generateAlbumHTML(photosForPdf, title, selectedChild.name, albumDateFrom, albumDateTo, coverDataUri, milestoneDataUriMap);
+      const html = generateAlbumHTML(photosForPdf, title, selectedChild.name, albumDateFrom, albumDateTo, coverDataUri, milestoneDataUriMap, t);
       const { uri } = await Print.printToFileAsync({ html, base64: false });
 
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
         await Sharing.shareAsync(uri, {
           mimeType: 'application/pdf',
-          dialogTitle: '앨범 저장',
+          dialogTitle: t('album.saveAlbum'),
           UTI: 'com.adobe.pdf',
         });
       } else {
-        Alert.alert('저장 완료', `앨범 PDF가 생성됐어요.\n${uri}`);
+        Alert.alert(t('album.saveComplete'), t('album.albumPdfGenerated', { uri }));
       }
       if (convertFailCount > 0) {
         Alert.alert(
-          '일부 사진 변환 실패',
-          `${filtered.length}장 중 ${convertFailCount}장이 PDF에 제대로 포함되지 않았을 수 있어요.\nMetro 콘솔 로그를 공유해주세요.`
+          t('album.partialConvertFail'),
+          t('album.partialConvertFailDetail', { total: filtered.length, failed: convertFailCount })
         );
       }
       setShowAlbumForm(false);
       setAlbumTitle('');
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      Alert.alert('오류', `앨범 생성에 실패했습니다.\n${msg}`);
+      Alert.alert(t('common.error'), t('album.albumGenerationFail', { msg }));
     } finally {
       setAlbumGenerating(false);
     }
-  }, [selectedChild, albumDateFrom, albumDateTo, albumTitle, albumCoverUri, photos]);
+  }, [selectedChild, albumDateFrom, albumDateTo, albumTitle, albumCoverUri, photos, t]);
 
   const pickEditImage = useCallback(async () => {
     try {
@@ -2115,28 +2120,28 @@ function BabyAlbum() {
       // Photo Picker 사용 — 미디어 권한 요청 불필요 (Google Play 정책 준수)
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85, allowsEditing: true, aspect: [4, 3] });
       if (!result.canceled && result.assets[0]) setEditNewImage(result.assets[0].uri);
-    } catch { Alert.alert('오류', '사진을 불러오지 못했습니다'); }
-  }, []);
+    } catch { Alert.alert(t('common.error'), t('album.photoLoadFail')); }
+  }, [t]);
 
   /* -- Delete entry -- */
   const deleteEntry = useCallback((idx: number) => {
     const photo = photos[idx];
-    Alert.alert('기록 관리', photo.milestone ?? photo.memo ?? '사진', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('album.manageRecord'), photo.milestone ?? photo.memo ?? t('album.defaultPhotoLabel'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '수정',
+        text: t('common.edit'),
         onPress: () => {
           if (photo.id) {
             setEditNewImage(null);
-            setEditState({ id: photo.id, label: photo.milestone ?? '사진', value: photo.memo ?? '', imageUri: photo.uri });
+            setEditState({ id: photo.id, label: photo.milestone ?? t('album.defaultPhotoLabel'), value: photo.memo ?? '', imageUri: photo.uri });
           }
         },
       },
       {
-        text: '삭제', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: async () => {
           if (selectedChild && !(await canDo(selectedChild.id, 'editTimeline'))) {
-            Alert.alert('열람 전용', '사진 삭제 권한이 없어요.');
+            Alert.alert(t('album.viewOnly'), t('album.noDeletePhotoPermission'));
             return;
           }
           if (photo.id) {
@@ -2146,12 +2151,12 @@ function BabyAlbum() {
         },
       },
     ]);
-  }, [photos]);
+  }, [photos, selectedChild, t]);
 
   const handleEditSave = useCallback(async () => {
     if (!editState) return;
     if (selectedChild && !(await canDo(selectedChild.id, 'editTimeline'))) {
-      Alert.alert('열람 전용', '사진 수정 권한이 없어요.');
+      Alert.alert(t('album.viewOnly'), t('album.noEditPhotoPermission'));
       return;
     }
     setEditSaving(true);
@@ -2170,24 +2175,24 @@ function BabyAlbum() {
       );
       setEditState(null);
     } catch {
-      Alert.alert('오류', '수정에 실패했습니다');
+      Alert.alert(t('common.error'), t('album.editFail'));
     } finally {
       setEditSaving(false);
     }
-  }, [editState, editNewImage]);
+  }, [editState, editNewImage, selectedChild, t]);
 
   const viewerPhoto = viewerIndex !== null ? photos[viewerIndex] : null;
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: '성장앨범', headerShown: true, headerLeft: () => <BackButton />, headerRight: () => <View style={{ marginRight: 14 }}><GuideButton onPress={() => setGuideVisible(true)} /></View> }} />
+      <Stack.Screen options={{ title: t('album.growthAlbumTitle'), headerShown: true, headerLeft: () => <BackButton />, headerRight: () => <View style={{ marginRight: 14 }}><GuideButton onPress={() => setGuideVisible(true)} /></View> }} />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {selectedChild && (
           <Text style={styles.childLabel}>
-            {selectedChild.name}의 성장앨범
+            {t('album.growthAlbumOf', { name: selectedChild.name })}
           </Text>
         )}
 
@@ -2203,13 +2208,13 @@ function BabyAlbum() {
             <View>
               <Image source={{ uri: pendingUri }} style={styles.composePhoto} contentFit="cover" />
               <TouchableOpacity style={styles.composePhotoChange} onPress={pickImage} activeOpacity={0.7}>
-                <Text style={styles.composePhotoChangeText}>변경</Text>
+                <Text style={styles.composePhotoChangeText}>{t('common.change')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <TouchableOpacity style={styles.composePhotoPlaceholder} onPress={pickImage} activeOpacity={0.7}>
               <Image source={IC_CAMERA} style={styles.composePlaceholderIconImg} contentFit="contain" />
-              <Text style={styles.composePlaceholderText}>사진을 추가하세요</Text>
+              <Text style={styles.composePlaceholderText}>{t('album.addPhotoPlaceholder')}</Text>
             </TouchableOpacity>
           )}
 
@@ -2228,7 +2233,7 @@ function BabyAlbum() {
             activeOpacity={0.8}
           >
             <Text style={{ color: '#FF8C5A', fontSize: 14, fontWeight: '700' }}>
-              📷 여러 장 한꺼번에 추가
+              📷 {t('album.addMultiplePhotos')}
             </Text>
           </TouchableOpacity>
 
@@ -2308,7 +2313,7 @@ function BabyAlbum() {
             ) : (
               <>
                 <Image source={IC_DIARY} style={styles.composeDiaryIcon} contentFit="contain" />
-                <Text style={styles.composeDiaryText}>AI 오늘 일기 불러오기</Text>
+                <Text style={styles.composeDiaryText}>{t('album.loadAiDiary')}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -2316,7 +2321,7 @@ function BabyAlbum() {
           {/* Memo input */}
           <TextInput
             style={styles.composeInput}
-            placeholder="하고싶은 이야기를 적으세요... (AI 오늘 일기로 채울 수도 있어요)"
+            placeholder={t('album.composePlaceholder')}
             placeholderTextColor={COLORS.textLight}
             value={memo}
             onChangeText={setMemo}
@@ -2337,7 +2342,7 @@ function BabyAlbum() {
                 thumbColor="#FFFFFF"
                 style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
               />
-              <Text style={styles.composeShareLabel}>가족피드 공유</Text>
+              <Text style={styles.composeShareLabel}>{t('album.shareToFamilyFeed')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -2349,7 +2354,7 @@ function BabyAlbum() {
               {saving ? (
                 <ActivityIndicator color="#FFF" size="small" />
               ) : (
-                <Text style={styles.composeSaveBtnText}>기록하기</Text>
+                <Text style={styles.composeSaveBtnText}>{t('album.recordAction')}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -2367,7 +2372,7 @@ function BabyAlbum() {
           ) : (
             <>
               <Image source={IC_DIARY} style={styles.aiDiaryBtnIconImg} contentFit="contain" />
-              <Text style={styles.aiDiaryBtnText}>AI 오늘 일기</Text>
+              <Text style={styles.aiDiaryBtnText}>{t('album.aiTodayDiary')}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -2378,7 +2383,7 @@ function BabyAlbum() {
             <View style={styles.diaryHeader}>
               <View style={styles.diaryHeaderRow}>
                 <Image source={IC_DIARY} style={styles.diaryHeaderIconImg} contentFit="contain" />
-                <Text style={styles.diaryHeaderText}>{` AI 일기 - ${diaryDate}`}</Text>
+                <Text style={styles.diaryHeaderText}>{` ${t('album.aiDiaryDated', { date: diaryDate })}`}</Text>
               </View>
               <TouchableOpacity onPress={() => setDiaryText(null)}>
                 <Text style={styles.diaryClose}>{'✕'}</Text>
@@ -2398,12 +2403,12 @@ function BabyAlbum() {
               style={styles.emptyImage}
               contentFit="contain"
             />
-            <Text style={styles.emptyText}>아직 사진이 없습니다</Text>
-            <Text style={styles.emptyHint}>위에서 사진을 추가해보세요</Text>
+            <Text style={styles.emptyText}>{t('album.noPhotosYet')}</Text>
+            <Text style={styles.emptyHint}>{t('album.addPhotoAboveHint')}</Text>
           </View>
         ) : (
           <>
-            <Text style={styles.feedCount}>{photos.length}장의 기록</Text>
+            <Text style={styles.feedCount}>{t('album.recordCount', { count: photos.length })}</Text>
 
             {photos.map((photo, idx) => {
               const feedCat = photo.milestone ? getMilestoneCategory(photo.milestone) : null;
@@ -2450,43 +2455,43 @@ function BabyAlbum() {
           <View style={styles.albumSectionHeader}>
             <View style={styles.albumSectionTitleRow}>
               <Image source={IC_BOOK} style={styles.albumSectionTitleIconImg} contentFit="contain" />
-              <Text style={styles.albumSectionTitle}>{'성장 앨범 만들기'}</Text>
+              <Text style={styles.albumSectionTitle}>{t('album.createGrowthAlbum')}</Text>
             </View>
             <TouchableOpacity
               onPress={() => setShowAlbumForm((v) => !v)}
               style={styles.albumNewBtn}
               activeOpacity={0.8}
             >
-              <Text style={styles.albumNewBtnText}>{showAlbumForm ? '닫기' : '+ 새 앨범'}</Text>
+              <Text style={styles.albumNewBtnText}>{showAlbumForm ? t('common.close') : t('album.newAlbum')}</Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.albumSectionDesc}>
-            {'기간을 선택하면 기기에서 바로 PDF를 만들어요.\n생성 후 카카오톡 · 드라이브 · 인쇄소로 공유하세요'}
+            {t('album.albumSectionDesc')}
           </Text>
 
           {/* 임신기록 자동 병합 안내 */}
           <View style={styles.pregMergeHint}>
             <Text style={styles.pregMergeEmoji}>🤰</Text>
             <View style={{ flex: 1 }}>
-              <Text style={styles.pregMergeTitle}>임신앨범이 자동으로 포함돼요</Text>
-              <Text style={styles.pregMergeDesc}>임신 중 저장한 사진·초음파가 날짜순으로 앨범 앞부분에 이어져요</Text>
+              <Text style={styles.pregMergeTitle}>{t('album.pregMergeTitle')}</Text>
+              <Text style={styles.pregMergeDesc}>{t('album.pregMergeDesc')}</Text>
             </View>
           </View>
 
           {/* 앨범 생성 폼 */}
           {showAlbumForm && (
             <View style={styles.albumForm}>
-              <Text style={styles.albumFormLabel}>앨범 제목 (선택)</Text>
+              <Text style={styles.albumFormLabel}>{t('album.albumTitleLabel')}</Text>
               <TextInput
                 style={styles.albumFormInput}
-                placeholder={`${selectedChild?.name ?? '아이'} 성장앨범`}
+                placeholder={t('album.albumTitlePlaceholder', { name: selectedChild?.name ?? t('album.defaultChildName') })}
                 value={albumTitle}
                 onChangeText={setAlbumTitle}
                 maxLength={30}
               />
               <View style={styles.albumDateRow}>
                 <View style={styles.albumDateField}>
-                  <Text style={styles.albumFormLabel}>시작 월</Text>
+                  <Text style={styles.albumFormLabel}>{t('album.startMonthLabel')}</Text>
                   <TextInput
                     style={styles.albumFormInput}
                     placeholder="2024-01"
@@ -2498,7 +2503,7 @@ function BabyAlbum() {
                 </View>
                 <Text style={styles.albumDateSep}>{'~'}</Text>
                 <View style={styles.albumDateField}>
-                  <Text style={styles.albumFormLabel}>종료 월</Text>
+                  <Text style={styles.albumFormLabel}>{t('album.endMonthLabel')}</Text>
                   <TextInput
                     style={styles.albumFormInput}
                     placeholder="2024-12"
@@ -2510,11 +2515,11 @@ function BabyAlbum() {
                 </View>
               </View>
               <Text style={styles.albumFormHint}>
-                {'YYYY-MM 형식 · 최대 84개월(7년) · 페이지당 사진 4장'}
+                {t('album.albumFormHint')}
               </Text>
 
               {/* 표지 이미지 선택 */}
-              <Text style={styles.albumFormLabel}>표지 이미지 (선택)</Text>
+              <Text style={styles.albumFormLabel}>{t('album.coverImageLabel')}</Text>
               <TouchableOpacity
                 style={styles.albumCoverPicker}
                 onPress={pickCoverImage}
@@ -2543,7 +2548,7 @@ function BabyAlbum() {
                       contentFit="cover"
                     />
                     <View style={styles.albumCoverDefaultOverlay}>
-                      <Text style={styles.albumCoverDefaultText}>{'기본 표지 · 탭하여 변경'}</Text>
+                      <Text style={styles.albumCoverDefaultText}>{t('album.defaultCoverTapToChange')}</Text>
                     </View>
                   </>
                 )}
@@ -2557,7 +2562,7 @@ function BabyAlbum() {
               >
                 {albumGenerating
                   ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={styles.albumGenerateBtnText}>{'앨범 생성 시작'}</Text>
+                  : <Text style={styles.albumGenerateBtnText}>{t('album.startAlbumGeneration')}</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -2590,13 +2595,13 @@ function BabyAlbum() {
             <View style={styles.editCard}>
               <View style={styles.editHeader}>
                 <TouchableOpacity onPress={() => setEditState(null)}>
-                  <Text style={styles.editCancel}>취소</Text>
+                  <Text style={styles.editCancel}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
-                <Text style={styles.editTitle}>메모 수정</Text>
+                <Text style={styles.editTitle}>{t('album.editMemo')}</Text>
                 <TouchableOpacity onPress={handleEditSave} disabled={editSaving}>
                   {editSaving
                     ? <ActivityIndicator color={COLORS.primary} size="small" />
-                    : <Text style={styles.editDone}>저장</Text>
+                    : <Text style={styles.editDone}>{t('common.save')}</Text>
                   }
                 </TouchableOpacity>
               </View>
@@ -2612,11 +2617,11 @@ function BabyAlbum() {
                 />
               ) : null}
               <TouchableOpacity style={pStyles.editImgBtn} onPress={pickEditImage}>
-                <Text style={pStyles.editImgBtnText}>{(editNewImage ?? editState?.imageUri) ? '📷 사진 변경' : '📷 사진 추가'}</Text>
+                <Text style={pStyles.editImgBtnText}>{(editNewImage ?? editState?.imageUri) ? `📷 ${t('album.changePhoto')}` : `📷 ${t('album.addPhoto')}`}</Text>
               </TouchableOpacity>
               <TextInput
                 style={styles.editInput}
-                placeholder="메모를 입력하세요"
+                placeholder={t('album.enterMemo')}
                 placeholderTextColor={COLORS.textLight}
                 value={editState?.value ?? ''}
                 onChangeText={(v) => setEditState((s) => s ? { ...s, value: v } : s)}
