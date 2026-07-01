@@ -45,6 +45,8 @@ import { OnboardingGuide } from '../../components/common/OnboardingGuide';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { AgeGroupKey } from '../../constants/ageGroups';
 import { CenterModal } from '../../components/ui/CenterModal';
+import { useTranslation } from 'react-i18next';
+import { TFunction } from 'i18next';
 
 /* ------------------------------------------------------------------ */
 /* Pregnancy week-appropriate questions                                */
@@ -88,7 +90,8 @@ interface QuickAction {
   icon: ReturnType<typeof require>;
   /** emoji가 지정되면 icon 대신 큰 이모지로 렌더 (직관성 우선) */
   emoji?: string;
-  label: string;
+  /** i18n 키 접미사 — home.quickActions.{labelKey} 로 표시 문구 조회 + React key 로도 사용 */
+  labelKey: string;
   route: string;
   bg: string;
   ages: AgeGroupKey[]; // 표시할 연령 그룹
@@ -98,31 +101,31 @@ interface QuickAction {
 
 const ALL_ACTIONS: QuickAction[] = [
   // 임산부 전용 (pregnant 필터링 시 먼저 노출)
-  { icon: require('../../assets/quick-learning.png'), label: '임신앨범', route: '/(main)/pregnancy', bg: '#FCE4EC', ages: ['pregnant'] },
-  { icon: require('../../assets/quick-baby.png'), label: '주수별 발달', route: '/(main)/growth-stats', bg: '#F3E5F5', ages: ['pregnant'] },
-  { icon: require('../../assets/quick-blood.png'), label: '임당 관리', route: '/(main)/gdm', bg: '#FCE4EC', ages: ['pregnant'] },
-  { icon: require('../../assets/quick-sleep.png'), label: '태동 체크', route: '/(main)/labor-monitor?tab=kick', bg: '#FCE4EC', ages: ['pregnant'] },
-  { icon: require('../../assets/quick-parent-level.png'), label: '마음 건강체크', route: '/(main)/mom-wellness', bg: '#F8BBD0', ages: ['pregnant'] },
-  { icon: require('../../assets/quick-lullaby.png'), label: '태교음악', route: '/(main)/lullaby?mode=prenatal', bg: '#EDE7F6', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-learning.png'), labelKey: 'pregnancyAlbum', route: '/(main)/pregnancy', bg: '#FCE4EC', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-baby.png'), labelKey: 'weeklyDevelopment', route: '/(main)/growth-stats', bg: '#F3E5F5', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-blood.png'), labelKey: 'gdm', route: '/(main)/gdm', bg: '#FCE4EC', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-sleep.png'), labelKey: 'kickCheck', route: '/(main)/labor-monitor?tab=kick', bg: '#FCE4EC', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-parent-level.png'), labelKey: 'momWellness', route: '/(main)/mom-wellness', bg: '#F8BBD0', ages: ['pregnant'] },
+  { icon: require('../../assets/quick-lullaby.png'), labelKey: 'prenatalMusic', route: '/(main)/lullaby?mode=prenatal', bg: '#EDE7F6', ages: ['pregnant'] },
 
   // 영아·유아 순서 (사용자 요청 순서): 아기시간 → 성장앨범 → 열나 → 성장통계 → 접종달력 → 자장가 → 맘스톡 → 가족육아
-  { icon: require('../../assets/quick-learning.png'), label: '아기시간', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['infant', 'toddler'] },
-  { icon: require('../../assets/quick-timeline.png'), label: '성장앨범', route: '/(main)/album', bg: '#E0F2F1', ages: ['infant', 'toddler', 'elementary'] },
-  { icon: require('../../assets/quick-thermometer.png'), label: '열나열나', route: '/(main)/fever', bg: '#FFF0F0', ages: ['infant', 'toddler'], feverAlert: true },
-  { icon: require('../../assets/quick-sprout.png'), label: '성장 통계', route: '/(main)/growth-stats', bg: COLOR.mintBg, ages: ['infant', 'toddler', 'elementary'] },
-  { icon: require('../../assets/quick-syringe.png'), label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['infant', 'toddler'] },
-  { icon: require('../../assets/quick-lullaby.png'), label: '자장가', route: '/(main)/lullaby', bg: '#EDE7F6', ages: ['infant', 'toddler'] },
-  { icon: require('../../assets/icon-heart.png'), label: '맘스톡', route: '/(main)/mom-group', bg: '#FCE4EC', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
-  { icon: require('../../assets/quick-coparenting.png'), label: '가족육아', route: '/(main)/coparenting', bg: '#FFF3E0', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
+  { icon: require('../../assets/quick-learning.png'), labelKey: 'babyTime', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['infant', 'toddler'] },
+  { icon: require('../../assets/quick-timeline.png'), labelKey: 'growthAlbum', route: '/(main)/album', bg: '#E0F2F1', ages: ['infant', 'toddler', 'elementary'] },
+  { icon: require('../../assets/quick-thermometer.png'), labelKey: 'fever', route: '/(main)/fever', bg: '#FFF0F0', ages: ['infant', 'toddler'], feverAlert: true },
+  { icon: require('../../assets/quick-sprout.png'), labelKey: 'growthStats', route: '/(main)/growth-stats', bg: COLOR.mintBg, ages: ['infant', 'toddler', 'elementary'] },
+  { icon: require('../../assets/quick-syringe.png'), labelKey: 'vaccination', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['infant', 'toddler'] },
+  { icon: require('../../assets/quick-lullaby.png'), labelKey: 'lullaby', route: '/(main)/lullaby', bg: '#EDE7F6', ages: ['infant', 'toddler'] },
+  { icon: require('../../assets/icon-heart.png'), labelKey: 'momGroup', route: '/(main)/mom-group', bg: '#FCE4EC', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
+  { icon: require('../../assets/quick-coparenting.png'), labelKey: 'coparenting', route: '/(main)/coparenting', bg: '#FFF3E0', ages: ['pregnant', 'infant', 'toddler', 'elementary'] },
 
   // 초등 전용
-  { icon: require('../../assets/quick-learning.png'), label: '생활 기록', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['elementary'] },
+  { icon: require('../../assets/quick-learning.png'), labelKey: 'lifeLog', route: '/(main)/baby-tracker', bg: COLOR.mintBg, ages: ['elementary'] },
   // 놀이 학습은 맞춤추천 카드에 이미 있으므로 퀵메뉴에서는 초등만 노출
-  { icon: require('../../assets/play-activity.png'), label: '놀이 학습', route: '/(main)/play-learning', bg: COLOR.yellowBg, ages: ['elementary'] },
+  { icon: require('../../assets/play-activity.png'), labelKey: 'playLearning', route: '/(main)/play-learning', bg: COLOR.yellowBg, ages: ['elementary'] },
 ];
 
 const VACCINE_ACTION: QuickAction = {
-  icon: require('../../assets/quick-syringe.png'), label: '접종달력', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['pregnant'],
+  icon: require('../../assets/quick-syringe.png'), labelKey: 'vaccination', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['pregnant'],
 };
 
 function getActionsForAge(ageGroup: AgeGroupKey, child?: Child | null): QuickAction[] {
@@ -142,12 +145,12 @@ function getActionsForAge(ageGroup: AgeGroupKey, child?: Child | null): QuickAct
 }
 
 /* ------------------------------------------------------------------ */
-function getAgeText(months: number): string {
-  if (months < 12) return `${months}개월`;
+function getAgeText(months: number, t: TFunction): string {
+  if (months < 12) return t('home.age.months', { count: months });
   const years = Math.floor(months / 12);
   const remaining = months % 12;
-  if (remaining === 0) return `${years}세`;
-  return `${years}세 ${remaining}개월`;
+  if (remaining === 0) return t('home.age.years', { count: years });
+  return t('home.age.yearsMonths', { years, months: remaining });
 }
 
 /* ── 맞춤 추천 카테고리 (홈 + 마이페이지 동일) ── */
@@ -170,6 +173,7 @@ const TRIAL_POPUP_KEY = 'amatda_trial_popup_dismissed';
 
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const overlayCount = useUiStore((s) => s.overlayCount);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -257,7 +261,7 @@ export default function HomeScreen() {
         if (!alreadyStarted && (status.trialDaysLeft === undefined || status.trialDaysLeft === null)) {
           await premiumApi.startTrial();
           await AsyncStorage.setItem(TRIAL_AUTO_KEY, '1');
-          Alert.alert('7일 무료 체험 시작!', '프리미엄 기능을 무료로 이용해보세요.');
+          Alert.alert(t('home.trialStartAlert.title'), t('home.trialStartAlert.desc'));
           return;
         }
         if (alreadyStarted && status.trialDaysLeft !== undefined && status.trialDaysLeft <= 0) {
@@ -300,15 +304,15 @@ export default function HomeScreen() {
 
   const handleBirthSubmit = useCallback(async () => {
     if (!selectedChild || !birthDateVal || !birthTimeVal) {
-      Alert.alert('알림', '생년월일과 출생시각을 입력해주세요');
+      Alert.alert(t('common.notice'), t('home.birthAlert.missingFields'));
       return;
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(birthDateVal)) {
-      Alert.alert('알림', 'YYYY-MM-DD 형식으로 입력해주세요');
+      Alert.alert(t('common.notice'), t('home.birthAlert.dateFormat'));
       return;
     }
     if (!/^\d{2}:\d{2}$/.test(birthTimeVal)) {
-      Alert.alert('알림', 'HH:MM 형식으로 입력해주세요');
+      Alert.alert(t('common.notice'), t('home.birthAlert.timeFormat'));
       return;
     }
     setBirthLoading(true);
@@ -340,11 +344,11 @@ export default function HomeScreen() {
         }
       }
       setBirthModalVisible(false);
-      Alert.alert('축하합니다!', '아이가 태어났어요! 이제부터 육아 코칭이 시작됩니다.');
+      Alert.alert(t('home.birthAlert.successTitle'), t('home.birthAlert.successDesc'));
       // 새로고침
       loadChildren();
     } catch {
-      Alert.alert('오류', '출산 전환에 실패했습니다');
+      Alert.alert(t('home.birthAlert.errorTitle'), t('home.birthAlert.errorDesc'));
     } finally {
       setBirthLoading(false);
     }
@@ -482,8 +486,8 @@ export default function HomeScreen() {
       // 사라져 사진이 없어진 것처럼 보이는 회귀 방지). 사용자에게 명확히 안내.
       updateChild({ ...selectedChild, photoUri: previousPhotoUri ?? null });
       Alert.alert(
-        '사진 업로드 실패',
-        '네트워크 또는 서버 문제로 사진을 저장하지 못했어요. 잠시 후 다시 시도해주세요.',
+        t('home.photoUploadFail.title'),
+        t('home.photoUploadFail.desc'),
       );
     }
   };
@@ -503,16 +507,16 @@ export default function HomeScreen() {
       <View style={styles.center}>
         <Image source={require('../../assets/mascot-worried.png')} style={{ width: 56, height: 56, marginBottom: 16 }} resizeMode="contain" />
         <Text style={{ fontSize: 16, fontWeight: '600', color: '#333', marginBottom: 8 }}>
-          {'서버 연결에 실패했어요'}
+          {t('home.networkError.title')}
         </Text>
         <Text style={{ fontSize: 13, color: '#888', marginBottom: 24, textAlign: 'center', paddingHorizontal: 32 }}>
-          {'인터넷 연결을 확인하고 다시 시도해주세요'}
+          {t('home.networkError.desc')}
         </Text>
         <TouchableOpacity
           onPress={() => loadChildren(true)}
           style={{ backgroundColor: COLOR.accent, paddingHorizontal: 32, paddingVertical: 12, borderRadius: 24 }}
         >
-          <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 15 }}>{'다시 시도'}</Text>
+          <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 15 }}>{t('common.retry')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -560,8 +564,8 @@ export default function HomeScreen() {
         >
           <Text style={styles.registerBannerIcon}>👶</Text>
           <View style={{ flex: 1 }}>
-            <Text style={styles.registerBannerTitle}>자녀를 등록해보세요</Text>
-            <Text style={styles.registerBannerDesc}>맞춤 코칭과 기록을 시작할 수 있어요</Text>
+            <Text style={styles.registerBannerTitle}>{t('home.registerBanner.title')}</Text>
+            <Text style={styles.registerBannerDesc}>{t('home.registerBanner.desc')}</Text>
           </View>
           <Text style={styles.registerBannerArrow}>›</Text>
         </TouchableOpacity>
@@ -621,17 +625,17 @@ export default function HomeScreen() {
             );
           }
           const msg = isNearDue
-            ? `${child.name} 출산하셨나요?`
+            ? t('home.pregnancyHero.nearDue', { name: child.name })
             : weeks >= 24
-            ? `${child.name} 정밀 초음파 받으셨나요?`
+            ? t('home.pregnancyHero.ultrasound', { name: child.name })
             : weeks >= 16
-            ? `${child.name} 첫 태동 느끼셨나요?`
+            ? t('home.pregnancyHero.firstKick', { name: child.name })
             : weeks >= 12
-            ? `${child.name} 안정기 진입! 검진 예약하세요`
-            : `${child.name} 엽산 챙기고 계신가요?`;
+            ? t('home.pregnancyHero.stableEntry', { name: child.name })
+            : t('home.pregnancyHero.folicAcid', { name: child.name });
           const subMsg = isNearDue
-            ? '탭하면 육아 모드로 전환됩니다'
-            : '탭해서 기록하기';
+            ? t('home.pregnancyHero.tapToCare')
+            : t('home.pregnancyHero.tapToRecord');
           const heroIcon = isNearDue
             ? require('../../assets/preg-ribbon.png')
             : require('../../assets/preg-test.png');
@@ -734,9 +738,9 @@ export default function HomeScreen() {
         </View>
 
         <View style={{ flex: 1 }}>
-          <Text style={styles.addChildBannerTitle}>내 아이 정보 추가하기</Text>
+          <Text style={styles.addChildBannerTitle}>{t('home.addChildBanner.title')}</Text>
           <Text style={styles.addChildBannerDesc}>
-            둘째 또는 다른 자녀의 맞춤 코칭을 받아보세요
+            {t('home.addChildBanner.desc')}
           </Text>
         </View>
         <Text style={styles.addChildBannerPlus}>{'+'}</Text>
@@ -791,9 +795,9 @@ export default function HomeScreen() {
         overlayStyle={{ padding: 32 }}
       >
         <Image source={require('../../assets/premium-badge.png')} style={styles.trialEmojiImg} resizeMode="contain" />
-        <Text style={styles.trialTitle}>무료 체험이 종료되었습니다</Text>
+        <Text style={styles.trialTitle}>{t('home.trialPopup.title')}</Text>
         <Text style={styles.trialDesc}>
-          프리미엄으로 업그레이드하면 상담이모 무제한, 상세 리포트 등 모든 기능을 이용할 수 있어요.
+          {t('home.trialPopup.desc')}
         </Text>
         <TouchableOpacity
           style={styles.trialPremiumBtn}
@@ -803,7 +807,7 @@ export default function HomeScreen() {
           }}
           activeOpacity={0.8}
         >
-          <Text style={styles.trialPremiumText}>프리미엄 구독하기</Text>
+          <Text style={styles.trialPremiumText}>{t('home.trialPopup.subscribeBtn')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.trialFreeBtn}
@@ -813,7 +817,7 @@ export default function HomeScreen() {
           }}
           activeOpacity={0.7}
         >
-          <Text style={styles.trialFreeText}>무료로 계속하기</Text>
+          <Text style={styles.trialFreeText}>{t('home.trialPopup.continueFreeBtn')}</Text>
         </TouchableOpacity>
       </CenterModal>
 
@@ -824,40 +828,40 @@ export default function HomeScreen() {
         animationType="slide"
       >
         <Image source={require('../../assets/quick-baby.png')} style={styles.birthModalEmojiImg} resizeMode="contain" />
-            <Text style={styles.birthModalTitle}>출산 정보 입력</Text>
-            <Text style={styles.birthModalDesc}>축하합니다! 아이 정보를 입력해주세요</Text>
+            <Text style={styles.birthModalTitle}>{t('home.birthModal.title')}</Text>
+            <Text style={styles.birthModalDesc}>{t('home.birthModal.desc')}</Text>
 
             <View style={styles.birthField}>
-              <Text style={styles.birthFieldLabel}>이름 (정식 이름)</Text>
+              <Text style={styles.birthFieldLabel}>{t('home.birthModal.nameLabel')}</Text>
               <TextInput
                 style={styles.birthInput}
                 value={birthName}
                 onChangeText={setBirthName}
-                placeholder="아이 이름"
+                placeholder={t('home.birthModal.namePlaceholder')}
                 placeholderTextColor={COLOR.textLight}
               />
             </View>
 
             <View style={styles.birthField}>
-              <Text style={styles.birthFieldLabel}>성별</Text>
+              <Text style={styles.birthFieldLabel}>{t('home.birthModal.genderLabel')}</Text>
               <View style={styles.birthGenderRow}>
                 <TouchableOpacity
                   style={[styles.birthGenderBtn, birthGender === 'M' && styles.birthGenderActive]}
                   onPress={() => setBirthGender('M')}
                 >
-                  <Text style={[styles.birthGenderText, birthGender === 'M' && styles.birthGenderActiveText]}>남아</Text>
+                  <Text style={[styles.birthGenderText, birthGender === 'M' && styles.birthGenderActiveText]}>{t('home.birthModal.boy')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.birthGenderBtn, birthGender === 'F' && styles.birthGenderActive]}
                   onPress={() => setBirthGender('F')}
                 >
-                  <Text style={[styles.birthGenderText, birthGender === 'F' && styles.birthGenderActiveText]}>여아</Text>
+                  <Text style={[styles.birthGenderText, birthGender === 'F' && styles.birthGenderActiveText]}>{t('home.birthModal.girl')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             <View style={styles.birthField}>
-              <Text style={styles.birthFieldLabel}>생년월일 *</Text>
+              <Text style={styles.birthFieldLabel}>{t('home.birthModal.birthDateLabel')}</Text>
               <TextInput
                 style={styles.birthInput}
                 value={birthDateVal}
@@ -869,7 +873,7 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.birthField}>
-              <Text style={styles.birthFieldLabel}>출생시각 *</Text>
+              <Text style={styles.birthFieldLabel}>{t('home.birthModal.birthTimeLabel')}</Text>
               <TextInput
                 style={styles.birthInput}
                 value={birthTimeVal}
@@ -889,7 +893,7 @@ export default function HomeScreen() {
               {birthLoading ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={styles.birthSubmitText}>출산 완료!</Text>
+                <Text style={styles.birthSubmitText}>{t('home.birthModal.submit')}</Text>
               )}
             </TouchableOpacity>
 
@@ -897,7 +901,7 @@ export default function HomeScreen() {
               style={styles.birthCancelBtn}
               onPress={() => setBirthModalVisible(false)}
             >
-              <Text style={styles.birthCancelText}>취소</Text>
+              <Text style={styles.birthCancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
       </CenterModal>
 
@@ -929,14 +933,15 @@ function Header({
   child: Child | null;
   onPickPhoto: () => void;
 }) {
+  const { t } = useTranslation();
   // mockup 형식: "지수 8개월 12일 · 여" / "콩 1주차 · 태명"
   const subInfo = (() => {
     if (!child) return '';
     if (child.isPregnant) {
-      return `${child.pregnancyWeeks ?? 0}주차 · 태명`;
+      return `${child.pregnancyWeeks ?? 0}${t('home.header.weekSuffix')}`;
     }
-    const age = getAgeText(child.ageInfo.months);
-    const gender = child.gender === 'F' ? '여' : child.gender === 'M' ? '남' : '';
+    const age = getAgeText(child.ageInfo.months, t);
+    const gender = child.gender === 'F' ? t('home.header.genderF') : child.gender === 'M' ? t('home.header.genderM') : '';
     return gender ? `${age} · ${gender}` : age;
   })();
 
@@ -960,7 +965,7 @@ function Header({
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={styles.headerNameSimple} numberOfLines={1}>
-            <Text style={styles.headerNameStrong}>{child?.name ?? '아이'}</Text>
+            <Text style={styles.headerNameStrong}>{child?.name ?? t('home.header.defaultChildName')}</Text>
             {subInfo ? <Text style={styles.headerNameSub}>{`  ${subInfo}`}</Text> : null}
           </Text>
         </View>
@@ -973,7 +978,7 @@ function Header({
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
-          accessibilityLabel="알림 설정"
+          accessibilityLabel={t('home.header.notificationSettings')}
         >
           <Image source={require('../../assets/icon-bell.png')} style={styles.headerIcon} resizeMode="contain" />
         </TouchableOpacity>
@@ -983,7 +988,7 @@ function Header({
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
-          accessibilityLabel="프로필 및 설정"
+          accessibilityLabel={t('home.header.profileSettings')}
         >
           <Image source={require('../../assets/icon-settings.png')} style={styles.headerIcon} resizeMode="contain" />
         </TouchableOpacity>
@@ -995,6 +1000,7 @@ function Header({
 /* TodayCard 제거됨 — 홈화면에서 미사용 */
 
 function TraitAnalysisCard({ child }: { child: Child }) {
+  const { t } = useTranslation();
   const pulse = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0)).current;
 
@@ -1063,16 +1069,16 @@ function TraitAnalysisCard({ child }: { child: Child }) {
             { opacity: glowOpacity, transform: [{ scale: glowScale }] },
           ]}
         />
-        <Text style={traitCardStyles.iconText}>{'기질'}</Text>
+        <Text style={traitCardStyles.iconText}>{t('home.trait.label')}</Text>
       </View>
       <View style={traitCardStyles.textCol}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
-          <Text style={traitCardStyles.title}>{child.name}{'의 기질'}</Text>
+          <Text style={traitCardStyles.title}>{child.name}{t('home.trait.titleSuffix')}</Text>
           <View style={traitCardStyles.typeBadge}>
             <Text style={traitCardStyles.typeBadgeText}>{typeName}</Text>
           </View>
         </View>
-        <Text style={traitCardStyles.sub}>전체 결과 보기 · 다시 분석</Text>
+        <Text style={traitCardStyles.sub}>{t('home.trait.subtitle')}</Text>
       </View>
       <Text style={traitCardStyles.arrow}>{'›'}</Text>
     </TouchableOpacity>
@@ -1137,6 +1143,7 @@ const traitCardStyles = StyleSheet.create({
 });
 
 function MonthlyCharCard({ child }: { child: Child }) {
+  const { t } = useTranslation();
   const ageMonths = child.birthDate
     ? Math.floor(
         (Date.now() - new Date(child.birthDate).getTime()) /
@@ -1158,10 +1165,10 @@ function MonthlyCharCard({ child }: { child: Child }) {
     >
       <View style={styles.monthlyTop}>
         <View style={styles.monthlyBadge}>
-          <Text style={styles.monthlyBadgeText}>{ageMonths}{'개월'}</Text>
+          <Text style={styles.monthlyBadgeText}>{t('home.monthly.badge', { count: ageMonths })}</Text>
         </View>
         <Text style={styles.monthlyTitle} numberOfLines={1}>
-          {ageMonths}{'개월 특징 — '}{result.characteristic.title}
+          {t('home.monthly.titlePrefix', { count: ageMonths })}{result.characteristic.title}
         </Text>
         <Text style={styles.monthlyArrow}>{'>'}</Text>
       </View>
@@ -1178,6 +1185,7 @@ function MonthlyCharCard({ child }: { child: Child }) {
  * AsyncStorage에서 출산가방 진행률·아빠 담당 카운트 읽어 표시.
  */
 function BirthBagBigCard({ childId, onPress }: { childId: string; onPress: () => void }) {
+  const { t } = useTranslation();
   const [progress, setProgress] = useState<{ done: number; total: number; dadRemaining: number } | null>(null);
 
   useEffect(() => {
@@ -1225,10 +1233,10 @@ function BirthBagBigCard({ childId, onPress }: { childId: string; onPress: () =>
   const pct = progress ? Math.min(100, Math.round((progress.done / progress.total) * 100)) : 0;
   const subText = (() => {
     if (!progress || progress.done === 0) {
-      return '엄마·아빠가 함께 챙기는 체크리스트';
+      return t('home.birthBag.defaultSub');
     }
-    const parts: string[] = [`${progress.done}/${progress.total} 완료 (${pct}%)`];
-    if (progress.dadRemaining > 0) parts.push(`아빠 담당 ${progress.dadRemaining}개 남음`);
+    const parts: string[] = [t('home.birthBag.completed', { done: progress.done, total: progress.total, pct })];
+    if (progress.dadRemaining > 0) parts.push(t('home.birthBag.dadRemaining', { count: progress.dadRemaining }));
     return parts.join(' · ');
   })();
 
@@ -1238,7 +1246,7 @@ function BirthBagBigCard({ childId, onPress }: { childId: string; onPress: () =>
         <Image source={require('../../assets/preg-bag.png')} style={styles.preghomeBigIcon} resizeMode="contain" />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.preghomeBigTitle}>출산가방 같이 끝내요</Text>
+        <Text style={styles.preghomeBigTitle}>{t('home.birthBag.title')}</Text>
         <Text style={styles.preghomeBigSub}>{subText}</Text>
         {progress && progress.done > 0 ? (
           <View style={styles.bagProgressTrack}>
@@ -1260,6 +1268,7 @@ function BirthBagBigCard({ childId, onPress }: { childId: string; onPress: () =>
  * 사이즈: 헤더 라인 안에 들어가는 작은 pill (height 36) — 메인 영역 카드 차지 X.
  */
 function ContractionHeaderPill({ weeks, onPress }: { weeks: number; onPress: () => void }) {
+  const { t } = useTranslation();
   const emphasized = weeks >= 35;
   const urgent = weeks >= 37;
 
@@ -1319,7 +1328,7 @@ function ContractionHeaderPill({ weeks, onPress }: { weeks: number; onPress: () 
               urgent && styles.contractionPillTextUrgent,
             ]}
           >
-            진통 체크
+            {t('home.contractionCheck')}
           </Text>
           {urgent ? <View style={styles.contractionPillDot} /> : null}
         </TouchableOpacity>
@@ -1436,6 +1445,7 @@ function FeverPulseCircle({ children }: { children: React.ReactNode; bg: string 
 }
 
 function AllActionsGrid({ ageGroup, child }: { ageGroup: AgeGroupKey; child?: Child | null }) {
+  const { t } = useTranslation();
   const actions = getActionsForAge(ageGroup, child);
   const feverAlert = useFeverAlert(child?.id);
   return (
@@ -1455,7 +1465,7 @@ function AllActionsGrid({ ageGroup, child }: { ageGroup: AgeGroupKey; child?: Ch
 
         return (
           <TouchableOpacity
-            key={action.label}
+            key={action.labelKey}
             style={styles.quickItem}
             onPress={() => router.push(action.route as never)}
             activeOpacity={0.7}
@@ -1466,7 +1476,7 @@ function AllActionsGrid({ ageGroup, child }: { ageGroup: AgeGroupKey; child?: Ch
               <View style={[styles.quickCircle, { backgroundColor: action.bg }]}>{inner}</View>
             )}
             <Text style={[styles.quickLabel, showPulse && styles.feverAlertLabel]}>
-              {action.label}
+              {t(`home.quickActions.${action.labelKey}`)}
             </Text>
           </TouchableOpacity>
         );
@@ -1481,21 +1491,22 @@ function AllActionsGrid({ ageGroup, child }: { ageGroup: AgeGroupKey; child?: Ch
  * 임신부일 경우 임산부용 카테고리/문구로 자동 전환.
  */
 function RecommendationSection({ child }: { child: Child }) {
+  const { t } = useTranslation();
   const isPregnant = !!child.isPregnant;
   const week = child.pregnancyWeeks ?? 0;
 
   // 임신부 — 트라이메스터별 강조 카테고리 변경
-  let title = '나를 위한 맞춤 추천 보기';
-  let desc = '음식 · 놀이 · 학원 · 책 등 카테고리별';
+  let title = t('home.recommendation.generalTitle');
+  let desc = t('home.recommendation.generalDesc');
 
   if (isPregnant) {
-    title = '임산부 맞춤 추천 보기';
+    title = t('home.recommendation.pregnantTitle');
     if (week <= 13) {
-      desc = '입덧 식단 · 가벼운 운동 · 태교 시작 · 초기 관리';
+      desc = t('home.recommendation.trimester1');
     } else if (week <= 27) {
-      desc = '영양 식단 · 임산부 요가 · 태교 책 · 출산용품 준비';
+      desc = t('home.recommendation.trimester2');
     } else {
-      desc = '체중 관리 식단 · 분만 준비 운동 · 태교 마무리 · 출산가방';
+      desc = t('home.recommendation.trimester3');
     }
   }
 
@@ -1516,6 +1527,7 @@ function RecommendationSection({ child }: { child: Child }) {
 }
 
 function AIAnalysisCard() {
+  const { t } = useTranslation();
   const pulse = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0)).current;
 
@@ -1581,12 +1593,12 @@ function AIAnalysisCard() {
       </View>
       <View style={aiCardStyles.textCol}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 3 }}>
-          <Text style={aiCardStyles.title}>AI 분석</Text>
+          <Text style={aiCardStyles.title}>{t('home.aiCard.title')}</Text>
           <View style={aiCardStyles.newBadge}>
             <Text style={aiCardStyles.newBadgeText}>NEW</Text>
           </View>
         </View>
-        <Text style={aiCardStyles.sub}>육아패턴 · 대변 · 울음 분석</Text>
+        <Text style={aiCardStyles.sub}>{t('home.aiCard.subtitle')}</Text>
       </View>
       <Text style={aiCardStyles.arrow}>{'\u203A'}</Text>
     </TouchableOpacity>

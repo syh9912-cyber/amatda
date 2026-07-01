@@ -1,0 +1,139 @@
+{
+  "tabs": {
+    "home": "홈",
+    "babyTime": "아기시간",
+    "pregnancyAlbum": "임신앨범",
+    "lifeLog": "생활기록",
+    "coach": "상담이모",
+    "familyFeed": "가족피드",
+    "my": "마이"
+  },
+  "common": {
+    "cancel": "취소",
+    "save": "저장",
+    "confirm": "확인",
+    "notice": "알림",
+    "next": "다음",
+    "back": "이전",
+    "retry": "다시 시도",
+    "close": "닫기",
+    "delete": "삭제"
+  },
+  "home": {
+    "networkError": {
+      "title": "서버 연결에 실패했어요",
+      "desc": "인터넷 연결을 확인하고 다시 시도해주세요"
+    },
+    "registerBanner": {
+      "title": "자녀를 등록해보세요",
+      "desc": "맞춤 코칭과 기록을 시작할 수 있어요"
+    },
+    "contractionCheck": "진통 체크",
+    "addChildBanner": {
+      "title": "내 아이 정보 추가하기",
+      "desc": "둘째 또는 다른 자녀의 맞춤 코칭을 받아보세요"
+    },
+    "trialPopup": {
+      "title": "무료 체험이 종료되었습니다",
+      "desc": "프리미엄으로 업그레이드하면 상담이모 무제한, 상세 리포트 등 모든 기능을 이용할 수 있어요.",
+      "subscribeBtn": "프리미엄 구독하기",
+      "continueFreeBtn": "무료로 계속하기"
+    },
+    "trialStartAlert": {
+      "title": "7일 무료 체험 시작!",
+      "desc": "프리미엄 기능을 무료로 이용해보세요."
+    },
+    "birthAlert": {
+      "missingFields": "생년월일과 출생시각을 입력해주세요",
+      "dateFormat": "YYYY-MM-DD 형식으로 입력해주세요",
+      "timeFormat": "HH:MM 형식으로 입력해주세요",
+      "successTitle": "축하합니다!",
+      "successDesc": "아이가 태어났어요! 이제부터 육아 코칭이 시작됩니다.",
+      "errorTitle": "오류",
+      "errorDesc": "출산 전환에 실패했습니다"
+    },
+    "photoUploadFail": {
+      "title": "사진 업로드 실패",
+      "desc": "네트워크 또는 서버 문제로 사진을 저장하지 못했어요. 잠시 후 다시 시도해주세요."
+    },
+    "birthModal": {
+      "title": "출산 정보 입력",
+      "desc": "축하합니다! 아이 정보를 입력해주세요",
+      "nameLabel": "이름 (정식 이름)",
+      "namePlaceholder": "아이 이름",
+      "genderLabel": "성별",
+      "boy": "남아",
+      "girl": "여아",
+      "birthDateLabel": "생년월일 *",
+      "birthTimeLabel": "출생시각 *",
+      "submit": "출산 완료!"
+    },
+    "header": {
+      "defaultChildName": "아이",
+      "notificationSettings": "알림 설정",
+      "profileSettings": "프로필 및 설정",
+      "weekSuffix": "주차 · 태명",
+      "genderF": "여",
+      "genderM": "남"
+    },
+    "age": {
+      "months": "{{count}}개월",
+      "years": "{{count}}세",
+      "yearsMonths": "{{years}}세 {{months}}개월"
+    },
+    "trait": {
+      "label": "기질",
+      "titleSuffix": "의 기질",
+      "subtitle": "전체 결과 보기 · 다시 분석"
+    },
+    "monthly": {
+      "badge": "{{count}}개월",
+      "titlePrefix": "{{count}}개월 특징 — "
+    },
+    "birthBag": {
+      "title": "출산가방 같이 끝내요",
+      "defaultSub": "엄마·아빠가 함께 챙기는 체크리스트",
+      "completed": "{{done}}/{{total}} 완료 ({{pct}}%)",
+      "dadRemaining": "아빠 담당 {{count}}개 남음"
+    },
+    "pregnancyHero": {
+      "nearDue": "{{name}} 출산하셨나요?",
+      "ultrasound": "{{name}} 정밀 초음파 받으셨나요?",
+      "firstKick": "{{name}} 첫 태동 느끼셨나요?",
+      "stableEntry": "{{name}} 안정기 진입! 검진 예약하세요",
+      "folicAcid": "{{name}} 엽산 챙기고 계신가요?",
+      "tapToCare": "탭하면 육아 모드로 전환됩니다",
+      "tapToRecord": "탭해서 기록하기"
+    },
+    "recommendation": {
+      "generalTitle": "나를 위한 맞춤 추천 보기",
+      "generalDesc": "음식 · 놀이 · 학원 · 책 등 카테고리별",
+      "pregnantTitle": "임산부 맞춤 추천 보기",
+      "trimester1": "입덧 식단 · 가벼운 운동 · 태교 시작 · 초기 관리",
+      "trimester2": "영양 식단 · 임산부 요가 · 태교 책 · 출산용품 준비",
+      "trimester3": "체중 관리 식단 · 분만 준비 운동 · 태교 마무리 · 출산가방"
+    },
+    "aiCard": {
+      "title": "AI 분석",
+      "subtitle": "육아패턴 · 대변 · 울음 분석"
+    },
+    "quickActions": {
+      "pregnancyAlbum": "임신앨범",
+      "weeklyDevelopment": "주수별 발달",
+      "gdm": "임당 관리",
+      "kickCheck": "태동 체크",
+      "momWellness": "마음 건강체크",
+      "prenatalMusic": "태교음악",
+      "babyTime": "아기시간",
+      "growthAlbum": "성장앨범",
+      "fever": "열나열나",
+      "growthStats": "성장 통계",
+      "vaccination": "접종달력",
+      "lullaby": "자장가",
+      "momGroup": "맘스톡",
+      "coparenting": "가족육아",
+      "lifeLog": "생활 기록",
+      "playLearning": "놀이 학습"
+    }
+  }
+}

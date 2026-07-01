@@ -1,0 +1,139 @@
+{
+  "tabs": {
+    "home": "首頁",
+    "babyTime": "育兒記錄",
+    "pregnancyAlbum": "懷孕相簿",
+    "lifeLog": "生活記錄",
+    "coach": "諮詢",
+    "familyFeed": "社群",
+    "my": "我的"
+  },
+  "common": {
+    "cancel": "取消",
+    "save": "儲存",
+    "confirm": "確認",
+    "notice": "提醒",
+    "next": "下一步",
+    "back": "返回",
+    "retry": "重試",
+    "close": "關閉",
+    "delete": "刪除"
+  },
+  "home": {
+    "networkError": {
+      "title": "伺服器連線失敗",
+      "desc": "請確認網路連線後再試一次"
+    },
+    "registerBanner": {
+      "title": "幫寶寶建立資料吧",
+      "desc": "立即開始個人化育兒建議與紀錄"
+    },
+    "contractionCheck": "陣痛紀錄",
+    "addChildBanner": {
+      "title": "新增寶寶資料",
+      "desc": "也能為第二個孩子或其他家人取得專屬建議"
+    },
+    "trialPopup": {
+      "title": "免費體驗已結束",
+      "desc": "升級高級版即可無限使用諮詢功能、查看詳細報告等所有功能。",
+      "subscribeBtn": "立即升級高級版",
+      "continueFreeBtn": "繼續使用免費版"
+    },
+    "trialStartAlert": {
+      "title": "7天免費體驗開始！",
+      "desc": "立即免費體驗所有高級功能。"
+    },
+    "birthAlert": {
+      "missingFields": "請輸入出生年月日與時間",
+      "dateFormat": "請以 YYYY-MM-DD 格式輸入",
+      "timeFormat": "請以 HH:MM 格式輸入",
+      "successTitle": "恭喜！",
+      "successDesc": "寶寶出生囉！育兒諮詢即刻開始。",
+      "errorTitle": "發生錯誤",
+      "errorDesc": "切換為出生資料失敗"
+    },
+    "photoUploadFail": {
+      "title": "照片上傳失敗",
+      "desc": "因網路或伺服器問題，照片未能儲存，請稍後再試一次。"
+    },
+    "birthModal": {
+      "title": "輸入出生資料",
+      "desc": "恭喜！請輸入寶寶的資料",
+      "nameLabel": "姓名（正式名稱）",
+      "namePlaceholder": "寶寶的名字",
+      "genderLabel": "性別",
+      "boy": "男寶寶",
+      "girl": "女寶寶",
+      "birthDateLabel": "出生年月日 *",
+      "birthTimeLabel": "出生時間 *",
+      "submit": "完成出生登記！"
+    },
+    "header": {
+      "defaultChildName": "寶寶",
+      "notificationSettings": "通知設定",
+      "profileSettings": "個人資料與設定",
+      "weekSuffix": "週 · 胎名",
+      "genderF": "女",
+      "genderM": "男"
+    },
+    "age": {
+      "months": "{{count}}個月",
+      "years": "{{count}}歲",
+      "yearsMonths": "{{years}}歲{{months}}個月"
+    },
+    "trait": {
+      "label": "氣質",
+      "titleSuffix": "的氣質",
+      "subtitle": "查看完整結果 · 重新分析"
+    },
+    "monthly": {
+      "badge": "{{count}}個月",
+      "titlePrefix": "{{count}}個月的特徵 — "
+    },
+    "birthBag": {
+      "title": "一起準備待產包",
+      "defaultSub": "爸爸媽媽一起準備的檢查清單",
+      "completed": "{{done}}/{{total}} 完成（{{pct}}%）",
+      "dadRemaining": "爸爸負責項目還剩 {{count}} 項"
+    },
+    "pregnancyHero": {
+      "nearDue": "{{name}}，寶寶出生了嗎？",
+      "ultrasound": "{{name}}，做過詳細超音波檢查了嗎？",
+      "firstKick": "{{name}}，感覺到第一次胎動了嗎？",
+      "stableEntry": "{{name}}，已進入穩定期！記得預約產檢",
+      "folicAcid": "{{name}}，有記得補充葉酸嗎？",
+      "tapToCare": "點一下即可切換為育兒模式",
+      "tapToRecord": "點一下開始紀錄"
+    },
+    "recommendation": {
+      "generalTitle": "查看為你推薦的內容",
+      "generalDesc": "依飲食 · 遊戲 · 補習班 · 書籍等分類",
+      "pregnantTitle": "查看孕媽咪專屬推薦",
+      "trimester1": "孕吐飲食 · 輕度運動 · 開始胎教 · 孕早期照護",
+      "trimester2": "營養飲食 · 孕婦瑜伽 · 胎教書籍 · 準備待產用品",
+      "trimester3": "體重管理飲食 · 生產前運動 · 胎教收尾 · 待產包"
+    },
+    "aiCard": {
+      "title": "AI 分析",
+      "subtitle": "育兒模式 · 便便 · 哭聲分析"
+    },
+    "quickActions": {
+      "pregnancyAlbum": "懷孕相簿",
+      "weeklyDevelopment": "週數發展",
+      "gdm": "妊娠糖尿病管理",
+      "kickCheck": "胎動紀錄",
+      "momWellness": "媽媽心理檢測",
+      "prenatalMusic": "胎教音樂",
+      "babyTime": "育兒記錄",
+      "growthAlbum": "成長相簿",
+      "fever": "發燒警示",
+      "growthStats": "成長統計",
+      "vaccination": "疫苗行事曆",
+      "lullaby": "搖籃曲",
+      "momGroup": "媽媽社群",
+      "coparenting": "家庭共同育兒",
+      "lifeLog": "生活紀錄",
+      "playLearning": "遊戲學習"
+    }
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "tabs": {
+    "home": "ホーム",
+    "babyTime": "育児記録",
+    "pregnancyAlbum": "妊娠アルバム",
+    "lifeLog": "生活記録",
+    "coach": "そうだん",
+    "familyFeed": "コミュニティ",
+    "my": "マイ"
+  },
+  "common": {
+    "cancel": "キャンセル",
+    "save": "保存",
+    "confirm": "確認",
+    "notice": "お知らせ",
+    "next": "次へ",
+    "back": "戻る",
+    "retry": "もう一度",
+    "close": "閉じる",
+    "delete": "削除"
+  },
+  "home": {
+    "networkError": {
+      "title": "サーバーに接続できませんでした",
+      "desc": "インターネット接続を確認して、もう一度お試しください"
+    },
+    "registerBanner": {
+      "title": "お子さまを登録しましょう",
+      "desc": "個別コーチングと記録がすぐに始められます"
+    },
+    "contractionCheck": "陣痛チェック",
+    "addChildBanner": {
+      "title": "お子さま情報を追加する",
+      "desc": "二人目やほかのお子さまの個別コーチングも受けられます"
+    },
+    "trialPopup": {
+      "title": "無料体験が終了しました",
+      "desc": "プレミアムにアップグレードすると、そうだん無制限・詳細レポートなどすべての機能が使えます。",
+      "subscribeBtn": "プレミアムに登録する",
+      "continueFreeBtn": "無料のまま続ける"
+    },
+    "trialStartAlert": {
+      "title": "7日間の無料体験スタート！",
+      "desc": "プレミアム機能を無料でお試しいただけます。"
+    },
+    "birthAlert": {
+      "missingFields": "生年月日と出生時刻を入力してください",
+      "dateFormat": "YYYY-MM-DDの形式で入力してください",
+      "timeFormat": "HH:MMの形式で入力してください",
+      "successTitle": "おめでとうございます！",
+      "successDesc": "赤ちゃんが生まれました！ここから育児そうだんがスタートします。",
+      "errorTitle": "エラー",
+      "errorDesc": "出産情報への切り替えに失敗しました"
+    },
+    "photoUploadFail": {
+      "title": "写真のアップロードに失敗しました",
+      "desc": "ネットワークまたはサーバーの問題で写真を保存できませんでした。しばらくしてからもう一度お試しください。"
+    },
+    "birthModal": {
+      "title": "出産情報の入力",
+      "desc": "おめでとうございます！お子さまの情報を入力してください",
+      "nameLabel": "名前（本名）",
+      "namePlaceholder": "お子さまの名前",
+      "genderLabel": "性別",
+      "boy": "男の子",
+      "girl": "女の子",
+      "birthDateLabel": "生年月日 *",
+      "birthTimeLabel": "出生時刻 *",
+      "submit": "出産完了！"
+    },
+    "header": {
+      "defaultChildName": "お子さま",
+      "notificationSettings": "通知設定",
+      "profileSettings": "プロフィールと設定",
+      "weekSuffix": "週目・胎児ニックネーム",
+      "genderF": "女の子",
+      "genderM": "男の子"
+    },
+    "age": {
+      "months": "{{count}}か月",
+      "years": "{{count}}歳",
+      "yearsMonths": "{{years}}歳{{months}}か月"
+    },
+    "trait": {
+      "label": "気質",
+      "titleSuffix": "の気質",
+      "subtitle": "詳しい結果を見る・再分析"
+    },
+    "monthly": {
+      "badge": "{{count}}か月",
+      "titlePrefix": "生後{{count}}か月の特徴 — "
+    },
+    "birthBag": {
+      "title": "出産準備バッグを一緒に完成させよう",
+      "defaultSub": "ママとパパで一緒に準備するチェックリスト",
+      "completed": "{{done}}/{{total}} 完了（{{pct}}%）",
+      "dadRemaining": "パパ担当があと{{count}}個"
+    },
+    "pregnancyHero": {
+      "nearDue": "{{name}}、もう出産されましたか？",
+      "ultrasound": "{{name}}の精密超音波検査は受けましたか？",
+      "firstKick": "{{name}}の胎動を感じましたか？",
+      "stableEntry": "{{name}}、安定期に入りました！健診の予約をしましょう",
+      "folicAcid": "{{name}}のために葉酸は摂れていますか？",
+      "tapToCare": "タップすると育児モードに切り替わります",
+      "tapToRecord": "タップして記録する"
+    },
+    "recommendation": {
+      "generalTitle": "あなたにぴったりのおすすめを見る",
+      "generalDesc": "食事・遊び・習い事・本などカテゴリ別に",
+      "pregnantTitle": "妊婦さん向けおすすめを見る",
+      "trimester1": "つわり対策の食事・軽い運動・胎教スタート・初期のケア",
+      "trimester2": "栄養バランスの食事・マタニティヨガ・胎教の本・出産準備",
+      "trimester3": "体重管理の食事・出産準備運動・胎教の仕上げ・入院バッグ"
+    },
+    "aiCard": {
+      "title": "AI分析",
+      "subtitle": "育児パターン・うんち・泣き声分析"
+    },
+    "quickActions": {
+      "pregnancyAlbum": "妊娠アルバム",
+      "weeklyDevelopment": "週数別の成長",
+      "gdm": "妊娠糖尿病管理",
+      "kickCheck": "胎動チェック",
+      "momWellness": "ママのメンタルチェック",
+      "prenatalMusic": "胎教音楽",
+      "babyTime": "育児記録",
+      "growthAlbum": "成長アルバム",
+      "fever": "発熱チェック",
+      "growthStats": "成長統計",
+      "vaccination": "予防接種カレンダー",
+      "lullaby": "子守唄",
+      "momGroup": "ママの掲示板",
+      "coparenting": "家族で育児",
+      "lifeLog": "生活記録",
+      "playLearning": "あそび学習"
+    }
+  }
+}

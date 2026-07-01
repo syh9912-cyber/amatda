@@ -9,6 +9,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useChildStore } from '../../stores/childStore';
 import { usePremiumStore } from '../../stores/premiumStore';
 import { authApi } from '../../services/api';
+import { useTranslation } from 'react-i18next';
 
 // 약관 버전 게이트 — consent.tsx / register.tsx 와 동기화
 //   기존 사용자가 신규 필수 항목(커뮤니티 약관) 누락 시 재동의 화면 강제 라우팅.
@@ -121,6 +122,7 @@ export default function MainLayout() {
     })();
   }, [isAuthenticated]);
 
+  const { t } = useTranslation();
   const ageGroup = selectedChild?.ageInfo?.group;
   const isElementary = ageGroup === 'elementary';
   const isPregnant = ageGroup === 'pregnant';
@@ -157,35 +159,35 @@ export default function MainLayout() {
         name="home"
         options={{
           tabBarIcon: ({ focused }) => <TabIcon iconKey="home" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TabLabel label={'홈'} focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={t('tabs.home')} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="baby-tracker"
         options={{
           tabBarIcon: ({ focused }) => <TabIcon iconKey="diary" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TabLabel label={isPregnant ? '임신앨범' : isElementary ? '생활기록' : '아기시간'} focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={isPregnant ? t('tabs.pregnancyAlbum') : isElementary ? t('tabs.lifeLog') : t('tabs.babyTime')} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="chatbot"
         options={{
           tabBarIcon: ({ focused }) => <TabIcon iconKey="chat" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TabLabel label={'상담이모'} focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={t('tabs.coach')} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="momstagram"
         options={{
           tabBarIcon: ({ focused }) => <TabIcon iconKey="family" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TabLabel label={'가족피드'} focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={t('tabs.familyFeed')} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           tabBarIcon: ({ focused }) => <TabIcon iconKey="more" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TabLabel label={'마이'} focused={focused} />,
+          tabBarLabel: ({ focused }) => <TabLabel label={t('tabs.my')} focused={focused} />,
         }}
       />
 

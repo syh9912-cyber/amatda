@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, Component, ErrorInfo, ReactNode } from 'react';
+import '../i18n'; // i18n 초기화 (기기 언어 감지 → ko/ja/zh-Hant, 미지원은 ko fallback)
 import { useSiriVoiceLaunch } from '../hooks/useSiriVoiceLaunch';
 
 import { View, ActivityIndicator, Text, TextInput, Image, Animated, Easing, StyleSheet, Dimensions, AppState, AppStateStatus, TouchableOpacity } from 'react-native';
