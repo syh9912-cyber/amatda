@@ -10,6 +10,8 @@ import {
   Platform,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useAuthStore } from '../stores/authStore';
 import { useChildStore } from '../stores/childStore';
 import { trackerApi, childApi } from '../services/api';
@@ -37,12 +39,17 @@ interface ParsedMulti {
   records: ParsedRecord[];
 }
 
-const SUBTYPE_LABELS: Record<string, string> = {
-  pee: '소변', poop: '대변', both: '소변+대변',
-  breast: '모유', formula: '분유', baby_food: '이유식', snack: '간식',
-  nap: '낮잠', night: '밤잠', sleep: '수면',
-  fever: '해열제', antibiotic: '항생제', vitamin: '비타민', other: '기타 약',
+const SUBTYPE_LABEL_KEYS: Record<string, string> = {
+  pee: 'voice.subtypePee', poop: 'voice.subtypePoop', both: 'voice.subtypeBoth',
+  breast: 'voice.subtypeBreast', formula: 'voice.subtypeFormula', baby_food: 'voice.subtypeBabyFood', snack: 'voice.subtypeSnack',
+  nap: 'voice.subtypeNap', night: 'voice.subtypeNight', sleep: 'voice.subtypeSleep',
+  fever: 'voice.subtypeFever', antibiotic: 'voice.subtypeAntibiotic', vitamin: 'voice.subtypeVitamin', other: 'voice.subtypeOther',
 };
+
+function getSubtypeLabel(t: TFunction, subType: string): string {
+  const key = SUBTYPE_LABEL_KEYS[subType];
+  return key ? t(key) : subType;
+}
 
 /* ================================================================== */
 /*  Speech Recognition wrapper (dynamic import, graceful fallback)     */
@@ -89,6 +96,7 @@ async function loadSpeechModule(): Promise<SpeechModule | null> {
  * Case 2 (Google/Bixby): no text → auto-start speech recognition → process
  */
 export default function VoiceScreen() {
+  const { t } = useTranslation();
   const { text } = useLocalSearchParams<{ text?: string }>();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const children = useChildStore((s) => s.children);
@@ -178,13 +186,13 @@ export default function VoiceScreen() {
         },
       } as Parameters<typeof mod.ExpoSpeechRecognitionModule.start>[0]);
       setPhase('listening');
-      setStatus('말씀하세요...');
+      setStatus(t('voice.statusSpeak'));
       setRecognizedText('');
     } catch {
-      setError('음성 인식을 시작할 수 없습니다');
+      setError(t('voice.errorCannotStart'));
       setPhase('error');
     }
-  }, []);
+  }, [t]);
 
   // ── Main flow ──
   useEffect(() => {
@@ -199,7 +207,7 @@ export default function VoiceScreen() {
     // → 즉시 처리 후, 완료되면 연속 기록을 위해 음성 인식 시작
     if (text && text.trim().length >= 2) {
       setPhase('processing');
-      setStatus('AI가 분석 중...');
+      setStatus(t('voice.statusAnalyzing'));
       setRecognizedText(text.trim());
       processVoice(text.trim());
       // speechModuleRef 초기화 (processVoice 완료 후 연속 모드 시작 시 필요)
@@ -228,7 +236,7 @@ export default function VoiceScreen() {
   async function initSpeechRecognition() {
     const mod = await loadSpeechModule();
     if (!mod) {
-      setError('음성 인식을 사용할 수 없습니다');
+      setError(t('voice.errorUnavailable'));
       setPhase('error');
       setTimeout(() => router.replace('/(main)/baby-tracker'), 2000);
       return;
@@ -241,7 +249,7 @@ export default function VoiceScreen() {
     try {
       const available = mod.ExpoSpeechRecognitionModule.isRecognitionAvailable();
       if (!available) {
-        setError('이 기기에서 음성 인식을 지원하지 않습니다');
+        setError(t('voice.errorDeviceUnsupported'));
         setPhase('error');
         setTimeout(() => router.replace('/(main)/baby-tracker'), 2000);
         return;
@@ -251,7 +259,7 @@ export default function VoiceScreen() {
     }
 
     // 권한 요청 (5초 타임아웃 — requestPermissionsAsync 무한 대기 방지)
-    setStatus('마이크 권한 확인 중...');
+    setStatus(t('voice.statusCheckingMic'));
     try {
       const perm = await Promise.race<{ granted: boolean }>([
         mod.ExpoSpeechRecognitionModule.requestPermissionsAsync(),
@@ -260,7 +268,7 @@ export default function VoiceScreen() {
         ),
       ]);
       if (!perm.granted) {
-        setError('마이크 권한이 필요합니다');
+        setError(t('voice.errorMicPermission'));
         setPhase('error');
         setTimeout(() => router.replace('/(main)/baby-tracker'), 2000);
         return;
@@ -285,13 +293,13 @@ export default function VoiceScreen() {
         setRecognizedText(result.transcript);
         if (result.transcript.trim().length >= 2) {
           restartCountRef.current = 0; // 실제 입력 들어옴 — 빈 재시작 카운터 리셋
-          setStatus('듣는 중...');
+          setStatus(t('voice.statusListening'));
           if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
           debounceTimerRef.current = setTimeout(() => {
             if (!hasProcessed.current) {
               hasProcessed.current = true;
               setPhase('processing');
-              setStatus('AI가 분석 중...');
+              setStatus(t('voice.statusAnalyzing'));
               processVoice(result.transcript.trim());
               try { mod.ExpoSpeechRecognitionModule.stop(); } catch { /* ignore */ }
             }
@@ -310,7 +318,7 @@ export default function VoiceScreen() {
       // 사용자는 상단 "완료" 버튼으로만 화면을 빠져나간다.
       if (!hasText && restartCountRef.current < MAX_EMPTY_RESTARTS) {
         restartCountRef.current += 1;
-        setStatus('말씀하세요...');
+        setStatus(t('voice.statusSpeak'));
         setTimeout(() => { if (!hasProcessed.current) startListening(mod); }, 500);
         return;
       }
@@ -319,7 +327,7 @@ export default function VoiceScreen() {
         return;
       }
       // 재시도 소진 — 에러 화면(재시도/완료 버튼). 자동 이탈하지 않음.
-      setError('음성 인식이 시작되지 않았어요. 다시 시도를 눌러주세요.');
+      setError(t('voice.errorRestartFailed'));
       setPhase('error');
     });
 
@@ -331,7 +339,7 @@ export default function VoiceScreen() {
       if (!hasProcessed.current && currentText.trim().length >= 2) {
         hasProcessed.current = true;
         setPhase('processing');
-        setStatus('AI가 분석 중...');
+        setStatus(t('voice.statusAnalyzing'));
         processVoice(currentText.trim());
         return;
       }
@@ -372,7 +380,7 @@ export default function VoiceScreen() {
           : []);
 
       if (records.length === 0) {
-        setError('기록을 파악할 수 없습니다');
+        setError(t('voice.errorNoRecordParsed'));
         setPhase('error');
         setTimeout(() => router.replace('/(main)/baby-tracker'), 1500);
         return;
@@ -425,7 +433,7 @@ export default function VoiceScreen() {
       }
 
       if (!targetChildId) {
-        setError(availableChildren.length === 0 ? '먼저 아이를 등록해주세요' : '아이를 선택해주세요');
+        setError(availableChildren.length === 0 ? t('voice.errorRegisterChildFirst') : t('voice.errorSelectChild'));
         setPhase('error');
         setTimeout(() => router.replace('/(main)/home'), 1500);
         return;
@@ -542,7 +550,7 @@ export default function VoiceScreen() {
         }
       } catch {
         // 로컬 저장 실패 — "완료" 로 위장하지 않고 에러 화면(재시도 버튼)으로 전환
-        setError('기록 저장에 실패했어요. 다시 말해주세요.');
+        setError(t('voice.errorSaveFailed'));
         setPhase('error');
         return;
       }
@@ -568,11 +576,11 @@ export default function VoiceScreen() {
       } catch { /* best-effort */ }
 
       const totalCount = records.length;
-      const firstLabel = SUBTYPE_LABELS[records[0].subType] ?? records[0].subType;
+      const firstLabel = getSubtypeLabel(t, records[0].subType);
       const doneLabel = totalCount === 1
-        ? `${firstLabel} ${records[0].time ?? ''} 기록됨`
-        : `${totalCount}건 일괄 기록됨 (${firstLabel} 외)`;
-      setStatus(totalCount === 1 ? `${firstLabel} 기록 완료!` : `${totalCount}건 기록 완료!`);
+        ? t('voice.doneSingleLabel', { label: firstLabel, time: records[0].time ?? '' })
+        : t('voice.doneMultiLabel', { count: totalCount, label: firstLabel });
+      setStatus(totalCount === 1 ? t('voice.statusDoneSingle', { label: firstLabel }) : t('voice.statusDoneMulti', { count: totalCount }));
       setLastRecord(doneLabel);
       setPhase('done');
 
@@ -593,7 +601,7 @@ export default function VoiceScreen() {
         }
       }, 1500);
     } catch {
-      setError('기록 분석에 실패했습니다');
+      setError(t('voice.errorAnalysisFailed'));
       setPhase('error');
       setTimeout(() => router.replace('/(main)/baby-tracker'), 1500);
     }
@@ -631,7 +639,7 @@ export default function VoiceScreen() {
 
       {/* ── 완료 버튼 (항상 상단 고정) ── */}
       <TouchableOpacity style={s.closeBtn} onPress={handleClose}>
-        <Text style={s.closeBtnText}>{'완료'}</Text>
+        <Text style={s.closeBtnText}>{t('common.complete')}</Text>
       </TouchableOpacity>
 
       {/* ── Listening mode: mic animation ── */}
@@ -643,9 +651,9 @@ export default function VoiceScreen() {
             </View>
           </Animated.View>
 
-          <Text style={s.listeningTitle}>{'말씀하세요'}</Text>
+          <Text style={s.listeningTitle}>{t('voice.listeningTitle')}</Text>
           <Text style={s.listeningHint}>
-            {'"윤도 밥먹었어", "똥 쌌어", "낮잠 잤어" 처럼 말해보세요'}
+            {t('voice.listeningHint')}
           </Text>
 
           {recognizedText.length > 0 && (
@@ -673,7 +681,7 @@ export default function VoiceScreen() {
           {error ? (
             <Text style={s.errorText}>{error}</Text>
           ) : (
-            <Text style={s.statusText}>{status || '준비 중...'}</Text>
+            <Text style={s.statusText}>{status || t('voice.statusPreparing')}</Text>
           )}
 
           {recognizedText.length > 0 && (
@@ -684,7 +692,7 @@ export default function VoiceScreen() {
 
           {phase === 'done' && (
             <View style={s.doneBadge}>
-              <Text style={s.doneBadgeText}>{'기록 완료! 다음 말씀하세요'}</Text>
+              <Text style={s.doneBadgeText}>{t('voice.doneNextPrompt')}</Text>
             </View>
           )}
         </>
@@ -698,12 +706,12 @@ export default function VoiceScreen() {
 
           {(speechAvailable || speechReady) && (
             <TouchableOpacity style={s.retryBtn} onPress={handleRetry}>
-              <Text style={s.retryBtnText}>{'다시 말하기'}</Text>
+              <Text style={s.retryBtnText}>{t('voice.retrySpeak')}</Text>
             </TouchableOpacity>
           )}
 
           <TouchableOpacity style={[s.retryBtn, s.closeBtnAlt]} onPress={handleClose}>
-            <Text style={s.retryBtnText}>{'기록 화면으로'}</Text>
+            <Text style={s.retryBtnText}>{t('voice.backToTracker')}</Text>
           </TouchableOpacity>
         </>
       )}

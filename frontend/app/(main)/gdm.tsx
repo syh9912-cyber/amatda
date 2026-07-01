@@ -18,6 +18,8 @@ import {
 import { LineChart } from 'react-native-chart-kit';
 import { Stack } from 'expo-router';
 import * as FileSystem from 'expo-file-system/legacy';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { pregnancyApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
@@ -38,26 +40,32 @@ type MealType = 'fasting' | 'before_meal' | 'after_meal_1h' | 'after_meal_2h' | 
 type FoodMealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 type TabMode = 'glucose' | 'food';
 
-const MEAL_LABELS: Record<MealType, string> = {
-  fasting: '공복',
-  before_meal: '식전',
-  after_meal_1h: '식후 1시간',
-  after_meal_2h: '식후 2시간',
-  bedtime: '취침 전',
-};
+function getMealLabels(t: TFunction): Record<MealType, string> {
+  return {
+    fasting: t('gdm.mealFasting'),
+    before_meal: t('gdm.mealBeforeMeal'),
+    after_meal_1h: t('gdm.mealAfter1h'),
+    after_meal_2h: t('gdm.mealAfter2h'),
+    bedtime: t('gdm.mealBedtime'),
+  };
+}
 
-const FOOD_MEAL_LABELS: Record<FoodMealType, string> = {
-  breakfast: '아침',
-  lunch: '점심',
-  dinner: '저녁',
-  snack: '간식',
-};
+function getFoodMealLabels(t: TFunction): Record<FoodMealType, string> {
+  return {
+    breakfast: t('gdm.foodMealBreakfast'),
+    lunch: t('gdm.foodMealLunch'),
+    dinner: t('gdm.foodMealDinner'),
+    snack: t('gdm.foodMealSnack'),
+  };
+}
 
-const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  normal: { bg: '#E8F5E9', text: '#2E7D32', label: '정상' },
-  caution: { bg: '#FFF8E1', text: '#F57F17', label: '주의' },
-  warning: { bg: '#FFEBEE', text: '#C62828', label: '위험' },
-};
+function getStatusColors(t: TFunction): Record<string, { bg: string; text: string; label: string }> {
+  return {
+    normal: { bg: '#E8F5E9', text: '#2E7D32', label: t('gdm.statusNormal') },
+    caution: { bg: '#FFF8E1', text: '#F57F17', label: t('gdm.statusCaution') },
+    warning: { bg: '#FFEBEE', text: '#C62828', label: t('gdm.statusWarning') },
+  };
+}
 
 interface GdmRecord {
   id: string;
@@ -109,16 +117,18 @@ interface WeeklyReport {
   disclaimer: string;
 }
 
-const GLUCOSE_ADVICE: Record<string, { title: string; body: string }> = {
-  caution: {
-    title: '살짝 주의가 필요해요 (참고)',
-    body: '기준치보다 조금 높아요.\n· 식후라면 10~15분 가벼운 산책이 도움돼요\n· 다음 끼니는 탄수화물 양을 조금 줄여보세요\n· 물을 충분히 드시고, 1~2시간 후 재측정을 권해요\n※ 참고용 안내이며 의학적 진단이 아닙니다. 담당 의료진과 상담하세요.',
-  },
-  warning: {
-    title: '기준치보다 높아요 (참고)',
-    body: '기준치보다 많이 높아요.\n· 물을 충분히 드시고 안정을 취하세요\n· 같은 패턴이 반복되면 담당 의료진과 상의하세요\n· 이번 식사 내용을 식단 탭에 기록해두면 원인 파악에 도움돼요\n※ 참고용 안내이며 의학적 진단이 아닙니다. 담당 의료진과 상담하세요.',
-  },
-};
+function getGlucoseAdvice(t: TFunction): Record<string, { title: string; body: string }> {
+  return {
+    caution: {
+      title: t('gdm.adviceCautionTitle'),
+      body: t('gdm.adviceCautionBody'),
+    },
+    warning: {
+      title: t('gdm.adviceWarningTitle'),
+      body: t('gdm.adviceWarningBody'),
+    },
+  };
+}
 
 const MEAL_CARB_LIMIT: Record<FoodMealType, number> = {
   breakfast: 45,
@@ -128,6 +138,12 @@ const MEAL_CARB_LIMIT: Record<FoodMealType, number> = {
 };
 
 export default function GdmScreen() {
+  const { t } = useTranslation();
+  const MEAL_LABELS = getMealLabels(t);
+  const FOOD_MEAL_LABELS = getFoodMealLabels(t);
+  const statusColors = getStatusColors(t);
+  const GLUCOSE_ADVICE = getGlucoseAdvice(t);
+
   const child = useChildStore((s) => s.selectedChild);
   const childId = child?.id ?? '';
 
@@ -201,7 +217,7 @@ export default function GdmScreen() {
   const handleSaveGlucose = async () => {
     const level = parseFloat(glucose);
     if (isNaN(level) || level < 30 || level > 500) {
-      Alert.alert('알림', '혈당 수치를 올바르게 입력해주세요 (30~500 mg/dL)');
+      Alert.alert(t('common.notice'), t('gdm.glucoseInputInvalid'));
       return;
     }
     setSaving(true);
@@ -222,24 +238,24 @@ export default function GdmScreen() {
         Alert.alert(a.title, a.body);
       }
     } catch {
-      Alert.alert('오류', '혈당 기록 저장에 실패했습니다.');
+      Alert.alert(t('common.error'), t('gdm.saveGlucoseFailed'));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert('삭제', '이 기록을 삭제할까요?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('common.delete'), t('gdm.confirmDeleteRecord'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             await pregnancyApi.deleteGdm(id);
             await loadData();
           } catch {
-            Alert.alert('오류', '삭제에 실패했습니다.');
+            Alert.alert(t('common.error'), t('gdm.deleteFailed'));
           }
         },
       },
@@ -247,17 +263,17 @@ export default function GdmScreen() {
   };
 
   const handleDeleteFood = (id: string) => {
-    Alert.alert('삭제', '이 식단 기록을 삭제할까요?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('common.delete'), t('gdm.confirmDeleteFoodRecord'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           try {
             await pregnancyApi.deleteFoodLog(id);
             await loadData();
           } catch {
-            Alert.alert('오류', '삭제에 실패했습니다.');
+            Alert.alert(t('common.error'), t('gdm.deleteFailed'));
           }
         },
       },
@@ -301,7 +317,7 @@ export default function GdmScreen() {
 
   const handleAnalyze = async () => {
     if (!photoUri || !photoMime) {
-      Alert.alert('알림', '먼저 사진을 선택해주세요.');
+      Alert.alert(t('common.notice'), t('gdm.selectPhotoFirst'));
       return;
     }
     setAnalyzing(true);
@@ -317,7 +333,7 @@ export default function GdmScreen() {
       if (!calories && typeof data.calories === 'number') setCalories(String(data.calories));
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      Alert.alert('분석 불가', msg || 'AI 분석에 실패했어요.');
+      Alert.alert(t('gdm.analyzeFailedTitle'), msg || t('gdm.analyzeFailedBody'));
     } finally {
       setAnalyzing(false);
     }
@@ -325,7 +341,7 @@ export default function GdmScreen() {
 
   const handleSaveFood = async () => {
     if (!foodName.trim()) {
-      Alert.alert('알림', '음식 이름을 입력해주세요.');
+      Alert.alert(t('common.notice'), t('gdm.foodNameRequired'));
       return;
     }
     setSavingFood(true);
@@ -360,12 +376,16 @@ export default function GdmScreen() {
       await loadData();
       if (savedCarbs !== null && savedCarbs > MEAL_CARB_LIMIT[savedMealType]) {
         Alert.alert(
-          '탄수화물이 조금 많아요',
-          `이번 ${FOOD_MEAL_LABELS[savedMealType]}의 탄수화물이 ${savedCarbs}g이에요. (${FOOD_MEAL_LABELS[savedMealType]} 권장 ${MEAL_CARB_LIMIT[savedMealType]}g 내외)\n· 식후 1시간 혈당을 꼭 재보세요\n· 다음 끼니는 채소/단백질 비율을 높여보세요\n· 식후 10~15분 가벼운 산책이 혈당 상승을 완화해줘요`,
+          t('gdm.carbHighTitle'),
+          t('gdm.carbHighBody', {
+            mealLabel: FOOD_MEAL_LABELS[savedMealType],
+            carbs: savedCarbs,
+            limit: MEAL_CARB_LIMIT[savedMealType],
+          }),
         );
       }
     } catch {
-      Alert.alert('오류', '식단 기록 저장에 실패했습니다.');
+      Alert.alert(t('common.error'), t('gdm.saveFoodFailed'));
     } finally {
       setSavingFood(false);
     }
@@ -382,7 +402,7 @@ export default function GdmScreen() {
       setReport(data);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      Alert.alert('알림', msg || 'AI 분석을 가져오지 못했어요. 잠시 후 다시 시도해주세요.');
+      Alert.alert(t('common.notice'), msg || t('gdm.reportLoadFailed'));
       setShowReportModal(false);
     } finally {
       setReportLoading(false);
@@ -406,11 +426,11 @@ export default function GdmScreen() {
   }
   const foodDateKeys = Object.keys(groupedFood).sort((a, b) => b.localeCompare(a));
 
-  const thresholdInfo = `공복: 95 이하 | 식후1h: 140 이하 | 식후2h: 120 이하`;
+  const thresholdInfo = t('gdm.thresholdInfo');
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: '임당 관리', headerShown: true, headerLeft: () => <BackButton />, headerRight: () => <View style={{ marginRight: 14 }}><GuideButton onPress={() => setGuideVisible(true)} color="#7FB1BB" /></View> }} />
+      <Stack.Screen options={{ title: t('gdm.screenTitle'), headerShown: true, headerLeft: () => <BackButton />, headerRight: () => <View style={{ marginRight: 14 }}><GuideButton onPress={() => setGuideVisible(true)} color="#7FB1BB" /></View> }} />
 
       {/* 탭 */}
       <View style={styles.tabBar}>
@@ -418,13 +438,13 @@ export default function GdmScreen() {
           style={[styles.tabBtn, tab === 'glucose' && styles.tabBtnActive]}
           onPress={() => setTab('glucose')}
         >
-          <Text style={[styles.tabText, tab === 'glucose' && styles.tabTextActive]}>🩸 혈당</Text>
+          <Text style={[styles.tabText, tab === 'glucose' && styles.tabTextActive]}>🩸 {t('gdm.tabGlucose')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tabBtn, tab === 'food' && styles.tabBtnActive]}
           onPress={() => setTab('food')}
         >
-          <Text style={[styles.tabText, tab === 'food' && styles.tabTextActive]}>🍚 식단</Text>
+          <Text style={[styles.tabText, tab === 'food' && styles.tabTextActive]}>🍚 {t('gdm.tabFood')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -434,10 +454,10 @@ export default function GdmScreen() {
       >
         <MedicalCitation
           compact
-          note="혈당·식단 권고는 일반 기준이며 개인별 목표는 담당 의료진과 상의하세요."
+          note={t('gdm.citationNote')}
           sources={[
-            { label: '대한당뇨병학회 「당뇨병 진료지침」 (임신성 당뇨병)', url: 'https://www.diabetes.or.kr' },
-            { label: '식품의약품안전처 식품영양성분 데이터베이스', url: 'https://www.foodsafetykorea.go.kr' },
+            { label: t('gdm.citationSourceDiabetesSociety'), url: 'https://www.diabetes.or.kr' },
+            { label: t('gdm.citationSourceFoodSafety'), url: 'https://www.foodsafetykorea.go.kr' },
           ]}
         />
 
@@ -447,8 +467,8 @@ export default function GdmScreen() {
           onPress={handleLoadReport}
           activeOpacity={0.85}
         >
-          <Text style={styles.reportBtnText}>🤖 이번 주 AI 분석 받기</Text>
-          <Text style={styles.reportBtnSub}>최근 7일 혈당+식단 종합 코칭</Text>
+          <Text style={styles.reportBtnText}>🤖 {t('gdm.reportBtnText')}</Text>
+          <Text style={styles.reportBtnSub}>{t('gdm.reportBtnSub')}</Text>
         </TouchableOpacity>
 
         {/* 인라인 입력 버튼 — FAB 가 광고에 가려 잘 안 보임 보완 */}
@@ -458,28 +478,28 @@ export default function GdmScreen() {
           activeOpacity={0.85}
         >
           <Text style={styles.inlineAddBtnText}>
-            {tab === 'glucose' ? '＋ 혈당 기록 추가' : '＋ 식단 기록 추가'}
+            {tab === 'glucose' ? t('gdm.addGlucoseRecord') : t('gdm.addFoodRecord')}
           </Text>
         </TouchableOpacity>
 
         {/* 산모 정보 */}
         {child && (
           <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>{child.name} 산모님의 임당 관리</Text>
+            <Text style={styles.infoTitle}>{t('gdm.infoTitle', { name: child.name })}</Text>
             {(child.momHeight || child.momWeight || child.momBloodType) ? (
               <Text style={styles.infoSub}>
                 {[
                   child.momHeight ? `${child.momHeight}cm` : null,
                   child.momWeight ? `${child.momWeight}kg` : null,
-                  child.momBloodType ? `${child.momBloodType}형` : null,
+                  child.momBloodType ? t('gdm.bloodTypeSuffix', { type: child.momBloodType }) : null,
                 ].filter(Boolean).join(' / ')}
               </Text>
             ) : null}
             {tab === 'glucose' && <Text style={styles.thresholdText}>{thresholdInfo}</Text>}
-            {tab === 'glucose' && <Text style={styles.thresholdText}>※ 정상/주의/위험 분류는 일반 참고 기준이며 의학적 진단이 아닙니다.</Text>}
+            {tab === 'glucose' && <Text style={styles.thresholdText}>{t('gdm.classificationDisclaimer')}</Text>}
             {tab === 'food' && (
               <Text style={styles.thresholdText}>
-                임당은 탄수화물 섭취량 관리가 핵심이에요. 매끼 식사 내용과 시간을 남겨주세요.
+                {t('gdm.foodTabHint')}
               </Text>
             )}
           </View>
@@ -489,23 +509,23 @@ export default function GdmScreen() {
           <>
             {stats && stats.total > 0 && (
               <View style={styles.statsCard}>
-                <Text style={styles.statsTitle}>최근 {stats.days}일 통계</Text>
+                <Text style={styles.statsTitle}>{t('gdm.statsTitle', { days: stats.days })}</Text>
                 <View style={styles.statsRow}>
                   <View style={styles.statItem}>
                     <Text style={styles.statValue}>{stats.avg}</Text>
-                    <Text style={styles.statLabel}>평균</Text>
+                    <Text style={styles.statLabel}>{t('gdm.statAvg')}</Text>
                   </View>
                   <View style={styles.statItem}>
                     <Text style={styles.statValue}>{stats.min}</Text>
-                    <Text style={styles.statLabel}>최저</Text>
+                    <Text style={styles.statLabel}>{t('gdm.statMin')}</Text>
                   </View>
                   <View style={styles.statItem}>
                     <Text style={styles.statValue}>{stats.max}</Text>
-                    <Text style={styles.statLabel}>최고</Text>
+                    <Text style={styles.statLabel}>{t('gdm.statMax')}</Text>
                   </View>
                   <View style={styles.statItem}>
                     <Text style={styles.statValue}>{stats.total}</Text>
-                    <Text style={styles.statLabel}>측정</Text>
+                    <Text style={styles.statLabel}>{t('gdm.statCount')}</Text>
                   </View>
                 </View>
                 {(stats.cautionCount > 0 || stats.warningCount > 0) && (
@@ -513,14 +533,14 @@ export default function GdmScreen() {
                     {stats.cautionCount > 0 && (
                       <View style={[styles.alertPill, { backgroundColor: '#FFF8E1' }]}>
                         <Text style={{ color: '#F57F17', fontSize: 12, fontWeight: '600' }}>
-                          주의 {stats.cautionCount}회
+                          {t('gdm.cautionCount', { count: stats.cautionCount })}
                         </Text>
                       </View>
                     )}
                     {stats.warningCount > 0 && (
                       <View style={[styles.alertPill, { backgroundColor: '#FFEBEE' }]}>
                         <Text style={{ color: '#C62828', fontSize: 12, fontWeight: '600' }}>
-                          위험 {stats.warningCount}회
+                          {t('gdm.warningCount', { count: stats.warningCount })}
                         </Text>
                       </View>
                     )}
@@ -548,7 +568,7 @@ export default function GdmScreen() {
 
               return (
                 <View style={styles.statsCard}>
-                  <Text style={styles.statsTitle}>혈당 추이</Text>
+                  <Text style={styles.statsTitle}>{t('gdm.glucoseTrend')}</Text>
                   <LineChart
                     data={{
                       labels,
@@ -577,16 +597,16 @@ export default function GdmScreen() {
             {!loading && glucoseDateKeys.length === 0 && (
               <View style={styles.emptyWrap}>
                 <Image source={IC_BLOOD} style={styles.emptyEmojiImg} resizeMode="contain" />
-                <Text style={styles.emptyTitle}>아직 기록이 없어요</Text>
-                <Text style={styles.emptySub}>+ 버튼으로 혈당을 기록해보세요</Text>
+                <Text style={styles.emptyTitle}>{t('gdm.emptyGlucoseTitle')}</Text>
+                <Text style={styles.emptySub}>{t('gdm.emptyGlucoseSub')}</Text>
               </View>
             )}
 
             {glucoseDateKeys.map((date) => (
               <View key={date} style={styles.dateGroup}>
-                <Text style={styles.dateLabel}>{formatKoreanDate(date)}</Text>
+                <Text style={styles.dateLabel}>{formatKoreanDate(date, t)}</Text>
                 {groupedGlucose[date].map((r) => {
-                  const sc = STATUS_COLORS[r.status] ?? STATUS_COLORS.normal;
+                  const sc = statusColors[r.status] ?? statusColors.normal;
                   return (
                     <TouchableOpacity
                       key={r.id}
@@ -628,14 +648,14 @@ export default function GdmScreen() {
             {!loading && foodDateKeys.length === 0 && (
               <View style={styles.emptyWrap}>
                 <Image source={IC_EATING} style={styles.emptyEmojiImg} resizeMode="contain" />
-                <Text style={styles.emptyTitle}>아직 식단 기록이 없어요</Text>
-                <Text style={styles.emptySub}>+ 버튼으로 먹은 음식과 시간을 남겨보세요</Text>
+                <Text style={styles.emptyTitle}>{t('gdm.emptyFoodTitle')}</Text>
+                <Text style={styles.emptySub}>{t('gdm.emptyFoodSub')}</Text>
               </View>
             )}
 
             {foodDateKeys.map((date) => (
               <View key={date} style={styles.dateGroup}>
-                <Text style={styles.dateLabel}>{formatKoreanDate(date)}</Text>
+                <Text style={styles.dateLabel}>{formatKoreanDate(date, t)}</Text>
                 {groupedFood[date].map((f) => (
                   <TouchableOpacity
                     key={f.id}
@@ -664,7 +684,7 @@ export default function GdmScreen() {
                               timeZone: 'Asia/Seoul',
                             })
                           : ''}
-                        {typeof f.carbs === 'number' ? ` · 탄수 ${f.carbs}g` : ''}
+                        {typeof f.carbs === 'number' ? ` · ${t('gdm.carbsSuffix', { carbs: f.carbs })}` : ''}
                         {typeof f.calories === 'number' ? ` · ${f.calories}kcal` : ''}
                       </Text>
                       {f.memo ? <Text style={styles.foodMemo} numberOfLines={1}>{f.memo}</Text> : null}
@@ -695,24 +715,24 @@ export default function GdmScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => setShowGlucoseModal(false)}>
-                <Text style={styles.modalBack}>{'< 뒤로'}</Text>
+                <Text style={styles.modalBack}>{`< ${t('gdm.modalBackToPrevious')}`}</Text>
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>혈당 기록</Text>
+              <Text style={styles.modalTitle}>{t('gdm.glucoseModalTitle')}</Text>
               <View style={{ width: 50 }} />
             </View>
 
-            <Text style={styles.modalLabel}>혈당 수치 (mg/dL)</Text>
+            <Text style={styles.modalLabel}>{t('gdm.glucoseValueLabel')}</Text>
             <TextInput
               style={styles.modalInput}
               value={glucose}
               onChangeText={setGlucose}
-              placeholder="예: 95"
+              placeholder={t('gdm.glucosePlaceholder')}
               placeholderTextColor={COLORS.textLight}
               keyboardType="decimal-pad"
               autoFocus
             />
 
-            <Text style={styles.modalLabel}>측정 시점</Text>
+            <Text style={styles.modalLabel}>{t('gdm.measuredAtLabel')}</Text>
             <View style={styles.mealGrid}>
               {(Object.keys(MEAL_LABELS) as MealType[]).map((key) => (
                 <TouchableOpacity
@@ -727,12 +747,12 @@ export default function GdmScreen() {
               ))}
             </View>
 
-            <Text style={styles.modalLabel}>메모 (선택)</Text>
+            <Text style={styles.modalLabel}>{t('gdm.memoOptionalLabel')}</Text>
             <TextInput
               style={[styles.modalInput, { height: 50 }]}
               value={memo}
               onChangeText={setMemo}
-              placeholder="아침식사 후, 간식 먹고 등"
+              placeholder={t('gdm.glucoseMemoPlaceholder')}
               placeholderTextColor={COLORS.textLight}
               multiline
             />
@@ -742,7 +762,7 @@ export default function GdmScreen() {
               onPress={handleSaveGlucose}
               disabled={saving}
             >
-              <Text style={styles.saveBtnText}>{saving ? '저장 중...' : '기록 저장'}</Text>
+              <Text style={styles.saveBtnText}>{saving ? t('gdm.saving') : t('gdm.saveRecord')}</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -754,16 +774,16 @@ export default function GdmScreen() {
           <View style={[styles.modalContent, { maxHeight: '88%' }]}>
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={() => setShowReportModal(false)}>
-                <Text style={styles.modalBack}>{'< 닫기'}</Text>
+                <Text style={styles.modalBack}>{`< ${t('common.close')}`}</Text>
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>이번 주 AI 분석</Text>
+              <Text style={styles.modalTitle}>{t('gdm.weeklyReportTitle')}</Text>
               <View style={{ width: 50 }} />
             </View>
 
             {reportLoading && (
               <View style={{ paddingVertical: 60, alignItems: 'center' }}>
                 <ActivityIndicator size="large" color="#E91E63" />
-                <Text style={{ marginTop: 12, color: COLORS.textSecondary }}>최근 7일 기록을 분석하고 있어요...</Text>
+                <Text style={{ marginTop: 12, color: COLORS.textSecondary }}>{t('gdm.reportLoadingText')}</Text>
               </View>
             )}
 
@@ -773,20 +793,20 @@ export default function GdmScreen() {
                   <View style={styles.reportStatsRow}>
                     <View style={styles.reportStat}>
                       <Text style={styles.reportStatVal}>{report.stats.avg}</Text>
-                      <Text style={styles.reportStatLabel}>평균혈당</Text>
+                      <Text style={styles.reportStatLabel}>{t('gdm.reportStatAvgGlucose')}</Text>
                     </View>
                     <View style={styles.reportStat}>
                       <Text style={styles.reportStatVal}>{report.stats.measurements}</Text>
-                      <Text style={styles.reportStatLabel}>측정</Text>
+                      <Text style={styles.reportStatLabel}>{t('gdm.statCount')}</Text>
                     </View>
                     <View style={styles.reportStat}>
                       <Text style={styles.reportStatVal}>{report.stats.meals}</Text>
-                      <Text style={styles.reportStatLabel}>식단</Text>
+                      <Text style={styles.reportStatLabel}>{t('gdm.tabFood')}</Text>
                     </View>
                     {report.stats.warningCount > 0 && (
                       <View style={styles.reportStat}>
                         <Text style={[styles.reportStatVal, { color: '#C62828' }]}>{report.stats.warningCount}</Text>
-                        <Text style={styles.reportStatLabel}>위험</Text>
+                        <Text style={styles.reportStatLabel}>{t('gdm.statusWarning')}</Text>
                       </View>
                     )}
                   </View>
@@ -800,7 +820,7 @@ export default function GdmScreen() {
 
                 {report.highlights.length > 0 && (
                   <View style={[styles.reportSection, { backgroundColor: '#E8F5E9' }]}>
-                    <Text style={[styles.reportSectionTitle, { color: '#2E7D32' }]}>👍 잘하고 있는 점</Text>
+                    <Text style={[styles.reportSectionTitle, { color: '#2E7D32' }]}>👍 {t('gdm.reportHighlightsTitle')}</Text>
                     {report.highlights.map((h, i) => (
                       <Text key={i} style={styles.reportListItem}>• {h}</Text>
                     ))}
@@ -809,7 +829,7 @@ export default function GdmScreen() {
 
                 {report.cautions.length > 0 && (
                   <View style={[styles.reportSection, { backgroundColor: '#FFF8E1' }]}>
-                    <Text style={[styles.reportSectionTitle, { color: '#F57F17' }]}>⚠️ 주의할 점</Text>
+                    <Text style={[styles.reportSectionTitle, { color: '#F57F17' }]}>⚠️ {t('gdm.reportCautionsTitle')}</Text>
                     {report.cautions.map((c, i) => (
                       <Text key={i} style={styles.reportListItem}>• {c}</Text>
                     ))}
@@ -818,7 +838,7 @@ export default function GdmScreen() {
 
                 {report.suggestions.length > 0 && (
                   <View style={[styles.reportSection, { backgroundColor: '#FCE4EC' }]}>
-                    <Text style={[styles.reportSectionTitle, { color: '#AD1457' }]}>💡 이번 주 실천 팁</Text>
+                    <Text style={[styles.reportSectionTitle, { color: '#AD1457' }]}>💡 {t('gdm.reportSuggestionsTitle')}</Text>
                     {report.suggestions.map((s, i) => (
                       <Text key={i} style={styles.reportListItem}>• {s}</Text>
                     ))}
@@ -844,9 +864,9 @@ export default function GdmScreen() {
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <TouchableOpacity onPress={() => setShowFoodModal(false)}>
-                  <Text style={styles.modalBack}>{'< 뒤로'}</Text>
+                  <Text style={styles.modalBack}>{`< ${t('gdm.modalBackToPrevious')}`}</Text>
                 </TouchableOpacity>
-                <Text style={styles.modalTitle}>식단 기록</Text>
+                <Text style={styles.modalTitle}>{t('gdm.foodModalTitle')}</Text>
                 <View style={{ width: 50 }} />
               </View>
 
@@ -857,15 +877,15 @@ export default function GdmScreen() {
                 ) : (
                   <View style={styles.photoPlaceholder}>
                     <Text style={{ fontSize: 36 }}>📷</Text>
-                    <Text style={styles.photoHint}>사진을 추가하면 AI가 음식을 분석해줘요</Text>
+                    <Text style={styles.photoHint}>{t('gdm.photoHint')}</Text>
                   </View>
                 )}
                 <View style={styles.photoBtnRow}>
                   <TouchableOpacity style={styles.photoBtn} onPress={() => handlePickPhoto('camera')}>
-                    <Text style={styles.photoBtnText}>📷 촬영</Text>
+                    <Text style={styles.photoBtnText}>📷 {t('gdm.photoBtnCamera')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.photoBtn} onPress={() => handlePickPhoto('library')}>
-                    <Text style={styles.photoBtnText}>🖼️ 앨범</Text>
+                    <Text style={styles.photoBtnText}>🖼️ {t('gdm.photoBtnAlbum')}</Text>
                   </TouchableOpacity>
                   {photoUri && (
                     <TouchableOpacity
@@ -876,7 +896,7 @@ export default function GdmScreen() {
                       {analyzing ? (
                         <ActivityIndicator size="small" color="#FFF" />
                       ) : (
-                        <Text style={[styles.photoBtnText, { color: '#FFF' }]}>🤖 AI 분석</Text>
+                        <Text style={[styles.photoBtnText, { color: '#FFF' }]}>🤖 {t('gdm.photoBtnAnalyze')}</Text>
                       )}
                     </TouchableOpacity>
                   )}
@@ -885,13 +905,13 @@ export default function GdmScreen() {
 
               {analyzeResult && (
                 <View style={styles.analyzeCard}>
-                  <Text style={styles.analyzeTitle}>AI 분석 결과 (참고용)</Text>
-                  <Text style={styles.analyzeLine}>음식: {analyzeResult.foodName}</Text>
+                  <Text style={styles.analyzeTitle}>{t('gdm.analyzeResultTitle')}</Text>
+                  <Text style={styles.analyzeLine}>{t('gdm.analyzeFoodLine', { name: analyzeResult.foodName })}</Text>
                   {typeof analyzeResult.carbs === 'number' && (
-                    <Text style={styles.analyzeLine}>탄수화물 추정: {analyzeResult.carbs}g</Text>
+                    <Text style={styles.analyzeLine}>{t('gdm.analyzeCarbsLine', { carbs: analyzeResult.carbs })}</Text>
                   )}
                   {typeof analyzeResult.calories === 'number' && (
-                    <Text style={styles.analyzeLine}>칼로리 추정: {analyzeResult.calories}kcal</Text>
+                    <Text style={styles.analyzeLine}>{t('gdm.analyzeCaloriesLine', { calories: analyzeResult.calories })}</Text>
                   )}
                   {analyzeResult.notes ? (
                     <Text style={styles.analyzeNote}>{analyzeResult.notes}</Text>
@@ -899,32 +919,36 @@ export default function GdmScreen() {
                   <Text style={styles.disclaimer}>⚠️ {analyzeResult.disclaimer}</Text>
                   {analyzeResult.usage && (
                     <Text style={styles.usageText}>
-                      오늘 사진 분석 {analyzeResult.usage.used}/{analyzeResult.usage.limit}회 사용 ({analyzeResult.usage.tier === 'paid' ? '프리미엄' : '무료'})
+                      {t('gdm.usageText', {
+                        used: analyzeResult.usage.used,
+                        limit: analyzeResult.usage.limit,
+                        tier: analyzeResult.usage.tier === 'paid' ? t('gdm.tierPaid') : t('gdm.tierFree'),
+                      })}
                     </Text>
                   )}
                 </View>
               )}
 
-              <Text style={styles.modalLabel}>음식 이름</Text>
+              <Text style={styles.modalLabel}>{t('gdm.foodNameLabel')}</Text>
               <TextInput
                 style={styles.modalInput}
                 value={foodName}
                 onChangeText={setFoodName}
-                placeholder="예: 잡곡밥, 된장국, 시금치나물"
+                placeholder={t('gdm.foodNamePlaceholder')}
                 placeholderTextColor={COLORS.textLight}
               />
 
-              <Text style={styles.modalLabel}>먹은 시간 (HH:mm)</Text>
+              <Text style={styles.modalLabel}>{t('gdm.eatenTimeLabel')}</Text>
               <TextInput
                 style={styles.modalInput}
                 value={eatenTime}
                 onChangeText={setEatenTime}
-                placeholder="예: 08:30"
+                placeholder={t('gdm.eatenTimePlaceholder')}
                 placeholderTextColor={COLORS.textLight}
                 keyboardType="numbers-and-punctuation"
               />
 
-              <Text style={styles.modalLabel}>끼니</Text>
+              <Text style={styles.modalLabel}>{t('gdm.mealLabel')}</Text>
               <View style={styles.mealGrid}>
                 {(Object.keys(FOOD_MEAL_LABELS) as FoodMealType[]).map((key) => (
                   <TouchableOpacity
@@ -941,42 +965,41 @@ export default function GdmScreen() {
 
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.modalLabel}>탄수화물(g)</Text>
+                  <Text style={styles.modalLabel}>{t('gdm.carbsLabel')}</Text>
                   <TextInput
                     style={styles.modalInput}
                     value={carbs}
                     onChangeText={setCarbs}
-                    placeholder="선택"
+                    placeholder={t('gdm.optionalPlaceholder')}
                     placeholderTextColor={COLORS.textLight}
                     keyboardType="decimal-pad"
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.modalLabel}>칼로리(kcal)</Text>
+                  <Text style={styles.modalLabel}>{t('gdm.caloriesLabel')}</Text>
                   <TextInput
                     style={styles.modalInput}
                     value={calories}
                     onChangeText={setCalories}
-                    placeholder="선택"
+                    placeholder={t('gdm.optionalPlaceholder')}
                     placeholderTextColor={COLORS.textLight}
                     keyboardType="decimal-pad"
                   />
                 </View>
               </View>
 
-              <Text style={styles.modalLabel}>메모 (선택)</Text>
+              <Text style={styles.modalLabel}>{t('gdm.memoOptionalLabel')}</Text>
               <TextInput
                 style={[styles.modalInput, { height: 50 }]}
                 value={foodMemo}
                 onChangeText={setFoodMemo}
-                placeholder="식후 혈당, 맛/컨디션 등"
+                placeholder={t('gdm.foodMemoPlaceholder')}
                 placeholderTextColor={COLORS.textLight}
                 multiline
               />
 
               <Text style={styles.disclaimerBottom}>
-                ⚠️ AI 사진 분석은 참고용 추정치이며, 의료 진단이나 영양 처방이 아닙니다.
-                정확한 임당 관리는 담당 의료진과 상담해주세요.
+                {t('gdm.foodDisclaimer')}
               </Text>
 
               <TouchableOpacity
@@ -984,7 +1007,7 @@ export default function GdmScreen() {
                 onPress={handleSaveFood}
                 disabled={savingFood}
               >
-                <Text style={styles.saveBtnText}>{savingFood ? '저장 중...' : '식단 저장'}</Text>
+                <Text style={styles.saveBtnText}>{savingFood ? t('gdm.saving') : t('gdm.saveFood')}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -996,9 +1019,17 @@ export default function GdmScreen() {
   );
 }
 
-function formatKoreanDate(dateStr: string): string {
+function formatKoreanDate(dateStr: string, t: TFunction): string {
   const d = new Date(dateStr);
-  const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+  const weekdays = [
+    t('gdm.weekdaySun'),
+    t('gdm.weekdayMon'),
+    t('gdm.weekdayTue'),
+    t('gdm.weekdayWed'),
+    t('gdm.weekdayThu'),
+    t('gdm.weekdayFri'),
+    t('gdm.weekdaySat'),
+  ];
   return `${d.getMonth() + 1}/${d.getDate()} (${weekdays[d.getDay()]})`;
 }
 

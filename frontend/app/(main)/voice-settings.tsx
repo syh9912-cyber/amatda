@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import {
   Modal,
 } from 'react-native';
 import { Stack } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '../../components/common/BackButton';
 import { useChildStore } from '../../stores/childStore';
@@ -37,17 +39,19 @@ interface VoiceDefaults {
 
 const STORAGE_KEY = 'voice_defaults';
 
-const EXAMPLE_COMMANDS = [
-  { text: '윤도 방금 밥먹었어', desc: '이유식 기록' },
-  { text: '분유 120ml 먹었어', desc: '분유 + 양 기록' },
-  { text: '방금 소변 봤어', desc: '소변 기록' },
-  { text: '똥 쌌어', desc: '대변 기록' },
-  { text: '10시부터 11시까지 잤어', desc: '수면 + 시작/종료 시간' },
-  { text: '왼쪽 모유 15분', desc: '모유 + 좌/우 + 시간' },
-  { text: '모유 수유했어', desc: '모유 (좌/우 자동 추천)' },
-  { text: '해열제 먹였어', desc: '투약 기록' },
-  { text: '비타민 먹였어', desc: '투약 기록' },
-];
+function getExampleCommands(t: TFunction) {
+  return [
+    { text: t('voiceSettings.example1Text'), desc: t('voiceSettings.example1Desc') },
+    { text: t('voiceSettings.example2Text'), desc: t('voiceSettings.example2Desc') },
+    { text: t('voiceSettings.example3Text'), desc: t('voiceSettings.example3Desc') },
+    { text: t('voiceSettings.example4Text'), desc: t('voiceSettings.example4Desc') },
+    { text: t('voiceSettings.example5Text'), desc: t('voiceSettings.example5Desc') },
+    { text: t('voiceSettings.example6Text'), desc: t('voiceSettings.example6Desc') },
+    { text: t('voiceSettings.example7Text'), desc: t('voiceSettings.example7Desc') },
+    { text: t('voiceSettings.example8Text'), desc: t('voiceSettings.example8Desc') },
+    { text: t('voiceSettings.example9Text'), desc: t('voiceSettings.example9Desc') },
+  ];
+}
 
 const DEEP_LINK = 'amatda://voice?text=';
 
@@ -68,39 +72,41 @@ interface AssistantGuide {
   open: () => void;
 }
 
-const SIRI_GUIDE: AssistantGuide = {
-  key: 'siri',
-  name: 'Siri',
-  subtitle: 'iPhone / iPad (iOS 16 이상)',
-  platformLabel: 'iPhone 사용자',
-  color: '#5856D6',
-  trigger: '"시리야, 아맞다 육아" → 앱 열리며 바로 녹음',
-  urlNote: `${DEEP_LINK}{받아쓰기 텍스트}`,
-  openLabel: '단축어 앱 열기 (선택)',
-  open: () => {
-    Linking.openURL('shortcuts://').catch(() => {
-      Alert.alert('단축어 앱', 'App Store에서 "단축어"를 검색해 설치하세요.');
-    });
-  },
-  steps: [
-    {
-      title: '설정 없이 바로 사용 (iOS 16 이상)',
-      desc: '앱을 한 번 설치·실행하면 별도 설정 없이 시리가 "아맞다 육아" 명령을 인식해요.\n\n"시리야, 아맞다 육아"라고 말하면 → 아맞다 음성기록 화면이 열리며 자동으로 녹음이 시작돼요.\n\n※ 처음 실행 시 마이크/음성인식 권한 팝업이 뜨면 모두 "허용"을 눌러주세요.',
+function getSiriGuide(t: TFunction): AssistantGuide {
+  return {
+    key: 'siri',
+    name: 'Siri',
+    subtitle: t('voiceSettings.siriSubtitle'),
+    platformLabel: t('voiceSettings.siriPlatformLabel'),
+    color: '#5856D6',
+    trigger: t('voiceSettings.siriTrigger'),
+    urlNote: `${DEEP_LINK}{${t('voiceSettings.dictatedTextVar')}}`,
+    openLabel: t('voiceSettings.siriOpenLabel'),
+    open: () => {
+      Linking.openURL('shortcuts://').catch(() => {
+        Alert.alert(t('voiceSettings.shortcutsAppTitle'), t('voiceSettings.shortcutsAppDesc'));
+      });
     },
-    {
-      title: '여러 개를 한 번에 말해도 OK',
-      desc: '녹음이 시작되면 자연스럽게 말하세요.\n예: "윤도 밥먹고 똥싸고 자고있어"\n→ AI가 밥 + 똥 + 잠 3가지로 자동 분리해서 기록해요.\n\n양·시간도 같이: "분유 120 먹고 30분 잤어"',
-    },
-    {
-      title: '인식되는 시리 문구',
-      desc: '앞에 "시리야,"를 붙여서 아래 중 아무거나 말하면 돼요:\n· "아맞다 육아"\n· "아맞다 기록"\n· "아맞다 음성"\n\n※ Apple 규칙상 시리 문구엔 앱 이름("아맞다")이 꼭 들어가요. "아맞다"만 말하면 녹음이 아니라 앱만 열려요.',
-    },
-    {
-      title: '(선택) "육아"처럼 더 짧게 — 단축어에서 URL 연결',
-      desc: '앱 이름 없이 "시리야, 육아"로 쓰고 싶으면 아이폰 "단축어" 앱에서 직접 만들 수 있어요 (1회 설정):\n\n1) 아래 "단축어 앱 열기" → 오른쪽 위 ＋\n2) "텍스트 받아쓰기" 동작 추가\n3) "URL 열기" 동작 추가 → 아래 URL을 복사해 붙여넣고, URL 끝에 "받아쓰기 텍스트" 변수를 연결\n4) 단축어 이름을 "육아"로 저장\n\n그럼 "시리야, 육아"로도 실행돼요.',
-    },
-  ],
-};
+    steps: [
+      {
+        title: t('voiceSettings.siriStep1Title'),
+        desc: t('voiceSettings.siriStep1Desc'),
+      },
+      {
+        title: t('voiceSettings.siriStep2Title'),
+        desc: t('voiceSettings.siriStep2Desc'),
+      },
+      {
+        title: t('voiceSettings.siriStep3Title'),
+        desc: t('voiceSettings.siriStep3Desc'),
+      },
+      {
+        title: t('voiceSettings.siriStep4Title'),
+        desc: t('voiceSettings.siriStep4Desc'),
+      },
+    ],
+  };
+}
 
 const BIXBY_GUIDE: AssistantGuide = {
   key: 'bixby',
@@ -235,6 +241,7 @@ async function copyToClipboard(text: string) {
 /* ================================================================== */
 
 export default function VoiceSettingsScreen() {
+  const { t } = useTranslation();
   const children = useChildStore((s) => s.children);
   const selectedChild = useChildStore((s) => s.selectedChild);
 
@@ -265,28 +272,28 @@ export default function VoiceSettingsScreen() {
       const supportInfo = pinSupported ? 'pinSupported=true' : 'pinSupported=false';
       if (result.ok) {
         Alert.alert(
-          '시스템 다이얼로그 호출됨',
-          '안드로이드 "바로가기 추가" 확인 창이 떠야 해요. 뜨면 "추가" 탭.\n\n"홈 화면 구성이 잠겨 있다"고 뜨면 → 홈 화면 빈 곳 길게 누르기 → 설정 → "홈 화면 레이아웃 잠금"을 끄고 다시 시도하세요.\n\n그래도 안 되면 방법 ①(앱 아이콘 길게 눌러 끌어다 놓기)을 사용하세요.',
+          t('voiceSettings.systemDialogCalledTitle'),
+          t('voiceSettings.systemDialogCalledDesc'),
         );
       } else if (result.reason === 'LAUNCHER_UNSUPPORTED') {
         Alert.alert(
-          '미지원 런처',
-          `홈 런처가 단축 아이콘 고정을 지원하지 않아요 (${supportInfo}). 앱 아이콘 길게 누르기로 "음성 기록"을 홈에 끌어 놓으세요.`,
+          t('voiceSettings.unsupportedLauncherTitle'),
+          t('voiceSettings.unsupportedLauncherDesc', { supportInfo }),
         );
       } else if (result.reason === 'UNSUPPORTED_ANDROID_VERSION') {
-        Alert.alert('미지원 OS', 'Android 8.0 이상 필요.');
+        Alert.alert(t('voiceSettings.unsupportedOsTitle'), t('voiceSettings.unsupportedOsDesc'));
       } else if (result.reason === 'NATIVE_MODULE_UNAVAILABLE') {
         Alert.alert(
-          'APK 재설치 필요',
-          'native 단축 모듈이 현재 빌드에 포함돼 있지 않아요. 새 APK 설치해야 작동.\n\n임시 해결: 앱 아이콘 길게 누르기 → "음성 기록" → 홈으로 드래그.',
+          t('voiceSettings.apkReinstallTitle'),
+          t('voiceSettings.apkReinstallDesc'),
         );
       } else {
-        Alert.alert('실패', `사유: ${result.reason ?? 'UNKNOWN'} (${supportInfo})`);
+        Alert.alert(t('voiceSettings.failTitle'), t('voiceSettings.failReason', { reason: result.reason ?? 'UNKNOWN', supportInfo }));
       }
     } finally {
       setPinning(false);
     }
-  }, [pinning, pinSupported]);
+  }, [pinning, pinSupported, t]);
 
   const loadDefaults = async () => {
     const storage = await getStorage();
@@ -319,14 +326,16 @@ export default function VoiceSettingsScreen() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } else {
-      Alert.alert('복사 실패', '직접 URL을 길게 눌러 복사해주세요.');
+      Alert.alert(t('voiceSettings.copyFailTitle'), t('voiceSettings.copyFailDesc'));
     }
   };
 
   const insets = useSafeAreaInsets();
 
+  const exampleCommands = useMemo(() => getExampleCommands(t), [t]);
+
   /* Siri 가이드 — 안드로이드 사용자도 참고용으로 항상 표시 */
-  const guides: AssistantGuide[] = [SIRI_GUIDE];
+  const guides: AssistantGuide[] = useMemo(() => [getSiriGuide(t)], [t]);
 
   return (
     <View style={s.container}>
@@ -337,22 +346,22 @@ export default function VoiceSettingsScreen() {
         {/* Header */}
         <View style={s.header}>
           <Image source={IC_MIC} style={s.headerIcon} resizeMode="contain" />
-          <Text style={s.headerTitle}>{'음성 기록 설정'}</Text>
-          <Text style={s.headerSub}>{'목소리로 육아 기록을 바로 남겨보세요'}</Text>
+          <Text style={s.headerTitle}>{t('voiceSettings.headerTitle')}</Text>
+          <Text style={s.headerSub}>{t('voiceSettings.headerSub')}</Text>
         </View>
 
         {/* ── Section 1: 기본값 설정 ── */}
         <View style={s.card}>
-          <Text style={s.cardTitle}>{'기본값 설정'}</Text>
-          <Text style={s.cardDesc}>{'음성 명령에 양이나 시간을 말하지 않으면 여기 설정한 값이 자동으로 적용돼요'}</Text>
+          <Text style={s.cardTitle}>{t('voiceSettings.defaultsTitle')}</Text>
+          <Text style={s.cardDesc}>{t('voiceSettings.defaultsDesc')}</Text>
 
-          <DefaultInput label="분유 기본량" value={defaults.formulaAmount} unit="ml" placeholder="120" onChange={(v) => updateField('formulaAmount', v)} />
-          <DefaultInput label="모유 수유 시간" value={defaults.breastDuration} unit="분" placeholder="15" onChange={(v) => updateField('breastDuration', v)} />
+          <DefaultInput label={t('voiceSettings.formulaAmountLabel')} value={defaults.formulaAmount} unit="ml" placeholder="120" onChange={(v) => updateField('formulaAmount', v)} />
+          <DefaultInput label={t('voiceSettings.breastDurationLabel')} value={defaults.breastDuration} unit={t('voiceSettings.minuteUnit')} placeholder="15" onChange={(v) => updateField('breastDuration', v)} />
           {/* 앱이 낮잠/밤잠 구분 없이 통합 '수면' 으로 기록 — 입력 1개로 통합 */}
           <DefaultInput
-            label="수면 기본 시간"
+            label={t('voiceSettings.napDurationLabel')}
             value={defaults.napDuration || defaults.nightDuration}
-            unit="분"
+            unit={t('voiceSettings.minuteUnit')}
             placeholder="60"
             onChange={(v) => {
               updateField('napDuration', v);
@@ -362,14 +371,14 @@ export default function VoiceSettingsScreen() {
           />
 
           <TouchableOpacity style={s.saveBtn} onPress={saveDefaults}>
-            <Text style={s.saveBtnText}>{saved ? '저장 완료!' : '저장'}</Text>
+            <Text style={s.saveBtnText}>{saved ? t('voiceSettings.saveDone') : t('common.save')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* ── Section 2: 내 아이 정보 ── */}
         <View style={s.card}>
-          <Text style={s.cardTitle}>{'등록된 아이'}</Text>
-          <Text style={s.cardDesc}>{'음성에서 아이 이름을 말하면 자동으로 매칭돼요'}</Text>
+          <Text style={s.cardTitle}>{t('voiceSettings.registeredChildrenTitle')}</Text>
+          <Text style={s.cardDesc}>{t('voiceSettings.registeredChildrenDesc')}</Text>
           {children.map((child) => (
             <View key={child.id} style={s.childRow}>
               <View style={[s.childDot, child.id === selectedChild?.id && s.childDotActive]} />
@@ -377,20 +386,20 @@ export default function VoiceSettingsScreen() {
               <Text style={s.childAge}>{child.ageInfo?.label ?? ''}</Text>
               {child.id === selectedChild?.id && (
                 <View style={s.defaultBadge}>
-                  <Text style={s.defaultBadgeText}>{'기본'}</Text>
+                  <Text style={s.defaultBadgeText}>{t('voiceSettings.defaultBadge')}</Text>
                 </View>
               )}
             </View>
           ))}
-          <Text style={s.childHint}>{'* 이름을 말하지 않으면 "기본" 아이에게 기록돼요'}</Text>
+          <Text style={s.childHint}>{t('voiceSettings.childHint')}</Text>
         </View>
 
         {/* ── Section 3: 음성 명령 예시 ── */}
         <View style={s.card}>
-          <Text style={s.cardTitle}>{'이렇게 말해보세요'}</Text>
-          <Text style={s.cardDesc}>{'아래 예시처럼 자연스럽게 말하면 AI가 알아서 분석해요'}</Text>
+          <Text style={s.cardTitle}>{t('voiceSettings.trySayingTitle')}</Text>
+          <Text style={s.cardDesc}>{t('voiceSettings.trySayingDesc')}</Text>
 
-          {EXAMPLE_COMMANDS.map((cmd, idx) => (
+          {exampleCommands.map((cmd, idx) => (
             <View key={idx} style={s.exampleRow}>
               <View style={s.exampleBubble}>
                 <Text style={s.exampleQuote}>{`"${cmd.text}"`}</Text>
@@ -403,7 +412,7 @@ export default function VoiceSettingsScreen() {
           <View style={s.tipBox}>
             <Text style={s.tipTitle}>{'TIP'}</Text>
             <Text style={s.tipText}>
-              {'시간: "방금", "30분 전", "1시에"\n양: "120ml"\n시간: "30분", "2시간"\n이름: "윤도", "승하" 등 아이 이름 포함'}
+              {t('voiceSettings.tipText')}
             </Text>
           </View>
         </View>
@@ -411,40 +420,40 @@ export default function VoiceSettingsScreen() {
         {/* ── Section 3.5: 안드로이드 음성 기록 호출 — 작동하는 2가지 방법 ── */}
         {Platform.OS === 'android' && (
           <View style={s.card}>
-            <Text style={s.cardTitle}>{'안드로이드에서 음성 기록 호출'}</Text>
+            <Text style={s.cardTitle}>{t('voiceSettings.androidInvokeTitle')}</Text>
             <Text style={s.cardDesc}>
-              {'아래 2가지 방법만 안정적으로 작동해요. 둘 다 1탭으로 음성 인식 즉시 시작.'}
+              {t('voiceSettings.androidInvokeDesc')}
             </Text>
 
             {/* 방법 ① 길게 누르기 */}
             <View style={s.methodBox}>
-              <Text style={s.methodTitle}>{'① 앱 아이콘 길게 누르기'}</Text>
+              <Text style={s.methodTitle}>{t('voiceSettings.method1Title')}</Text>
               <Text style={s.methodDesc}>
-                {'홈 화면에서 아맞다 아이콘을 0.5초 이상 꾹 누르면 "음성 기록" 메뉴가 떠요. 탭하면 즉시 녹음 시작.'}
+                {t('voiceSettings.method1Desc')}
               </Text>
             </View>
 
             {/* 방법 ② 홈 단축 아이콘 */}
             <View style={s.methodBox}>
-              <Text style={s.methodTitle}>{'② 홈 화면에 음성 단축 아이콘 추가'}</Text>
+              <Text style={s.methodTitle}>{t('voiceSettings.method2Title')}</Text>
               <Text style={s.methodDesc}>
-                {'아래 버튼 → 시스템에서 "바로가기 추가" 다이얼로그 → "추가"를 누르면 홈에 별도 아이콘 생성. 이후 1탭이면 끝.'}
+                {t('voiceSettings.method2Desc')}
               </Text>
               <TouchableOpacity
                 style={s.saveBtn}
                 onPress={handlePinShortcut}
                 disabled={pinning}
                 accessibilityRole="button"
-                accessibilityLabel="홈 화면에 음성 단축 아이콘 추가"
+                accessibilityLabel={t('voiceSettings.addHomeShortcutA11y')}
               >
                 <Text style={s.saveBtnText}>
-                  {pinning ? '추가 중...' : '＋ 홈 화면에 추가'}
+                  {pinning ? t('voiceSettings.addingInProgress') : t('voiceSettings.addToHomeScreen')}
                 </Text>
               </TouchableOpacity>
               <Text style={s.childHint}>
                 {pinSupported
-                  ? '* 버튼 후 시스템 다이얼로그가 안 뜨면 일부 런처(MIUI/Nova 등)가 막은 거예요. 방법 ①(아이콘 길게 누르기)이 항상 작동합니다.'
-                  : '* 이 빌드에선 동작이 제한될 수 있어요. 안 되면 방법 ①(아이콘 길게 누르기) 사용.'}
+                  ? t('voiceSettings.pinSupportedHint')
+                  : t('voiceSettings.pinUnsupportedHint')}
               </Text>
             </View>
           </View>
@@ -453,10 +462,10 @@ export default function VoiceSettingsScreen() {
         {/* ── Section 4: iOS Siri 가이드 (참고용 — 안드로이드에서도 표시) ── */}
         {guides.length > 0 && (
           <View style={s.card}>
-            <Text style={s.cardTitle}>{'iOS Siri 명령 (아이폰 사용자)'}</Text>
+            <Text style={s.cardTitle}>{t('voiceSettings.siriSectionTitle')}</Text>
             <Text style={s.cardDesc}>{Platform.OS === 'ios'
-              ? '아이폰은 설정 없이 "시리야, 아맞다 육아" 한마디로 음성 기록을 실행할 수 있어요 (iOS 16+).'
-              : '아이폰은 "시리야, 아맞다 육아" 한마디로 실행 (iOS 16+). 안드로이드는 위 방법 ①/② 사용.'}</Text>
+              ? t('voiceSettings.siriSectionDescIos')
+              : t('voiceSettings.siriSectionDescAndroid')}</Text>
 
             {guides.filter((g) => g.key === 'siri').map((guide) => (
               <View key={guide.key}>
@@ -465,7 +474,7 @@ export default function VoiceSettingsScreen() {
                   onPress={() => { setCopied(false); setOpenGuide(guide); }}
                   activeOpacity={0.7}
                   accessibilityRole="button"
-                  accessibilityLabel="Siri 명령 사용 방법 보기"
+                  accessibilityLabel={t('voiceSettings.viewSiriGuideA11y')}
                 >
                   <View style={[s.assistantDot, { backgroundColor: guide.color }]} />
                   <View style={s.assistantInfo}>
@@ -487,14 +496,14 @@ export default function VoiceSettingsScreen() {
         {/* ── Section 4-Android: 음성 비서 직접 호출 불가 안내 ── */}
         {Platform.OS === 'android' && (
           <View style={s.card}>
-            <Text style={s.cardTitle}>{'안드로이드 음성 비서로는 안 되나요?'}</Text>
+            <Text style={s.cardTitle}>{t('voiceSettings.assistantNotSupportedTitle')}</Text>
             <Text style={s.cardDesc}>
-              {'"하이 빅스비, 아맞다 켜줘" / "OK 구글, 아맞다 열어줘" 같은 음성 비서 직접 호출은 안 됩니다.'}
+              {t('voiceSettings.assistantNotSupportedDesc')}
             </Text>
             <View style={s.tipBox}>
-              <Text style={s.tipTitle}>{'이유'}</Text>
+              <Text style={s.tipTitle}>{t('voiceSettings.reasonLabel')}</Text>
               <Text style={s.tipText}>
-                {'· 빅스비: 2024년 12월 "빠른 명령어" 기능이 삭제됐고, 갤럭시 S25+/One UI 7부터는 새 빅스비(Perplexity 기반)로 교체 — 사용자 단축어 등록 불가.\n· Google 어시스턴트: 2026년 Gemini로 전환되면서 "루틴 → 맞춤 작업" 메뉴가 한국어 빌드에서 사라짐.\n· 한국어 앱 이름 인식이 약해 직접 명령("아맞다 실행")도 실패율 높음.\n\n→ 현실적으로 안드로이드에선 위 두 방법(앱 아이콘 길게 / 홈 단축 아이콘)만 안정적으로 작동.'}
+                {t('voiceSettings.assistantNotSupportedReason')}
               </Text>
             </View>
           </View>
@@ -503,7 +512,7 @@ export default function VoiceSettingsScreen() {
         {/* Mascot footer */}
         <View style={s.footer}>
           <Image source={IC_MASCOT} style={s.footerMascot} resizeMode="contain" />
-          <Text style={s.footerText}>{'음성으로 더 빠르게 기록해보세요!'}</Text>
+          <Text style={s.footerText}>{t('voiceSettings.footerText')}</Text>
         </View>
 
       </ScrollView>
@@ -519,16 +528,16 @@ export default function VoiceSettingsScreen() {
           <View style={s.modalContainer}>
             <View style={s.modalHeader}>
               <TouchableOpacity onPress={() => setOpenGuide(null)} style={s.modalClose}>
-                <Text style={s.modalCloseText}>{'닫기'}</Text>
+                <Text style={s.modalCloseText}>{t('common.close')}</Text>
               </TouchableOpacity>
-              <Text style={s.modalTitle}>{`${openGuide.name} 설정 방법`}</Text>
+              <Text style={s.modalTitle}>{t('voiceSettings.modalTitle', { name: openGuide.name })}</Text>
               <View style={s.modalClose} />
             </View>
 
             <ScrollView contentContainerStyle={s.modalScroll} showsVerticalScrollIndicator={false}>
               {/* 트리거 안내 */}
               <View style={[s.triggerBanner, { backgroundColor: openGuide.color + '15' }]}>
-                <Text style={[s.triggerBannerLabel, { color: openGuide.color }]}>{'이렇게 말하면 바로 기록돼요'}</Text>
+                <Text style={[s.triggerBannerLabel, { color: openGuide.color }]}>{t('voiceSettings.triggerBannerLabel')}</Text>
                 <Text style={[s.triggerBannerText, { color: openGuide.color }]}>{openGuide.trigger}</Text>
               </View>
 
@@ -551,7 +560,7 @@ export default function VoiceSettingsScreen() {
                           onPress={() => handleCopyUrl(openGuide.urlNote)}
                         >
                           <Text style={[s.copyBtnText, copied && s.copyBtnTextDone]}>
-                            {copied ? '복사됨!' : 'URL 복사'}
+                            {copied ? t('voiceSettings.copiedDone') : t('voiceSettings.copyUrl')}
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -570,7 +579,7 @@ export default function VoiceSettingsScreen() {
 
               <View style={s.modalNote}>
                 <Text style={s.modalNoteText}>
-                  {'* 음성 비서 설정은 각 앱에서 직접 해야 해요. 보안 정책상 외부 앱에서 자동 설정이 불가능합니다.'}
+                  {t('voiceSettings.modalNoteText')}
                 </Text>
               </View>
             </ScrollView>
