@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   View,
   Text,
@@ -42,25 +44,29 @@ interface FamilyMember {
   inviteeUserId?: string | null;
 }
 
-const PERMISSION_LIST = [
-  { key: 'viewRecords', label: '육아 기록 열람', desc: '수유/수면/기저귀 기록 보기', icon: '📋' },
-  { key: 'editRecords', label: '육아 기록 작성', desc: '기록 추가/수정', icon: '✏️' },
-  { key: 'viewCoaching', label: '상담이모 열람', desc: '상담 내역 보기', icon: '💬' },
-  { key: 'useCoaching', label: '상담이모 사용', desc: '직접 상담이모에 질문하기', icon: '🤖' },
-  { key: 'viewGrowth', label: '성장 통계 열람', desc: '성장 분석/그래프 보기', icon: '📊' },
-  { key: 'viewTimeline', label: '타임라인 열람', desc: '성장 사진 보기', icon: '📸' },
-  { key: 'editTimeline', label: '타임라인 추가', desc: '사진/마일스톤 추가', icon: '🖼' },
-  { key: 'viewProfile', label: '프로필 열람', desc: '아이 기본 정보 보기', icon: '👶' },
-  { key: 'editProfile', label: '프로필 수정', desc: '아이 정보 수정', icon: '✏️' },
-  { key: 'manageFamily', label: '가족 관리', desc: '구성원 초대/삭제', icon: '👥' },
-] as const;
+function getPermissionList(t: TFunction) {
+  return [
+    { key: 'viewRecords', label: t('coparenting.permission.viewRecords.label'), desc: t('coparenting.permission.viewRecords.desc'), icon: '📋' },
+    { key: 'editRecords', label: t('coparenting.permission.editRecords.label'), desc: t('coparenting.permission.editRecords.desc'), icon: '✏️' },
+    { key: 'viewCoaching', label: t('coparenting.permission.viewCoaching.label'), desc: t('coparenting.permission.viewCoaching.desc'), icon: '💬' },
+    { key: 'useCoaching', label: t('coparenting.permission.useCoaching.label'), desc: t('coparenting.permission.useCoaching.desc'), icon: '🤖' },
+    { key: 'viewGrowth', label: t('coparenting.permission.viewGrowth.label'), desc: t('coparenting.permission.viewGrowth.desc'), icon: '📊' },
+    { key: 'viewTimeline', label: t('coparenting.permission.viewTimeline.label'), desc: t('coparenting.permission.viewTimeline.desc'), icon: '📸' },
+    { key: 'editTimeline', label: t('coparenting.permission.editTimeline.label'), desc: t('coparenting.permission.editTimeline.desc'), icon: '🖼' },
+    { key: 'viewProfile', label: t('coparenting.permission.viewProfile.label'), desc: t('coparenting.permission.viewProfile.desc'), icon: '👶' },
+    { key: 'editProfile', label: t('coparenting.permission.editProfile.label'), desc: t('coparenting.permission.editProfile.desc'), icon: '✏️' },
+    { key: 'manageFamily', label: t('coparenting.permission.manageFamily.label'), desc: t('coparenting.permission.manageFamily.desc'), icon: '👥' },
+  ] as const;
+}
 
-const ROLE_OPTIONS = [
-  { key: 'parent', label: '부모', icon: '🫂', desc: '모든 권한 (기록·열람·관리)' },
-  { key: 'grandparent', label: '조부모', icon: '🧓', desc: '기록 작성 + 열람' },
-  { key: 'helper', label: '고모·이모·삼촌', icon: '🤝', desc: '기록 작성 + 열람' },
-  { key: 'viewer', label: '열람만', icon: '👁️', desc: '보기만 가능' },
-];
+function getRoleOptions(t: TFunction) {
+  return [
+    { key: 'parent', label: t('coparenting.role.parent.label'), icon: '🫂', desc: t('coparenting.role.parent.desc') },
+    { key: 'grandparent', label: t('coparenting.role.grandparent.label'), icon: '🧓', desc: t('coparenting.role.grandparent.desc') },
+    { key: 'helper', label: t('coparenting.role.helper.label'), icon: '🤝', desc: t('coparenting.role.helper.desc') },
+    { key: 'viewer', label: t('coparenting.role.viewer.label'), icon: '👁️', desc: t('coparenting.role.viewer.desc') },
+  ];
+}
 
 const ROLE_PRESETS: Record<string, string[]> = {
   parent: ['viewRecords', 'editRecords', 'viewCoaching', 'useCoaching', 'viewGrowth', 'viewTimeline', 'editTimeline', 'viewProfile', 'editProfile', 'manageFamily'],
@@ -93,6 +99,7 @@ const INVITE_LINK_BASE = 'https://amatda-parenting.web.app/invite';
 /* ------------------------------------------------------------------ */
 
 export default function CoparentingScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const authUserId = useAuthStore((s) => s.userId);
@@ -158,7 +165,7 @@ export default function CoparentingScreen() {
     (async () => {
       try {
         await coparentingApi.accept(code);
-        Alert.alert('완료', '가족으로 연결되었습니다! 👨‍👩‍👧');
+        Alert.alert(t('common.complete'), t('coparenting.alert.autoConnected'));
         loadMembers();
       } catch {
         // 자동 수락 실패 → 코드 채워서 수동 시도 가능하게
@@ -166,6 +173,7 @@ export default function CoparentingScreen() {
         setAcceptVisible(true);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inviteParams.inviteCode, loadMembers]);
 
   // Role change -> update preset permissions
@@ -189,7 +197,7 @@ export default function CoparentingScreen() {
   // Send invite
   const handleInvite = async () => {
     if (!inviteNickname.trim()) {
-      Alert.alert('알림', '이름/별명을 입력해주세요');
+      Alert.alert(t('common.notice'), t('coparenting.alert.nicknameRequired'));
       return;
     }
     if (!selectedChild) return;
@@ -216,14 +224,14 @@ export default function CoparentingScreen() {
       // SMS or share invite code
       const childName = selectedChild.name;
       const inviteUrl = `${INVITE_LINK_BASE}?code=${code}`;
-      const message = `${childName}의 육아에 함께해요! 👶\n아래 링크를 누르면 앱에서 바로 참여돼요:\n${inviteUrl}\n\n(앱이 없으면 설치 후 이 링크를 다시 눌러주세요)\n초대 코드: ${code}`;
+      const message = t('coparenting.inviteMessage', { childName, inviteUrl, code });
 
       Alert.alert(
-        '초대 완료',
-        `초대 코드: ${code}\n\n이 코드를 상대방에게 전달해주세요.`,
+        t('coparenting.alert.inviteCompleteTitle'),
+        t('coparenting.alert.inviteCompleteDesc', { code }),
         [
           {
-            text: '문자 보내기',
+            text: t('coparenting.alert.sendSms'),
             onPress: async () => {
               const phone = phoneDigits;
               if (phone.length >= 10) {
@@ -241,18 +249,18 @@ export default function CoparentingScreen() {
             },
           },
           {
-            text: '링크 공유',
+            text: t('coparenting.alert.shareLink'),
             onPress: async () => {
               try { await Share.share({ message }); } catch { /* */ }
             },
           },
-          { text: '닫기' },
+          { text: t('common.close') },
         ],
       );
 
       loadMembers();
     } catch {
-      Alert.alert('오류', '초대에 실패했습니다');
+      Alert.alert(t('common.error'), t('coparenting.alert.inviteFailed'));
     } finally {
       setInviteLoading(false);
     }
@@ -261,17 +269,17 @@ export default function CoparentingScreen() {
   // Accept invite
   const handleAccept = async () => {
     if (!acceptCode.trim()) {
-      Alert.alert('알림', '초대 코드를 입력해주세요');
+      Alert.alert(t('common.notice'), t('coparenting.alert.inviteCodeRequired'));
       return;
     }
     try {
       await coparentingApi.accept(acceptCode.trim());
-      Alert.alert('완료', '가족으로 연결되었습니다!');
+      Alert.alert(t('common.complete'), t('coparenting.alert.connected'));
       setAcceptVisible(false);
       setAcceptCode('');
       loadMembers();
     } catch {
-      Alert.alert('오류', '유효하지 않은 초대 코드입니다');
+      Alert.alert(t('common.error'), t('coparenting.alert.invalidInviteCode'));
     }
   };
 
@@ -280,29 +288,29 @@ export default function CoparentingScreen() {
     if (!editMember) return;
     try {
       await coparentingApi.updatePermissions(editMember.id, editPerms);
-      Alert.alert('완료', '권한이 수정되었습니다');
+      Alert.alert(t('common.complete'), t('coparenting.alert.permissionsUpdated'));
       setEditModalVisible(false);
       loadMembers();
     } catch {
-      Alert.alert('오류', '권한 수정에 실패했습니다');
+      Alert.alert(t('common.error'), t('coparenting.alert.permissionsUpdateFailed'));
     }
   };
 
   // Remove member
   const handleRemove = (member: FamilyMember) => {
     Alert.alert(
-      '구성원 삭제',
-      `${member.nickname}님을 삭제하시겠습니까?`,
+      t('coparenting.alert.removeMemberTitle'),
+      t('coparenting.alert.removeMemberDesc', { nickname: member.nickname }),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '삭제', style: 'destructive',
+          text: t('common.delete'), style: 'destructive',
           onPress: async () => {
             try {
               await coparentingApi.removeMember(member.id);
               loadMembers();
             } catch {
-              Alert.alert('오류', '삭제에 실패했습니다');
+              Alert.alert(t('common.error'), t('coparenting.alert.removeFailed'));
             }
           },
         },
@@ -317,9 +325,9 @@ export default function CoparentingScreen() {
   };
 
   const roleIcon = (role: string) =>
-    ROLE_OPTIONS.find((r) => r.key === role)?.icon ?? '👤';
+    getRoleOptions(t).find((r) => r.key === role)?.icon ?? '👤';
   const roleLabel = (role: string) =>
-    ROLE_OPTIONS.find((r) => r.key === role)?.label ?? role;
+    getRoleOptions(t).find((r) => r.key === role)?.label ?? role;
 
   // invitee(소유자 아님) 본인의 연결 정보 — members 목록에서 내 userId로 식별
   const myMembership = members.find((m) => m.inviteeUserId === authUserId) ?? null;
@@ -334,11 +342,11 @@ export default function CoparentingScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScreenHeader title="공동육아" right={<GuideButton onPress={() => setGuideVisible(true)} />} />
+      <ScreenHeader title={t('coparenting.headerTitle')} right={<GuideButton onPress={() => setGuideVisible(true)} />} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         <Text style={[styles.subtitle, { textAlign: 'center' }]}>
-          가족과 함께 {selectedChild?.name ?? '아이'}의 성장을 기록하세요
+          {t('coparenting.subtitle', { childName: selectedChild?.name ?? t('coparenting.defaultChildName') })}
         </Text>
 
         {loading ? (
@@ -346,15 +354,15 @@ export default function CoparentingScreen() {
         ) : !selectedChild ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>👶</Text>
-            <Text style={styles.emptyTitle}>먼저 아이를 등록해주세요</Text>
+            <Text style={styles.emptyTitle}>{t('coparenting.emptyState.title')}</Text>
             <Text style={styles.emptyDesc}>
-              공동육아는 등록된 아이의 기록을{'\n'}가족과 함께 보고 작성하는 기능이에요.
+              {t('coparenting.emptyState.desc')}
             </Text>
             <TouchableOpacity
               style={[styles.acceptBtn, { marginTop: 20, alignSelf: 'stretch' }]}
               onPress={() => setAcceptVisible(true)}
             >
-              <Text style={styles.acceptBtnText}>{'초대 코드 입력'}</Text>
+              <Text style={styles.acceptBtnText}>{t('coparenting.enterInviteCode')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -363,17 +371,17 @@ export default function CoparentingScreen() {
               <>
                 {/* Owner: me */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>나</Text>
+                  <Text style={styles.sectionTitle}>{t('coparenting.me')}</Text>
                   <View style={styles.memberCard}>
                     <View style={styles.memberAvatar}>
                       <Text style={styles.memberIcon}>{'★'}</Text>
                     </View>
                     <View style={styles.memberInfo}>
-                      <Text style={styles.memberName}>나 (소유자)</Text>
-                      <Text style={styles.memberPerm}>모든 권한</Text>
+                      <Text style={styles.memberName}>{t('coparenting.meOwner')}</Text>
+                      <Text style={styles.memberPerm}>{t('coparenting.allPermissions')}</Text>
                     </View>
                     <View style={[styles.statusBadge, styles.statusOwner]}>
-                      <Text style={styles.statusOwnerText}>소유자</Text>
+                      <Text style={styles.statusOwnerText}>{t('coparenting.owner')}</Text>
                     </View>
                   </View>
                 </View>
@@ -382,7 +390,7 @@ export default function CoparentingScreen() {
                 {members.length > 0 && (
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>
-                      가족 ({members.length})
+                      {t('coparenting.familyCount', { count: members.length })}
                     </Text>
                     {members.map((m) => (
                       <View key={m.id} style={styles.memberCard}>
@@ -392,7 +400,7 @@ export default function CoparentingScreen() {
                         <View style={styles.memberInfo}>
                           <Text style={styles.memberName}>{m.nickname}</Text>
                           <Text style={styles.memberRole}>
-                            {roleLabel(m.role)} ({m.permissions.length}개 권한)
+                            {t('coparenting.roleWithPermCount', { role: roleLabel(m.role), count: m.permissions.length })}
                           </Text>
                         </View>
                         <View style={{ alignItems: 'flex-end', gap: 4 }}>
@@ -404,15 +412,15 @@ export default function CoparentingScreen() {
                               styles.statusText,
                               m.status === 'accepted' ? styles.statusAcceptedText : styles.statusPendingText,
                             ]}>
-                              {m.status === 'accepted' ? '연결됨' : '대기중'}
+                              {m.status === 'accepted' ? t('coparenting.status.connected') : t('coparenting.status.pending')}
                             </Text>
                           </View>
                           <View style={styles.memberActions}>
                             <TouchableOpacity onPress={() => openEditPerms(m)}>
-                              <Text style={styles.actionEdit}>권한수정</Text>
+                              <Text style={styles.actionEdit}>{t('coparenting.editPermissions')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity onPress={() => handleRemove(m)}>
-                              <Text style={styles.actionRemove}>삭제</Text>
+                              <Text style={styles.actionRemove}>{t('common.delete')}</Text>
                             </TouchableOpacity>
                           </View>
                         </View>
@@ -429,25 +437,25 @@ export default function CoparentingScreen() {
                     <Text style={styles.connAvatarIcon}>{roleIcon(myRole)}</Text>
                   </View>
                   <Text style={styles.connTitle}>
-                    당신은 {selectedChild?.name ?? '아이'}의 공동육아에{'\n'}
+                    {t('coparenting.connTitle', { childName: selectedChild?.name ?? t('coparenting.defaultChildName') })}{'\n'}
                     <Text style={styles.connRole}>{roleLabel(myRole)}</Text>
-                    {'(으)로 연결되어 있어요'}
+                    {t('coparenting.connTitleSuffix')}
                   </Text>
                   {myNickname ? (
-                    <Text style={styles.connNick}>표시 이름: {myNickname}</Text>
+                    <Text style={styles.connNick}>{t('coparenting.displayName', { nickname: myNickname })}</Text>
                   ) : null}
                   <View style={styles.connBadge}>
-                    <Text style={styles.connBadgeText}>{'연결됨'}</Text>
+                    <Text style={styles.connBadgeText}>{t('coparenting.status.connected')}</Text>
                   </View>
                 </View>
 
                 {/* Invitee: 내 권한 */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>내 권한 ({myPerms.length}개)</Text>
+                  <Text style={styles.sectionTitle}>{t('coparenting.myPermissionsCount', { count: myPerms.length })}</Text>
                   <Text style={styles.fieldHint}>
-                    소유자가 부여한 권한이에요. 변경은 소유자에게 요청하세요.
+                    {t('coparenting.myPermissionsHint')}
                   </Text>
-                  {PERMISSION_LIST.map((p) => {
+                  {getPermissionList(t).map((p) => {
                     const on = myPerms.includes(p.key);
                     return (
                       <View
@@ -460,7 +468,7 @@ export default function CoparentingScreen() {
                           <Text style={styles.permDesc}>{p.desc}</Text>
                         </View>
                         <Text style={on ? styles.permOn : styles.permOff}>
-                          {on ? '✓ 허용' : '제한'}
+                          {on ? t('coparenting.permAllowed') : t('coparenting.permRestricted')}
                         </Text>
                       </View>
                     );
@@ -470,7 +478,7 @@ export default function CoparentingScreen() {
                 {/* Invitee: 함께하는 다른 가족 (읽기 전용) */}
                 {otherMembers.length > 0 && (
                   <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>함께하는 가족 ({otherMembers.length})</Text>
+                    <Text style={styles.sectionTitle}>{t('coparenting.otherFamilyCount', { count: otherMembers.length })}</Text>
                     {otherMembers.map((m) => (
                       <View key={m.id} style={styles.memberCard}>
                         <View style={styles.memberAvatar}>
@@ -481,7 +489,7 @@ export default function CoparentingScreen() {
                           <Text style={styles.memberRole}>{roleLabel(m.role)}</Text>
                         </View>
                         <View style={[styles.statusBadge, styles.statusAccepted]}>
-                          <Text style={[styles.statusText, styles.statusAcceptedText]}>연결됨</Text>
+                          <Text style={[styles.statusText, styles.statusAcceptedText]}>{t('coparenting.status.connected')}</Text>
                         </View>
                       </View>
                     ))}
@@ -503,24 +511,24 @@ export default function CoparentingScreen() {
                     setInviteVisible(true);
                   }}
                 >
-                  <Text style={styles.inviteBtnText}>{'+'} 가족 초대하기</Text>
+                  <Text style={styles.inviteBtnText}>{'+'} {t('coparenting.inviteFamily')}</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
                 style={styles.acceptBtn}
                 onPress={() => setAcceptVisible(true)}
               >
-                <Text style={styles.acceptBtnText}>{'초대 코드 입력'}</Text>
+                <Text style={styles.acceptBtnText}>{t('coparenting.enterInviteCode')}</Text>
               </TouchableOpacity>
             </View>
 
             {/* Benefits */}
             <View style={styles.benefitCard}>
-              <Text style={styles.benefitTitle}>{'공동육아의 장점'}</Text>
-              <Text style={styles.benefitItem}>{'•'} 아빠가 수유 기록하면 엄마에게 즉시 반영</Text>
-              <Text style={styles.benefitItem}>{'•'} 조부모는 열람만 가능해서 기록 실수 방지</Text>
-              <Text style={styles.benefitItem}>{'•'} 도우미에게 필요한 권한만 부여 가능</Text>
-              <Text style={styles.benefitItem}>{'•'} 모든 가족의 기록이 상담이모에 반영</Text>
+              <Text style={styles.benefitTitle}>{t('coparenting.benefits.title')}</Text>
+              <Text style={styles.benefitItem}>{'•'} {t('coparenting.benefits.item1')}</Text>
+              <Text style={styles.benefitItem}>{'•'} {t('coparenting.benefits.item2')}</Text>
+              <Text style={styles.benefitItem}>{'•'} {t('coparenting.benefits.item3')}</Text>
+              <Text style={styles.benefitItem}>{'•'} {t('coparenting.benefits.item4')}</Text>
             </View>
           </>
         )}
@@ -534,18 +542,18 @@ export default function CoparentingScreen() {
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalContent}>
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <Text style={styles.modalTitle}>가족 초대</Text>
+              <Text style={styles.modalTitle}>{t('coparenting.inviteFamily')}</Text>
 
-              <Text style={styles.fieldLabel}>이름/별명</Text>
+              <Text style={styles.fieldLabel}>{t('coparenting.field.nickname')}</Text>
               <TextInput
                 style={styles.fieldInput}
-                placeholder="예: 할머니, 아빠"
+                placeholder={t('coparenting.field.nicknamePlaceholder')}
                 placeholderTextColor={COLOR.textLight}
                 value={inviteNickname}
                 onChangeText={setInviteNickname}
               />
 
-              <Text style={styles.fieldLabel}>전화번호 (선택)</Text>
+              <Text style={styles.fieldLabel}>{t('coparenting.field.phone')}</Text>
               <TextInput
                 style={styles.fieldInput}
                 placeholder="01012345678"
@@ -555,9 +563,9 @@ export default function CoparentingScreen() {
                 keyboardType="phone-pad"
               />
 
-              <Text style={styles.fieldLabel}>역할 선택</Text>
+              <Text style={styles.fieldLabel}>{t('coparenting.field.selectRole')}</Text>
               <View style={styles.roleGrid}>
-                {ROLE_OPTIONS.map((r) => (
+                {getRoleOptions(t).map((r) => (
                   <TouchableOpacity
                     key={r.key}
                     style={[styles.roleChip, inviteRole === r.key && styles.roleChipActive]}
@@ -572,9 +580,9 @@ export default function CoparentingScreen() {
                 ))}
               </View>
 
-              <Text style={styles.fieldLabel}>세부 권한 설정</Text>
-              <Text style={styles.fieldHint}>역할 기본 권한이 적용됩니다. 필요에 따라 조정하세요.</Text>
-              {PERMISSION_LIST.map((p) => (
+              <Text style={styles.fieldLabel}>{t('coparenting.field.detailedPermissions')}</Text>
+              <Text style={styles.fieldHint}>{t('coparenting.field.detailedPermissionsHint')}</Text>
+              {getPermissionList(t).map((p) => (
                 <TouchableOpacity
                   key={p.key}
                   style={styles.permRow}
@@ -600,7 +608,7 @@ export default function CoparentingScreen() {
                   style={styles.modalBtnCancel}
                   onPress={() => setInviteVisible(false)}
                 >
-                  <Text style={styles.modalBtnCancelText}>취소</Text>
+                  <Text style={styles.modalBtnCancelText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalBtnSave, inviteLoading && { opacity: 0.5 }]}
@@ -608,7 +616,7 @@ export default function CoparentingScreen() {
                   disabled={inviteLoading}
                 >
                   <Text style={styles.modalBtnSaveText}>
-                    {inviteLoading ? '처리중...' : '초대하기'}
+                    {inviteLoading ? t('coparenting.processing') : t('coparenting.inviteAction')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -623,13 +631,13 @@ export default function CoparentingScreen() {
           <View style={styles.modalContent}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={styles.modalTitle}>
-                {editMember?.nickname} 권한 수정
+                {t('coparenting.editPermissionsFor', { nickname: editMember?.nickname ?? '' })}
               </Text>
               <Text style={styles.fieldHint}>
-                {roleLabel(editMember?.role ?? '')} 역할
+                {t('coparenting.roleSuffix', { role: roleLabel(editMember?.role ?? '') })}
               </Text>
 
-              {PERMISSION_LIST.map((p) => (
+              {getPermissionList(t).map((p) => (
                 <TouchableOpacity
                   key={p.key}
                   style={styles.permRow}
@@ -655,13 +663,13 @@ export default function CoparentingScreen() {
                   style={styles.modalBtnCancel}
                   onPress={() => setEditModalVisible(false)}
                 >
-                  <Text style={styles.modalBtnCancelText}>취소</Text>
+                  <Text style={styles.modalBtnCancelText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.modalBtnSave}
                   onPress={handleSavePermissions}
                 >
-                  <Text style={styles.modalBtnSaveText}>저장</Text>
+                  <Text style={styles.modalBtnSaveText}>{t('common.save')}</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -673,9 +681,9 @@ export default function CoparentingScreen() {
       <Modal visible={acceptVisible} transparent animationType="fade" onRequestClose={() => setAcceptVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { maxHeight: '40%' }]}>
-            <Text style={styles.modalTitle}>초대 코드 입력</Text>
+            <Text style={styles.modalTitle}>{t('coparenting.enterInviteCode')}</Text>
             <Text style={styles.fieldHint}>
-              가족에게 받은 초대 코드를 입력하세요
+              {t('coparenting.enterInviteCodeHint')}
             </Text>
             <TextInput
               style={[styles.fieldInput, { fontSize: 20, textAlign: 'center', letterSpacing: 4 }]}
@@ -691,10 +699,10 @@ export default function CoparentingScreen() {
                 style={styles.modalBtnCancel}
                 onPress={() => setAcceptVisible(false)}
               >
-                <Text style={styles.modalBtnCancelText}>취소</Text>
+                <Text style={styles.modalBtnCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalBtnSave} onPress={handleAccept}>
-                <Text style={styles.modalBtnSaveText}>연결하기</Text>
+                <Text style={styles.modalBtnSaveText}>{t('coparenting.connect')}</Text>
               </TouchableOpacity>
             </View>
           </View>

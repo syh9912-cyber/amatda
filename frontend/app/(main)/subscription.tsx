@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   View,
   Text,
@@ -54,48 +56,48 @@ interface PremiumStatus {
   expiresAt?: string;
 }
 
-const FALLBACK_PLANS: PremiumPlan[] = [
+const getFallbackPlans = (t: TFunction): PremiumPlan[] => [
   {
     id: 'monthly',
-    name: 'VIP 월간',
+    name: t('subscription.plan.monthlyName'),
     price: 3900,
-    priceLabel: '3,900원/월',
+    priceLabel: t('subscription.plan.monthlyPriceLabel'),
     period: 'monthly',
     features: [
-      '상담이모 무제한',
-      '음식 사진 분석 월 300회',
-      '대변 분석 월 300회',
-      '울음 분석 월 300회',
-      'AI 수면 예측 무제한',
-      '육아 패턴 분석 무제한',
-      '광고 제거',
+      t('subscription.plan.feature.unlimitedConsult'),
+      t('subscription.plan.feature.foodAnalysis300'),
+      t('subscription.plan.feature.poopAnalysis300'),
+      t('subscription.plan.feature.cryAnalysis300'),
+      t('subscription.plan.feature.unlimitedSleepPredict'),
+      t('subscription.plan.feature.unlimitedPatternAnalysis'),
+      t('subscription.plan.feature.adFree'),
     ],
   },
   {
     id: 'yearly',
-    name: 'VIP 연간',
+    name: t('subscription.plan.yearlyName'),
     price: 39900,
-    priceLabel: '39,900원/년',
+    priceLabel: t('subscription.plan.yearlyPriceLabel'),
     period: 'yearly',
     badge: 'BEST',
-    discount: '15% 할인',
+    discount: t('subscription.plan.yearlyDiscount'),
     features: [
-      'VIP 월간의 모든 기능',
-      '월 3,325원꼴',
+      t('subscription.plan.feature.allMonthlyFeatures'),
+      t('subscription.plan.feature.yearlyPerMonth'),
     ],
   },
 ];
 
-const FREE_FEATURES = [
-  { label: '상담이모', free: '하루 10회', premium: '무제한' },
-  { label: '음식 사진 분석', free: '하루 2회', premium: '월 300회' },
-  { label: '대변 분석', free: '하루 2회', premium: '월 300회' },
-  { label: '울음 분석', free: '하루 2회', premium: '월 300회' },
-  { label: 'AI 수면 예측', free: '하루 3회', premium: '무제한' },
-  { label: '육아 패턴 분석', free: '하루 3회', premium: '무제한' },
-  { label: 'AI 자동기록', free: 'O', premium: 'O' },
-  { label: '대화 맥락', free: '7일', premium: '7일' },
-  { label: '광고', free: '있음', premium: '없음' },
+const getFreeFeatures = (t: TFunction) => [
+  { label: t('subscription.compare.consult'), free: t('subscription.compare.dailyTimes', { count: 10 }), premium: t('subscription.compare.unlimited') },
+  { label: t('subscription.compare.foodAnalysis'), free: t('subscription.compare.dailyTimes', { count: 2 }), premium: t('subscription.compare.monthlyTimes', { count: 300 }) },
+  { label: t('subscription.compare.poopAnalysis'), free: t('subscription.compare.dailyTimes', { count: 2 }), premium: t('subscription.compare.monthlyTimes', { count: 300 }) },
+  { label: t('subscription.compare.cryAnalysis'), free: t('subscription.compare.dailyTimes', { count: 2 }), premium: t('subscription.compare.monthlyTimes', { count: 300 }) },
+  { label: t('subscription.compare.sleepPredict'), free: t('subscription.compare.dailyTimes', { count: 3 }), premium: t('subscription.compare.unlimited') },
+  { label: t('subscription.compare.patternAnalysis'), free: t('subscription.compare.dailyTimes', { count: 3 }), premium: t('subscription.compare.unlimited') },
+  { label: t('subscription.compare.autoRecord'), free: 'O', premium: 'O' },
+  { label: t('subscription.compare.conversationContext'), free: t('subscription.compare.days', { count: 7 }), premium: t('subscription.compare.days', { count: 7 }) },
+  { label: t('subscription.compare.ads'), free: t('subscription.compare.adsPresent'), premium: t('subscription.compare.adsNone') },
 ];
 
 interface FeatureGuide {
@@ -104,18 +106,19 @@ interface FeatureGuide {
   desc: string;
 }
 
-const FEATURE_GUIDES: FeatureGuide[] = [
-  { emoji: '🚫', title: '광고 제거', desc: '앱 내 모든 광고가 사라져서 쾌적하게 이용할 수 있어요.' },
-  { emoji: '💬', title: '상담이모', desc: '아이 기질에 맞는 맞춤 육아 답변을 받아보세요. 수면, 식사, 행동 등 모든 고민을 상담할 수 있어요.' },
-  { emoji: '😢', title: '울음/대변 분석', desc: '상담이모 탭에서 아이 울음소리를 녹음하거나 대변 사진을 찍으면 분석해드려요.' },
-  { emoji: '📝', title: '자동기록', desc: '타임라인에서 "오늘 하루 정리" 버튼을 누르면 수유, 수면, 상담 기록을 일기로 만들어줘요.' },
+const getFeatureGuides = (t: TFunction): FeatureGuide[] => [
+  { emoji: '🚫', title: t('subscription.guide.adFree.title'), desc: t('subscription.guide.adFree.desc') },
+  { emoji: '💬', title: t('subscription.guide.consult.title'), desc: t('subscription.guide.consult.desc') },
+  { emoji: '😢', title: t('subscription.guide.analysis.title'), desc: t('subscription.guide.analysis.desc') },
+  { emoji: '📝', title: t('subscription.guide.autoRecord.title'), desc: t('subscription.guide.autoRecord.desc') },
 ];
 
 // 결제 수단은 services/payment.ts의 getPaymentMethodOptions()로 동적 결정
 // (PortOne 환경변수 등록 여부에 따라 자동 표시/숨김)
 
 export default function SubscriptionScreen() {
-  const [plans, setPlans] = useState<PremiumPlan[]>(FALLBACK_PLANS);
+  const { t } = useTranslation();
+  const [plans, setPlans] = useState<PremiumPlan[]>(() => getFallbackPlans(t));
   const [status, setStatus] = useState<PremiumStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState(false);
@@ -166,20 +169,20 @@ export default function SubscriptionScreen() {
       const stillActive = expiresAt ? expiresAt > new Date() : true;
       if (stillActive) {
         const isIOS = Platform.OS === 'ios';
-        const storeLabel = isIOS ? 'App Store 구독' : 'Google Play 정기 결제';
+        const storeLabel = isIOS ? t('subscription.store.appStoreSubscription') : t('subscription.store.googlePlaySubscription');
         const manageUrl = isIOS
           ? 'https://apps.apple.com/account/subscriptions'
           : 'https://play.google.com/store/account/subscriptions';
         Alert.alert(
-          '이미 구독 중이에요',
-          `현재 프리미엄을 이용 중이세요. 플랜 변경은 ${storeLabel} 관리에서 가능해요.`,
+          t('subscription.alert.alreadySubscribedTitle'),
+          t('subscription.alert.alreadySubscribedMessage', { storeLabel }),
           [
-            { text: '취소', style: 'cancel' },
+            { text: t('common.cancel'), style: 'cancel' },
             {
-              text: '구독 관리 열기',
+              text: t('subscription.alert.openSubscriptionManagement'),
               onPress: () => {
                 Linking.openURL(manageUrl).catch(() => {
-                  Alert.alert('오류', '구독 관리 페이지를 열 수 없어요.');
+                  Alert.alert(t('common.error'), t('subscription.alert.cannotOpenManagementPage'));
                 });
               },
             },
@@ -198,10 +201,10 @@ export default function SubscriptionScreen() {
         if (res.ok) {
           const priceKRW = productId === 'premium_yearly' ? 39900 : 3900;
           analytics.logPurchase(productId === 'premium_yearly' ? 'yearly' : 'monthly', priceKRW);
-          Alert.alert('구독 완료', res.message ?? '프리미엄 기능을 이용해보세요!');
+          Alert.alert(t('subscription.alert.subscribeCompleteTitle'), res.message ?? t('subscription.alert.subscribeCompleteMessage'));
           loadData();
         } else {
-          Alert.alert('결제 실패', res.message ?? '다시 시도해주세요.');
+          Alert.alert(t('subscription.alert.paymentFailedTitle'), res.message ?? t('common.retry'));
         }
       } finally {
         setSubscribing(false);
@@ -217,8 +220,8 @@ export default function SubscriptionScreen() {
     });
     if (!checkoutParams) {
       Alert.alert(
-        '결제 준비 중',
-        '선택한 결제 수단은 아직 활성화되지 않았습니다. 다른 수단을 선택해 주세요.',
+        t('subscription.alert.paymentPreparingTitle'),
+        t('subscription.alert.paymentMethodNotActive'),
       );
       return;
     }
@@ -230,9 +233,9 @@ export default function SubscriptionScreen() {
     setPortOneVisible(false);
     if (result.status !== 'OK') {
       if (result.status === 'FAILED') {
-        Alert.alert('결제 실패', result.message ?? '결제가 취소되었습니다.');
+        Alert.alert(t('subscription.alert.paymentFailedTitle'), result.message ?? t('subscription.alert.paymentCancelled'));
       } else {
-        Alert.alert('결제 오류', result.message ?? '결제 중 오류가 발생했습니다.');
+        Alert.alert(t('subscription.alert.paymentErrorTitle'), result.message ?? t('subscription.alert.paymentErrorOccurred'));
       }
       setPortOneParams(null);
       return;
@@ -248,15 +251,15 @@ export default function SubscriptionScreen() {
         // 1회성 결제 검증
         await paymentApi.verifyPortOne(result.paymentId, productId);
       } else {
-        Alert.alert('오류', '결제 정보를 확인할 수 없습니다.');
+        Alert.alert(t('common.error'), t('subscription.alert.cannotVerifyPaymentInfo'));
         return;
       }
-      Alert.alert('구독 완료', '프리미엄 기능을 이용해보세요!');
+      Alert.alert(t('subscription.alert.subscribeCompleteTitle'), t('subscription.alert.subscribeCompleteMessage'));
       loadData();
     } catch {
       Alert.alert(
-        '검증 실패',
-        '결제는 진행되었지만 서버 검증이 실패했습니다. 잠시 후 다시 확인해주세요.',
+        t('subscription.alert.verificationFailedTitle'),
+        t('subscription.alert.verificationFailedMessage'),
       );
     } finally {
       setSubscribing(false);
@@ -269,10 +272,10 @@ export default function SubscriptionScreen() {
     try {
       await premiumApi.startTrial();
       analytics.logTrialStart();
-      Alert.alert('체험 시작', '7일간 프리미엄 기능을 무료로 이용해보세요!');
+      Alert.alert(t('subscription.alert.trialStartTitle'), t('subscription.alert.trialStartMessage'));
       loadData();
     } catch {
-      Alert.alert('오류', '체험 시작에 실패했습니다.');
+      Alert.alert(t('common.error'), t('subscription.alert.trialStartFailed'));
     } finally {
       setSubscribing(false);
     }
@@ -283,10 +286,10 @@ export default function SubscriptionScreen() {
     try {
       const res = await restoreIAP();
       if (res.ok) {
-        Alert.alert('복원 완료', res.message ?? '구독이 복원되었습니다.');
+        Alert.alert(t('subscription.alert.restoreCompleteTitle'), res.message ?? t('subscription.alert.restoreCompleteMessage'));
         loadData();
       } else {
-        Alert.alert('복원 실패', res.message ?? '복원할 구매 내역이 없습니다.');
+        Alert.alert(t('subscription.alert.restoreFailedTitle'), res.message ?? t('subscription.alert.restoreFailedMessage'));
       }
     } finally {
       setSubscribing(false);
@@ -296,7 +299,7 @@ export default function SubscriptionScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Stack.Screen options={{ title: '프리미엄 플랜', headerShown: true, headerLeft: () => <BackButton /> }} />
+        <Stack.Screen options={{ title: t('subscription.screenTitle'), headerShown: true, headerLeft: () => <BackButton /> }} />
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
@@ -306,24 +309,24 @@ export default function SubscriptionScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Stack.Screen options={{ title: '프리미엄 플랜', headerShown: true, headerLeft: () => <BackButton /> }} />
+      <Stack.Screen options={{ title: t('subscription.screenTitle'), headerShown: true, headerLeft: () => <BackButton /> }} />
 
       {/* Header */}
       <View style={styles.header}>
         <Image source={IC_PREMIUM} style={styles.crownEmojiImg} resizeMode="contain" />
-        <Text style={styles.headerTitle}>프리미엄 플랜</Text>
+        <Text style={styles.headerTitle}>{t('subscription.screenTitle')}</Text>
         <Text style={styles.headerSub}>
-          아이 맞춤 육아, 더 깊이있게
+          {t('subscription.headerSub')}
         </Text>
       </View>
 
       {/* Current status */}
       <View style={styles.statusCard}>
         <View style={styles.statusRow}>
-          <Text style={styles.statusLabel}>현재 플랜</Text>
+          <Text style={styles.statusLabel}>{t('subscription.currentPlan')}</Text>
           <View style={[styles.tierBadge, isPaid && styles.tierBadgePaid]}>
             <Text style={[styles.tierText, isPaid && styles.tierTextPaid]}>
-              {isPaid ? 'PREMIUM' : 'FREE'}
+              {isPaid ? t('subscription.tierPremium') : t('subscription.tierFree')}
             </Text>
           </View>
         </View>
@@ -331,20 +334,20 @@ export default function SubscriptionScreen() {
           <View style={styles.trialRow}>
             <Image source={IC_CLOCK} style={styles.trialIconImg} resizeMode="contain" />
             <Text style={styles.trialText}>
-              체험 기간 {status.trialDaysLeft}일 남음
+              {t('subscription.trialDaysLeft', { count: status.trialDaysLeft })}
             </Text>
           </View>
         )}
         {isPaid && status?.expiresAt && (
           <Text style={styles.expiresText}>
-            만료일: {status.expiresAt.split('T')[0]}
+            {t('subscription.expiresAt', { date: status.expiresAt.split('T')[0] })}
           </Text>
         )}
       </View>
 
       {/* Feature guide */}
-      <Text style={styles.sectionTitle}>VIP 혜택 소개</Text>
-      {FEATURE_GUIDES.map((g) => (
+      <Text style={styles.sectionTitle}>{t('subscription.featureGuideTitle')}</Text>
+      {getFeatureGuides(t).map((g) => (
         <View key={g.title} style={styles.guideCard}>
           <Text style={styles.guideEmoji}>{g.emoji}</Text>
           <View style={styles.guideContent}>
@@ -357,7 +360,7 @@ export default function SubscriptionScreen() {
       {/* Plan cards */}
       {!isPaid && (
         <>
-          <Text style={styles.sectionTitle}>플랜 선택</Text>
+          <Text style={styles.sectionTitle}>{t('subscription.selectPlan')}</Text>
           {plans.map((plan) => {
             const isSelected = selectedPlan === plan.id;
             return (
@@ -399,7 +402,7 @@ export default function SubscriptionScreen() {
           })}
 
           {/* Payment method */}
-          <Text style={styles.sectionTitle}>결제 수단</Text>
+          <Text style={styles.sectionTitle}>{t('subscription.paymentMethod')}</Text>
           <View style={styles.paymentRow}>
             {paymentMethodOptions
               .filter((pm) => pm.available)
@@ -425,13 +428,13 @@ export default function SubscriptionScreen() {
             onPress={handleSubscribe}
             disabled={subscribing}
             accessibilityRole="button"
-            accessibilityLabel="구독 시작"
-            accessibilityHint="선택한 플랜으로 결제를 시작합니다"
+            accessibilityLabel={t('subscription.a11y.subscribeStart')}
+            accessibilityHint={t('subscription.a11y.subscribeStartHint')}
           >
             {subscribing ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text style={styles.subscribeBtnText}>구독하기</Text>
+              <Text style={styles.subscribeBtnText}>{t('subscription.subscribeButton')}</Text>
             )}
           </TouchableOpacity>
 
@@ -446,7 +449,7 @@ export default function SubscriptionScreen() {
               return (
                 <View style={[styles.trialBtn, styles.trialBtnDisabled]}>
                   <Text style={[styles.trialBtnText, styles.trialBtnTextDisabled]}>
-                    이미 체험하셨습니다
+                    {t('subscription.trialAlreadyUsed')}
                   </Text>
                 </View>
               );
@@ -457,22 +460,22 @@ export default function SubscriptionScreen() {
                 onPress={handleStartTrial}
                 disabled={subscribing}
                 accessibilityRole="button"
-                accessibilityLabel="7일 무료 체험 시작"
+                accessibilityLabel={t('subscription.trialStartButton')}
               >
-                <Text style={styles.trialBtnText}>7일 무료 체험 시작</Text>
+                <Text style={styles.trialBtnText}>{t('subscription.trialStartButton')}</Text>
               </TouchableOpacity>
             );
           })()}
 
           {/* 자동갱신 / 체험 고지 — Apple/Google 정책 필수 표기 */}
           <Text style={styles.legalNotice}>
-            {'• 구독은 선택한 기간(월간/연간)으로 자동 갱신됩니다.\n' +
-            '• 7일 무료 체험 종료 후 선택한 플랜 요금이 자동 청구됩니다.\n' +
-            '• 갱신 24시간 전까지 구독을 취소하지 않으면 자동 결제됩니다.\n' +
+            {t('subscription.legalNotice.autoRenew') + '\n' +
+            t('subscription.legalNotice.trialAutoCharge') + '\n' +
+            t('subscription.legalNotice.cancelBefore24h') + '\n' +
             (Platform.OS === 'ios'
-              ? '• 구독 취소: 설정 앱 → 본인 Apple 계정 → 구독 → 아맞다 → 구독 취소\n'
-              : '• 구독 취소: Play 스토어 → 프로필 → 결제 및 정기 결제 → 정기 결제 → 아맞다\n') +
-            '• 구독 기간 중 취소해도 만료일까지 이용 가능합니다.'}
+              ? t('subscription.legalNotice.cancelIOS') + '\n'
+              : t('subscription.legalNotice.cancelAndroid') + '\n') +
+            t('subscription.legalNotice.cancelStillUsableUntilExpiry')}
           </Text>
 
           {/* 구매 복원 — Apple 필수 제공 */}
@@ -481,10 +484,10 @@ export default function SubscriptionScreen() {
             onPress={handleRestorePurchases}
             disabled={subscribing}
             accessibilityRole="button"
-            accessibilityLabel="구매 복원"
-            accessibilityHint="이전에 구입한 구독을 복원합니다"
+            accessibilityLabel={t('subscription.restorePurchasesButton')}
+            accessibilityHint={t('subscription.a11y.restorePurchasesHint')}
           >
-            <Text style={styles.restoreBtnText}>구매 복원</Text>
+            <Text style={styles.restoreBtnText}>{t('subscription.restorePurchasesButton')}</Text>
           </TouchableOpacity>
 
           {/* 구독 관리 / 환불 안내 — Google/Apple 정책 + 한국 전자상거래법 준수 */}
@@ -495,43 +498,43 @@ export default function SubscriptionScreen() {
                 ? 'https://apps.apple.com/account/subscriptions'
                 : 'https://play.google.com/store/account/subscriptions';
               Linking.openURL(url).catch(() => {
-                Alert.alert('오류', '정기 결제 관리 페이지를 열 수 없어요.');
+                Alert.alert(t('common.error'), t('subscription.alert.cannotOpenSubscriptionManagementPage'));
               });
             }}
             accessibilityRole="button"
-            accessibilityLabel="구독 취소 또는 환불 요청"
+            accessibilityLabel={t('subscription.manageOrRefundButton')}
           >
-            <Text style={styles.manageBtnText}>구독 취소 / 환불 요청</Text>
+            <Text style={styles.manageBtnText}>{t('subscription.manageOrRefundButton')}</Text>
           </TouchableOpacity>
 
           <Text style={styles.refundNotice}>
-            {'환불 정책:\n' +
-            '• 결제 후 7일 이내 미사용: 100% 환불\n' +
-            '• 결제 후 7일 이내 사용 이력 있음: 사용 일수 차감 후 환불\n' +
-            '• 결제 후 14일 초과: 회사 귀책 사유 없으면 환불 불가\n' +
-            '• 자세한 내용은 [이용약관 > 제12조] 참조'}
+            {t('subscription.refundNotice.title') + '\n' +
+            t('subscription.refundNotice.within7DaysUnused') + '\n' +
+            t('subscription.refundNotice.within7DaysUsed') + '\n' +
+            t('subscription.refundNotice.after14Days') + '\n' +
+            t('subscription.refundNotice.seeTerms')}
           </Text>
 
           {/* 약관 링크 — Apple 결제 화면 권장 */}
           <View style={styles.policyRow}>
             <TouchableOpacity onPress={() => Linking.openURL('https://amatda-parenting.web.app/terms')}>
-              <Text style={styles.policyLink}>이용약관</Text>
+              <Text style={styles.policyLink}>{t('subscription.termsOfService')}</Text>
             </TouchableOpacity>
             <Text style={styles.policySep}> · </Text>
             <TouchableOpacity onPress={() => Linking.openURL('https://amatda-parenting.web.app/privacy')}>
-              <Text style={styles.policyLink}>개인정보처리방침</Text>
+              <Text style={styles.policyLink}>{t('subscription.privacyPolicy')}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Comparison table */}
-          <Text style={styles.sectionTitle}>무료 vs 프리미엄</Text>
+          <Text style={styles.sectionTitle}>{t('subscription.compareTitle')}</Text>
           <View style={styles.compareTable}>
             <View style={styles.compareHeaderRow}>
-              <Text style={[styles.compareCell, styles.compareLabelCell]}>기능</Text>
-              <Text style={[styles.compareCell, styles.compareHeaderText]}>무료</Text>
-              <Text style={[styles.compareCell, styles.compareHeaderText, styles.comparePremiumHeader]}>프리미엄</Text>
+              <Text style={[styles.compareCell, styles.compareLabelCell]}>{t('subscription.compare.featureColumn')}</Text>
+              <Text style={[styles.compareCell, styles.compareHeaderText]}>{t('subscription.compare.freeColumn')}</Text>
+              <Text style={[styles.compareCell, styles.compareHeaderText, styles.comparePremiumHeader]}>{t('subscription.compare.premiumColumn')}</Text>
             </View>
-            {FREE_FEATURES.map((row) => (
+            {getFreeFeatures(t).map((row) => (
               <View key={row.label} style={styles.compareRow}>
                 <Text style={[styles.compareCell, styles.compareLabelCell]}>{row.label}</Text>
                 <Text style={[styles.compareCell, styles.compareFreeValue]}>{row.free}</Text>
@@ -545,9 +548,9 @@ export default function SubscriptionScreen() {
       {isPaid && (
         <View style={styles.paidMessage}>
           <Image source={IC_RIBBON} style={styles.paidEmojiImg} resizeMode="contain" />
-          <Text style={styles.paidTitle}>프리미엄 이용 중</Text>
+          <Text style={styles.paidTitle}>{t('subscription.paidTitle')}</Text>
           <Text style={styles.paidSub}>
-            모든 프리미엄 기능을 이용하고 계세요!
+            {t('subscription.paidSub')}
           </Text>
         </View>
       )}

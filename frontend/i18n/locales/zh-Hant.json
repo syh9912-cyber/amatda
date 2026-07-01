@@ -2374,5 +2374,378 @@
     "weekdayThu": "四",
     "weekdayFri": "五",
     "weekdaySat": "六"
+  },
+  "coparenting": {
+    "headerTitle": "共同育兒",
+    "subtitle": "和家人一起記錄{{childName}}的成長吧",
+    "defaultChildName": "孩子",
+    "emptyState": {
+      "title": "請先註冊孩子的資料",
+      "desc": "共同育兒功能可以讓家人一起\n查看和記錄已註冊孩子的資料。"
+    },
+    "enterInviteCode": "輸入邀請碼",
+    "me": "我",
+    "meOwner": "我（擁有者）",
+    "allPermissions": "所有權限",
+    "owner": "擁有者",
+    "familyCount": "家人（{{count}}）",
+    "roleWithPermCount": "{{role}}（{{count}}項權限）",
+    "status": {
+      "connected": "已連結",
+      "pending": "待確認"
+    },
+    "editPermissions": "編輯權限",
+    "connTitle": "您在{{childName}}的共同育兒中",
+    "connTitleSuffix": "身分已連結",
+    "displayName": "顯示名稱：{{nickname}}",
+    "myPermissionsCount": "我的權限（{{count}}項）",
+    "myPermissionsHint": "這是擁有者授予的權限，如需變更請聯絡擁有者。",
+    "permAllowed": "✓ 允許",
+    "permRestricted": "受限",
+    "otherFamilyCount": "共同參與的家人（{{count}}）",
+    "inviteFamily": "邀請家人",
+    "benefits": {
+      "title": "共同育兒的優點",
+      "item1": "爸爸記錄餵奶後,媽媽也能立即看到",
+      "item2": "祖父母僅能查看,避免誤動記錄",
+      "item3": "可只授予幫手所需的權限",
+      "item4": "所有家人的記錄都會同步給育兒顧問"
+    },
+    "field": {
+      "nickname": "姓名／暱稱",
+      "nicknamePlaceholder": "例如:阿嬤、爸爸",
+      "phone": "電話號碼（選填）",
+      "selectRole": "選擇角色",
+      "detailedPermissions": "詳細權限設定",
+      "detailedPermissionsHint": "系統會套用角色的預設權限,可依需要調整。"
+    },
+    "processing": "處理中...",
+    "inviteAction": "邀請",
+    "editPermissionsFor": "編輯{{nickname}}的權限",
+    "roleSuffix": "{{role}}角色",
+    "enterInviteCodeHint": "請輸入家人提供的邀請碼",
+    "connect": "連結",
+    "alert": {
+      "autoConnected": "已成功連結為家人！👨‍👩‍👧",
+      "nicknameRequired": "請輸入姓名／暱稱",
+      "inviteCompleteTitle": "邀請完成",
+      "inviteCompleteDesc": "邀請碼:{{code}}\n\n請將此邀請碼提供給對方。",
+      "sendSms": "傳送簡訊",
+      "shareLink": "分享連結",
+      "inviteFailed": "邀請失敗",
+      "inviteCodeRequired": "請輸入邀請碼",
+      "connected": "已成功連結為家人！",
+      "invalidInviteCode": "邀請碼無效",
+      "permissionsUpdated": "權限已更新",
+      "permissionsUpdateFailed": "權限更新失敗",
+      "removeMemberTitle": "刪除成員",
+      "removeMemberDesc": "確定要刪除{{nickname}}嗎?",
+      "removeFailed": "刪除失敗"
+    },
+    "inviteMessage": "一起參與{{childName}}的育兒吧！👶\n點擊下方連結即可直接在應用程式中加入:\n{{inviteUrl}}\n\n(若尚未安裝應用程式,請先安裝後再次點擊此連結)\n邀請碼:{{code}}",
+    "permission": {
+      "viewRecords": {
+        "label": "查看育兒記錄",
+        "desc": "查看餵奶／睡眠／換尿布記錄"
+      },
+      "editRecords": {
+        "label": "記錄育兒事項",
+        "desc": "新增／編輯記錄"
+      },
+      "viewCoaching": {
+        "label": "查看育兒顧問內容",
+        "desc": "查看諮詢紀錄"
+      },
+      "useCoaching": {
+        "label": "使用育兒顧問",
+        "desc": "直接向育兒顧問提問"
+      },
+      "viewGrowth": {
+        "label": "查看成長統計",
+        "desc": "查看成長分析／圖表"
+      },
+      "viewTimeline": {
+        "label": "查看時間軸",
+        "desc": "查看成長照片"
+      },
+      "editTimeline": {
+        "label": "新增時間軸內容",
+        "desc": "新增照片／里程碑"
+      },
+      "viewProfile": {
+        "label": "查看個人資料",
+        "desc": "查看孩子基本資料"
+      },
+      "editProfile": {
+        "label": "編輯個人資料",
+        "desc": "編輯孩子資料"
+      },
+      "manageFamily": {
+        "label": "管理家人",
+        "desc": "邀請／刪除成員"
+      }
+    },
+    "role": {
+      "parent": {
+        "label": "父母",
+        "desc": "所有權限(記錄・查看・管理)"
+      },
+      "grandparent": {
+        "label": "祖父母",
+        "desc": "記錄+查看"
+      },
+      "helper": {
+        "label": "姑姑・阿姨・叔叔",
+        "desc": "記錄+查看"
+      },
+      "viewer": {
+        "label": "僅供查看",
+        "desc": "僅可查看"
+      }
+    }
+  },
+  "subscription": {
+    "screenTitle": "高級方案",
+    "headerSub": "為孩子量身打造的育兒體驗，更深入",
+    "currentPlan": "目前方案",
+    "tierPremium": "PREMIUM",
+    "tierFree": "FREE",
+    "trialDaysLeft": "體驗期還剩 {{count}} 天",
+    "expiresAt": "到期日：{{date}}",
+    "featureGuideTitle": "VIP 專屬福利介紹",
+    "selectPlan": "選擇方案",
+    "paymentMethod": "付款方式",
+    "subscribeButton": "立即訂閱",
+    "trialAlreadyUsed": "您已使用過體驗方案",
+    "trialStartButton": "開始 7 天免費體驗",
+    "restorePurchasesButton": "恢復購買",
+    "manageOrRefundButton": "取消訂閱／申請退款",
+    "termsOfService": "服務條款",
+    "privacyPolicy": "隱私權政策",
+    "compareTitle": "免費 vs 高級版",
+    "paidTitle": "高級方案使用中",
+    "paidSub": "您正在使用所有高級功能！",
+    "plan": {
+      "monthlyName": "VIP 月繳方案",
+      "monthlyPriceLabel": "每月 3,900 韓元",
+      "yearlyName": "VIP 年繳方案",
+      "yearlyPriceLabel": "每年 39,900 韓元",
+      "yearlyDiscount": "85 折優惠",
+      "feature": {
+        "unlimitedConsult": "育兒諮詢 無限次數",
+        "foodAnalysis300": "食物照片分析 每月 300 次",
+        "poopAnalysis300": "排便分析 每月 300 次",
+        "cryAnalysis300": "哭聲分析 每月 300 次",
+        "unlimitedSleepPredict": "AI 睡眠預測 無限次數",
+        "unlimitedPatternAnalysis": "育兒模式分析 無限次數",
+        "adFree": "移除廣告",
+        "allMonthlyFeatures": "VIP 月繳方案的所有功能",
+        "yearlyPerMonth": "平均每月約 3,325 韓元"
+      }
+    },
+    "compare": {
+      "consult": "育兒諮詢",
+      "foodAnalysis": "食物照片分析",
+      "poopAnalysis": "排便分析",
+      "cryAnalysis": "哭聲分析",
+      "sleepPredict": "AI 睡眠預測",
+      "patternAnalysis": "育兒模式分析",
+      "autoRecord": "AI 自動記錄",
+      "conversationContext": "對話記憶",
+      "ads": "廣告",
+      "adsPresent": "有",
+      "adsNone": "無",
+      "unlimited": "無限次數",
+      "dailyTimes": "每天 {{count}} 次",
+      "monthlyTimes": "每月 {{count}} 次",
+      "days": "{{count}} 天",
+      "featureColumn": "功能",
+      "freeColumn": "免費",
+      "premiumColumn": "高級版"
+    },
+    "guide": {
+      "adFree": {
+        "title": "移除廣告",
+        "desc": "應用程式內所有廣告都會消失，讓您使用起來更舒適。"
+      },
+      "consult": {
+        "title": "育兒諮詢",
+        "desc": "獲得符合孩子氣質的專屬育兒建議。睡眠、飲食、行為等各種煩惱都能諮詢。"
+      },
+      "analysis": {
+        "title": "哭聲／排便分析",
+        "desc": "在育兒諮詢頁籤錄下孩子的哭聲或拍下排便照片，即可為您分析。"
+      },
+      "autoRecord": {
+        "title": "自動記錄",
+        "desc": "在時間軸上點擊「今日總結」按鈕，即可將餵奶、睡眠、諮詢記錄整理成日記。"
+      }
+    },
+    "store": {
+      "appStoreSubscription": "App Store 訂閱",
+      "googlePlaySubscription": "Google Play 定期付款"
+    },
+    "alert": {
+      "alreadySubscribedTitle": "您已訂閱",
+      "alreadySubscribedMessage": "您目前正在使用高級方案。方案變更請至「{{storeLabel}}」管理頁面進行。",
+      "openSubscriptionManagement": "開啟訂閱管理",
+      "cannotOpenManagementPage": "無法開啟訂閱管理頁面。",
+      "subscribeCompleteTitle": "訂閱完成",
+      "subscribeCompleteMessage": "快來體驗高級功能吧！",
+      "paymentFailedTitle": "付款失敗",
+      "paymentPreparingTitle": "付款準備中",
+      "paymentMethodNotActive": "您選擇的付款方式尚未啟用，請選擇其他付款方式。",
+      "paymentCancelled": "付款已取消。",
+      "paymentErrorTitle": "付款發生錯誤",
+      "paymentErrorOccurred": "付款過程中發生錯誤。",
+      "cannotVerifyPaymentInfo": "無法確認付款資訊。",
+      "verificationFailedTitle": "驗證失敗",
+      "verificationFailedMessage": "付款已完成，但伺服器驗證失敗，請稍後再確認一次。",
+      "trialStartTitle": "開始體驗",
+      "trialStartMessage": "快來免費體驗 7 天高級功能吧！",
+      "trialStartFailed": "開始體驗失敗。",
+      "restoreCompleteTitle": "恢復完成",
+      "restoreCompleteMessage": "訂閱已恢復。",
+      "restoreFailedTitle": "恢復失敗",
+      "restoreFailedMessage": "沒有可恢復的購買紀錄。",
+      "cannotOpenSubscriptionManagementPage": "無法開啟定期付款管理頁面。"
+    },
+    "a11y": {
+      "subscribeStart": "開始訂閱",
+      "subscribeStartHint": "將以您選擇的方案開始付款",
+      "restorePurchasesHint": "恢復您先前購買的訂閱"
+    },
+    "legalNotice": {
+      "autoRenew": "．訂閱將依您選擇的週期（月繳／年繳）自動續訂。",
+      "trialAutoCharge": "．7 天免費體驗結束後，將自動收取您所選方案的費用。",
+      "cancelBefore24h": "．若未於續訂前 24 小時取消，將自動扣款。",
+      "cancelIOS": "．取消訂閱：設定 App → 您的 Apple 帳號 → 訂閱 → 아맞다 → 取消訂閱",
+      "cancelAndroid": "．取消訂閱：Play 商店 → 個人資料 → 付款與訂閱 → 訂閱 → 아맞다",
+      "cancelStillUsableUntilExpiry": "．即使在訂閱期間內取消，仍可使用至到期日為止。"
+    },
+    "refundNotice": {
+      "title": "退款政策：",
+      "within7DaysUnused": "．付款後 7 天內未使用：全額退款",
+      "within7DaysUsed": "．付款後 7 天內已使用：扣除已使用天數後退款",
+      "after14Days": "．付款後超過 14 天：若無本公司過失，恕不接受退款",
+      "seeTerms": "．詳細請參閱〔服務條款 > 第 12 條〕"
+    }
+  },
+  "privacy": {
+    "pageTitle": "隱私權政策",
+    "heading": "隱私權政策",
+    "translationDisclaimer": "本文件為韓文原文之參考翻譯版本。若翻譯內容與韓文原文有任何出入，應以韓文版本為準，韓文版本具法律效力。",
+    "meta": "施行日：2026年5月25日\n公司名稱：SY Labs\n服務名稱：Amatda（兒童專屬日記）",
+    "intro": "SY Labs（以下稱「本公司」）依據韓國《個人情報保護法》，為保護使用者之個人資料，並能迅速圓滑處理相關申訴，特制定並公開以下個人資料處理方針。",
+    "collectionItems": {
+      "title": "1. 個人資料蒐集項目",
+      "body": "本公司為提供服務，將蒐集以下個人資料。\n\n【必要蒐集項目】\n- 電子郵件地址（會員識別及登入）\n- 密碼雜湊值（帳號安全，不儲存原始密碼）\n- 子女資訊：姓名、出生年月日、性別、出生時刻（氣質分析及客製化服務）\n\n【選擇性蒐集項目】\n- 觀察日記內容（文字、成長紀錄及AI分析）\n- 照片（大頭貼照片、成長相簿）\n- 位置資訊（推薦鄰近補習班，僅於使用時蒐集）\n- 暱稱、大頭貼照片（社群活動）\n\n【透過社群登入蒐集之項目】\n- Kakao登入：電子郵件、暱稱、大頭貼照片（選填）\n- NAVER登入：電子郵件、姓名（暱稱）、大頭貼照片（選填）\n- Google登入：電子郵件、姓名、大頭貼照片（選填）\n※ 使用社群登入時，可於該業者之資訊提供同意畫面中逐項選擇。\n\n【自動蒐集項目】\n- 裝置資訊（作業系統版本、應用程式版本、裝置識別碼）\n- 服務使用紀錄（連線日期時間、使用功能）\n- 推播通知權杖（FCM，用於發送通知）"
+    },
+    "socialLogin": {
+      "title": "1-1. 社群登入資訊處理",
+      "body": "本公司支援Kakao、NAVER、Google社群登入，為使用者之便利，將自該業者接收以下資訊。\n\n【Kakao登入 — Kakao Corp.】\n- 蒐集資訊：電子郵件、暱稱、大頭貼照片（選填）\n- 使用目的：會員識別、本人驗證、簡化加入程序\n- 保有期間：會員退出時立即刪除\n- Kakao處理方針：https://www.kakao.com/policy/privacy\n\n【NAVER登入 — NAVER Cloud Corp.】\n- 蒐集資訊：電子郵件、姓名（或暱稱）、大頭貼照片（選填）\n- 使用目的：會員識別、本人驗證、簡化加入程序\n- 保有期間：會員退出時立即刪除＋解除NAVER連動\n- NAVER處理方針：https://policy.naver.com/policy/service.html\n\n【Google登入 — Google LLC】\n- 蒐集資訊：電子郵件、姓名、大頭貼照片（選填）\n- 使用目的：會員識別、本人驗證、簡化加入程序\n- 保有期間：會員退出時立即刪除\n- Google處理方針：https://policies.google.com/privacy\n\n【共通事項】\n- 本公司除上述業者所提供之資訊外，不蒐集任何其他社群活動資訊（好友清單、貼文等）。\n- 使用社群登入為選擇性，亦可透過電子郵件＋密碼註冊。\n- 會員退出時，本公司將刪除自有資料，並向Kakao、NAVER請求解除連動（unlink）。"
+    },
+    "purpose": {
+      "title": "2. 蒐集目的",
+      "body": "本公司將蒐集之個人資料用於以下目的。\n\n- 分析子女之獨特氣質並提供客製化育兒解決方案\n- 提供依年齡客製化之教育、營養、活動推薦\n- 成長紀錄管理（觀察日記、成長相簿）\n- 會員管理及本人驗證\n- 服務改善及新功能開發\n- 顧客諮詢及申訴處理\n\n所蒐集之個人資料不得用於上述目的以外之用途，若目的變更，將事先取得同意。"
+    },
+    "retention": {
+      "title": "3. 保存期間及銷毀",
+      "body": "- 會員退出時：立即刪除所有個人資料。\n- 申請刪除子女資訊時：立即刪除該子女之所有相關資料（觀察日記、照片、分析結果）。\n\n【依法定保存義務之例外】\n- 依《電子商務等消費者保護相關法律》規定，有關契約或要約撤回等紀錄：5年\n- 貨款結算及商品供應相關紀錄：5年\n- 消費者申訴或糾紛處理相關紀錄：3年\n- 依《通訊秘密保護法》規定之連線紀錄：3個月\n\n銷毀方式：電子檔案形式之資訊將以無法復原之方式永久刪除，紙本文件則以碎紙方式銷毀。"
+    },
+    "thirdParty": {
+      "title": "4. 提供予第三方",
+      "body": "本公司不會將使用者之個人資料提供予第三方。\n\n惟以下情形屬例外：\n- 經使用者事前同意者\n- 依法令規定，或基於偵查目的，依法令所定程序及方法，經偵查機關要求者\n\n【AI分析時之資料處理】\n- 進行AI氣質分析及客製化推薦時，將對子女之真實姓名進行去識別化處理後，傳送至外部AI服務（Google Gemini）。\n- 經去識別化處理之資料無法識別特定個人。\n- AI服務提供者不會將傳送之資料用於學習目的。"
+    },
+    "childProtection": {
+      "title": "5. 兒童個人資料保護",
+      "body": "本公司於蒐集未滿14歲兒童之個人資料時，將取得法定代理人（父母等）之同意。\n\n- 本服務係由父母（法定代理人）登錄並管理子女資訊之服務。\n- 子女之個人資料係經法定代理人同意後蒐集，法定代理人得隨時要求查閱、修改、刪除子女之個人資料。\n- 不允許未滿14歲兒童自行註冊使用本服務。\n- 未經法定代理人同意所蒐集之兒童個人資料，將立即銷毀。"
+    },
+    "userRights": {
+      "title": "6. 使用者權利及行使方式",
+      "body": "使用者（或法定代理人）得行使以下權利。\n\n- 請求查閱個人資料\n- 請求修改個人資料\n- 請求刪除個人資料\n- 請求停止處理個人資料\n- 請求退出會員及刪除全部資料\n\n權利行使方式：\n- 於應用程式內【更多＞設定＞刪除帳號】直接處理\n- 電子郵件申請：privacy@sylabs.kr\n- 本公司將於收到申請之日起10日內處理完畢。"
+    },
+    "dpo": {
+      "title": "7. 個人資料保護負責人",
+      "body": "本公司統籌並負責個人資料處理相關業務，為處理使用者申訴及救濟受害，指定以下個人資料保護負責人。\n\n個人資料保護負責人\n- 電子郵件：privacy@sylabs.kr\n- 公司名稱：SY Labs\n\n個人資料侵害相關申報及諮詢（韓國國內窗口）：\n- 個人資料侵害申報中心（韓國網路振興院）：118，privacy.kisa.or.kr\n- 個人資料紛爭調解委員會：1833-6972，kopico.go.kr\n- 大檢察廳網路搜查科：1301，spo.go.kr\n- 警察廳網路安全局：182，cyberbureau.police.go.kr"
+    },
+    "outsourcing": {
+      "title": "8. 資料處理委外",
+      "body": "本公司為提供服務，將個人資料處理委外予以下業者。\n\n【委外業者及內容】\n- Google Cloud Platform／Firebase：資料儲存、驗證、主機代管\n  （資料處理地區：美國，遵循Google Cloud安全政策）\n- Google（Gemini AI）：AI氣質分析及育兒諮詢（僅傳送去識別化資料，不用於資料學習）\n- Sentry（Functional Software Inc.）：應用程式當機、錯誤蒐集（用於提升服務穩定性）\n- Kakao Corp.：Kakao登入驗證（僅限使用社群登入之使用者）\n- NAVER Cloud Corp.：NAVER登入驗證（僅限使用社群登入之使用者）\n- Google LLC：Google登入驗證＋推播通知（FCM）發送\n\n委外業者將依相關法令安全處理個人資料，並禁止將個人資料用於委託目的以外之用途。\n\n【資料跨境傳輸】\n部分委外業者（Google Cloud、Sentry等）於美國等海外地區處理資料。本公司依韓國《個人情報保護法》第28條之8規定，事先告知使用者，並採取安全傳輸（TLS加密）及儲存（AES-256）之安全措施。"
+    },
+    "cookies": {
+      "title": "9. Cookie及自動蒐集裝置",
+      "body": "本服務為行動應用程式，不使用網頁Cookie。\n\n- 用於自動登入之驗證權杖將加密儲存於裝置之安全儲存空間（Secure Store）。\n- 不使用其他行為追蹤工具（Tracker）。\n- 不蒐集廣告識別碼。"
+    },
+    "policyChanges": {
+      "title": "10. 政策變更公告",
+      "body": "本隱私權政策內容可能因法令、政策或資安技術之變更而新增、刪除或修改。\n\n- 變更事項將於施行日至少7日前，透過應用程式內公告通知。\n- 重大變更事項（新增蒐集項目、提供予第三方等）將於施行日至少30日前通知，並於必要時重新取得使用者同意。\n- 本政策自2026年4月5日起施行。"
+    }
+  },
+  "terms": {
+    "pageTitle": "使用者條款",
+    "heading": "使用者條款",
+    "translationDisclaimer": "本文件為韓文原文之參考翻譯版本。若翻譯內容與韓文原文有任何出入，應以韓文版本為準，韓文版本具法律效力。",
+    "meta": "施行日：2026年5月25日\n公司名稱：SY Labs\n服務名稱：Amatda（兒童專屬日記）",
+    "purpose": {
+      "title": "第1條（目的）",
+      "body": "本條款旨在規範SY Labs（以下稱「本公司」）所提供之「Amatda」行動應用程式服務（以下稱「服務」）之使用條件及程序，以及本公司與使用者之權利、義務、責任事項等。"
+    },
+    "definitions": {
+      "title": "第2條（定義）",
+      "body": "1.「服務」係指本公司所提供之子女氣質分析、客製化育兒解決方案、成長紀錄管理等相關各項服務。\n2.「使用者」係指同意本條款並使用本公司所提供服務之人。\n3.「子女資訊」係指使用者於服務中登錄之子女姓名、出生年月日、性別、出生時刻等資訊。\n4.「內容」係指使用者於服務內撰寫或上傳之觀察日記、照片、備註等。"
+    },
+    "effectAndChanges": {
+      "title": "第3條（條款之效力及變更）",
+      "body": "1. 本條款於刊登在服務畫面或以其他方式通知使用者時發生效力。\n2. 本公司得於不違反相關法令之範圍內變更本條款。\n3. 條款變更時，本公司將於施行日7日前於服務內公告變更內容。\n4. 使用者若不同意變更後之條款，得停止使用服務並退出會員。"
+    },
+    "serviceContent": {
+      "title": "第4條（服務內容）",
+      "body": "本公司提供以下服務。\n\n1. 子女氣質分析：依出生年月日時分析子女獨特之氣質與傾向。\n2. 客製化育兒解決方案：依年齡、性別、氣質推薦教育、營養、活動。\n3. 成長紀錄：透過觀察日記、照片相簿、每日紀錄記錄子女之成長。\n4. 諮詢阿姨：提供育兒諮詢服務。\n5. 補習班推薦：提供以位置為基礎之鄰近補習班資訊。\n6. 營養指南：依年齡及氣質推薦飲食菜單。\n7. 手足契合度：分析子女間性向之契合度。\n\n服務之具體內容可能依本公司情況而變更。"
+    },
+    "membership": {
+      "title": "第5條（會員加入及退出）",
+      "body": "1. 使用者依本公司所定程序申請加入會員，經本公司同意後即完成會員加入。\n2. 會員得隨時透過服務內【更多＞設定＞刪除帳號】申請退出會員。\n3. 會員退出時，所有個人資料及服務使用紀錄將立即刪除。惟依相關法令須保存之資訊，將於該法定期間內予以保存。"
+    },
+    "userObligations": {
+      "title": "第6條（使用者之義務）",
+      "body": "使用者應遵守以下各項規定。\n\n1. 加入會員時提供正確資訊\n2. 妥善保管自身帳號資訊\n3. 登錄子女個人資料時，須具備法定代理人之權限\n4. 不得不當使用他人之個人資料\n5. 使用服務時遵守相關法令及本條款"
+    },
+    "prohibitedActs": {
+      "title": "第7條（禁止行為）",
+      "body": "使用者不得從事以下各項行為。\n\n1. 冒用他人資訊加入會員之行為\n2. 未經本公司事前同意，將利用本公司服務所得資訊予以複製、散布或作商業利用之行為\n3. 妨礙服務穩定運作之行為\n4. 侵害本公司智慧財產權之行為\n5. 上傳猥褻或暴力內容，或其他違反公序良俗之內容之行為\n6. 駭客攻擊、散布惡意程式等異常使用服務之行為\n7. 利用自動化手段（機器人、爬蟲程式等）存取服務之行為\n8. 妨礙其他使用者使用服務之行為\n\n違反上述規定時，本公司得限制該使用者使用服務，或停止、剝奪其會員資格。"
+    },
+    "serviceChangeSuspension": {
+      "title": "第8條（服務提供之變更及中止）",
+      "body": "1. 本公司得因營運上、技術上之需要，變更服務之全部或一部分。\n2. 服務變更時，將於服務內公告變更內容及適用日期。\n3. 若有下列各項事由，本公司得限制或中止服務之全部或一部分：\n   - 系統定期維護、擴充、更換等設備維修時\n   - 發生天災、戰爭等不可抗力事由時\n   - 其他發生本公司無法提供服務之事由時"
+    },
+    "intellectualProperty": {
+      "title": "第9條（智慧財產權）",
+      "body": "1. 服務中所含之所有內容（設計、文字、圖片、軟體等）之智慧財產權歸屬於本公司。\n2. 使用者上傳至服務之內容，其著作權歸屬於該使用者。\n3. 使用者授予本公司得於服務營運目的範圍內使用該內容之非專屬授權。"
+    },
+    "disclaimer": {
+      "title": "第10條（免責條款）",
+      "body": "1. 因天災或與其相當之不可抗力事由致無法提供服務時，本公司免除服務提供之責任。\n2. 因使用者可歸責事由所致之服務使用障礙，本公司不負責任。\n3. 氣質分析結果及推薦資訊僅供參考，不能取代醫學診斷或專業諮詢。本公司不保證分析結果之正確性或完整性。\n4. 使用者於服務中刊載資訊之可信度、正確性，由該使用者自行負責。\n5. 本公司對於使用者間或使用者與第三方間因服務所引發之糾紛，無介入義務，亦不負損害賠償責任。"
+    },
+    "paidServiceAndPayment": {
+      "title": "第11條（付費服務及付款）",
+      "body": "1. 本公司提供「VIP月繳（3,900韓元／月）」、「VIP年繳（39,900韓元／年）」等付費訂閱服務。\n2. 付款透過Google Play（Android）／App Store（iOS）之應用程式內購買系統完成。\n3. 訂閱將依所選期間（月繳／年繳）自動續約，若於續約前24小時內未取消訂閱，將自動扣款。\n4. 本公司得於事先公告後變更價格，變更後之價格自下次續約時起適用。\n5. 7天免費試用僅提供一次，試用期結束後將自動轉為付費扣款。若於試用期結束前24小時取消，則不予收費。"
+    },
+    "subscriptionCancelRefund": {
+      "title": "第12條（訂閱取消及退款）",
+      "body": "1. 訂閱取消：\n   - 使用者得隨時於Google Play【定期購買】或App Store【訂閱】選單中取消訂閱。\n   - 取消後，於已付款期間（月繳／年繳）到期日前，仍可繼續使用進階功能。\n   - 僅停止自動續約，到期日後將轉為免費會員。\n\n2. 退款政策（遵循電子商務法及Google／Apple政策）：\n   - 付款後7日內，未實質使用付費功能者：全額退款（100%）\n   - 付款後7日內，已有使用紀錄者：依使用天數比例扣除後退款\n   - 付款後超過7日至14日內：扣除已使用天數後退還餘額（因使用者個人因素申請退款）\n   - 付款後超過14日：除本公司可歸責事由（服務障礙等）外，不予退款\n\n3. 退款申請方式：\n   - Google Play付款：於Play商店＞個人資料＞付款及訂閱＞預算與訂單記錄中申請，或至https://support.google.com/googleplay/answer/2479637\n   - App Store付款：於https://reportaproblem.apple.com 申請\n   - 或聯繫本公司客服中心（privacy@sylabs.kr），並附上訂單編號及退款原因\n\n4. 立即退款事由（全額退款）：\n   - 付款後未使用內容，且於付款後7日內\n   - 因本公司服務障礙致無法正常使用\n   - 提供之內容與本公司所載明功能不符\n\n5. 退款處理期間：\n   - 退款經核准後，將立即透過Google／Apple付款系統進行退款處理。\n   - 實際入帳至信用卡等付款工具，依付款方式不同，可能需1至10個工作天（信用卡平均5至10天）。\n\n6. 退款限制：\n   - 若同一使用者反覆於付款後申請退款，本公司得限制其服務使用。\n   - 若以不正當方式進行付款及退款，本公司得封鎖其使用權限並請求損害賠償。"
+    },
+    "damages": {
+      "title": "第13條（損害賠償）",
+      "body": "1. 本公司或使用者若違反本條款致對方受有損害時，應負損害賠償責任。\n2. 本公司之損害賠償範圍僅限於直接且通常之損害，不包括特別損害或間接損害。"
+    },
+    "disputeResolution": {
+      "title": "第14條（爭議解決）",
+      "body": "1. 有關本條款之爭議，依大韓民國法律解釋。\n2. 因使用服務而於本公司與使用者間發生爭議時，雙方應誠實協商以解決爭議。\n3. 若協商未能達成共識，管轄法院為本公司總公司所在地之管轄法院。\n4. 使用者得向韓國消費者院（www.kca.go.kr）或電子交易爭議調解委員會（www.ecmc.or.kr）申請爭議調解。"
+    },
+    "addendum": {
+      "title": "附則",
+      "body": "本條款自2026年5月25日起施行。"
+    }
   }
 }
