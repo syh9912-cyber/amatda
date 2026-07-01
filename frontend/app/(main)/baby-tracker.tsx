@@ -72,6 +72,8 @@ import {
   syncSessionsFromServer,
 } from '../../features/baby-tracker/storage';
 import { resolveAuthorMeta, resolveCanEditRecords, stampAuthor, type AuthorMeta } from '../../features/baby-tracker/author';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
  
 const IC_POOP = require('../../assets/cat-poop.png') as number;
@@ -102,30 +104,30 @@ const VOICE_PIN_PROMPTED_KEY = 'amatda_voice_pin_prompted';
  * - 안드로이드 전용 (iOS는 애플 정책상 홈 아이콘 추가 불가)
  * - 지원 안 하는 런처/OS는 조용히 패스 (플래그는 세팅해 재차 묻지 않음)
  */
-async function promptVoicePinOnce(force = false): Promise<void> {
+async function promptVoicePinOnce(t: TFunction, force = false): Promise<void> {
   try {
     if (Platform.OS !== 'android') return;
     const already = await AsyncStorage.getItem(VOICE_PIN_PROMPTED_KEY);
     if (already && !force) return; // force(가이드 '?' 재열람 완료)면 다시 물어봄
     Alert.alert(
-      '음성입력 아이콘 추가',
-      '홈 화면에 "음성 기록" 아이콘을 추가하면, 아이콘 한 번으로 바로 말해서 기록할 수 있어요. 추가할까요?',
+      t('babyTracker.voicePin.title'),
+      t('babyTracker.voicePin.desc'),
       [
         {
-          text: '나중에',
+          text: t('babyTracker.voicePin.later'),
           style: 'cancel',
           onPress: () => { AsyncStorage.setItem(VOICE_PIN_PROMPTED_KEY, '1').catch(() => {}); },
         },
         {
-          text: '추가',
+          text: t('babyTracker.voicePin.add'),
           onPress: async () => {
             AsyncStorage.setItem(VOICE_PIN_PROMPTED_KEY, '1').catch(() => {});
             const result = await requestPinVoiceShortcut();
             // 자동 핀을 막는 런처(One UI 일부/Nova 등) → 수동 방법 안내
             if (!result.ok) {
               Alert.alert(
-                '홈에 추가하기',
-                '"홈 화면 구성이 잠겨 있다"고 뜨면, 홈 화면 레이아웃 잠금 때문이에요.\n\n[해제 방법 — 삼성 갤럭시]\n홈 화면 빈 곳을 길게 누르기 → 설정 → "홈 화면 레이아웃 잠금" 끄기 → 다시 추가\n\n[또는 직접 끌어다 놓기]\n앱 아이콘을 길게 눌러 "음성 기록"을 홈 화면 빈 공간으로 드래그하면 돼요.',
+                t('babyTracker.voicePin.manualTitle'),
+                t('babyTracker.voicePin.manualDesc'),
               );
             }
           },
@@ -163,19 +165,21 @@ const TRACKER_COLORS = {
   white: '#FFFFFF',
 };
 
+// label 필드는 i18n 키 접미사를 담는다 (표시 시 t(`babyTracker.tabs.${label}`) 등으로 조회).
 const TAB_CONFIG: { key: RecordType; icon: number; label: string; color: string }[] = [
-  { key: 'diaper', icon: IC_POOP, label: '배변', color: TRACKER_COLORS.diaper },
-  { key: 'feeding', icon: IC_FEED, label: '수유/식사', color: TRACKER_COLORS.feeding },
-  { key: 'sleep', icon: IC_SLEEP, label: '수면', color: TRACKER_COLORS.sleep },
-  { key: 'medication', icon: IC_MEDICATION, label: '투약', color: TRACKER_COLORS.medication },
+  { key: 'diaper', icon: IC_POOP, label: 'diaper', color: TRACKER_COLORS.diaper },
+  { key: 'feeding', icon: IC_FEED, label: 'feeding', color: TRACKER_COLORS.feeding },
+  { key: 'sleep', icon: IC_SLEEP, label: 'sleep', color: TRACKER_COLORS.sleep },
+  { key: 'medication', icon: IC_MEDICATION, label: 'medication', color: TRACKER_COLORS.medication },
 ];
 
 const DIAPER_OPTIONS: { key: DiaperSubType; label: string; icon: number }[] = [
-  { key: 'pee', label: '소변', icon: IC_POOP },
-  { key: 'poop', label: '대변', icon: IC_POOP },
-  { key: 'both', label: '소변+대변', icon: IC_POOP },
+  { key: 'pee', label: 'pee', icon: IC_POOP },
+  { key: 'poop', label: 'poop', icon: IC_POOP },
+  { key: 'both', label: 'both', icon: IC_POOP },
 ];
 
+// FEEDING_OPTIONS — 미사용(dead code, 실제로는 ageFeatures.getFeedingTypes prop 사용). 번역 대상 아님.
 const FEEDING_OPTIONS: { key: FeedingSubType; label: string; icon: number }[] = [
   { key: 'breast', label: '모유', icon: IC_MASCOT_EAT },
   { key: 'formula', label: '분유', icon: IC_FEED },
@@ -184,29 +188,36 @@ const FEEDING_OPTIONS: { key: FeedingSubType; label: string; icon: number }[] = 
 ];
 
 const SLEEP_OPTIONS: { key: SleepSubType; label: string; icon: number }[] = [
-  { key: 'nap', label: '낮잠', icon: IC_SUNNY },
-  { key: 'night', label: '밤잠', icon: IC_NIGHT },
+  { key: 'nap', label: 'nap', icon: IC_SUNNY },
+  { key: 'night', label: 'night', icon: IC_NIGHT },
 ];
 
+// 값은 i18n 키 접미사(babyTracker.subtypes.*) — SUBTYPE_LABELS[x] 직접 렌더 금지,
+// 반드시 getSubtypeLabel(x, t) 을 통해 표시 문구로 변환할 것.
 const SUBTYPE_LABELS: Record<string, string> = {
-  pee: '소변',
-  poop: '대변',
-  both: '소변+대변',
-  breast: '모유',
-  formula: '분유',
-  baby_food: '이유식',
-  snack: '간식',
-  nap: '낮잠',
-  night: '밤잠',
-  sleep: '수면',
-  sleep_start: '수면',     // '수면 시작' → '수면' (사용자 요청, 화면 간결화)
-  sleep_end: '기상',
+  pee: 'pee',
+  poop: 'poop',
+  both: 'both',
+  breast: 'breast',
+  formula: 'formula',
+  baby_food: 'babyFood',
+  snack: 'snack',
+  nap: 'nap',
+  night: 'night',
+  sleep: 'sleep',
+  sleep_start: 'sleep',     // '수면 시작' → '수면' (사용자 요청, 화면 간결화)
+  sleep_end: 'wake',
   // 투약 (Phase 4-A)
-  fever: '해열제',
-  antibiotic: '항생제',
-  vitamin: '비타민',
-  other: '기타 약',
+  fever: 'fever',
+  antibiotic: 'antibiotic',
+  vitamin: 'vitamin',
+  other: 'otherMed',
 };
+
+function getSubtypeLabel(subType: string, t: TFunction): string {
+  const key = SUBTYPE_LABELS[subType];
+  return key ? t(`babyTracker.subtypes.${key}`) : subType;
+}
 
 const SUBTYPE_ICONS: Record<string, number> = {
   pee: IC_POOP,
@@ -561,7 +572,12 @@ const emptyStyles = StyleSheet.create({
 
 /* ---- Weekly Summary Table (그래프 대신 표 요약 — 모든 타입 한번에) ---- */
 
-const PERIOD_LABELS: Record<number, string> = { 7: '7일', 14: '14일', 31: '1달' };
+function getPeriodLabel(days: number, t: TFunction): string {
+  if (days === 7) return t('babyTracker.period.week');
+  if (days === 14) return t('babyTracker.period.twoWeeks');
+  if (days === 31) return t('babyTracker.period.month');
+  return t('babyTracker.period.days', { count: days });
+}
 
 function WeeklySummaryTable({
   stats,
@@ -571,6 +587,7 @@ function WeeklySummaryTable({
   activeTab?: RecordType;
   periodDays?: number;
 }) {
+  const { t } = useTranslation();
   // 최근이 뒤(배열 끝) → 상단에 표시되도록 역순
   const rows = [...stats].reverse();
 
@@ -592,16 +609,16 @@ function WeeklySummaryTable({
   return (
     <View style={summaryStyles.container}>
       <Text style={summaryStyles.title}>
-        최근 {PERIOD_LABELS[periodDays] ?? `${periodDays}일`} 요약
+        {t('babyTracker.weeklyTable.title', { period: getPeriodLabel(periodDays, t) })}
       </Text>
 
       {/* 헤더 — 분유/모유 별도 표시 */}
       <View style={summaryStyles.headerRow}>
-        <Text style={[summaryStyles.cellDate, summaryStyles.headerCell]}>날짜</Text>
-        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>배변</Text>
-        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>분유</Text>
-        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>모유</Text>
-        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>수면</Text>
+        <Text style={[summaryStyles.cellDate, summaryStyles.headerCell]}>{t('babyTracker.weeklyTable.date')}</Text>
+        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>{t('babyTracker.tabs.diaper')}</Text>
+        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>{t('babyTracker.subtypes.formula')}</Text>
+        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>{t('babyTracker.subtypes.breast')}</Text>
+        <Text style={[summaryStyles.cellVal, summaryStyles.headerCell]}>{t('babyTracker.subtypes.sleep')}</Text>
       </View>
 
       {rows.map((s, i) => {
@@ -616,7 +633,7 @@ function WeeklySummaryTable({
             ]}
           >
             <Text style={[summaryStyles.cellDate, isToday && summaryStyles.todayText]}>
-              {isToday ? '오늘' : s.dateLabel}
+              {isToday ? t('babyTracker.today') : s.dateLabel}
             </Text>
             <View style={[summaryStyles.cellValWrap, { backgroundColor: intensity(s.diaper, maxDiaper) }]}>
               <Text style={[summaryStyles.cellVal, isToday && summaryStyles.todayText]}>
@@ -767,40 +784,41 @@ const WeeklyChart = WeeklySummaryTable;
 
 /* ---- Day Summary Card ---- */
 function DaySummaryCard({ summary }: { summary: DaySummary }) {
+  const { t } = useTranslation();
   const { totalSleepMinutes, feedingCount, peeCount, poopCount } = summary;
   const sleepH = Math.floor(totalSleepMinutes / 60);
   const sleepM = totalSleepMinutes % 60;
   const sleepText = totalSleepMinutes > 0
-    ? (sleepH > 0 && sleepM > 0 ? `${sleepH}h${sleepM}분`
-        : sleepH > 0 ? `${sleepH}h`
-        : `${sleepM}분`)
+    ? (sleepH > 0 && sleepM > 0 ? t('babyTracker.unit.hoursMinutes', { h: sleepH, m: sleepM })
+        : sleepH > 0 ? t('babyTracker.unit.hoursOnly', { h: sleepH })
+        : t('babyTracker.unit.minutesOnly', { m: sleepM }))
     : '0';
   const diaperTotal = peeCount + poopCount;
   // 변 부가 설명 (소/대 분리)
   const diaperSub = diaperTotal > 0
-    ? (poopCount > 0 && peeCount > 0 ? `소${peeCount}·대${poopCount}`
-        : poopCount > 0 ? `대${poopCount}`
-        : `소${peeCount}`)
+    ? (poopCount > 0 && peeCount > 0 ? t('babyTracker.daySummary.diaperBoth', { pee: peeCount, poop: poopCount })
+        : poopCount > 0 ? t('babyTracker.daySummary.diaperPoopOnly', { poop: poopCount })
+        : t('babyTracker.daySummary.diaperPeeOnly', { pee: peeCount }))
     : '';
 
   return (
     <View style={daySumStyles.row}>
       <View style={[daySumStyles.cell, { backgroundColor: TRACKER_COLORS.feedingLight }]}>
-        <Text style={[daySumStyles.cellLabel, { color: TRACKER_COLORS.feedingDark }]}>수유</Text>
+        <Text style={[daySumStyles.cellLabel, { color: TRACKER_COLORS.feedingDark }]}>{t('babyTracker.daySummary.feeding')}</Text>
         <Text style={[daySumStyles.cellValue, { color: TRACKER_COLORS.feedingDark }]}>
-          {feedingCount}회
+          {t('babyTracker.unit.times', { count: feedingCount })}
         </Text>
       </View>
       <View style={[daySumStyles.cell, { backgroundColor: TRACKER_COLORS.sleepLight }]}>
-        <Text style={[daySumStyles.cellLabel, { color: TRACKER_COLORS.sleepDark }]}>수면</Text>
+        <Text style={[daySumStyles.cellLabel, { color: TRACKER_COLORS.sleepDark }]}>{t('babyTracker.daySummary.sleep')}</Text>
         <Text style={[daySumStyles.cellValue, { color: TRACKER_COLORS.sleepDark }]}>
           {sleepText}
         </Text>
       </View>
       <View style={[daySumStyles.cell, { backgroundColor: TRACKER_COLORS.diaperLight }]}>
-        <Text style={[daySumStyles.cellLabel, { color: TRACKER_COLORS.diaperDark }]}>변</Text>
+        <Text style={[daySumStyles.cellLabel, { color: TRACKER_COLORS.diaperDark }]}>{t('babyTracker.daySummary.diaper')}</Text>
         <Text style={[daySumStyles.cellValue, { color: TRACKER_COLORS.diaperDark }]}>
-          {diaperTotal}회
+          {t('babyTracker.unit.times', { count: diaperTotal })}
         </Text>
         {diaperSub ? (
           <Text style={[daySumStyles.cellSub, { color: TRACKER_COLORS.diaperDark }]}>{diaperSub}</Text>
@@ -860,6 +878,7 @@ function DailyReferenceCard({
   totalSleepMinutesToday,
   minutesSinceLastFeed,
 }: DailyReferenceCardProps) {
+  const { t } = useTranslation();
   const ref = useMemo(() => getDailyReference(ageMonths, weightKg), [ageMonths, weightKg]);
 
   // 분유 진행률 (목표 = max 권장량)
@@ -898,7 +917,7 @@ function DailyReferenceCard({
   // 텀 텍스트 — 짧게
   // 라벨: "수유 텀" → "식사 텀" — 모유/분유/이유식/간식 모두 포함됨을 명확히 (사용자 피드백)
   const feedText = minutesSinceLastFeed < 0
-    ? '첫 식사'
+    ? t('babyTracker.dailyRef.firstMeal')
     : compactMin(minutesSinceLastFeed);
 
   return (
@@ -906,7 +925,7 @@ function DailyReferenceCard({
     <View style={dailyRefStyles.card}>
       {showFeedRow && (
         <View style={dailyRefStyles.col}>
-          <Text style={dailyRefStyles.colLabel}>식사 텀</Text>
+          <Text style={dailyRefStyles.colLabel}>{t('babyTracker.dailyRef.mealInterval')}</Text>
           <Text
             style={dailyRefStyles.colValue}
             numberOfLines={1}
@@ -916,7 +935,7 @@ function DailyReferenceCard({
             {feedText}
           </Text>
           <Text style={dailyRefStyles.colHint} numberOfLines={1}>
-            식사 후 / 권장 {ref.feedIntervalHrMax}h
+            {t('babyTracker.dailyRef.mealIntervalHint', { hours: ref.feedIntervalHrMax })}
           </Text>
           <View style={dailyRefStyles.barTrack}>
             <View
@@ -934,7 +953,7 @@ function DailyReferenceCard({
 
       {showFormulaRow && (
         <View style={dailyRefStyles.col}>
-          <Text style={dailyRefStyles.colLabel}>일일 분유</Text>
+          <Text style={dailyRefStyles.colLabel}>{t('babyTracker.dailyRef.dailyFormula')}</Text>
           <Text
             style={dailyRefStyles.colValue}
             numberOfLines={1}
@@ -944,7 +963,7 @@ function DailyReferenceCard({
             {formulaMlToday}/{ref.formulaMlMax}ml
           </Text>
           <Text style={dailyRefStyles.colHint} numberOfLines={1}>
-            오늘 누적 / 몸무게 기준
+            {t('babyTracker.dailyRef.byWeightHint')}
           </Text>
           <View style={dailyRefStyles.barTrack}>
             <View
@@ -964,7 +983,7 @@ function DailyReferenceCard({
 
       {sleepTargetMin > 0 && (
         <View style={dailyRefStyles.col}>
-          <Text style={dailyRefStyles.colLabel}>일일 수면</Text>
+          <Text style={dailyRefStyles.colLabel}>{t('babyTracker.dailyRef.dailySleep')}</Text>
           <Text
             style={dailyRefStyles.colValue}
             numberOfLines={1}
@@ -974,7 +993,7 @@ function DailyReferenceCard({
             {compactMin(totalSleepMinutesToday)}/{ref.sleepHrMax}h
           </Text>
           <Text style={dailyRefStyles.colHint} numberOfLines={1}>
-            오늘 누적 / 개월수 기준
+            {t('babyTracker.dailyRef.byAgeHint')}
           </Text>
           <View style={dailyRefStyles.barTrack}>
             <View
@@ -993,7 +1012,7 @@ function DailyReferenceCard({
       )}
     </View>
     <Text style={{ fontSize: 11, color: '#9A9AA0', textAlign: 'center', marginTop: 6, fontWeight: '600' }}>
-      {'ⓘ 권장치는 우리 아이 월령·몸무게에 맞춰 자동 계산돼요'}
+      {t('babyTracker.dailyRef.autoCalcNote')}
     </Text>
     </View>
   );
@@ -1177,6 +1196,7 @@ interface AddModalProps {
 }
 
 function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, availableTabs, feedingOptions, lockSubType, lockTitle, onSetDefaultFormula, defaultFormulaAmount = 0 }: AddModalProps) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<RecordType>(initialTab);
   const [subType, setSubType] = useState<string>('');
   const [time, setTime] = useState(nowTime());
@@ -1209,7 +1229,7 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
     }
   }, [visible, subType, defaultFormulaAmount]);
 
-  function resetForm(t: RecordType, sub?: string) {
+  function resetForm(tabType: RecordType, sub?: string) {
     setTime(nowTime());
     setEndTime('');
     setAmount('');
@@ -1220,19 +1240,19 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
       setSubType(sub);
       return;
     }
-    if (t === 'diaper') setSubType('pee');
-    else if (t === 'feeding') setSubType('breast');
+    if (tabType === 'diaper') setSubType('pee');
+    else if (tabType === 'feeding') setSubType('breast');
     else setSubType('nap');
   }
 
-  function handleTabChange(t: RecordType) {
-    setTab(t);
-    resetForm(t);
+  function handleTabChange(newTab: RecordType) {
+    setTab(newTab);
+    resetForm(newTab);
   }
 
   function handleSave() {
     if (!subType) {
-      Alert.alert('', '유형을 선택해주세요.');
+      Alert.alert('', t('babyTracker.selectTypeRequired'));
       return;
     }
 
@@ -1319,24 +1339,24 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
           {/* Tab switcher (연령별 필터) */}
           {!lockSubType && (
           <View style={modalStyles.tabRow}>
-            {availableTabs.map((t) => (
+            {availableTabs.map((tabItem) => (
               <TouchableOpacity
-                key={t.key}
+                key={tabItem.key}
                 style={[
                   modalStyles.tabBtn,
-                  tab === t.key && { backgroundColor: t.color },
+                  tab === tabItem.key && { backgroundColor: tabItem.color },
                 ]}
-                onPress={() => handleTabChange(t.key)}
+                onPress={() => handleTabChange(tabItem.key)}
               >
                 <View style={modalStyles.tabBtnInner}>
-                  <Image source={t.icon} style={modalStyles.tabIcon} resizeMode="contain" />
+                  <Image source={tabItem.icon} style={modalStyles.tabIcon} resizeMode="contain" />
                   <Text
                     style={[
                       modalStyles.tabBtnText,
-                      tab === t.key && modalStyles.tabBtnTextActive,
+                      tab === tabItem.key && modalStyles.tabBtnTextActive,
                     ]}
                   >
-                    {t.label}
+                    {t(`babyTracker.tabs.${tabItem.label}`)}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -1352,7 +1372,7 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
             {/* Sub-type selector (잠금 모드에선 숨김) */}
             {!lockSubType && (
               <>
-            <Text style={modalStyles.sectionTitle}>유형 선택</Text>
+            <Text style={modalStyles.sectionTitle}>{t('babyTracker.selectType')}</Text>
             <View style={modalStyles.optionGrid}>
               {options.map((opt) => (
                 <TouchableOpacity
@@ -1370,7 +1390,7 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
                       subType === opt.key && { color: TRACKER_COLORS.white },
                     ]}
                   >
-                    {opt.label}
+                    {tab === 'feeding' ? t(`babyTracker.feedingTypes.${opt.label}`) : t(`babyTracker.subtypes.${opt.label}`)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -1379,27 +1399,27 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
             )}
 
             {/* Time picker */}
-            <TimePicker value={time} onChange={setTime} label="시간" />
+            <TimePicker value={time} onChange={setTime} label={t('babyTracker.time')} />
 
             {/* Sleep end time */}
             {tab === 'sleep' && (
               <TimePicker
                 value={endTime || nowTime()}
                 onChange={setEndTime}
-                label="종료 시간"
+                label={t('babyTracker.endTime')}
               />
             )}
 
             {/* Formula amount */}
             {tab === 'feeding' && subType === 'formula' && (
               <View style={modalStyles.inputRow}>
-                <Text style={modalStyles.inputLabel}>분유량 (ml)</Text>
+                <Text style={modalStyles.inputLabel}>{t('babyTracker.formulaAmountMl')}</Text>
                 <TextInput
                   style={modalStyles.input}
                   keyboardType="number-pad"
                   value={amount}
                   onChangeText={setAmount}
-                  placeholder="예: 120"
+                  placeholder={t('babyTracker.exampleAmount120')}
                   placeholderTextColor={TRACKER_COLORS.textLight}
                   maxLength={4}
                 />
@@ -1413,11 +1433,11 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
                 onLongPress={() => {
                   if (defaultFormulaAmount > 0) {
                     Alert.alert(
-                      `기본 분유량 ${defaultFormulaAmount}ml`,
-                      '분유량을 새로 입력하고 체크 후 저장하면 변경돼요.',
+                      t('babyTracker.defaultFormula.titleWithAmount', { amount: defaultFormulaAmount }),
+                      t('babyTracker.defaultFormula.changeHint'),
                       [
-                        { text: '기본값 해제', style: 'destructive', onPress: () => { onSetDefaultFormula?.(0); setSaveAsDefault(false); setAmount(''); } },
-                        { text: '취소', style: 'cancel' },
+                        { text: t('babyTracker.defaultFormula.unset'), style: 'destructive', onPress: () => { onSetDefaultFormula?.(0); setSaveAsDefault(false); setAmount(''); } },
+                        { text: t('common.cancel'), style: 'cancel' },
                       ],
                     );
                   }
@@ -1436,8 +1456,8 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
                 </View>
                 <Text style={{ fontSize: 13.5, color: '#555555', fontWeight: '600' }}>
                   {defaultFormulaAmount > 0
-                    ? `기본 분유량 ${defaultFormulaAmount}ml · 길게 눌러 변경/해제`
-                    : '기본 분유량으로 자동 저장됩니다'}
+                    ? t('babyTracker.defaultFormula.currentWithHint', { amount: defaultFormulaAmount })
+                    : t('babyTracker.defaultFormula.autoSaveHint')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -1445,13 +1465,13 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
             {/* Breast duration */}
             {tab === 'feeding' && subType === 'breast' && (
               <View style={modalStyles.inputRow}>
-                <Text style={modalStyles.inputLabel}>수유 시간 (분)</Text>
+                <Text style={modalStyles.inputLabel}>{t('babyTracker.breastDurationMin')}</Text>
                 <TextInput
                   style={modalStyles.input}
                   keyboardType="number-pad"
                   value={durationMin}
                   onChangeText={setDurationMin}
-                  placeholder="예: 15"
+                  placeholder={t('babyTracker.exampleAmount15')}
                   placeholderTextColor={TRACKER_COLORS.textLight}
                   maxLength={3}
                 />
@@ -1460,17 +1480,17 @@ function AddRecordModal({ visible, initialTab, initialSubType, onClose, onSave, 
 
             {/* Note */}
             <View style={modalStyles.inputRow}>
-              <Text style={modalStyles.inputLabel}>메모 (선택)</Text>
+              <Text style={modalStyles.inputLabel}>{t('babyTracker.noteOptional')}</Text>
               <TextInput
                 style={[modalStyles.input, modalStyles.inputMultiline]}
                 value={note}
                 onChangeText={setNote}
                 placeholder={
                   tab === 'diaper'
-                    ? '색상, 상태 등'
+                    ? t('babyTracker.notePlaceholder.diaper')
                     : tab === 'feeding'
-                      ? '특이사항'
-                      : '수면 품질 등'
+                      ? t('babyTracker.notePlaceholder.feeding')
+                      : t('babyTracker.notePlaceholder.sleep')
                 }
                 placeholderTextColor={TRACKER_COLORS.textLight}
                 multiline
@@ -1618,11 +1638,12 @@ export default function BabyTrackerScreen() {
 }
 
 function BabyTrackerInner() {
+  const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const ageGroup: AgeGroupKey = selectedChild?.ageInfo?.group ?? 'infant';
   const ageTabs = useMemo(() => {
     const allowed = getTrackerTabs(ageGroup);
-    return TAB_CONFIG.filter((t) => allowed.some((a) => a.key === t.key));
+    return TAB_CONFIG.filter((tc) => allowed.some((a) => a.key === tc.key));
   }, [ageGroup]);
   const ageFeedingTypes = useMemo(() => getFeedingTypes(ageGroup), [ageGroup]);
   const defaultTab = ageTabs[0]?.key ?? 'feeding';
@@ -1683,7 +1704,7 @@ function BabyTrackerInner() {
   const completeGuide = useCallback(() => {
     setGuideVisible(false);
     AsyncStorage.setItem(BABY_GUIDE_SHOWN_KEY, '1').catch(() => {});
-    setTimeout(() => { promptVoicePinOnce(true); }, 400);
+    setTimeout(() => { promptVoicePinOnce(t, true); }, 400);
   }, []);
   // 타임라인 entry 길게 누르기 → 액션 시트 + 편집 모달
   const [entryActionId, setEntryActionId] = useState<string | null>(null);
@@ -1730,7 +1751,7 @@ function BabyTrackerInner() {
 
   function ensureCanEdit(): boolean {
     if (canEditRecords) return true;
-    Alert.alert('열람 전용', '이 아이의 기록을 편집할 권한이 없어요.\n보호자에게 편집 권한을 요청해주세요.');
+    Alert.alert(t('babyTracker.viewOnly.title'), t('babyTracker.viewOnly.desc'));
     return false;
   }
 
@@ -1848,7 +1869,7 @@ function BabyTrackerInner() {
       createdAt: new Date().toISOString(),
     };
     handleAddRecord(record);
-    showToast(`${SUBTYPE_LABELS[subType] ?? subType} 기록 완료`);
+    showToast(t('babyTracker.recordedWithLabel', { label: getSubtypeLabel(subType, t) }));
     if (hintRemaining > 0) {
       decrementHint().then(setHintRemaining).catch(() => {});
     }
@@ -1861,37 +1882,40 @@ function BabyTrackerInner() {
       decrementHint().then(setHintRemaining).catch(() => {});
     }
     if (action.kind === 'quick') {
-      const label = SUBTYPE_LABELS[action.subType] ?? action.subType;
+      const label = getSubtypeLabel(action.subType, t);
       setTimedActionPayload({ kind: 'quick', type: action.type, subType: action.subType, label });
     } else if (action.kind === 'sleepStart') {
       // 이미 진행 중이면 거부
       if (sleepSession) {
         const startDt = new Date(sleepSession.startTime);
         Alert.alert(
-          '수면 기록 진행 중',
-          `${sleepSession.startDate} ${String(startDt.getHours()).padStart(2, '0')}:${String(startDt.getMinutes()).padStart(2, '0')}에 시작한 수면이 진행 중이에요. 기상 버튼을 먼저 눌러주세요.`,
+          t('babyTracker.sleepInProgress.title'),
+          t('babyTracker.sleepInProgress.descPressWake', {
+            date: sleepSession.startDate,
+            time: `${String(startDt.getHours()).padStart(2, '0')}:${String(startDt.getMinutes()).padStart(2, '0')}`,
+          }),
         );
         return;
       }
-      setTimedActionPayload({ kind: 'sleepStart', label: '수면 시작' });
+      setTimedActionPayload({ kind: 'sleepStart', label: t('babyTracker.sleepStartLabel') });
     } else if (action.kind === 'sleepWake') {
       // 활성 세션 없으면 거부
       if (!sleepSession) {
-        Alert.alert('수면 시작 기록 없음', '"수면 시작"을 먼저 눌러주세요.');
+        Alert.alert(t('babyTracker.noSleepStartRecord.title'), t('babyTracker.noSleepStartRecord.desc'));
         return;
       }
-      setTimedActionPayload({ kind: 'sleepWake', label: '기상' });
+      setTimedActionPayload({ kind: 'sleepWake', label: t('babyTracker.subtypes.wake') });
     } else if (action.kind === 'breast') {
       // 활성 모유 세션 있으면 거부 (정상 탭으로 종료 후 다시)
       if (breastSession) {
-        Alert.alert('모유 수유 진행 중', '진행 중인 수유를 먼저 종료한 뒤 시간 지정 입력을 사용하세요.');
+        Alert.alert(t('babyTracker.breastInProgress.title'), t('babyTracker.breastInProgress.desc'));
         return;
       }
-      setTimedActionPayload({ kind: 'breast', label: '모유' });
+      setTimedActionPayload({ kind: 'breast', label: t('babyTracker.subtypes.breast') });
       setTimedActionBreastSide(null);
     } else if (action.kind === 'modal' && action.subType === 'formula') {
       // 분유 길게 누르기 → 시간+양 지정 입력
-      setTimedActionPayload({ kind: 'quick', type: 'feeding', subType: 'formula', label: '분유' });
+      setTimedActionPayload({ kind: 'quick', type: 'feeding', subType: 'formula', label: t('babyTracker.subtypes.formula') });
       setTimedActionAmount(defaultFormulaAmount > 0 ? String(defaultFormulaAmount) : '');
     } else {
       return; // custom 등은 미지원
@@ -1931,7 +1955,7 @@ function BabyTrackerInner() {
       }
       handleAddRecord(record);
       const amtSuffix = payload.subType === 'formula' && record.amount ? ` ${record.amount}ml` : '';
-      showToast(`${payload.label}${amtSuffix} ${timedActionTime} 기록`);
+      showToast(t('babyTracker.toast.recordedAt', { label: `${payload.label}${amtSuffix}`, time: timedActionTime }));
     } else if (payload.kind === 'sleepStart') {
       // 사용자가 선택한 날짜+시간으로 sleepSession 시작
       const [hh, mm] = timedActionTime.split(':').map((s) => parseInt(s, 10));
@@ -1944,7 +1968,7 @@ function BabyTrackerInner() {
       };
       await saveSleepSession(childId, session);
       setSleepSession(session);
-      showToast(`수면 시작 ${timedActionTime} 기록`);
+      showToast(t('babyTracker.toast.sleepStartAt', { time: timedActionTime }));
     } else if (payload.kind === 'sleepWake') {
       if (!sleepSession) { setTimedActionVisible(false); return; }
       const start = new Date(sleepSession.startTime);
@@ -1987,10 +2011,10 @@ function BabyTrackerInner() {
       }
       await saveSleepSession(childId, null);
       setSleepSession(null);
-      showToast(`기상 ${timedActionTime} 기록`);
+      showToast(t('babyTracker.toast.wakeAt', { time: timedActionTime }));
     } else if (payload.kind === 'breast') {
       if (!timedActionBreastSide) {
-        Alert.alert('수유 방향 선택', '왼쪽 또는 오른쪽을 먼저 선택해주세요.');
+        Alert.alert(t('babyTracker.breastDirection.title'), t('babyTracker.breastDirection.desc'));
         return;
       }
       // 지정 시각으로 모유 세션 시작 (정상 탭으로 종료 시 종료 시간 = now)
@@ -2009,7 +2033,10 @@ function BabyTrackerInner() {
       };
       await saveBreastSession(childId, session);
       setBreastSession(session);
-      showToast(`${timedActionBreastSide === 'left' ? '왼쪽' : '오른쪽'} 수유 시작 ${timedActionTime} 기록`);
+      showToast(t('babyTracker.toast.breastStartAt', {
+        side: timedActionBreastSide === 'left' ? t('babyTracker.side.left') : t('babyTracker.side.right'),
+        time: timedActionTime,
+      }));
     }
 
     setTimedActionVisible(false);
@@ -2052,8 +2079,8 @@ function BabyTrackerInner() {
       const crossWake = crossDayWakes.find((r) => r.id === id);
       if (crossWake) {
         Alert.alert(
-          '어제 시작한 수면',
-          '이 수면 기록은 어제 시작한 수면이에요. 어제 날짜로 이동해서 편집해주세요.',
+          t('babyTracker.yesterdaySleep.title'),
+          t('babyTracker.yesterdaySleep.desc'),
         );
         return;
       }
@@ -2121,7 +2148,7 @@ function BabyTrackerInner() {
     // 검증: HH:MM 형식
     const timeOk = /^\d{1,2}:\d{2}$/.test(editTime);
     if (!timeOk) {
-      Alert.alert('시간 형식', '시간을 다시 확인해주세요 (예: 08:30)');
+      Alert.alert(t('babyTracker.timeFormat.title'), t('babyTracker.timeFormat.desc'));
       return;
     }
 
@@ -2142,7 +2169,7 @@ function BabyTrackerInner() {
       setSleepSession(newSession);
       setEditRecord(null);
       setEntryActionId(null);
-      showToast('진행중 수면 시작 시간 수정');
+      showToast(t('babyTracker.toast.activeSleepTimeUpdated'));
       return;
     }
 
@@ -2166,7 +2193,7 @@ function BabyTrackerInner() {
     if (editRecord.type === 'sleep' && editRecord.endTime) {
       const endTimeOk = /^\d{1,2}:\d{2}$/.test(editEndTime);
       if (!endTimeOk) {
-        Alert.alert('기상 시간 형식', '기상 시간을 다시 확인해주세요 (예: 08:30)');
+        Alert.alert(t('babyTracker.wakeTimeFormat.title'), t('babyTracker.wakeTimeFormat.desc'));
         return;
       }
       const startDateForCalc = editDate || dateStr;
@@ -2194,7 +2221,7 @@ function BabyTrackerInner() {
       setEditRecord(null);
       setEntryActionId(null);
       const d = new Date(editDate + 'T00:00:00');
-      showToast(`${d.getMonth() + 1}/${d.getDate()}로 이동 완료`);
+      showToast(t('babyTracker.toast.movedTo', { month: d.getMonth() + 1, day: d.getDate() }));
       return;
     }
     const newRecords = records.map((r) => (r.id === editRecord.id ? updated : r));
@@ -2202,7 +2229,7 @@ function BabyTrackerInner() {
     saveRecords(childId, dateStr, newRecords);
     setEditRecord(null);
     setEntryActionId(null);
-    showToast('수정 완료');
+    showToast(t('babyTracker.toast.editComplete'));
   }
 
   /* ---- 서버 sync (offline-first 복구) ----
@@ -2272,7 +2299,7 @@ function BabyTrackerInner() {
     await saveBreastSession(childId, session);
     setBreastSession(session);
     setBreastSidePickerVisible(false);
-    showToast(`${side === 'left' ? '왼쪽' : '오른쪽'} 수유 시작`);
+    showToast(t('babyTracker.toast.breastStart', { side: side === 'left' ? t('babyTracker.side.left') : t('babyTracker.side.right') }));
   }
 
   async function handleBreastStop() {
@@ -2285,7 +2312,7 @@ function BabyTrackerInner() {
     const startHHMM = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
     const endHHMM = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
 
-    const sideLabel = breastSession.side === 'left' ? '왼쪽' : '오른쪽';
+    const sideLabel = breastSession.side === 'left' ? t('babyTracker.side.left') : t('babyTracker.side.right');
     const combinedNote = breastSession.note ? `${sideLabel} · ${breastSession.note}` : sideLabel;
     const record: TrackerRecord = stampAuthor({
       id: generateId(),
@@ -2307,7 +2334,7 @@ function BabyTrackerInner() {
     }
     await saveBreastSession(childId, null);
     setBreastSession(null);
-    showToast(`모유 ${formatMinutes(diff)} 기록됨`);
+    showToast(t('babyTracker.toast.breastRecorded', { duration: formatMinutes(diff) }));
   }
 
   function handleBreastPress() {
@@ -2323,8 +2350,11 @@ function BabyTrackerInner() {
     if (sleepSession) {
       const startDt = new Date(sleepSession.startTime);
       Alert.alert(
-        '수면 기록 진행 중',
-        `${sleepSession.startDate} ${String(startDt.getHours()).padStart(2, '0')}:${String(startDt.getMinutes()).padStart(2, '0')}에 시작한 수면이 진행 중이에요. 기상 버튼을 눌러 종료해주세요.`,
+        t('babyTracker.sleepInProgress.title'),
+        t('babyTracker.sleepInProgress.descPressWakeEnd', {
+          date: sleepSession.startDate,
+          time: `${String(startDt.getHours()).padStart(2, '0')}:${String(startDt.getMinutes()).padStart(2, '0')}`,
+        }),
       );
       return;
     }
@@ -2335,14 +2365,14 @@ function BabyTrackerInner() {
     };
     await saveSleepSession(childId, session);
     setSleepSession(session);
-    showToast('수면 시작 기록');
+    showToast(t('babyTracker.toast.sleepStartRecorded'));
   }
 
   async function handleSleepWake() {
     if (!sleepSession) {
       Alert.alert(
-        '수면 시작 기록 없음',
-        '수면 시작 기록이 없어요. "수면 시작"을 먼저 눌러주세요.',
+        t('babyTracker.noSleepStartRecord.title'),
+        t('babyTracker.noSleepStartRecord.descFull'),
       );
       return;
     }
@@ -2354,8 +2384,8 @@ function BabyTrackerInner() {
     const MAX_SLEEP_MIN = 14 * 60; // 14시간
     if (duration > MAX_SLEEP_MIN) {
       Alert.alert(
-        '수면 시간이 너무 길어요',
-        `${Math.round((duration / 60) * 10) / 10}시간으로 계산되어 14시간으로 제한했어요. 기상 시간을 잊으신 것 같으면 직접 수정해주세요.`,
+        t('babyTracker.sleepTooLong.title'),
+        t('babyTracker.sleepTooLong.desc', { hours: Math.round((duration / 60) * 10) / 10 }),
       );
       duration = MAX_SLEEP_MIN;
     }
@@ -2401,17 +2431,17 @@ function BabyTrackerInner() {
     }
     await saveSleepSession(childId, null);
     setSleepSession(null);
-    showToast(`기상 기록 (${formatMinutes(duration)})`);
+    showToast(t('babyTracker.toast.wakeRecorded', { duration: formatMinutes(duration) }));
   }
 
   function handleDeleteRecord(id: string) {
     if (!ensureCanEdit()) return;
     // 진행중 수면 — record가 아니라 sleepSession 취소
     if (id === '__active_sleep__') {
-      Alert.alert('진행중 수면 취소', '시작한 수면 기록을 취소할까요?', [
-        { text: '취소', style: 'cancel' },
+      Alert.alert(t('babyTracker.cancelActiveSleep.title'), t('babyTracker.cancelActiveSleep.desc'), [
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '취소',
+          text: t('babyTracker.cancelActiveSleep.confirm'),
           style: 'destructive',
           onPress: async () => {
             await saveSleepSession(childId, null);
@@ -2423,10 +2453,10 @@ function BabyTrackerInner() {
     }
     // 수면 record는 __start / __wake 가짜 suffix가 붙어 있음 → 원본 id 복원
     const realId = id.replace(/__start$|__wake$/, '');
-    Alert.alert('기록 삭제', '이 기록을 삭제할까요?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('babyTracker.deleteRecord.title'), t('babyTracker.deleteRecord.desc'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: () => {
           const updated = records.filter((r) => r.id !== realId);
@@ -2451,7 +2481,7 @@ function BabyTrackerInner() {
         createdAt: new Date().toISOString(),
       };
       handleAddRecord(record);
-      showToast(`분유 ${defaultFormulaAmount}ml 기록 · 길게 눌러 수정`);
+      showToast(t('babyTracker.toast.formulaOneTouch', { amount: defaultFormulaAmount }));
       if (hintRemaining > 0) decrementHint().then(setHintRemaining).catch(() => {});
     } else if (action.kind === 'modal') {
       setModalSubType(action.subType);
@@ -2494,16 +2524,16 @@ function BabyTrackerInner() {
   async function handleSaveCustom() {
     const name = customName.trim();
     if (!name) {
-      Alert.alert('이름 필요', '기록할 이름을 입력해주세요. (예: 과일먹음)');
+      Alert.alert(t('babyTracker.customRecord.nameRequired.title'), t('babyTracker.customRecord.nameRequired.desc'));
       return;
     }
     if (name.length > 20) {
-      Alert.alert('이름 길이', '이름은 20자 이내로 입력해주세요.');
+      Alert.alert(t('babyTracker.customRecord.nameLength.title'), t('babyTracker.customRecord.nameLength.desc'));
       return;
     }
     const detail = customDetail.trim();
     if (detail.length > 80) {
-      Alert.alert('특징 길이', '특징은 80자 이내로 입력해주세요.');
+      Alert.alert(t('babyTracker.customRecord.detailLength.title'), t('babyTracker.customRecord.detailLength.desc'));
       return;
     }
     const now = new Date();
@@ -2521,7 +2551,7 @@ function BabyTrackerInner() {
     setCustomModalVisible(false);
     setCustomName('');
     setCustomDetail('');
-    showToast(`'${name}' 기록 완료`);
+    showToast(t('babyTracker.toast.customRecorded', { name }));
   }
 
   /* ---- Breast elapsed display ---- */
@@ -2542,12 +2572,12 @@ function BabyTrackerInner() {
     const mlPerMin = getBreastMlPerMin(ageMonths);
     const estimatedMl = Math.round(elapsedMin * mlPerMin);
     // 연령 라벨
-    let ageLabel = '6~12개월 기준';
-    if (ageMonths <= 1) ageLabel = '0~1개월 기준';
-    else if (ageMonths <= 3) ageLabel = '1~3개월 기준';
-    else if (ageMonths <= 6) ageLabel = '3~6개월 기준';
-    else if (ageMonths <= 12) ageLabel = '6~12개월 기준';
-    else ageLabel = '12개월+ 기준';
+    let ageLabel = t('babyTracker.ageRange.a6to12');
+    if (ageMonths <= 1) ageLabel = t('babyTracker.ageRange.a0to1');
+    else if (ageMonths <= 3) ageLabel = t('babyTracker.ageRange.a1to3');
+    else if (ageMonths <= 6) ageLabel = t('babyTracker.ageRange.a3to6');
+    else if (ageMonths <= 12) ageLabel = t('babyTracker.ageRange.a6to12');
+    else ageLabel = t('babyTracker.ageRange.a12plus');
     return { estimatedMl, mlPerMin, ageLabel };
   }, [breastSession, breastNow, ageMonths]);
 
@@ -2555,8 +2585,8 @@ function BabyTrackerInner() {
   const sleepDisplay = useMemo(() => {
     const hours = Math.floor(summary.totalSleepMinutes / 60);
     const mins = summary.totalSleepMinutes % 60;
-    if (hours === 0 && mins === 0) return '0분';
-    if (hours === 0) return `${mins}분`;
+    if (hours === 0 && mins === 0) return t('babyTracker.unit.minutesOnly', { m: 0 });
+    if (hours === 0) return t('babyTracker.unit.minutesOnly', { m: mins });
     if (mins === 0) return `${hours}h`;
     return `${hours}h${mins}m`;
   }, [summary.totalSleepMinutes]);
@@ -2701,26 +2731,30 @@ function BabyTrackerInner() {
             onPress={handleBreastPress}
             activeOpacity={0.85}
             accessibilityRole="button"
-            accessibilityLabel={`모유 수유 진행 중 ${breastSession.side === 'left' ? '왼쪽' : '오른쪽'}, 경과 ${breastElapsed}, 추정 ${breastEstimateInfo?.estimatedMl ?? 0}ml. 탭하여 종료`}
+            accessibilityLabel={t('babyTracker.breastActive.accessibilityLabel', {
+              side: breastSession.side === 'left' ? t('babyTracker.side.left') : t('babyTracker.side.right'),
+              elapsed: breastElapsed,
+              amount: breastEstimateInfo?.estimatedMl ?? 0,
+            })}
           >
             <View style={breastStyles.iconWrap}>
               <Image source={IC_MASCOT_EAT} style={breastStyles.icon} resizeMode="contain" />
             </View>
             <View style={breastStyles.textCol}>
-              <Text style={breastStyles.title}>모유 수유 진행 중</Text>
+              <Text style={breastStyles.title}>{t('babyTracker.breastActive.title')}</Text>
               <Text style={breastStyles.sub}>
-                {breastSession.side === 'left' ? '왼쪽' : '오른쪽'} · 탭하여 종료
+                {breastSession.side === 'left' ? t('babyTracker.side.left') : t('babyTracker.side.right')} · {t('babyTracker.breastActive.tapToEnd')}
               </Text>
               {breastEstimateInfo && (
                 <>
                   <Text style={breastStyles.estimateText}>
-                    {`예상 수유량: 약 ${breastEstimateInfo.estimatedMl}ml`}
+                    {t('babyTracker.breastActive.estimatedAmount', { amount: breastEstimateInfo.estimatedMl })}
                   </Text>
                   <Text style={breastStyles.estimateHint}>
-                    {`계산: 경과 시간 × 분당 ${breastEstimateInfo.mlPerMin}ml (${breastEstimateInfo.ageLabel})`}
+                    {t('babyTracker.breastActive.calcHint', { mlPerMin: breastEstimateInfo.mlPerMin, ageLabel: breastEstimateInfo.ageLabel })}
                   </Text>
                   <Text style={breastStyles.estimateNote}>
-                    ⓘ 의료 자료 기반 추정치예요. 실제 양은 아기/엄마/시간대에 따라 달라요.
+                    {t('babyTracker.breastActive.estimateNote')}
                   </Text>
                 </>
               )}
@@ -2785,13 +2819,13 @@ function BabyTrackerInner() {
           <View style={styles.timelineTitleRow}>
             <Image source={IC_SLEEP} style={styles.timelineTitleIcon} resizeMode="contain" />
             <Text style={styles.timelineTitle}>
-              오늘의 타임라인 ({allRecordsSorted.length}건)
+              {t('babyTracker.timeline.title', { count: allRecordsSorted.length })}
             </Text>
           </View>
 
           {loading ? (
             <View style={emptyStyles.container}>
-              <Text style={emptyStyles.sub}>불러오는 중...</Text>
+              <Text style={emptyStyles.sub}>{t('babyTracker.loading')}</Text>
             </View>
           ) : (
             <HourGroupedTimeline
@@ -2813,7 +2847,7 @@ function BabyTrackerInner() {
           activeOpacity={0.7}
         >
           <Text style={periodToggleStyles.headerTitle}>
-            {'기간 분석 ('}{PERIOD_LABELS[chartPeriod]}{')'}
+            {t('babyTracker.periodAnalysis', { period: getPeriodLabel(chartPeriod, t) })}
           </Text>
           <Text style={periodToggleStyles.headerArrow}>
             {periodSectionOpen ? '▲' : '▼'}
@@ -2837,7 +2871,7 @@ function BabyTrackerInner() {
                       chartPeriod === p && summaryStyles.periodBtnTextActive,
                     ]}
                   >
-                    {PERIOD_LABELS[p]}
+                    {getPeriodLabel(p, t)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -2855,7 +2889,7 @@ function BabyTrackerInner() {
           activeOpacity={0.7}
         >
           <Text style={periodToggleStyles.headerTitle}>
-            {'하루 패턴 · 24시간'}
+            {t('babyTracker.dailyPattern')}
           </Text>
           <Text style={periodToggleStyles.headerArrow}>
             {clockSectionOpen ? '▲' : '▼'}
@@ -2864,7 +2898,7 @@ function BabyTrackerInner() {
         {clockSectionOpen && (
           <DayClock
             records={allRecordsSorted}
-            dateLabel={isToday(currentDate) ? '오늘' : formatDateKorean(currentDate)}
+            dateLabel={isToday(currentDate) ? t('babyTracker.today') : formatDateKorean(currentDate)}
             onPrevDay={() => goDay(-1)}
             onNextDay={() => goDay(1)}
             canGoNext={!isToday(currentDate)}
@@ -2910,15 +2944,15 @@ function BabyTrackerInner() {
             onPress={() => setCustomModalVisible(false)}
           />
           <View style={customModalStyles.card}>
-            <Text style={customModalStyles.title}>{'직접 입력 기록'}</Text>
+            <Text style={customModalStyles.title}>{t('babyTracker.customRecord.title')}</Text>
             <Text style={customModalStyles.sub}>
-              지금 시간으로 기록됩니다. 이름과 특징을 입력해주세요.
+              {t('babyTracker.customRecord.sub')}
             </Text>
 
-            <Text style={customModalStyles.label}>이름 (필수)</Text>
+            <Text style={customModalStyles.label}>{t('babyTracker.customRecord.nameLabel')}</Text>
             <TextInput
               style={customModalStyles.input}
-              placeholder="예: 과일먹음, 산책, 양치"
+              placeholder={t('babyTracker.customRecord.namePlaceholder')}
               placeholderTextColor="#ABABAB"
               value={customName}
               onChangeText={setCustomName}
@@ -2928,7 +2962,7 @@ function BabyTrackerInner() {
 
             {recentCustomNames.length > 0 && (
               <View style={customModalStyles.recentRow}>
-                <Text style={customModalStyles.recentLabel}>{'최근 사용:'}</Text>
+                <Text style={customModalStyles.recentLabel}>{t('babyTracker.customRecord.recentlyUsed')}</Text>
                 {recentCustomNames.map((n) => (
                   <TouchableOpacity
                     key={n}
@@ -2941,10 +2975,10 @@ function BabyTrackerInner() {
               </View>
             )}
 
-            <Text style={customModalStyles.label}>특징 (선택)</Text>
+            <Text style={customModalStyles.label}>{t('babyTracker.customRecord.detailLabel')}</Text>
             <TextInput
               style={customModalStyles.input}
-              placeholder="예: 딸기 2개, 공원 30분"
+              placeholder={t('babyTracker.customRecord.detailPlaceholder')}
               placeholderTextColor="#ABABAB"
               value={customDetail}
               onChangeText={setCustomDetail}
@@ -2956,13 +2990,13 @@ function BabyTrackerInner() {
                 style={[customModalStyles.btn, customModalStyles.btnCancel]}
                 onPress={() => setCustomModalVisible(false)}
               >
-                <Text style={customModalStyles.btnCancelText}>취소</Text>
+                <Text style={customModalStyles.btnCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[customModalStyles.btn, customModalStyles.btnSave]}
                 onPress={handleSaveCustom}
               >
-                <Text style={customModalStyles.btnSaveText}>저장</Text>
+                <Text style={customModalStyles.btnSaveText}>{t('common.save')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -2991,7 +3025,7 @@ function BabyTrackerInner() {
           icon: f.key === 'breast' ? IC_MASCOT_EAT : IC_FEED,
         }))}
         lockSubType={modalSubType === 'formula'}
-        lockTitle={modalSubType === 'formula' ? '분유 기록' : undefined}
+        lockTitle={modalSubType === 'formula' ? t('babyTracker.formulaRecordTitle') : undefined}
       />
 
       {/* ---- Breast Side Picker ---- */}
@@ -3101,12 +3135,12 @@ function BabyTrackerInner() {
           onPress={() => setTimedActionVisible(false)}
         >
           <TouchableOpacity activeOpacity={1} style={pickerStyles.sheet}>
-            <Text style={pickerStyles.title}>{timedActionPayload?.label ?? '기록'} — 시간 지정</Text>
+            <Text style={pickerStyles.title}>{timedActionPayload?.label ?? t('babyTracker.record')} — {t('babyTracker.timeSpecify')}</Text>
             <Text style={pickerStyles.subtitle}>
-              {timedActionPayload?.kind === 'sleepStart' ? '몇 시에 잠들었나요?'
-                : timedActionPayload?.kind === 'sleepWake' ? '몇 시에 깼나요?'
-                : timedActionPayload?.kind === 'breast' ? '방향 선택 후 시작 시각을 골라주세요'
-                : '몇 시에 있었나요?'}
+              {timedActionPayload?.kind === 'sleepStart' ? t('babyTracker.timedPrompt.sleepStart')
+                : timedActionPayload?.kind === 'sleepWake' ? t('babyTracker.timedPrompt.sleepWake')
+                : timedActionPayload?.kind === 'breast' ? t('babyTracker.timedPrompt.breast')
+                : t('babyTracker.timedPrompt.general')}
             </Text>
 
             {/* 모유: 좌/우 선택 */}
@@ -3121,7 +3155,7 @@ function BabyTrackerInner() {
                   onPress={() => setTimedActionBreastSide('left')}
                   activeOpacity={0.85}
                 >
-                  <Text style={breastSidePickStyles.sideLabel}>왼쪽</Text>
+                  <Text style={breastSidePickStyles.sideLabel}>{t('babyTracker.side.left')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
@@ -3132,7 +3166,7 @@ function BabyTrackerInner() {
                   onPress={() => setTimedActionBreastSide('right')}
                   activeOpacity={0.85}
                 >
-                  <Text style={breastSidePickStyles.sideLabel}>오른쪽</Text>
+                  <Text style={breastSidePickStyles.sideLabel}>{t('babyTracker.side.right')}</Text>
                 </TouchableOpacity>
               </View>
             ) : null}
@@ -3140,7 +3174,7 @@ function BabyTrackerInner() {
             {(timedActionPayload?.kind === 'sleepStart' || timedActionPayload?.kind === 'sleepWake') && timedActionDate !== '' && (
               <View style={editModalStyles.field}>
                 <Text style={editModalStyles.fieldLabel}>
-                  {timedActionPayload.kind === 'sleepStart' ? '수면 날짜' : '기상 날짜'}
+                  {timedActionPayload.kind === 'sleepStart' ? t('babyTracker.sleepDate') : t('babyTracker.wakeDate')}
                 </Text>
                 <View style={editModalStyles.dateRow}>
                   <TouchableOpacity style={editModalStyles.dateArrow} onPress={() => adjustTimedActionDate(-1)}>
@@ -3162,12 +3196,12 @@ function BabyTrackerInner() {
             {/* 분유: 양(ml) 입력 */}
             {timedActionPayload?.kind === 'quick' && timedActionPayload?.subType === 'formula' && (
               <View style={editModalStyles.field}>
-                <Text style={editModalStyles.fieldLabel}>분유량 (ml)</Text>
+                <Text style={editModalStyles.fieldLabel}>{t('babyTracker.formulaAmountMl')}</Text>
                 <TextInput
                   style={editModalStyles.input}
                   value={timedActionAmount}
                   onChangeText={setTimedActionAmount}
-                  placeholder="예) 120"
+                  placeholder={t('babyTracker.exampleAmount120b')}
                   placeholderTextColor={TRACKER_COLORS.textLight}
                   keyboardType="number-pad"
                   maxLength={4}
@@ -3178,11 +3212,11 @@ function BabyTrackerInner() {
                   onLongPress={() => {
                     if (defaultFormulaAmount > 0) {
                       Alert.alert(
-                        `기본 분유량 ${defaultFormulaAmount}ml`,
-                        '분유량을 새로 입력하고 체크 후 저장하면 변경돼요.',
+                        t('babyTracker.defaultFormula.titleWithAmount', { amount: defaultFormulaAmount }),
+                        t('babyTracker.defaultFormula.changeHint'),
                         [
-                          { text: '기본값 해제', style: 'destructive', onPress: () => { saveFormulaDefault(childId, 0).catch(() => {}); setDefaultFormulaAmount(0); setTimedSaveAsDefault(false); setTimedActionAmount(''); } },
-                          { text: '취소', style: 'cancel' },
+                          { text: t('babyTracker.defaultFormula.unset'), style: 'destructive', onPress: () => { saveFormulaDefault(childId, 0).catch(() => {}); setDefaultFormulaAmount(0); setTimedSaveAsDefault(false); setTimedActionAmount(''); } },
+                          { text: t('common.cancel'), style: 'cancel' },
                         ],
                       );
                     }
@@ -3201,27 +3235,27 @@ function BabyTrackerInner() {
                   </View>
                   <Text style={{ fontSize: 13, color: '#555555', fontWeight: '600', flex: 1 }}>
                     {defaultFormulaAmount > 0
-                      ? `기본 분유량 ${defaultFormulaAmount}ml · 길게 눌러 변경/해제`
-                      : '기본 분유량으로 자동 저장됩니다'}
+                      ? t('babyTracker.defaultFormula.currentWithHint', { amount: defaultFormulaAmount })
+                      : t('babyTracker.defaultFormula.autoSaveHint')}
                   </Text>
                 </TouchableOpacity>
               </View>
             )}
 
-            <TimePicker value={timedActionTime} onChange={setTimedActionTime} label="시간" />
+            <TimePicker value={timedActionTime} onChange={setTimedActionTime} label={t('babyTracker.time')} />
 
             {/* 메모 (선택) — 모든 액션 공통 */}
             <View style={editModalStyles.field}>
-              <Text style={editModalStyles.fieldLabel}>메모 (선택)</Text>
+              <Text style={editModalStyles.fieldLabel}>{t('babyTracker.noteOptional')}</Text>
               <TextInput
                 style={editModalStyles.input}
                 value={timedActionNote}
                 onChangeText={setTimedActionNote}
                 placeholder={
-                  timedActionPayload?.kind === 'sleepStart' ? '예) 낮잠, 잘 자는 중'
-                    : timedActionPayload?.kind === 'sleepWake' ? '예) 깨자마자 보챔'
-                    : timedActionPayload?.kind === 'breast' ? '예) 트림함, 잘 빨음'
-                    : '예) 평소보다 많이 먹음'
+                  timedActionPayload?.kind === 'sleepStart' ? t('babyTracker.notePlaceholder.nap')
+                    : timedActionPayload?.kind === 'sleepWake' ? t('babyTracker.notePlaceholder.wake')
+                    : timedActionPayload?.kind === 'breast' ? t('babyTracker.notePlaceholder.breast')
+                    : t('babyTracker.notePlaceholder.generalFeed')
                 }
                 placeholderTextColor={TRACKER_COLORS.textLight}
                 maxLength={120}
@@ -3233,7 +3267,7 @@ function BabyTrackerInner() {
                 style={editModalStyles.cancelBtn}
                 onPress={() => setTimedActionVisible(false)}
               >
-                <Text style={editModalStyles.cancelText}>취소</Text>
+                <Text style={editModalStyles.cancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -3243,7 +3277,7 @@ function BabyTrackerInner() {
                 onPress={handleTimedActionConfirm}
                 disabled={timedActionPayload?.kind === 'breast' && !timedActionBreastSide}
               >
-                <Text style={editModalStyles.saveText}>{timedActionTime}에 기록</Text>
+                <Text style={editModalStyles.saveText}>{t('babyTracker.recordAtTime', { time: timedActionTime })}</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -3274,7 +3308,7 @@ function BabyTrackerInner() {
           <TouchableOpacity activeOpacity={1} style={pickerStyles.sheet} onPress={() => Keyboard.dismiss()}>
             {editRecord === null && entryActionId !== null ? (
               <>
-                <Text style={pickerStyles.title}>기록 옵션</Text>
+                <Text style={pickerStyles.title}>{t('babyTracker.recordOptions')}</Text>
                 <TouchableOpacity
                   style={editModalStyles.actionRow}
                   onPress={() => {
@@ -3282,7 +3316,7 @@ function BabyTrackerInner() {
                     if (entryActionId) openEditModalById(entryActionId);
                   }}
                 >
-                  <Text style={editModalStyles.actionRowText}>편집 (시간·메모)</Text>
+                  <Text style={editModalStyles.actionRowText}>{t('babyTracker.editTimeNote')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[editModalStyles.actionRow, editModalStyles.actionRowDanger]}
@@ -3292,19 +3326,19 @@ function BabyTrackerInner() {
                     if (id) handleDeleteRecord(id);
                   }}
                 >
-                  <Text style={[editModalStyles.actionRowText, editModalStyles.actionRowTextDanger]}>삭제</Text>
+                  <Text style={[editModalStyles.actionRowText, editModalStyles.actionRowTextDanger]}>{t('common.delete')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={editModalStyles.cancelRow}
                   onPress={() => setEntryActionId(null)}
                 >
-                  <Text style={editModalStyles.cancelRowText}>취소</Text>
+                  <Text style={editModalStyles.cancelRowText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
               </>
             ) : null}
             {editRecord !== null ? (
               <Text style={pickerStyles.title}>
-                {SUBTYPE_LABELS[editRecord.subType] ?? editRecord.subType} 편집
+                {t('babyTracker.editWithLabel', { label: getSubtypeLabel(editRecord.subType, t) })}
               </Text>
             ) : null}
             {editRecord ? (
@@ -3312,7 +3346,7 @@ function BabyTrackerInner() {
                 {editDate !== '' && (
                   <View style={editModalStyles.field}>
                     <Text style={editModalStyles.fieldLabel}>
-                      {editRecord.type === 'sleep' && editRecord.endTime ? '수면 시작 날짜' : '날짜'}
+                      {editRecord.type === 'sleep' && editRecord.endTime ? t('babyTracker.sleepStartDate') : t('babyTracker.date')}
                     </Text>
                     <View style={editModalStyles.dateRow}>
                       <TouchableOpacity style={editModalStyles.dateArrow} onPress={() => adjustEditDate(-1)}>
@@ -3320,7 +3354,7 @@ function BabyTrackerInner() {
                       </TouchableOpacity>
                       <Text style={editModalStyles.dateText}>
                         {formatDateKorean(new Date(editDate + 'T00:00:00'))}
-                        {editDate !== dateStr ? ' (이동)' : ''}
+                        {editDate !== dateStr ? ` (${t('babyTracker.moved')})` : ''}
                       </Text>
                       <TouchableOpacity
                         style={[editModalStyles.dateArrow, editDate >= formatDate(new Date()) && { opacity: 0.3 }]}
@@ -3332,11 +3366,11 @@ function BabyTrackerInner() {
                     </View>
                   </View>
                 )}
-                <TimePicker value={editTime} onChange={setEditTime} label={editRecord.type === 'sleep' && editRecord.endTime ? '수면 시작 시간' : '시간'} />
+                <TimePicker value={editTime} onChange={setEditTime} label={editRecord.type === 'sleep' && editRecord.endTime ? t('babyTracker.sleepStartTime') : t('babyTracker.time')} />
                 {editRecord.type === 'sleep' && editRecord.endTime ? (
                   <>
                     <View style={editModalStyles.field}>
-                      <Text style={editModalStyles.fieldLabel}>기상 날짜</Text>
+                      <Text style={editModalStyles.fieldLabel}>{t('babyTracker.wakeDate')}</Text>
                       <View style={editModalStyles.dateRow}>
                         <TouchableOpacity style={editModalStyles.dateArrow} onPress={() => adjustEditEndDate(-1)}>
                           <Text style={editModalStyles.dateArrowText}>◀</Text>
@@ -3353,17 +3387,17 @@ function BabyTrackerInner() {
                         </TouchableOpacity>
                       </View>
                     </View>
-                    <TimePicker value={editEndTime} onChange={setEditEndTime} label="기상 시간" />
+                    <TimePicker value={editEndTime} onChange={setEditEndTime} label={t('babyTracker.wakeTime')} />
                   </>
                 ) : null}
                 {editRecord.type === 'feeding' ? (
                   <View style={editModalStyles.field}>
-                    <Text style={editModalStyles.fieldLabel}>양 (ml)</Text>
+                    <Text style={editModalStyles.fieldLabel}>{t('babyTracker.amountMl')}</Text>
                     <TextInput
                       style={editModalStyles.input}
                       value={editAmount}
                       onChangeText={setEditAmount}
-                      placeholder="예) 120"
+                      placeholder={t('babyTracker.exampleAmount120b')}
                       placeholderTextColor={TRACKER_COLORS.textLight}
                       keyboardType="number-pad"
                       maxLength={4}
@@ -3374,11 +3408,11 @@ function BabyTrackerInner() {
                         onLongPress={() => {
                           if (defaultFormulaAmount > 0) {
                             Alert.alert(
-                              `기본 분유량 ${defaultFormulaAmount}ml`,
-                              '양을 새로 입력하고 체크 후 저장하면 변경돼요.',
+                              t('babyTracker.defaultFormula.titleWithAmount', { amount: defaultFormulaAmount }),
+                              t('babyTracker.defaultFormula.changeHintAmount'),
                               [
-                                { text: '기본값 해제', style: 'destructive', onPress: () => { saveFormulaDefault(childId, 0).catch(() => {}); setDefaultFormulaAmount(0); setEditSaveAsDefault(false); } },
-                                { text: '취소', style: 'cancel' },
+                                { text: t('babyTracker.defaultFormula.unset'), style: 'destructive', onPress: () => { saveFormulaDefault(childId, 0).catch(() => {}); setDefaultFormulaAmount(0); setEditSaveAsDefault(false); } },
+                                { text: t('common.cancel'), style: 'cancel' },
                               ],
                             );
                           }
@@ -3397,20 +3431,20 @@ function BabyTrackerInner() {
                         </View>
                         <Text style={{ fontSize: 13, color: '#555555', fontWeight: '600', flex: 1 }}>
                           {defaultFormulaAmount > 0
-                            ? `기본 분유량 ${defaultFormulaAmount}ml · 길게 눌러 변경/해제`
-                            : '기본 분유량으로 자동 저장됩니다'}
+                            ? t('babyTracker.defaultFormula.currentWithHint', { amount: defaultFormulaAmount })
+                            : t('babyTracker.defaultFormula.autoSaveHint')}
                         </Text>
                       </TouchableOpacity>
                     )}
                   </View>
                 ) : null}
                 <View style={editModalStyles.field}>
-                  <Text style={editModalStyles.fieldLabel}>메모</Text>
+                  <Text style={editModalStyles.fieldLabel}>{t('babyTracker.note')}</Text>
                   <TextInput
                     style={editModalStyles.input}
                     value={editNote}
                     onChangeText={setEditNote}
-                    placeholder="메모 (선택)"
+                    placeholder={t('babyTracker.noteOptional')}
                     placeholderTextColor={TRACKER_COLORS.textLight}
                     maxLength={120}
                   />
@@ -3420,13 +3454,13 @@ function BabyTrackerInner() {
                     style={editModalStyles.cancelBtn}
                     onPress={() => { setEditRecord(null); setEntryActionId(null); }}
                   >
-                    <Text style={editModalStyles.cancelText}>취소</Text>
+                    <Text style={editModalStyles.cancelText}>{t('common.cancel')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={editModalStyles.saveBtn}
                     onPress={handleEditSave}
                   >
-                    <Text style={editModalStyles.saveText}>저장</Text>
+                    <Text style={editModalStyles.saveText}>{t('common.save')}</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -3868,6 +3902,7 @@ interface HourGroupedTimelineProps {
 }
 
 function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete, onLongAction, activeSleepSession, ageMonths }: HourGroupedTimelineProps) {
+  const { t } = useTranslation();
   // 분 단위 'now' 갱신 — LIVE 배지·진행중 표시용
   const [, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -3910,7 +3945,7 @@ function HourGroupedTimeline({ records, dateStr, isCurrentlyToday, onDelete, onL
         type: 'sleep',
         subType: 'sleep_start',
         time,
-        note: '진행중',
+        note: t('babyTracker.inProgress'),
       } as TrackerRecord);
     }
     // 시간순 정렬 — 분 단위 숫자 비교 (string localeCompare 는 "9:30" vs "09:35" 같은
@@ -4060,6 +4095,7 @@ const hourTlStyles = StyleSheet.create({
 });
 
 function TimelineEntry({ record, dateStr, showRelative, onDelete, onLongAction, ageMonths }: TimelineEntryProps) {
+  const { t } = useTranslation();
   const typeColor =
     record.type === 'diaper'
       ? TRACKER_COLORS.diaper
@@ -4081,7 +4117,7 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete, onLongAction, 
             ? TRACKER_COLORS.customDark
             : TRACKER_COLORS.sleepDark;
   const icon = SUBTYPE_ICONS[record.subType] ?? IC_POOP;
-  const baseLabel = SUBTYPE_LABELS[record.subType] ?? record.subType;
+  const baseLabel = getSubtypeLabel(record.subType, t);
   // 모유: 왼쪽/오른쪽을 라벨에 병합 → "모유 (왼쪽)"
   const label = record.subType === 'breast' && record.note
     ? `${baseLabel} (${record.note})`
@@ -4102,7 +4138,7 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete, onLongAction, 
     record.duration > 0
   ) {
     const estMl = estimateBreastMl(record.duration, ageMonths ?? 6);
-    if (estMl > 0) infoParts.push(`약 ${estMl}ml (추정)`);
+    if (estMl > 0) infoParts.push(t('babyTracker.estimatedAmount', { amount: estMl }));
   }
   const info = infoParts.join(' · ');
   // note는 별도 두 번째 줄로 (사용자 요청: '메모 적은 거 다 보이게')
@@ -4145,7 +4181,7 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete, onLongAction, 
           {/* 공동육아: 초대받은 가족이 남긴 기록이면 작성자 표시 (소유자/옛 기록은 미표시) */}
           {record.authorLabel ? (
             <Text style={timelineRowStyles.author} numberOfLines={1}>
-              {`${record.authorLabel}가 기록함`}
+              {t('babyTracker.recordedBy', { author: record.authorLabel })}
             </Text>
           ) : null}
           {subInfo ? (
@@ -4339,20 +4375,22 @@ interface BottomBarItem {
   color: string;
 }
 
+// label 필드는 i18n 키 접미사(babyTracker.subtypes.*) — 표시 시 getSubtypeLabel 대신
+// 직접 t(`babyTracker.subtypes.${label}`) 로 조회한다 (아래 render 참고).
 const BAR_ITEMS: BottomBarItem[] = [
-  { icon: IC_FEED, label: '분유', action: { kind: 'modal', subType: 'formula' }, color: TRACKER_COLORS.feedingDark },
-  { icon: IC_FEED, label: '이유식', action: { kind: 'quick', type: 'feeding', subType: 'baby_food' }, color: TRACKER_COLORS.feedingDark },
-  { icon: IC_MASCOT_EAT, label: '모유', action: { kind: 'breast' }, color: TRACKER_COLORS.feedingDark },
-  { icon: IC_SLEEP, label: '수면', action: { kind: 'sleepStart' }, color: TRACKER_COLORS.sleepDark },
-  { icon: IC_SUNNY, label: '기상', action: { kind: 'sleepWake' }, color: TRACKER_COLORS.sleepDark },
-  { icon: IC_POOP, label: '소변', action: { kind: 'quick', type: 'diaper', subType: 'pee' }, color: TRACKER_COLORS.diaperDark },
-  { icon: IC_POOP, label: '대변', action: { kind: 'quick', type: 'diaper', subType: 'poop' }, color: TRACKER_COLORS.diaperDark },
+  { icon: IC_FEED, label: 'formula', action: { kind: 'modal', subType: 'formula' }, color: TRACKER_COLORS.feedingDark },
+  { icon: IC_FEED, label: 'babyFood', action: { kind: 'quick', type: 'feeding', subType: 'baby_food' }, color: TRACKER_COLORS.feedingDark },
+  { icon: IC_MASCOT_EAT, label: 'breast', action: { kind: 'breast' }, color: TRACKER_COLORS.feedingDark },
+  { icon: IC_SLEEP, label: 'sleep', action: { kind: 'sleepStart' }, color: TRACKER_COLORS.sleepDark },
+  { icon: IC_SUNNY, label: 'wake', action: { kind: 'sleepWake' }, color: TRACKER_COLORS.sleepDark },
+  { icon: IC_POOP, label: 'pee', action: { kind: 'quick', type: 'diaper', subType: 'pee' }, color: TRACKER_COLORS.diaperDark },
+  { icon: IC_POOP, label: 'poop', action: { kind: 'quick', type: 'diaper', subType: 'poop' }, color: TRACKER_COLORS.diaperDark },
   // Phase 4-A (2026-04-28): 투약 — 빠른 기록 4종
-  { icon: IC_MEDICATION, label: '해열제', action: { kind: 'quick', type: 'medication', subType: 'fever' }, color: TRACKER_COLORS.medicationDark },
-  { icon: IC_MEDICATION, label: '항생제', action: { kind: 'quick', type: 'medication', subType: 'antibiotic' }, color: TRACKER_COLORS.medicationDark },
-  { icon: IC_MEDICATION, label: '비타민', action: { kind: 'quick', type: 'medication', subType: 'vitamin' }, color: TRACKER_COLORS.medicationDark },
+  { icon: IC_MEDICATION, label: 'fever', action: { kind: 'quick', type: 'medication', subType: 'fever' }, color: TRACKER_COLORS.medicationDark },
+  { icon: IC_MEDICATION, label: 'antibiotic', action: { kind: 'quick', type: 'medication', subType: 'antibiotic' }, color: TRACKER_COLORS.medicationDark },
+  { icon: IC_MEDICATION, label: 'vitamin', action: { kind: 'quick', type: 'medication', subType: 'vitamin' }, color: TRACKER_COLORS.medicationDark },
   // Phase 4-B (2026-04-28): 사용자 정의 라벨 — '직접 입력'
-  { icon: IC_CUSTOM, label: '직접 입력', action: { kind: 'custom' }, color: TRACKER_COLORS.customDark },
+  { icon: IC_CUSTOM, label: 'customInput', action: { kind: 'custom' }, color: TRACKER_COLORS.customDark },
 ];
 
 interface BottomActionBarProps {
@@ -4363,10 +4401,11 @@ interface BottomActionBarProps {
 }
 
 function BottomActionBar({ breastActive, onAction, onLongAction, hintVisible }: BottomActionBarProps) {
+  const { t } = useTranslation();
   return (
     <View style={barStyles.wrapper}>
       {hintVisible ? (
-        <Text style={barStyles.hint}>탭: 지금 입력 · 길게: 시간 지정</Text>
+        <Text style={barStyles.hint}>{t('babyTracker.bottomBarHint')}</Text>
       ) : null}
       <ScrollView
         horizontal
@@ -4400,7 +4439,7 @@ function BottomActionBar({ breastActive, onAction, onLongAction, hintVisible }: 
                 <Image source={item.icon} style={barStyles.icon} resizeMode="contain" />
               </View>
               <Text style={[barStyles.itemLabel, active && { color: item.color }]}>
-                {isBreast && breastActive ? '모유중' : item.label}
+                {isBreast && breastActive ? t('babyTracker.breastFeeding') : t(`babyTracker.subtypes.${item.label}`)}
               </Text>
             </TouchableOpacity>
           );

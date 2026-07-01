@@ -135,5 +135,253 @@
       "lifeLog": "생활 기록",
       "playLearning": "놀이 학습"
     }
+  },
+  "babyTracker": {
+    "voicePin": {
+      "title": "음성입력 아이콘 추가",
+      "desc": "홈 화면에 \"음성 기록\" 아이콘을 추가하면, 아이콘 한 번으로 바로 말해서 기록할 수 있어요. 추가할까요?",
+      "later": "나중에",
+      "add": "추가",
+      "manualTitle": "홈에 추가하기",
+      "manualDesc": "\"홈 화면 구성이 잠겨 있다\"고 뜨면, 홈 화면 레이아웃 잠금 때문이에요.\n\n[해제 방법 — 삼성 갤럭시]\n홈 화면 빈 곳을 길게 누르기 → 설정 → \"홈 화면 레이아웃 잠금\" 끄기 → 다시 추가\n\n[또는 직접 끌어다 놓기]\n앱 아이콘을 길게 눌러 \"음성 기록\"을 홈 화면 빈 공간으로 드래그하면 돼요."
+    },
+    "tabs": {
+      "diaper": "배변",
+      "feeding": "수유/식사",
+      "sleep": "수면",
+      "medication": "투약"
+    },
+    "subtypes": {
+      "pee": "소변",
+      "poop": "대변",
+      "both": "소변+대변",
+      "breast": "모유",
+      "formula": "분유",
+      "babyFood": "이유식",
+      "snack": "간식",
+      "nap": "낮잠",
+      "night": "밤잠",
+      "sleep": "수면",
+      "wake": "기상",
+      "fever": "해열제",
+      "antibiotic": "항생제",
+      "vitamin": "비타민",
+      "otherMed": "기타 약",
+      "customInput": "직접 입력"
+    },
+    "feedingTypes": {
+      "pregnantMeal": "식사",
+      "pregnantSnack": "간식",
+      "pregnantSupplement": "영양제",
+      "infantBreast": "모유",
+      "infantFormula": "분유",
+      "infantBabyFood": "이유식",
+      "infantSnack": "간식",
+      "toddlerBabyFood": "유아식",
+      "toddlerMeal": "밥",
+      "toddlerSnack": "간식",
+      "toddlerMilk": "우유",
+      "elementaryMeal": "식사",
+      "elementarySnack": "간식"
+    },
+    "period": {
+      "week": "7일",
+      "twoWeeks": "14일",
+      "month": "1달",
+      "days": "{{count}}일"
+    },
+    "weeklyTable": {
+      "title": "최근 {{period}} 요약",
+      "date": "날짜"
+    },
+    "today": "오늘",
+    "selectType": "유형 선택",
+    "selectTypeRequired": "유형을 선택해주세요.",
+    "time": "시간",
+    "endTime": "종료 시간",
+    "formulaAmountMl": "분유량 (ml)",
+    "exampleAmount120": "예: 120",
+    "exampleAmount120b": "예) 120",
+    "breastDurationMin": "수유 시간 (분)",
+    "exampleAmount15": "예: 15",
+    "amountMl": "양 (ml)",
+    "note": "메모",
+    "noteOptional": "메모 (선택)",
+    "notePlaceholder": {
+      "diaper": "색상, 상태 등",
+      "feeding": "특이사항",
+      "sleep": "수면 품질 등",
+      "nap": "예) 낮잠, 잘 자는 중",
+      "wake": "예) 깨자마자 보챔",
+      "breast": "예) 트림함, 잘 빨음",
+      "generalFeed": "예) 평소보다 많이 먹음"
+    },
+    "defaultFormula": {
+      "titleWithAmount": "기본 분유량 {{amount}}ml",
+      "changeHint": "분유량을 새로 입력하고 체크 후 저장하면 변경돼요.",
+      "changeHintAmount": "양을 새로 입력하고 체크 후 저장하면 변경돼요.",
+      "unset": "기본값 해제",
+      "currentWithHint": "기본 분유량 {{amount}}ml · 길게 눌러 변경/해제",
+      "autoSaveHint": "기본 분유량으로 자동 저장됩니다"
+    },
+    "viewOnly": {
+      "title": "열람 전용",
+      "desc": "이 아이의 기록을 편집할 권한이 없어요.\n보호자에게 편집 권한을 요청해주세요."
+    },
+    "recordedWithLabel": "{{label}} 기록 완료",
+    "sleepInProgress": {
+      "title": "수면 기록 진행 중",
+      "descPressWake": "{{date}} {{time}}에 시작한 수면이 진행 중이에요. 기상 버튼을 먼저 눌러주세요.",
+      "descPressWakeEnd": "{{date}} {{time}}에 시작한 수면이 진행 중이에요. 기상 버튼을 눌러 종료해주세요."
+    },
+    "sleepStartLabel": "수면 시작",
+    "noSleepStartRecord": {
+      "title": "수면 시작 기록 없음",
+      "desc": "\"수면 시작\"을 먼저 눌러주세요.",
+      "descFull": "수면 시작 기록이 없어요. \"수면 시작\"을 먼저 눌러주세요."
+    },
+    "breastInProgress": {
+      "title": "모유 수유 진행 중",
+      "desc": "진행 중인 수유를 먼저 종료한 뒤 시간 지정 입력을 사용하세요."
+    },
+    "breastDirection": {
+      "title": "수유 방향 선택",
+      "desc": "왼쪽 또는 오른쪽을 먼저 선택해주세요."
+    },
+    "toast": {
+      "recordedAt": "{{label}} {{time}} 기록",
+      "sleepStartAt": "수면 시작 {{time}} 기록",
+      "wakeAt": "기상 {{time}} 기록",
+      "breastStartAt": "{{side}} 수유 시작 {{time}} 기록",
+      "breastStart": "{{side}} 수유 시작",
+      "breastRecorded": "모유 {{duration}} 기록됨",
+      "activeSleepTimeUpdated": "진행중 수면 시작 시간 수정",
+      "movedTo": "{{month}}/{{day}}로 이동 완료",
+      "editComplete": "수정 완료",
+      "formulaOneTouch": "분유 {{amount}}ml 기록 · 길게 눌러 수정",
+      "customRecorded": "'{{name}}' 기록 완료",
+      "sleepStartRecorded": "수면 시작 기록",
+      "wakeRecorded": "기상 기록 ({{duration}})"
+    },
+    "yesterdaySleep": {
+      "title": "어제 시작한 수면",
+      "desc": "이 수면 기록은 어제 시작한 수면이에요. 어제 날짜로 이동해서 편집해주세요."
+    },
+    "timeFormat": {
+      "title": "시간 형식",
+      "desc": "시간을 다시 확인해주세요 (예: 08:30)"
+    },
+    "wakeTimeFormat": {
+      "title": "기상 시간 형식",
+      "desc": "기상 시간을 다시 확인해주세요 (예: 08:30)"
+    },
+    "sleepTooLong": {
+      "title": "수면 시간이 너무 길어요",
+      "desc": "{{hours}}시간으로 계산되어 14시간으로 제한했어요. 기상 시간을 잊으신 것 같으면 직접 수정해주세요."
+    },
+    "cancelActiveSleep": {
+      "title": "진행중 수면 취소",
+      "desc": "시작한 수면 기록을 취소할까요?",
+      "confirm": "취소하기"
+    },
+    "deleteRecord": {
+      "title": "기록 삭제",
+      "desc": "이 기록을 삭제할까요?"
+    },
+    "customRecord": {
+      "title": "직접 입력 기록",
+      "sub": "지금 시간으로 기록됩니다. 이름과 특징을 입력해주세요.",
+      "nameLabel": "이름 (필수)",
+      "namePlaceholder": "예: 과일먹음, 산책, 양치",
+      "recentlyUsed": "최근 사용:",
+      "detailLabel": "특징 (선택)",
+      "detailPlaceholder": "예: 딸기 2개, 공원 30분",
+      "nameRequired": {
+        "title": "이름 필요",
+        "desc": "기록할 이름을 입력해주세요. (예: 과일먹음)"
+      },
+      "nameLength": {
+        "title": "이름 길이",
+        "desc": "이름은 20자 이내로 입력해주세요."
+      },
+      "detailLength": {
+        "title": "특징 길이",
+        "desc": "특징은 80자 이내로 입력해주세요."
+      }
+    },
+    "ageRange": {
+      "a0to1": "0~1개월 기준",
+      "a1to3": "1~3개월 기준",
+      "a3to6": "3~6개월 기준",
+      "a6to12": "6~12개월 기준",
+      "a12plus": "12개월+ 기준"
+    },
+    "unit": {
+      "times": "{{count}}회",
+      "hoursMinutes": "{{h}}h{{m}}분",
+      "hoursOnly": "{{h}}h",
+      "minutesOnly": "{{m}}분"
+    },
+    "daySummary": {
+      "feeding": "수유",
+      "sleep": "수면",
+      "diaper": "변",
+      "diaperBoth": "소{{pee}}·대{{poop}}",
+      "diaperPoopOnly": "대{{poop}}",
+      "diaperPeeOnly": "소{{pee}}"
+    },
+    "dailyRef": {
+      "firstMeal": "첫 식사",
+      "mealInterval": "식사 텀",
+      "mealIntervalHint": "식사 후 / 권장 {{hours}}h",
+      "dailyFormula": "일일 분유",
+      "byWeightHint": "오늘 누적 / 몸무게 기준",
+      "dailySleep": "일일 수면",
+      "byAgeHint": "오늘 누적 / 개월수 기준",
+      "autoCalcNote": "ⓘ 권장치는 우리 아이 월령·몸무게에 맞춰 자동 계산돼요"
+    },
+    "breastActive": {
+      "accessibilityLabel": "모유 수유 진행 중 {{side}}, 경과 {{elapsed}}, 추정 {{amount}}ml. 탭하여 종료",
+      "title": "모유 수유 진행 중",
+      "tapToEnd": "탭하여 종료",
+      "estimatedAmount": "예상 수유량: 약 {{amount}}ml",
+      "calcHint": "계산: 경과 시간 × 분당 {{mlPerMin}}ml ({{ageLabel}})",
+      "estimateNote": "ⓘ 의료 자료 기반 추정치예요. 실제 양은 아기/엄마/시간대에 따라 달라요."
+    },
+    "side": {
+      "left": "왼쪽",
+      "right": "오른쪽"
+    },
+    "periodAnalysis": "기간 분석 ({{period}})",
+    "dailyPattern": "하루 패턴 · 24시간",
+    "timeline": {
+      "title": "오늘의 타임라인 ({{count}}건)"
+    },
+    "loading": "불러오는 중...",
+    "formulaRecordTitle": "분유 기록",
+    "record": "기록",
+    "timeSpecify": "시간 지정",
+    "timedPrompt": {
+      "sleepStart": "몇 시에 잠들었나요?",
+      "sleepWake": "몇 시에 깼나요?",
+      "breast": "방향 선택 후 시작 시각을 골라주세요",
+      "general": "몇 시에 있었나요?"
+    },
+    "sleepDate": "수면 날짜",
+    "wakeDate": "기상 날짜",
+    "recordAtTime": "{{time}}에 기록",
+    "recordOptions": "기록 옵션",
+    "editTimeNote": "편집 (시간·메모)",
+    "editWithLabel": "{{label}} 편집",
+    "date": "날짜",
+    "moved": "이동",
+    "sleepStartDate": "수면 시작 날짜",
+    "sleepStartTime": "수면 시작 시간",
+    "wakeTime": "기상 시간",
+    "inProgress": "진행중",
+    "estimatedAmount": "약 {{amount}}ml (추정)",
+    "recordedBy": "{{author}}가 기록함",
+    "bottomBarHint": "탭: 지금 입력 · 길게: 시간 지정",
+    "breastFeeding": "모유중"
   }
 }

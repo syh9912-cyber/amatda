@@ -135,5 +135,253 @@
       "lifeLog": "生活紀錄",
       "playLearning": "遊戲學習"
     }
+  },
+  "babyTracker": {
+    "voicePin": {
+      "title": "新增語音輸入圖示",
+      "desc": "在主畫面新增「語音記錄」圖示後，只要點一下就能直接說話記錄。要新增嗎？",
+      "later": "稍後再說",
+      "add": "新增",
+      "manualTitle": "新增到主畫面",
+      "manualDesc": "若出現「主畫面版面配置已鎖定」，是因為主畫面版面鎖定所致。\n\n[解除方法 — 三星 Galaxy]\n長按主畫面空白處 → 設定 → 關閉「鎖定主畫面版面配置」→ 重新新增\n\n[或直接拖曳]\n長按應用程式圖示，將「語音記錄」拖曳到主畫面的空白處即可。"
+    },
+    "tabs": {
+      "diaper": "如廁",
+      "feeding": "餵食",
+      "sleep": "睡眠",
+      "medication": "用藥"
+    },
+    "subtypes": {
+      "pee": "小便",
+      "poop": "大便",
+      "both": "小便+大便",
+      "breast": "母乳",
+      "formula": "配方奶",
+      "babyFood": "副食品",
+      "snack": "點心",
+      "nap": "午睡",
+      "night": "夜眠",
+      "sleep": "睡眠",
+      "wake": "起床",
+      "fever": "退燒藥",
+      "antibiotic": "抗生素",
+      "vitamin": "維他命",
+      "otherMed": "其他藥物",
+      "customInput": "自訂輸入"
+    },
+    "feedingTypes": {
+      "pregnantMeal": "正餐",
+      "pregnantSnack": "點心",
+      "pregnantSupplement": "營養補充品",
+      "infantBreast": "母乳",
+      "infantFormula": "配方奶",
+      "infantBabyFood": "副食品",
+      "infantSnack": "點心",
+      "toddlerBabyFood": "幼兒食",
+      "toddlerMeal": "正餐",
+      "toddlerSnack": "點心",
+      "toddlerMilk": "牛奶",
+      "elementaryMeal": "正餐",
+      "elementarySnack": "點心"
+    },
+    "period": {
+      "week": "7天",
+      "twoWeeks": "14天",
+      "month": "1個月",
+      "days": "{{count}}天"
+    },
+    "weeklyTable": {
+      "title": "近{{period}}摘要",
+      "date": "日期"
+    },
+    "today": "今天",
+    "selectType": "選擇類型",
+    "selectTypeRequired": "請選擇類型。",
+    "time": "時間",
+    "endTime": "結束時間",
+    "formulaAmountMl": "配方奶量 (ml)",
+    "exampleAmount120": "例：120",
+    "exampleAmount120b": "例）120",
+    "breastDurationMin": "餵食時間（分鐘）",
+    "exampleAmount15": "例：15",
+    "amountMl": "量 (ml)",
+    "note": "備註",
+    "noteOptional": "備註（選填）",
+    "notePlaceholder": {
+      "diaper": "顏色、狀態等",
+      "feeding": "特殊狀況",
+      "sleep": "睡眠品質等",
+      "nap": "例）午睡、睡得很熟",
+      "wake": "例）一起床就哭鬧",
+      "breast": "例）有打嗝、喝得很好",
+      "generalFeed": "例）吃得比平常多"
+    },
+    "defaultFormula": {
+      "titleWithAmount": "預設配方奶量 {{amount}}ml",
+      "changeHint": "重新輸入奶量並勾選後儲存即可變更。",
+      "changeHintAmount": "重新輸入量並勾選後儲存即可變更。",
+      "unset": "取消預設值",
+      "currentWithHint": "預設配方奶量 {{amount}}ml · 長按可變更/取消",
+      "autoSaveHint": "將自動儲存為預設配方奶量"
+    },
+    "viewOnly": {
+      "title": "僅供檢視",
+      "desc": "您沒有編輯這位寶寶紀錄的權限。\n請向照護者申請編輯權限。"
+    },
+    "recordedWithLabel": "已記錄「{{label}}」",
+    "sleepInProgress": {
+      "title": "睡眠記錄進行中",
+      "descPressWake": "{{date}} {{time}} 開始的睡眠正在進行中，請先按下起床按鈕。",
+      "descPressWakeEnd": "{{date}} {{time}} 開始的睡眠正在進行中，請按下起床按鈕結束。"
+    },
+    "sleepStartLabel": "開始睡眠",
+    "noSleepStartRecord": {
+      "title": "沒有開始睡眠的記錄",
+      "desc": "請先按「開始睡眠」。",
+      "descFull": "沒有開始睡眠的記錄，請先按「開始睡眠」。"
+    },
+    "breastInProgress": {
+      "title": "母乳哺餵進行中",
+      "desc": "請先結束目前的哺餵，再使用時間指定輸入。"
+    },
+    "breastDirection": {
+      "title": "選擇哺餵方向",
+      "desc": "請先選擇左邊或右邊。"
+    },
+    "toast": {
+      "recordedAt": "已記錄「{{label}}」{{time}}",
+      "sleepStartAt": "已記錄開始睡眠 {{time}}",
+      "wakeAt": "已記錄起床 {{time}}",
+      "breastStartAt": "已記錄{{side}}哺餵開始 {{time}}",
+      "breastStart": "{{side}}哺餵開始",
+      "breastRecorded": "已記錄母乳 {{duration}}",
+      "activeSleepTimeUpdated": "已修改進行中睡眠的開始時間",
+      "movedTo": "已移動到 {{month}}/{{day}}",
+      "editComplete": "修改完成",
+      "formulaOneTouch": "已記錄配方奶 {{amount}}ml · 長按可修改",
+      "customRecorded": "已記錄「{{name}}」",
+      "sleepStartRecorded": "已記錄開始睡眠",
+      "wakeRecorded": "已記錄起床（{{duration}}）"
+    },
+    "yesterdaySleep": {
+      "title": "昨天開始的睡眠",
+      "desc": "這筆睡眠記錄是從昨天開始的，請移到昨天的日期編輯。"
+    },
+    "timeFormat": {
+      "title": "時間格式",
+      "desc": "請再次確認時間（例如：08:30）"
+    },
+    "wakeTimeFormat": {
+      "title": "起床時間格式",
+      "desc": "請再次確認起床時間（例如：08:30）"
+    },
+    "sleepTooLong": {
+      "title": "睡眠時間過長",
+      "desc": "計算為 {{hours}} 小時，已限制為 14 小時。如果忘記按起床按鈕，請直接修改。"
+    },
+    "cancelActiveSleep": {
+      "title": "取消進行中的睡眠",
+      "desc": "要取消已開始的睡眠記錄嗎？",
+      "confirm": "取消睡眠"
+    },
+    "deleteRecord": {
+      "title": "刪除記錄",
+      "desc": "要刪除這筆記錄嗎？"
+    },
+    "customRecord": {
+      "title": "自訂輸入記錄",
+      "sub": "將以目前時間記錄，請輸入名稱與特徵。",
+      "nameLabel": "名稱（必填）",
+      "namePlaceholder": "例：吃水果、散步、刷牙",
+      "recentlyUsed": "最近使用：",
+      "detailLabel": "特徵（選填）",
+      "detailPlaceholder": "例：草莓2顆、公園30分鐘",
+      "nameRequired": {
+        "title": "需要輸入名稱",
+        "desc": "請輸入要記錄的名稱。（例：吃水果）"
+      },
+      "nameLength": {
+        "title": "名稱長度",
+        "desc": "名稱請在20字以內。"
+      },
+      "detailLength": {
+        "title": "特徵長度",
+        "desc": "特徵請在80字以內。"
+      }
+    },
+    "ageRange": {
+      "a0to1": "0~1個月適用",
+      "a1to3": "1~3個月適用",
+      "a3to6": "3~6個月適用",
+      "a6to12": "6~12個月適用",
+      "a12plus": "12個月以上適用"
+    },
+    "unit": {
+      "times": "{{count}}次",
+      "hoursMinutes": "{{h}}小時{{m}}分",
+      "hoursOnly": "{{h}}小時",
+      "minutesOnly": "{{m}}分"
+    },
+    "daySummary": {
+      "feeding": "餵食",
+      "sleep": "睡眠",
+      "diaper": "如廁",
+      "diaperBoth": "尿{{pee}}·便{{poop}}",
+      "diaperPoopOnly": "便{{poop}}",
+      "diaperPeeOnly": "尿{{pee}}"
+    },
+    "dailyRef": {
+      "firstMeal": "第一餐",
+      "mealInterval": "餵食間隔",
+      "mealIntervalHint": "飯後 / 建議 {{hours}}小時",
+      "dailyFormula": "每日配方奶",
+      "byWeightHint": "今日累計 / 依體重計算",
+      "dailySleep": "每日睡眠",
+      "byAgeHint": "今日累計 / 依月齡計算",
+      "autoCalcNote": "ⓘ 建議值會依寶寶月齡·體重自動計算"
+    },
+    "breastActive": {
+      "accessibilityLabel": "母乳哺餵進行中 {{side}}，經過 {{elapsed}}，推估 {{amount}}ml。點按結束",
+      "title": "母乳哺餵進行中",
+      "tapToEnd": "點按結束",
+      "estimatedAmount": "預估哺餵量：約{{amount}}ml",
+      "calcHint": "計算方式：經過時間 × 每分鐘{{mlPerMin}}ml（{{ageLabel}}）",
+      "estimateNote": "ⓘ 此為根據醫學資料的推估值，實際量會依寶寶、媽媽與時段而異。"
+    },
+    "side": {
+      "left": "左邊",
+      "right": "右邊"
+    },
+    "periodAnalysis": "期間分析（{{period}}）",
+    "dailyPattern": "每日模式 · 24小時",
+    "timeline": {
+      "title": "今天的時間軸（{{count}}筆）"
+    },
+    "loading": "載入中...",
+    "formulaRecordTitle": "配方奶記錄",
+    "record": "記錄",
+    "timeSpecify": "指定時間",
+    "timedPrompt": {
+      "sleepStart": "幾點入睡的呢？",
+      "sleepWake": "幾點醒來的呢？",
+      "breast": "請先選擇方向，再選擇開始時間",
+      "general": "是幾點發生的呢？"
+    },
+    "sleepDate": "睡眠日期",
+    "wakeDate": "起床日期",
+    "recordAtTime": "於{{time}}記錄",
+    "recordOptions": "記錄選項",
+    "editTimeNote": "編輯（時間·備註）",
+    "editWithLabel": "編輯{{label}}",
+    "date": "日期",
+    "moved": "已移動",
+    "sleepStartDate": "開始睡眠日期",
+    "sleepStartTime": "開始睡眠時間",
+    "wakeTime": "起床時間",
+    "inProgress": "進行中",
+    "estimatedAmount": "約{{amount}}ml（推估）",
+    "recordedBy": "由{{author}}記錄",
+    "bottomBarHint": "點一下：立即記錄 · 長按：指定時間",
+    "breastFeeding": "哺乳中"
   }
 }

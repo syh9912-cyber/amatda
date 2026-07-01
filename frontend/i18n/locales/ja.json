@@ -135,5 +135,253 @@
       "lifeLog": "生活記録",
       "playLearning": "あそび学習"
     }
+  },
+  "babyTracker": {
+    "voicePin": {
+      "title": "音声入力アイコンを追加",
+      "desc": "ホーム画面に「音声記録」アイコンを追加すると、アイコン一つでそのまま話して記録できます。追加しますか？",
+      "later": "あとで",
+      "add": "追加",
+      "manualTitle": "ホームに追加する",
+      "manualDesc": "「ホーム画面の構成がロックされています」と表示される場合は、ホーム画面のレイアウトロックが原因です。\n\n[解除方法 — Samsung Galaxy]\nホーム画面の空いている場所を長押し → 設定 → 「ホーム画面レイアウトのロック」をオフ → もう一度追加\n\n[または直接ドラッグ]\nアプリアイコンを長押しして「音声記録」をホーム画面の空いている場所にドラッグしてください。"
+    },
+    "tabs": {
+      "diaper": "おむつ",
+      "feeding": "授乳・食事",
+      "sleep": "睡眠",
+      "medication": "投薬"
+    },
+    "subtypes": {
+      "pee": "おしっこ",
+      "poop": "うんち",
+      "both": "おしっこ+うんち",
+      "breast": "母乳",
+      "formula": "ミルク",
+      "babyFood": "離乳食",
+      "snack": "おやつ",
+      "nap": "昼寝",
+      "night": "夜間睡眠",
+      "sleep": "睡眠",
+      "wake": "起床",
+      "fever": "解熱剤",
+      "antibiotic": "抗生剤",
+      "vitamin": "ビタミン",
+      "otherMed": "その他の薬",
+      "customInput": "自由入力"
+    },
+    "feedingTypes": {
+      "pregnantMeal": "食事",
+      "pregnantSnack": "間食",
+      "pregnantSupplement": "サプリメント",
+      "infantBreast": "母乳",
+      "infantFormula": "ミルク",
+      "infantBabyFood": "離乳食",
+      "infantSnack": "おやつ",
+      "toddlerBabyFood": "幼児食",
+      "toddlerMeal": "ごはん",
+      "toddlerSnack": "おやつ",
+      "toddlerMilk": "牛乳",
+      "elementaryMeal": "食事",
+      "elementarySnack": "間食"
+    },
+    "period": {
+      "week": "7日間",
+      "twoWeeks": "14日間",
+      "month": "1か月",
+      "days": "{{count}}日間"
+    },
+    "weeklyTable": {
+      "title": "直近{{period}}のまとめ",
+      "date": "日付"
+    },
+    "today": "今日",
+    "selectType": "種類を選択",
+    "selectTypeRequired": "種類を選択してください。",
+    "time": "時間",
+    "endTime": "終了時間",
+    "formulaAmountMl": "ミルクの量 (ml)",
+    "exampleAmount120": "例: 120",
+    "exampleAmount120b": "例) 120",
+    "breastDurationMin": "授乳時間 (分)",
+    "exampleAmount15": "例: 15",
+    "amountMl": "量 (ml)",
+    "note": "メモ",
+    "noteOptional": "メモ（任意）",
+    "notePlaceholder": {
+      "diaper": "色、状態など",
+      "feeding": "特記事項",
+      "sleep": "睡眠の質など",
+      "nap": "例) 昼寝、よく眠っている",
+      "wake": "例) 起きてすぐぐずる",
+      "breast": "例) げっぷした、よく飲んだ",
+      "generalFeed": "例) いつもよりよく食べた"
+    },
+    "defaultFormula": {
+      "titleWithAmount": "基本のミルク量 {{amount}}ml",
+      "changeHint": "ミルクの量を入力し直してチェックして保存すると変更されます。",
+      "changeHintAmount": "量を入力し直してチェックして保存すると変更されます。",
+      "unset": "基本値を解除",
+      "currentWithHint": "基本のミルク量 {{amount}}ml・長押しで変更/解除",
+      "autoSaveHint": "基本のミルク量として自動保存されます"
+    },
+    "viewOnly": {
+      "title": "閲覧専用",
+      "desc": "このお子さまの記録を編集する権限がありません。\n保護者に編集権限を依頼してください。"
+    },
+    "recordedWithLabel": "{{label}}を記録しました",
+    "sleepInProgress": {
+      "title": "睡眠記録が進行中です",
+      "descPressWake": "{{date}} {{time}}に始まった睡眠が進行中です。先に起床ボタンを押してください。",
+      "descPressWakeEnd": "{{date}} {{time}}に始まった睡眠が進行中です。起床ボタンを押して終了してください。"
+    },
+    "sleepStartLabel": "睡眠開始",
+    "noSleepStartRecord": {
+      "title": "睡眠開始の記録がありません",
+      "desc": "「睡眠開始」を先に押してください。",
+      "descFull": "睡眠開始の記録がありません。「睡眠開始」を先に押してください。"
+    },
+    "breastInProgress": {
+      "title": "授乳が進行中です",
+      "desc": "進行中の授乳を先に終了してから時間指定入力をご利用ください。"
+    },
+    "breastDirection": {
+      "title": "授乳する方向を選択",
+      "desc": "左右どちらか先に選択してください。"
+    },
+    "toast": {
+      "recordedAt": "{{label}} {{time}} 記録",
+      "sleepStartAt": "睡眠開始 {{time}} 記録",
+      "wakeAt": "起床 {{time}} 記録",
+      "breastStartAt": "{{side}}授乳開始 {{time}} 記録",
+      "breastStart": "{{side}}授乳開始",
+      "breastRecorded": "母乳 {{duration}} 記録しました",
+      "activeSleepTimeUpdated": "進行中の睡眠開始時間を修正しました",
+      "movedTo": "{{month}}/{{day}}へ移動しました",
+      "editComplete": "修正が完了しました",
+      "formulaOneTouch": "ミルク {{amount}}ml 記録・長押しで修正",
+      "customRecorded": "「{{name}}」を記録しました",
+      "sleepStartRecorded": "睡眠開始を記録しました",
+      "wakeRecorded": "起床を記録 ({{duration}})"
+    },
+    "yesterdaySleep": {
+      "title": "昨日始まった睡眠",
+      "desc": "この睡眠記録は昨日始まったものです。昨日の日付に移動して編集してください。"
+    },
+    "timeFormat": {
+      "title": "時刻の形式",
+      "desc": "時刻をもう一度ご確認ください（例: 08:30）"
+    },
+    "wakeTimeFormat": {
+      "title": "起床時刻の形式",
+      "desc": "起床時刻をもう一度ご確認ください（例: 08:30）"
+    },
+    "sleepTooLong": {
+      "title": "睡眠時間が長すぎます",
+      "desc": "{{hours}}時間と計算されたため14時間に制限しました。起床時刻の入力を忘れた場合は直接修正してください。"
+    },
+    "cancelActiveSleep": {
+      "title": "進行中の睡眠をキャンセル",
+      "desc": "開始した睡眠記録をキャンセルしますか？",
+      "confirm": "キャンセルする"
+    },
+    "deleteRecord": {
+      "title": "記録を削除",
+      "desc": "この記録を削除しますか？"
+    },
+    "customRecord": {
+      "title": "自由入力で記録",
+      "sub": "現在の時刻で記録されます。名前と特徴を入力してください。",
+      "nameLabel": "名前（必須）",
+      "namePlaceholder": "例: 果物を食べた、散歩、歯みがき",
+      "recentlyUsed": "最近使った項目:",
+      "detailLabel": "特徴（任意）",
+      "detailPlaceholder": "例: いちご2個、公園で30分",
+      "nameRequired": {
+        "title": "名前が必要です",
+        "desc": "記録する名前を入力してください。（例: 果物を食べた）"
+      },
+      "nameLength": {
+        "title": "名前の長さ",
+        "desc": "名前は20文字以内で入力してください。"
+      },
+      "detailLength": {
+        "title": "特徴の長さ",
+        "desc": "特徴は80文字以内で入力してください。"
+      }
+    },
+    "ageRange": {
+      "a0to1": "生後0〜1か月基準",
+      "a1to3": "生後1〜3か月基準",
+      "a3to6": "生後3〜6か月基準",
+      "a6to12": "生後6〜12か月基準",
+      "a12plus": "生後12か月以上基準"
+    },
+    "unit": {
+      "times": "{{count}}回",
+      "hoursMinutes": "{{h}}時間{{m}}分",
+      "hoursOnly": "{{h}}時間",
+      "minutesOnly": "{{m}}分"
+    },
+    "daySummary": {
+      "feeding": "授乳",
+      "sleep": "睡眠",
+      "diaper": "排泄",
+      "diaperBoth": "尿{{pee}}・便{{poop}}",
+      "diaperPoopOnly": "便{{poop}}",
+      "diaperPeeOnly": "尿{{pee}}"
+    },
+    "dailyRef": {
+      "firstMeal": "最初の食事",
+      "mealInterval": "食事の間隔",
+      "mealIntervalHint": "食後 / 推奨 {{hours}}時間",
+      "dailyFormula": "1日のミルク量",
+      "byWeightHint": "本日累計 / 体重基準",
+      "dailySleep": "1日の睡眠",
+      "byAgeHint": "本日累計 / 月齢基準",
+      "autoCalcNote": "ⓘ 推奨値はお子さまの月齢・体重に合わせて自動計算されます"
+    },
+    "breastActive": {
+      "accessibilityLabel": "授乳中 {{side}}、経過 {{elapsed}}、推定 {{amount}}ml。タップして終了",
+      "title": "授乳中",
+      "tapToEnd": "タップして終了",
+      "estimatedAmount": "推定授乳量: 約{{amount}}ml",
+      "calcHint": "計算: 経過時間 × 1分あたり{{mlPerMin}}ml（{{ageLabel}}）",
+      "estimateNote": "ⓘ 医療資料に基づく推定値です。実際の量は赤ちゃん・ママ・時間帯によって異なります。"
+    },
+    "side": {
+      "left": "左",
+      "right": "右"
+    },
+    "periodAnalysis": "期間分析（{{period}}）",
+    "dailyPattern": "1日のパターン・24時間",
+    "timeline": {
+      "title": "今日のタイムライン（{{count}}件）"
+    },
+    "loading": "読み込み中...",
+    "formulaRecordTitle": "ミルクの記録",
+    "record": "記録",
+    "timeSpecify": "時間指定",
+    "timedPrompt": {
+      "sleepStart": "何時に寝ましたか？",
+      "sleepWake": "何時に起きましたか？",
+      "breast": "方向を選んでから開始時刻を選んでください",
+      "general": "何時にありましたか？"
+    },
+    "sleepDate": "睡眠日",
+    "wakeDate": "起床日",
+    "recordAtTime": "{{time}}に記録",
+    "recordOptions": "記録のオプション",
+    "editTimeNote": "編集（時間・メモ）",
+    "editWithLabel": "{{label}}を編集",
+    "date": "日付",
+    "moved": "移動",
+    "sleepStartDate": "睡眠開始日",
+    "sleepStartTime": "睡眠開始時間",
+    "wakeTime": "起床時間",
+    "inProgress": "進行中",
+    "estimatedAmount": "約{{amount}}ml（推定）",
+    "recordedBy": "{{author}}が記録",
+    "bottomBarHint": "タップ: 今すぐ記録・長押し: 時間指定",
+    "breastFeeding": "授乳中"
   }
 }

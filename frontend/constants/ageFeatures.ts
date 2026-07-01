@@ -41,27 +41,30 @@ export interface FeedingType {
   label: string;
 }
 
+// label 필드는 표시 텍스트가 아니라 i18n 키 접미사다 — 사용처(baby-tracker.tsx)에서
+// t(`babyTracker.feedingTypes.${label}`) 로 조회한다. 같은 key(예: baby_food)라도
+// 연령대별 문구가 달라 label 을 age-prefixed 키로 분리했다.
 const FEEDING_TYPES_BY_AGE: Record<AgeGroupKey, FeedingType[]> = {
   pregnant: [
-    { key: 'meal', label: '식사' },
-    { key: 'snack', label: '간식' },
-    { key: 'supplement', label: '영양제' },
+    { key: 'meal', label: 'pregnantMeal' },
+    { key: 'snack', label: 'pregnantSnack' },
+    { key: 'supplement', label: 'pregnantSupplement' },
   ],
   infant: [
-    { key: 'breast', label: '모유' },
-    { key: 'formula', label: '분유' },
-    { key: 'baby_food', label: '이유식' },
-    { key: 'snack', label: '간식' },
+    { key: 'breast', label: 'infantBreast' },
+    { key: 'formula', label: 'infantFormula' },
+    { key: 'baby_food', label: 'infantBabyFood' },
+    { key: 'snack', label: 'infantSnack' },
   ],
   toddler: [
-    { key: 'baby_food', label: '유아식' },
-    { key: 'meal', label: '밥' },
-    { key: 'snack', label: '간식' },
-    { key: 'milk', label: '우유' },
+    { key: 'baby_food', label: 'toddlerBabyFood' },
+    { key: 'meal', label: 'toddlerMeal' },
+    { key: 'snack', label: 'toddlerSnack' },
+    { key: 'milk', label: 'toddlerMilk' },
   ],
   elementary: [
-    { key: 'meal', label: '식사' },
-    { key: 'snack', label: '간식' },
+    { key: 'meal', label: 'elementaryMeal' },
+    { key: 'snack', label: 'elementarySnack' },
   ],
 };
 
