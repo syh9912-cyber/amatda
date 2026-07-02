@@ -422,6 +422,7 @@ interface RecordCardProps {
 }
 
 function RecordCard({ record, onDelete }: RecordCardProps) {
+  const { t } = useTranslation();
   const typeColor =
     record.type === 'diaper'
       ? TRACKER_COLORS.diaper
@@ -444,13 +445,13 @@ function RecordCard({ record, onDelete }: RecordCardProps) {
     detail = `${record.amount}ml`;
   }
   if (record.type === 'feeding' && record.duration) {
-    detail = detail ? `${detail} / ${formatMinutes(record.duration)}` : formatMinutes(record.duration);
+    detail = detail ? `${detail} / ${formatMinutes(record.duration, t)}` : formatMinutes(record.duration, t);
   }
   if (record.type === 'sleep' && record.endTime) {
     const dur = record.duration ?? calcDurationMinutes(record.time, record.endTime);
-    detail = `${record.time} ~ ${record.endTime} (${formatMinutes(dur)})`;
+    detail = `${record.time} ~ ${record.endTime} (${formatMinutes(dur, t)})`;
   } else if (record.type === 'sleep' && record.duration) {
-    detail = formatMinutes(record.duration);
+    detail = formatMinutes(record.duration, t);
   }
 
   return (
@@ -2336,7 +2337,7 @@ function BabyTrackerInner() {
     }
     await saveBreastSession(childId, null);
     setBreastSession(null);
-    showToast(t('babyTracker.toast.breastRecorded', { duration: formatMinutes(diff) }));
+    showToast(t('babyTracker.toast.breastRecorded', { duration: formatMinutes(diff, t) }));
   }
 
   function handleBreastPress() {
@@ -2433,7 +2434,7 @@ function BabyTrackerInner() {
     }
     await saveSleepSession(childId, null);
     setSleepSession(null);
-    showToast(t('babyTracker.toast.wakeRecorded', { duration: formatMinutes(duration) }));
+    showToast(t('babyTracker.toast.wakeRecorded', { duration: formatMinutes(duration, t) }));
   }
 
   function handleDeleteRecord(id: string) {
@@ -2647,7 +2648,7 @@ function BabyTrackerInner() {
               style={[styles.dateText, isToday(currentDate) && styles.dateTextToday]}
               numberOfLines={1}
             >
-              {formatDateKorean(currentDate)}
+              {formatDateKorean(currentDate, t)}
             </Text>
           </TouchableOpacity>
 
@@ -2900,7 +2901,7 @@ function BabyTrackerInner() {
         {clockSectionOpen && (
           <DayClock
             records={allRecordsSorted}
-            dateLabel={isToday(currentDate) ? t('babyTracker.today') : formatDateKorean(currentDate)}
+            dateLabel={isToday(currentDate) ? t('babyTracker.today') : formatDateKorean(currentDate, t)}
             onPrevDay={() => goDay(-1)}
             onNextDay={() => goDay(1)}
             canGoNext={!isToday(currentDate)}
@@ -3183,7 +3184,7 @@ function BabyTrackerInner() {
                     <Text style={editModalStyles.dateArrowText}>◀</Text>
                   </TouchableOpacity>
                   <Text style={editModalStyles.dateText}>
-                    {formatDateKorean(new Date(timedActionDate + 'T00:00:00'))}
+                    {formatDateKorean(new Date(timedActionDate + 'T00:00:00'), t)}
                   </Text>
                   <TouchableOpacity
                     style={[editModalStyles.dateArrow, timedActionDate >= formatDate(new Date()) && { opacity: 0.3 }]}
@@ -3355,7 +3356,7 @@ function BabyTrackerInner() {
                         <Text style={editModalStyles.dateArrowText}>◀</Text>
                       </TouchableOpacity>
                       <Text style={editModalStyles.dateText}>
-                        {formatDateKorean(new Date(editDate + 'T00:00:00'))}
+                        {formatDateKorean(new Date(editDate + 'T00:00:00'), t)}
                         {editDate !== dateStr ? ` (${t('babyTracker.moved')})` : ''}
                       </Text>
                       <TouchableOpacity
@@ -3378,7 +3379,7 @@ function BabyTrackerInner() {
                           <Text style={editModalStyles.dateArrowText}>◀</Text>
                         </TouchableOpacity>
                         <Text style={editModalStyles.dateText}>
-                          {editEndDate ? formatDateKorean(new Date(editEndDate + 'T00:00:00')) : '-'}
+                          {editEndDate ? formatDateKorean(new Date(editEndDate + 'T00:00:00'), t) : '-'}
                         </Text>
                         <TouchableOpacity
                           style={[editModalStyles.dateArrow, (editEndDate >= formatDate(new Date())) && { opacity: 0.3 }]}
@@ -3720,6 +3721,7 @@ interface SleepSessionCardProps {
 }
 
 function SleepSessionCard({ session, now, onStart, onWake }: SleepSessionCardProps) {
+  const { t } = useTranslation();
   if (!session) {
     return (
       <TouchableOpacity style={sleepSessionStyles.cardIdle} onPress={onStart} activeOpacity={0.85}>
@@ -3743,7 +3745,7 @@ function SleepSessionCard({ session, now, onStart, onWake }: SleepSessionCardPro
         <Image source={IC_SLEEP} style={sleepSessionStyles.icon} resizeMode="contain" />
         <Text style={sleepSessionStyles.activeTitle}>수면 중</Text>
       </View>
-      <Text style={sleepSessionStyles.activeDuration}>{formatMinutes(diffMin)}</Text>
+      <Text style={sleepSessionStyles.activeDuration}>{formatMinutes(diffMin, t)}</Text>
       <Text style={sleepSessionStyles.activeStartedAt}>시작 {startLabel}</Text>
       <TouchableOpacity style={sleepSessionStyles.wakeBtn} onPress={onWake} activeOpacity={0.85}>
         <Text style={sleepSessionStyles.wakeBtnText}>기상</Text>
@@ -4124,14 +4126,14 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete, onLongAction, 
   const label = record.subType === 'breast' && record.note
     ? `${baseLabel} (${record.note})`
     : baseLabel;
-  const relative = showRelative ? getRelativeTime(record.time, dateStr) : '';
+  const relative = showRelative ? getRelativeTime(record.time, dateStr, t) : '';
   // note를 라벨에 합쳤으면 하단 note는 숨김
   const hideNote = record.subType === 'breast';
 
   // Amount/duration은 첫 줄 info로
   const infoParts: string[] = [];
   if (record.amount != null && record.amount > 0) infoParts.push(`${record.amount}ml`);
-  if (record.duration != null && record.duration > 0) infoParts.push(formatMinutes(record.duration));
+  if (record.duration != null && record.duration > 0) infoParts.push(formatMinutes(record.duration, t));
   // 모유: duration 있으면 연령별 추정 ml 같이 표시 (요약 표와 동일 계산)
   if (
     record.type === 'feeding' &&

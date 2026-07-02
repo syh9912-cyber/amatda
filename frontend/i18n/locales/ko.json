@@ -23,7 +23,26 @@
     "change": "변경",
     "collapse": "접기",
     "complete": "완료",
-    "view": "보기"
+    "view": "보기",
+    "time": {
+      "dayShort": {
+        "sun": "일",
+        "mon": "월",
+        "tue": "화",
+        "wed": "수",
+        "thu": "목",
+        "fri": "금",
+        "sat": "토"
+      },
+      "dateWithDay": "{{month}}월 {{day}}일 ({{dayName}})",
+      "justNow": "방금 전",
+      "minutesAgo": "{{count}}분 전",
+      "hoursAgo": "{{count}}시간 전",
+      "hoursMinutesAgo": "{{hours}}시간{{minutes}}분 전",
+      "minutes": "{{count}}분",
+      "hours": "{{count}}시간",
+      "hoursMinutes": "{{hours}}시간 {{minutes}}분"
+    }
   },
   "home": {
     "networkError": {

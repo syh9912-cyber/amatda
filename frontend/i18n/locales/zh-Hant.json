@@ -23,7 +23,26 @@
     "change": "變更",
     "collapse": "收合",
     "complete": "完成",
-    "view": "查看"
+    "view": "查看",
+    "time": {
+      "dayShort": {
+        "sun": "日",
+        "mon": "一",
+        "tue": "二",
+        "wed": "三",
+        "thu": "四",
+        "fri": "五",
+        "sat": "六"
+      },
+      "dateWithDay": "{{month}}月{{day}}日（週{{dayName}}）",
+      "justNow": "剛剛",
+      "minutesAgo": "{{count}}分鐘前",
+      "hoursAgo": "{{count}}小時前",
+      "hoursMinutesAgo": "{{hours}}小時{{minutes}}分鐘前",
+      "minutes": "{{count}}分鐘",
+      "hours": "{{count}}小時",
+      "hoursMinutes": "{{hours}}小時{{minutes}}分鐘"
+    }
   },
   "home": {
     "networkError": {

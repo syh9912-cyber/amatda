@@ -23,7 +23,26 @@
     "change": "変更",
     "collapse": "閉じる",
     "complete": "完了",
-    "view": "見る"
+    "view": "見る",
+    "time": {
+      "dayShort": {
+        "sun": "日",
+        "mon": "月",
+        "tue": "火",
+        "wed": "水",
+        "thu": "木",
+        "fri": "金",
+        "sat": "土"
+      },
+      "dateWithDay": "{{month}}月{{day}}日({{dayName}})",
+      "justNow": "たった今",
+      "minutesAgo": "{{count}}分前",
+      "hoursAgo": "{{count}}時間前",
+      "hoursMinutesAgo": "{{hours}}時間{{minutes}}分前",
+      "minutes": "{{count}}分",
+      "hours": "{{count}}時間",
+      "hoursMinutes": "{{hours}}時間{{minutes}}分"
+    }
   },
   "home": {
     "networkError": {
