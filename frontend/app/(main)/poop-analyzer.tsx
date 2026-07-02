@@ -81,7 +81,7 @@ function resolveLikelihoodConfig(likelihood: string): { color: string; bg: strin
 export default function PoopAnalyzerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
 
   // 연령 제한: 영아+유아(0-72개월)만 접근 가능 (임신부 모드는 조용히 뒤로)
@@ -167,6 +167,7 @@ export default function PoopAnalyzerScreen() {
         undefined,
         base64,
         'image/jpeg',
+        i18n.language,
       );
       const data = res.data?.data as AnalysisResult | undefined;
       if (data) {
@@ -212,7 +213,7 @@ export default function PoopAnalyzerScreen() {
     } finally {
       setAnalyzing(false);
     }
-  }, [photoUri, selectedChild, t]);
+  }, [photoUri, selectedChild, t, i18n.language]);
 
   const handleReset = useCallback(() => {
     setResult(null);

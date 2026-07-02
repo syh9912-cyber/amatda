@@ -25,7 +25,14 @@ const AnalyzeMediaBodySchema = z.object({
   description: z.string().max(1000).optional(),
   mediaBase64: z.string().max(8 * 1024 * 1024).optional(), // ~6MB raw → 5MB base64-decoded cap
   mediaMimeType: z.string().max(64).optional(),
+  locale: z.enum(['ko', 'ja', 'zh-Hant']).optional(),
 });
+
+// 비한국어 로케일이면 프롬프트 뒤에 응답 언어 힌트만 추가(추가형) — 한국어 프롬프트 본문은 무변경
+const LOCALE_RESPONSE_HINT: Partial<Record<'ja' | 'zh-Hant', string>> = {
+  ja: '\n\n[重要] JSON の全ての値(analysis, possibilities[].label, recommendations 等)は自然な日本語で作成しろ。likelihood の値も「高い/普通/低い」のように日本語で書け。JSON のキー名は英語のまま維持しろ。',
+  'zh-Hant': '\n\n[重要] JSON 中所有的值(analysis, possibilities[].label, recommendations 等)請以自然的繁體中文書寫。likelihood 的值也請用「高/中/低」等繁體中文表示。JSON 的鍵名請保持英文原樣。',
+};
 
 /**
  * base64 데이터 + MIME 검증.
@@ -250,12 +257,66 @@ recommendations는 부모가 바로 실천할 수 있는 구체적 행동을 적
 
 // ─── Mock 빌더 ───
 
+// 목업 폴백(AI 미사용/실패 시)용 로케일별 문구. 키워드 감지는 한국어 설명 기준이라
+// 비한국어 입력에서는 항상 "그 외" 분기로 빠지지만(하드 오류 아님), 텍스트 자체는
+// 로케일에 맞게 준비해 최소한 폴백 결과가 한국어로 노출되지는 않도록 함.
+const CRY_KEYWORDS: Record<'hunger' | 'pain' | 'sleepy', string[]> = {
+  hunger: ['배고', '먹', '젖'],
+  pain: ['아프', '높', '급', '갑자기'],
+  sleepy: ['졸', '잠', '눈'],
+};
+
 function buildMockCryAnalysis(
-  name: string, description: string
+  name: string, description: string, locale?: string
 ): Record<string, unknown> {
-  const hasHunger = description.includes('배고') || description.includes('먹') || description.includes('젖');
-  const hasPain = description.includes('아프') || description.includes('높') || description.includes('급') || description.includes('갑자기');
-  const hasSleepy = description.includes('졸') || description.includes('잠') || description.includes('눈');
+  const hasHunger = CRY_KEYWORDS.hunger.some((k) => description.includes(k));
+  const hasPain = CRY_KEYWORDS.pain.some((k) => description.includes(k));
+  const hasSleepy = CRY_KEYWORDS.sleepy.some((k) => description.includes(k));
+
+  if (locale === 'ja') {
+    return {
+      childName: name,
+      type: 'cry',
+      analysis: `お子さんの泣き声を分析しました。${hasPain ? '突然で強い泣き方のパターンが検出され、痛みや不快感の可能性があります。まず体温とおむつの状態を確認してください。' : hasHunger ? '規則的で徐々に強くなる泣き方のパターンで、空腹のサインである可能性が高いです。最後の授乳時間を確認してください。' : hasSleepy ? 'ぐずついた不規則な泣き方で、疲れ・眠気のサインかもしれません。眠りやすい環境を整えてあげてください。' : 'お子さんの泣き声を総合的に分析した結果、いくつかの可能性があります。以下のチェックリストを順番に確認してみてください。'}`,
+      possibilities: [
+        { label: '空腹', likelihood: hasHunger ? '高い' : '普通' },
+        { label: '眠気・疲れ', likelihood: hasSleepy ? '高い' : '普通' },
+        { label: '痛み・不快感', likelihood: hasPain ? '高い' : '低い' },
+        { label: 'おむつ・体温', likelihood: '普通' },
+        { label: '過刺激・環境', likelihood: '低い' },
+      ],
+      recommendations: [
+        '最後の授乳/食事時間を確認し、2時間以上経っていたら授乳を試してみてください。',
+        'おむつの状態を確認し、体温を測ってください（正常値：36.5〜37.5度）。',
+        '抱っこしてゆっくり揺らしながら、シーッという音やホワイトノイズであやしてみてください。',
+        '明るすぎたりうるさい環境なら、静かで暗い場所に移動してみてください。',
+        '30分以上あやしても泣き止まない場合は、小児科への電話相談を検討してください。',
+      ],
+      needsDoctor: hasPain,
+    };
+  }
+  if (locale === 'zh-Hant') {
+    return {
+      childName: name,
+      type: 'cry',
+      analysis: `分析了寶寶的哭聲。${hasPain ? '偵測到突然且強烈的哭泣模式，可能有疼痛或不適感，請先確認體溫和尿布狀態。' : hasHunger ? '規律且逐漸增強的哭泣模式，很可能是肚子餓的訊號，請確認上次餵食的時間。' : hasSleepy ? '帶有煩躁感的不規則哭聲，可能是疲累/想睡的訊號，請營造舒適的睡眠環境。' : '綜合分析寶寶的哭聲後，有幾種可能性，請依序確認以下檢查清單。'}`,
+      possibilities: [
+        { label: '肚子餓', likelihood: hasHunger ? '高' : '中' },
+        { label: '想睡/疲累', likelihood: hasSleepy ? '高' : '中' },
+        { label: '疼痛/不適', likelihood: hasPain ? '高' : '低' },
+        { label: '尿布/體溫', likelihood: '中' },
+        { label: '過度刺激/環境', likelihood: '低' },
+      ],
+      recommendations: [
+        '確認上次餵食時間，若已超過2小時可以嘗試餵食。',
+        '確認尿布狀態並測量體溫（正常範圍：36.5~37.5度）。',
+        '抱起來輕輕搖晃，用噓聲或白噪音安撫。',
+        '若環境太亮或太吵，可以移到安靜昏暗的地方。',
+        '若安撫超過30分鐘仍未停止哭泣，建議電話諮詢小兒科。',
+      ],
+      needsDoctor: hasPain,
+    };
+  }
 
   return {
     childName: name,
@@ -279,13 +340,80 @@ function buildMockCryAnalysis(
   };
 }
 
+const POOP_KEYWORDS: Record<'red' | 'white' | 'watery', string[]> = {
+  red: ['빨간', '피', '혈'],
+  white: ['하얀', '흰', '회색'],
+  watery: ['물', '설사'],
+};
+
 function buildMockPoopAnalysis(
-  name: string, description: string
+  name: string, description: string, locale?: string
 ): Record<string, unknown> {
-  const hasRed = description.includes('빨간') || description.includes('피') || description.includes('혈');
-  const hasWhite = description.includes('하얀') || description.includes('흰') || description.includes('회색');
-  const hasWatery = description.includes('물') || description.includes('설사');
+  const hasRed = POOP_KEYWORDS.red.some((k) => description.includes(k));
+  const hasWhite = POOP_KEYWORDS.white.some((k) => description.includes(k));
+  const hasWatery = POOP_KEYWORDS.watery.some((k) => description.includes(k));
   const needsDoctor = hasRed || hasWhite;
+
+  if (locale === 'ja') {
+    return {
+      childName: name,
+      type: 'poop',
+      analysis: `お子さんの便を分析しました。${needsDoctor ? '注意が必要な兆候が確認されました。血便や白色便は消化器の問題を示している可能性があるため、小児科の受診をおすすめします。便の写真を保存して医師に見せてください。' : hasWatery ? '柔らかい便または水っぽい状態が観察されます。一時的な食事の変化や腸の動きの変化によるものかもしれませんが、脱水の兆候(唇の乾燥、尿量の減少)に注意して観察してください。' : '現在の便の状態は、その月齢の正常範囲内です。色や形は良好で、特に異常な兆候は見られません。'}`,
+      possibilities: [
+        { label: '正常範囲', likelihood: needsDoctor ? '低い' : '高い' },
+        { label: '食事の影響', likelihood: hasWatery ? '高い' : '普通' },
+        { label: '消化機能の変化', likelihood: hasWatery ? '高い' : '低い' },
+        { label: '腸感染・炎症', likelihood: needsDoctor ? '高い' : '低い' },
+        { label: 'アレルギー反応', likelihood: hasRed ? '普通' : '低い' },
+      ],
+      recommendations: needsDoctor
+        ? [
+            '今日中に小児科を受診してください。',
+            '便が付いたおむつを袋に密封して病院へ持って行ってください。',
+            '直近48時間に食べた食品と薬をメモしてください。',
+            '体温を測り、38度以上なら救急受診を検討してください。',
+            '水分を少量ずつこまめに与えてください(母乳/ミルク/経口補水液)。',
+          ]
+        : [
+            '水分を十分に与えてください(母乳/ミルクはいつも通り、離乳食の子は水を追加)。',
+            '最近新しく食べさせた食品があれば、2〜3日中止して変化を観察してください。',
+            '乳酸菌(プロバイオティクス)は小児科相談の上で始めてみてもよいでしょう。',
+            'お腹を時計回りにやさしくマッサージして腸の動きを助けてあげてください。',
+            '3日以上同じ状態が続く場合は小児科を受診してください。',
+          ],
+      needsDoctor,
+    };
+  }
+  if (locale === 'zh-Hant') {
+    return {
+      childName: name,
+      type: 'poop',
+      analysis: `分析了寶寶的大便。${needsDoctor ? '確認到需要留意的徵兆，血便或白色便可能代表消化系統問題，建議儘快就醫，並保留照片給醫師參考。' : hasWatery ? '觀察到偏軟或水狀的大便，可能是暫時的飲食變化或腸道蠕動變化所致，但請留意脫水徵兆(嘴唇乾燥、尿量減少)。' : '目前的大便狀態屬於該月齡的正常範圍，顏色與形狀良好，未見特別異常徵兆。'}`,
+      possibilities: [
+        { label: '正常範圍', likelihood: needsDoctor ? '低' : '高' },
+        { label: '飲食影響', likelihood: hasWatery ? '高' : '中' },
+        { label: '消化功能變化', likelihood: hasWatery ? '高' : '低' },
+        { label: '腸道感染/發炎', likelihood: needsDoctor ? '高' : '低' },
+        { label: '過敏反應', likelihood: hasRed ? '中' : '低' },
+      ],
+      recommendations: needsDoctor
+        ? [
+            '請今天內就醫看小兒科。',
+            '請將沾有大便的尿布密封裝袋帶去給醫師看。',
+            '請記錄最近48小時吃過的食物與藥物。',
+            '請測量體溫，若超過38度請考慮掛急診。',
+            '請少量多次補充水分(母乳/配方奶/電解質水)。',
+          ]
+        : [
+            '請補充足夠的水分(母乳/配方奶維持平時份量，已吃副食品的孩子可額外補水)。',
+            '若最近有新添加的食物，可先暫停2~3天觀察變化。',
+            '益生菌可在諮詢小兒科醫師後考慮使用。',
+            '以順時針方向輕柔按摩腹部，幫助腸道蠕動。',
+            '若相同狀況持續超過3天，請就醫看小兒科。',
+          ],
+      needsDoctor,
+    };
+  }
 
   return {
     childName: name,
@@ -324,7 +452,7 @@ export function registerAnalyzeMediaHandler(router: Router): void {
     try {
       const body = parseBody(req, res, AnalyzeMediaBodySchema);
       if (!body) return;
-      const { childId, type, description, mediaBase64, mediaMimeType } = body;
+      const { childId, type, description, mediaBase64, mediaMimeType, locale } = body;
 
       if (!mediaBase64 && !description) {
         error(res, '미디어 파일 또는 설명이 필요합니다');
@@ -354,8 +482,11 @@ export function registerAnalyzeMediaHandler(router: Router): void {
       const tier = await getUserTier(req.userId!);
       const usage = await checkAndIncrementUsage(req.userId!, tier);
       if (!usage.allowed) {
-        const limitLabel = tier === 'free' ? '무료 회원 월 3회' : '유료 회원 월 90회';
-        const msg = `이번 달 분석 횟수를 모두 사용했어요 (${limitLabel}). ${tier === 'free' ? '프리미엄 구독 시 월 90회까지 이용 가능합니다.' : '다음 달에 다시 이용해주세요.'}`;
+        const msg = locale === 'ja'
+          ? `今月の分析回数をすべて使い切りました（${tier === 'free' ? '無料会員 月3回' : '有料会員 月90回'}）。${tier === 'free' ? 'プレミアム会員なら月90回までご利用いただけます。' : '来月また利用してください。'}`
+          : locale === 'zh-Hant'
+            ? `這個月的分析次數已經用完了（${tier === 'free' ? '免費會員每月3次' : '付費會員每月90次'}）。${tier === 'free' ? '訂閱付費方案可享每月90次。' : '請下個月再使用。'}`
+            : `이번 달 분석 횟수를 모두 사용했어요 (${tier === 'free' ? '무료 회원 월 3회' : '유료 회원 월 90회'}). ${tier === 'free' ? '프리미엄 구독 시 월 90회까지 이용 가능합니다.' : '다음 달에 다시 이용해주세요.'}`;
         res.status(429).json({
           success: false,
           error: msg,
@@ -368,17 +499,19 @@ export function registerAnalyzeMediaHandler(router: Router): void {
 
       if (!isGeminiAvailable()) {
         const mockData = type === 'cry'
-          ? buildMockCryAnalysis('아이', fallbackDesc)
-          : buildMockPoopAnalysis('아이', fallbackDesc);
+          ? buildMockCryAnalysis('아이', fallbackDesc, locale)
+          : buildMockPoopAnalysis('아이', fallbackDesc, locale);
         success(res, { ...mockData, usage: { used: usage.used, limit: usage.limit, remaining: usage.remaining } });
         return;
       }
 
       try {
         const hasMedia = !!mediaBase64;
-        const prompt = type === 'cry'
+        const basePrompt = type === 'cry'
           ? buildCryPrompt(child, hasMedia)
           : buildPoopPrompt(child, hasMedia);
+        const localeHint = locale && locale !== 'ko' ? LOCALE_RESPONSE_HINT[locale] : undefined;
+        const prompt = localeHint ? basePrompt + localeHint : basePrompt;
 
         const parsed = await callGeminiJSON<{
           analysis?: string;
@@ -396,8 +529,8 @@ export function registerAnalyzeMediaHandler(router: Router): void {
         // 응답 후처리: 사주/오행 등 금지 용어 검출 시 mock fallback
         if (shouldRejectAIResponse(parsed, 'analyzeMedia.handler')) {
           const mockData = type === 'cry'
-            ? buildMockCryAnalysis('아이', fallbackDesc)
-            : buildMockPoopAnalysis('아이', fallbackDesc);
+            ? buildMockCryAnalysis('아이', fallbackDesc, locale)
+            : buildMockPoopAnalysis('아이', fallbackDesc, locale);
           success(res, { ...mockData, usage: { used: usage.used, limit: usage.limit, remaining: usage.remaining } });
           return;
         }
@@ -413,8 +546,8 @@ export function registerAnalyzeMediaHandler(router: Router): void {
         });
       } catch {
         const mockData = type === 'cry'
-          ? buildMockCryAnalysis('아이', fallbackDesc)
-          : buildMockPoopAnalysis('아이', fallbackDesc);
+          ? buildMockCryAnalysis('아이', fallbackDesc, locale)
+          : buildMockPoopAnalysis('아이', fallbackDesc, locale);
         success(res, { ...mockData, usage: { used: usage.used, limit: usage.limit, remaining: usage.remaining } });
       }
     } catch (err: unknown) {
