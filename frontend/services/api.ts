@@ -809,11 +809,11 @@ export const trackerApi = {
     return api.post('/tracker/voice-parse', { text, clientTime, clientDate, locale });
   },
   // 어린이집 알림장/기록지 사진 → 기록 추출 (Gemini 비전)
-  photoParse: (imageBase64: string, mimeType?: string) => {
+  photoParse: (imageBase64: string, mimeType?: string, locale?: string) => {
     const now = new Date();
     const clientTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const clientDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    return api.post('/tracker/photo-parse', { imageBase64, mimeType, clientTime, clientDate });
+    return api.post('/tracker/photo-parse', { imageBase64, mimeType, clientTime, clientDate, locale });
   },
   importExcel: async (fileUri: string) => {
     const token = useAuthStore.getState().accessToken;

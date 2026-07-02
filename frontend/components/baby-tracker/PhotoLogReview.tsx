@@ -99,7 +99,7 @@ function normTime(raw: string | undefined, now: Date): string {
 const COLOR = { accent: '#FF8C5A', text: '#1C1C1E', sub: '#636366', border: '#E5E5EA' };
 
 export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [phase, setPhase] = useState<'choose' | 'parsing' | 'review' | 'saving'>('choose');
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
@@ -124,7 +124,7 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
         { compress: 0.7, base64: true, format: ImageManipulator.SaveFormat.JPEG },
       );
       if (!manip.base64) throw new Error('no base64');
-      const res = await trackerApi.photoParse(manip.base64, 'image/jpeg');
+      const res = await trackerApi.photoParse(manip.base64, 'image/jpeg', i18n.language);
       const data = res.data?.data as { records?: ParsedPhotoRecord[] } | undefined;
       const records = Array.isArray(data?.records) ? data!.records : [];
       if (records.length === 0) {
@@ -138,7 +138,7 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
       Alert.alert(t('common.error'), t('components.photoLogReview.parseFailAlert'));
       reset();
     }
-  }, [reset, t]);
+  }, [reset, t, i18n.language]);
 
   const pickCamera = useCallback(async () => {
     const p = await pickImageFromCamera(t, { quality: 0.9 });

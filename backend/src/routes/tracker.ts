@@ -441,13 +441,14 @@ const PhotoParseBodySchema = z.object({
   mimeType: z.string().optional(),
   clientDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   clientTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  locale: z.enum(['ko', 'ja', 'zh-Hant']).optional(),
 });
 
 router.post('/photo-parse', authMiddleware, async (req: Request, res: Response) => {
   try {
     const body = parseBody(req, res, PhotoParseBodySchema);
     if (!body) return;
-    const { imageBase64, mimeType, clientDate, clientTime } = body;
+    const { imageBase64, mimeType, clientDate, clientTime, locale } = body;
 
     if (!isGeminiAvailable()) {
       return error(res, 'AI 서비스를 사용할 수 없습니다');
@@ -519,10 +520,14 @@ router.post('/photo-parse', authMiddleware, async (req: Request, res: Response) 
 { "records": [ { "type":"...", "subType":"...", "dayRef":"today|yesterday|dayBefore|tomorrow", "date":"YYYY-MM-DD"|null, "time":"HH:MM"|null, "endTime":"HH:MM"|null, "amount":숫자|null, "duration":숫자|null, "note":"메모"|null }, ... ] }
 사진에서 기록을 못 읽으면 { "records": [] } 만 반환.`;
 
+    // 비한국어 로케일이면 어휘 힌트만 추가(additive) — 위 한국어 프롬프트 본문은 절대 수정하지 않음
+    const photoLocaleHint = locale && locale !== 'ko' ? LOCALE_VOCAB_HINT[locale] : undefined;
+    const finalPhotoSystemPrompt = photoLocaleHint ? systemPrompt + photoLocaleHint : systemPrompt;
+
     const parsed = await callGeminiJSON<ParsedMulti>(
       '이 이미지(어린이집 알림장 또는 육아 기록지)에서 아기 활동 기록을 모두 추출해 JSON 으로만 응답해.',
       {
-        systemPrompt,
+        systemPrompt: finalPhotoSystemPrompt,
         temperature: 0.1,
         maxTokens: 1400,
         mediaData: { mimeType: mimeType || 'image/jpeg', base64: imageBase64 },
