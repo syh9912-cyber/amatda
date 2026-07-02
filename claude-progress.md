@@ -6442,3 +6442,50 @@ sleepKnowledgeCache, dailyTraits, milestonePhotos, kakaoOAuthState
   - `album.tsx`: 임신 앨범 타임라인의 "임신 {week}주차" 배지 2곳 — 기존에 동일한 문구의 `components.profileCard.pregnancyWeek` 키가 있어 재사용(신규 키 불필요).
 - 검증: 매 배치 `frontend && npx tsc --noEmit`(0 error), `frontend && npx expo lint`(96 warnings, 기존과 동일 — 회귀 없음), 키 파리티(ko/ja/zh-Hant 4539개 동일) 확인.
 - **이번 감사에서 발견된 진짜 미번역 텍스트는 모두 처리 완료. 프론트엔드 전체 번역 스윕 최종 마무리.**
+
+
+---
+
+## 2026-07-02 — 국제 출시 남은 8개 갭 전수 조사·수정 + 코칭 DB 487개 항목 완역
+- 사용자 지시("이런 DB처럼 안된곳 있는지 전부 체크해줘")로 백엔드 전체 감사 진행 →
+  코칭 DB 외에도 8곳이 한국어 전용으로 확인됨. 우선순위(P0~P2)대로 전부 처리.
+
+### P0 — 최우선 (전체 사용자 필수 경로)
+- **saju.interpreter.ts**: 온보딩 시 아이당 1회 생성되는 기질/성격 분석이 100% 한국어
+  프롬프트, locale 파라미터 자체가 없었음. LOCALE_RESPONSE_HINT 추가(추가형).
+  child.ts 3개 엔드포인트(등록/출산전환/수정)에 locale 파라미터 배선.
+- **auto.diary.ts**: 감사 결과 실제 호출부가 전혀 없는 죽은 코드로 확인 — 수정 불필요.
+
+### P1 — 핵심 경로
+- **dailyDiary.handler.ts**: 프롬프트에 "한국어로 작성해"가 박혀있었음. 로케일 힌트로
+  오버라이드 + 폴백 텍스트(buildMockDiary, 기록없음 안내) 로케일별 분기.
+- **firstTalk.handler.ts**: 첫 대화 인사말(STARTER_TOPICS/OPEN_INVITATION/traitDesc)
+  전부 하드코딩 한국어 — 로케일별 사전 준비 + AI 프롬프트 힌트 추가.
+- **analyzeMedia.handler.ts**: 울음/대변 분석 프롬프트 + 목업 폴백 + 월한도 안내 메시지
+  로케일 분기 추가.
+
+### P2
+- **child.report.ts**: 온보딩 설문 후 생성되는 기질별 종합 리포트(BASE_PROFILES 5종 +
+  AGE_OVERLAYS 4개 연령대, ~1300줄)에 완역 데이터(child.report.ja.ts/zh-hant.ts) 추가.
+  단, 답변 기반 미세조정(analyze*Answers, ~660줄 조건부 로직)은 비한국어에서 스킵 —
+  부분 번역 노출 방지가 근사 번역보다 우선이라는 판단(완역된 기본 리포트까지만 반환).
+- **red.flag.detector.ts**: EMERGENCY 단계는 AI를 거치지 않고 그대로 노출되는데 라벨/
+  메시지가 한국어 전용이었음. 38개 라벨 + 메시지 템플릿 번역. **알려진 갭**: 정규식
+  감지 자체는 여전히 한국어 입력 기준이라 일본어/중국어 직접 입력 시 미감지 가능 —
+  별도 세션(task_7aca3316)으로 분리해 안전 검토 후 진행 예정.
+- **followup.templates.ts**: 후속질문 폴백 템플릿(카테고리별 3개씩) 로케일 분기.
+
+### 코칭 DB(487개 항목) 완역
+- 24개 병렬 에이전트로 번역(메인 4청크+초등 6파일+임산부 2파일 × 2언어), 원본 대비
+  id 순서/개수 100% 일치, traitAdvice 5키 전항목 존재, Hangul 잔존 0건 검증 후 병합.
+- 18개 신규 파일(coaching.knowledge*.ja.ts/*.zh-hant.ts) — 기존 9개 한국어 원본 무변경.
+- db.searcher.ts에 locale 파라미터로 DB 선택 분기, ko/미지정 시 byte-identical.
+
+### 검증
+- 전 배치마다 backend/frontend tsc 0 error, frontend lint 96 warnings(기존과 동일,
+  회귀 없음) 확인 후 커밋. 총 10개 커밋으로 분리.
+
+### 남은 갭 (별도 세션으로 분리)
+- red.flag.detector.ts 정규식 패턴 자체의 다국어 확장(task_7aca3316) — 안전 관련이라
+  신중한 검토 필요.
+- premiumApi.plans() 응답 형태 불일치 버그(task_49ea8aa0, 사용자가 별도 세션에서 진행 중).
