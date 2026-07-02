@@ -4449,6 +4449,399 @@
       "continueWithGoogle": "Googleで続ける",
       "continueWithNaver": "NAVERで続ける",
       "continueWithKakao": "カカオで続ける"
+    },
+    "concernCategories": {
+      "crying": "泣き",
+      "sleep": "睡眠",
+      "eating": "食事",
+      "poop": "うんち",
+      "social": "社会性",
+      "growth": "成長",
+      "behavior": "行動",
+      "etc": "その他",
+      "symptoms": "妊娠症状",
+      "nutrition": "栄養・食事",
+      "checkup": "検診・検査",
+      "exercise": "妊婦運動",
+      "emotion": "感情・メンタル",
+      "birth_prep": "出産準備"
+    },
+    "analyzingScreen": {
+      "screenTitle": "分析中",
+      "title": "{{name}}の性向を分析しています",
+      "messages": {
+        "startEngine": "AI気質分析エンジンを起動しています...",
+        "analyzeEnergy": "生年月日時に基づく固有エネルギーを分析しています...",
+        "collectResponses": "20個の回答パターンを収集しています...",
+        "crossValidate": "回答データを相互検証しています...",
+        "classifyType": "気質タイプを分類しています...",
+        "generatePersonalityProfile": "性格特性プロフィールを作成しています...",
+        "analyzeStudyStyle": "学習スタイルを分析しています...",
+        "exploreBestSubjects": "得意な分野を探っています...",
+        "identifyWeakAreas": "補うべき点を把握しています...",
+        "predictFutureFields": "将来の進路適性を予測しています...",
+        "findSportsMatch": "相性の良い運動を探しています...",
+        "matchAcademyStyle": "合う学習塾スタイルをマッチングしています...",
+        "analyzeNutrition": "栄養と食習慣を分析しています...",
+        "designEducationDirection": "教育の方向性を設計しています...",
+        "discoverTalent": "際立った才能を発見しています...",
+        "writeParentingTip": "育児のヒントを作成しています...",
+        "completeSocialProfile": "社会性プロフィールを完成させています...",
+        "finalizeGuide": "カスタム育児ガイドを最終調整しています...",
+        "done": "分析が完了しました!"
+      }
+    },
+    "birthDatePicker": {
+      "selectDatePlaceholder": "日付を選択してください",
+      "selectBirthDatePlaceholder": "生年月日を選択してください",
+      "dateLabel": "{{year}}年{{month}}月{{day}}日"
+    },
+    "birthTimePicker": {
+      "placeholder": "例: 14:30（24時間制）",
+      "errorText": "00:00〜23:59の間で入力してください",
+      "hintText": "数字だけ入力すると自動的に時刻形式になります（例: 1430 → 14:30）"
+    },
+    "photoPicker": {
+      "hint": "タップして写真を追加"
+    },
+    "portOneWebView": {
+      "title": "決済",
+      "updateRequired": "外部決済機能は次のアップデートで利用可能になります。\nアプリを最新バージョンに更新してください。"
+    },
+    "vaccinationDonut": {
+      "title": "{{name}}の接種状況",
+      "countUnit": "{{count}}件",
+      "percent": "{{percent}}%",
+      "hint": "👆 グラフをタップすると未完了のみ表示されます"
+    },
+    "batchPhotoReview": {
+      "headerTitle": "写真{{count}}枚を追加",
+      "subTextPrefix": "すべて成長アルバムに保存されます。",
+      "subTextHighlight": "共有したい写真だけ",
+      "subTextSuffix": "家族フィードのトグルをオンにしてください。",
+      "shareAll": "すべてフィードに共有",
+      "unshareAll": "すべて共有解除",
+      "memoPlaceholder": "ひとことメモ（任意）",
+      "shareLabelOn": "💛 家族フィードに共有",
+      "shareLabelOff": "家族フィードに共有",
+      "saving": "保存中...",
+      "savingProgress": "保存中 {{done}}/{{total}}",
+      "saveCount": "{{count}}枚保存",
+      "saveWithShare": "{{count}}枚保存・{{shareCount}}枚フィード共有"
+    },
+    "babyTrackerGuide": {
+      "tabFeedingSleepShort": "授乳・食事",
+      "todayTimeline": "📋  今日のタイムライン",
+      "nap": "昼寝",
+      "oneHourTwenty": "1時間20分",
+      "ateWell": "よく食べた",
+      "tapHint": "👆  1回タップ＝今の時刻で記録",
+      "longPressHint": "✏️  長押し＝時刻修正・直接入力",
+      "voiceSample": "\"ミルクを120飲ませて、おしっこして、\n離乳食も少し、1時間くらい寝たよ\"",
+      "oneHour": "1時間",
+      "noteTitle": "🌱 今日の連絡帳",
+      "noteDate": "6/2（火）",
+      "noteLine1": "お昼に離乳食を一杯全部食べました",
+      "noteLine2": "1時〜2時半までぐっすり昼寝しました",
+      "noteLine3": "午後にうんちも1回しました",
+      "noteArrow": "↓  AIが自動で整理",
+      "lunchFinished": "昼食を完食",
+      "onceCount": "1回",
+      "yesterday": "昨日",
+      "dayBeforeYesterday": "一昨日",
+      "mealInterval": "食事の間隔",
+      "aiInsight": "🤖  睡眠が推奨量に近いです。順調です！",
+      "page1": {
+        "title": "育児タイムへようこそ",
+        "desc": "排泄・授乳・睡眠・投薬をタブ別に\n簡単に記録して一目で確認できます"
+      },
+      "page2": {
+        "title": "ボタン1回で記録完了",
+        "desc": "よく使う記録はワンタッチで、\n長押しすれば時刻修正・直接入力もできます"
+      },
+      "page3": {
+        "title": "話すだけで複数まとめて",
+        "desc": "音声入力アイコン（アプリ内またはホーム画面）を押して\n話すと、複数の記録もAIが一度に整理します"
+      },
+      "page4": {
+        "title": "写真1枚でまとめて",
+        "desc": "保育園の連絡帳・メモ写真をアップロードすると\nAIが授乳・睡眠・排泄を自動で整理します"
+      },
+      "page5": {
+        "title": "1日の流れを一目で",
+        "desc": "推奨量に対する進捗、週間まとめ、\nAIパターン分析まで一緒に確認できます"
+      }
+    },
+    "dayClock": {
+      "all": "全体",
+      "feedingShort": "授乳",
+      "feedingCount": "授乳 {{count}}",
+      "sleepHours": "睡眠 {{hours}}h",
+      "noDataYet": "まだ記録なし",
+      "emptyHint": "記録を残すと1日の流れが時計のように埋まります"
+    },
+    "photoLogReview": {
+      "babyFoodOrMeal": "離乳食・ご飯",
+      "medicationShort": "薬",
+      "durationMinutes": "{{minutes}}分",
+      "noRecordsFoundAlert": "写真から記録を見つけられませんでした。もっと鮮明な写真で再度お試しください。",
+      "parseFailAlert": "写真の分析に失敗しました。もう一度お試しください。",
+      "selectAtLeastOneAlert": "保存する記録を1つ以上選択してください。",
+      "saveCompleteAlert": "{{count}}件の記録を保存しました",
+      "saveFailAlert": "保存に失敗しました。",
+      "headerTitle": "写真で記録",
+      "chooseDescLine1": "保育園の連絡帳や手書きの記録用紙、他アプリのスクリーンショットを撮影するか選んでください。",
+      "chooseDescLine2": "AIが授乳・睡眠・排泄などを自動で読み取ります。",
+      "takePhoto": "📷  写真を撮る",
+      "chooseFromGallery": "🖼  ギャラリーから選択",
+      "parsingText": "写真から記録を読み取り中...",
+      "reviewHint": "読み取った記録です。間違っているものは外して保存してください。",
+      "dateBarLabel": "📅 日付",
+      "dateBarHint": "すべての記録に適用されます",
+      "yesterday": "昨日",
+      "excluded": "除外",
+      "saveCount": "{{count}}件保存"
+    },
+    "observationCard": {
+      "weekday": {
+        "sun": "日",
+        "mon": "月",
+        "tue": "火",
+        "wed": "水",
+        "thu": "木",
+        "fri": "金",
+        "sat": "土"
+      },
+      "dateFormat": "{{month}}月{{day}}日（{{weekday}}）",
+      "viewMore": "もっと見る"
+    },
+    "writeArea": {
+      "todaysQuestion": "今日の質問",
+      "contentPlaceholder": "今日のお子さんの様子を自由に記録してください...",
+      "charCounter": "{{count}} / {{limit}}文字",
+      "analyzing": "分析中...",
+      "recordButton": "記録する"
+    },
+    "commentsModal": {
+      "justNow": "たった今",
+      "minutesAgo": "{{count}}分前",
+      "hoursAgo": "{{count}}時間前",
+      "daysAgo": "{{count}}日前",
+      "title": "コメント",
+      "emptyText": "まだコメントがありません",
+      "emptyHint": "最初のコメントを残してみましょう",
+      "inputPlaceholder": "コメントを入力してください...",
+      "send": "送信"
+    },
+    "postCard": {
+      "justNow": "たった今",
+      "minutesAgo": "{{count}}分前",
+      "hoursAgo": "{{count}}時間前",
+      "daysAgo": "{{count}}日前",
+      "weeksAgo": "{{count}}週間前",
+      "likeCount": "いいね{{count}}件",
+      "viewMore": "もっと見る",
+      "viewAllComments": "コメント{{count}}件をすべて見る"
+    },
+    "storiesRow": {
+      "myStory": "マイストーリー"
+    },
+    "traitBars": {
+      "heading": "主な傾向"
+    },
+    "traitCharacteristics": {
+      "strengths": "強み",
+      "weaknesses": "改善点",
+      "emptyText": "傾向特性の分析データを準備中です。"
+    },
+    "traitSummaryText": {
+      "fallback": "{{name}}は{{label}}の傾向があります。"
+    },
+    "traitTypeCard": {
+      "subtitle": "{{name}}の気質タイプ",
+      "fallback": "{{dominantType}}気質"
+    },
+    "traitConstants": {
+      "element": {
+        "wood": "好奇心",
+        "fire": "活動性",
+        "earth": "安定感",
+        "metal": "集中力",
+        "water": "敏感さ"
+      },
+      "tabs": {
+        "summary": "総合まとめ",
+        "traits": "傾向特性",
+        "detail": "詳細分析"
+      }
+    },
+    "denseStatsRow": {
+      "noRecord": "記録なし",
+      "sufficient": "十分",
+      "mlShort": "{{value}}ml不足",
+      "mlOver": "{{value}}ml超過",
+      "hourShort": "{{value}}h不足",
+      "hourOver": "{{value}}h超過",
+      "constipationCaution": "便秘に注意",
+      "looseStool": "軟便",
+      "normal": "正常",
+      "countTimes": "{{count}}回",
+      "topPercent": "上位{{pct}}%",
+      "heightWeight": "身長・体重",
+      "streak": {
+        "d3": "3日連続成功！すごいです 🌟",
+        "d7": "7日連続ミッション達成！1週間のルーティン完成 💛",
+        "d14": "14日連続！本当によくできています 🎉",
+        "d30": "30日連続 — これは本物の習慣です ✨",
+        "d60": "60日連続 ママルーティンマスター 👑",
+        "d100": "100日連続！伝説のママ認定 🎊"
+      },
+      "todayMissionComplete": "今日のミッション達成！ママも赤ちゃんもしっかりケアできました 🎉",
+      "toast": {
+        "waterGoalClear": "水8杯ミッションクリア！💧",
+        "waterAdded": "水を1杯追加しました 💧",
+        "supplementDone": "サプリメントを摂りました 💛",
+        "moodRecorded": "体調を記録しました 😊"
+      },
+      "today": "今日",
+      "waterGlass": "水の杯数",
+      "notYet": "まだ",
+      "supplement": "サプリメント",
+      "input": "入力",
+      "record": "記録",
+      "condition": "体調",
+      "tapHintPrefix": "タップでカウント・",
+      "tapHintAccent": "長押しで説明",
+      "moodPickerTitle": "今日の体調は？",
+      "clearMood": "今日の体調を削除",
+      "mood": {
+        "good": "良い",
+        "tired": "疲労",
+        "nausea": "つわり",
+        "discomfort": "胃の不快感",
+        "pain": "痛み"
+      }
+    },
+    "nextCheckupModal": {
+      "subtitle": "いつ病院に行きますか？ホームでD-dayをお知らせします。",
+      "currentlySaved": "現在保存中",
+      "yearLabel": "年",
+      "monthLabel": "月",
+      "dayLabel": "日",
+      "enterValidDate": "年・月・日を正確に入力してください。",
+      "nonexistentDate": "存在しない日付です。",
+      "deleteConfirmTitle": "次回検診の予定を削除",
+      "deleteConfirmMessage": "保存された検診予定を削除しますか？",
+      "pastDate": "⚠️ 過去の日付です",
+      "todayIsCheckup": "今日が検診日です",
+      "daysRemaining": "残り{{count}}日",
+      "deleteSchedule": "予定を削除"
+    },
+    "pregnancyJourneyCard": {
+      "headerTitle": "妊娠の旅",
+      "weekSuffix": "{{week}}週目",
+      "inProgress": "進行中",
+      "stage": {
+        "early": "初期",
+        "wk12": "12週",
+        "stable": "安定期",
+        "late": "後期",
+        "birth": "出産"
+      }
+    },
+    "hospitalRegisterBanner": {
+      "titleHighRisk": "ハイリスク妊娠 — 分娩病院を今すぐ登録してください",
+      "title": "病院の電話番号を事前に登録してください",
+      "subHighRisk": "早産の可能性を考慮し、28週から案内しています。緊急時にすぐ電話できるよう準備してください。",
+      "sub": "出産が近づいています。緊急時にすぐ電話できるよう準備しておきましょう。"
+    },
+    "hospitalRegisterModal": {
+      "requiredInputTitle": "必須入力",
+      "requiredInputMessage": "病院名と緊急連絡先の電話番号は必須です。",
+      "saveCompleteTitle": "保存完了",
+      "suggestDirectLineMessage": "病院の案内によると、夜間・週末に別途つながる直通番号はありますか？\nなければそのまま進めても大丈夫です。",
+      "noneOrLater": "ありません／後で",
+      "addDirectLine": "直通番号を追加する",
+      "saveCompleteMessageDelivery": "分娩予定病院の情報が保存されました。",
+      "saveCompleteMessageClinic": "現在の通院病院の情報が保存されました。",
+      "saveFailedTitle": "保存失敗",
+      "retryMessage": "もう一度お試しください。",
+      "enterAddressOrNameFirst": "住所または病院名を先に入力してください。",
+      "mapOpenError": "地図アプリを開けません。",
+      "screenTitle": "病院登録",
+      "tabClinic": "🏥 通院病院",
+      "tabDelivery": "🤰 分娩予定病院",
+      "guideDeliveryEmphasis": "昼は外来、夜・休日は分娩室！",
+      "guideDeliveryRest": "時間に合わせて賢く接続します。",
+      "guideClinic": "普段定期検診を受けている主治医の病院情報です。",
+      "universityHospitalCheckbox": "🏥 大学病院（上級総合病院）です",
+      "universityHospitalExample": "例：ソウル大学病院、三星ソウル病院、車病院本院など",
+      "uniInfoPrefix": "💡 病院の案内に従って最も早くつながる番号を登録してください。",
+      "uniInfoEmphasis": "大学病院は分娩室または高危険妊産婦センター（MFICU）の直通番号",
+      "uniInfoSuffix": "の登録をおすすめします。",
+      "nameLabel": "病院名 *",
+      "namePlaceholder": "例：車病院江南",
+      "mainPhoneLabel": "📞 緊急時にすぐつながる番号 *",
+      "mainPhoneSubLabel": "昼は外来、夜・休日は分娩室 — 最も早くつながる番号を1つ入力するだけでOK",
+      "mainPhonePlaceholder": "例：02-3468-3000",
+      "accordionCollapse": "▾ 追加情報を閉じる",
+      "accordionExpand": "▸ 追加情報を入力する（任意）",
+      "accordionSub": "分娩室直通・住所・メモ",
+      "deliveryWardPhoneLabel": "分娩室／産婦人科直通番号（任意）",
+      "deliveryWardPhoneSubUniversity": "大学病院は高危険妊産婦センター（MFICU）の番号を登録するとよいです",
+      "deliveryWardPhoneSubDefault": "夜間や休日、緊急事態発生時に分娩室へ即座につながる番号です",
+      "deliveryWardPhonePlaceholder": "例：02-3468-3010",
+      "addressLabel": "住所（任意）",
+      "addressPlaceholder": "住所を入力してください",
+      "mapButton": "🗺️ 地図",
+      "memoLabel": "メモ（家族分娩室／ルボワイエ／その他特徴）",
+      "memoPlaceholder": "例：家族分娩室可能、個室入院申請済み",
+      "saving": "保存中...",
+      "saveButton": "保存する"
+    },
+    "hospitalRegisterPrompt": {
+      "titleHighRisk": "ハイリスク妊娠 — 病院登録が必ず必要です",
+      "title": "出産が近づいています",
+      "bodyHighRiskLine1": "早産の可能性を考慮し、24週から案内しています。",
+      "bodyHighRiskLine2": "緊急時にすぐ電話できるよう",
+      "bodyHighRiskEmphasis": "分娩病院の番号を今すぐ登録",
+      "bodySuffix": "してください。",
+      "bodyLine1": "緊急時にすぐ電話できるよう",
+      "bodyEmphasis": "病院の電話番号を事前に登録",
+      "registerNow": "今すぐ登録する",
+      "snooze3Days": "3日間表示しない"
+    },
+    "missionInfoModal": {
+      "waterTitle": "1日水8杯が重要な理由",
+      "supplementTitle": "サプリメントを毎日摂るべき理由",
+      "waterSubtitle": "今日{{water}} / 8杯飲みました",
+      "supplementSubtitleDone": "今日サプリメント ✓ 摂りました",
+      "supplementSubtitleNotYet": "今日はまだサプリメントを摂っていません",
+      "water": {
+        "amnioticTitle": "羊水量の維持",
+        "amnioticDesc": "赤ちゃんを取り巻く羊水が十分でないと、自由に動いたり肺が発達したりできません。",
+        "bloodFlowTitle": "血流量の増加",
+        "bloodFlowDesc": "妊娠中は血液量が50%増加します。不足するとめまいや浮腫が悪化します。",
+        "swellingTitle": "浮腫・便秘予防",
+        "swellingDesc": "水分不足になると足のむくみ、便秘、尿路感染のリスクが高まります。",
+        "breastMilkTitle": "母乳の準備",
+        "breastMilkDesc": "後期には初乳の生成のためにより多くの水分が必要です。",
+        "factText": "妊娠中の推奨水分摂取量は1日2L（約8杯）です。一度に多く飲まず、30分〜1時間間隔で分けて飲みましょう。カフェイン飲料は除いて計算する必要があります。"
+      },
+      "factTitle": "💡 知っておきましょう",
+      "supplement": {
+        "folateTitle": "葉酸（Folate）",
+        "folateDesc": "神経管欠損（二分脊椎など）の発生率を約70%減少させます。妊娠12週までが特に重要です。",
+        "ironTitle": "鉄分",
+        "ironDesc": "血液量が増えるにつれて鉄分の需要が2倍になります。不足すると貧血・早産のリスクが増加します。",
+        "calciumTitle": "カルシウム",
+        "calciumDesc": "赤ちゃんの骨・歯の形成に必須です。不足するとママの骨から抜け出ます。",
+        "dhaTitle": "DHA／オメガ3",
+        "dhaDesc": "胎児の脳・視覚発達に直接関与します。後期になるほど需要が↑します。",
+        "factText": "サプリメントは食事と一緒に決まった時間に毎日摂るのが最も効果的です。鉄剤はビタミンCと一緒に摂ると吸収率が上がります。"
+      },
+      "disclaimer": "※本情報は一般的な妊娠・授乳ガイドであり、個人の状態により異なる場合があります。正確な推奨量と服用スケジュールは担当の産婦人科医または薬剤師にご相談ください。",
+      "closeButton": "分かりました 💛"
     }
   }
 }

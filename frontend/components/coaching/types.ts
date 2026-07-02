@@ -44,25 +44,27 @@ export const COACHING_COLORS = {
   white: '#FFFFFF',
 };
 
- 
-export const CONCERN_CATEGORIES = [
-  // Baby categories
-  { icon: require('../../assets/cat-crying.png') as number, label: '울음', key: 'crying' },
-  { icon: require('../../assets/cat-sleep.png') as number, label: '수면', key: 'sleep' },
-  { icon: require('../../assets/cat-eating.png') as number, label: '식사', key: 'eating' },
-  { icon: require('../../assets/cat-poop.png') as number, label: '대변', key: 'poop' },
-  { icon: require('../../assets/cat-social.png') as number, label: '사회성', key: 'social' },
-  { icon: require('../../assets/cat-growth.png') as number, label: '성장', key: 'growth' },
-  { icon: require('../../assets/cat-behavior.png') as number, label: '행동', key: 'behavior' },
-  { icon: require('../../assets/cat-etc.png') as number, label: '기타', key: 'etc' },
-  // Pregnancy categories
-  { icon: require('../../assets/cat-etc.png') as number, label: '임신 증상', key: 'symptoms' },
-  { icon: require('../../assets/cat-eating.png') as number, label: '영양/식단', key: 'nutrition' },
-  { icon: require('../../assets/cat-growth.png') as number, label: '검진/검사', key: 'checkup' },
-  { icon: require('../../assets/cat-behavior.png') as number, label: '산모 운동', key: 'exercise' },
-  { icon: require('../../assets/cat-social.png') as number, label: '감정/멘탈', key: 'emotion' },
-  { icon: require('../../assets/cat-crying.png') as number, label: '출산 준비', key: 'birth_prep' },
-];
+
+export function getConcernCategories(t: TFunction) {
+  return [
+    // Baby categories
+    { icon: require('../../assets/cat-crying.png') as number, label: t('components.concernCategories.crying'), key: 'crying' },
+    { icon: require('../../assets/cat-sleep.png') as number, label: t('components.concernCategories.sleep'), key: 'sleep' },
+    { icon: require('../../assets/cat-eating.png') as number, label: t('components.concernCategories.eating'), key: 'eating' },
+    { icon: require('../../assets/cat-poop.png') as number, label: t('components.concernCategories.poop'), key: 'poop' },
+    { icon: require('../../assets/cat-social.png') as number, label: t('components.concernCategories.social'), key: 'social' },
+    { icon: require('../../assets/cat-growth.png') as number, label: t('components.concernCategories.growth'), key: 'growth' },
+    { icon: require('../../assets/cat-behavior.png') as number, label: t('components.concernCategories.behavior'), key: 'behavior' },
+    { icon: require('../../assets/cat-etc.png') as number, label: t('components.concernCategories.etc'), key: 'etc' },
+    // Pregnancy categories
+    { icon: require('../../assets/cat-etc.png') as number, label: t('components.concernCategories.symptoms'), key: 'symptoms' },
+    { icon: require('../../assets/cat-eating.png') as number, label: t('components.concernCategories.nutrition'), key: 'nutrition' },
+    { icon: require('../../assets/cat-growth.png') as number, label: t('components.concernCategories.checkup'), key: 'checkup' },
+    { icon: require('../../assets/cat-behavior.png') as number, label: t('components.concernCategories.exercise'), key: 'exercise' },
+    { icon: require('../../assets/cat-social.png') as number, label: t('components.concernCategories.emotion'), key: 'emotion' },
+    { icon: require('../../assets/cat-crying.png') as number, label: t('components.concernCategories.birth_prep'), key: 'birth_prep' },
+  ];
+}
 
 const CATEGORY_KEYS_BY_AGE: Record<AgeGroupKey, string[]> = {
   pregnant: ['symptoms', 'nutrition', 'checkup', 'exercise', 'emotion', 'birth_prep', 'etc'],
@@ -71,9 +73,9 @@ const CATEGORY_KEYS_BY_AGE: Record<AgeGroupKey, string[]> = {
   elementary: ['eating', 'sleep', 'behavior', 'social', 'growth', 'etc'],
 };
 
-export function getCategoriesForAge(ageGroup: AgeGroupKey) {
+export function getCategoriesForAge(categories: ReturnType<typeof getConcernCategories>, ageGroup: AgeGroupKey) {
   const keys = CATEGORY_KEYS_BY_AGE[ageGroup];
-  return CONCERN_CATEGORIES.filter((c) => keys.includes(c.key));
+  return categories.filter((c) => keys.includes(c.key));
 }
 
 export function getCheckinOptions(t: TFunction) {

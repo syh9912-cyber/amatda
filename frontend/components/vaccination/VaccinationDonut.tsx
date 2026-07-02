@@ -8,6 +8,7 @@
 
 import { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Svg, { Circle } from 'react-native-svg';
 
 interface Props {
@@ -32,6 +33,7 @@ export function VaccinationDonut({
   childName,
   onPressDonut,
 }: Props) {
+  const { t } = useTranslation();
   const ratio = total > 0 ? completed / total : 0;
   const percent = Math.round(ratio * 100);
   const offset = useMemo(() => CIRCUMFERENCE * (1 - ratio), [ratio]);
@@ -40,7 +42,7 @@ export function VaccinationDonut({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>{childName}의 접종 현황</Text>
+      <Text style={styles.title}>{t('components.vaccinationDonut.title', { name: childName })}</Text>
 
       <View style={styles.row}>
         {/* 도넛 차트 */}
@@ -79,13 +81,13 @@ export function VaccinationDonut({
             {hasOverdue ? (
               <>
                 <Text style={styles.warningEmoji}>⚠️</Text>
-                <Text style={styles.warningText}>놓친 접종</Text>
-                <Text style={styles.warningCount}>{overdue}건</Text>
+                <Text style={styles.warningText}>{t('vaccination.filterOverdue')}</Text>
+                <Text style={styles.warningCount}>{t('components.vaccinationDonut.countUnit', { count: overdue })}</Text>
               </>
             ) : (
               <>
-                <Text style={styles.percent}>{percent}%</Text>
-                <Text style={styles.percentLabel}>완료</Text>
+                <Text style={styles.percent}>{t('components.vaccinationDonut.percent', { percent })}</Text>
+                <Text style={styles.percentLabel}>{t('common.complete')}</Text>
               </>
             )}
           </View>
@@ -93,10 +95,10 @@ export function VaccinationDonut({
 
         {/* 우측 배지 3종 */}
         <View style={styles.badgeCol}>
-          <Badge label="완료" count={completed} color="#4CAF50" bg="#E8F5E9" />
-          <Badge label="다가오는" count={upcoming} color="#FF8C5A" bg="#FFF3EC" />
+          <Badge label={t('common.complete')} count={completed} color="#4CAF50" bg="#E8F5E9" />
+          <Badge label={t('vaccination.filterUpcoming')} count={upcoming} color="#FF8C5A" bg="#FFF3EC" />
           <Badge
-            label="놓친 접종"
+            label={t('vaccination.filterOverdue')}
             count={overdue}
             color={hasOverdue ? '#D32F2F' : '#9E9E9E'}
             bg={hasOverdue ? '#FFEBEE' : '#F5F5F5'}
@@ -107,7 +109,7 @@ export function VaccinationDonut({
 
       {/* 터치 안내 */}
       {(upcoming + overdue) > 0 && (
-        <Text style={styles.hint}>👆 그래프를 누르면 미완료만 볼 수 있어요</Text>
+        <Text style={styles.hint}>{t('components.vaccinationDonut.hint')}</Text>
       )}
     </View>
   );

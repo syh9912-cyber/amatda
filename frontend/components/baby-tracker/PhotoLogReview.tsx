@@ -6,7 +6,7 @@
  *
  * ★ OCR/AI라 100%가 아니므로 "저장 전 확인" 단계 필수.
  */
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   Modal,
   View,
@@ -22,6 +22,8 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { pickImageFromLibrary, pickImageFromCamera } from '../../utils/imagePicker';
 import { trackerApi } from '../../services/api';
 import { loadRecords, saveRecords, loadSleepSession, saveSleepSession } from '../../features/baby-tracker/storage';
@@ -51,34 +53,53 @@ interface Props {
   onSaved: () => void;
 }
 
-const TYPE_LABEL: Record<string, string> = {
-  feeding: '수유/식사', sleep: '수면', diaper: '배변', medication: '투약',
-};
-const SUB_LABEL: Record<string, string> = {
-  breast: '모유', formula: '분유', baby_food: '이유식/밥', snack: '간식',
-  pee: '소변', poop: '대변', both: '소변+대변',
-  sleep: '수면', fever: '해열제', antibiotic: '항생제', vitamin: '비타민', other: '약',
-};
+function getTypeLabel(t: TFunction): Record<string, string> {
+  return {
+    feeding: t('babyTracker.tabs.feeding'),
+    sleep: t('babyTracker.tabs.sleep'),
+    diaper: t('babyTracker.tabs.diaper'),
+    medication: t('babyTracker.tabs.medication'),
+  };
+}
+function getSubLabel(t: TFunction): Record<string, string> {
+  return {
+    breast: t('babyTracker.subtypes.breast'),
+    formula: t('babyTracker.subtypes.formula'),
+    baby_food: t('components.photoLogReview.babyFoodOrMeal'),
+    snack: t('babyTracker.subtypes.snack'),
+    pee: t('babyTracker.subtypes.pee'),
+    poop: t('babyTracker.subtypes.poop'),
+    both: t('babyTracker.subtypes.both'),
+    sleep: t('babyTracker.subtypes.sleep'),
+    fever: t('babyTracker.subtypes.fever'),
+    antibiotic: t('babyTracker.subtypes.antibiotic'),
+    vitamin: t('babyTracker.subtypes.vitamin'),
+    other: t('components.photoLogReview.medicationShort'),
+  };
+}
 
-function summarize(r: ParsedPhotoRecord): string {
-  const parts: string[] = [SUB_LABEL[r.subType] || TYPE_LABEL[r.type] || r.type];
+function summarize(r: ParsedPhotoRecord, t: TFunction): string {
+  const typeLabel = getTypeLabel(t);
+  const subLabel = getSubLabel(t);
+  const parts: string[] = [subLabel[r.subType] || typeLabel[r.type] || r.type];
   if (r.type === 'feeding' && r.amount) parts.push(`${r.amount}ml`);
   if (r.type === 'sleep' && r.endTime) parts.push(`~${r.endTime}`);
-  if (r.duration) parts.push(`${r.duration}분`);
+  if (r.duration) parts.push(t('components.photoLogReview.durationMinutes', { minutes: r.duration }));
   if (r.note) parts.push(`· ${r.note}`);
   return parts.join(' ');
 }
 
 // 사용자가 편집한 시각을 HH:MM 으로 정규화 (잘못된 입력은 현재시각)
 function normTime(raw: string | undefined, now: Date): string {
-  const t = (raw || '').trim();
-  if (/^\d{1,2}:\d{2}$/.test(t)) return t.length === 4 ? `0${t}` : t;
+  const trimmed = (raw || '').trim();
+  if (/^\d{1,2}:\d{2}$/.test(trimmed)) return trimmed.length === 4 ? `0${trimmed}` : trimmed;
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 }
 
 const COLOR = { accent: '#FF8C5A', text: '#1C1C1E', sub: '#636366', border: '#E5E5EA' };
 
 export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
+  const { t } = useTranslation();
   const [phase, setPhase] = useState<'choose' | 'parsing' | 'review' | 'saving'>('choose');
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
@@ -107,17 +128,17 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
       const data = res.data?.data as { records?: ParsedPhotoRecord[] } | undefined;
       const records = Array.isArray(data?.records) ? data!.records : [];
       if (records.length === 0) {
-        Alert.alert('알림', '사진에서 기록을 찾지 못했어요. 더 선명한 사진으로 다시 시도해주세요.');
+        Alert.alert(t('common.notice'), t('components.photoLogReview.noRecordsFoundAlert'));
         reset();
         return;
       }
       setItems(records.map((r, i) => ({ ...r, _id: `${i}`, include: true })));
       setPhase('review');
     } catch {
-      Alert.alert('오류', '사진 분석에 실패했어요. 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('components.photoLogReview.parseFailAlert'));
       reset();
     }
-  }, [reset]);
+  }, [reset, t]);
 
   const pickCamera = useCallback(async () => {
     const p = await pickImageFromCamera({ quality: 0.9 });
@@ -156,7 +177,7 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
   const handleSave = useCallback(async () => {
     if (!childId) return;
     const chosen = items.filter((it) => it.include);
-    if (chosen.length === 0) { Alert.alert('알림', '저장할 기록을 1개 이상 선택해주세요.'); return; }
+    if (chosen.length === 0) { Alert.alert(t('common.notice'), t('components.photoLogReview.selectAtLeastOneAlert')); return; }
     setPhase('saving');
     try {
       // 공동육아: 초대받은 가족이 사진으로 일괄 기록하면 작성자 라벨 주입 (소유자는 no-op)
@@ -224,8 +245,8 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
       if (sessionCandidateId) {
         const cand = chosen.find((c) => c._id === sessionCandidateId);
         if (cand) {
-          const t = normTime(cand.time, now);
-          const m = /(\d{1,2}):(\d{2})/.exec(t);
+          const normalized = normTime(cand.time, now);
+          const m = /(\d{1,2}):(\d{2})/.exec(normalized);
           const hh = m ? Number(m[1]) : now.getHours();
           const mi = m ? Number(m[2]) : now.getMinutes();
           const [yy, mo, dd] = todayStr.split('-').map(Number);
@@ -236,14 +257,15 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
       useTrackerStore.getState().bump();
       reset();
       onSaved();
-      Alert.alert('완료', `${chosen.length}건 기록 저장 완료`);
+      Alert.alert(t('common.complete'), t('components.photoLogReview.saveCompleteAlert', { count: chosen.length }));
     } catch {
-      Alert.alert('오류', '저장에 실패했어요.');
+      Alert.alert(t('common.error'), t('components.photoLogReview.saveFailAlert'));
       setPhase('review');
     }
-  }, [childId, items, reset, onSaved]);
+  }, [childId, items, reset, onSaved, t]);
 
   const includedCount = items.filter((it) => it.include).length;
+  const typeLabel = useMemo(() => getTypeLabel(t), [t]);
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
@@ -252,23 +274,23 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
       <View style={[styles.container, { paddingTop: Platform.OS === 'ios' ? 60 : (StatusBar.currentHeight ?? 24) }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleClose} disabled={phase === 'parsing' || phase === 'saving'}>
-            <Text style={[styles.cancel, (phase === 'parsing' || phase === 'saving') && { opacity: 0.4 }]}>취소</Text>
+            <Text style={[styles.cancel, (phase === 'parsing' || phase === 'saving') && { opacity: 0.4 }]}>{t('common.cancel')}</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>사진으로 기록</Text>
+          <Text style={styles.title}>{t('components.photoLogReview.headerTitle')}</Text>
           <View style={{ width: 36 }} />
         </View>
 
         {phase === 'choose' && (
           <View style={styles.choose}>
             <Text style={styles.chooseDesc}>
-              어린이집 알림장이나 손글씨 기록지, 다른 앱 캡처 사진을 찍거나 골라주세요.{'\n'}
-              AI가 수유·수면·배변 등을 자동으로 읽어드려요.
+              {t('components.photoLogReview.chooseDescLine1')}{'\n'}
+              {t('components.photoLogReview.chooseDescLine2')}
             </Text>
             <TouchableOpacity style={styles.bigBtn} onPress={pickCamera} activeOpacity={0.85}>
-              <Text style={styles.bigBtnText}>📷  사진 찍기</Text>
+              <Text style={styles.bigBtnText}>{t('components.photoLogReview.takePhoto')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.bigBtn, styles.bigBtnAlt]} onPress={pickGallery} activeOpacity={0.85}>
-              <Text style={[styles.bigBtnText, { color: COLOR.accent }]}>🖼  갤러리에서 선택</Text>
+              <Text style={[styles.bigBtnText, { color: COLOR.accent }]}>{t('components.photoLogReview.chooseFromGallery')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -277,17 +299,17 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
           <View style={styles.center}>
             {previewUri && <Image source={{ uri: previewUri }} style={styles.preview} contentFit="contain" />}
             <ActivityIndicator color={COLOR.accent} style={{ marginTop: 16 }} />
-            <Text style={styles.parsingText}>사진에서 기록을 읽는 중...</Text>
+            <Text style={styles.parsingText}>{t('components.photoLogReview.parsingText')}</Text>
           </View>
         )}
 
         {(phase === 'review' || phase === 'saving') && (
           <>
-            <Text style={styles.reviewHint}>읽어온 기록이에요. 틀린 건 빼고 저장하세요.</Text>
+            <Text style={styles.reviewHint}>{t('components.photoLogReview.reviewHint')}</Text>
 
             {/* 날짜 — 전체 기록에 한 번에 적용 (사진 1장 = 보통 하루). 알림장 날짜 자동, 틀리면 수정/오늘 */}
             <View style={styles.dateBar}>
-              <Text style={styles.dateBarLabel}>{'📅 날짜'}</Text>
+              <Text style={styles.dateBarLabel}>{t('components.photoLogReview.dateBarLabel')}</Text>
               <TextInput
                 style={styles.dateInput}
                 value={items[0]?.date || ''}
@@ -304,10 +326,10 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
                 disabled={phase === 'saving'}
                 activeOpacity={0.8}
               >
-                <Text style={styles.todayBtnText}>{'오늘'}</Text>
+                <Text style={styles.todayBtnText}>{t('babyTracker.today')}</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.dateBarHint}>{'모든 기록에 적용돼요'}</Text>
+            <Text style={styles.dateBarHint}>{t('components.photoLogReview.dateBarHint')}</Text>
 
             <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
               {items.map((it) => (
@@ -319,16 +341,16 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
                   disabled={phase === 'saving'}
                 >
                   <View style={[styles.typeTag, !it.include && { opacity: 0.4 }]}>
-                    <Text style={styles.typeTagText}>{TYPE_LABEL[it.type] || it.type}</Text>
+                    <Text style={styles.typeTagText}>{typeLabel[it.type] || it.type}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.rowSummary, !it.include && styles.rowTextOff]}>{summarize(it)}</Text>
+                    <Text style={[styles.rowSummary, !it.include && styles.rowTextOff]}>{summarize(it, t)}</Text>
                     <View style={styles.timeEditRow}>
                       <Text style={styles.timeIcon}>🕐</Text>
                       <TextInput
                         style={[styles.timeInput, !it.include && styles.rowTextOff]}
                         value={it.time || ''}
-                        onChangeText={(t) => setItemTime(it._id, t)}
+                        onChangeText={(time) => setItemTime(it._id, time)}
                         placeholder="HH:MM"
                         placeholderTextColor="#C7C7CC"
                         maxLength={5}
@@ -339,16 +361,16 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
                         <Text
                           onPress={() => { if (it.include && phase !== 'saving') setItemDate(it._id, yesterdayStr); }}
                           style={[styles.dateChip, it.date === yesterdayStr && styles.dateChipOn]}
-                        >어제</Text>
+                        >{t('components.photoLogReview.yesterday')}</Text>
                         <Text
                           onPress={() => { if (it.include && phase !== 'saving') setItemDate(it._id, todayStr); }}
                           style={[styles.dateChip, (it.date === todayStr || !it.date) && styles.dateChipOn]}
-                        >오늘</Text>
+                        >{t('babyTracker.today')}</Text>
                       </View>
                     </View>
                   </View>
                   <Text style={[styles.toggleMark, it.include ? { color: COLOR.accent } : { color: '#C7C7CC' }]}>
-                    {it.include ? '✓' : '제외'}
+                    {it.include ? '✓' : t('components.photoLogReview.excluded')}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -363,7 +385,7 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
                 {phase === 'saving' ? (
                   <ActivityIndicator color="#FFF" />
                 ) : (
-                  <Text style={styles.saveBtnText}>{`${includedCount}건 저장`}</Text>
+                  <Text style={styles.saveBtnText}>{t('components.photoLogReview.saveCount', { count: includedCount })}</Text>
                 )}
               </TouchableOpacity>
             </View>

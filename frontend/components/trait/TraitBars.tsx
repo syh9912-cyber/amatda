@@ -1,23 +1,26 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { ELEMENT_DISPLAY_NAMES, TRAIT_COLORS } from './traitConstants';
+import { useTranslation } from 'react-i18next';
+import { getElementDisplayNames, TRAIT_COLORS } from './traitConstants';
 
 interface Props {
   fiveElements: Record<string, number>;
 }
 
 export function TraitBars({ fiveElements }: Props) {
+  const { t } = useTranslation();
+  const elementDisplayNames = getElementDisplayNames(t);
   const maxVal = Math.max(...Object.values(fiveElements), 1);
   const entries = Object.entries(fiveElements).sort((a, b) => b[1] - a[1]);
 
   return (
     <View style={styles.card}>
-      <Text style={styles.heading}>주요 성향</Text>
+      <Text style={styles.heading}>{t('components.traitBars.heading')}</Text>
       {entries.map(([key, val]) => {
         const pct = Math.round((val / maxVal) * 100);
         return (
           <View key={key} style={styles.row}>
             <Text style={styles.label} numberOfLines={1}>
-              {ELEMENT_DISPLAY_NAMES[key] ?? key}
+              {elementDisplayNames[key] ?? key}
             </Text>
             <View style={styles.track}>
               <View

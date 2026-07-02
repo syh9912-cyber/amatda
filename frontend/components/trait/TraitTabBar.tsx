@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { TABS, TRAIT_COLORS, TraitTab } from './traitConstants';
+import { useTranslation } from 'react-i18next';
+import { getTraitTabs, TRAIT_COLORS, TraitTab } from './traitConstants';
 
 interface Props {
   activeTab: TraitTab;
@@ -7,9 +8,11 @@ interface Props {
 }
 
 export function TraitTabBar({ activeTab, onTabChange }: Props) {
+  const { t } = useTranslation();
+  const tabs = getTraitTabs(t);
   return (
     <View style={styles.container}>
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const active = activeTab === tab.key;
         return (
           <TouchableOpacity

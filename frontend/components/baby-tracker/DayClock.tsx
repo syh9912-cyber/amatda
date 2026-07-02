@@ -12,6 +12,8 @@
 import { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import type { TrackerRecord } from '../../features/baby-tracker/types';
 
 type Cat = 'sleep' | 'feeding' | 'diaper' | 'medication';
@@ -106,13 +108,15 @@ function buildWedges(records: TrackerRecord[]): Wedge[] {
   return wedges.sort((a, b) => (a.cat === 'sleep' ? 0 : 1) - (b.cat === 'sleep' ? 0 : 1));
 }
 
-const FILTERS: { key: Cat | 'all'; label: string; color: string }[] = [
-  { key: 'all', label: '전체', color: C.sleepLeg },
-  { key: 'sleep', label: '수면', color: C.sleepLeg },
-  { key: 'feeding', label: '수유', color: C.feedingLeg },
-  { key: 'diaper', label: '배변', color: C.diaperLeg },
-  { key: 'medication', label: '투약', color: C.medicationLeg },
-];
+function buildFilters(t: TFunction): { key: Cat | 'all'; label: string; color: string }[] {
+  return [
+    { key: 'all', label: t('components.dayClock.all'), color: C.sleepLeg },
+    { key: 'sleep', label: t('babyTracker.tabs.sleep'), color: C.sleepLeg },
+    { key: 'feeding', label: t('components.dayClock.feedingShort'), color: C.feedingLeg },
+    { key: 'diaper', label: t('babyTracker.tabs.diaper'), color: C.diaperLeg },
+    { key: 'medication', label: t('babyTracker.tabs.medication'), color: C.medicationLeg },
+  ];
+}
 
 interface Props {
   records: TrackerRecord[];
@@ -123,8 +127,10 @@ interface Props {
 }
 
 export function DayClock({ records, dateLabel, onPrevDay, onNextDay, canGoNext = true }: Props) {
+  const { t } = useTranslation();
   const showNav = !!(onPrevDay && onNextDay);
   const [filter, setFilter] = useState<Cat | 'all'>('all');
+  const filters = useMemo(() => buildFilters(t), [t]);
   const wedges = useMemo(() => buildWedges(records), [records]);
   const hasData = wedges.length > 0;
   const shown = filter === 'all' ? wedges : wedges.filter((w) => w.cat === filter);
@@ -153,7 +159,7 @@ export function DayClock({ records, dateLabel, onPrevDay, onNextDay, canGoNext =
 
   return (
     <View style={s.card}>
-      <Text style={s.title}>하루 패턴 · 24시간</Text>
+      <Text style={s.title}>{t('babyTracker.dailyPattern')}</Text>
 
       {showNav && (
         <View style={s.dateNav}>
@@ -169,7 +175,7 @@ export function DayClock({ records, dateLabel, onPrevDay, onNextDay, canGoNext =
 
       {/* 카테고리 필터 칩 */}
       <View style={s.chips}>
-        {FILTERS.map((f) => {
+        {filters.map((f) => {
           const on = filter === f.key;
           return (
             <TouchableOpacity key={f.key} onPress={() => setFilter(f.key)} activeOpacity={0.7}>
@@ -235,25 +241,27 @@ export function DayClock({ records, dateLabel, onPrevDay, onNextDay, canGoNext =
           {!showNav && <Text style={s.centerDate}>{dateLabel}</Text>}
           {hasData ? (
             <Text style={s.centerSub}>
-              {feedingCount > 0 ? `수유 ${feedingCount}` : ''}
+              {feedingCount > 0 ? t('components.dayClock.feedingCount', { count: feedingCount }) : ''}
               {feedingCount > 0 && sleepHours > 0 ? '\n' : ''}
-              {sleepHours > 0 ? `수면 ${sleepHours >= 10 ? Math.round(sleepHours) : sleepHours.toFixed(1)}h` : ''}
+              {sleepHours > 0
+                ? t('components.dayClock.sleepHours', { hours: sleepHours >= 10 ? Math.round(sleepHours) : sleepHours.toFixed(1) })
+                : ''}
             </Text>
           ) : (
-            <Text style={s.centerEmpty}>아직 기록 없음</Text>
+            <Text style={s.centerEmpty}>{t('components.dayClock.noDataYet')}</Text>
           )}
         </View>
       </View>
 
       {/* 범례 */}
       <View style={s.legend}>
-        <Legend color={C.feeding} label="수유·식사" />
-        <Legend color={C.diaper} label="배변" />
-        <Legend color={C.sleep} label="수면" />
-        <Legend color={C.medication} label="투약" />
+        <Legend color={C.feeding} label={t('babyTracker.tabs.feeding')} />
+        <Legend color={C.diaper} label={t('babyTracker.tabs.diaper')} />
+        <Legend color={C.sleep} label={t('babyTracker.tabs.sleep')} />
+        <Legend color={C.medication} label={t('babyTracker.tabs.medication')} />
       </View>
 
-      {!hasData && <Text style={s.hint}>기록을 남기면 하루 흐름이 시계처럼 채워져요</Text>}
+      {!hasData && <Text style={s.hint}>{t('components.dayClock.emptyHint')}</Text>}
     </View>
   );
 }

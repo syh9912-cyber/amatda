@@ -25,6 +25,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
   type HospitalInfo,
   type HospitalKind,
@@ -48,6 +49,7 @@ export function HospitalRegisterModal({
   onClose,
   onSaved,
 }: Props) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<HospitalKind>(initialKind);
   const [name, setName] = useState('');
   const [mainPhone, setMainPhone] = useState('');
@@ -82,7 +84,7 @@ export function HospitalRegisterModal({
 
   const handleSave = async () => {
     if (!name.trim() || !mainPhone.trim()) {
-      Alert.alert('필수 입력', '병원명과 급할 때 연결할 번호는 필수입니다.');
+      Alert.alert(t('components.hospitalRegisterModal.requiredInputTitle'), t('components.hospitalRegisterModal.requiredInputMessage'));
       return;
     }
     setSaving(true);
@@ -98,12 +100,12 @@ export function HospitalRegisterModal({
       // 분만 병원 + 분만실/산부인과 직통 미입력 시 부드러운 추가 권유 (스마트 제안)
       if (tab === 'delivery' && !deliveryWardPhone.trim()) {
         Alert.alert(
-          '저장 완료',
-          '병원 안내에 따라 밤·주말에 따로 받는 직통 번호가 있나요?\n없으면 그냥 넘어가도 괜찮아요.',
+          t('components.hospitalRegisterModal.saveCompleteTitle'),
+          t('components.hospitalRegisterModal.suggestDirectLineMessage'),
           [
-            { text: '없어요 / 다음에', style: 'cancel', onPress: () => { onSaved?.(); onClose(); } },
+            { text: t('components.hospitalRegisterModal.noneOrLater'), style: 'cancel', onPress: () => { onSaved?.(); onClose(); } },
             {
-              text: '직통번호 추가하기',
+              text: t('components.hospitalRegisterModal.addDirectLine'),
               onPress: () => {
                 setMoreOpen(true); // 아코디언 펼치기 — 사용자가 직통번호 필드에 입력 후 다시 저장
               },
@@ -111,14 +113,19 @@ export function HospitalRegisterModal({
           ],
         );
       } else {
-        Alert.alert('저장 완료', `${tab === 'delivery' ? '분만 예정' : '현재 진료'} 병원 정보가 저장되었습니다.`);
+        Alert.alert(
+          t('components.hospitalRegisterModal.saveCompleteTitle'),
+          tab === 'delivery'
+            ? t('components.hospitalRegisterModal.saveCompleteMessageDelivery')
+            : t('components.hospitalRegisterModal.saveCompleteMessageClinic'),
+        );
         onSaved?.();
         onClose();
       }
     } catch (e) {
       // #24 정석 방법: 에러 silent 삼키지 않고 Sentry 로 추적
       captureError(e, { ctx: 'HospitalRegisterModal/save', tab, childId });
-      Alert.alert('저장 실패', '다시 시도해 주세요.');
+      Alert.alert(t('components.hospitalRegisterModal.saveFailedTitle'), t('components.hospitalRegisterModal.retryMessage'));
     } finally {
       setSaving(false);
     }
@@ -126,13 +133,13 @@ export function HospitalRegisterModal({
 
   const handleOpenMap = () => {
     if (!address.trim() && !name.trim()) {
-      Alert.alert('주소 또는 병원명을 먼저 입력해주세요.');
+      Alert.alert(t('components.hospitalRegisterModal.enterAddressOrNameFirst'));
       return;
     }
     const q = encodeURIComponent(address.trim() || name.trim());
     Linking.openURL(`https://map.kakao.com/link/search/${q}`).catch((e) => {
       captureError(e, { ctx: 'HospitalRegisterModal/openMap', q });
-      Alert.alert('지도 앱을 열 수 없습니다.');
+      Alert.alert(t('components.hospitalRegisterModal.mapOpenError'));
     });
   };
 
@@ -143,7 +150,7 @@ export function HospitalRegisterModal({
           <TouchableOpacity onPress={onClose} hitSlop={12}>
             <Text style={styles.closeBtn}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>병원 등록</Text>
+          <Text style={styles.title}>{t('components.hospitalRegisterModal.screenTitle')}</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -156,7 +163,7 @@ export function HospitalRegisterModal({
               onPress={() => setTab(k)}
             >
               <Text style={[styles.tabText, tab === k && styles.tabTextActive]}>
-                {k === 'clinic' ? '🏥 진료 병원' : '🤰 분만 예정 병원'}
+                {k === 'clinic' ? t('components.hospitalRegisterModal.tabClinic') : t('components.hospitalRegisterModal.tabDelivery')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -168,15 +175,15 @@ export function HospitalRegisterModal({
             <View style={styles.guideBox}>
               <Text style={styles.guideText}>
                 <Text style={{ fontWeight: '800', color: '#7C5CFF' }}>
-                  낮에는 외래, 밤·휴일엔 분만실!
+                  {t('components.hospitalRegisterModal.guideDeliveryEmphasis')}
                 </Text>{'\n'}
-                시간에 맞춰 똑똑하게 연결합니다.
+                {t('components.hospitalRegisterModal.guideDeliveryRest')}
               </Text>
             </View>
           ) : (
             <View style={styles.guideBox}>
               <Text style={styles.guideText}>
-                평소 정기 검진을 받는 주치의 병원 정보입니다.
+                {t('components.hospitalRegisterModal.guideClinic')}
               </Text>
             </View>
           )}
@@ -193,9 +200,9 @@ export function HospitalRegisterModal({
                   {isUniversityHospital && <Text style={styles.checkboxMark}>✓</Text>}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.checkboxLabel}>🏥 대학병원(상급종합병원)이에요</Text>
+                  <Text style={styles.checkboxLabel}>{t('components.hospitalRegisterModal.universityHospitalCheckbox')}</Text>
                   <Text style={styles.checkboxSub}>
-                    예: 서울대병원, 삼성서울병원, 차병원 본원 등
+                    {t('components.hospitalRegisterModal.universityHospitalExample')}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -203,35 +210,35 @@ export function HospitalRegisterModal({
               {isUniversityHospital && (
                 <View style={styles.uniInfoBox}>
                   <Text style={styles.uniInfoText}>
-                    💡 병원 안내에 따라 가장 빠르게 연결되는 번호를 등록해 주세요.{'\n'}
+                    {t('components.hospitalRegisterModal.uniInfoPrefix')}{'\n'}
                     <Text style={{ fontWeight: '800', color: '#7C5CFF' }}>
-                      대학병원은 분만실 또는 고위험산모센터(MFICU) 직통번호
+                      {t('components.hospitalRegisterModal.uniInfoEmphasis')}
                     </Text>
-                    {' '}등록을 권장해요.
+                    {' '}{t('components.hospitalRegisterModal.uniInfoSuffix')}
                   </Text>
                 </View>
               )}
             </>
           )}
 
-          <Text style={styles.label}>병원명 *</Text>
+          <Text style={styles.label}>{t('components.hospitalRegisterModal.nameLabel')}</Text>
           <TextInput
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="예: 차병원 강남"
+            placeholder={t('components.hospitalRegisterModal.namePlaceholder')}
             placeholderTextColor="#BBB"
           />
 
-          <Text style={styles.label}>📞 급할 때 바로 연결할 번호 *</Text>
+          <Text style={styles.label}>{t('components.hospitalRegisterModal.mainPhoneLabel')}</Text>
           <Text style={styles.subLabel}>
-            낮에는 외래, 밤·휴일엔 분만실 — 가장 빨리 받는 번호 하나만 입력해도 OK
+            {t('components.hospitalRegisterModal.mainPhoneSubLabel')}
           </Text>
           <TextInput
             style={styles.input}
             value={mainPhone}
             onChangeText={setMainPhone}
-            placeholder="예: 02-3468-3000"
+            placeholder={t('components.hospitalRegisterModal.mainPhonePlaceholder')}
             placeholderTextColor="#BBB"
             keyboardType="phone-pad"
           />
@@ -243,50 +250,50 @@ export function HospitalRegisterModal({
             activeOpacity={0.7}
           >
             <Text style={styles.accordionHeaderText}>
-              {moreOpen ? '▾ 추가 정보 접기' : '▸ 추가 정보 입력하기 (선택)'}
+              {moreOpen ? t('components.hospitalRegisterModal.accordionCollapse') : t('components.hospitalRegisterModal.accordionExpand')}
             </Text>
             <Text style={styles.accordionHeaderSub}>
-              {moreOpen ? '' : '분만실 직통 · 주소 · 메모'}
+              {moreOpen ? '' : t('components.hospitalRegisterModal.accordionSub')}
             </Text>
           </TouchableOpacity>
 
           {moreOpen && (
             <>
-              <Text style={styles.label}>분만실 / 산부인과 직통 번호 (선택)</Text>
+              <Text style={styles.label}>{t('components.hospitalRegisterModal.deliveryWardPhoneLabel')}</Text>
               <Text style={styles.subLabel}>
                 {tab === 'delivery' && isUniversityHospital
-                  ? '대학병원은 고위험산모센터(MFICU) 번호를 등록하면 좋아요'
-                  : '밤이나 휴일, 응급 상황 발생 시 분만실로 즉시 연결되는 번호예요'}
+                  ? t('components.hospitalRegisterModal.deliveryWardPhoneSubUniversity')
+                  : t('components.hospitalRegisterModal.deliveryWardPhoneSubDefault')}
               </Text>
               <TextInput
                 style={styles.input}
                 value={deliveryWardPhone}
                 onChangeText={setDeliveryWardPhone}
-                placeholder="예: 02-3468-3010"
+                placeholder={t('components.hospitalRegisterModal.deliveryWardPhonePlaceholder')}
                 placeholderTextColor="#BBB"
                 keyboardType="phone-pad"
               />
 
-              <Text style={styles.label}>주소 (선택)</Text>
+              <Text style={styles.label}>{t('components.hospitalRegisterModal.addressLabel')}</Text>
               <View style={styles.addressRow}>
                 <TextInput
                   style={[styles.input, { flex: 1, marginRight: 8 }]}
                   value={address}
                   onChangeText={setAddress}
-                  placeholder="주소를 입력하세요"
+                  placeholder={t('components.hospitalRegisterModal.addressPlaceholder')}
                   placeholderTextColor="#BBB"
                 />
                 <TouchableOpacity style={styles.mapBtn} onPress={handleOpenMap} hitSlop={8}>
-                  <Text style={styles.mapBtnText}>🗺️ 지도</Text>
+                  <Text style={styles.mapBtnText}>{t('components.hospitalRegisterModal.mapButton')}</Text>
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.label}>메모 (가족 분만실 / 르봐이예 / 기타 특징)</Text>
+              <Text style={styles.label}>{t('components.hospitalRegisterModal.memoLabel')}</Text>
               <TextInput
                 style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
                 value={memo}
                 onChangeText={setMemo}
-                placeholder="예: 가족 분만실 가능, 1인 입원실 신청 완료"
+                placeholder={t('components.hospitalRegisterModal.memoPlaceholder')}
                 placeholderTextColor="#BBB"
                 multiline
               />
@@ -298,7 +305,7 @@ export function HospitalRegisterModal({
             onPress={handleSave}
             disabled={saving}
           >
-            <Text style={styles.saveBtnText}>{saving ? '저장 중...' : '저장하기'}</Text>
+            <Text style={styles.saveBtnText}>{saving ? t('components.hospitalRegisterModal.saving') : t('components.hospitalRegisterModal.saveButton')}</Text>
           </TouchableOpacity>
         </ScrollView>
         </KeyboardAvoidingView>

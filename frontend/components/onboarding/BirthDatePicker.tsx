@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, Platform } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
 interface BirthDatePickerProps {
@@ -10,13 +11,6 @@ interface BirthDatePickerProps {
   placeholder?: string;
 }
 
-function formatDateLabel(date: Date): string {
-  const y = date.getFullYear();
-  const m = date.getMonth() + 1;
-  const d = date.getDate();
-  return `${y}년 ${m}월 ${d}일`;
-}
-
 function toISODate(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -25,9 +19,12 @@ function toISODate(date: Date): string {
 }
 
 export function BirthDatePicker({ birthDate, onChangeBirthDate, allowFuture, placeholder }: BirthDatePickerProps) {
+  const { t } = useTranslation();
   const [show, setShow] = useState(false);
 
-  const defaultPlaceholder = allowFuture ? '날짜를 선택해주세요' : '생년월일을 선택해주세요';
+  const defaultPlaceholder = allowFuture
+    ? t('components.birthDatePicker.selectDatePlaceholder')
+    : t('components.birthDatePicker.selectBirthDatePlaceholder');
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const maxDate = allowFuture
@@ -67,7 +64,13 @@ export function BirthDatePicker({ birthDate, onChangeBirthDate, allowFuture, pla
     <View>
       <TouchableOpacity style={styles.input} onPress={() => setShow(true)}>
         <Text style={birthDate ? styles.valueText : styles.placeholderText}>
-          {birthDate ? formatDateLabel(currentValue) : placeholder ?? defaultPlaceholder}
+          {birthDate
+            ? t('components.birthDatePicker.dateLabel', {
+                year: currentValue.getFullYear(),
+                month: currentValue.getMonth() + 1,
+                day: currentValue.getDate(),
+              })
+            : placeholder ?? defaultPlaceholder}
         </Text>
       </TouchableOpacity>
       {show && (

@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { TRAIT_COLORS } from './traitConstants';
 
 interface Props {
@@ -13,12 +14,13 @@ function stripAgePrefix(s: string): string {
 }
 
 export function TraitTypeCard({ name, dominantType, label }: Props) {
+  const { t } = useTranslation();
   const cleanLabel = stripAgePrefix(label || '');
   return (
     <View style={styles.card}>
-      <Text style={styles.subtitle}>{name}의 기질 유형</Text>
+      <Text style={styles.subtitle}>{t('components.traitTypeCard.subtitle', { name })}</Text>
       <Text style={styles.title}>
-        {cleanLabel || `${dominantType} 기질`}
+        {cleanLabel || t('components.traitTypeCard.fallback', { dominantType })}
       </Text>
     </View>
   );

@@ -23,6 +23,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 // react-native-webview는 새 EAS 빌드에서만 사용 가능 (네이티브 모듈).
 // OTA로 배포된 기존 앱에서 이 파일이 로드돼도 크래시 안 나도록 동적 require.
@@ -84,7 +85,7 @@ function buildUrl(p: PortOneCheckoutParams): string {
 }
 
 export function PortOneWebView({ visible, params, onResult, onClose }: Props) {
-   
+  const { t } = useTranslation();
   const webRef = useRef<any>(null);
 
   function handleMessage(e: WebViewMessageEvent) {
@@ -109,12 +110,12 @@ export function PortOneWebView({ visible, params, onResult, onClose }: Props) {
           <TouchableOpacity onPress={onClose} hitSlop={12}>
             <Text style={styles.closeBtn}>✕</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>결제</Text>
+          <Text style={styles.title}>{t('components.portOneWebView.title')}</Text>
           <View style={{ width: 24 }} />
         </View>
         <View style={styles.fallbackWrap}>
           <Text style={styles.fallbackText}>
-            외부 결제 기능은 다음 업데이트에서 사용 가능합니다.{'\n'}앱을 최신 버전으로 업데이트해 주세요.
+            {t('components.portOneWebView.updateRequired')}
           </Text>
         </View>
       </Modal>
@@ -134,7 +135,7 @@ export function PortOneWebView({ visible, params, onResult, onClose }: Props) {
         <TouchableOpacity onPress={onClose} hitSlop={12}>
           <Text style={styles.closeBtn}>✕</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>결제</Text>
+        <Text style={styles.title}>{t('components.portOneWebView.title')}</Text>
         <View style={{ width: 24 }} />
       </View>
       {params ? (

@@ -10,6 +10,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, ImageSourcePropType, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 interface Child {
   id: string;
@@ -44,17 +46,19 @@ interface Stage {
   weeksMax: number;
 }
 
-const STAGES: Stage[] = [
-  { label: '초기',   src: require('../../assets/preg-test.png'),         weeksMin: 1,  weeksMax: 11 },
-  { label: '12주',   src: require('../../assets/preg-stethoscope.png'),  weeksMin: 12, weeksMax: 12 },
-  { label: '안정',   src: require('../../assets/preg-leaf.png'),         weeksMin: 13, weeksMax: 24 },
-  { label: '후기',   src: require('../../assets/preg-bag.png'),          weeksMin: 25, weeksMax: 37 },
-  { label: '출산',   src: require('../../assets/quick-baby.png'),        weeksMin: 38, weeksMax: 99 },
-];
+function getStages(t: TFunction): Stage[] {
+  return [
+    { label: t('components.pregnancyJourneyCard.stage.early'),  src: require('../../assets/preg-test.png'),        weeksMin: 1,  weeksMax: 11 },
+    { label: t('components.pregnancyJourneyCard.stage.wk12'),   src: require('../../assets/preg-stethoscope.png'), weeksMin: 12, weeksMax: 12 },
+    { label: t('components.pregnancyJourneyCard.stage.stable'), src: require('../../assets/preg-leaf.png'),        weeksMin: 13, weeksMax: 24 },
+    { label: t('components.pregnancyJourneyCard.stage.late'),   src: require('../../assets/preg-bag.png'),         weeksMin: 25, weeksMax: 37 },
+    { label: t('components.pregnancyJourneyCard.stage.birth'),  src: require('../../assets/quick-baby.png'),       weeksMin: 38, weeksMax: 99 },
+  ];
+}
 
-function getCurrentStageIdx(weeks: number): number {
-  for (let i = 0; i < STAGES.length; i++) {
-    const s = STAGES[i];
+function getCurrentStageIdx(stages: Stage[], weeks: number): number {
+  for (let i = 0; i < stages.length; i++) {
+    const s = stages[i];
     if (weeks >= s.weeksMin && weeks <= s.weeksMax) return i;
   }
   return 0;
@@ -70,24 +74,26 @@ function daysUntilDue(dueIso: string): number | null {
 }
 
 export function PregnancyJourneyCard({ child }: Props) {
+  const { t } = useTranslation();
+  const stages = getStages(t);
   if (!child.isPregnant) return null;
   const weeks = child.pregnancyWeeks ?? 0;
-  const stageIdx = getCurrentStageIdx(weeks);
+  const stageIdx = getCurrentStageIdx(stages, weeks);
   const dueDays = child.dueDate ? daysUntilDue(child.dueDate) : null;
 
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
-        <Text style={styles.headerTitle}>임신 여정</Text>
+        <Text style={styles.headerTitle}>{t('components.pregnancyJourneyCard.headerTitle')}</Text>
         <Text style={styles.headerSub}>
           {dueDays != null ? <Text style={styles.headerDday}>{`D-${dueDays}`}</Text> : null}
           {dueDays != null ? <Text style={{ color: COLOR.textLight }}>{` · `}</Text> : null}
-          <Text style={{ color: COLOR.text, fontWeight: '800' }}>{`${weeks}주차`}</Text>
+          <Text style={{ color: COLOR.text, fontWeight: '800' }}>{t('components.pregnancyJourneyCard.weekSuffix', { week: weeks })}</Text>
         </Text>
       </View>
 
       <View style={styles.stagesRow}>
-        {STAGES.map((s, idx) => {
+        {stages.map((s, idx) => {
           const isCurrent = idx === stageIdx;
           const isPast = idx < stageIdx;
           const stageKey = STAGE_KEYS[idx];
@@ -120,12 +126,12 @@ export function PregnancyJourneyCard({ child }: Props) {
                 >
                   {s.label}
                 </Text>
-                {isCurrent && <Text style={styles.stageStatus}>진행중</Text>}
+                {isCurrent && <Text style={styles.stageStatus}>{t('components.pregnancyJourneyCard.inProgress')}</Text>}
                 {isPast && <Text style={styles.stagePast}>—</Text>}
               </TouchableOpacity>
 
               {/* 단계 사이 connector (마지막 제외) */}
-              {idx < STAGES.length - 1 && (
+              {idx < stages.length - 1 && (
                 <View
                   style={[
                     styles.connector,

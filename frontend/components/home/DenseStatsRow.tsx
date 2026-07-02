@@ -7,6 +7,8 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ImageSourcePropType } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { loadRecords } from '../../features/baby-tracker/storage';
 import { computeSummary } from '../../features/baby-tracker/utils/summary';
@@ -78,13 +80,15 @@ const WATER_GOAL = 8;
 type MoodKey = 'good' | 'tired' | 'nausea' | 'discomfort' | 'pain' | null;
 
 // 속불편(discomfort) — 후기에 입덧은 사라지지만 속이 불편한 경우 (역류성·소화불량 등)
-const MOOD_OPTIONS: { key: MoodKey; label: string; src: ImageSourcePropType }[] = [
-  { key: 'good',       label: '좋음',   src: ASSETS.moodGood },
-  { key: 'tired',      label: '피로',   src: ASSETS.moodTired },
-  { key: 'nausea',     label: '입덧',   src: ASSETS.moodNausea },
-  { key: 'discomfort', label: '속불편', src: ASSETS.moodNausea },
-  { key: 'pain',       label: '통증',   src: ASSETS.moodPain },
-];
+function getMoodOptions(t: TFunction): { key: MoodKey; label: string; src: ImageSourcePropType }[] {
+  return [
+    { key: 'good',       label: t('components.denseStatsRow.mood.good'),       src: ASSETS.moodGood },
+    { key: 'tired',      label: t('components.denseStatsRow.mood.tired'),      src: ASSETS.moodTired },
+    { key: 'nausea',     label: t('components.denseStatsRow.mood.nausea'),     src: ASSETS.moodNausea },
+    { key: 'discomfort', label: t('components.denseStatsRow.mood.discomfort'), src: ASSETS.moodNausea },
+    { key: 'pain',       label: t('components.denseStatsRow.mood.pain'),       src: ASSETS.moodPain },
+  ];
+}
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -105,6 +109,7 @@ export function DenseStatsRow({ child, onTapCheckup }: Props) {
    영아 stats
    ════════════════════════════════════════════════════════════ */
 function BabyStats({ child }: { child: Child }) {
+  const { t } = useTranslation();
   const [feeding, setFeeding] = useState<{ count: number; ml: number }>({ count: 0, ml: 0 });
   const [sleep, setSleep] = useState<{ totalH: number; naps: number; nights: number }>({ totalH: 0, naps: 0, nights: 0 });
   const [diaper, setDiaper] = useState<{ poop: number }>({ poop: 0 });
@@ -179,41 +184,41 @@ function BabyStats({ child }: { child: Child }) {
 
   // 분유 비교 메시지
   const formulaSub = (() => {
-    if (feeding.ml <= 0) return '기록 없음';
+    if (feeding.ml <= 0) return t('components.denseStatsRow.noRecord');
     if (ref.formulaMlMax === 0) return `${feeding.ml}ml`; // 일반식 (24개월+)
-    if (feeding.ml < ref.formulaMlMin) return `${ref.formulaMlMin - feeding.ml}ml 부족`;
-    if (feeding.ml > ref.formulaMlMax) return `${feeding.ml - ref.formulaMlMax}ml 초과`;
-    return '충분';
+    if (feeding.ml < ref.formulaMlMin) return t('components.denseStatsRow.mlShort', { value: ref.formulaMlMin - feeding.ml });
+    if (feeding.ml > ref.formulaMlMax) return t('components.denseStatsRow.mlOver', { value: feeding.ml - ref.formulaMlMax });
+    return t('components.denseStatsRow.sufficient');
   })();
 
   // 수면 비교 메시지
   const sleepSub = (() => {
-    if (sleep.totalH <= 0) return '기록 없음';
+    if (sleep.totalH <= 0) return t('components.denseStatsRow.noRecord');
     if (sleep.totalH < ref.sleepHrMin) {
       const gap = ref.sleepHrMin - sleep.totalH;
-      return `${gap.toFixed(1)}h 부족`;
+      return t('components.denseStatsRow.hourShort', { value: gap.toFixed(1) });
     }
     if (sleep.totalH > ref.sleepHrMax) {
       const over = sleep.totalH - ref.sleepHrMax;
-      return `${over.toFixed(1)}h 초과`;
+      return t('components.denseStatsRow.hourOver', { value: over.toFixed(1) });
     }
-    return '충분';
+    return t('components.denseStatsRow.sufficient');
   })();
 
   // 대변 메시지 — 개월수와 무관한 일반 가이드:
   //   0회 = 변비 주의 (24h 미배변), 1-3회 정상, 4+회 묽은 변 주의
   //   세부 가이드는 baby-tracker 메인 진입 시 확인 가능
   const poopSub = (() => {
-    if (diaper.poop === 0) return '변비 주의';
-    if (diaper.poop >= 4) return '묽은 변';
-    return '정상';
+    if (diaper.poop === 0) return t('components.denseStatsRow.constipationCaution');
+    if (diaper.poop >= 4) return t('components.denseStatsRow.looseStool');
+    return t('components.denseStatsRow.normal');
   })();
 
   return (
     <View style={styles.row}>
       <StatCard
         icon={ASSETS.bottle}
-        valueBig={feeding.count > 0 ? `${feeding.count}회` : '0회'}
+        valueBig={feeding.count > 0 ? t('components.denseStatsRow.countTimes', { count: feeding.count }) : t('components.denseStatsRow.countTimes', { count: 0 })}
         valueSub={formulaSub}
       />
       <View style={styles.divider} />
@@ -225,14 +230,14 @@ function BabyStats({ child }: { child: Child }) {
       <View style={styles.divider} />
       <StatCard
         icon={ASSETS.poop}
-        valueBig={`${diaper.poop}회`}
+        valueBig={t('components.denseStatsRow.countTimes', { count: diaper.poop })}
         valueSub={poopSub}
       />
       <View style={styles.divider} />
       <StatCard
         icon={ASSETS.sprout}
-        valueBig={percentile ? `상위 ${percentile.pct}%` : '—'}
-        valueSub="키·체중"
+        valueBig={percentile ? t('components.denseStatsRow.topPercent', { pct: percentile.pct }) : '—'}
+        valueSub={t('components.denseStatsRow.heightWeight')}
       />
     </View>
   );
@@ -242,6 +247,7 @@ function BabyStats({ child }: { child: Child }) {
    임신부 stats
    ════════════════════════════════════════════════════════════ */
 function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: () => void }) {
+  const { t } = useTranslation();
   const [waterCount, setWaterCount] = useState(0);
   const [supplementDone, setSupplementDone] = useState(false);
   const [mood, setMood] = useState<MoodKey>(null);
@@ -273,12 +279,12 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
 
   function streakLine(days: StreakMilestone): string {
     switch (days) {
-      case 3:   return '3일 연속 성공! 대단해요 🌟';
-      case 7:   return '7일 연속 미션 완료! 일주일 루틴 완성 💛';
-      case 14:  return '14일 연속! 정말 잘하고 있어요 🎉';
-      case 30:  return '30일 연속 — 이건 진짜 습관이에요 ✨';
-      case 60:  return '60일 연속 엄마 루틴 마스터 👑';
-      case 100: return '100일 연속! 전설의 엄마 인증 🎊';
+      case 3:   return t('components.denseStatsRow.streak.d3');
+      case 7:   return t('components.denseStatsRow.streak.d7');
+      case 14:  return t('components.denseStatsRow.streak.d14');
+      case 30:  return t('components.denseStatsRow.streak.d30');
+      case 60:  return t('components.denseStatsRow.streak.d60');
+      case 100: return t('components.denseStatsRow.streak.d100');
     }
   }
 
@@ -297,11 +303,11 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
         setCelebrateMsg(streakLine(reachedMilestone));
         setCelebrateVip(true);
       } else {
-        setCelebrateMsg('오늘 미션 완료! 엄마도 아기도 잘 챙겼어요 🎉');
+        setCelebrateMsg(t('components.denseStatsRow.todayMissionComplete'));
         setCelebrateVip(false);
       }
     } catch {
-      setCelebrateMsg('오늘 미션 완료! 엄마도 아기도 잘 챙겼어요 🎉');
+      setCelebrateMsg(t('components.denseStatsRow.todayMissionComplete'));
       setCelebrateVip(false);
     }
     return true;
@@ -359,7 +365,7 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
     const tryAll = justHitGoal && supplementDone;
     const celebrated = tryAll ? await maybeCelebrateAllDone(next, true) : false;
     if (!celebrated) {
-      setToastMsg(justHitGoal ? '물 8잔 미션 클리어! 💧' : '물 한 잔 추가했어요 💧');
+      setToastMsg(justHitGoal ? t('components.denseStatsRow.toast.waterGoalClear') : t('components.denseStatsRow.toast.waterAdded'));
     }
   };
 
@@ -372,7 +378,7 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
       const tryAll = waterCount >= WATER_GOAL;
       const celebrated = tryAll ? await maybeCelebrateAllDone(waterCount, true) : false;
       if (!celebrated) {
-        setToastMsg('영양제 완료했어요 💛');
+        setToastMsg(t('components.denseStatsRow.toast.supplementDone'));
       }
     }
   };
@@ -383,12 +389,13 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
     if (key) {
       await AsyncStorage.setItem(MOOD_KEY(child.id, todayYMD()), key).catch(() => {});
       bumpTapHint();
-      setToastMsg('컨디션 기록했어요 😊');
+      setToastMsg(t('components.denseStatsRow.toast.moodRecorded'));
     }
   };
 
-  const moodSrc = MOOD_OPTIONS.find((m) => m.key === mood)?.src ?? ASSETS.moodGood;
-  const moodLabel = MOOD_OPTIONS.find((m) => m.key === mood)?.label ?? '오늘';
+  const moodOptions = getMoodOptions(t);
+  const moodSrc = moodOptions.find((m) => m.key === mood)?.src ?? ASSETS.moodGood;
+  const moodLabel = moodOptions.find((m) => m.key === mood)?.label ?? t('components.denseStatsRow.today');
 
   // 다음 검진 D-day
   const dday = checkupDate ? formatDday(daysUntil(checkupDate)) : null;
@@ -399,7 +406,7 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
         <StatCard
           icon={ASSETS.water}
           valueBig={`${waterCount}/${WATER_GOAL}`}
-          valueSub="물 잔"
+          valueSub={t('components.denseStatsRow.waterGlass')}
           onPress={incWater}
           onLongPress={() => setInfoOpen('water')}
           tappable
@@ -407,8 +414,8 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
         <View style={styles.divider} />
         <StatCard
           icon={ASSETS.pill}
-          valueBig={supplementDone ? '완료' : '아직'}
-          valueSub="영양제"
+          valueBig={supplementDone ? t('common.complete') : t('components.denseStatsRow.notYet')}
+          valueSub={t('components.denseStatsRow.supplement')}
           onPress={toggleSupplement}
           onLongPress={() => setInfoOpen('supplements')}
           highlighted={supplementDone}
@@ -417,8 +424,8 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
         <View style={styles.divider} />
         <StatCard
           icon={ASSETS.stethoscope}
-          valueBig={dday ?? '입력'}
-          valueSub="다음 검진"
+          valueBig={dday ?? t('components.denseStatsRow.input')}
+          valueSub={t('pregnancy.nextCheckupLabel')}
           onPress={onTapCheckup}
           dim={!dday}
           tappable
@@ -426,8 +433,8 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
         <View style={styles.divider} />
         <StatCard
           icon={moodSrc}
-          valueBig={mood ? moodLabel : '기록'}
-          valueSub="컨디션"
+          valueBig={mood ? moodLabel : t('components.denseStatsRow.record')}
+          valueSub={t('components.denseStatsRow.condition')}
           onPress={openMoodPicker}
           dim={!mood}
           tappable
@@ -436,8 +443,8 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
       {/* 안내문 — 항상 표시 (자동 숨김 제거 2026-05-08: 너무 빨리 사라져서 사용자가
           길게 누르는 동작을 발견하지 못한다는 피드백) */}
       <Text style={styles.tapHint}>
-        {'탭하면 카운트 · '}
-        <Text style={styles.tapHintAccent}>길게 누르면 설명</Text>
+        {t('components.denseStatsRow.tapHintPrefix')}
+        <Text style={styles.tapHintAccent}>{t('components.denseStatsRow.tapHintAccent')}</Text>
       </Text>
 
       {/* 물/영양제 long-press 시 의학적 의미 + 가이드 */}
@@ -467,9 +474,9 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
           onPress={closeMoodPicker}
         >
           <View style={styles.moodCard}>
-            <Text style={styles.moodTitle}>오늘 컨디션은?</Text>
+            <Text style={styles.moodTitle}>{t('components.denseStatsRow.moodPickerTitle')}</Text>
             <View style={styles.moodRow}>
-              {MOOD_OPTIONS.map((m) => (
+              {moodOptions.map((m) => (
                 <TouchableOpacity
                   key={m.key}
                   style={[styles.moodBtn, mood === m.key && styles.moodBtnSelected]}
@@ -483,7 +490,7 @@ function PregnancyStats({ child, onTapCheckup }: { child: Child; onTapCheckup: (
             </View>
             {mood && (
               <TouchableOpacity onPress={() => pickMood(null)} activeOpacity={0.7}>
-                <Text style={styles.moodClearText}>오늘 컨디션 지우기</Text>
+                <Text style={styles.moodClearText}>{t('components.denseStatsRow.clearMood')}</Text>
               </TouchableOpacity>
             )}
           </View>

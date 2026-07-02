@@ -1,4 +1,5 @@
 import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
 interface BirthTimePickerProps {
@@ -32,6 +33,7 @@ function isValidTime(time: string): boolean {
 }
 
 export function BirthTimePicker({ birthTime, onChangeBirthTime }: BirthTimePickerProps) {
+  const { t } = useTranslation();
   const handleChange = (text: string) => {
     const formatted = formatTimeInput(text);
     onChangeBirthTime(formatted);
@@ -43,7 +45,7 @@ export function BirthTimePicker({ birthTime, onChangeBirthTime }: BirthTimePicke
     <View>
       <TextInput
         style={[styles.input, showError && styles.inputError]}
-        placeholder="예: 14:30 (24시간제)"
+        placeholder={t('components.birthTimePicker.placeholder')}
         placeholderTextColor={COLORS.textLight}
         value={birthTime}
         onChangeText={handleChange}
@@ -51,9 +53,9 @@ export function BirthTimePicker({ birthTime, onChangeBirthTime }: BirthTimePicke
         maxLength={5}
       />
       {showError ? (
-        <Text style={styles.errorText}>00:00 ~ 23:59 사이로 입력해주세요</Text>
+        <Text style={styles.errorText}>{t('components.birthTimePicker.errorText')}</Text>
       ) : (
-        <Text style={styles.hintText}>숫자만 입력하면 자동으로 시각 형식이 돼요 (예: 1430 → 14:30)</Text>
+        <Text style={styles.hintText}>{t('components.birthTimePicker.hintText')}</Text>
       )}
     </View>
   );

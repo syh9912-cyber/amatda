@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 
@@ -8,6 +9,7 @@ interface PhotoPickerProps {
 }
 
 export function PhotoPicker({ photoUri, onChangePhoto }: PhotoPickerProps) {
+  const { t } = useTranslation();
   const handlePress = async () => {
     const picked = await pickImageFromLibrary({ quality: 0.7 });
     if (picked) onChangePhoto(picked.uri);
@@ -23,7 +25,7 @@ export function PhotoPicker({ photoUri, onChangePhoto }: PhotoPickerProps) {
         )}
       </TouchableOpacity>
       <Text style={styles.hint}>
-        탭하여 사진 추가
+        {t('components.photoPicker.hint')}
       </Text>
     </View>
   );

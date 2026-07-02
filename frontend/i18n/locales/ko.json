@@ -4449,6 +4449,399 @@
       "continueWithGoogle": "Google로 계속하기",
       "continueWithNaver": "네이버로 계속하기",
       "continueWithKakao": "카카오로 계속하기"
+    },
+    "concernCategories": {
+      "crying": "울음",
+      "sleep": "수면",
+      "eating": "식사",
+      "poop": "대변",
+      "social": "사회성",
+      "growth": "성장",
+      "behavior": "행동",
+      "etc": "기타",
+      "symptoms": "임신 증상",
+      "nutrition": "영양/식단",
+      "checkup": "검진/검사",
+      "exercise": "산모 운동",
+      "emotion": "감정/멘탈",
+      "birth_prep": "출산 준비"
+    },
+    "analyzingScreen": {
+      "screenTitle": "분석 중",
+      "title": "{{name}}의 성향을 분석하고 있어요",
+      "messages": {
+        "startEngine": "AI 기질 분석 엔진을 시작합니다...",
+        "analyzeEnergy": "생년월일시 기반 고유 에너지를 분석하고 있어요...",
+        "collectResponses": "20개 응답 패턴을 수집하고 있어요...",
+        "crossValidate": "응답 데이터를 교차 검증하고 있어요...",
+        "classifyType": "기질 유형을 분류하고 있어요...",
+        "generatePersonalityProfile": "성격 특성 프로파일을 생성하고 있어요...",
+        "analyzeStudyStyle": "학습 스타일을 분석하고 있어요...",
+        "exploreBestSubjects": "잘하는 분야를 탐색하고 있어요...",
+        "identifyWeakAreas": "보완할 점을 파악하고 있어요...",
+        "predictFutureFields": "미래 진로 적성을 예측하고 있어요...",
+        "findSportsMatch": "잘 맞는 운동을 찾고 있어요...",
+        "matchAcademyStyle": "학원 스타일을 매칭하고 있어요...",
+        "analyzeNutrition": "영양 및 식습관을 분석하고 있어요...",
+        "designEducationDirection": "교육 방향을 설계하고 있어요...",
+        "discoverTalent": "특출난 재능을 발견하고 있어요...",
+        "writeParentingTip": "양육 팁을 작성하고 있어요...",
+        "completeSocialProfile": "사회성 프로파일을 완성하고 있어요...",
+        "finalizeGuide": "맞춤형 육아 가이드를 최종 정리하고 있어요...",
+        "done": "분석이 완료되었습니다!"
+      }
+    },
+    "birthDatePicker": {
+      "selectDatePlaceholder": "날짜를 선택해주세요",
+      "selectBirthDatePlaceholder": "생년월일을 선택해주세요",
+      "dateLabel": "{{year}}년 {{month}}월 {{day}}일"
+    },
+    "birthTimePicker": {
+      "placeholder": "예: 14:30 (24시간제)",
+      "errorText": "00:00 ~ 23:59 사이로 입력해주세요",
+      "hintText": "숫자만 입력하면 자동으로 시각 형식이 돼요 (예: 1430 → 14:30)"
+    },
+    "photoPicker": {
+      "hint": "탭하여 사진 추가"
+    },
+    "portOneWebView": {
+      "title": "결제",
+      "updateRequired": "외부 결제 기능은 다음 업데이트에서 사용 가능합니다.\n앱을 최신 버전으로 업데이트해 주세요."
+    },
+    "vaccinationDonut": {
+      "title": "{{name}}의 접종 현황",
+      "countUnit": "{{count}}건",
+      "percent": "{{percent}}%",
+      "hint": "👆 그래프를 누르면 미완료만 볼 수 있어요"
+    },
+    "batchPhotoReview": {
+      "headerTitle": "사진 {{count}}장 추가",
+      "subTextPrefix": "모두 성장앨범에 저장돼요.",
+      "subTextHighlight": "공유할 사진만",
+      "subTextSuffix": "가족피드 토글을 켜세요.",
+      "shareAll": "전체 피드 공유",
+      "unshareAll": "전체 공유 해제",
+      "memoPlaceholder": "한 줄 메모 (선택)",
+      "shareLabelOn": "💛 가족피드 공유",
+      "shareLabelOff": "가족피드 공유",
+      "saving": "저장 중...",
+      "savingProgress": "저장 중 {{done}}/{{total}}",
+      "saveCount": "{{count}}장 저장",
+      "saveWithShare": "{{count}}장 저장 · {{shareCount}}장 피드 공유"
+    },
+    "babyTrackerGuide": {
+      "tabFeedingSleepShort": "수유·식사",
+      "todayTimeline": "📋  오늘의 타임라인",
+      "nap": "낮잠",
+      "oneHourTwenty": "1시간 20분",
+      "ateWell": "잘 먹음",
+      "tapHint": "👆  한 번 = 지금 시각으로 기록",
+      "longPressHint": "✏️  길게 = 시간 수정·직접 입력",
+      "voiceSample": "\"분유 백이십 먹였고, 소변 봤고,\n이유식도 조금, 한 시간쯤 잤어\"",
+      "oneHour": "1시간",
+      "noteTitle": "🌱 오늘의 알림장",
+      "noteDate": "6/2 (화)",
+      "noteLine1": "점심에 이유식 한 그릇 다 먹었어요",
+      "noteLine2": "1시~2시 반까지 낮잠 푹 잤어요",
+      "noteLine3": "오후에 응가도 한 번 했어요",
+      "noteArrow": "↓  AI가 자동으로 정리",
+      "lunchFinished": "점심 다 먹음",
+      "onceCount": "1회",
+      "yesterday": "어제",
+      "dayBeforeYesterday": "그제",
+      "mealInterval": "식사 텀",
+      "aiInsight": "🤖  수면이 권장량에 가까워요. 잘하고 있어요!",
+      "page1": {
+        "title": "아기시간에 오신 걸 환영해요",
+        "desc": "배변·수유·수면·투약을 탭별로\n간편하게 기록하고 한눈에 볼 수 있어요"
+      },
+      "page2": {
+        "title": "버튼 한 번이면 기록 끝",
+        "desc": "자주 쓰는 기록은 원터치로,\n길게 누르면 시간 수정·직접 입력도 돼요"
+      },
+      "page3": {
+        "title": "말로 여러 개를 한 번에",
+        "desc": "음성입력 아이콘(앱 안 또는 홈 화면)을 누르고\n말하면 여러 기록도 AI가 한 번에 정리해요"
+      },
+      "page4": {
+        "title": "사진 한 장으로 한 번에",
+        "desc": "어린이집 알림장·메모 사진을 올리면\nAI가 수유·수면·배변을 자동으로 정리해요"
+      },
+      "page5": {
+        "title": "하루 흐름을 한눈에",
+        "desc": "권장량 대비 진행, 주간 요약,\nAI 패턴 분석까지 함께 확인하세요"
+      }
+    },
+    "dayClock": {
+      "all": "전체",
+      "feedingShort": "수유",
+      "feedingCount": "수유 {{count}}",
+      "sleepHours": "수면 {{hours}}h",
+      "noDataYet": "아직 기록 없음",
+      "emptyHint": "기록을 남기면 하루 흐름이 시계처럼 채워져요"
+    },
+    "photoLogReview": {
+      "babyFoodOrMeal": "이유식/밥",
+      "medicationShort": "약",
+      "durationMinutes": "{{minutes}}분",
+      "noRecordsFoundAlert": "사진에서 기록을 찾지 못했어요. 더 선명한 사진으로 다시 시도해주세요.",
+      "parseFailAlert": "사진 분석에 실패했어요. 다시 시도해주세요.",
+      "selectAtLeastOneAlert": "저장할 기록을 1개 이상 선택해주세요.",
+      "saveCompleteAlert": "{{count}}건 기록 저장 완료",
+      "saveFailAlert": "저장에 실패했어요.",
+      "headerTitle": "사진으로 기록",
+      "chooseDescLine1": "어린이집 알림장이나 손글씨 기록지, 다른 앱 캡처 사진을 찍거나 골라주세요.",
+      "chooseDescLine2": "AI가 수유·수면·배변 등을 자동으로 읽어드려요.",
+      "takePhoto": "📷  사진 찍기",
+      "chooseFromGallery": "🖼  갤러리에서 선택",
+      "parsingText": "사진에서 기록을 읽는 중...",
+      "reviewHint": "읽어온 기록이에요. 틀린 건 빼고 저장하세요.",
+      "dateBarLabel": "📅 날짜",
+      "dateBarHint": "모든 기록에 적용돼요",
+      "yesterday": "어제",
+      "excluded": "제외",
+      "saveCount": "{{count}}건 저장"
+    },
+    "observationCard": {
+      "weekday": {
+        "sun": "일",
+        "mon": "월",
+        "tue": "화",
+        "wed": "수",
+        "thu": "목",
+        "fri": "금",
+        "sat": "토"
+      },
+      "dateFormat": "{{month}}월 {{day}}일 ({{weekday}})",
+      "viewMore": "더 보기"
+    },
+    "writeArea": {
+      "todaysQuestion": "오늘의 질문",
+      "contentPlaceholder": "오늘 아이의 모습을 자유롭게 기록해주세요...",
+      "charCounter": "{{count}} / {{limit}}자",
+      "analyzing": "분석 중...",
+      "recordButton": "기록하기"
+    },
+    "commentsModal": {
+      "justNow": "방금 전",
+      "minutesAgo": "{{count}}분 전",
+      "hoursAgo": "{{count}}시간 전",
+      "daysAgo": "{{count}}일 전",
+      "title": "댓글",
+      "emptyText": "아직 댓글이 없습니다",
+      "emptyHint": "첫 댓글을 남겨보세요",
+      "inputPlaceholder": "댓글을 입력하세요...",
+      "send": "전송"
+    },
+    "postCard": {
+      "justNow": "방금 전",
+      "minutesAgo": "{{count}}분 전",
+      "hoursAgo": "{{count}}시간 전",
+      "daysAgo": "{{count}}일 전",
+      "weeksAgo": "{{count}}주 전",
+      "likeCount": "좋아요 {{count}}개",
+      "viewMore": "더 보기",
+      "viewAllComments": "댓글 {{count}}개 모두 보기"
+    },
+    "storiesRow": {
+      "myStory": "내 스토리"
+    },
+    "traitBars": {
+      "heading": "주요 성향"
+    },
+    "traitCharacteristics": {
+      "strengths": "강점",
+      "weaknesses": "보완할 점",
+      "emptyText": "성향 특성 분석 데이터가 준비 중이에요."
+    },
+    "traitSummaryText": {
+      "fallback": "{{name}}은(는) {{label}} 성향을 가지고 있어요."
+    },
+    "traitTypeCard": {
+      "subtitle": "{{name}}의 기질 유형",
+      "fallback": "{{dominantType}} 기질"
+    },
+    "traitConstants": {
+      "element": {
+        "wood": "호기심",
+        "fire": "활동성",
+        "earth": "안정감",
+        "metal": "집중력",
+        "water": "민감도"
+      },
+      "tabs": {
+        "summary": "종합 요약",
+        "traits": "성향 특성",
+        "detail": "상세분석"
+      }
+    },
+    "denseStatsRow": {
+      "noRecord": "기록 없음",
+      "sufficient": "충분",
+      "mlShort": "{{value}}ml 부족",
+      "mlOver": "{{value}}ml 초과",
+      "hourShort": "{{value}}h 부족",
+      "hourOver": "{{value}}h 초과",
+      "constipationCaution": "변비 주의",
+      "looseStool": "묽은 변",
+      "normal": "정상",
+      "countTimes": "{{count}}회",
+      "topPercent": "상위 {{pct}}%",
+      "heightWeight": "키·체중",
+      "streak": {
+        "d3": "3일 연속 성공! 대단해요 🌟",
+        "d7": "7일 연속 미션 완료! 일주일 루틴 완성 💛",
+        "d14": "14일 연속! 정말 잘하고 있어요 🎉",
+        "d30": "30일 연속 — 이건 진짜 습관이에요 ✨",
+        "d60": "60일 연속 엄마 루틴 마스터 👑",
+        "d100": "100일 연속! 전설의 엄마 인증 🎊"
+      },
+      "todayMissionComplete": "오늘 미션 완료! 엄마도 아기도 잘 챙겼어요 🎉",
+      "toast": {
+        "waterGoalClear": "물 8잔 미션 클리어! 💧",
+        "waterAdded": "물 한 잔 추가했어요 💧",
+        "supplementDone": "영양제 완료했어요 💛",
+        "moodRecorded": "컨디션 기록했어요 😊"
+      },
+      "today": "오늘",
+      "waterGlass": "물 잔",
+      "notYet": "아직",
+      "supplement": "영양제",
+      "input": "입력",
+      "record": "기록",
+      "condition": "컨디션",
+      "tapHintPrefix": "탭하면 카운트 · ",
+      "tapHintAccent": "길게 누르면 설명",
+      "moodPickerTitle": "오늘 컨디션은?",
+      "clearMood": "오늘 컨디션 지우기",
+      "mood": {
+        "good": "좋음",
+        "tired": "피로",
+        "nausea": "입덧",
+        "discomfort": "속불편",
+        "pain": "통증"
+      }
+    },
+    "nextCheckupModal": {
+      "subtitle": "언제 병원 가시나요? 홈에서 D-day로 알려드릴게요.",
+      "currentlySaved": "현재 저장됨",
+      "yearLabel": "년",
+      "monthLabel": "월",
+      "dayLabel": "일",
+      "enterValidDate": "연/월/일을 정확히 입력해 주세요.",
+      "nonexistentDate": "존재하지 않는 날짜입니다.",
+      "deleteConfirmTitle": "다음 검진 일정 삭제",
+      "deleteConfirmMessage": "저장된 검진 일정을 삭제할까요?",
+      "pastDate": "⚠️ 지난 날짜입니다",
+      "todayIsCheckup": "오늘이 검진일입니다",
+      "daysRemaining": "{{count}}일 남음",
+      "deleteSchedule": "일정 삭제"
+    },
+    "pregnancyJourneyCard": {
+      "headerTitle": "임신 여정",
+      "weekSuffix": "{{week}}주차",
+      "inProgress": "진행중",
+      "stage": {
+        "early": "초기",
+        "wk12": "12주",
+        "stable": "안정",
+        "late": "후기",
+        "birth": "출산"
+      }
+    },
+    "hospitalRegisterBanner": {
+      "titleHighRisk": "고위험 임신 — 분만 병원을 지금 등록하세요",
+      "title": "병원 번호를 미리 등록해 주세요",
+      "subHighRisk": "조산 가능성을 고려해 28주부터 안내드려요. 급한 순간 즉시 전화할 수 있도록 준비해 주세요.",
+      "sub": "출산이 가까워지고 있어요. 급한 순간 바로 전화할 수 있도록 준비해 두세요."
+    },
+    "hospitalRegisterModal": {
+      "requiredInputTitle": "필수 입력",
+      "requiredInputMessage": "병원명과 급할 때 연결할 번호는 필수입니다.",
+      "saveCompleteTitle": "저장 완료",
+      "suggestDirectLineMessage": "병원 안내에 따라 밤·주말에 따로 받는 직통 번호가 있나요?\n없으면 그냥 넘어가도 괜찮아요.",
+      "noneOrLater": "없어요 / 다음에",
+      "addDirectLine": "직통번호 추가하기",
+      "saveCompleteMessageDelivery": "분만 예정 병원 정보가 저장되었습니다.",
+      "saveCompleteMessageClinic": "현재 진료 병원 정보가 저장되었습니다.",
+      "saveFailedTitle": "저장 실패",
+      "retryMessage": "다시 시도해 주세요.",
+      "enterAddressOrNameFirst": "주소 또는 병원명을 먼저 입력해주세요.",
+      "mapOpenError": "지도 앱을 열 수 없습니다.",
+      "screenTitle": "병원 등록",
+      "tabClinic": "🏥 진료 병원",
+      "tabDelivery": "🤰 분만 예정 병원",
+      "guideDeliveryEmphasis": "낮에는 외래, 밤·휴일엔 분만실!",
+      "guideDeliveryRest": "시간에 맞춰 똑똑하게 연결합니다.",
+      "guideClinic": "평소 정기 검진을 받는 주치의 병원 정보입니다.",
+      "universityHospitalCheckbox": "🏥 대학병원(상급종합병원)이에요",
+      "universityHospitalExample": "예: 서울대병원, 삼성서울병원, 차병원 본원 등",
+      "uniInfoPrefix": "💡 병원 안내에 따라 가장 빠르게 연결되는 번호를 등록해 주세요.",
+      "uniInfoEmphasis": "대학병원은 분만실 또는 고위험산모센터(MFICU) 직통번호",
+      "uniInfoSuffix": "등록을 권장해요.",
+      "nameLabel": "병원명 *",
+      "namePlaceholder": "예: 차병원 강남",
+      "mainPhoneLabel": "📞 급할 때 바로 연결할 번호 *",
+      "mainPhoneSubLabel": "낮에는 외래, 밤·휴일엔 분만실 — 가장 빨리 받는 번호 하나만 입력해도 OK",
+      "mainPhonePlaceholder": "예: 02-3468-3000",
+      "accordionCollapse": "▾ 추가 정보 접기",
+      "accordionExpand": "▸ 추가 정보 입력하기 (선택)",
+      "accordionSub": "분만실 직통 · 주소 · 메모",
+      "deliveryWardPhoneLabel": "분만실 / 산부인과 직통 번호 (선택)",
+      "deliveryWardPhoneSubUniversity": "대학병원은 고위험산모센터(MFICU) 번호를 등록하면 좋아요",
+      "deliveryWardPhoneSubDefault": "밤이나 휴일, 응급 상황 발생 시 분만실로 즉시 연결되는 번호예요",
+      "deliveryWardPhonePlaceholder": "예: 02-3468-3010",
+      "addressLabel": "주소 (선택)",
+      "addressPlaceholder": "주소를 입력하세요",
+      "mapButton": "🗺️ 지도",
+      "memoLabel": "메모 (가족 분만실 / 르봐이예 / 기타 특징)",
+      "memoPlaceholder": "예: 가족 분만실 가능, 1인 입원실 신청 완료",
+      "saving": "저장 중...",
+      "saveButton": "저장하기"
+    },
+    "hospitalRegisterPrompt": {
+      "titleHighRisk": "고위험 임신 — 병원 등록이 꼭 필요해요",
+      "title": "출산이 가까워지고 있어요",
+      "bodyHighRiskLine1": "조산 가능성을 고려해 24주부터 안내드려요.",
+      "bodyHighRiskLine2": "급한 순간 바로 전화할 수 있도록",
+      "bodyHighRiskEmphasis": "분만 병원 번호를 지금 등록",
+      "bodySuffix": "해 주세요.",
+      "bodyLine1": "급한 순간 바로 전화할 수 있도록",
+      "bodyEmphasis": "병원 번호를 미리 등록",
+      "registerNow": "지금 등록하기",
+      "snooze3Days": "3일간 보지 않기"
+    },
+    "missionInfoModal": {
+      "waterTitle": "하루 물 8잔이 중요한 이유",
+      "supplementTitle": "영양제, 매일 챙겨야 하는 이유",
+      "waterSubtitle": "오늘 {{water}} / 8잔 마셨어요",
+      "supplementSubtitleDone": "오늘 영양제 ✓ 챙기셨어요",
+      "supplementSubtitleNotYet": "오늘 아직 영양제를 안 챙기셨어요",
+      "water": {
+        "amnioticTitle": "양수량 유지",
+        "amnioticDesc": "아기를 둘러싼 양수가 충분해야 자유롭게 움직이고 폐가 발달해요.",
+        "bloodFlowTitle": "혈류량 증가",
+        "bloodFlowDesc": "임신 중 혈액량이 50% 늘어요. 부족하면 어지럼증과 부종이 심해집니다.",
+        "swellingTitle": "부종·변비 예방",
+        "swellingDesc": "수분 부족 시 다리 부종, 변비, 요로감염 위험이 올라가요.",
+        "breastMilkTitle": "모유 준비",
+        "breastMilkDesc": "후기에는 초유 생성을 위한 수분이 더 필요해요.",
+        "factText": "임신 중 권장 수분 섭취량은 하루 2L (약 8잔). 한 번에 많이 마시지 말고 30분~1시간 간격으로 나눠 드세요. 카페인 음료는 제외하고 계산해야 해요."
+      },
+      "factTitle": "💡 알아두세요",
+      "supplement": {
+        "folateTitle": "엽산 (Folate)",
+        "folateDesc": "신경관 결손(이분척추 등) 발생률을 약 70% 낮춥니다. 임신 12주까지 특히 중요.",
+        "ironTitle": "철분",
+        "ironDesc": "혈액량이 늘면서 철분 수요 2배. 부족 시 빈혈·조산 위험이 증가합니다.",
+        "calciumTitle": "칼슘",
+        "calciumDesc": "아기 뼈·치아 형성에 필수. 부족하면 엄마 뼈에서 빠져나갑니다.",
+        "dhaTitle": "DHA / 오메가3",
+        "dhaDesc": "태아의 뇌·시각 발달에 직접 관여. 후기일수록 수요 ↑.",
+        "factText": "영양제는 식사와 함께 일정한 시간에 매일 드시는 게 가장 효과적이에요. 철분제는 비타민C와 함께 먹으면 흡수율이 올라갑니다."
+      },
+      "disclaimer": "※ 본 정보는 일반적인 임신·수유 가이드이며 개인 상태에 따라 다를 수 있어요. 정확한 권장량과 복용 일정은 담당 산부인과 의사 또는 약사와 상담해 결정하세요.",
+      "closeButton": "알겠어요 💛"
     }
   }
 }

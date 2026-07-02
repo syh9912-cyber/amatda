@@ -10,6 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { MomstagramComment } from '../../stores/momstagramStore';
 
@@ -20,18 +22,18 @@ interface CommentsModalProps {
   onSubmit: (text: string) => void;
 }
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: TFunction): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return '방금 전';
-  if (mins < 60) return `${mins}분 전`;
+  if (mins < 1) return t('components.commentsModal.justNow');
+  if (mins < 60) return t('components.commentsModal.minutesAgo', { count: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}시간 전`;
+  if (hours < 24) return t('components.commentsModal.hoursAgo', { count: hours });
   const days = Math.floor(hours / 24);
-  return `${days}일 전`;
+  return t('components.commentsModal.daysAgo', { count: days });
 }
 
-function CommentRow({ item }: { item: MomstagramComment }) {
+function CommentRow({ item, t }: { item: MomstagramComment; t: TFunction }) {
   return (
     <View style={styles.commentRow}>
       <View style={styles.commentAvatar}>
@@ -42,7 +44,7 @@ function CommentRow({ item }: { item: MomstagramComment }) {
       <View style={styles.commentBody}>
         <View style={styles.commentHeader}>
           <Text style={styles.commentName}>{item.userName}</Text>
-          <Text style={styles.commentTime}>{timeAgo(item.createdAt)}</Text>
+          <Text style={styles.commentTime}>{timeAgo(item.createdAt, t)}</Text>
         </View>
         <Text style={styles.commentText}>{item.text}</Text>
       </View>
@@ -56,6 +58,7 @@ export function CommentsModal({
   onClose,
   onSubmit,
 }: CommentsModalProps) {
+  const { t } = useTranslation();
   const [text, setText] = useState('');
   const inputRef = useRef<TextInput>(null);
 
@@ -101,24 +104,24 @@ export function CommentsModal({
           {/* Title */}
           <View style={styles.titleRow}>
             <Text style={styles.title}>
-              댓글 {comments.length > 0 ? `(${comments.length})` : ''}
+              {t('components.commentsModal.title')} {comments.length > 0 ? `(${comments.length})` : ''}
             </Text>
             <TouchableOpacity onPress={onClose}>
-              <Text style={styles.closeBtn}>닫기</Text>
+              <Text style={styles.closeBtn}>{t('common.close')}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Comment list */}
           {comments.length === 0 ? (
             <View style={styles.emptyWrap}>
-              <Text style={styles.emptyText}>아직 댓글이 없습니다</Text>
-              <Text style={styles.emptyHint}>첫 댓글을 남겨보세요</Text>
+              <Text style={styles.emptyText}>{t('components.commentsModal.emptyText')}</Text>
+              <Text style={styles.emptyHint}>{t('components.commentsModal.emptyHint')}</Text>
             </View>
           ) : (
             <FlatList
               data={comments}
               keyExtractor={(c) => c.id}
-              renderItem={({ item }) => <CommentRow item={item} />}
+              renderItem={({ item }) => <CommentRow item={item} t={t} />}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
             />
@@ -129,7 +132,7 @@ export function CommentsModal({
             <TextInput
               ref={inputRef}
               style={styles.textInput}
-              placeholder="댓글을 입력하세요..."
+              placeholder={t('components.commentsModal.inputPlaceholder')}
               placeholderTextColor="#A0A0B0"
               value={text}
               onChangeText={setText}
@@ -144,7 +147,7 @@ export function CommentsModal({
               onPress={handleSubmit}
               disabled={!text.trim()}
             >
-              <Text style={styles.sendBtnText}>전송</Text>
+              <Text style={styles.sendBtnText}>{t('components.commentsModal.send')}</Text>
             </TouchableOpacity>
           </View>
         </View>

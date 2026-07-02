@@ -8,6 +8,8 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { FONT_SIZE, SPACING } from '../../constants/theme';
 import { MomstagramPost } from '../../stores/momstagramStore';
 import { EmojiIcon } from '../common/EmojiIcon';
@@ -61,19 +63,20 @@ function getAvatarColor(name: string): string {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: TFunction): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return '방금 전';
-  if (mins < 60) return `${mins}분 전`;
+  if (mins < 1) return t('components.postCard.justNow');
+  if (mins < 60) return t('components.postCard.minutesAgo', { count: mins });
   const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}시간 전`;
+  if (hours < 24) return t('components.postCard.hoursAgo', { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}일 전`;
-  return `${Math.floor(days / 7)}주 전`;
+  if (days < 7) return t('components.postCard.daysAgo', { count: days });
+  return t('components.postCard.weeksAgo', { count: Math.floor(days / 7) });
 }
 
 export function PostCard({ post, onLike, onComment, onShare, onMore, isMine }: PostCardProps) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -125,11 +128,11 @@ export function PostCard({ post, onLike, onComment, onShare, onMore, isMine }: P
               <Text style={styles.userName}>{post.userName}</Text>
               {post.isPrivate && (
                 <View style={styles.privateBadge}>
-                  <Text style={styles.privateBadgeText}>나만보기</Text>
+                  <Text style={styles.privateBadgeText}>{t('momstagramPost.privateOnly')}</Text>
                 </View>
               )}
             </View>
-            <Text style={styles.timeText}>{timeAgo(post.createdAt)}</Text>
+            <Text style={styles.timeText}>{timeAgo(post.createdAt, t)}</Text>
           </View>
         </View>
         <TouchableOpacity
@@ -142,7 +145,7 @@ export function PostCard({ post, onLike, onComment, onShare, onMore, isMine }: P
           activeOpacity={0.7}
           style={styles.moreBtn}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          accessibilityLabel="게시글 메뉴"
+          accessibilityLabel={t('momstagram.postMenu.title')}
           accessibilityRole="button"
         >
           <Text style={styles.moreIcon}>{'···'}</Text>
@@ -203,7 +206,7 @@ export function PostCard({ post, onLike, onComment, onShare, onMore, isMine }: P
       {/* Like count */}
       {post.likes > 0 && (
         <Text style={styles.likeCount}>
-          좋아요 {post.likes}개
+          {t('components.postCard.likeCount', { count: post.likes })}
         </Text>
       )}
 
@@ -233,7 +236,7 @@ export function PostCard({ post, onLike, onComment, onShare, onMore, isMine }: P
         {isLong && (
           <TouchableOpacity onPress={() => setExpanded((p) => !p)}>
             <Text style={styles.expandToggle}>
-              {expanded ? '접기' : '더 보기'}
+              {expanded ? t('common.collapse') : t('components.postCard.viewMore')}
             </Text>
           </TouchableOpacity>
         )}
@@ -246,7 +249,7 @@ export function PostCard({ post, onLike, onComment, onShare, onMore, isMine }: P
           style={styles.viewCommentsWrap}
         >
           <Text style={styles.viewCommentsText}>
-            댓글 {post.comments.length}개 모두 보기
+            {t('components.postCard.viewAllComments', { count: post.comments.length })}
           </Text>
         </TouchableOpacity>
       )}

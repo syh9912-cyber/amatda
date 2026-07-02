@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
 const COLLAPSE_THRESHOLD = 120;
@@ -10,16 +12,25 @@ interface ObservationCardProps {
   onShare?: () => void;
 }
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, t: TFunction): string {
   const d = new Date(iso);
   const month = d.getMonth() + 1;
   const day = d.getDate();
-  const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+  const weekdays = [
+    t('components.observationCard.weekday.sun'),
+    t('components.observationCard.weekday.mon'),
+    t('components.observationCard.weekday.tue'),
+    t('components.observationCard.weekday.wed'),
+    t('components.observationCard.weekday.thu'),
+    t('components.observationCard.weekday.fri'),
+    t('components.observationCard.weekday.sat'),
+  ];
   const wd = weekdays[d.getDay()];
-  return `${month}월 ${day}일 (${wd})`;
+  return t('components.observationCard.dateFormat', { month, day, weekday: wd });
 }
 
 export function ObservationCard({ rawContent, createdAt, onShare }: ObservationCardProps) {
+  const { t } = useTranslation();
   const isLong = rawContent.length > COLLAPSE_THRESHOLD;
   const [expanded, setExpanded] = useState(false);
 
@@ -31,11 +42,11 @@ export function ObservationCard({ rawContent, createdAt, onShare }: ObservationC
     <View style={styles.card}>
       <View style={styles.dateRow}>
         <View style={styles.dateBadge}>
-          <Text style={styles.dateText}>{formatDate(createdAt)}</Text>
+          <Text style={styles.dateText}>{formatDate(createdAt, t)}</Text>
         </View>
         {onShare && (
           <TouchableOpacity onPress={onShare} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Text style={styles.shareBtn}>{'📸'} 가족피드 공유</Text>
+            <Text style={styles.shareBtn}>{'📸'} {t('album.shareToFamilyFeed')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -44,7 +55,7 @@ export function ObservationCard({ rawContent, createdAt, onShare }: ObservationC
       {isLong && (
         <TouchableOpacity onPress={() => setExpanded((p) => !p)}>
           <Text style={styles.toggle}>
-            {expanded ? '접기' : '더 보기'}
+            {expanded ? t('common.collapse') : t('components.observationCard.viewMore')}
           </Text>
         </TouchableOpacity>
       )}

@@ -1,4 +1,5 @@
 import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 
@@ -28,6 +29,7 @@ export function WriteArea({
   photoUri,
   onChangePhoto,
 }: WriteAreaProps) {
+  const { t } = useTranslation();
   const charCount = content.length;
   const isOverLimit = charCount > CHAR_LIMIT;
 
@@ -41,14 +43,14 @@ export function WriteArea({
     <View style={styles.card}>
       {dailyQuestion && (
         <View style={styles.questionCard}>
-          <Text style={styles.questionLabel}>오늘의 질문</Text>
+          <Text style={styles.questionLabel}>{t('components.writeArea.todaysQuestion')}</Text>
           <Text style={styles.questionText}>{dailyQuestion.question}</Text>
           <Text style={styles.questionHint}>{dailyQuestion.hint}</Text>
         </View>
       )}
       <TextInput
         style={styles.textArea}
-        placeholder="오늘 아이의 모습을 자유롭게 기록해주세요..."
+        placeholder={t('components.writeArea.contentPlaceholder')}
         placeholderTextColor={COLORS.textLight}
         value={content}
         onChangeText={handleChange}
@@ -68,7 +70,7 @@ export function WriteArea({
       ) : null}
       <View style={styles.footer}>
         <Text style={[styles.counter, isOverLimit && styles.counterOver]}>
-          {charCount} / {CHAR_LIMIT}자
+          {t('components.writeArea.charCounter', { count: charCount, limit: CHAR_LIMIT })}
         </Text>
         <View style={styles.actions}>
           {onChangePhoto && (
@@ -88,7 +90,7 @@ export function WriteArea({
             disabled={loading || isOverLimit}
           >
             <Text style={styles.submitText}>
-              {loading ? '분석 중...' : '기록하기'}
+              {loading ? t('components.writeArea.analyzing') : t('components.writeArea.recordButton')}
             </Text>
           </TouchableOpacity>
         </View>

@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { TRAIT_COLORS } from './traitConstants';
 import type { DetailItem } from '../../stores/childStore';
 
@@ -32,11 +33,12 @@ export function TraitCharacteristics({
   strengthsDetail,
   weaknessesDetail,
 }: Props) {
+  const { t } = useTranslation();
   return (
     <View>
       {strengthsDetail && strengthsDetail.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>강점</Text>
+          <Text style={styles.sectionTitle}>{t('components.traitCharacteristics.strengths')}</Text>
           {strengthsDetail.map((d, i) => (
             <DetailCard
               key={`s-${i}`}
@@ -48,7 +50,7 @@ export function TraitCharacteristics({
       )}
       {weaknessesDetail && weaknessesDetail.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>보완할 점</Text>
+          <Text style={styles.sectionTitle}>{t('components.traitCharacteristics.weaknesses')}</Text>
           {weaknessesDetail.map((d, i) => (
             <DetailCard
               key={`w-${i}`}
@@ -61,7 +63,7 @@ export function TraitCharacteristics({
       {!strengthsDetail?.length && !weaknessesDetail?.length && (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyText}>
-            성향 특성 분석 데이터가 준비 중이에요.
+            {t('components.traitCharacteristics.emptyText')}
           </Text>
         </View>
       )}

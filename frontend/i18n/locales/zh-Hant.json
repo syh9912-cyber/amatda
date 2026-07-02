@@ -4449,6 +4449,399 @@
       "continueWithGoogle": "使用Google繼續",
       "continueWithNaver": "使用NAVER繼續",
       "continueWithKakao": "使用Kakao繼續"
+    },
+    "concernCategories": {
+      "crying": "哭泣",
+      "sleep": "睡眠",
+      "eating": "飲食",
+      "poop": "排便",
+      "social": "社交能力",
+      "growth": "成長",
+      "behavior": "行為",
+      "etc": "其他",
+      "symptoms": "懷孕症狀",
+      "nutrition": "營養/飲食",
+      "checkup": "產檢/檢查",
+      "exercise": "孕婦運動",
+      "emotion": "情緒/心理",
+      "birth_prep": "生產準備"
+    },
+    "analyzingScreen": {
+      "screenTitle": "分析中",
+      "title": "正在分析{{name}}的性向",
+      "messages": {
+        "startEngine": "正在啟動AI氣質分析引擎...",
+        "analyzeEnergy": "正在根據出生年月日時分析獨特能量...",
+        "collectResponses": "正在收集20個回答模式...",
+        "crossValidate": "正在交叉驗證回答資料...",
+        "classifyType": "正在分類氣質類型...",
+        "generatePersonalityProfile": "正在生成性格特質檔案...",
+        "analyzeStudyStyle": "正在分析學習風格...",
+        "exploreBestSubjects": "正在探索擅長領域...",
+        "identifyWeakAreas": "正在找出需要加強的部分...",
+        "predictFutureFields": "正在預測未來志向性向...",
+        "findSportsMatch": "正在尋找適合的運動...",
+        "matchAcademyStyle": "正在配對補習班風格...",
+        "analyzeNutrition": "正在分析營養與飲食習慣...",
+        "designEducationDirection": "正在規劃教育方向...",
+        "discoverTalent": "正在發現突出的才能...",
+        "writeParentingTip": "正在撰寫育兒建議...",
+        "completeSocialProfile": "正在完成社交性檔案...",
+        "finalizeGuide": "正在最終彙整客製化育兒指南...",
+        "done": "分析已完成!"
+      }
+    },
+    "birthDatePicker": {
+      "selectDatePlaceholder": "請選擇日期",
+      "selectBirthDatePlaceholder": "請選擇出生年月日",
+      "dateLabel": "{{year}}年{{month}}月{{day}}日"
+    },
+    "birthTimePicker": {
+      "placeholder": "例如：14:30（24小時制）",
+      "errorText": "請輸入00:00~23:59之間的時間",
+      "hintText": "只需輸入數字即可自動轉換為時間格式（例如：1430 → 14:30）"
+    },
+    "photoPicker": {
+      "hint": "點擊新增照片"
+    },
+    "portOneWebView": {
+      "title": "付款",
+      "updateRequired": "外部付款功能將於下次更新後提供。\n請將應用程式更新至最新版本。"
+    },
+    "vaccinationDonut": {
+      "title": "{{name}}的接種現況",
+      "countUnit": "{{count}}件",
+      "percent": "{{percent}}%",
+      "hint": "👆 點擊圖表即可只顯示未完成項目"
+    },
+    "batchPhotoReview": {
+      "headerTitle": "新增{{count}}張照片",
+      "subTextPrefix": "全部都會儲存到成長相簿。",
+      "subTextHighlight": "只有想分享的照片",
+      "subTextSuffix": "請開啟家庭動態的切換開關。",
+      "shareAll": "全部分享到動態",
+      "unshareAll": "全部取消分享",
+      "memoPlaceholder": "簡短備註（選填）",
+      "shareLabelOn": "💛 分享到家庭動態",
+      "shareLabelOff": "分享到家庭動態",
+      "saving": "儲存中...",
+      "savingProgress": "儲存中 {{done}}/{{total}}",
+      "saveCount": "儲存{{count}}張",
+      "saveWithShare": "儲存{{count}}張・{{shareCount}}張分享至動態"
+    },
+    "babyTrackerGuide": {
+      "tabFeedingSleepShort": "餵食",
+      "todayTimeline": "📋  今日時間軸",
+      "nap": "午睡",
+      "oneHourTwenty": "1小時20分鐘",
+      "ateWell": "吃得很好",
+      "tapHint": "👆  點一下＝以目前時間記錄",
+      "longPressHint": "✏️  長按＝修改時間・手動輸入",
+      "voiceSample": "\"餵了120配方奶，尿了，\n也吃了一點副食品，睡了大概一小時\"",
+      "oneHour": "1小時",
+      "noteTitle": "🌱 今日聯絡簿",
+      "noteDate": "6/2（週二）",
+      "noteLine1": "中午吃完了一碗副食品",
+      "noteLine2": "1點到2點半好好地睡了午覺",
+      "noteLine3": "下午也大了一次便",
+      "noteArrow": "↓  AI自動整理",
+      "lunchFinished": "午餐吃完了",
+      "onceCount": "1次",
+      "yesterday": "昨天",
+      "dayBeforeYesterday": "前天",
+      "mealInterval": "餵食間隔",
+      "aiInsight": "🤖  睡眠接近建議量，做得很好！",
+      "page1": {
+        "title": "歡迎使用寶寶時間",
+        "desc": "如廁・餵食・睡眠・用藥可依分頁\n輕鬆記錄，一目了然"
+      },
+      "page2": {
+        "title": "按一下按鈕就能完成記錄",
+        "desc": "常用記錄一鍵搞定，\n長按還能修改時間・手動輸入"
+      },
+      "page3": {
+        "title": "用說的一次記錄多筆",
+        "desc": "點選語音輸入圖示（App內或主畫面）\n說話後，多筆記錄AI會一次整理好"
+      },
+      "page4": {
+        "title": "一張照片就能完成記錄",
+        "desc": "上傳幼兒園聯絡簿・筆記照片\nAI會自動整理餵食・睡眠・如廁記錄"
+      },
+      "page5": {
+        "title": "一目掌握一天的節奏",
+        "desc": "建議量對比進度、每週摘要，\n連AI模式分析都能一起確認"
+      }
+    },
+    "dayClock": {
+      "all": "全部",
+      "feedingShort": "餵食",
+      "feedingCount": "餵食 {{count}}",
+      "sleepHours": "睡眠 {{hours}}h",
+      "noDataYet": "尚無記錄",
+      "emptyHint": "留下記錄後，一天的節奏就會像時鐘一樣填滿"
+    },
+    "photoLogReview": {
+      "babyFoodOrMeal": "副食品／飯",
+      "medicationShort": "藥",
+      "durationMinutes": "{{minutes}}分鐘",
+      "noRecordsFoundAlert": "無法從照片中找到記錄。請用更清晰的照片再試一次。",
+      "parseFailAlert": "照片分析失敗，請再試一次。",
+      "selectAtLeastOneAlert": "請至少選擇一筆要儲存的記錄。",
+      "saveCompleteAlert": "已完成儲存{{count}}筆記錄",
+      "saveFailAlert": "儲存失敗。",
+      "headerTitle": "用照片記錄",
+      "chooseDescLine1": "請拍攝或選擇幼兒園聯絡簿、手寫記錄單，或其他App的截圖。",
+      "chooseDescLine2": "AI會自動讀取餵食・睡眠・如廁等資訊。",
+      "takePhoto": "📷  拍照",
+      "chooseFromGallery": "🖼  從相簿選擇",
+      "parsingText": "正在從照片讀取記錄...",
+      "reviewHint": "這是讀取到的記錄，請取消勾選錯誤項目後再儲存。",
+      "dateBarLabel": "📅 日期",
+      "dateBarHint": "會套用到所有記錄",
+      "yesterday": "昨天",
+      "excluded": "排除",
+      "saveCount": "儲存{{count}}筆"
+    },
+    "observationCard": {
+      "weekday": {
+        "sun": "日",
+        "mon": "一",
+        "tue": "二",
+        "wed": "三",
+        "thu": "四",
+        "fri": "五",
+        "sat": "六"
+      },
+      "dateFormat": "{{month}}月{{day}}日（週{{weekday}}）",
+      "viewMore": "查看更多"
+    },
+    "writeArea": {
+      "todaysQuestion": "今日提問",
+      "contentPlaceholder": "請自由記錄今天孩子的樣子...",
+      "charCounter": "{{count}} / {{limit}}字",
+      "analyzing": "分析中...",
+      "recordButton": "記錄"
+    },
+    "commentsModal": {
+      "justNow": "剛剛",
+      "minutesAgo": "{{count}}分鐘前",
+      "hoursAgo": "{{count}}小時前",
+      "daysAgo": "{{count}}天前",
+      "title": "留言",
+      "emptyText": "尚無留言",
+      "emptyHint": "留下第一則留言吧",
+      "inputPlaceholder": "請輸入留言...",
+      "send": "傳送"
+    },
+    "postCard": {
+      "justNow": "剛剛",
+      "minutesAgo": "{{count}}分鐘前",
+      "hoursAgo": "{{count}}小時前",
+      "daysAgo": "{{count}}天前",
+      "weeksAgo": "{{count}}週前",
+      "likeCount": "{{count}}個讚",
+      "viewMore": "查看更多",
+      "viewAllComments": "查看全部{{count}}則留言"
+    },
+    "storiesRow": {
+      "myStory": "我的限時動態"
+    },
+    "traitBars": {
+      "heading": "主要傾向"
+    },
+    "traitCharacteristics": {
+      "strengths": "優點",
+      "weaknesses": "待加強之處",
+      "emptyText": "性格特質分析資料準備中。"
+    },
+    "traitSummaryText": {
+      "fallback": "{{name}}具有{{label}}的傾向。"
+    },
+    "traitTypeCard": {
+      "subtitle": "{{name}}的氣質類型",
+      "fallback": "{{dominantType}}氣質"
+    },
+    "traitConstants": {
+      "element": {
+        "wood": "好奇心",
+        "fire": "活動力",
+        "earth": "安定感",
+        "metal": "專注力",
+        "water": "敏感度"
+      },
+      "tabs": {
+        "summary": "綜合摘要",
+        "traits": "性格特質",
+        "detail": "詳細分析"
+      }
+    },
+    "denseStatsRow": {
+      "noRecord": "無記錄",
+      "sufficient": "充足",
+      "mlShort": "不足{{value}}ml",
+      "mlOver": "超過{{value}}ml",
+      "hourShort": "不足{{value}}h",
+      "hourOver": "超過{{value}}h",
+      "constipationCaution": "注意便秘",
+      "looseStool": "軟便",
+      "normal": "正常",
+      "countTimes": "{{count}}次",
+      "topPercent": "前{{pct}}%",
+      "heightWeight": "身高體重",
+      "streak": {
+        "d3": "連續3天成功！太棒了 🌟",
+        "d7": "連續7天完成任務！一週習慣養成 💛",
+        "d14": "連續14天！你做得非常好 🎉",
+        "d30": "連續30天—這已經是真正的習慣了 ✨",
+        "d60": "連續60天 媽媽習慣達人 👑",
+        "d100": "連續100天！傳說級媽媽認證 🎊"
+      },
+      "todayMissionComplete": "今天的任務完成了！媽媽和寶寶都照顧得很好 🎉",
+      "toast": {
+        "waterGoalClear": "喝水8杯任務達成！💧",
+        "waterAdded": "已新增一杯水 💧",
+        "supplementDone": "已完成營養品攝取 💛",
+        "moodRecorded": "已記錄狀態 😊"
+      },
+      "today": "今天",
+      "waterGlass": "喝水杯數",
+      "notYet": "尚未",
+      "supplement": "營養品",
+      "input": "輸入",
+      "record": "記錄",
+      "condition": "狀態",
+      "tapHintPrefix": "點擊計數．",
+      "tapHintAccent": "長按查看說明",
+      "moodPickerTitle": "今天的狀態如何？",
+      "clearMood": "清除今天的狀態",
+      "mood": {
+        "good": "良好",
+        "tired": "疲勞",
+        "nausea": "孕吐",
+        "discomfort": "腸胃不適",
+        "pain": "疼痛"
+      }
+    },
+    "nextCheckupModal": {
+      "subtitle": "什麼時候要去醫院呢？我們會在首頁顯示倒數天數。",
+      "currentlySaved": "目前已儲存",
+      "yearLabel": "年",
+      "monthLabel": "月",
+      "dayLabel": "日",
+      "enterValidDate": "請正確輸入年／月／日。",
+      "nonexistentDate": "此日期不存在。",
+      "deleteConfirmTitle": "刪除下次檢查行程",
+      "deleteConfirmMessage": "確定要刪除已儲存的檢查行程嗎？",
+      "pastDate": "⚠️ 這是過去的日期",
+      "todayIsCheckup": "今天就是檢查日",
+      "daysRemaining": "剩餘{{count}}天",
+      "deleteSchedule": "刪除行程"
+    },
+    "pregnancyJourneyCard": {
+      "headerTitle": "孕期旅程",
+      "weekSuffix": "第{{week}}週",
+      "inProgress": "進行中",
+      "stage": {
+        "early": "初期",
+        "wk12": "12週",
+        "stable": "穩定期",
+        "late": "後期",
+        "birth": "分娩"
+      }
+    },
+    "hospitalRegisterBanner": {
+      "titleHighRisk": "高風險妊娠—請立即註冊分娩醫院",
+      "title": "請事先註冊醫院電話號碼",
+      "subHighRisk": "考量早產風險，我們從第28週開始提醒您。請預先準備好，以便緊急時能立即撥打電話。",
+      "sub": "生產日期即將到來。請預先準備好，以便緊急時能立即撥打電話。"
+    },
+    "hospitalRegisterModal": {
+      "requiredInputTitle": "必填欄位",
+      "requiredInputMessage": "醫院名稱與緊急聯絡電話為必填。",
+      "saveCompleteTitle": "儲存完成",
+      "suggestDirectLineMessage": "根據醫院指引，是否有夜間．週末專用的直撥電話？\n沒有的話也可以直接跳過。",
+      "noneOrLater": "沒有／稍後再說",
+      "addDirectLine": "新增直撥電話",
+      "saveCompleteMessageDelivery": "分娩預定醫院資訊已儲存。",
+      "saveCompleteMessageClinic": "目前就診醫院資訊已儲存。",
+      "saveFailedTitle": "儲存失敗",
+      "retryMessage": "請再試一次。",
+      "enterAddressOrNameFirst": "請先輸入地址或醫院名稱。",
+      "mapOpenError": "無法開啟地圖應用程式。",
+      "screenTitle": "醫院註冊",
+      "tabClinic": "🏥 就診醫院",
+      "tabDelivery": "🤰 分娩預定醫院",
+      "guideDeliveryEmphasis": "白天門診，夜間．假日分娩室！",
+      "guideDeliveryRest": "依時段智慧接通。",
+      "guideClinic": "這是您平時定期產檢的主治醫師醫院資訊。",
+      "universityHospitalCheckbox": "🏥 這是大學醫院（醫學中心）",
+      "universityHospitalExample": "例如：首爾大學醫院、三星首爾醫院、車醫院總院等",
+      "uniInfoPrefix": "💡 請依醫院指引，登記能最快接通的電話號碼。",
+      "uniInfoEmphasis": "大學醫院建議登記分娩室或高危險妊娠中心（MFICU）的直撥電話",
+      "uniInfoSuffix": "。",
+      "nameLabel": "醫院名稱 *",
+      "namePlaceholder": "例如：車醫院江南院區",
+      "mainPhoneLabel": "📞 緊急時可立即接通的電話 *",
+      "mainPhoneSubLabel": "白天門診，夜間．假日分娩室—只需輸入一個最快接通的號碼即可",
+      "mainPhonePlaceholder": "例如：02-3468-3000",
+      "accordionCollapse": "▾ 收合其他資訊",
+      "accordionExpand": "▸ 輸入其他資訊（選填）",
+      "accordionSub": "分娩室直撥電話．地址．備註",
+      "deliveryWardPhoneLabel": "分娩室／婦產科直撥電話（選填）",
+      "deliveryWardPhoneSubUniversity": "大學醫院建議登記高危險妊娠中心（MFICU）電話",
+      "deliveryWardPhoneSubDefault": "夜間或假日發生緊急狀況時，可立即接通分娩室的電話號碼",
+      "deliveryWardPhonePlaceholder": "例如：02-3468-3010",
+      "addressLabel": "地址（選填）",
+      "addressPlaceholder": "請輸入地址",
+      "mapButton": "🗺️ 地圖",
+      "memoLabel": "備註（家庭產房／溫和生產／其他特色）",
+      "memoPlaceholder": "例如：可申請家庭產房，已完成單人病房申請",
+      "saving": "儲存中...",
+      "saveButton": "儲存"
+    },
+    "hospitalRegisterPrompt": {
+      "titleHighRisk": "高風險妊娠—務必註冊醫院資訊",
+      "title": "生產日期即將到來",
+      "bodyHighRiskLine1": "考量早產風險，我們從第24週開始提醒您。",
+      "bodyHighRiskLine2": "為了能在緊急時立即撥打電話，",
+      "bodyHighRiskEmphasis": "請立即註冊分娩醫院電話",
+      "bodySuffix": "。",
+      "bodyLine1": "為了能在緊急時立即撥打電話，",
+      "bodyEmphasis": "請事先註冊醫院電話號碼",
+      "registerNow": "立即註冊",
+      "snooze3Days": "3天內不再顯示"
+    },
+    "missionInfoModal": {
+      "waterTitle": "每天喝水8杯的重要原因",
+      "supplementTitle": "為什麼要每天補充營養品",
+      "waterSubtitle": "今天已喝{{water}} / 8杯",
+      "supplementSubtitleDone": "今天已✓補充營養品",
+      "supplementSubtitleNotYet": "今天尚未補充營養品",
+      "water": {
+        "amnioticTitle": "維持羊水量",
+        "amnioticDesc": "包覆寶寶的羊水量充足，寶寶才能自由活動並促進肺部發育。",
+        "bloodFlowTitle": "增加血流量",
+        "bloodFlowDesc": "懷孕期間血液量會增加50%。若水分不足，暈眩與水腫會更嚴重。",
+        "swellingTitle": "預防水腫．便秘",
+        "swellingDesc": "水分不足時，腿部水腫、便秘、泌尿道感染的風險會提高。",
+        "breastMilkTitle": "準備母乳",
+        "breastMilkDesc": "後期需要更多水分來幫助初乳生成。",
+        "factText": "懷孕期間建議每日攝取2公升水分（約8杯）。請勿一次大量飲用，應每隔30分鐘至1小時分次飲用。含咖啡因的飲料需另外計算，不包含在內。"
+      },
+      "factTitle": "💡 小提醒",
+      "supplement": {
+        "folateTitle": "葉酸 (Folate)",
+        "folateDesc": "可降低約70%神經管缺陷（如脊柱裂）的發生率。懷孕12週前特別重要。",
+        "ironTitle": "鐵質",
+        "ironDesc": "隨著血液量增加，鐵質需求量提高2倍。不足時會增加貧血．早產風險。",
+        "calciumTitle": "鈣質",
+        "calciumDesc": "寶寶骨骼．牙齒發育所必需。不足時會從媽媽的骨骼中流失。",
+        "dhaTitle": "DHA／Omega-3",
+        "dhaDesc": "直接影響胎兒腦部．視覺發育。懷孕後期需求量↑。",
+        "factText": "營養品最好每天在固定時間隨餐服用，效果最佳。鐵劑與維生素C一起服用可提高吸收率。"
+      },
+      "disclaimer": "※本資訊為一般妊娠．哺乳指南，實際狀況可能因個人體質而異。準確的建議攝取量與服用時程，請諮詢您的婦產科醫師或藥師決定。",
+      "closeButton": "了解了 💛"
     }
   }
 }

@@ -15,6 +15,7 @@
  */
 import { useEffect, useState, useCallback } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HospitalRegisterModal } from './HospitalRegisterModal';
 import { getHospital } from '../../services/deliveryHospital';
@@ -34,6 +35,7 @@ const NORMAL_THRESHOLD = 30;
 const HIGH_RISK_THRESHOLD = 24;
 
 export function HospitalRegisterPrompt({ childId, weeks, isHighRisk = false, enabled = true }: Props) {
+  const { t } = useTranslation();
   const [shouldShow, setShouldShow] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [checked, setChecked] = useState(false);
@@ -112,22 +114,22 @@ export function HospitalRegisterPrompt({ childId, weeks, isHighRisk = false, ena
             </TouchableOpacity>
             <Text style={styles.icon}>{isHighRisk ? '🚨' : '⏰'}</Text>
             <Text style={[styles.title, isHighRisk && styles.titleHighRisk]}>
-              {isHighRisk ? '고위험 임신 — 병원 등록이 꼭 필요해요' : '출산이 가까워지고 있어요'}
+              {isHighRisk ? t('components.hospitalRegisterPrompt.titleHighRisk') : t('components.hospitalRegisterPrompt.title')}
             </Text>
             <Text style={styles.body}>
               {isHighRisk ? (
                 <>
-                  조산 가능성을 고려해 24주부터 안내드려요.{'\n'}
-                  급한 순간 바로 전화할 수 있도록{'\n'}
+                  {t('components.hospitalRegisterPrompt.bodyHighRiskLine1')}{'\n'}
+                  {t('components.hospitalRegisterPrompt.bodyHighRiskLine2')}{'\n'}
                   <Text style={[styles.bodyEmph, styles.bodyEmphHighRisk]}>
-                    분만 병원 번호를 지금 등록
+                    {t('components.hospitalRegisterPrompt.bodyHighRiskEmphasis')}
                   </Text>
-                  해 주세요.
+                  {t('components.hospitalRegisterPrompt.bodySuffix')}
                 </>
               ) : (
                 <>
-                  급한 순간 바로 전화할 수 있도록{'\n'}
-                  <Text style={styles.bodyEmph}>병원 번호를 미리 등록</Text>해 주세요.
+                  {t('components.hospitalRegisterPrompt.bodyLine1')}{'\n'}
+                  <Text style={styles.bodyEmph}>{t('components.hospitalRegisterPrompt.bodyEmphasis')}</Text>{t('components.hospitalRegisterPrompt.bodySuffix')}
                 </>
               )}
             </Text>
@@ -136,10 +138,10 @@ export function HospitalRegisterPrompt({ childId, weeks, isHighRisk = false, ena
               onPress={handleRegister}
               activeOpacity={0.85}
             >
-              <Text style={styles.primaryBtnText}>지금 등록하기</Text>
+              <Text style={styles.primaryBtnText}>{t('components.hospitalRegisterPrompt.registerNow')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.secondaryBtn} onPress={handleSnooze} activeOpacity={0.7}>
-              <Text style={styles.secondaryBtnText}>3일간 보지 않기</Text>
+              <Text style={styles.secondaryBtnText}>{t('components.hospitalRegisterPrompt.snooze3Days')}</Text>
             </TouchableOpacity>
           </View>
         </View>

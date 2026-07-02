@@ -9,6 +9,7 @@
  */
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { HospitalRegisterModal } from './HospitalRegisterModal';
 import { getHospital } from '../../services/deliveryHospital';
 
@@ -25,6 +26,7 @@ const NORMAL_THRESHOLD = 35;
 const HIGH_RISK_THRESHOLD = 28;
 
 export function HospitalRegisterBanner({ childId, weeks, isHighRisk = false, refreshKey }: Props) {
+  const { t } = useTranslation();
   const [registered, setRegistered] = useState<boolean | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -61,13 +63,13 @@ export function HospitalRegisterBanner({ childId, weeks, isHighRisk = false, ref
         <View style={{ flex: 1 }}>
           <Text style={[styles.title, isHighRisk && styles.titleHighRisk]}>
             {isHighRisk
-              ? '고위험 임신 — 분만 병원을 지금 등록하세요'
-              : '병원 번호를 미리 등록해 주세요'}
+              ? t('components.hospitalRegisterBanner.titleHighRisk')
+              : t('components.hospitalRegisterBanner.title')}
           </Text>
           <Text style={[styles.sub, isHighRisk && styles.subHighRisk]}>
             {isHighRisk
-              ? '조산 가능성을 고려해 28주부터 안내드려요. 급한 순간 즉시 전화할 수 있도록 준비해 주세요.'
-              : '출산이 가까워지고 있어요. 급한 순간 바로 전화할 수 있도록 준비해 두세요.'}
+              ? t('components.hospitalRegisterBanner.subHighRisk')
+              : t('components.hospitalRegisterBanner.sub')}
           </Text>
         </View>
         <Text style={[styles.arrow, isHighRisk && styles.arrowHighRisk]}>{'>'}</Text>

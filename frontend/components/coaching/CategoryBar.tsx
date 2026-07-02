@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { ScrollView, TouchableOpacity, Text, Image, StyleSheet } from 'react-native';
-import { CONCERN_CATEGORIES, COACHING_COLORS, getCategoriesForAge } from './types';
+import { useTranslation } from 'react-i18next';
+import { COACHING_COLORS, getCategoriesForAge, getConcernCategories } from './types';
 import type { AgeGroupKey } from '../../constants/ageGroups';
 
 interface Props {
@@ -8,7 +10,9 @@ interface Props {
 }
 
 export function CategoryBar({ onSelect, ageGroup }: Props) {
-  const categories = ageGroup ? getCategoriesForAge(ageGroup) : CONCERN_CATEGORIES;
+  const { t } = useTranslation();
+  const concernCategories = useMemo(() => getConcernCategories(t), [t]);
+  const categories = ageGroup ? getCategoriesForAge(concernCategories, ageGroup) : concernCategories;
 
   return (
     <ScrollView

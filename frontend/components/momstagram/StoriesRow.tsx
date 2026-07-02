@@ -1,5 +1,8 @@
+import { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 import { SPACING } from '../../constants/theme';
 
@@ -16,9 +19,11 @@ interface StoryUser {
 
 // 실제 스토리 데이터는 Firestore에서 로드 (추후 연동).
 // 현재는 "내 스토리" 버튼만 노출하여 가짜 사용자를 표시하지 않는다.
-const STORY_USERS: StoryUser[] = [
-  { id: 'my', name: '내 스토리', hasNew: false },
-];
+function buildStoryUsers(t: TFunction): StoryUser[] {
+  return [
+    { id: 'my', name: t('components.storiesRow.myStory'), hasNew: false },
+  ];
+}
 
 function getColor(name: string): string {
   let hash = 0;
@@ -29,6 +34,8 @@ function getColor(name: string): string {
 }
 
 export function StoriesRow() {
+  const { t } = useTranslation();
+  const storyUsers = useMemo(() => buildStoryUsers(t), [t]);
   const handleMyStory = async () => {
     const picked = await pickImageFromLibrary({ quality: 0.8 });
     if (picked) {
@@ -46,7 +53,7 @@ export function StoriesRow() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {STORY_USERS.map((user) => {
+        {storyUsers.map((user) => {
           const isMyStory = user.id === 'my';
           const bg = getColor(user.name);
           return (

@@ -1,11 +1,15 @@
-/** Display names mapping fiveElements keys to Korean labels */
-export const ELEMENT_DISPLAY_NAMES: Record<string, string> = {
-  wood: '호기심',
-  fire: '활동성',
-  earth: '안정감',
-  metal: '집중력',
-  water: '민감도',
-};
+import type { TFunction } from 'i18next';
+
+/** Display names mapping fiveElements keys to translated labels */
+export function getElementDisplayNames(t: TFunction): Record<string, string> {
+  return {
+    wood: t('components.traitConstants.element.wood'),
+    fire: t('components.traitConstants.element.fire'),
+    earth: t('components.traitConstants.element.earth'),
+    metal: t('components.traitConstants.element.metal'),
+    water: t('components.traitConstants.element.water'),
+  };
+}
 
 /** Coral-based style constants for the trait detail screen */
 export const TRAIT_COLORS = {
@@ -24,8 +28,10 @@ export const TRAIT_COLORS = {
 
 export type TraitTab = 'summary' | 'traits' | 'detail';
 
-export const TABS: { key: TraitTab; label: string }[] = [
-  { key: 'summary', label: '종합 요약' },
-  { key: 'traits', label: '성향 특성' },
-  { key: 'detail', label: '상세분석' },
-];
+export function getTraitTabs(t: TFunction): { key: TraitTab; label: string }[] {
+  return [
+    { key: 'summary', label: t('components.traitConstants.tabs.summary') },
+    { key: 'traits', label: t('components.traitConstants.tabs.traits') },
+    { key: 'detail', label: t('components.traitConstants.tabs.detail') },
+  ];
+}

@@ -22,6 +22,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { useTranslation } from 'react-i18next';
 
 export interface BatchSelection {
   uri: string;
@@ -48,6 +49,7 @@ const COLOR = {
 };
 
 export function BatchPhotoReview({ visible, uris, saving, progress, onCancel, onConfirm }: Props) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<BatchSelection[]>([]);
 
   // uris 가 바뀔 때(새로 선택) 상태 초기화
@@ -79,19 +81,19 @@ export function BatchPhotoReview({ visible, uris, saving, progress, onCancel, on
         {/* 헤더 */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onCancel} disabled={saving} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={[styles.headerCancel, saving && { opacity: 0.4 }]}>취소</Text>
+            <Text style={[styles.headerCancel, saving && { opacity: 0.4 }]}>{t('common.cancel')}</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{`사진 ${uris.length}장 추가`}</Text>
+          <Text style={styles.headerTitle}>{t('components.batchPhotoReview.headerTitle', { count: uris.length })}</Text>
           <View style={{ width: 36 }} />
         </View>
 
         {/* 안내 + 전체 공유 */}
         <View style={styles.subBar}>
           <Text style={styles.subText}>
-            모두 성장앨범에 저장돼요. <Text style={{ color: COLOR.feed, fontWeight: '700' }}>공유할 사진만</Text> 가족피드 토글을 켜세요.
+            {t('components.batchPhotoReview.subTextPrefix')} <Text style={{ color: COLOR.feed, fontWeight: '700' }}>{t('components.batchPhotoReview.subTextHighlight')}</Text> {t('components.batchPhotoReview.subTextSuffix')}
           </Text>
           <TouchableOpacity onPress={toggleAllShare} disabled={saving} style={styles.allShareBtn} activeOpacity={0.7}>
-            <Text style={styles.allShareText}>{allShared ? '전체 공유 해제' : '전체 피드 공유'}</Text>
+            <Text style={styles.allShareText}>{allShared ? t('components.batchPhotoReview.unshareAll') : t('components.batchPhotoReview.shareAll')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -103,16 +105,16 @@ export function BatchPhotoReview({ visible, uris, saving, progress, onCancel, on
               <View style={styles.rowBody}>
                 <TextInput
                   style={styles.memoInput}
-                  placeholder="한 줄 메모 (선택)"
+                  placeholder={t('components.batchPhotoReview.memoPlaceholder')}
                   placeholderTextColor={COLOR.textSub}
                   value={it.memo}
-                  onChangeText={(t) => setMemo(idx, t)}
+                  onChangeText={(memo) => setMemo(idx, memo)}
                   editable={!saving}
                   maxLength={60}
                 />
                 <View style={styles.shareRow}>
                   <Text style={[styles.shareLabel, it.share && { color: COLOR.feed, fontWeight: '700' }]}>
-                    {it.share ? '💛 가족피드 공유' : '가족피드 공유'}
+                    {it.share ? t('components.batchPhotoReview.shareLabelOn') : t('components.batchPhotoReview.shareLabelOff')}
                   </Text>
                   <Switch
                     value={it.share}
@@ -140,12 +142,16 @@ export function BatchPhotoReview({ visible, uris, saving, progress, onCancel, on
               <View style={styles.savingRow}>
                 <ActivityIndicator color="#FFFFFF" size="small" />
                 <Text style={styles.saveBtnText}>
-                  {progress ? `저장 중 ${progress.done}/${progress.total}` : '저장 중...'}
+                  {progress
+                    ? t('components.batchPhotoReview.savingProgress', { done: progress.done, total: progress.total })
+                    : t('components.batchPhotoReview.saving')}
                 </Text>
               </View>
             ) : (
               <Text style={styles.saveBtnText}>
-                {sharedCount > 0 ? `${uris.length}장 저장 · ${sharedCount}장 피드 공유` : `${uris.length}장 저장`}
+                {sharedCount > 0
+                  ? t('components.batchPhotoReview.saveWithShare', { count: uris.length, shareCount: sharedCount })
+                  : t('components.batchPhotoReview.saveCount', { count: uris.length })}
               </Text>
             )}
           </TouchableOpacity>

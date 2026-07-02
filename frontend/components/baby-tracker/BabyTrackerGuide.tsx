@@ -7,7 +7,10 @@
  * - 표시 제어는 부모(baby-tracker)가 담당 (첫 진입 자동 1회 + 헤더 '?' 버튼 재열람).
  *   visible + onClose(건너뛰기/닫기) + onComplete(마지막 '시작하기').
  */
+import { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { GuideCarousel, type GuidePage } from '../common/GuideCarousel';
 
 /* 세련된 팔레트 (아기시간 톤 + 차분한 뉴트럴) */
@@ -64,86 +67,86 @@ function MiniRecord({
 }
 
 /* ── Page 1: 4개 탭 ── */
-function MockTabs() {
+function MockTabs({ t }: { t: TFunction }) {
   const tabs = [
-    { label: '배변', color: C.diaper },
-    { label: '수유·식사', color: C.feeding },
-    { label: '수면', color: C.sleep },
-    { label: '투약', color: C.medication },
+    { label: t('babyTracker.tabs.diaper'), color: C.diaper },
+    { label: t('components.babyTrackerGuide.tabFeedingSleepShort'), color: C.feeding },
+    { label: t('babyTracker.tabs.sleep'), color: C.sleep },
+    { label: t('babyTracker.tabs.medication'), color: C.medication },
   ];
   return (
     <MockFrame>
       <View style={s.tabRow}>
-        {tabs.map((t, i) => (
-          <View key={t.label} style={[s.tabChip, { backgroundColor: i === 1 ? t.color : '#EFEFF3' }]}>
-            <Text style={[s.tabChipText, i === 1 && { color: '#FFF' }]}>{t.label}</Text>
+        {tabs.map((tab, i) => (
+          <View key={tab.label} style={[s.tabChip, { backgroundColor: i === 1 ? tab.color : '#EFEFF3' }]}>
+            <Text style={[s.tabChipText, i === 1 && { color: '#FFF' }]}>{tab.label}</Text>
           </View>
         ))}
       </View>
-      <Text style={s.frameCaption}>📋  오늘의 타임라인</Text>
-      <MiniRecord time="09:20" label="분유" detail="120ml" color={C.feeding} bg={C.feedingLight} />
-      <MiniRecord time="11:00" label="낮잠" detail="1시간 20분" color={C.sleep} bg={C.sleepLight} />
-      <MiniRecord time="14:30" label="소변" color={C.diaper} bg={C.diaperLight} />
-      <MiniRecord time="15:00" label="이유식" detail="잘 먹음" color={C.feeding} bg={C.feedingLight} />
+      <Text style={s.frameCaption}>{t('components.babyTrackerGuide.todayTimeline')}</Text>
+      <MiniRecord time="09:20" label={t('babyTracker.subtypes.formula')} detail="120ml" color={C.feeding} bg={C.feedingLight} />
+      <MiniRecord time="11:00" label={t('components.babyTrackerGuide.nap')} detail={t('components.babyTrackerGuide.oneHourTwenty')} color={C.sleep} bg={C.sleepLight} />
+      <MiniRecord time="14:30" label={t('babyTracker.subtypes.pee')} color={C.diaper} bg={C.diaperLight} />
+      <MiniRecord time="15:00" label={t('babyTracker.subtypes.babyFood')} detail={t('components.babyTrackerGuide.ateWell')} color={C.feeding} bg={C.feedingLight} />
     </MockFrame>
   );
 }
 
 /* ── Page 2: 원터치 / 길게=수정·직접입력 ── */
-function MockQuickButtons() {
+function MockQuickButtons({ t }: { t: TFunction }) {
   return (
     <MockFrame>
       <View style={s.quickRow}>
-        <View style={[s.quickBtn, { backgroundColor: '#EBC97E' }]}><Text style={s.quickBtnText}>분유</Text></View>
-        <View style={[s.quickBtn, { backgroundColor: '#BCAEDE' }]}><Text style={s.quickBtnText}>수면 시작</Text></View>
-        <View style={[s.quickBtn, { backgroundColor: '#96C7D0' }]}><Text style={s.quickBtnText}>소변</Text></View>
+        <View style={[s.quickBtn, { backgroundColor: '#EBC97E' }]}><Text style={s.quickBtnText}>{t('babyTracker.subtypes.formula')}</Text></View>
+        <View style={[s.quickBtn, { backgroundColor: '#BCAEDE' }]}><Text style={s.quickBtnText}>{t('babyTracker.sleepStartLabel')}</Text></View>
+        <View style={[s.quickBtn, { backgroundColor: '#96C7D0' }]}><Text style={s.quickBtnText}>{t('babyTracker.subtypes.pee')}</Text></View>
       </View>
-      <View style={s.tapHint}><Text style={s.tapHintText}>👆  한 번 = 지금 시각으로 기록</Text></View>
-      <View style={[s.tapHint, { marginTop: 8 }]}><Text style={s.tapHintText}>✏️  길게 = 시간 수정·직접 입력</Text></View>
+      <View style={s.tapHint}><Text style={s.tapHintText}>{t('components.babyTrackerGuide.tapHint')}</Text></View>
+      <View style={[s.tapHint, { marginTop: 8 }]}><Text style={s.tapHintText}>{t('components.babyTrackerGuide.longPressHint')}</Text></View>
       <Text style={s.arrowDown}>↓</Text>
-      <MiniRecord time="14:30" label="분유" detail="120ml" color={C.feeding} bg={C.feedingLight} />
+      <MiniRecord time="14:30" label={t('babyTracker.subtypes.formula')} detail="120ml" color={C.feeding} bg={C.feedingLight} />
     </MockFrame>
   );
 }
 
 /* ── Page 3: 음성으로 기록 ── */
-function MockVoice() {
+function MockVoice({ t }: { t: TFunction }) {
   return (
     <MockFrame>
       <View style={s.voiceMicRow}>
         <View style={s.voiceMic}><Text style={{ fontSize: 20 }}>🎤</Text></View>
         <View style={s.voiceBubble}>
           <Text style={s.voiceBubbleText}>
-            “분유 백이십 먹였고, 소변 봤고,{'\n'}이유식도 조금, 한 시간쯤 잤어”
+            {t('components.babyTrackerGuide.voiceSample')}
           </Text>
         </View>
       </View>
       <Text style={s.arrowDown}>↓</Text>
-      <MiniRecord time="09:20" label="분유" detail="120ml" color={C.feeding} bg={C.feedingLight} />
-      <MiniRecord time="09:40" label="소변" color={C.diaper} bg={C.diaperLight} />
-      <MiniRecord time="11:30" label="이유식" color={C.feeding} bg={C.feedingLight} />
-      <MiniRecord time="13:00" label="수면" detail="1시간" color={C.sleep} bg={C.sleepLight} />
+      <MiniRecord time="09:20" label={t('babyTracker.subtypes.formula')} detail="120ml" color={C.feeding} bg={C.feedingLight} />
+      <MiniRecord time="09:40" label={t('babyTracker.subtypes.pee')} color={C.diaper} bg={C.diaperLight} />
+      <MiniRecord time="11:30" label={t('babyTracker.subtypes.babyFood')} color={C.feeding} bg={C.feedingLight} />
+      <MiniRecord time="13:00" label={t('babyTracker.subtypes.sleep')} detail={t('components.babyTrackerGuide.oneHour')} color={C.sleep} bg={C.sleepLight} />
     </MockFrame>
   );
 }
 
 /* ── Page 4: 진짜 알림장처럼 → AI가 정리 ── */
-function MockNote() {
+function MockNote({ t }: { t: TFunction }) {
   return (
     <MockFrame>
       <View style={s.noteCard}>
         <View style={s.noteTop}>
-          <Text style={s.noteTitle}>🌱 오늘의 알림장</Text>
-          <Text style={s.noteDate}>6/2 (화)</Text>
+          <Text style={s.noteTitle}>{t('components.babyTrackerGuide.noteTitle')}</Text>
+          <Text style={s.noteDate}>{t('components.babyTrackerGuide.noteDate')}</Text>
         </View>
-        <Text style={s.noteLine}>점심에 이유식 한 그릇 다 먹었어요</Text>
-        <Text style={s.noteLine}>1시~2시 반까지 낮잠 푹 잤어요</Text>
-        <Text style={s.noteLine}>오후에 응가도 한 번 했어요</Text>
+        <Text style={s.noteLine}>{t('components.babyTrackerGuide.noteLine1')}</Text>
+        <Text style={s.noteLine}>{t('components.babyTrackerGuide.noteLine2')}</Text>
+        <Text style={s.noteLine}>{t('components.babyTrackerGuide.noteLine3')}</Text>
       </View>
-      <Text style={s.noteArrow}>↓  AI가 자동으로 정리</Text>
-      <MiniRecord time="12:00" label="이유식" detail="점심 다 먹음" color={C.feeding} bg={C.feedingLight} />
-      <MiniRecord time="13:00" label="낮잠" detail="13:00 ~ 14:30" color={C.sleep} bg={C.sleepLight} />
-      <MiniRecord time="14:40" label="대변" detail="1회" color={C.diaper} bg={C.diaperLight} />
+      <Text style={s.noteArrow}>{t('components.babyTrackerGuide.noteArrow')}</Text>
+      <MiniRecord time="12:00" label={t('babyTracker.subtypes.babyFood')} detail={t('components.babyTrackerGuide.lunchFinished')} color={C.feeding} bg={C.feedingLight} />
+      <MiniRecord time="13:00" label={t('components.babyTrackerGuide.nap')} detail="13:00 ~ 14:30" color={C.sleep} bg={C.sleepLight} />
+      <MiniRecord time="14:40" label={t('babyTracker.subtypes.poop')} detail={t('components.babyTrackerGuide.onceCount')} color={C.diaper} bg={C.diaperLight} />
     </MockFrame>
   );
 }
@@ -160,22 +163,27 @@ function Bar({ label, value, pct, color }: { label: string; value: string; pct: 
     </View>
   );
 }
-function MockOverview() {
+function MockOverview({ t }: { t: TFunction }) {
+  const rows = [
+    [t('babyTracker.today'), '540', '13h', '3'],
+    [t('components.babyTrackerGuide.yesterday'), '600', '12h', '4'],
+    [t('components.babyTrackerGuide.dayBeforeYesterday'), '580', '13h', '3'],
+  ];
   return (
     <MockFrame>
       <View style={s.refRow}>
-        <Bar label="식사 텀" value="2h 10m" pct={75} color={C.accent} />
-        <Bar label="일일 분유" value="540ml" pct={68} color={C.feeding} />
-        <Bar label="일일 수면" value="13h" pct={90} color={C.sleep} />
+        <Bar label={t('components.babyTrackerGuide.mealInterval')} value="2h 10m" pct={75} color={C.accent} />
+        <Bar label={t('babyTracker.dailyRef.dailyFormula')} value="540ml" pct={68} color={C.feeding} />
+        <Bar label={t('babyTracker.dailyRef.dailySleep')} value="13h" pct={90} color={C.sleep} />
       </View>
       <View style={s.weekTable}>
         <View style={s.weekHeaderRow}>
-          <Text style={s.weekHcell}>날짜</Text>
-          <Text style={s.weekHcell}>분유</Text>
-          <Text style={s.weekHcell}>수면</Text>
-          <Text style={s.weekHcell}>배변</Text>
+          <Text style={s.weekHcell}>{t('babyTracker.date')}</Text>
+          <Text style={s.weekHcell}>{t('babyTracker.subtypes.formula')}</Text>
+          <Text style={s.weekHcell}>{t('babyTracker.tabs.sleep')}</Text>
+          <Text style={s.weekHcell}>{t('babyTracker.tabs.diaper')}</Text>
         </View>
-        {[['오늘', '540', '13h', '3'], ['어제', '600', '12h', '4'], ['그제', '580', '13h', '3']].map((r, i) => (
+        {rows.map((r, i) => (
           <View key={i} style={s.weekDataRow}>
             {r.map((c, j) => (
               <Text key={j} style={[s.weekCell, j === 0 && i === 0 && { color: C.accent, fontWeight: '700' }]}>{c}</Text>
@@ -184,42 +192,46 @@ function MockOverview() {
         ))}
       </View>
       <View style={s.aiInsight}>
-        <Text style={s.aiInsightText}>🤖  수면이 권장량에 가까워요. 잘하고 있어요!</Text>
+        <Text style={s.aiInsightText}>{t('components.babyTrackerGuide.aiInsight')}</Text>
       </View>
     </MockFrame>
   );
 }
 
-const PAGES: GuidePage[] = [
-  {
-    title: '아기시간에 오신 걸 환영해요',
-    desc: '배변·수유·수면·투약을 탭별로\n간편하게 기록하고 한눈에 볼 수 있어요',
-    visual: <MockTabs />,
-  },
-  {
-    title: '버튼 한 번이면 기록 끝',
-    desc: '자주 쓰는 기록은 원터치로,\n길게 누르면 시간 수정·직접 입력도 돼요',
-    visual: <MockQuickButtons />,
-  },
-  {
-    title: '말로 여러 개를 한 번에',
-    desc: '음성입력 아이콘(앱 안 또는 홈 화면)을 누르고\n말하면 여러 기록도 AI가 한 번에 정리해요',
-    visual: <MockVoice />,
-  },
-  {
-    title: '사진 한 장으로 한 번에',
-    desc: '어린이집 알림장·메모 사진을 올리면\nAI가 수유·수면·배변을 자동으로 정리해요',
-    visual: <MockNote />,
-  },
-  {
-    title: '하루 흐름을 한눈에',
-    desc: '권장량 대비 진행, 주간 요약,\nAI 패턴 분석까지 함께 확인하세요',
-    visual: <MockOverview />,
-  },
-];
+function buildPages(t: TFunction): GuidePage[] {
+  return [
+    {
+      title: t('components.babyTrackerGuide.page1.title'),
+      desc: t('components.babyTrackerGuide.page1.desc'),
+      visual: <MockTabs t={t} />,
+    },
+    {
+      title: t('components.babyTrackerGuide.page2.title'),
+      desc: t('components.babyTrackerGuide.page2.desc'),
+      visual: <MockQuickButtons t={t} />,
+    },
+    {
+      title: t('components.babyTrackerGuide.page3.title'),
+      desc: t('components.babyTrackerGuide.page3.desc'),
+      visual: <MockVoice t={t} />,
+    },
+    {
+      title: t('components.babyTrackerGuide.page4.title'),
+      desc: t('components.babyTrackerGuide.page4.desc'),
+      visual: <MockNote t={t} />,
+    },
+    {
+      title: t('components.babyTrackerGuide.page5.title'),
+      desc: t('components.babyTrackerGuide.page5.desc'),
+      visual: <MockOverview t={t} />,
+    },
+  ];
+}
 
 export function BabyTrackerGuide({ visible, onClose, onComplete }: Props) {
-  return <GuideCarousel visible={visible} pages={PAGES} onClose={onClose} onComplete={onComplete} />;
+  const { t } = useTranslation();
+  const pages = useMemo(() => buildPages(t), [t]);
+  return <GuideCarousel visible={visible} pages={pages} onClose={onClose} onComplete={onComplete} />;
 }
 
 const s = StyleSheet.create({

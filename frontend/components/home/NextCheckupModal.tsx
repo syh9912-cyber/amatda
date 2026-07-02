@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import {
   setNextCheckup,
   clearNextCheckup,
@@ -36,6 +37,7 @@ const COLOR = {
 };
 
 export function NextCheckupModal({ visible, onClose, childId, current }: Props) {
+  const { t } = useTranslation();
   const [yearText, setYearText] = useState('');
   const [monthText, setMonthText] = useState('');
   const [dayText, setDayText] = useState('');
@@ -61,13 +63,13 @@ export function NextCheckupModal({ visible, onClose, childId, current }: Props) 
       !Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d) ||
       y < 2024 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31
     ) {
-      Alert.alert('날짜 형식 오류', '연/월/일을 정확히 입력해 주세요.');
+      Alert.alert(t('vaccination.dateFormatErrorTitle'), t('components.nextCheckupModal.enterValidDate'));
       return;
     }
     // 실제 유효한 날짜인지 검증 (예: 2/30 거부)
     const test = new Date(y, m - 1, d);
     if (test.getFullYear() !== y || test.getMonth() !== m - 1 || test.getDate() !== d) {
-      Alert.alert('날짜 형식 오류', '존재하지 않는 날짜입니다.');
+      Alert.alert(t('vaccination.dateFormatErrorTitle'), t('components.nextCheckupModal.nonexistentDate'));
       return;
     }
     const iso = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -77,12 +79,12 @@ export function NextCheckupModal({ visible, onClose, childId, current }: Props) 
 
   const handleClear = async () => {
     Alert.alert(
-      '다음 검진 일정 삭제',
-      '저장된 검진 일정을 삭제할까요?',
+      t('components.nextCheckupModal.deleteConfirmTitle'),
+      t('components.nextCheckupModal.deleteConfirmMessage'),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '삭제',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             await clearNextCheckup(childId);
@@ -111,15 +113,15 @@ export function NextCheckupModal({ visible, onClose, childId, current }: Props) 
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.card}>
-          <Text style={styles.title}>다음 검진 일정</Text>
+          <Text style={styles.title}>{t('pregnancy.nextCheckupLabel')}</Text>
           <Text style={styles.subtitle}>
-            언제 병원 가시나요? 홈에서 D-day로 알려드릴게요.
+            {t('components.nextCheckupModal.subtitle')}
           </Text>
 
           {/* 현재 저장된 값 표시 */}
           {current && (
             <View style={styles.currentBox}>
-              <Text style={styles.currentLabel}>현재 저장됨</Text>
+              <Text style={styles.currentLabel}>{t('components.nextCheckupModal.currentlySaved')}</Text>
               <Text style={styles.currentDate}>{formatKoreanDate(current)}</Text>
               <Text style={styles.currentDday}>{formatDday(daysUntil(current))}</Text>
             </View>
@@ -128,33 +130,33 @@ export function NextCheckupModal({ visible, onClose, childId, current }: Props) 
           {/* 입력 필드 */}
           <View style={styles.inputRow}>
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>년</Text>
+              <Text style={styles.inputLabel}>{t('components.nextCheckupModal.yearLabel')}</Text>
               <TextInput
                 style={styles.inputField}
                 value={yearText}
-                onChangeText={(t) => setYearText(t.replace(/[^0-9]/g, '').slice(0, 4))}
+                onChangeText={(v) => setYearText(v.replace(/[^0-9]/g, '').slice(0, 4))}
                 keyboardType="number-pad"
                 maxLength={4}
                 returnKeyType="next"
               />
             </View>
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>월</Text>
+              <Text style={styles.inputLabel}>{t('components.nextCheckupModal.monthLabel')}</Text>
               <TextInput
                 style={styles.inputField}
                 value={monthText}
-                onChangeText={(t) => setMonthText(t.replace(/[^0-9]/g, '').slice(0, 2))}
+                onChangeText={(v) => setMonthText(v.replace(/[^0-9]/g, '').slice(0, 2))}
                 keyboardType="number-pad"
                 maxLength={2}
                 returnKeyType="next"
               />
             </View>
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>일</Text>
+              <Text style={styles.inputLabel}>{t('components.nextCheckupModal.dayLabel')}</Text>
               <TextInput
                 style={styles.inputField}
                 value={dayText}
-                onChangeText={(t) => setDayText(t.replace(/[^0-9]/g, '').slice(0, 2))}
+                onChangeText={(v) => setDayText(v.replace(/[^0-9]/g, '').slice(0, 2))}
                 keyboardType="number-pad"
                 maxLength={2}
                 returnKeyType="done"
@@ -173,10 +175,10 @@ export function NextCheckupModal({ visible, onClose, childId, current }: Props) 
                 ]}
               >
                 {preview.days < 0
-                  ? '⚠️ 지난 날짜입니다'
+                  ? t('components.nextCheckupModal.pastDate')
                   : preview.days === 0
-                  ? '오늘이 검진일입니다'
-                  : `${preview.days}일 남음`}
+                  ? t('components.nextCheckupModal.todayIsCheckup')
+                  : t('components.nextCheckupModal.daysRemaining', { count: preview.days })}
               </Text>
             </View>
           )}
@@ -184,7 +186,7 @@ export function NextCheckupModal({ visible, onClose, childId, current }: Props) 
           {/* 버튼 */}
           <View style={styles.btnRow}>
             <TouchableOpacity style={styles.btnSecondary} onPress={onClose} activeOpacity={0.7}>
-              <Text style={styles.btnSecondaryText}>취소</Text>
+              <Text style={styles.btnSecondaryText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.btnPrimary, !preview && styles.btnDisabled]}
@@ -192,13 +194,13 @@ export function NextCheckupModal({ visible, onClose, childId, current }: Props) 
               disabled={!preview}
               activeOpacity={0.85}
             >
-              <Text style={styles.btnPrimaryText}>저장</Text>
+              <Text style={styles.btnPrimaryText}>{t('common.save')}</Text>
             </TouchableOpacity>
           </View>
 
           {current && (
             <TouchableOpacity onPress={handleClear} activeOpacity={0.7} style={{ marginTop: 8 }}>
-              <Text style={styles.deleteLink}>일정 삭제</Text>
+              <Text style={styles.deleteLink}>{t('components.nextCheckupModal.deleteSchedule')}</Text>
             </TouchableOpacity>
           )}
         </View>
