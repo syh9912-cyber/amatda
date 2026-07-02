@@ -3,6 +3,8 @@
  * 자녀 종합 분석 리포트 생성 (정적 — AI 호출 없음)
  * dominantType + ageGroup + 온보딩 질문 답변으로 상세 리포트를 생성한다.
  */
+import { BASE_PROFILES_JA, AGE_OVERLAYS_JA } from './child.report.ja';
+import { BASE_PROFILES_ZH, AGE_OVERLAYS_ZH } from './child.report.zh-hant';
 
 export interface ReportReasons {
   personality: string;
@@ -497,7 +499,7 @@ const BASE_PROFILES: Record<string, ChildReport> = {
 // ─────────────────────────────────────────────
 // 연령대별 리포트 오버레이
 // ─────────────────────────────────────────────
-interface AgeOverlay {
+export interface AgeOverlay {
   summaryPrefix: string;
   studyStyleOverride: Record<string, string>;
   academyStyleOverride: Record<string, string>;
@@ -1144,9 +1146,10 @@ function analyzeElemHighAnswers(
 function applyAgeOverlay(
   report: ChildReport,
   ageGroup: AgeGroup,
-  typeKey: string
+  typeKey: string,
+  overlays: Record<string, AgeOverlay> = AGE_OVERLAYS
 ): void {
-  const overlay = AGE_OVERLAYS[ageGroup];
+  const overlay = overlays[ageGroup];
   if (!overlay) return;
 
   report.summary = overlay.summaryPrefix + report.summary;
@@ -1290,14 +1293,20 @@ export function monthsToAgeGroup(months: number): AgeGroup {
  * @param dominantType 기질 유형 (wood/fire/earth/metal/water 또는 한글)
  * @param answers 온보딩 답변 배열
  * @param ageGroup 연령 그룹 (없으면 범용 분석)
+ * @param locale 비한국어 로케일(ja/zh-Hant)이면 번역된 BASE_PROFILES/AGE_OVERLAYS 사용 (추가형).
+ *   단, 답변 기반 미세 조정(adjustByAnswers)은 원문이 전부 한국어라 ko에서만 적용 —
+ *   비한국어는 완역된 기본 리포트 + 연령 오버레이까지만 반환(정확성 우선, 부분 번역 노출 방지).
  */
 export function generateChildReport(
   dominantType: string,
   answers: AnswerItem[],
-  ageGroup?: AgeGroup
+  ageGroup?: AgeGroup,
+  locale?: string
 ): ChildReport {
   const typeKey = resolveTypeKey(dominantType);
-  const base = { ...(BASE_PROFILES[typeKey] ?? BASE_PROFILES.earth) };
+  const profiles = locale === 'ja' ? BASE_PROFILES_JA : locale === 'zh-Hant' ? BASE_PROFILES_ZH : BASE_PROFILES;
+  const overlays = locale === 'ja' ? AGE_OVERLAYS_JA : locale === 'zh-Hant' ? AGE_OVERLAYS_ZH : AGE_OVERLAYS;
+  const base = { ...(profiles[typeKey] ?? profiles.earth) };
 
   // 배열 필드 깊은 복사
   base.personality = [...base.personality];
@@ -1315,7 +1324,12 @@ export function generateChildReport(
 
   // 연령대별 오버레이 적용
   if (ageGroup) {
-    applyAgeOverlay(base, ageGroup, typeKey);
+    applyAgeOverlay(base, ageGroup, typeKey, overlays);
+  }
+
+  // 비한국어 로케일: 답변 기반 미세 조정(전부 한국어 원문)은 건너뛰고 완역된 기본 리포트만 반환
+  if (locale === 'ja' || locale === 'zh-Hant') {
+    return base;
   }
 
   // 답변 기반 미세 조정

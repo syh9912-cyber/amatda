@@ -427,7 +427,7 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
 
 router.post('/:id/analyze', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { answers } = req.body;
+    const { answers, locale } = req.body;
     if (!answers || !Array.isArray(answers)) { error(res, '응답 데이터가 필요합니다'); return; }
 
     const access = await getChildIfAccessible(req.params.id as string, req.userId, 'editProfile', res);
@@ -446,7 +446,7 @@ router.post('/:id/analyze', authMiddleware, async (req: Request, res: Response) 
     const ageGroup = monthsToAgeGroup(ageMonths);
 
     // Generate static report
-    const report = generateChildReport(innate.dominantType, answers, ageGroup);
+    const report = generateChildReport(innate.dominantType, answers, ageGroup, locale);
 
     // Save report to child document
     await collections.children.doc(req.params.id as string).update({

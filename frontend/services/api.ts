@@ -163,8 +163,8 @@ export const childApi = {
   delete: (id: string) => api.delete(`/children/${id}`),
   saveBaseline: (id: string, answers: unknown[]) =>
     api.post(`/children/${id}/baseline`, { answers }),
-  analyze: (id: string, answers: { questionId: string; answer: number }[]) =>
-    api.post(`/children/${id}/analyze`, { answers }),
+  analyze: (id: string, answers: { questionId: string; answer: number }[], locale?: string) =>
+    api.post(`/children/${id}/analyze`, { answers, locale }),
   // 예측 알람 설정 (수유/수면/기상)
   getAlarmSettings: (id: string) => api.get(`/children/${id}/alarm-settings`),
   updateAlarmSettings: (id: string, data: Record<string, unknown>) =>

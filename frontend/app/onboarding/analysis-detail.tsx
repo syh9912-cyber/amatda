@@ -163,7 +163,7 @@ export default function AnalysisDetailScreen() {
           let parsed = (found?.analysisReport ?? null) as AnalysisReport | null;
           if (!parsed) {
             // 설문을 안 한 자녀: 생년월일 기반으로 기질 리포트 즉시 생성 (빈 답변 analyze)
-            const aRes = await childApi.analyze(childId, []);
+            const aRes = await childApi.analyze(childId, [], i18n.language);
             const data = aRes.data?.data as
               | (Record<string, unknown> & { analysisReport?: AnalysisReport })
               | undefined;
@@ -180,7 +180,7 @@ export default function AnalysisDetailScreen() {
         }
       })();
     }
-  }, [childId, storeReport, localReport, loading, updateChild]);
+  }, [childId, storeReport, localReport, loading, updateChild, i18n.language]);
 
   useEffect(() => {
     if (!childId || !report || firstTalk || firstTalkLoading) return;

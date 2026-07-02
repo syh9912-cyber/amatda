@@ -45,7 +45,7 @@ const DEFAULT_TRAIT_ORDER: TraitKey[] = ['analyst', 'explorer', 'harmony', 'acti
 void LIKERT_OPTIONS;
 
 export default function QuestionsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { childId } = useLocalSearchParams<{ childId: string }>();
   const children = useChildStore((s) => s.children);
   const updateChild = useChildStore((s) => s.updateChild);
@@ -73,7 +73,7 @@ export default function QuestionsScreen() {
     if (analyzing || !childId) return;
     setAnalyzing(true);
     try {
-      const res = await childApi.analyze(childId, []); // 빈 답변 → 생년월일 기반
+      const res = await childApi.analyze(childId, [], i18n.language); // 빈 답변 → 생년월일 기반
       const updated = res.data?.data;
       if (updated) {
         updateChild(updated);
@@ -124,7 +124,7 @@ export default function QuestionsScreen() {
           questionId: q.id,
           answer: finalAnswers[q.id] ?? 0,
         }));
-        const res = await childApi.analyze(childId!, answerList);
+        const res = await childApi.analyze(childId!, answerList, i18n.language);
         const updatedChild = res.data?.data;
         if (updatedChild) {
           updateChild(updatedChild);
