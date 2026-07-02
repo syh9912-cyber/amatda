@@ -35,6 +35,8 @@ export interface InterpreterInput {
    * AI 가 응답으로 다른 dominantType 을 반환해도 무시 (덮어쓰기 X).
    */
   fixedDominantType: string;
+  /** 비한국어 로케일이면 출력 언어 힌트만 추가(추가형) — 아래 명리 분석 로직은 그대로 */
+  locale?: string;
 }
 
 export interface InterpretedDetail {
@@ -108,6 +110,28 @@ const FEW_SHOT_EXAMPLES = `
 // ── 분류 라벨 (5종 고정) ──
 const VALID_TYPES = ['탐구형', '활동형', '조화형', '분석형', '감성형'] as const;
 
+// ── 응답 언어 힌트 (추가형) — 비한국어 로케일일 때만 프롬프트 뒤에 append.
+// 위 명리 분석 로직/Few-Shot 예시는 절대 수정하지 않음(한국어 사용자는 byte-identical).
+const LOCALE_RESPONSE_HINT: Partial<Record<'ja' | 'zh-Hant', string>> = {
+  ja: `
+
+[応答言語 — 重要]
+ユーザーのアプリ言語は日本語だ。上記の分析ロジックと出力形式はそのまま守りつつ、
+JSON の全てのテキスト値(label, personality, strengths, cautions, parentingTips,
+learningStyle, socialStyle, stressResponse, bestActivities, bestFoods)は
+自然な日本語で作成しろ。JSON のキー名(dominantType など)は絶対に翻訳せず、
+英語のまま維持しろ。dominantType の値は上記で指定された固定ラベル(韓国語のまま)を
+絶対に変更せず、そのまま使え。`,
+  'zh-Hant': `
+
+[應答語言 — 重要]
+使用者的應用程式語言是繁體中文（台灣/香港用語）。請照舊遵守上述分析邏輯與輸出格式，
+但 JSON 中所有文字內容(label, personality, strengths, cautions, parentingTips,
+learningStyle, socialStyle, stressResponse, bestActivities, bestFoods)
+必須以自然的繁體中文書寫。JSON 的鍵名(dominantType 等)絕對不要翻譯，請保持英文原樣。
+dominantType 的值請務必維持指定的韓文固定標籤，不要更改。`,
+};
+
 function buildPrompt(input: InterpreterInput, strict = false): string {
   const ageInfo =
     input.ageMonths < 12
@@ -124,7 +148,11 @@ function buildPrompt(input: InterpreterInput, strict = false): string {
 `
     : '';
 
-  return `너는 한국 정통 명리학에 정통한 육아 코치다. 아래 아이의 사주 8글자를 명리학적으로 깊이 있게 분석한 뒤, 부모에게 전달할 때는 사주 용어 없이 일상 언어로만 풀어 설명해라.
+  const localeHint = input.locale && input.locale !== 'ko'
+    ? LOCALE_RESPONSE_HINT[input.locale as 'ja' | 'zh-Hant']
+    : undefined;
+
+  const basePrompt = `너는 한국 정통 명리학에 정통한 육아 코치다. 아래 아이의 사주 8글자를 명리학적으로 깊이 있게 분석한 뒤, 부모에게 전달할 때는 사주 용어 없이 일상 언어로만 풀어 설명해라.
 
 [아이 정보]
 - 이름: ${input.childName}
@@ -171,6 +199,8 @@ ${FEW_SHOT_EXAMPLES}
   "bestActivities": ["활동1", "활동2", "활동3", "활동4"],
   "bestFoods": ["음식1", "음식2", "음식3", "음식4"]
 }`;
+
+  return localeHint ? basePrompt + localeHint : basePrompt;
 }
 
 interface RawResponse {
@@ -309,6 +339,7 @@ export async function calculateSajuWithAI(
   birthTime: string,
   childName: string,
   gender: string,
+  locale?: string,
 ): Promise<ReturnType<typeof calculateSaju>> {
   // 룰 기반 결과 — dominantType 은 fiveElements 최대값으로 결정적 매핑되어 있음.
   // 같은 사주(생년월일·시간·성별) → 항상 같은 dominantType 보장.
@@ -323,6 +354,7 @@ export async function calculateSajuWithAI(
       gender,
       // 룰 기반 dominantType 을 AI 에 강제 전달 — AI 가 다른 값을 응답해도 무시되어 결정적 결과 보장
       fixedDominantType: ruleResult.dominantType,
+      locale,
     });
     if (ai) {
       // AI 해석 성공 — label/detail 만 AI 결과로 갱신.

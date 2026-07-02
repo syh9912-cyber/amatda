@@ -327,11 +327,12 @@ export default function HomeScreen() {
       const payload: Record<string, unknown> = {
         birthDate: birthDateVal,
         birthTime: birthTimeVal,
+        locale: i18n.language,
       };
       if (birthName.trim()) payload.name = birthName;
       if (birthGender) payload.gender = birthGender;
       const res = await childApi.birth(selectedChild.id, payload as {
-        birthDate: string; birthTime: string; name?: string; gender?: string;
+        birthDate: string; birthTime: string; name?: string; gender?: string; locale?: string;
       });
       const updatedChild = res.data?.data;
       if (updatedChild) {

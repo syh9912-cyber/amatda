@@ -181,7 +181,7 @@ export const childApi = {
   registerPregnant: (data: Record<string, unknown>) =>
     api.post('/children/pregnant', data),
   // 출산 전환 (임신→육아)
-  birth: (childId: string, data: { birthDate: string; birthTime: string; name?: string; gender?: string; height?: number; weight?: number }) =>
+  birth: (childId: string, data: { birthDate: string; birthTime: string; name?: string; gender?: string; height?: number; weight?: number; locale?: string }) =>
     api.post(`/children/${childId}/birth`, data),
 };
 

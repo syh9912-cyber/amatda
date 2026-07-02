@@ -87,10 +87,10 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
 router.post('/', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { name, gender, birthDate, birthTime } = req.body;
+    const { name, gender, birthDate, birthTime, locale } = req.body;
     if (!name || !gender || !birthDate || !birthTime) { error(res, '이름, 성별, 생년월일, 출생시각을 모두 입력해주세요'); return; }
 
-    const innateData = await calculateSajuWithAI(new Date(birthDate), birthTime, name, gender);
+    const innateData = await calculateSajuWithAI(new Date(birthDate), birthTime, name, gender, locale);
     const id = genId();
     const heightVal = typeof req.body.height === 'number' ? req.body.height : null;
     const weightVal = typeof req.body.weight === 'number' ? req.body.weight : null;
@@ -180,13 +180,14 @@ router.post('/:id/birth', authMiddleware, async (req: Request, res: Response) =>
       return;
     }
 
-    const { birthDate, birthTime, name, gender, height, weight } = req.body as {
+    const { birthDate, birthTime, name, gender, height, weight, locale } = req.body as {
       birthDate: string;     // YYYY-MM-DD
       birthTime: string;     // HH:MM
       name?: string;         // 정식 이름 (태명에서 변경)
       gender?: string;       // 성별 확정
       height?: number;       // 출생 키
       weight?: number;       // 출생 체중
+      locale?: string;
     };
 
     if (!birthDate || !birthTime) {
@@ -207,6 +208,7 @@ router.post('/:id/birth', authMiddleware, async (req: Request, res: Response) =>
       birthTime,
       childName,
       childGender,
+      locale,
     );
 
     const updates: Record<string, unknown> = {
@@ -248,7 +250,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
     if (!access) return;
 
     const updates: Record<string, unknown> = {};
-    const { name, gender, birthDate, birthTime, photoUri } = req.body;
+    const { name, gender, birthDate, birthTime, photoUri, locale } = req.body;
     if (name) updates.name = name;
     if (gender) updates.gender = gender;
     if (photoUri !== undefined) updates.photoUri = photoUri;
@@ -261,7 +263,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
       const updGender =
         (gender as string | undefined) ?? (access.data.gender as string | undefined) ?? 'U';
       updates.innateData = JSON.stringify(
-        await calculateSajuWithAI(new Date(bd), bt, updName, updGender),
+        await calculateSajuWithAI(new Date(bd), bt, updName, updGender, locale),
       );
     }
     // 건강 정보 필드

@@ -23,7 +23,7 @@ import { PhotoPicker } from '../../components/onboarding/PhotoPicker';
 type ChildType = 'born' | 'pregnant';
 
 export default function ChildInfoScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [childType, setChildType] = useState<ChildType>('born');
   const [name, setName] = useState('');
   const [gender, setGender] = useState<'M' | 'F' | null>(null);
@@ -60,7 +60,7 @@ export default function ChildInfoScreen() {
 
     setLoading(true);
     try {
-      const createPayload: Record<string, unknown> = { name, gender, birthDate, birthTime };
+      const createPayload: Record<string, unknown> = { name, gender, birthDate, birthTime, locale: i18n.language };
       if (height.trim()) createPayload.height = parseFloat(height);
       if (weight.trim()) createPayload.weight = parseFloat(weight);
       if (bloodType.trim()) createPayload.bloodType = bloodType.trim();
