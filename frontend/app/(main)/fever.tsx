@@ -19,6 +19,7 @@ import type { ImageSourcePropType } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getLocales } from 'expo-localization';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 // DateTimePicker는 FastTimeInput 도입(숫자 키패드)으로 미사용 — import 제거
@@ -1478,13 +1479,30 @@ const IBU_MG_PER_KG = 5;   // 보수값 (5~10 권장 중 최저)
  *   1mg/ml이 아님에 주의) — 이부프로펜은 시판약 기준 만 15세 미만 금기라 미제공
  *   근거: 東和薬品「アセトアミノフェンシロップ小児用2%」체중별 早見表(5kg→2.5~3.75ml,
  *   10kg→5.0~7.5ml — 10~15mg/kg 기준 역산 시 20mg/ml로 일치 확인), PMDA 환자용 가이드
- * 대만: 安佳熱糖漿(Anti-Phen) 24mg/ml, 依普芬(Ibuprofen) 20mg/ml
- *   근거: 奇美醫院/童綜合醫院/樂生婦幼醫院 약품 정보 (홍콩 파나돌 50mg/ml과는 다르므로 라벨 확인 필수)
+ * 대만: 安佳熱糖漿(Anti-Phen) 아세트 24mg/ml, 依普芬(Ibuprofen) 20mg/ml
+ *   근거: 奇美醫院/童綜合醫院/台大醫院 약품 정보
+ * 홍콩: 必理痛(Panadol) 撲熱息痛 250mg/5ml = 아세트 50mg/ml, Infacalm 이부 20mg/ml
+ *   근거: Panadol HK 공식페이지, 醫護行社區藥房(HK-55059)
+ *   → zh-Hant 단일 로케일이지만 대만·홍콩 아세트 농도가 2배 차이나므로 반드시 분리 계산.
  */
-const LOCALE_CONCENTRATION: Record<'ja' | 'zh-Hant', { acet: number; ibu: number | null }> = {
+type ZhRegion = 'TW' | 'HK';
+const CONCENTRATION_BY_REGION: Record<'ja' | 'zh-Hant-TW' | 'zh-Hant-HK', { acet: number; ibu: number | null }> = {
   ja: { acet: 20, ibu: null },
-  'zh-Hant': { acet: 24, ibu: 20 },
+  'zh-Hant-TW': { acet: 24, ibu: 20 },
+  'zh-Hant-HK': { acet: 50, ibu: 20 },
 };
+
+/** 기기 지역코드로 zh-Hant 사용자의 대만/홍콩 자동 추정 (기본 TW). 사용자가 토글로 재정의 가능. */
+function detectZhRegion(): ZhRegion {
+  try {
+    const region = (getLocales()[0]?.regionCode ?? '').toUpperCase();
+    return region === 'HK' || region === 'MO' ? 'HK' : 'TW';
+  } catch {
+    return 'TW';
+  }
+}
+
+const ZH_REGION_STORAGE_KEY = 'fever_zh_region';
 
 function recalcSyrup(weight: number, t: TFunction, acetConcMgPerMl = 32, ibuConcMgPerMl = 20) {
   const acetaminophenMg = +(weight * ACET_MG_PER_KG).toFixed(0);
@@ -1516,11 +1534,29 @@ function MedicineSection({
   const locale = i18n.language === 'ja' || i18n.language === 'zh-Hant' ? i18n.language : undefined;
   const parsedWeight = parseFloat(inputWeight);
   const useInput = !isNaN(parsedWeight) && parsedWeight > 0 && parsedWeight < 100;
+
+  // zh-Hant는 대만/홍콩 아세트 농도가 2배(24 vs 50mg/ml) 다르므로 지역별로 분리 계산.
+  // 기기 지역코드로 기본값 자동 추정 후, 사용자가 토글로 재정의(AsyncStorage 저장).
+  const [zhRegion, setZhRegion] = useState<ZhRegion>(detectZhRegion);
+  useEffect(() => {
+    if (locale !== 'zh-Hant') return;
+    AsyncStorage.getItem(ZH_REGION_STORAGE_KEY).then((v) => {
+      if (v === 'TW' || v === 'HK') setZhRegion(v);
+    }).catch(() => { /* 저장값 없으면 자동 추정값 유지 */ });
+  }, [locale]);
+  const changeZhRegion = useCallback((r: ZhRegion) => {
+    setZhRegion(r);
+    AsyncStorage.setItem(ZH_REGION_STORAGE_KEY, r).catch(() => { /* 저장 실패 무시 */ });
+  }, []);
+
   // 농도 결정 — 챔프 ER 선택 시 48mg/ml, 그 외 32mg/ml. 이부는 고정 20mg/ml. (한국 로직 무변경)
-  // 비한국어는 LOCALE_CONCENTRATION 값 사용(추가형) — 일본은 이부프로펜 미제공(acet만).
-  // selectedBrand / champType 는 아래에서 정의되지만 hooks 순서상 이 시점엔 stale 가능 →
-  // 안전하게 useInput 시점에 일반 농도로 일단 계산하고 hook 이후 override.
-  const localeConc = locale ? LOCALE_CONCENTRATION[locale] : undefined;
+  // 비한국어는 CONCENTRATION_BY_REGION 값 사용(추가형) — 일본은 이부프로펜 미제공(acet만),
+  // zh-Hant는 대만/홍콩 지역별 분리.
+  const concKey: 'ja' | 'zh-Hant-TW' | 'zh-Hant-HK' | undefined =
+    locale === 'ja' ? 'ja'
+    : locale === 'zh-Hant' ? (zhRegion === 'HK' ? 'zh-Hant-HK' : 'zh-Hant-TW')
+    : undefined;
+  const localeConc = concKey ? CONCENTRATION_BY_REGION[concKey] : undefined;
   const recalc = useInput
     ? recalcSyrup(parsedWeight, t, localeConc?.acet ?? 32, localeConc?.ibu ?? 20)
     : null;
@@ -1804,11 +1840,48 @@ function MedicineSection({
         </View>
       )}
 
+      {/* === 대만/홍콩 지역 선택 (zh-Hant 전용) — 아세트 농도가 2배 달라 분리 계산 필수 === */}
+      {locale === 'zh-Hant' && (
+        <View style={styles.champRow}>
+          <Text style={styles.champLabel}>{t('fever.zhRegion.label')}</Text>
+          <View style={styles.champToggle}>
+            <TouchableOpacity
+              style={[
+                styles.champBtn,
+                zhRegion === 'TW' && { backgroundColor: TYLENOL_COLOR + '20', borderColor: TYLENOL_COLOR },
+              ]}
+              onPress={() => changeZhRegion('TW')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.champBtnText, zhRegion === 'TW' && { color: TYLENOL_COLOR, fontWeight: '700' }]}>
+                {t('fever.zhRegion.tw')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.champBtn,
+                zhRegion === 'HK' && { backgroundColor: TYLENOL_COLOR + '20', borderColor: TYLENOL_COLOR },
+              ]}
+              onPress={() => changeZhRegion('HK')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.champBtnText, zhRegion === 'HK' && { color: TYLENOL_COLOR, fontWeight: '700' }]}>
+                {t('fever.zhRegion.hk')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* === 비한국어 로케일 — 실제 제품 농도 확인 안내 (국가별 시판 농도가 달라 자동 판단 불가) === */}
       {isNonKoLocale && (
         <View style={styles.champRow}>
           <Text style={styles.medConcentrationNote}>
-            {locale === 'ja' ? t('fever.concentrationNote.ja') : t('fever.concentrationNote.zhHant')}
+            {locale === 'ja'
+              ? t('fever.concentrationNote.ja')
+              : zhRegion === 'HK'
+                ? t('fever.concentrationNote.hk')
+                : t('fever.concentrationNote.tw')}
           </Text>
         </View>
       )}
