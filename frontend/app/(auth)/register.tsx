@@ -11,10 +11,22 @@ import {
   Image,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { AuthInput } from '../../components/ui/AuthInput';
 import { pendingSignup } from '../../utils/pendingSignup';
 
+const PARENT_ROLES: { value: string; labelKey: string }[] = [
+  { value: '엄마', labelKey: 'onboardingSetNickname.roleMom' },
+  { value: '아빠', labelKey: 'onboardingSetNickname.roleDad' },
+  { value: '할머니', labelKey: 'onboardingSetNickname.roleGrandma' },
+  { value: '할아버지', labelKey: 'onboardingSetNickname.roleGrandpa' },
+  { value: '고모/이모', labelKey: 'onboardingSetNickname.roleAunt' },
+  { value: '삼촌', labelKey: 'onboardingSetNickname.roleUncle' },
+  { value: '기타', labelKey: 'onboardingSetNickname.roleOther' },
+];
+
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -24,20 +36,20 @@ export default function RegisterScreen() {
   // 약관 동의는 별도 화면(/onboarding/consent)에서 처리. 여기서는 자격증명만 수집.
   const handleNext = async () => {
     if (!email || !password) {
-      Alert.alert('알림', '이메일과 비밀번호를 입력해주세요');
+      Alert.alert(t('common.notice'), t('register.fillEmailPassword'));
       return;
     }
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRe.test(email.trim())) {
-      Alert.alert('알림', '올바른 이메일 형식이 아니에요. (예: name@example.com)');
+      Alert.alert(t('common.notice'), t('register.invalidEmailFormat'));
       return;
     }
     if (password !== confirm) {
-      Alert.alert('알림', '비밀번호가 일치하지 않습니다');
+      Alert.alert(t('common.notice'), t('register.passwordMismatch'));
       return;
     }
     if (password.length < 6) {
-      Alert.alert('알림', '비밀번호는 6자 이상이어야 합니다');
+      Alert.alert(t('common.notice'), t('register.passwordTooShort'));
       return;
     }
     setLoading(true);
@@ -46,7 +58,7 @@ export default function RegisterScreen() {
       pendingSignup.set({ email: email.trim(), password, parentRole });
       router.push('/onboarding/consent?signup=email');
     } catch {
-      Alert.alert('가입 실패', '이미 사용 중인 이메일이거나 서버 오류입니다');
+      Alert.alert(t('register.signupFailedTitle'), t('register.signupFailedMessage'));
     } finally {
       setLoading(false);
     }
@@ -65,9 +77,9 @@ export default function RegisterScreen() {
       >
         <View style={styles.header}>
           <Image source={require('../../assets/preg-leaf.png')} style={styles.emojiImg} resizeMode="contain" />
-          <Text style={styles.title}>회원가입</Text>
+          <Text style={styles.title}>{t('register.title')}</Text>
           <Text style={styles.subtitle}>
-            아맞다에 오신 것을 환영합니다
+            {t('register.subtitle')}
           </Text>
         </View>
 
@@ -75,7 +87,7 @@ export default function RegisterScreen() {
           <View style={styles.form}>
             <AuthInput
               icon={require('../../assets/icon-comment.png')}
-              placeholder="이메일"
+              placeholder={t('register.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -83,23 +95,23 @@ export default function RegisterScreen() {
             />
             <AuthInput
               icon={require('../../assets/icon-lock.png')}
-              placeholder="비밀번호 (6자 이상)"
+              placeholder={t('register.passwordPlaceholder')}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
             />
             <AuthInput
               icon={require('../../assets/icon-lock.png')}
-              placeholder="비밀번호 확인"
+              placeholder={t('register.confirmPasswordPlaceholder')}
               value={confirm}
               onChangeText={setConfirm}
               secureTextEntry
             />
           </View>
 
-          <Text style={styles.roleLabel}>누구로 가입하시나요?</Text>
+          <Text style={styles.roleLabel}>{t('onboardingSetNickname.roleQuestion')}</Text>
           <View style={styles.roleWrap}>
-            {['엄마', '아빠', '할머니', '할아버지', '고모/이모', '삼촌', '기타'].map((role) => (
+            {PARENT_ROLES.map(({ value: role, labelKey }) => (
               <TouchableOpacity
                 key={role}
                 style={[styles.roleBtn, parentRole === role && styles.roleBtnActive]}
@@ -107,10 +119,10 @@ export default function RegisterScreen() {
                 activeOpacity={0.8}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: parentRole === role }}
-                accessibilityLabel={`역할 ${role}`}
+                accessibilityLabel={t('register.roleAccessibilityLabel', { role: t(labelKey) })}
               >
                 <Text style={[styles.roleBtnText, parentRole === role && styles.roleBtnTextActive]}>
-                  {role}
+                  {t(labelKey)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -118,7 +130,7 @@ export default function RegisterScreen() {
 
           <View style={styles.consentNote}>
             <Text style={styles.consentNoteText}>
-              ⓘ 다음 화면에서 약관 동의를 확인합니다.
+              {t('register.consentNoteText')}
             </Text>
           </View>
 
@@ -131,11 +143,11 @@ export default function RegisterScreen() {
             disabled={loading}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel={loading ? '진행 중' : '다음'}
+            accessibilityLabel={loading ? t('register.inProgress') : t('common.next')}
             accessibilityState={{ disabled: loading, busy: loading }}
           >
             <Text style={styles.buttonText}>
-              {loading ? '진행 중...' : '다음'}
+              {loading ? t('register.inProgressEllipsis') : t('common.next')}
             </Text>
           </TouchableOpacity>
 
@@ -143,11 +155,11 @@ export default function RegisterScreen() {
             style={styles.loginLink}
             onPress={() => router.back()}
             accessibilityRole="link"
-            accessibilityLabel="이미 계정이 있으신가요? 로그인"
+            accessibilityLabel={t('register.alreadyHaveAccountLogin')}
           >
             <Text style={styles.loginText}>
-              {'이미 계정이 있으신가요? '}
-              <Text style={styles.loginBold}>로그인</Text>
+              {t('register.alreadyHaveAccount')}
+              <Text style={styles.loginBold}>{t('register.loginLinkText')}</Text>
             </Text>
           </TouchableOpacity>
         </View>

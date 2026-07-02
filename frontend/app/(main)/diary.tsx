@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { observationApi, uploadApi, coachingApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 import { canDo } from '../../features/coparenting/permissions';
@@ -36,6 +37,7 @@ interface AiDiaryData {
 }
 
 export default function DiaryScreen() {
+  const { t } = useTranslation();
   const [content, setContent] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -65,7 +67,7 @@ export default function DiaryScreen() {
       const res = await observationApi.list(selectedChild.id);
       setObservations(res.data.data ?? []);
     } catch {
-      Alert.alert('오류', '관찰 기록을 불러오지 못했습니다');
+      Alert.alert(t('common.error'), t('diary.alert.loadFail'));
     } finally {
       setListLoading(false);
     }
@@ -75,7 +77,7 @@ export default function DiaryScreen() {
     if (!selectedChild) return;
     // 공동육아: AI 일기 생성은 useCoaching 권한 필요
     if (!(await canDo(selectedChild.id, 'useCoaching'))) {
-      Alert.alert('열람 전용', 'AI 일기 생성 권한이 없어요.\n보호자에게 "상담이모 사용" 권한을 요청해주세요.');
+      Alert.alert(t('diary.alert.viewOnlyTitle'), t('diary.alert.noAiDiaryPermission'));
       return;
     }
     setAiDiaryLoading(true);
@@ -85,10 +87,10 @@ export default function DiaryScreen() {
       if (data?.diary) {
         setAiDiary(data);
       } else {
-        Alert.alert('알림', 'AI 일기를 생성하지 못했습니다. 오늘 상담 내역이 있어야 생성됩니다.');
+        Alert.alert(t('common.notice'), t('diary.alert.aiDiaryGenFail'));
       }
     } catch {
-      Alert.alert('오류', 'AI 일기 생성에 실패했습니다. 잠시 후 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('diary.alert.aiDiaryError'));
     } finally {
       setAiDiaryLoading(false);
     }
@@ -96,16 +98,16 @@ export default function DiaryScreen() {
 
   const handleSubmit = async () => {
     if (!content.trim()) {
-      Alert.alert('알림', '관찰 내용을 입력해주세요');
+      Alert.alert(t('common.notice'), t('diary.alert.contentRequired'));
       return;
     }
     if (!selectedChild) {
-      Alert.alert('알림', '선택된 자녀가 없습니다');
+      Alert.alert(t('common.notice'), t('diary.alert.noChildSelected'));
       return;
     }
     // 공동육아: 관찰 일기 작성은 editRecords 권한 필요 (열람 전용 멤버 차단)
     if (!(await canDo(selectedChild.id, 'editRecords'))) {
-      Alert.alert('열람 전용', '기록 작성 권한이 없어요.\n보호자에게 "육아 기록 작성/수정" 권한을 요청해주세요.');
+      Alert.alert(t('diary.alert.viewOnlyTitle'), t('diary.alert.noWritePermission'));
       return;
     }
     setLoading(true);
@@ -124,9 +126,9 @@ export default function DiaryScreen() {
       setObservations((prev) => [res.data.data.observation, ...prev]);
       setContent('');
       setPhotoUri(null);
-      Alert.alert('완료', '관찰 일기가 저장되었습니다');
+      Alert.alert(t('common.complete'), t('diary.alert.saveSuccess'));
     } catch {
-      Alert.alert('오류', '저장에 실패했습니다');
+      Alert.alert(t('common.error'), t('diary.alert.saveFail'));
     } finally {
       setLoading(false);
     }
@@ -143,11 +145,11 @@ export default function DiaryScreen() {
         keyboardShouldPersistTaps="handled"
         bounces={false}
       >
-        <Stack.Screen options={{ title: '관찰 일기', headerShown: true, headerLeft: () => <BackButton /> }} />
+        <Stack.Screen options={{ title: t('diary.headerTitle'), headerShown: true, headerLeft: () => <BackButton /> }} />
 
         {selectedChild && (
           <Text style={styles.childLabel}>
-            {selectedChild.name}의 관찰 일기
+            {t('diary.childLabel', { name: selectedChild.name })}
           </Text>
         )}
 
@@ -164,7 +166,7 @@ export default function DiaryScreen() {
         {/* AI 오늘 일기 섹션 */}
         <View style={styles.aiDiarySection}>
           <View style={styles.listHeader}>
-            <Text style={styles.sectionTitle}>AI 오늘 일기</Text>
+            <Text style={styles.sectionTitle}>{t('diary.aiTodayDiary')}</Text>
           </View>
           {aiDiary ? (
             <View style={styles.aiDiaryCard}>
@@ -176,7 +178,7 @@ export default function DiaryScreen() {
                 disabled={aiDiaryLoading}
               >
                 <Text style={styles.aiDiaryRefreshText}>
-                  {aiDiaryLoading ? '생성 중...' : '다시 생성'}
+                  {aiDiaryLoading ? t('diary.generating') : t('diary.regenerate')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -189,16 +191,16 @@ export default function DiaryScreen() {
               {aiDiaryLoading ? (
                 <ActivityIndicator color={COLORS.primary} />
               ) : (
-                <Text style={styles.aiDiaryGenText}>✨ AI 오늘 일기 생성</Text>
+                <Text style={styles.aiDiaryGenText}>{t('diary.generateAiDiaryButton')}</Text>
               )}
             </TouchableOpacity>
           )}
         </View>
 
         <View style={styles.listHeader}>
-          <Text style={styles.sectionTitle}>이전 기록</Text>
+          <Text style={styles.sectionTitle}>{t('diary.previousRecords')}</Text>
           {observations.length > 0 && (
-            <Text style={styles.countBadge}>{observations.length}건</Text>
+            <Text style={styles.countBadge}>{t('diary.countBadge', { count: observations.length })}</Text>
           )}
         </View>
 
@@ -212,10 +214,10 @@ export default function DiaryScreen() {
               resizeMode="contain"
             />
             <Text style={styles.emptyText}>
-              아직 작성된 관찰 일기가 없습니다
+              {t('diary.emptyText')}
             </Text>
             <Text style={styles.emptyHint}>
-              위에서 아이의 모습을 기록해보세요
+              {t('diary.emptyHint')}
             </Text>
           </View>
         ) : (

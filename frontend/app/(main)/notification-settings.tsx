@@ -3,6 +3,8 @@ import type { ImageSourcePropType } from 'react-native';
 import { useState, useEffect, useCallback } from 'react';
 import { Stack, router } from 'expo-router';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useChildStore } from '../../stores/childStore';
 import { retentionApi } from '../../services/api';
 import {
@@ -37,44 +39,46 @@ const IC_PLAY = require('../../assets/play-activity.png') as ImageSourcePropType
 const IC_DIARY = require('../../assets/child-diary.png') as ImageSourcePropType;
 const IC_REPORT = require('../../assets/quick-report.png') as ImageSourcePropType;
 
-const DAILY_ITEMS: ToggleItem[] = [
-  {
-    key: 'morning',
-    timeKey: 'morningTime',
-    icon: IC_SUNNY,
-    label: '아침 인사 알림',
-    description: '어젯밤 아이 수면 체크',
-  },
-  {
-    key: 'afternoon',
-    timeKey: 'afternoonTime',
-    icon: IC_PLAY,
-    label: '오후 활동 추천',
-    description: '아이와 함께하는 15분 놀이',
-  },
-  {
-    key: 'evening',
-    timeKey: 'eveningTime',
-    icon: IC_DIARY,
-    label: '저녁 일기 알림',
-    description: '오늘의 육아일기 작성 알림',
-  },
-  {
-    key: 'weekly',
-    icon: IC_REPORT,
-    label: '주간 리포트',
-    description: '이번 주 육아 리포트 도착',
-    fixedTimeLabel: '매주 월요일 오전 9:00',
-  },
-];
+function getDailyItems(t: TFunction): ToggleItem[] {
+  return [
+    {
+      key: 'morning',
+      timeKey: 'morningTime',
+      icon: IC_SUNNY,
+      label: t('notificationSettings.daily.morning.label'),
+      description: t('notificationSettings.daily.morning.description'),
+    },
+    {
+      key: 'afternoon',
+      timeKey: 'afternoonTime',
+      icon: IC_PLAY,
+      label: t('notificationSettings.daily.afternoon.label'),
+      description: t('notificationSettings.daily.afternoon.description'),
+    },
+    {
+      key: 'evening',
+      timeKey: 'eveningTime',
+      icon: IC_DIARY,
+      label: t('notificationSettings.daily.evening.label'),
+      description: t('notificationSettings.daily.evening.description'),
+    },
+    {
+      key: 'weekly',
+      icon: IC_REPORT,
+      label: t('notificationSettings.daily.weekly.label'),
+      description: t('notificationSettings.daily.weekly.description'),
+      fixedTimeLabel: t('notificationSettings.daily.weekly.fixedTimeLabel'),
+    },
+  ];
+}
 
-function formatTimeLabel(hhmm: string): string {
+function formatTimeLabel(t: TFunction, hhmm: string): string {
   const [hStr, mStr] = hhmm.split(':');
   const h = parseInt(hStr ?? '0', 10);
   const m = parseInt(mStr ?? '0', 10);
-  const period = h < 12 ? '오전' : '오후';
+  const period = h < 12 ? t('notificationSettings.am') : t('notificationSettings.pm');
   const h12 = ((h + 11) % 12) + 1;
-  return `매일 ${period} ${h12}:${String(m).padStart(2, '0')}`;
+  return t('notificationSettings.dailyAtTime', { period, hour: h12, minute: String(m).padStart(2, '0') });
 }
 
 function hhmmToDate(hhmm: string): Date {
@@ -89,7 +93,9 @@ function dateToHHMM(d: Date): string {
 }
 
 export default function NotificationSettingsScreen() {
+  const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
+  const DAILY_ITEMS = getDailyItems(t);
   const [prefs, setPrefs] = useState<NotificationPreferences>({
     morning: true,
     afternoon: true,
@@ -173,7 +179,7 @@ export default function NotificationSettingsScreen() {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <Stack.Screen options={{ headerShown: false }} />
-        <Text style={styles.loadingText}>불러오는 중...</Text>
+        <Text style={styles.loadingText}>{t('notificationSettings.loading')}</Text>
       </View>
     );
   }
@@ -182,31 +188,31 @@ export default function NotificationSettingsScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScreenHeader title="알림 설정" />
+      <ScreenHeader title={t('notificationSettings.title')} />
 
       <View style={styles.descCard}>
         <Image source={IC_BELL} style={styles.descEmojiImg} resizeMode="contain" />
         <Text style={styles.descTitle}>
           {selectedChild
-            ? `${selectedChild.name} 맞춤 알림을 설정해보세요`
-            : '맞춤 알림을 설정해보세요'}
+            ? t('notificationSettings.descTitleWithName', { name: selectedChild.name })
+            : t('notificationSettings.descTitle')}
         </Text>
         <Text style={styles.descSub}>
-          알림 시간을 탭하면 원하는 시간으로 바꿀 수 있어요
+          {t('notificationSettings.descSub')}
         </Text>
       </View>
 
       {/* 임산부 데일리 미션 알림 (임신부 모드에서만) */}
       {isPregnant && (
         <>
-          <Text style={styles.sectionTitle}>임산부 데일리 미션</Text>
+          <Text style={styles.sectionTitle}>{t('notificationSettings.pregnantMissionSection')}</Text>
           <View style={styles.card}>
             <View style={styles.row}>
               <Image source={IC_WATER} style={styles.emojiImg} resizeMode="contain" />
               <View style={styles.labelCol}>
-                <Text style={styles.label}>매일 9시 미션 알림</Text>
-                <Text style={styles.desc}>물 마시기 / 영양제 챙기기 리마인더</Text>
-                <Text style={styles.time}>매일 오전 9:00</Text>
+                <Text style={styles.label}>{t('notificationSettings.dailyMission.label')}</Text>
+                <Text style={styles.desc}>{t('notificationSettings.dailyMission.description')}</Text>
+                <Text style={styles.time}>{t('notificationSettings.dailyMission.time')}</Text>
               </View>
               <Switch
                 value={dailyMissionEnabled}
@@ -219,12 +225,12 @@ export default function NotificationSettingsScreen() {
         </>
       )}
 
-      <Text style={styles.sectionTitle}>일상 알림</Text>
+      <Text style={styles.sectionTitle}>{t('notificationSettings.dailySection')}</Text>
       <View style={styles.card}>
         {DAILY_ITEMS.map((item, idx) => {
           const isLast = idx === DAILY_ITEMS.length - 1;
           const timeValue = item.timeKey ? prefs[item.timeKey] : null;
-          const timeLabel = item.fixedTimeLabel ?? (timeValue ? formatTimeLabel(timeValue) : '');
+          const timeLabel = item.fixedTimeLabel ?? (timeValue ? formatTimeLabel(t, timeValue) : '');
           return (
             <View key={item.key} style={[styles.row, !isLast && styles.rowBorder]}>
               <Image source={item.icon} style={styles.emojiImg} resizeMode="contain" />
@@ -257,7 +263,7 @@ export default function NotificationSettingsScreen() {
 
       <View style={styles.infoCard}>
         <Text style={styles.infoText}>
-          알림은 기기에서 직접 전송되며 무료입니다. 진동 모드에서는 진동으로 알림됩니다.
+          {t('notificationSettings.infoText')}
         </Text>
       </View>
 

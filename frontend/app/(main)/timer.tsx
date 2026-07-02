@@ -9,17 +9,21 @@ import {
 } from 'react-native';
 import { Stack } from 'expo-router';
 import Svg, { Circle } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { BackButton } from '../../components/common/BackButton';
 
-const PRESETS = [
-  { label: '5분', seconds: 5 * 60 },
-  { label: '10분', seconds: 10 * 60 },
-  { label: '15분', seconds: 15 * 60 },
-  { label: '20분', seconds: 20 * 60 },
-];
+function getPresets(t: TFunction) {
+  return [
+    { label: t('timer.presets.min', { count: 5 }), seconds: 5 * 60 },
+    { label: t('timer.presets.min', { count: 10 }), seconds: 10 * 60 },
+    { label: t('timer.presets.min', { count: 15 }), seconds: 15 * 60 },
+    { label: t('timer.presets.min', { count: 20 }), seconds: 20 * 60 },
+  ];
+}
 
 // 진행 링(SVG) — 반지름 90, 둘레 기준 strokeDashoffset로 실제 진행 표시
 const RING_R = 90;
@@ -32,6 +36,8 @@ function formatTime(sec: number): string {
 }
 
 export default function TimerScreen() {
+  const { t } = useTranslation();
+  const PRESETS = getPresets(t);
   const [duration, setDuration] = useState(15 * 60);
   const [remaining, setRemaining] = useState(15 * 60);
   const [running, setRunning] = useState(false);
@@ -60,10 +66,10 @@ export default function TimerScreen() {
           Vibration.vibrate([0, 500, 200, 500]);
           // 최신 선택 아이 이름을 ref+store에서 읽어 stale 방지
           const doneName =
-            useChildStore.getState().children[selectedChildRef.current]?.name ?? '아이';
+            useChildStore.getState().children[selectedChildRef.current]?.name ?? t('timer.defaultChildName');
           Alert.alert(
-            'Quality Time 완료!',
-            `${doneName}와의 소중한 시간이었어요 💕`
+            t('timer.completeAlert.title'),
+            t('timer.completeAlert.message', { name: doneName })
           );
           return 0;
         }
@@ -93,10 +99,10 @@ export default function TimerScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: 'Quality Time', headerShown: true, headerLeft: () => <BackButton /> }} />
+      <Stack.Screen options={{ title: t('timer.headerTitle'), headerShown: true, headerLeft: () => <BackButton /> }} />
 
       <Text style={styles.subtitle}>
-        형제자매와 1:1 시간을 보내세요
+        {t('timer.subtitle')}
       </Text>
 
       {/* 자녀 선택 */}
@@ -150,33 +156,33 @@ export default function TimerScreen() {
         </Svg>
         <Text style={styles.timerText}>{formatTime(remaining)}</Text>
         <Text style={styles.timerLabel}>
-          {running ? '진행 중...' : remaining === 0 ? '완료!' : '준비'}
+          {running ? t('timer.status.running') : remaining === 0 ? t('timer.status.done') : t('timer.status.ready')}
         </Text>
       </View>
 
       {/* 컨트롤 */}
       <View style={styles.controlRow}>
         <TouchableOpacity style={styles.resetBtn} onPress={reset}>
-          <Text style={styles.resetText}>초기화</Text>
+          <Text style={styles.resetText}>{t('timer.resetButton')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.mainBtn, running && styles.pauseBtn]}
           onPress={running ? pause : start}
         >
           <Text style={styles.mainBtnText}>
-            {running ? '일시정지' : remaining === 0 ? '다시 시작' : '시작'}
+            {running ? t('timer.mainButton.pause') : remaining === 0 ? t('timer.mainButton.restart') : t('timer.mainButton.start')}
           </Text>
         </TouchableOpacity>
       </View>
 
       {/* 팁 */}
       <View style={styles.tipCard}>
-        <Text style={styles.tipTitle}>💡 Quality Time 팁</Text>
+        <Text style={styles.tipTitle}>{t('timer.tipCard.title')}</Text>
         <Text style={styles.tipText}>
-          • 핸드폰을 내려놓고 아이에게 온전히 집중하세요{'\n'}
-          • 아이가 주도하는 놀이를 따라가 주세요{'\n'}
-          • 하루 15분이면 충분합니다{'\n'}
-          • 형제가 있다면 각각 1:1 시간을 만들어주세요
+          {t('timer.tipCard.tip1')}{'\n'}
+          {t('timer.tipCard.tip2')}{'\n'}
+          {t('timer.tipCard.tip3')}{'\n'}
+          {t('timer.tipCard.tip4')}
         </Text>
       </View>
       <AdSlot />

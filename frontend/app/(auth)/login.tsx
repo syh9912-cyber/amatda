@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { AuthInput } from '../../components/ui/AuthInput';
 import { AuthDivider } from '../../components/ui/AuthDivider';
 import { SocialLoginButtons } from '../../components/ui/SocialLoginButtons';
@@ -21,6 +22,7 @@ const BG_BOTTOM = '#F8FAFD'; // 차분한 화이트 (하단)
 const { width: SW } = Dimensions.get('window');
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const h = useLoginHandlers();
 
   return (
@@ -54,7 +56,7 @@ export default function LoginScreen() {
           <View style={styles.form}>
             <AuthInput
               icon={require('../../assets/icon-comment.png')}
-              placeholder="이메일"
+              placeholder={t('login.emailPlaceholder')}
               value={h.email}
               onChangeText={h.setEmail}
               keyboardType="email-address"
@@ -62,7 +64,7 @@ export default function LoginScreen() {
             />
             <AuthInput
               icon={require('../../assets/icon-lock.png')}
-              placeholder="비밀번호"
+              placeholder={t('login.passwordPlaceholder')}
               value={h.password}
               onChangeText={h.setPassword}
               secureTextEntry
@@ -75,20 +77,20 @@ export default function LoginScreen() {
             disabled={h.loading}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel={h.loading ? '로그인 중' : '로그인'}
+            accessibilityLabel={h.loading ? t('login.loggingIn') : t('login.loginButton')}
             accessibilityState={{ disabled: h.loading, busy: h.loading }}
           >
             {h.loading ? (
               <View style={styles.buttonRow}>
                 <ActivityIndicator size="small" color="#FFFFFF" />
-                <Text style={styles.buttonText}>로그인 중...</Text>
+                <Text style={styles.buttonText}>{t('login.loggingInEllipsis')}</Text>
               </View>
             ) : (
-              <Text style={styles.buttonText}>로그인</Text>
+              <Text style={styles.buttonText}>{t('login.loginButton')}</Text>
             )}
           </TouchableOpacity>
           {h.loading && (
-            <Text style={styles.loadingHint}>서버 연결 중이에요. 잠시만 기다려주세요…</Text>
+            <Text style={styles.loadingHint}>{t('login.connectingHint')}</Text>
           )}
 
           <View style={styles.dividerWrap}>
@@ -104,11 +106,11 @@ export default function LoginScreen() {
             style={styles.registerLink}
             onPress={() => router.push('/(auth)/register')}
             accessibilityRole="link"
-            accessibilityLabel="계정이 없으신가요? 회원가입"
+            accessibilityLabel={t('login.noAccountRegister')}
           >
             <Text style={styles.registerText}>
-              {'계정이 없으신가요? '}
-              <Text style={styles.registerBold}>회원가입</Text>
+              {t('login.noAccount')}
+              <Text style={styles.registerBold}>{t('login.registerLinkText')}</Text>
             </Text>
           </TouchableOpacity>
         </View>

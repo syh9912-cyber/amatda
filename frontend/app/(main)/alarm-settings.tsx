@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { childApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
 
@@ -27,6 +28,7 @@ function hhmm(min: number): string {
 const TYPE_EMOJI: Record<string, string> = { feeding: '🍼', sleep: '😴', wake: '☀️' };
 
 export default function AlarmSettingsScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ childId?: string }>();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const childId = params.childId || selectedChild?.id || '';
@@ -45,11 +47,11 @@ export default function AlarmSettingsScreen() {
       if (d?.settings) setSettings({ ...d.settings, disabledKeys: d.settings.disabledKeys ?? [] });
       if (Array.isArray(d?.slots)) setSlots(d.slots);
     } catch {
-      Alert.alert('오류', '알람 설정을 불러오지 못했어요.');
+      Alert.alert(t('common.error'), t('alarmSettings.alert.loadFail'));
     } finally {
       setLoading(false);
     }
-  }, [childId]);
+  }, [childId, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -59,11 +61,11 @@ export default function AlarmSettingsScreen() {
     try {
       await childApi.updateAlarmSettings(childId, next as unknown as Record<string, unknown>);
     } catch {
-      Alert.alert('오류', '저장에 실패했어요. 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('alarmSettings.alert.saveFail'));
     } finally {
       setSaving(false);
     }
-  }, [childId]);
+  }, [childId, t]);
 
   const toggleMaster = (v: boolean) => persist({ ...settings, enabled: v });
   const setOffset = (m: number) => persist({ ...settings, offsetMin: m });
@@ -82,7 +84,7 @@ export default function AlarmSettingsScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={12} style={s.backBtn}>
           <Text style={s.backArrow}>‹</Text>
         </TouchableOpacity>
-        <Text style={s.title}>⏰ 알람 설정</Text>
+        <Text style={s.title}>{t('alarmSettings.title')}</Text>
         <View style={{ width: 32 }}>{saving ? <ActivityIndicator size="small" color={ACCENT} /> : null}</View>
       </View>
 
@@ -91,39 +93,38 @@ export default function AlarmSettingsScreen() {
       ) : (
         <ScrollView contentContainerStyle={s.scroll}>
           <Text style={s.desc}>
-            최근 3일 동안 기록한 수유·수면·기상 시간을 분석해, 평소 그 시간 전에 미리 알려드려요.
-            기록이 없으면 알람도 생기지 않아요.
+            {t('alarmSettings.desc')}
           </Text>
 
           {/* 전체 on/off */}
           <View style={s.rowCard}>
             <View style={{ flex: 1 }}>
-              <Text style={s.rowLabel}>예측 알람 켜기</Text>
-              <Text style={s.rowSub}>끄면 모든 예측 알람이 오지 않아요</Text>
+              <Text style={s.rowLabel}>{t('alarmSettings.masterToggle.label')}</Text>
+              <Text style={s.rowSub}>{t('alarmSettings.masterToggle.sub')}</Text>
             </View>
             <Switch value={settings.enabled} onValueChange={toggleMaster}
               trackColor={{ true: ACCENT, false: '#D1D5DB' }} thumbColor="#FFF" />
           </View>
 
           {/* 알림 시점 */}
-          <Text style={s.sectionLabel}>알림 시점</Text>
+          <Text style={s.sectionLabel}>{t('alarmSettings.offsetSection')}</Text>
           <View style={s.offsetRow}>
             {OFFSETS.map((m) => (
               <TouchableOpacity key={m}
                 style={[s.offsetChip, settings.offsetMin === m && s.offsetChipOn, !settings.enabled && s.dim]}
                 disabled={!settings.enabled}
                 onPress={() => setOffset(m)} activeOpacity={0.8}>
-                <Text style={[s.offsetText, settings.offsetMin === m && s.offsetTextOn]}>{m}분 전</Text>
+                <Text style={[s.offsetText, settings.offsetMin === m && s.offsetTextOn]}>{t('alarmSettings.minutesBefore', { count: m })}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
           {/* 슬롯 목록 */}
-          <Text style={s.sectionLabel}>알람 목록 (패턴 기반)</Text>
+          <Text style={s.sectionLabel}>{t('alarmSettings.slotSection')}</Text>
           {slots.length === 0 ? (
             <View style={s.empty}>
               <Text style={s.emptyText}>
-                아직 패턴이 없어요.{'\n'}수유·수면·기상을 기록하면 다음 날부터 알람이 자동으로 생겨요.
+                {t('alarmSettings.emptySlots')}
               </Text>
             </View>
           ) : (
@@ -132,7 +133,7 @@ export default function AlarmSettingsScreen() {
                 <Text style={s.slotEmoji}>{TYPE_EMOJI[slot.type] ?? '⏰'}</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={s.slotLabel}>{slot.label}</Text>
-                  <Text style={s.slotTime}>{hhmm(slot.timeMin)} · {settings.offsetMin}분 전 알림</Text>
+                  <Text style={s.slotTime}>{t('alarmSettings.slotTime', { time: hhmm(slot.timeMin), offset: settings.offsetMin })}</Text>
                 </View>
                 <Switch value={slot.on} disabled={!settings.enabled}
                   onValueChange={(v) => toggleSlot(slot.key, v)}
@@ -141,7 +142,7 @@ export default function AlarmSettingsScreen() {
             ))
           )}
 
-          <Text style={s.foot}>알람 목록은 기록이 쌓이면 자동으로 업데이트돼요.</Text>
+          <Text style={s.foot}>{t('alarmSettings.footNote')}</Text>
         </ScrollView>
       )}
     </View>

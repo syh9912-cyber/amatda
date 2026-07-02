@@ -3866,5 +3866,198 @@
     "askMore": "AIにもっと質問する",
     "citationNote": "AIが生成した参考用のおすすめです。健康・食事に関する判断は小児科医など専門家にご相談ください。",
     "citationSourceFoodSafety": "食品医薬品安全処 食品安全の国"
+  },
+  "support": {
+    "title": "サポートセンター",
+    "faqSectionTitle": "よくある質問",
+    "inquirySectionTitle": "お問い合わせ",
+    "inquiryTypeLabel": "お問い合わせ種類",
+    "inquiryTypes": {
+      "bug": "不具合報告",
+      "feature": "機能のご提案",
+      "account": "アカウントに関するお問い合わせ",
+      "etc": "その他のお問い合わせ"
+    },
+    "faq": {
+      "temperament": {
+        "q": "気質検査は何回まで受けられますか？",
+        "a": "気質検査は回数制限なく無料でご利用いただけます。"
+      },
+      "coachLimit": {
+        "q": "相談イモは1日に何回まで利用できますか？",
+        "a": "無料プランは1日10回、プレミアムは無制限でご利用いただけます。"
+      },
+      "dataSafety": {
+        "q": "お子さまの情報は安全に保護されますか？",
+        "a": "すべてのデータはFirebaseのセキュリティルールで保護されており、AI送信時には本名がマスキングされます。"
+      },
+      "errorReport": {
+        "q": "アプリ利用中にエラーが発生した場合はどうすればいいですか？",
+        "a": "下記のお問い合わせフォームからエラー内容をお送りいただければ、迅速に修正いたします。"
+      }
+    },
+    "selectInquiryType": "お問い合わせ種類を選択してください。",
+    "enterTitle": "タイトルを入力してください。",
+    "enterContent": "内容を入力してください。",
+    "emailSubjectPrefix": "アマッタ",
+    "emailBodyInquiryType": "お問い合わせ種類",
+    "emailBodyDevice": "端末",
+    "emailBodyAppVersion": "アプリバージョン",
+    "thankYouTitle": "ありがとうございます",
+    "mailAppOpened": "メールアプリが開きました。送信を押してください。",
+    "noMailAppTitle": "メールアプリがありません",
+    "noMailAppMessage": "メールアプリが見つかりません。",
+    "sendDirectly": "直接お送りください",
+    "copyEmail": "メールアドレスをコピー",
+    "cannotOpenMailApp": "メールアプリを開けません。",
+    "copyCompleteTitle": "コピー完了",
+    "emailCopied": "メールアドレスがコピーされました。",
+    "titleFieldLabel": "タイトル",
+    "titlePlaceholder": "お問い合わせのタイトルを入力してください",
+    "contentFieldLabel": "内容",
+    "contentPlaceholder": "お問い合わせ内容を詳しくご記入ください",
+    "openingMailApp": "メールアプリを開いています...",
+    "sendByMail": "メールで問い合わせる",
+    "sendDirectEmail": "直接メールを送る"
+  },
+  "register": {
+    "fillEmailPassword": "メールアドレスとパスワードを入力してください",
+    "invalidEmailFormat": "メールアドレスの形式が正しくありません。(例: name@example.com)",
+    "passwordMismatch": "パスワードが一致しません",
+    "passwordTooShort": "パスワードは6文字以上で入力してください",
+    "signupFailedTitle": "登録失敗",
+    "signupFailedMessage": "すでに使用中のメールアドレスか、サーバーエラーです",
+    "title": "会員登録",
+    "subtitle": "アマッダへようこそ",
+    "emailPlaceholder": "メールアドレス",
+    "passwordPlaceholder": "パスワード（6文字以上）",
+    "confirmPasswordPlaceholder": "パスワード確認",
+    "roleAccessibilityLabel": "役割 {{role}}",
+    "consentNoteText": "ⓘ 次の画面で利用規約への同意を確認します。",
+    "inProgress": "処理中",
+    "inProgressEllipsis": "処理中...",
+    "alreadyHaveAccountLogin": "すでにアカウントをお持ちですか？ ログイン",
+    "alreadyHaveAccount": "すでにアカウントをお持ちですか？ ",
+    "loginLinkText": "ログイン"
+  },
+  "login": {
+    "emailPlaceholder": "メールアドレス",
+    "passwordPlaceholder": "パスワード",
+    "loggingIn": "ログイン中",
+    "loginButton": "ログイン",
+    "loggingInEllipsis": "ログイン中...",
+    "connectingHint": "サーバーに接続しています。少々お待ちください…",
+    "noAccountRegister": "アカウントをお持ちでないですか？ 会員登録",
+    "noAccount": "アカウントをお持ちでないですか？ ",
+    "registerLinkText": "会員登録"
+  },
+  "notificationSettings": {
+    "title": "通知設定",
+    "loading": "読み込み中...",
+    "descTitleWithName": "{{name}}に合わせた通知を設定しましょう",
+    "descTitle": "通知をカスタマイズしましょう",
+    "descSub": "通知時間をタップすると好きな時間に変更できます",
+    "pregnantMissionSection": "妊婦デイリーミッション",
+    "dailyMission": {
+      "label": "毎日9時のミッション通知",
+      "description": "水分補給・サプリ摂取のリマインダー",
+      "time": "毎日午前9:00"
+    },
+    "dailySection": "日常通知",
+    "daily": {
+      "morning": {
+        "label": "朝の挨拶通知",
+        "description": "昨夜の子どもの睡眠チェック"
+      },
+      "afternoon": {
+        "label": "午後のアクティビティ提案",
+        "description": "子どもと過ごす15分の遊び"
+      },
+      "evening": {
+        "label": "夜の日記通知",
+        "description": "今日の育児日記作成の通知"
+      },
+      "weekly": {
+        "label": "週間レポート",
+        "description": "今週の育児レポートが届きます",
+        "fixedTimeLabel": "毎週月曜日午前9:00"
+      }
+    },
+    "am": "午前",
+    "pm": "午後",
+    "dailyAtTime": "毎日{{period}}{{hour}}:{{minute}}",
+    "infoText": "通知は端末から直接送信され、無料です。マナーモードでは振動でお知らせします。"
+  },
+  "timer": {
+    "presets": {
+      "min": "{{count}}分"
+    },
+    "headerTitle": "Quality Time",
+    "subtitle": "きょうだいと1対1の時間を過ごしましょう",
+    "defaultChildName": "子ども",
+    "completeAlert": {
+      "title": "Quality Time 完了！",
+      "message": "{{name}}との大切な時間でした 💕"
+    },
+    "status": {
+      "running": "進行中...",
+      "done": "完了！",
+      "ready": "準備"
+    },
+    "resetButton": "リセット",
+    "mainButton": {
+      "pause": "一時停止",
+      "restart": "もう一度開始",
+      "start": "開始"
+    },
+    "tipCard": {
+      "title": "💡 Quality Time のヒント",
+      "tip1": "• スマホを置いて、お子さんに集中しましょう",
+      "tip2": "• 子どもが主導する遊びに合わせてあげてください",
+      "tip3": "• 1日15分で十分です",
+      "tip4": "• きょうだいがいる場合は、それぞれ1対1の時間を作ってあげてください"
+    }
+  },
+  "diary": {
+    "headerTitle": "観察日記",
+    "childLabel": "{{name}}の観察日記",
+    "alert": {
+      "loadFail": "観察記録を読み込めませんでした",
+      "viewOnlyTitle": "閲覧専用",
+      "noAiDiaryPermission": "AI日記作成の権限がありません。\n保護者に「相談アドバイザー利用」権限を依頼してください。",
+      "aiDiaryGenFail": "AI日記を作成できませんでした。今日の相談履歴が必要です。",
+      "aiDiaryError": "AI日記の作成に失敗しました。しばらくしてからもう一度お試しください。",
+      "contentRequired": "観察内容を入力してください",
+      "noChildSelected": "選択されたお子さんがいません",
+      "noWritePermission": "記録作成の権限がありません。\n保護者に「育児記録の作成・修正」権限を依頼してください。",
+      "saveSuccess": "観察日記が保存されました",
+      "saveFail": "保存に失敗しました"
+    },
+    "aiTodayDiary": "AI 今日の日記",
+    "generating": "作成中...",
+    "regenerate": "再作成",
+    "generateAiDiaryButton": "✨ AI 今日の日記を作成",
+    "previousRecords": "過去の記録",
+    "countBadge": "{{count}}件",
+    "emptyText": "まだ作成された観察日記がありません",
+    "emptyHint": "上でお子さんの様子を記録してみましょう"
+  },
+  "alarmSettings": {
+    "title": "⏰ アラーム設定",
+    "alert": {
+      "loadFail": "アラーム設定を読み込めませんでした。",
+      "saveFail": "保存に失敗しました。もう一度お試しください。"
+    },
+    "desc": "直近3日間に記録した授乳・睡眠・起床の時間を分析し、いつものその時間前にお知らせします。\n記録がなければアラームも作成されません。",
+    "masterToggle": {
+      "label": "予測アラームをオンにする",
+      "sub": "オフにするとすべての予測アラームが届きません"
+    },
+    "offsetSection": "通知タイミング",
+    "minutesBefore": "{{count}}分前",
+    "slotSection": "アラーム一覧（パターン基準）",
+    "emptySlots": "まだパターンがありません。\n授乳・睡眠・起床を記録すると、翌日からアラームが自動的に作成されます。",
+    "slotTime": "{{time}} ・ {{offset}}分前に通知",
+    "footNote": "アラーム一覧は記録が蓄積されると自動的に更新されます。"
   }
 }

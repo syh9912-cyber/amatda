@@ -4,6 +4,8 @@ import {
   TouchableOpacity, Alert, Linking, Platform,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { COLORS } from '../../constants/theme';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 
@@ -19,50 +21,58 @@ const COLOR = {
 
 type InquiryType = 'bug' | 'feature' | 'account' | 'etc';
 
-const INQUIRY_TYPES: { key: InquiryType; emoji: string; label: string }[] = [
-  { key: 'bug', emoji: '🐛', label: '오류 신고' },
-  { key: 'feature', emoji: '💡', label: '기능 건의' },
-  { key: 'account', emoji: '👤', label: '계정 문의' },
-  { key: 'etc', emoji: '📝', label: '기타 문의' },
-];
+function getInquiryTypes(t: TFunction): { key: InquiryType; emoji: string; label: string }[] {
+  return [
+    { key: 'bug', emoji: '🐛', label: t('support.inquiryTypes.bug') },
+    { key: 'feature', emoji: '💡', label: t('support.inquiryTypes.feature') },
+    { key: 'account', emoji: '👤', label: t('support.inquiryTypes.account') },
+    { key: 'etc', emoji: '📝', label: t('support.inquiryTypes.etc') },
+  ];
+}
 
-const FAQ_ITEMS = [
-  { q: '기질 검사는 몇 번까지 할 수 있나요?', a: '기질 검사는 횟수 제한 없이 무료로 이용 가능합니다.' },
-  { q: '상담이모는 하루에 몇 번까지 가능한가요?', a: '무료 플랜은 하루 10회, 프리미엄은 무제한 이용 가능합니다.' },
-  { q: '아이 정보는 안전하게 보호되나요?', a: '모든 데이터는 Firebase 보안 규칙으로 보호되며, AI 전송 시 실명이 마스킹됩니다.' },
-  { q: '앱 사용 중 오류가 발생하면 어떻게 하나요?', a: '아래 문의하기에서 오류 내용을 보내주시면 빠르게 수정하겠습니다.' },
-];
+function getFaqItems(t: TFunction): { q: string; a: string }[] {
+  return [
+    { q: t('support.faq.temperament.q'), a: t('support.faq.temperament.a') },
+    { q: t('support.faq.coachLimit.q'), a: t('support.faq.coachLimit.a') },
+    { q: t('support.faq.dataSafety.q'), a: t('support.faq.dataSafety.a') },
+    { q: t('support.faq.errorReport.q'), a: t('support.faq.errorReport.a') },
+  ];
+}
 
 const SUPPORT_EMAIL = 'support@sylabs.kr';
 
 export default function SupportScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [selectedType, setSelectedType] = useState<InquiryType | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
+  const inquiryTypes = getInquiryTypes(t);
+  const faqItems = getFaqItems(t);
+
   const handleSend = async () => {
     if (!selectedType) {
-      Alert.alert('알림', '문의 유형을 선택해주세요.');
+      Alert.alert(t('common.notice'), t('support.selectInquiryType'));
       return;
     }
     if (!title.trim()) {
-      Alert.alert('알림', '제목을 입력해주세요.');
+      Alert.alert(t('common.notice'), t('support.enterTitle'));
       return;
     }
     if (!content.trim()) {
-      Alert.alert('알림', '내용을 입력해주세요.');
+      Alert.alert(t('common.notice'), t('support.enterContent'));
       return;
     }
 
     setSending(true);
 
-    const typeLabel = INQUIRY_TYPES.find((t) => t.key === selectedType)?.label ?? '';
-    const subject = encodeURIComponent(`[아맞다 ${typeLabel}] ${title}`);
+    const typeLabel = inquiryTypes.find((it) => it.key === selectedType)?.label ?? '';
+    const subject = encodeURIComponent(`[${t('support.emailSubjectPrefix')} ${typeLabel}] ${title}`);
     const body = encodeURIComponent(
-      `문의 유형: ${typeLabel}\n\n${content}\n\n---\n기기: ${Platform.OS} ${Platform.Version}\n앱 버전: 1.4.2`
+      `${t('support.emailBodyInquiryType')}: ${typeLabel}\n\n${content}\n\n---\n${t('support.emailBodyDevice')}: ${Platform.OS} ${Platform.Version}\n${t('support.emailBodyAppVersion')}: 1.4.2`
     );
     const mailUrl = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
 
@@ -70,19 +80,19 @@ export default function SupportScreen() {
       const canOpen = await Linking.canOpenURL(mailUrl);
       if (canOpen) {
         await Linking.openURL(mailUrl);
-        Alert.alert('감사합니다', '메일 앱이 열렸습니다. 보내기를 눌러주세요.');
+        Alert.alert(t('support.thankYouTitle'), t('support.mailAppOpened'));
         setTitle('');
         setContent('');
         setSelectedType(null);
       } else {
         Alert.alert(
-          '메일 앱 없음',
-          `메일 앱을 찾을 수 없습니다.\n직접 보내주세요: ${SUPPORT_EMAIL}`,
-          [{ text: '이메일 복사', onPress: () => copyEmail() }, { text: '확인' }]
+          t('support.noMailAppTitle'),
+          `${t('support.noMailAppMessage')}\n${t('support.sendDirectly')}: ${SUPPORT_EMAIL}`,
+          [{ text: t('support.copyEmail'), onPress: () => copyEmail() }, { text: t('common.confirm') }]
         );
       }
     } catch {
-      Alert.alert('오류', '메일 앱을 열 수 없습니다.');
+      Alert.alert(t('common.error'), t('support.cannotOpenMailApp'));
     } finally {
       setSending(false);
     }
@@ -92,7 +102,7 @@ export default function SupportScreen() {
     try {
       const Clipboard = await import('expo-clipboard');
       await Clipboard.setStringAsync(SUPPORT_EMAIL);
-      Alert.alert('복사 완료', '이메일 주소가 복사되었습니다.');
+      Alert.alert(t('support.copyCompleteTitle'), t('support.emailCopied'));
     } catch {
       // clipboard not available
     }
@@ -103,17 +113,17 @@ export default function SupportScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={s.headerWrap}>
-        <ScreenHeader title="고객센터" onBack={() => router.back()} />
+        <ScreenHeader title={t('support.title')} onBack={() => router.back()} />
       </View>
 
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
         {/* FAQ Section */}
-        <Text style={s.sectionTitle}>자주 묻는 질문</Text>
+        <Text style={s.sectionTitle}>{t('support.faqSectionTitle')}</Text>
         <View style={s.card}>
-          {FAQ_ITEMS.map((faq, idx) => (
+          {faqItems.map((faq, idx) => (
             <TouchableOpacity
               key={idx}
-              style={[s.faqRow, idx < FAQ_ITEMS.length - 1 && s.faqBorder]}
+              style={[s.faqRow, idx < faqItems.length - 1 && s.faqBorder]}
               onPress={() => setExpandedFaq(expandedFaq === idx ? null : idx)}
               activeOpacity={0.7}
             >
@@ -129,12 +139,12 @@ export default function SupportScreen() {
         </View>
 
         {/* Inquiry Form */}
-        <Text style={s.sectionTitle}>문의하기</Text>
+        <Text style={s.sectionTitle}>{t('support.inquirySectionTitle')}</Text>
         <View style={s.card}>
           {/* Type Selection */}
-          <Text style={s.fieldLabel}>문의 유형</Text>
+          <Text style={s.fieldLabel}>{t('support.inquiryTypeLabel')}</Text>
           <View style={s.typeRow}>
-            {INQUIRY_TYPES.map((type) => (
+            {inquiryTypes.map((type) => (
               <TouchableOpacity
                 key={type.key}
                 style={[s.typeChip, selectedType === type.key && s.typeChipActive]}
@@ -150,20 +160,20 @@ export default function SupportScreen() {
           </View>
 
           {/* Title */}
-          <Text style={s.fieldLabel}>제목</Text>
+          <Text style={s.fieldLabel}>{t('support.titleFieldLabel')}</Text>
           <TextInput
             style={s.input}
-            placeholder="문의 제목을 입력해주세요"
+            placeholder={t('support.titlePlaceholder')}
             placeholderTextColor={COLOR.textLight}
             value={title}
             onChangeText={setTitle}
           />
 
           {/* Content */}
-          <Text style={s.fieldLabel}>내용</Text>
+          <Text style={s.fieldLabel}>{t('support.contentFieldLabel')}</Text>
           <TextInput
             style={[s.input, s.textarea]}
-            placeholder="문의 내용을 자세히 적어주세요"
+            placeholder={t('support.contentPlaceholder')}
             placeholderTextColor={COLOR.textLight}
             value={content}
             onChangeText={setContent}
@@ -179,14 +189,14 @@ export default function SupportScreen() {
             disabled={sending}
           >
             <Text style={s.sendBtnText}>
-              {sending ? '메일 앱 여는 중...' : '메일로 문의하기'}
+              {sending ? t('support.openingMailApp') : t('support.sendByMail')}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Direct Email */}
         <TouchableOpacity style={s.emailRow} onPress={copyEmail} activeOpacity={0.7}>
-          <Text style={s.emailLabel}>직접 이메일 보내기</Text>
+          <Text style={s.emailLabel}>{t('support.sendDirectEmail')}</Text>
           <Text style={s.emailAddr}>{SUPPORT_EMAIL}</Text>
         </TouchableOpacity>
       </ScrollView>

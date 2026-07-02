@@ -3866,5 +3866,198 @@
     "askMore": "詢問AI更多內容",
     "citationNote": "此為AI生成之參考推薦。健康、飲食相關決定請諮詢小兒科醫師等專業人士。",
     "citationSourceFoodSafety": "食品藥物安全處食品安全入口網"
+  },
+  "support": {
+    "title": "客服中心",
+    "faqSectionTitle": "常見問題",
+    "inquirySectionTitle": "聯絡我們",
+    "inquiryTypeLabel": "詢問類型",
+    "inquiryTypes": {
+      "bug": "錯誤回報",
+      "feature": "功能建議",
+      "account": "帳號詢問",
+      "etc": "其他詢問"
+    },
+    "faq": {
+      "temperament": {
+        "q": "氣質測驗最多可以做幾次？",
+        "a": "氣質測驗次數不限，可免費使用。"
+      },
+      "coachLimit": {
+        "q": "諮詢阿姨每天最多可以用幾次？",
+        "a": "免費方案每天10次，尊爵方案可無限使用。"
+      },
+      "dataSafety": {
+        "q": "孩子的資料會受到安全保護嗎？",
+        "a": "所有資料皆受 Firebase 安全規則保護，傳送給 AI 時真實姓名會被遮蔽處理。"
+      },
+      "errorReport": {
+        "q": "使用App時發生錯誤該怎麼辦？",
+        "a": "請透過下方的聯絡我們告訴我們錯誤內容，我們會盡快修正。"
+      }
+    },
+    "selectInquiryType": "請選擇詢問類型。",
+    "enterTitle": "請輸入標題。",
+    "enterContent": "請輸入內容。",
+    "emailSubjectPrefix": "아맞다",
+    "emailBodyInquiryType": "詢問類型",
+    "emailBodyDevice": "裝置",
+    "emailBodyAppVersion": "App版本",
+    "thankYouTitle": "感謝您",
+    "mailAppOpened": "郵件App已開啟，請點選傳送。",
+    "noMailAppTitle": "沒有郵件App",
+    "noMailAppMessage": "找不到郵件App。",
+    "sendDirectly": "請直接寄送",
+    "copyEmail": "複製電子郵件",
+    "cannotOpenMailApp": "無法開啟郵件App。",
+    "copyCompleteTitle": "複製完成",
+    "emailCopied": "電子郵件地址已複製。",
+    "titleFieldLabel": "標題",
+    "titlePlaceholder": "請輸入詢問標題",
+    "contentFieldLabel": "內容",
+    "contentPlaceholder": "請詳細填寫詢問內容",
+    "openingMailApp": "正在開啟郵件App...",
+    "sendByMail": "以電子郵件詢問",
+    "sendDirectEmail": "直接寄送電子郵件"
+  },
+  "register": {
+    "fillEmailPassword": "請輸入電子郵件和密碼",
+    "invalidEmailFormat": "電子郵件格式不正確。(例如：name@example.com)",
+    "passwordMismatch": "密碼不一致",
+    "passwordTooShort": "密碼須為6個字元以上",
+    "signupFailedTitle": "註冊失敗",
+    "signupFailedMessage": "此電子郵件已被使用，或伺服器發生錯誤",
+    "title": "註冊會員",
+    "subtitle": "歡迎來到阿麻打",
+    "emailPlaceholder": "電子郵件",
+    "passwordPlaceholder": "密碼（6個字元以上）",
+    "confirmPasswordPlaceholder": "確認密碼",
+    "roleAccessibilityLabel": "角色 {{role}}",
+    "consentNoteText": "ⓘ 下一個畫面將確認條款同意事項。",
+    "inProgress": "處理中",
+    "inProgressEllipsis": "處理中...",
+    "alreadyHaveAccountLogin": "已經有帳號了嗎？登入",
+    "alreadyHaveAccount": "已經有帳號了嗎？ ",
+    "loginLinkText": "登入"
+  },
+  "login": {
+    "emailPlaceholder": "電子郵件",
+    "passwordPlaceholder": "密碼",
+    "loggingIn": "登入中",
+    "loginButton": "登入",
+    "loggingInEllipsis": "登入中...",
+    "connectingHint": "正在連接伺服器，請稍候…",
+    "noAccountRegister": "還沒有帳號嗎？註冊",
+    "noAccount": "還沒有帳號嗎？ ",
+    "registerLinkText": "註冊"
+  },
+  "notificationSettings": {
+    "title": "通知設定",
+    "loading": "載入中...",
+    "descTitleWithName": "設定{{name}}的專屬通知",
+    "descTitle": "設定專屬通知",
+    "descSub": "點擊通知時間即可改成想要的時間",
+    "pregnantMissionSection": "孕婦每日任務",
+    "dailyMission": {
+      "label": "每天9點任務提醒",
+      "description": "喝水／補充營養品提醒",
+      "time": "每天上午9:00"
+    },
+    "dailySection": "日常通知",
+    "daily": {
+      "morning": {
+        "label": "早安問候通知",
+        "description": "昨晚孩子睡眠檢查"
+      },
+      "afternoon": {
+        "label": "下午活動推薦",
+        "description": "與孩子共度15分鐘遊戲"
+      },
+      "evening": {
+        "label": "晚間日記通知",
+        "description": "今日育兒日記撰寫提醒"
+      },
+      "weekly": {
+        "label": "週報",
+        "description": "本週育兒報告送達",
+        "fixedTimeLabel": "每週一上午9:00"
+      }
+    },
+    "am": "上午",
+    "pm": "下午",
+    "dailyAtTime": "每天{{period}}{{hour}}:{{minute}}",
+    "infoText": "通知由裝置直接發送，完全免費。震動模式下會以震動提醒。"
+  },
+  "timer": {
+    "presets": {
+      "min": "{{count}}分鐘"
+    },
+    "headerTitle": "Quality Time",
+    "subtitle": "與手足共度1對1時光",
+    "defaultChildName": "孩子",
+    "completeAlert": {
+      "title": "Quality Time 完成！",
+      "message": "與{{name}}共度了珍貴的時光 💕"
+    },
+    "status": {
+      "running": "進行中...",
+      "done": "完成！",
+      "ready": "準備"
+    },
+    "resetButton": "重置",
+    "mainButton": {
+      "pause": "暫停",
+      "restart": "重新開始",
+      "start": "開始"
+    },
+    "tipCard": {
+      "title": "💡 Quality Time 小提示",
+      "tip1": "• 放下手機，全心陪伴孩子",
+      "tip2": "• 跟隨孩子主導的遊戲",
+      "tip3": "• 每天15分鐘就足夠了",
+      "tip4": "• 若有多個孩子，請分別安排1對1時光"
+    }
+  },
+  "diary": {
+    "headerTitle": "觀察日記",
+    "childLabel": "{{name}}的觀察日記",
+    "alert": {
+      "loadFail": "無法載入觀察記錄",
+      "viewOnlyTitle": "僅限查閱",
+      "noAiDiaryPermission": "沒有AI日記生成權限。\n請向監護人申請「使用諮詢阿姨」權限。",
+      "aiDiaryGenFail": "無法生成AI日記。需要有今日的諮詢紀錄才能生成。",
+      "aiDiaryError": "AI日記生成失敗。請稍後再試一次。",
+      "contentRequired": "請輸入觀察內容",
+      "noChildSelected": "尚未選擇孩子",
+      "noWritePermission": "沒有撰寫記錄的權限。\n請向監護人申請「育兒記錄撰寫/修改」權限。",
+      "saveSuccess": "觀察日記已儲存",
+      "saveFail": "儲存失敗"
+    },
+    "aiTodayDiary": "AI 今日日記",
+    "generating": "生成中...",
+    "regenerate": "重新生成",
+    "generateAiDiaryButton": "✨ 生成AI今日日記",
+    "previousRecords": "過往記錄",
+    "countBadge": "{{count}}筆",
+    "emptyText": "尚未撰寫任何觀察日記",
+    "emptyHint": "請在上方記錄孩子的模樣"
+  },
+  "alarmSettings": {
+    "title": "⏰ 鬧鐘設定",
+    "alert": {
+      "loadFail": "無法載入鬧鐘設定。",
+      "saveFail": "儲存失敗。請再試一次。"
+    },
+    "desc": "分析最近3天記錄的餵奶、睡眠、起床時間，提前在平常那個時間前通知您。\n沒有記錄的話就不會產生鬧鐘。",
+    "masterToggle": {
+      "label": "開啟預測鬧鐘",
+      "sub": "關閉後將不會收到任何預測鬧鐘"
+    },
+    "offsetSection": "通知時機",
+    "minutesBefore": "{{count}}分鐘前",
+    "slotSection": "鬧鐘列表（依據模式）",
+    "emptySlots": "尚無模式。\n記錄餵奶、睡眠、起床後，隔天起會自動產生鬧鐘。",
+    "slotTime": "{{time}} · {{offset}}分鐘前通知",
+    "footNote": "鬧鐘列表會隨記錄累積自動更新。"
   }
 }
