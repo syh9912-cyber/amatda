@@ -377,7 +377,7 @@ export default function VoiceScreen() {
         if (raw) voiceDefaults = JSON.parse(raw);
       } catch { /* no defaults */ }
 
-      const res = await trackerApi.voiceParse(voiceText);
+      const res = await trackerApi.voiceParse(voiceText, i18n.language);
       const parsedData = res.data?.data as ParsedMulti | ParsedRecord | undefined;
       // 백워드 호환 — 옛 응답(단일 객체) / 새 응답({records:[]}) 모두 처리
       const records: ParsedRecord[] = Array.isArray((parsedData as ParsedMulti)?.records)

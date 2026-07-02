@@ -800,13 +800,13 @@ export const babyTrackerApi = {
 };
 
 export const trackerApi = {
-  voiceParse: (text: string) => {
+  voiceParse: (text: string, locale?: string) => {
     // 서버(UTC) 시각 오류 방지 — 클라이언트 로컬 시각 + 날짜 전송
     // 날짜는 '어제/오늘/그저께' 상대 표현 정확 해석에 필수
     const now = new Date();
     const clientTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const clientDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    return api.post('/tracker/voice-parse', { text, clientTime, clientDate });
+    return api.post('/tracker/voice-parse', { text, clientTime, clientDate, locale });
   },
   // 어린이집 알림장/기록지 사진 → 기록 추출 (Gemini 비전)
   photoParse: (imageBase64: string, mimeType?: string) => {
