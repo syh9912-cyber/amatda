@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 import { Stack } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { clinicApi } from '../../services/api';
 import { useLocationStore } from '../../stores/locationStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
@@ -56,6 +57,7 @@ const RADIUS_OPTIONS = [3, 5, 10, 20] as const;
 // ── Main Screen ──
 
 export default function ClinicScreen() {
+  const { t } = useTranslation();
   const [clinics, setClinics] = useState<KakaoClinic[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchRadius, setSearchRadius] = useState<number>(5);
@@ -92,18 +94,18 @@ export default function ClinicScreen() {
 
   const callPhone = (phone: string) => {
     if (!phone) {
-      Alert.alert('알림', '전화번호가 등록되지 않은 병원입니다.');
+      Alert.alert(t('common.notice'), t('clinic.noPhoneRegistered'));
       return;
     }
     Linking.openURL(`tel:${phone.replace(/[^0-9]/g, '')}`).catch(() => {
-      Alert.alert('오류', '전화 연결에 실패했습니다.');
+      Alert.alert(t('common.error'), t('clinic.callFailed'));
     });
   };
 
   const openMap = (clinic: KakaoClinic) => {
     const url = `https://map.kakao.com/link/map/${encodeURIComponent(clinic.name)},${clinic.latitude},${clinic.longitude}`;
     Linking.openURL(url).catch(() => {
-      Alert.alert('오류', '지도를 열 수 없습니다.');
+      Alert.alert(t('common.error'), t('clinic.mapOpenFailed'));
     });
   };
 
@@ -114,7 +116,7 @@ export default function ClinicScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: '소아과 / 아동병원', headerShown: true, headerLeft: () => <BackButton /> }} />
+      <Stack.Screen options={{ title: t('clinic.screenTitle'), headerShown: true, headerLeft: () => <BackButton /> }} />
 
       {/* Search bar */}
       <View style={styles.searchSection}>
@@ -123,13 +125,13 @@ export default function ClinicScreen() {
             style={styles.searchInput}
             value={keyword}
             onChangeText={setKeyword}
-            placeholder="소아과, 아동병원, 응급실..."
+            placeholder={t('clinic.searchPlaceholder')}
             placeholderTextColor={COLORS.textLight}
             returnKeyType="search"
             onSubmitEditing={handleSearch}
           />
           <TouchableOpacity style={styles.searchBtn} onPress={handleSearch}>
-            <Text style={styles.searchBtnText}>검색</Text>
+            <Text style={styles.searchBtnText}>{t('clinic.search')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -158,7 +160,7 @@ export default function ClinicScreen() {
       ) : clinics.length > 0 ? (
         <ScrollView contentContainerStyle={styles.listContent}>
           <Text style={styles.resultCount}>
-            {clinics.length}개 병원
+            {t('clinic.resultCount', { count: clinics.length })}
           </Text>
           {clinics.map((clinic) => (
             <View key={clinic.id} style={styles.clinicCard}>
@@ -167,7 +169,7 @@ export default function ClinicScreen() {
                   <Text style={styles.clinicName} numberOfLines={1}>{clinic.name}</Text>
                   {clinic.hasEmergency && (
                     <View style={styles.erBadge}>
-                      <Text style={styles.erBadgeText}>응급실</Text>
+                      <Text style={styles.erBadgeText}>{t('clinic.emergencyBadge')}</Text>
                     </View>
                   )}
                 </View>
@@ -190,14 +192,14 @@ export default function ClinicScreen() {
                   onPress={() => callPhone(clinic.phone)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.actionText}>전화</Text>
+                  <Text style={styles.actionText}>{t('clinic.actionCall')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.actionBtn}
                   onPress={() => openMap(clinic)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.actionText}>지도</Text>
+                  <Text style={styles.actionText}>{t('clinic.actionMap')}</Text>
                 </TouchableOpacity>
                 {clinic.placeUrl ? (
                   <TouchableOpacity
@@ -205,7 +207,7 @@ export default function ClinicScreen() {
                     onPress={() => Linking.openURL(clinic.placeUrl).catch(() => {})}
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.actionText}>상세</Text>
+                    <Text style={styles.actionText}>{t('clinic.actionDetail')}</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -216,10 +218,10 @@ export default function ClinicScreen() {
         <View style={styles.emptyContainer}>
           <Image source={IC_HOSPITAL} style={styles.emptyEmojiImg} resizeMode="contain" />
           <Text style={styles.emptyText}>
-            주변에 소아과/아동병원을 찾을 수 없습니다.
+            {t('clinic.emptyText')}
           </Text>
           <Text style={styles.emptySubText}>
-            검색어를 변경하거나 반경을 넓혀보세요.
+            {t('clinic.emptySubText')}
           </Text>
         </View>
       )}

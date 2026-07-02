@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import {
@@ -29,6 +30,7 @@ const ACCENT_LIGHT = '#FFF0E6';
 export default function PlayLearningScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const selectedChild = useChildStore((s) => s.selectedChild);
 
@@ -55,7 +57,7 @@ export default function PlayLearningScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <ScreenHeader
-        title={`${childName}의 놀이학습`}
+        title={t('playLearning.title', { name: childName })}
         onBack={() => router.back()}
       />
 
@@ -68,14 +70,14 @@ export default function PlayLearningScreen() {
         <View style={styles.introBanner}>
           <Image source={require('../../assets/play-activity.png')} style={styles.introIcon} resizeMode="contain" />
           <Text style={styles.introText}>
-            {`${dominantLabel} 기질의 ${childName}에게 딱 맞는\n집에서 할 수 있는 놀이학습 방법이에요`}
+            {t('playLearning.introText', { trait: dominantLabel, name: childName })}
           </Text>
         </View>
 
         {filtered.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>
-              {'해당 연령대에 맞는 활동이 준비 중입니다'}
+              {t('playLearning.emptyText')}
             </Text>
           </View>
         ) : (
@@ -116,6 +118,7 @@ function ActivityCard({
   childName: string;
   dominantLabel: string;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.actCard}>
       {/* Top row */}
@@ -148,10 +151,10 @@ function ActivityCard({
       {/* Reason */}
       <View style={styles.reasonBox}>
         <Text style={styles.reasonLabel}>
-          {'왜 좋을까요?'}
+          {t('playLearning.reasonLabel')}
         </Text>
         <Text style={styles.reasonText}>
-          {`${dominantLabel} 기질의 ${childName}에게 - ${activity.reason}`}
+          {t('playLearning.reasonText', { trait: dominantLabel, name: childName, reason: activity.reason })}
         </Text>
       </View>
 
@@ -159,7 +162,7 @@ function ActivityCard({
       {expanded && (
         <View style={styles.stepsSection}>
           <Text style={styles.stepsTitle}>
-            {'이렇게 해보세요'}
+            {t('playLearning.stepsTitle')}
           </Text>
           {activity.steps.map((step, sIdx) => (
             <View key={sIdx} style={styles.stepRow}>
@@ -173,7 +176,7 @@ function ActivityCard({
           {activity.materials.length > 0 && (
             <View style={styles.materialsBox}>
               <Text style={styles.materialsLabel}>
-                {'준비물'}
+                {t('playLearning.materialsLabel')}
               </Text>
               {activity.materials.map((m, mIdx) => (
                 <Text key={mIdx} style={styles.materialItem}>

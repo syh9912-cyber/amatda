@@ -3949,7 +3949,21 @@
     "connectingHint": "서버 연결 중이에요. 잠시만 기다려주세요…",
     "noAccountRegister": "계정이 없으신가요? 회원가입",
     "noAccount": "계정이 없으신가요? ",
-    "registerLinkText": "회원가입"
+    "registerLinkText": "회원가입",
+    "errors": {
+      "emailPasswordRequired": "이메일과 비밀번호를 입력해주세요",
+      "loginFailedTitle": "로그인 실패",
+      "loginFailedDefaultMessage": "이메일 또는 비밀번호를 확인해주세요",
+      "socialLoginIncomplete": "로그인이 완료되지 않았습니다. 다시 시도해주세요.",
+      "socialUserFallback": "{{provider}} 유저",
+      "unknownError": "알 수 없는 오류가 발생했습니다",
+      "loginCancelled": "로그인을 취소했습니다.",
+      "kakaoNotInstalled": "카카오톡이 설치되어 있지 않습니다.\n카카오톡을 설치 후 다시 시도해주세요.",
+      "networkError": "네트워크 연결을 확인해주세요.",
+      "kakaoAuthError": "카카오 인증 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.",
+      "kakaoLoginFailedTitle": "카카오 로그인 실패",
+      "socialLoginFailedTitle": "소셜 로그인 실패"
+    }
   },
   "notificationSettings": {
     "title": "알림 설정",
@@ -4059,5 +4073,63 @@
     "emptySlots": "아직 패턴이 없어요.\n수유·수면·기상을 기록하면 다음 날부터 알람이 자동으로 생겨요.",
     "slotTime": "{{time}} · {{offset}}분 전 알림",
     "footNote": "알람 목록은 기록이 쌓이면 자동으로 업데이트돼요."
+  },
+  "nutrition": {
+    "title": "{{name}}{{particle}} 위한 식단 가이드",
+    "defaultChildName": "우리 아이",
+    "cannotOpenTitle": "열 수 없어요",
+    "cannotOpenYoutube": "유튜브를 열 수 없습니다. 잠시 후 다시 시도해주세요.",
+    "tabGood": "먹으면 좋은 음식",
+    "tabBad": "피해야 할 음식",
+    "customRecommended": "맞춤 추천",
+    "reasonLabel": "추천 이유",
+    "reasonText": "{{trait}} 기질의 {{name}}에게 - {{reason}}",
+    "cautionLabel": "주의사항",
+    "recipeCollapse": "간단 레시피 접기",
+    "recipeExpand": "간단 레시피 보기",
+    "youtubeSearch": "유튜브 검색",
+    "citationNote": "음식 권장은 일반 영양 정보 기반 참고용이며, 알레르기·질환이 있는 경우 소아과 의사와 상담하세요.",
+    "citationSourceFoodSafety": "식품의약품안전처 식품영양성분 데이터베이스",
+    "citationSourceMohw": "보건복지부 한국인 영양소 섭취기준"
+  },
+  "clinic": {
+    "screenTitle": "소아과 / 아동병원",
+    "noPhoneRegistered": "전화번호가 등록되지 않은 병원입니다.",
+    "callFailed": "전화 연결에 실패했습니다.",
+    "mapOpenFailed": "지도를 열 수 없습니다.",
+    "searchPlaceholder": "소아과, 아동병원, 응급실...",
+    "search": "검색",
+    "resultCount": "{{count}}개 병원",
+    "emergencyBadge": "응급실",
+    "actionCall": "전화",
+    "actionMap": "지도",
+    "actionDetail": "상세",
+    "emptyText": "주변에 소아과/아동병원을 찾을 수 없습니다.",
+    "emptySubText": "검색어를 변경하거나 반경을 넓혀보세요."
+  },
+  "monthlyCharacteristic": {
+    "domainPhysical": "신체 발달",
+    "domainCognitive": "인지 발달",
+    "domainLanguage": "언어 발달",
+    "domainSocial": "사회/정서",
+    "defaultChildName": "아이",
+    "screenTitle": "개월별 발달 특징",
+    "loadingText": "{{name}}의 발달 특징을 불러오고 있어요...",
+    "notReadyText": "발달 특징 데이터가 아직 준비되지 않았습니다",
+    "developmentPeriod": "{{name}}의 발달 시기",
+    "parentingTips": "양육 팁",
+    "traitAdvice": "{{name}}의 기질 맞춤 조언",
+    "citationNote": "발달 시기는 평균 기준이며 아이마다 차이가 있습니다. 발달이 걱정되면 소아과 전문의와 상담하세요.",
+    "citationSourceKdca": "질병관리청 국가건강정보포털 (영유아 발달)",
+    "citationSourcePediatrics": "대한소아과학회 어린이 건강정보"
+  },
+  "playLearning": {
+    "title": "{{name}}의 놀이학습",
+    "introText": "{{trait}} 기질의 {{name}}에게 딱 맞는\n집에서 할 수 있는 놀이학습 방법이에요",
+    "emptyText": "해당 연령대에 맞는 활동이 준비 중입니다",
+    "reasonLabel": "왜 좋을까요?",
+    "reasonText": "{{trait}} 기질의 {{name}}에게 - {{reason}}",
+    "stepsTitle": "이렇게 해보세요",
+    "materialsLabel": "준비물"
   }
 }

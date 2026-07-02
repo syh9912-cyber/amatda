@@ -3949,7 +3949,21 @@
     "connectingHint": "サーバーに接続しています。少々お待ちください…",
     "noAccountRegister": "アカウントをお持ちでないですか？ 会員登録",
     "noAccount": "アカウントをお持ちでないですか？ ",
-    "registerLinkText": "会員登録"
+    "registerLinkText": "会員登録",
+    "errors": {
+      "emailPasswordRequired": "メールアドレスとパスワードを入力してください",
+      "loginFailedTitle": "ログイン失敗",
+      "loginFailedDefaultMessage": "メールアドレスまたはパスワードをご確認ください",
+      "socialLoginIncomplete": "ログインが完了しませんでした。もう一度お試しください。",
+      "socialUserFallback": "{{provider}}ユーザー",
+      "unknownError": "不明なエラーが発生しました",
+      "loginCancelled": "ログインをキャンセルしました。",
+      "kakaoNotInstalled": "KakaoTalkがインストールされていません。\nKakaoTalkをインストール後、もう一度お試しください。",
+      "networkError": "ネットワーク接続をご確認ください。",
+      "kakaoAuthError": "Kakao認証エラーが発生しました。\nしばらくしてからもう一度お試しください。",
+      "kakaoLoginFailedTitle": "Kakaoログイン失敗",
+      "socialLoginFailedTitle": "ソーシャルログイン失敗"
+    }
   },
   "notificationSettings": {
     "title": "通知設定",
@@ -4059,5 +4073,63 @@
     "emptySlots": "まだパターンがありません。\n授乳・睡眠・起床を記録すると、翌日からアラームが自動的に作成されます。",
     "slotTime": "{{time}} ・ {{offset}}分前に通知",
     "footNote": "アラーム一覧は記録が蓄積されると自動的に更新されます。"
+  },
+  "nutrition": {
+    "title": "{{name}}のための食事ガイド",
+    "defaultChildName": "私たちの子ども",
+    "cannotOpenTitle": "開けません",
+    "cannotOpenYoutube": "YouTubeを開けません。しばらくしてからもう一度お試しください。",
+    "tabGood": "食べると良い食品",
+    "tabBad": "避けるべき食品",
+    "customRecommended": "おすすめ",
+    "reasonLabel": "おすすめの理由",
+    "reasonText": "{{trait}}気質の{{name}}に - {{reason}}",
+    "cautionLabel": "注意事項",
+    "recipeCollapse": "簡単レシピを閉じる",
+    "recipeExpand": "簡単レシピを見る",
+    "youtubeSearch": "YouTube検索",
+    "citationNote": "食品のおすすめは一般的な栄養情報に基づく参考用です。アレルギーや疾患がある場合は小児科医にご相談ください。",
+    "citationSourceFoodSafety": "食品医薬品安全処 食品栄養成分データベース",
+    "citationSourceMohw": "保健福祉部 韓国人栄養素摂取基準"
+  },
+  "clinic": {
+    "screenTitle": "小児科 / 子ども病院",
+    "noPhoneRegistered": "電話番号が登録されていない病院です。",
+    "callFailed": "電話の発信に失敗しました。",
+    "mapOpenFailed": "地図を開けません。",
+    "searchPlaceholder": "小児科、子ども病院、救急室...",
+    "search": "検索",
+    "resultCount": "{{count}}件の病院",
+    "emergencyBadge": "救急室",
+    "actionCall": "電話",
+    "actionMap": "地図",
+    "actionDetail": "詳細",
+    "emptyText": "近くに小児科/子ども病院が見つかりません。",
+    "emptySubText": "検索語を変更するか、範囲を広げてみてください。"
+  },
+  "monthlyCharacteristic": {
+    "domainPhysical": "身体発達",
+    "domainCognitive": "認知発達",
+    "domainLanguage": "言語発達",
+    "domainSocial": "社会性/情緒",
+    "defaultChildName": "子ども",
+    "screenTitle": "月齢別発達の特徴",
+    "loadingText": "{{name}}の発達の特徴を読み込んでいます...",
+    "notReadyText": "発達特徴データがまだ準備されていません",
+    "developmentPeriod": "{{name}}の発達時期",
+    "parentingTips": "育児のヒント",
+    "traitAdvice": "{{name}}の気質に合わせたアドバイス",
+    "citationNote": "発達時期は平均的な基準であり、お子様によって差があります。発達が心配な場合は小児科専門医にご相談ください。",
+    "citationSourceKdca": "疾病管理庁 国家健康情報ポータル(乳幼児発達)",
+    "citationSourcePediatrics": "大韓小児科学会 子どもの健康情報"
+  },
+  "playLearning": {
+    "title": "{{name}}の遊び学習",
+    "introText": "{{trait}}気質の{{name}}にぴったりの\n自宅でできる遊び学習方法です",
+    "emptyText": "該当年齢に合った活動を準備中です",
+    "reasonLabel": "なぜ良いのでしょうか?",
+    "reasonText": "{{trait}}気質の{{name}}に - {{reason}}",
+    "stepsTitle": "このようにやってみましょう",
+    "materialsLabel": "準備物"
   }
 }

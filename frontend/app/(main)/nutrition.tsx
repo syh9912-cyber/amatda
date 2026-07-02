@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
@@ -45,6 +46,7 @@ function objectParticle(name: string): string {
 export default function NutritionScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<FoodTab>('good');
   const [expandedItems, setExpandedItems] = useState<Set<number>>(
     new Set(),
@@ -68,12 +70,12 @@ export default function NutritionScreen() {
   const openYoutube = useCallback((query: string) => {
     const url = `https://m.youtube.com/results?search_query=${encodeURIComponent(query)}`;
     Linking.openURL(url).catch(() => {
-      Alert.alert('열 수 없어요', '유튜브를 열 수 없습니다. 잠시 후 다시 시도해주세요.');
+      Alert.alert(t('nutrition.cannotOpenTitle'), t('nutrition.cannotOpenYoutube'));
     });
-  }, []);
+  }, [t]);
 
   const childName = selectedChild?.name ?? '';
-  const displayName = childName || '우리 아이';
+  const displayName = childName || t('nutrition.defaultChildName');
   const dominantLabel =
     selectedChild?.innateData?.dominantType?.split('(')[0] ?? '';
 
@@ -82,7 +84,7 @@ export default function NutritionScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <ScreenHeader
-        title={`${displayName}${objectParticle(displayName)} 위한 식단 가이드`}
+        title={t('nutrition.title', { name: displayName, particle: objectParticle(displayName) })}
         onBack={() => router.back()}
       />
 
@@ -113,10 +115,10 @@ export default function NutritionScreen() {
         )}
 
         <MedicalCitation
-          note="음식 권장은 일반 영양 정보 기반 참고용이며, 알레르기·질환이 있는 경우 소아과 의사와 상담하세요."
+          note={t('nutrition.citationNote')}
           sources={[
-            { label: '식품의약품안전처 식품영양성분 데이터베이스', url: 'https://www.foodsafetykorea.go.kr' },
-            { label: '보건복지부 한국인 영양소 섭취기준', url: 'https://www.mohw.go.kr' },
+            { label: t('nutrition.citationSourceFoodSafety'), url: 'https://www.foodsafetykorea.go.kr' },
+            { label: t('nutrition.citationSourceMohw'), url: 'https://www.mohw.go.kr' },
           ]}
         />
       </ScrollView>
@@ -134,8 +136,9 @@ function ToggleTabs({
   onChange,
 }: {
   active: FoodTab;
-  onChange: (t: FoodTab) => void;
+  onChange: (tab: FoodTab) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.toggleRow}>
       <TouchableOpacity
@@ -151,7 +154,7 @@ function ToggleTabs({
             active === 'good' && styles.toggleTextActive,
           ]}
         >
-          {'먹으면 좋은 음식'}
+          {t('nutrition.tabGood')}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -167,7 +170,7 @@ function ToggleTabs({
             active === 'bad' && styles.toggleTextActive,
           ]}
         >
-          {'피해야 할 음식'}
+          {t('nutrition.tabBad')}
         </Text>
       </TouchableOpacity>
     </View>
@@ -195,6 +198,7 @@ function GoodFoodCard({
   onToggle: (idx: number) => void;
   onYoutube: (query: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={[styles.foodCard, { borderLeftColor: MINT }]}>
       {/* Top row */}
@@ -207,7 +211,7 @@ function GoodFoodCard({
         </View>
         <View style={styles.mintBadge}>
           <Text style={styles.mintBadgeText}>
-            {'맞춤 추천'}
+            {t('nutrition.customRecommended')}
           </Text>
         </View>
       </View>
@@ -215,10 +219,10 @@ function GoodFoodCard({
       {/* Reason */}
       <View style={styles.reasonBox}>
         <Text style={styles.reasonLabel}>
-          {'추천 이유'}
+          {t('nutrition.reasonLabel')}
         </Text>
         <Text style={styles.reasonText}>
-          {`${dominantLabel} 기질의 ${childName}에게 - ${food.reason}`}
+          {t('nutrition.reasonText', { trait: dominantLabel, name: childName, reason: food.reason })}
         </Text>
       </View>
 
@@ -226,7 +230,7 @@ function GoodFoodCard({
       {food.caution && (
         <View style={styles.cautionBox}>
           <Text style={styles.cautionLabel}>
-            {'주의사항'}
+            {t('nutrition.cautionLabel')}
           </Text>
           <Text style={styles.cautionText}>{food.caution}</Text>
         </View>
@@ -240,8 +244,8 @@ function GoodFoodCard({
         >
           <Text style={[styles.recipeToggleText, { color: MINT }]}>
             {expanded
-              ? '간단 레시피 접기'
-              : '간단 레시피 보기'}
+              ? t('nutrition.recipeCollapse')
+              : t('nutrition.recipeExpand')}
           </Text>
         </TouchableOpacity>
 
@@ -265,7 +269,7 @@ function GoodFoodCard({
         onPress={() => onYoutube(food.youtubeQuery)}
       >
         <Text style={styles.youtubeBtnText}>
-          {'유튜브 검색'}
+          {t('nutrition.youtubeSearch')}
         </Text>
       </TouchableOpacity>
     </View>

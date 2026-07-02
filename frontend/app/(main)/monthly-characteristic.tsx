@@ -5,6 +5,8 @@ import {
 import type { ImageSourcePropType } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { MedicalCitation } from '../../components/common/MedicalCitation';
 import { useChildStore } from '../../stores/childStore';
@@ -44,20 +46,24 @@ interface CharacteristicData {
   temperamentTips: Record<string, string>;
 }
 
-const DOMAIN_CONFIG = [
-  { key: 'physical' as const, icon: IC_PLAY, label: '신체 발달', color: COLOR.physical },
-  { key: 'cognitive' as const, icon: IC_THINKING, label: '인지 발달', color: COLOR.cognitive },
-  { key: 'language' as const, icon: IC_COMMENT, label: '언어 발달', color: COLOR.language },
-  { key: 'social' as const, icon: IC_WAVING, label: '사회/정서', color: COLOR.social },
-];
+function getDomainConfig(t: TFunction) {
+  return [
+    { key: 'physical' as const, icon: IC_PLAY, label: t('monthlyCharacteristic.domainPhysical'), color: COLOR.physical },
+    { key: 'cognitive' as const, icon: IC_THINKING, label: t('monthlyCharacteristic.domainCognitive'), color: COLOR.cognitive },
+    { key: 'language' as const, icon: IC_COMMENT, label: t('monthlyCharacteristic.domainLanguage'), color: COLOR.language },
+    { key: 'social' as const, icon: IC_WAVING, label: t('monthlyCharacteristic.domainSocial'), color: COLOR.social },
+  ];
+}
 
 export default function MonthlyCharacteristicScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const [data, setData] = useState<CharacteristicData | null>(null);
   const [loading, setLoading] = useState(true);
   const [temperamentTip, setTemperamentTip] = useState('');
+  const DOMAIN_CONFIG = getDomainConfig(t);
 
   useEffect(() => {
     loadCharacteristic();
@@ -83,26 +89,26 @@ export default function MonthlyCharacteristicScreen() {
     }
   };
 
-  const childName = selectedChild?.name ?? '아이';
+  const childName = selectedChild?.name ?? t('monthlyCharacteristic.defaultChildName');
 
   return (
     <View style={[s.screen, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <ScreenHeader title="개월별 발달 특징" />
+      <ScreenHeader title={t('monthlyCharacteristic.screenTitle')} />
 
 
       {loading ? (
         <View style={s.loadingWrap}>
           <ActivityIndicator size="large" color={COLOR.accent} />
-          <Text style={s.loadingText}>{childName}의 발달 특징을 불러오고 있어요...</Text>
+          <Text style={s.loadingText}>{t('monthlyCharacteristic.loadingText', { name: childName })}</Text>
         </View>
       ) : !data ? (
         <View style={s.loadingWrap}>
           <Image source={IC_CALENDAR} style={s.emptyEmojiImg} resizeMode="contain" />
-          <Text style={s.loadingText}>발달 특징 데이터가 아직 준비되지 않았습니다</Text>
+          <Text style={s.loadingText}>{t('monthlyCharacteristic.notReadyText')}</Text>
           <TouchableOpacity style={s.retryBtn} onPress={loadCharacteristic}>
-            <Text style={s.retryText}>다시 시도</Text>
+            <Text style={s.retryText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -111,7 +117,7 @@ export default function MonthlyCharacteristicScreen() {
           <View style={s.ageCard}>
             <Text style={s.ageLabel}>{data.label}</Text>
             <Text style={s.ageTitle}>{data.title}</Text>
-            <Text style={s.ageName}>{childName}의 발달 시기</Text>
+            <Text style={s.ageName}>{t('monthlyCharacteristic.developmentPeriod', { name: childName })}</Text>
           </View>
 
           {/* Domain cards */}
@@ -139,7 +145,7 @@ export default function MonthlyCharacteristicScreen() {
             <View style={s.tipsCard}>
               <View style={s.tipsTitleRow}>
                 <Image source={IC_THINKING} style={s.tipsTitleIconImg} resizeMode="contain" />
-                <Text style={s.tipsTitle}>{' 양육 팁'}</Text>
+                <Text style={s.tipsTitle}>{t('monthlyCharacteristic.parentingTips')}</Text>
               </View>
               {data.tips.map((tip, idx) => (
                 <View key={idx} style={s.bulletRow}>
@@ -155,17 +161,17 @@ export default function MonthlyCharacteristicScreen() {
             <View style={s.tempCard}>
               <View style={s.tempTitleRow}>
                 <Image source={IC_HAPPY} style={s.tempTitleIconImg} resizeMode="contain" />
-                <Text style={s.tempTitle}>{` ${childName}의 기질 맞춤 조언`}</Text>
+                <Text style={s.tempTitle}>{t('monthlyCharacteristic.traitAdvice', { name: childName })}</Text>
               </View>
               <Text style={s.tempBody}>{temperamentTip}</Text>
             </View>
           ) : null}
 
           <MedicalCitation
-            note="발달 시기는 평균 기준이며 아이마다 차이가 있습니다. 발달이 걱정되면 소아과 전문의와 상담하세요."
+            note={t('monthlyCharacteristic.citationNote')}
             sources={[
-              { label: '질병관리청 국가건강정보포털 (영유아 발달)', url: 'https://health.kdca.go.kr' },
-              { label: '대한소아과학회 어린이 건강정보', url: 'https://www.pediatrics.or.kr' },
+              { label: t('monthlyCharacteristic.citationSourceKdca'), url: 'https://health.kdca.go.kr' },
+              { label: t('monthlyCharacteristic.citationSourcePediatrics'), url: 'https://www.pediatrics.or.kr' },
             ]}
           />
         </ScrollView>

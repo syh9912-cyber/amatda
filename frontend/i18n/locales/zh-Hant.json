@@ -3949,7 +3949,21 @@
     "connectingHint": "正在連接伺服器，請稍候…",
     "noAccountRegister": "還沒有帳號嗎？註冊",
     "noAccount": "還沒有帳號嗎？ ",
-    "registerLinkText": "註冊"
+    "registerLinkText": "註冊",
+    "errors": {
+      "emailPasswordRequired": "請輸入電子郵件和密碼",
+      "loginFailedTitle": "登入失敗",
+      "loginFailedDefaultMessage": "請確認電子郵件或密碼",
+      "socialLoginIncomplete": "登入未完成，請重新嘗試。",
+      "socialUserFallback": "{{provider}} 使用者",
+      "unknownError": "發生未知的錯誤",
+      "loginCancelled": "已取消登入。",
+      "kakaoNotInstalled": "尚未安裝 KakaoTalk。\n請安裝 KakaoTalk 後再重新嘗試。",
+      "networkError": "請確認網路連線。",
+      "kakaoAuthError": "發生 Kakao 驗證錯誤。\n請稍後再重新嘗試。",
+      "kakaoLoginFailedTitle": "Kakao 登入失敗",
+      "socialLoginFailedTitle": "社群登入失敗"
+    }
   },
   "notificationSettings": {
     "title": "通知設定",
@@ -4059,5 +4073,63 @@
     "emptySlots": "尚無模式。\n記錄餵奶、睡眠、起床後，隔天起會自動產生鬧鐘。",
     "slotTime": "{{time}} · {{offset}}分鐘前通知",
     "footNote": "鬧鐘列表會隨記錄累積自動更新。"
+  },
+  "nutrition": {
+    "title": "為{{name}}準備的飲食指南",
+    "defaultChildName": "我們家寶貝",
+    "cannotOpenTitle": "無法開啟",
+    "cannotOpenYoutube": "無法開啟YouTube。請稍後再試一次。",
+    "tabGood": "適合食用的食物",
+    "tabBad": "應避免的食物",
+    "customRecommended": "個人化推薦",
+    "reasonLabel": "推薦原因",
+    "reasonText": "給{{trait}}氣質的{{name}} - {{reason}}",
+    "cautionLabel": "注意事項",
+    "recipeCollapse": "收合簡易食譜",
+    "recipeExpand": "查看簡易食譜",
+    "youtubeSearch": "YouTube搜尋",
+    "citationNote": "飲食建議僅供參考,基於一般營養資訊。如有過敏或疾病,請諮詢小兒科醫師。",
+    "citationSourceFoodSafety": "食品藥品安全處 食品營養成分資料庫",
+    "citationSourceMohw": "保健福祉部 韓國人營養素攝取基準"
+  },
+  "clinic": {
+    "screenTitle": "小兒科 / 兒童醫院",
+    "noPhoneRegistered": "該醫院尚未登記電話號碼。",
+    "callFailed": "撥打電話失敗。",
+    "mapOpenFailed": "無法開啟地圖。",
+    "searchPlaceholder": "小兒科、兒童醫院、急診室...",
+    "search": "搜尋",
+    "resultCount": "{{count}}間醫院",
+    "emergencyBadge": "急診室",
+    "actionCall": "電話",
+    "actionMap": "地圖",
+    "actionDetail": "詳情",
+    "emptyText": "附近找不到小兒科/兒童醫院。",
+    "emptySubText": "請試著更改搜尋詞或擴大搜尋範圍。"
+  },
+  "monthlyCharacteristic": {
+    "domainPhysical": "身體發展",
+    "domainCognitive": "認知發展",
+    "domainLanguage": "語言發展",
+    "domainSocial": "社交/情緒",
+    "defaultChildName": "寶貝",
+    "screenTitle": "各月齡發展特徵",
+    "loadingText": "正在載入{{name}}的發展特徵...",
+    "notReadyText": "發展特徵資料尚未準備完成",
+    "developmentPeriod": "{{name}}的發展時期",
+    "parentingTips": "育兒小提示",
+    "traitAdvice": "為{{name}}氣質量身打造的建議",
+    "citationNote": "發展時期為平均標準,每個孩子皆有個別差異。若擔心發展狀況,請諮詢小兒科專科醫師。",
+    "citationSourceKdca": "疾病管理廳 國家健康資訊入口網(嬰幼兒發展)",
+    "citationSourcePediatrics": "大韓小兒科學會 兒童健康資訊"
+  },
+  "playLearning": {
+    "title": "{{name}}的遊戲學習",
+    "introText": "最適合{{trait}}氣質的{{name}}\n在家就能進行的遊戲學習方法",
+    "emptyText": "適合此年齡層的活動準備中",
+    "reasonLabel": "為什麼有幫助?",
+    "reasonText": "給{{trait}}氣質的{{name}} - {{reason}}",
+    "stepsTitle": "請這樣試試看",
+    "materialsLabel": "準備物品"
   }
 }
