@@ -127,7 +127,7 @@ export default function SubscriptionScreen() {
   // PortOne WebView 상태
   const [portOneParams, setPortOneParams] = useState<PortOneCheckoutParams | null>(null);
   const [portOneVisible, setPortOneVisible] = useState(false);
-  const paymentMethodOptions = getPaymentMethodOptions();
+  const paymentMethodOptions = getPaymentMethodOptions(t);
 
   const loadData = useCallback(async () => {
     try {
@@ -197,7 +197,7 @@ export default function SubscriptionScreen() {
       setSubscribing(true);
       analytics.logSubscriptionStart(selectedPlan === 'yearly' ? 'yearly' : 'monthly', 'iap');
       try {
-        const res = await purchaseIAP(productId);
+        const res = await purchaseIAP(t, productId);
         if (res.ok) {
           const priceKRW = productId === 'premium_yearly' ? 39900 : 3900;
           analytics.logPurchase(productId === 'premium_yearly' ? 'yearly' : 'monthly', priceKRW);
@@ -213,7 +213,7 @@ export default function SubscriptionScreen() {
     }
 
     // 2) PortOne 외부결제 — 빌링키(자동결제) 발급
-    const checkoutParams = buildPortOneCheckoutParams({
+    const checkoutParams = buildPortOneCheckoutParams(t, {
       productId,
       method: paymentMethod,
       asBillingKey: true,
@@ -284,7 +284,7 @@ export default function SubscriptionScreen() {
   const handleRestorePurchases = async () => {
     setSubscribing(true);
     try {
-      const res = await restoreIAP();
+      const res = await restoreIAP(t);
       if (res.ok) {
         Alert.alert(t('subscription.alert.restoreCompleteTitle'), res.message ?? t('subscription.alert.restoreCompleteMessage'));
         loadData();

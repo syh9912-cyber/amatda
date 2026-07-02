@@ -1,6 +1,7 @@
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
+import type { TFunction } from 'i18next';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -27,7 +28,7 @@ const REDIRECT_URI = AuthSession.makeRedirectUri({ scheme: 'amatda' });
  * 카카오 로그인 — 네이티브 SDK (Android/iOS)
  * KakaoTalk 앱 → 즉시 토큰 반환, 브라우저/딥링크 불필요
  */
-async function kakaoLogin(): Promise<SocialLoginResult | null> {
+async function kakaoLogin(t: TFunction): Promise<SocialLoginResult | null> {
   if (Platform.OS === 'web') {
     // 웹은 AuthSession 방식 유지
     return kakaoWebLogin();
@@ -45,7 +46,7 @@ async function kakaoLogin(): Promise<SocialLoginResult | null> {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[KakaoLogin] native SDK error:', msg);
-    throw new Error(`카카오 SDK: ${msg}`);
+    throw new Error(t('socialAuth.errors.kakaoSdk', { message: msg }));
   }
 }
 
@@ -98,9 +99,9 @@ async function kakaoWebLogin(): Promise<SocialLoginResult | null> {
  *   - 미설치 → SDK 가 in-app browser 열기 → 로그인 → 토큰 반환
  *   - 백엔드 /auth/social → 토큰 verify → user 생성/매칭 → JWT 발급
  */
-async function naverLogin(): Promise<SocialLoginResult | null> {
+async function naverLogin(t: TFunction): Promise<SocialLoginResult | null> {
   if (Platform.OS === 'web') {
-    return authSessionLogin('NAVER');
+    return authSessionLogin('NAVER', t);
   }
 
   const consumerKey = process.env.EXPO_PUBLIC_NAVER_CLIENT_ID || '';
@@ -108,7 +109,7 @@ async function naverLogin(): Promise<SocialLoginResult | null> {
   const serviceUrlScheme = process.env.EXPO_PUBLIC_NAVER_URL_SCHEME || 'naverlogin';
 
   if (!consumerKey || !consumerSecret) {
-    throw new Error('네이버 로그인 환경변수(EXPO_PUBLIC_NAVER_CLIENT_ID/SECRET)가 설정되지 않았습니다.');
+    throw new Error(t('socialAuth.errors.naverEnvMissing'));
   }
 
   try {
@@ -117,7 +118,7 @@ async function naverLogin(): Promise<SocialLoginResult | null> {
     const NaverLogin = NaverLoginModule.default ?? NaverLoginModule;
 
     NaverLogin.initialize({
-      appName: '아맞다',
+      appName: t('socialAuth.appName'),
       consumerKey,
       consumerSecret,
       serviceUrlSchemeIOS: serviceUrlScheme,
@@ -134,8 +135,8 @@ async function naverLogin(): Promise<SocialLoginResult | null> {
       const failMsg =
         result?.failureResponse?.message ??
         result?.failureResponse?.lastErrorCodeFromNaverSDK ??
-        '알 수 없는 오류';
-      throw new Error(`네이버 로그인 실패: ${failMsg}`);
+        t('socialAuth.errors.unknownError');
+      throw new Error(t('socialAuth.errors.naverLoginFailed', { message: failMsg }));
     }
 
     console.log('[NaverLogin] native SDK success');
@@ -146,7 +147,7 @@ async function naverLogin(): Promise<SocialLoginResult | null> {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[NaverLogin] native SDK error:', msg);
-    throw new Error(`네이버 SDK: ${msg}`);
+    throw new Error(t('socialAuth.errors.naverSdk', { message: msg }));
   }
 }
 
@@ -154,14 +155,14 @@ async function naverLogin(): Promise<SocialLoginResult | null> {
  * 구글 로그인 — 네이티브 SDK (Android/iOS)
  * Google Play Services / Apple Sign-In Panel → idToken + accessToken 반환
  */
-async function googleLogin(): Promise<SocialLoginResult | null> {
+async function googleLogin(t: TFunction): Promise<SocialLoginResult | null> {
   if (Platform.OS === 'web') {
-    return authSessionLogin('GOOGLE');
+    return authSessionLogin('GOOGLE', t);
   }
 
   const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '';
   if (!webClientId) {
-    throw new Error('구글 로그인 환경변수(EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID)가 설정되지 않았습니다.');
+    throw new Error(t('socialAuth.errors.googleEnvMissing'));
   }
 
   try {
@@ -186,7 +187,7 @@ async function googleLogin(): Promise<SocialLoginResult | null> {
     const tokens = await GoogleSignin.getTokens();
 
     if (!tokens?.accessToken) {
-      throw new Error('accessToken을 받지 못했습니다.');
+      throw new Error(t('socialAuth.errors.googleTokenMissing'));
     }
 
     console.log('[GoogleLogin] native SDK success');
@@ -202,7 +203,7 @@ async function googleLogin(): Promise<SocialLoginResult | null> {
       return null;
     }
     console.error('[GoogleLogin] native SDK error:', msg);
-    throw new Error(`구글 SDK: ${msg}`);
+    throw new Error(t('socialAuth.errors.googleSdk', { message: msg }));
   }
 }
 
@@ -214,7 +215,7 @@ async function googleLogin(): Promise<SocialLoginResult | null> {
  * 네이버 콘솔에 등록할 Callback URL 은 첫 호출 시 콘솔에 찍히는 REDIRECT_URI 값.
  * Expo dev client / preview / production 빌드별로 값이 다를 수 있어 빌드 후 확인 필수.
  */
-async function authSessionLogin(provider: SocialProvider): Promise<SocialLoginResult | null> {
+async function authSessionLogin(provider: SocialProvider, t: TFunction): Promise<SocialLoginResult | null> {
   // 콘솔에 redirect URI 출력 — 네이버 개발자 콘솔 등록 시 정확한 값 확인용
   console.log(`[social-auth] ${provider} REDIRECT_URI:`, REDIRECT_URI);
 
@@ -236,7 +237,7 @@ async function authSessionLogin(provider: SocialProvider): Promise<SocialLoginRe
   const config = configs[provider];
   if (!config || !config.clientId) {
     if (!__DEV__) {
-      throw new Error(`[social-auth] ${provider} clientId 미설정 — 프로덕션에서 mock 토큰 불가`);
+      throw new Error(t('socialAuth.errors.clientIdMissing', { provider }));
     }
     return { provider, accessToken: `mock_token_${provider}_${Date.now()}` };
   }
@@ -277,16 +278,16 @@ async function authSessionLogin(provider: SocialProvider): Promise<SocialLoginRe
  * identityToken(JWT)을 백엔드 /auth/social (provider=APPLE)에서 서명 검증.
  * 네이티브 모듈 동적 require + fallback (정적 import 금지 규칙).
  */
-async function appleLogin(): Promise<SocialLoginResult | null> {
+async function appleLogin(t: TFunction): Promise<SocialLoginResult | null> {
   if (Platform.OS !== 'ios') {
-    throw new Error('Apple 로그인은 iOS에서만 지원됩니다.');
+    throw new Error(t('socialAuth.errors.appleIosOnly'));
   }
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const AppleAuthentication = require('expo-apple-authentication');
     const available = await AppleAuthentication.isAvailableAsync();
     if (!available) {
-      throw new Error('이 기기에서는 Apple 로그인을 사용할 수 없습니다.');
+      throw new Error(t('socialAuth.errors.appleUnavailable'));
     }
     const credential = await AppleAuthentication.signInAsync({
       requestedScopes: [
@@ -295,7 +296,7 @@ async function appleLogin(): Promise<SocialLoginResult | null> {
       ],
     });
     if (!credential?.identityToken) {
-      throw new Error('Apple identityToken 을 받지 못했습니다.');
+      throw new Error(t('socialAuth.errors.appleTokenMissing'));
     }
     console.log('[AppleLogin] native success');
     return {
@@ -308,16 +309,16 @@ async function appleLogin(): Promise<SocialLoginResult | null> {
     if (code === 'ERR_REQUEST_CANCELED' || code === 'ERR_CANCELED') return null;
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[AppleLogin] error:', msg);
-    throw new Error(`Apple 로그인: ${msg}`);
+    throw new Error(t('socialAuth.errors.appleLogin', { message: msg }));
   }
 }
 
-export async function socialLogin(provider: SocialProvider): Promise<SocialLoginResult | null> {
-  if (provider === 'KAKAO') return kakaoLogin();
-  if (provider === 'NAVER') return naverLogin();
-  if (provider === 'GOOGLE') return googleLogin();
-  if (provider === 'APPLE') return appleLogin();
-  return authSessionLogin(provider);
+export async function socialLogin(provider: SocialProvider, t: TFunction): Promise<SocialLoginResult | null> {
+  if (provider === 'KAKAO') return kakaoLogin(t);
+  if (provider === 'NAVER') return naverLogin(t);
+  if (provider === 'GOOGLE') return googleLogin(t);
+  if (provider === 'APPLE') return appleLogin(t);
+  return authSessionLogin(provider, t);
 }
 
 /**

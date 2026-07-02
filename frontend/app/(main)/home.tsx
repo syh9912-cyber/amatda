@@ -469,7 +469,7 @@ export default function HomeScreen() {
 
   const pickPhoto = async () => {
     if (!selectedChild) return;
-    const picked = await pickImageFromLibrary({ quality: 0.8 });
+    const picked = await pickImageFromLibrary(t, { quality: 0.8 });
     if (!picked) return;
     const localUri = picked.uri;
     const previousPhotoUri = selectedChild.photoUri;

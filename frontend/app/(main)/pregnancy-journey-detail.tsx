@@ -18,7 +18,7 @@ import { BackButton } from '../../components/common/BackButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
 import { MedicalCitation } from '../../components/common/MedicalCitation';
-import { PREGNANCY_JOURNEY_GUIDE } from '../../features/guide/pregnancyJourneyGuide';
+import { getPregnancyJourneyGuide } from '../../features/guide/pregnancyJourneyGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
 type Stage = 'early' | 'wk12' | 'stable' | 'late' | 'birth';
@@ -311,6 +311,7 @@ export default function PregnancyJourneyDetailScreen() {
   const stageContent = useMemo(() => getStageContent(t), [t]);
   const stageLabels = useMemo(() => getStageLabels(t), [t]);
   const content = stageContent[stage];
+  const pregnancyJourneyGuide = useMemo(() => getPregnancyJourneyGuide(t), [t]);
 
   // 사용 가이드 (첫 진입 1회 자동표시 + ? 버튼 재열람)
   const [guideVisible, setGuideVisible] = useState(false);
@@ -384,7 +385,7 @@ export default function PregnancyJourneyDetailScreen() {
           ]}
         />
       </ScrollView>
-      <GuideCarousel visible={guideVisible} pages={PREGNANCY_JOURNEY_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent={COLOR.pink} />
+      <GuideCarousel visible={guideVisible} pages={pregnancyJourneyGuide} onClose={closeGuide} onComplete={closeGuide} accent={COLOR.pink} />
     </View>
   );
 }

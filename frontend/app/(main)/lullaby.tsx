@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import { BackButton } from '../../components/common/BackButton';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
-import { LULLABY_GUIDE, LULLABY_PRENATAL_GUIDE } from '../../features/guide/lullabyGuide';
+import { getLullabyGuide, getLullabyPrenatalGuide } from '../../features/guide/lullabyGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Audio, AVPlaybackSource } from 'expo-av';
@@ -178,7 +178,10 @@ export default function LullabyScreen() {
     : t('lullaby.cryDetectLabel');
   // 사용 가이드 (모드별: 자장가 / 태교음악) — 첫 진입 1회 자동표시 + ? 버튼 재열람
   const guideKey = isPrenatal ? 'lullaby_prenatal' : 'lullaby';
-  const guidePages = isPrenatal ? LULLABY_PRENATAL_GUIDE : LULLABY_GUIDE;
+  const guidePages = useMemo(
+    () => (isPrenatal ? getLullabyPrenatalGuide(t) : getLullabyGuide(t)),
+    [isPrenatal, t]
+  );
   const [guideVisible, setGuideVisible] = useState(false);
   useEffect(() => {
     shouldAutoShowGuide(guideKey).then((sh) => { if (sh) setGuideVisible(true); });

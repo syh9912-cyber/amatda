@@ -30,7 +30,7 @@ import { BackButton } from '../../components/common/BackButton';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideButton } from '../../components/common/GuideButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
-import { MOMGROUP_GUIDE } from '../../features/guide/momGroupGuide';
+import { getMomGroupGuide } from '../../features/guide/momGroupGuide';
 
 const IC_HEART = require('../../assets/icon-heart.png');
 const IC_COMMENT = require('../../assets/icon-comment.png');
@@ -233,6 +233,7 @@ function displayTitle(t: TFunction, p: Post): string {
 
 export default function MomGroupScreen() {
   const { t } = useTranslation();
+  const momGroupGuide = useMemo(() => getMomGroupGuide(t), [t]);
   const insets = useSafeAreaInsets();
   const { selectedChild } = useChildStore();
   // 자녀 birthDate/dueDate 기반 월방. 자녀 없는 사용자(공식 계정 등)는 현재 월 fallback.
@@ -529,7 +530,7 @@ export default function MomGroupScreen() {
   };
 
   const pickImage = async () => {
-    const result = await pickImageFromLibrary({ quality: 0.7 });
+    const result = await pickImageFromLibrary(t, { quality: 0.7 });
     if (result?.uri) setPostImage(result.uri);
   };
 
@@ -1559,7 +1560,7 @@ export default function MomGroupScreen() {
       <AdSlot />
 
       {/* 첫 진입 가이드 — 스포트라이트 코치마크 (앱 공용 GuideCarousel). */}
-      <GuideCarousel visible={showGuide} pages={MOMGROUP_GUIDE} onClose={closeGuide} onComplete={closeGuide} />
+      <GuideCarousel visible={showGuide} pages={momGroupGuide} onClose={closeGuide} onComplete={closeGuide} />
     </View>
   );
 }

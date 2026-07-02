@@ -1,5 +1,6 @@
 /** 출산가방 체크리스트 가이드 — 맞춤 목록 · 상태/담당 태그 · 아빠모드/공유 */
 import { View, Text, Image, StyleSheet } from 'react-native';
+import type { TFunction } from 'i18next';
 import { GuideFrame, GUIDE_C, type GuidePage } from '../../components/common/GuideCarousel';
 
 const IC_SHARE = require('../../assets/icon-share.png') as number;
@@ -30,64 +31,66 @@ const g = StyleSheet.create({
   shareText: { fontSize: 12, fontWeight: '700', color: GUIDE_C.textSub },
 });
 
-export const BIRTHBAG_GUIDE: GuidePage[] = [
-  {
-    title: '내 상황에 맞는 목록을 받아요',
-    desc: '분만 형태와 산후 계획을 고르면\n딱 맞는 준비물만 추려서 보여줘요',
-    visual: (
-      <GuideFrame>
-        <Text style={g.cap}>분만 형태</Text>
-        <View style={g.selRow}>
-          <View style={[g.selCard, { backgroundColor: GUIDE_C.accentSoft, borderColor: GUIDE_C.accent }]}><Text style={[g.selText, { color: GUIDE_C.accent }]}>자연분만</Text></View>
-          <View style={[g.selCard, { backgroundColor: '#FFF', borderColor: GUIDE_C.border }]}><Text style={[g.selText, { color: GUIDE_C.textSub }]}>제왕절개</Text></View>
-        </View>
-        <Text style={g.cap}>산후 계획</Text>
-        <View style={g.selRow}>
-          <View style={[g.selCard, { backgroundColor: GUIDE_C.blueLight, borderColor: GUIDE_C.blue }]}><Text style={[g.selText, { color: GUIDE_C.blue }]}>조리원</Text></View>
-          <View style={[g.selCard, { backgroundColor: '#FFF', borderColor: GUIDE_C.border }]}><Text style={[g.selText, { color: GUIDE_C.textSub }]}>집으로</Text></View>
-        </View>
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '상태·담당을 정하고 체크해요',
-    desc: '항목마다 구매필요/준비완료를 태그하고\n엄마·아빠 담당을 나눠 진행률을 채워요',
-    visual: (
-      <GuideFrame>
-        <View style={g.item}>
-          <View style={g.check} />
-          <Text style={g.itemName}>산모 패드</Text>
-          <View style={[g.tag, { backgroundColor: GUIDE_C.accentSoft }]}><Text style={[g.tagText, { color: GUIDE_C.accent }]}>구매필요</Text></View>
-          <View style={[g.tag, { backgroundColor: '#FCE9F1' }]}><Text style={[g.tagText, { color: '#C77BA0' }]}>엄마</Text></View>
-        </View>
-        <View style={g.item}>
-          <View style={[g.check, g.checkOn]}><Text style={g.checkMark}>✓</Text></View>
-          <Text style={g.itemName}>카시트</Text>
-          <View style={[g.tag, { backgroundColor: GUIDE_C.blueLight }]}><Text style={[g.tagText, { color: GUIDE_C.blue }]}>가방에 넣음</Text></View>
-          <View style={[g.tag, { backgroundColor: GUIDE_C.greenLight }]}><Text style={[g.tagText, { color: GUIDE_C.green }]}>아빠</Text></View>
-        </View>
-        <View style={g.progressWrap}>
-          <View style={g.progressTrack}><View style={[g.progressFill, { width: '62%' }]} /></View>
-          <Text style={g.progressText}>62% 준비 완료</Text>
-        </View>
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '아빠와 함께, 링크로 공유',
-    desc: '아빠 모드로 아빠 담당만 모아 보고\n링크로 가족과 함께 준비해요',
-    visual: (
-      <GuideFrame>
-        <View style={g.dadRow}>
-          <Text style={g.dadEmoji}>👨</Text>
-          <Text style={g.dadText}>아빠 모드 — 아빠 담당만 보기</Text>
-          <View style={g.toggle}><View style={g.knob} /></View>
-        </View>
-        <View style={g.shareChip}>
-          <Image source={IC_SHARE} style={g.shareIcon} resizeMode="contain" />
-          <Text style={g.shareText}>카카오톡 · 링크로 공유</Text>
-        </View>
-      </GuideFrame>
-    ),
-  },
-];
+export function getBirthBagGuide(t: TFunction): GuidePage[] {
+  return [
+    {
+      title: t('guides.birthBag.page1.title'),
+      desc: t('guides.birthBag.page1.desc'),
+      visual: (
+        <GuideFrame>
+          <Text style={g.cap}>{t('guides.birthBag.page1.birthTypeLabel')}</Text>
+          <View style={g.selRow}>
+            <View style={[g.selCard, { backgroundColor: GUIDE_C.accentSoft, borderColor: GUIDE_C.accent }]}><Text style={[g.selText, { color: GUIDE_C.accent }]}>{t('birthBag.birthTypes.natural.label')}</Text></View>
+            <View style={[g.selCard, { backgroundColor: '#FFF', borderColor: GUIDE_C.border }]}><Text style={[g.selText, { color: GUIDE_C.textSub }]}>{t('birthBag.birthTypes.csection.label')}</Text></View>
+          </View>
+          <Text style={g.cap}>{t('guides.birthBag.page1.postpartumPlanLabel')}</Text>
+          <View style={g.selRow}>
+            <View style={[g.selCard, { backgroundColor: GUIDE_C.blueLight, borderColor: GUIDE_C.blue }]}><Text style={[g.selText, { color: GUIDE_C.blue }]}>{t('guides.birthBag.page1.postpartumCenter')}</Text></View>
+            <View style={[g.selCard, { backgroundColor: '#FFF', borderColor: GUIDE_C.border }]}><Text style={[g.selText, { color: GUIDE_C.textSub }]}>{t('guides.birthBag.page1.postpartumHome')}</Text></View>
+          </View>
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('guides.birthBag.page2.title'),
+      desc: t('guides.birthBag.page2.desc'),
+      visual: (
+        <GuideFrame>
+          <View style={g.item}>
+            <View style={g.check} />
+            <Text style={g.itemName}>{t('guides.birthBag.page2.sampleItemPad')}</Text>
+            <View style={[g.tag, { backgroundColor: GUIDE_C.accentSoft }]}><Text style={[g.tagText, { color: GUIDE_C.accent }]}>{t('birthBag.status.need')}</Text></View>
+            <View style={[g.tag, { backgroundColor: '#FCE9F1' }]}><Text style={[g.tagText, { color: '#C77BA0' }]}>{t('birthBag.owner.mom')}</Text></View>
+          </View>
+          <View style={g.item}>
+            <View style={[g.check, g.checkOn]}><Text style={g.checkMark}>✓</Text></View>
+            <Text style={g.itemName}>{t('guides.birthBag.page2.sampleItemCarSeat')}</Text>
+            <View style={[g.tag, { backgroundColor: GUIDE_C.blueLight }]}><Text style={[g.tagText, { color: GUIDE_C.blue }]}>{t('birthBag.status.packed')}</Text></View>
+            <View style={[g.tag, { backgroundColor: GUIDE_C.greenLight }]}><Text style={[g.tagText, { color: GUIDE_C.green }]}>{t('birthBag.owner.dad')}</Text></View>
+          </View>
+          <View style={g.progressWrap}>
+            <View style={g.progressTrack}><View style={[g.progressFill, { width: '62%' }]} /></View>
+            <Text style={g.progressText}>{t('guides.birthBag.page2.progressText')}</Text>
+          </View>
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('guides.birthBag.page3.title'),
+      desc: t('guides.birthBag.page3.desc'),
+      visual: (
+        <GuideFrame>
+          <View style={g.dadRow}>
+            <Text style={g.dadEmoji}>👨</Text>
+            <Text style={g.dadText}>{t('guides.birthBag.page3.dadModeLabel')}</Text>
+            <View style={g.toggle}><View style={g.knob} /></View>
+          </View>
+          <View style={g.shareChip}>
+            <Image source={IC_SHARE} style={g.shareIcon} resizeMode="contain" />
+            <Text style={g.shareText}>{t('guides.birthBag.page3.shareVia')}</Text>
+          </View>
+        </GuideFrame>
+      ),
+    },
+  ];
+}

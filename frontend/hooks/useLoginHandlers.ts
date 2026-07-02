@@ -43,7 +43,7 @@ export function useLoginHandlers() {
     setSocialLoading(provider);
     try {
       console.log('[SocialLogin] Starting', provider);
-      const result = await socialLogin(provider);
+      const result = await socialLogin(provider, t);
       console.log('[SocialLogin] Result:', result ? 'got result' : 'null');
       if (!result) {
         setSocialLoading(null);

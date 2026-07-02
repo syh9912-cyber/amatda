@@ -8,8 +8,8 @@ import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
 import { MedicalCitation } from '../../components/common/MedicalCitation';
-import { GROWTH_GUIDE } from '../../features/guide/growthGuide';
-import { WEEKLY_DEV_GUIDE } from '../../features/guide/weeklyDevGuide';
+import { getGrowthGuide } from '../../features/guide/growthGuide';
+import { getWeeklyDevGuide } from '../../features/guide/weeklyDevGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useChildStore } from '../../stores/childStore';
 import { canDo } from '../../features/coparenting/permissions';
@@ -231,6 +231,7 @@ export default function GrowthStatsScreen() {
 
   // 모드별 가이드: 임신(주수별 발달) / 육아(성장 기록)
   const guideKey = isPregnant ? 'weekly_dev' : 'growth';
+  const growthGuide = useMemo(() => getGrowthGuide(t), [t]);
   const [guideVisible, setGuideVisible] = useState(false);
   useEffect(() => {
     shouldAutoShowGuide(guideKey).then((sh) => { if (sh) setGuideVisible(true); });
@@ -254,7 +255,7 @@ export default function GrowthStatsScreen() {
           <PregnancyWeeklyDevelopment />
         </ScrollView>
         <AdSlot />
-        <GuideCarousel visible={guideVisible} pages={WEEKLY_DEV_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#F0976C" />
+        <GuideCarousel visible={guideVisible} pages={getWeeklyDevGuide(t)} onClose={closeGuide} onComplete={closeGuide} accent="#F0976C" />
       </View>
     );
   }
@@ -283,7 +284,7 @@ export default function GrowthStatsScreen() {
         <PhysicalTab childName={selectedChild?.name ?? t('growthStats.defaultChildName')} />
       </ScrollView>
       <AdSlot />
-      <GuideCarousel visible={guideVisible} pages={GROWTH_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#7CA46E" />
+      <GuideCarousel visible={guideVisible} pages={growthGuide} onClose={closeGuide} onComplete={closeGuide} accent="#7CA46E" />
     </KeyboardAvoidingView>
   );
 }

@@ -19,7 +19,7 @@ import { BackButton } from '../../components/common/BackButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
 import { MedicalCitation } from '../../components/common/MedicalCitation';
-import { VACCINATION_GUIDE } from '../../features/guide/vaccinationGuide';
+import { getVaccinationGuide } from '../../features/guide/vaccinationGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useChildStore } from '../../stores/childStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -551,7 +551,7 @@ export default function VaccinationScreen() {
         </View>
       </Modal>
       <AdSlot />
-      <GuideCarousel visible={guideVisible} pages={VACCINATION_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#5B8DEF" />
+      <GuideCarousel visible={guideVisible} pages={getVaccinationGuide(t)} onClose={closeGuide} onComplete={closeGuide} accent="#5B8DEF" />
     </View>
   );
 }

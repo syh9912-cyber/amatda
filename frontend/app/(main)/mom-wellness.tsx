@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -24,7 +24,7 @@ import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideButton } from '../../components/common/GuideButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { MedicalCitation } from '../../components/common/MedicalCitation';
-import { MOMWELLNESS_GUIDE } from '../../features/guide/momWellnessGuide';
+import { getMomWellnessGuide } from '../../features/guide/momWellnessGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
 // ─── 빠른 기분 일기 (간단 mood pick + 한 줄 메모) — EPDS 와 별개, AsyncStorage 로컬 저장 ───
@@ -141,6 +141,7 @@ export default function MomWellnessScreen() {
   const DIRECTION_META = getDirectionMeta(t);
   const EPDS_OPTIONS = getEpdsOptions(t);
   const RISK_STYLE = getRiskStyle(t);
+  const momWellnessGuide = useMemo(() => getMomWellnessGuide(t), [t]);
 
   const [guideVisible, setGuideVisible] = useState(false);
   useEffect(() => { shouldAutoShowGuide('mom-wellness').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
@@ -608,7 +609,7 @@ export default function MomWellnessScreen() {
 
       </ScrollView>
       <AdSlot />
-      <GuideCarousel visible={guideVisible} pages={MOMWELLNESS_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#9D8CC6" />
+      <GuideCarousel visible={guideVisible} pages={momWellnessGuide} onClose={closeGuide} onComplete={closeGuide} accent="#9D8CC6" />
     </View>
   );
 }

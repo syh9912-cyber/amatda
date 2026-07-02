@@ -1,5 +1,6 @@
 import { Alert } from 'react-native';
 import * as Updates from 'expo-updates';
+import i18n from '../i18n';
 
 /**
  * API 오류 발생 시 OTA 업데이트 여부를 확인하고, 새 버전이 있으면 사용자에게 안내.
@@ -17,7 +18,7 @@ async function applyUpdate() {
     await Updates.fetchUpdateAsync();
     await Updates.reloadAsync();
   } catch {
-    Alert.alert('업데이트 실패', '네트워크 상태를 확인하고 앱을 다시 시작해주세요.');
+    Alert.alert(i18n.t('otaCheck.updateFailed.title'), i18n.t('otaCheck.updateFailed.message'));
     dialogShown = false;
   }
 }
@@ -35,16 +36,16 @@ export async function checkOtaOnApiError(): Promise<void> {
 
     dialogShown = true;
     Alert.alert(
-      '새 버전이 준비됐어요',
-      '앱이 최신 서버와 맞지 않아 일부 기능이 동작하지 않을 수 있어요.\n지금 업데이트할까요?',
+      i18n.t('otaCheck.updateAvailable.title'),
+      i18n.t('otaCheck.updateAvailable.message'),
       [
         {
-          text: '나중에',
+          text: i18n.t('onboardingNotificationPermission.later'),
           style: 'cancel',
           onPress: () => { dialogShown = false; },
         },
         {
-          text: '업데이트',
+          text: i18n.t('otaCheck.updateAvailable.updateButton'),
           style: 'default',
           onPress: () => { applyUpdate(); },
         },

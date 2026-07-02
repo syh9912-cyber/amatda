@@ -22,7 +22,7 @@ import { BackButton } from '../../components/common/BackButton';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
-import { COPARENTING_GUIDE } from '../../features/guide/coparentingGuide';
+import { getCoparentingGuide } from '../../features/guide/coparentingGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChildStore } from '../../stores/childStore';
@@ -709,7 +709,7 @@ export default function CoparentingScreen() {
         </View>
       </Modal>
 
-      <GuideCarousel visible={guideVisible} pages={COPARENTING_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#9D8CC6" />
+      <GuideCarousel visible={guideVisible} pages={getCoparentingGuide(t)} onClose={closeGuide} onComplete={closeGuide} accent="#9D8CC6" />
     </View>
   );
 }

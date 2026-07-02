@@ -4216,7 +4216,8 @@
     "privateHintOn": "이 게시물은 나에게만 보입니다",
     "privateHintOff": "가족에게 공유됩니다",
     "saveBtn": "저장하기",
-    "shareBtn": "공유하기"
+    "shareBtn": "공유하기",
+    "anonymous": "익명"
   },
   "aiAnalysis": {
     "screenTitle": "AI 분석",
@@ -5675,6 +5676,757 @@
         "question": "이번 주 임신 생활에서 특별했던 순간이 있나요?",
         "hint": "예: 초음파 보러 감, 태명 정함, 아기방 준비 등"
       }
+    }
+  },
+  "guides": {
+    "aiAnalysis": {
+      "page1": {
+        "title": "AI가 우리 아이를 분석해요",
+        "desc": "세 가지로 분석해요 — 육아패턴, 대변, 울음.\n원하는 분석을 골라 시작하면 돼요"
+      },
+      "page2": {
+        "title": "기록만 하면 패턴이 분석돼요",
+        "desc": "아기시간에 쌓인 배변·수유·수면을\nAI가 표준과 비교해 종합 평가해줘요 (따로 입력 안 해도 돼요)",
+        "cardTitle": "📊  오늘의 육아패턴",
+        "feeding": "수유",
+        "feedingCount": "7회",
+        "sleep": "수면",
+        "sleepHours": "13시간",
+        "poop": "배변",
+        "poopCount": "3회",
+        "ok": "적정",
+        "evalText": "🤖  전반적으로 안정적인 하루였어요"
+      },
+      "page3": {
+        "title": "사진·소리로 대변·울음도 분석",
+        "desc": "대변은 사진, 울음은 녹음을 올리면\nAI가 원인과 대처법을 알려줘요",
+        "poopPhoto": "대변 사진",
+        "poopHint": "밝은 곳에서 또렷이",
+        "cryRecording": "울음 녹음",
+        "cryHint": "조용한 곳에서 가까이",
+        "ageNote": "👶  대변 분석은 0~72개월, 울음 분석은 0~24개월 아이에게 맞춰져 있어요.",
+        "warning": "참고용이에요. 이상 증상이 보이면 꼭 병원에 가세요"
+      }
+    },
+    "album": {
+      "page1": {
+        "title": "사진으로 성장을 기록해요",
+        "desc": "갤러리나 카메라로 사진을 더하면\n날짜순으로 차곡차곡 정리돼요",
+        "cardTitle": "📸  우리 아이 사진"
+      },
+      "page2": {
+        "title": "발달 단계가 자동으로 붙어요",
+        "desc": "\"첫 걸음\", \"첫 웃음\" 같은 발달 단계를\n월령에 맞춰 자동으로 제안해줘요",
+        "firstStep": "첫 걸음",
+        "firstWord": "첫 말",
+        "firstSmile": "첫 웃음"
+      },
+      "page3": {
+        "title": "사진을 여러 장 한 번에",
+        "desc": "갤러리에서 여러 장을 골라 한꺼번에 올리고,\n사진마다 가족피드 공유·메모를 정할 수 있어요",
+        "cardTitle": "🖼️  여러 장 추가 · 검토",
+        "sampleMemo": "\"첫 이유식 도전!\"",
+        "feedShare": "피드 공유"
+      },
+      "page4": {
+        "title": "하루를 AI가 일기로 써줘요",
+        "desc": "그날의 아기시간 기록과 상담 내용을 모아\nAI가 부모 마음으로 따뜻한 일기를 써줘요",
+        "sampleDate": "6월 6일 토요일",
+        "sampleDiary": "오늘 윤도는 분유를 잘 먹고 낮잠도 푹 잤다. 기저귀 갈 때마다 방긋 웃어줘서 하루 종일 행복했던 하루…",
+        "sourceBabyTracker": "🍼 아기시간 기록",
+        "sourceCoaching": "💬 상담 내용"
+      },
+      "page5": {
+        "title": "한 권의 앨범으로 만들어요",
+        "desc": "기간만 고르면 월별로 정리된\n사진 앨범을 PDF로 받아볼 수 있어요",
+        "sampleCoverTitle": "윤도의 성장앨범",
+        "sampleCoverRange": "2025.06 ~ 2026.05",
+        "saveAsAlbum": "앨범으로 저장"
+      }
+    },
+    "birthBag": {
+      "page1": {
+        "title": "내 상황에 맞는 목록을 받아요",
+        "desc": "분만 형태와 산후 계획을 고르면\n딱 맞는 준비물만 추려서 보여줘요",
+        "birthTypeLabel": "분만 형태",
+        "postpartumPlanLabel": "산후 계획",
+        "postpartumCenter": "조리원",
+        "postpartumHome": "집으로"
+      },
+      "page2": {
+        "title": "상태·담당을 정하고 체크해요",
+        "desc": "항목마다 구매필요/준비완료를 태그하고\n엄마·아빠 담당을 나눠 진행률을 채워요",
+        "sampleItemPad": "산모 패드",
+        "sampleItemCarSeat": "카시트",
+        "progressText": "62% 준비 완료"
+      },
+      "page3": {
+        "title": "아빠와 함께, 링크로 공유",
+        "desc": "아빠 모드로 아빠 담당만 모아 보고\n링크로 가족과 함께 준비해요",
+        "dadModeLabel": "아빠 모드 — 아빠 담당만 보기",
+        "shareVia": "카카오톡 · 링크로 공유"
+      }
+    },
+    "chatbot": {
+      "page1": {
+        "title": "상담이모에게 편하게 물어보세요",
+        "desc": "우리 아이 기질을 알고 답해주는 AI 상담.\n궁금한 건 무엇이든 대화하듯 물어보면 돼요",
+        "bubble1": "이유식을 자꾸 뱉어요. 어떻게 할까요?",
+        "bubble2": "아직 새로운 식감이 낯설 수 있어요. 활동형 아이는 한 번에 조금씩, 좋아하는 재료부터 섞어주면 거부감이 줄어요.",
+        "bubble3": "얼마나 자주 줘야 하나요?"
+      },
+      "page2": {
+        "title": "카테고리로 더 빠르게",
+        "desc": "주제를 고르면 질문이 자동으로 채워져요.\n그대로 보내거나 자유롭게 고쳐서 물어보세요",
+        "topicSelect": "주제 선택",
+        "topics": [
+          "수유·식사",
+          "수면",
+          "발달",
+          "훈육",
+          "건강",
+          "놀이"
+        ],
+        "samplePrompt": "아이가 수면 관련해서 고민이 있어요…"
+      },
+      "page3": {
+        "title": "울음·대변도 분석해드려요",
+        "desc": "상담 화면 안에서 울음소리·대변 사진을 올리면\nAI가 원인과 대처법을 분석해줘요",
+        "note": "🔊  5~15초, 아이 가까이서 녹음하면 정확해요{'\\n'}💩  밝은 곳에서 또렷하게 찍어주세요"
+      },
+      "page4": {
+        "title": "상담 후에도 챙겨드려요",
+        "desc": "상담한 내용은 다음 날 아침\n\"그 뒤로 어떤가요?\" 팔로업으로 다시 챙겨요",
+        "bubble": "🌙 어제 상담한 수면 루틴, 오늘은 좀 어떠셨어요?",
+        "note": "💡 상담이모는 참고용이에요. 아이가 아프거나 위급하면 꼭 병원·119를 먼저 이용하세요.",
+        "warning": "응급 증상은 홈의 SOS(응급) 기능을 이용하세요"
+      }
+    },
+    "coparenting": {
+      "page1": {
+        "title": "가족과 함께 아이를 키워요",
+        "desc": "배우자·조부모를 초대하면 같은 아이를\n함께 기록하고 상담 내역도 공유할 수 있어요"
+      },
+      "page2": {
+        "title": "초대는 코드 한 번이면 끝",
+        "desc": "초대를 만들면 코드/링크가 생겨요.\n카카오·문자로 보내면 상대가 눌러서 바로 연결돼요",
+        "inviteCode": "초대 코드",
+        "kakao": "카카오",
+        "sms": "문자",
+        "link": "링크"
+      },
+      "page3": {
+        "title": "역할마다 권한을 정해요",
+        "desc": "예: 부모는 기록·상담 모두, 조부모는 열람만.\n초대할 때 역할을 고르면 권한이 자동으로 맞춰져요",
+        "roleParent": "엄마 · 아빠 (부모)",
+        "permParent": "기록·상담·전체",
+        "roleGrandma": "할머니 (조부모)",
+        "permViewOnly": "열람만",
+        "roleHelper": "돌봄 도우미",
+        "permRecordOnly": "기록만",
+        "badgeCanRecord": "기록 가능",
+        "badgeViewOnly": "열람만"
+      },
+      "page4": {
+        "title": "연결은 언제든 정리할 수 있어요",
+        "desc": "소유자가 연결을 끊으면 상대 앱에서 아이가 사라져요.\n초대받은 분은 \"나가기\"로 직접 연결을 끊을 수 있어요",
+        "note": "🔑  아이를 만든 사람이 소유자예요.{'\\n'}🔁  기록은 모두에게 실시간으로 공유돼요.{'\\n'}🚪  더 이상 함께하지 않으면 연결을 끊으면 돼요."
+      }
+    },
+    "fever": {
+      "page1": {
+        "title": "체온을 빠르게 기록해요",
+        "desc": "귀·이마·겨드랑이 어디서 쟀는지 고르면\n부위에 맞게 자동 보정해서 정리해요",
+        "currentTemp": "🌡️  지금 체온",
+        "tempSub": "겨드랑이 측정 · +0.5° 보정됨",
+        "morningTemp": "아침 37.1°",
+        "eveningTemp": "저녁 38.2°"
+      },
+      "page2": {
+        "title": "위험한 열을 색으로 알려줘요",
+        "desc": "체온 단계를 색으로 보여주고\n병원에 가야 할 때를 바로 안내해요",
+        "normal": "정상 ~37.4°",
+        "mild": "미열 ~38°",
+        "high": "고열 38°+",
+        "hospitalRecommend": "병원 권고"
+      },
+      "page3": {
+        "title": "몸무게에 맞는 해열제 용량",
+        "desc": "아이 몸무게만 입력하면 타이레놀·부루펜\n먹일 양(ml)을 자동으로 계산해줘요",
+        "weightBasis": "몸무게 12kg 기준",
+        "tylenol": "타이레놀 (아세트아미노펜)",
+        "ibuprofen": "부루펜 (이부프로펜)",
+        "tylenolShort": "타이레놀"
+      },
+      "page4": {
+        "title": "교차복용도 헷갈리지 않게",
+        "desc": "같은 약은 4~6시간, 다른 약과 교차할 땐\n최소 2시간 간격으로 다음 시간을 알려줘요",
+        "doseLogTitle": "💊  복용 기록 & 다음 시간",
+        "sampleDoseTime": "오후 7:00 · 5ml",
+        "crossDoseAvailable": "부루펜 교차 가능",
+        "sampleNextTime": "오후 9:00 부터",
+        "overdosePrevention": "과다복용 자동 방지"
+      }
+    },
+    "gdm": {
+      "page1": {
+        "title": "혈당을 시점별로 기록해요",
+        "desc": "공복·식후 시점과 함께 기록하면 추이가 보여요.\n기준선이 항상 표시돼 한눈에 비교돼요",
+        "targetBaseline": "목표 기준선",
+        "fastingTarget": "95 이하",
+        "after1hTarget": "140 이하",
+        "after2hTarget": "120 이하",
+        "sampleTime": "오늘 아침 · 공복"
+      },
+      "page2": {
+        "title": "식단은 사진으로 간편하게",
+        "desc": "음식 사진을 올리면 AI가 탄수·칼로리를 추정해요.\n끼니별 권장 탄수량도 함께 알려줘요",
+        "sampleMeal": "현미밥 + 나물 반찬",
+        "sampleCarb": "탄수 45g",
+        "sampleCalories": "320 kcal",
+        "aiAnalyzeByPhoto": "사진으로 AI 분석"
+      },
+      "page3": {
+        "title": "주간 AI 리포트로 관리해요",
+        "desc": "일주일 혈당·식단을 종합해\n잘한 점과 주의할 점을 코칭해줘요",
+        "reportLine1": "✅ 식후 혈당이 안정적이에요",
+        "reportLine2": "⚠️ 저녁 탄수는 조금 줄여볼까요?",
+        "note": "🩺 수치·분석은 참고용이에요. 정확한 임당 관리는 담당 의료진과 상담하세요."
+      }
+    },
+    "growth": {
+      "page1": {
+        "title": "키·몸무게로 성장 곡선을 그려요",
+        "desc": "기록을 남기면 또래 대비 위치를\n성장 곡선 위에 점으로 보여줘요",
+        "captionLabel": "📈  몸무게 성장 곡선",
+        "legendNormal": "정상 범위",
+        "legendMyChild": "우리 아이"
+      },
+      "page2": {
+        "title": "백분위(%)가 뭔가요?",
+        "desc": "\"또래 100명 중 몇 번째\"라는 뜻이에요.\n50%면 딱 평균. 너무 높거나 낮은지보다\n곡선을 따라 꾸준히 크는지가 더 중요해요",
+        "pctPill": "몸무게 62백분위 · 키 58백분위",
+        "explain": "또래 100명을 줄 세우면{'\\n'}우리 아이는 약 62번째 정도예요{'\\n'}(평균보다 조금 큰 편)"
+      },
+      "page3": {
+        "title": "정확히 재는 게 중요해요",
+        "desc": "같은 방법으로 재야 곡선이 들쭉날쭉하지 않아요",
+        "tip1": "몸무게는 기저귀를 벗고, 가급적 아침 같은 시간에",
+        "tip2": "키(신장)는 24개월 전엔 눕혀서, 이후엔 세워서",
+        "tip3": "한 달에 1~2번 정도 꾸준히 기록하면 추이가 또렷해져요"
+      }
+    },
+    "laborMonitor": {
+      "page1": {
+        "title": "진통을 시작·종료로 측정해요",
+        "desc": "진통이 오면 버튼, 끝나면 다시 눌러요.\n간격과 지속 시간이 자동으로 기록돼요",
+        "btnLabel": "진통 시작",
+        "btnSub": "누르면 측정 시작",
+        "flow": "시작 → 진통이 끝나면 다시 눌러 종료"
+      },
+      "page2": {
+        "title": "병원 갈 때를 알려줘요",
+        "desc": "가진통과 진진통을 구분해서\n병원 갈 시점을 짚어줘요",
+        "falseLaborTitle": "가진통",
+        "falseLaborDesc": "불규칙{'\\n'}자세 바꾸면 나아짐",
+        "trueLaborTitle": "진진통",
+        "trueLaborDesc": "규칙적·점점 짧아짐{'\\n'}자세 바꿔도 아픔",
+        "rule511": "5-1-1 · 5분 간격 진통이 1시간 지속되면 병원으로!"
+      },
+      "page3": {
+        "title": "태동도 세고, 응급은 바로",
+        "desc": "아기가 움직일 때마다 버튼을 눌러 세요.\n안 느껴지면 안심 가이드, 위급하면 119·분만실",
+        "counterSub": "30분 동안 8회 · 건강한 신호",
+        "warn": "측정·분석은 참고용이에요. 위급 증상은 앱보다 119·분만실에 먼저 연락하세요."
+      }
+    },
+    "lullaby": {
+      "page1": {
+        "title": "잠들기 좋은 소리를 골라요",
+        "desc": "모차르트·브람스 자장가부터\n빗소리·파도 같은 백색소음까지",
+        "trackTitle": "모차르트 자장가",
+        "trackSub": "편안하게 잠들어요 · 3:20",
+        "pillLullaby": "🎵 자장가",
+        "pillWhiteNoise": "🌧️ 백색소음"
+      },
+      "page2": {
+        "title": "울면 자동으로 틀어줘요",
+        "desc": "울음 감지를 켜두면 아이가 울 때\n자장가가 자동으로 재생돼요",
+        "captionLabel": "👂  울음 감지 자동 재생",
+        "detecting": "울음 감지 중…",
+        "pillCryToLullaby": "울음 감지 → 자장가 ON"
+      },
+      "page3": {
+        "title": "엄마 목소리로 녹음해요",
+        "desc": "엄마 목소리로 자장가나 인사를 녹음해\n아이에게 직접 들려줄 수 있어요",
+        "captionLabel": "🎙️  엄마 목소리 녹음",
+        "trackTitle": "엄마의 자장가",
+        "trackSub": "녹음해서 언제든 들려주기"
+      },
+      "page4": {
+        "title": "타이머로 자동 종료",
+        "desc": "시간을 정해두면 아이가 잠든 뒤\n음악이 알아서 꺼져요",
+        "timerSub": "30분 뒤 자동 종료",
+        "min15": "15분",
+        "min30": "30분",
+        "min60": "60분"
+      },
+      "prenatalPage1": {
+        "title": "아기에게 들려주는 태교음악",
+        "desc": "잔잔한 클래식과 편안한 소리를 골라\n뱃속 아기에게 들려줄 수 있어요",
+        "trackTitle": "잔잔한 클래식",
+        "trackSub": "마음이 편안해져요 · 4:10"
+      },
+      "prenatalPage2": {
+        "title": "엄마 목소리를 들려주세요",
+        "desc": "엄마 목소리를 녹음해두면\n뱃속 아기에게 매일 들려줄 수 있어요",
+        "captionLabel": "🎙️  엄마 목소리 녹음",
+        "trackTitle": "아가야 안녕",
+        "trackSub": "엄마 목소리가 태교에 좋아요"
+      },
+      "prenatalPage3": {
+        "title": "자궁 소리로 편안하게",
+        "desc": "자궁 소리·심장소리 같은 편안한 소리와\n타이머로 매일 편하게 들려주세요",
+        "timerSub": "20분 뒤 자동 종료",
+        "pillWomb": "자궁소리",
+        "pillHeartbeat": "심장소리"
+      }
+    },
+    "momGroup": {
+      "page1": {
+        "title": "같은 시기 엄마들과 이야기해요",
+        "desc": "비슷한 또래 아이를 키우는 엄마들과\n질문하고 수다 떨고 정보를 나눠요",
+        "monthRoomName": "월방",
+        "monthRoomDesc": "같은 출생·예정월 엄마들이 모여요",
+        "localRoomName": "내 동네",
+        "localRoomDesc": "가까운 동네 + 또래 엄마들과 연결돼요"
+      },
+      "page2": {
+        "title": "궁금한 걸 올리고 댓글로 나눠요",
+        "desc": "제목·내용·사진으로 글을 쓰고\n주제(질문·수다·정보·고민·축하)를 골라요",
+        "catQuestion": "질문",
+        "catChat": "수다",
+        "catInfo": "정보",
+        "catWorry": "고민",
+        "catCelebration": "축하",
+        "samplePostTitle": "이앓이 시작인데 어떻게 하세요?",
+        "samplePostMeta": "익명맘 · 조회 24 · 댓글 6"
+      },
+      "page3": {
+        "title": "익명·신고로 안전하게",
+        "desc": "부담되는 이야기는 익명으로,\n불쾌한 글은 신고로 함께 지켜요",
+        "anonNote": "익명으로 쓰면 그 방에서는 \"익명맘#1234\"처럼 같은 별명이 유지돼요.",
+        "reportNote": "욕설·광고·개인정보 등은 신고할 수 있고, 여러 번 신고되면 자동으로 가려져요."
+      }
+    },
+    "momWellness": {
+      "page1": {
+        "title": "매일 기분을 가볍게 남겨요",
+        "desc": "5단계 기분과 한 줄 메모로 오늘을 기록해요.\n기기에만 저장돼 부담 없이 남길 수 있어요",
+        "captionLabel": "오늘 기분은 어때요?"
+      },
+      "page2": {
+        "title": "EPDS로 마음 상태를 체크해요",
+        "desc": "세계 표준 산전·산후 우울감 자가검사(10문항).\n10점 이상이면 주의, 13점 이상이면 전문가 상담 권장이에요",
+        "sampleQuestion": "Q. 별다른 이유 없이 불안하거나 걱정스러웠나요?",
+        "optNever": "전혀 그렇지 않다",
+        "optSometimes": "가끔 그랬다",
+        "optOften": "자주 그랬다",
+        "scaleLabel": "안정 → 주의 → 경미한 우울감 → 뚜렷"
+      },
+      "page3": {
+        "title": "혼자 힘들면 함께 지켜요",
+        "desc": "우울감이 중간 이상일 때만 가족에게 알림이 가요.\n많이 힘들 땐 전문 상담으로 바로 연결돼요",
+        "shareText": "남편·가족과 공유",
+        "crisisText": "💙 자가검사는 진단을 대체하지 않아요. 많이 힘들면 정신건강상담 1577-0199 · 자살예방 1393으로 꼭 연락하세요."
+      }
+    },
+    "pregnancyAlbum": {
+      "page1": {
+        "title": "배부른 순간을 주수별로",
+        "desc": "주수마다 배 사진을 남기면\n조금씩 불러오는 변화가 모여요",
+        "weekTile": "{{week}}주"
+      },
+      "page2": {
+        "title": "초음파 사진도 한곳에",
+        "desc": "검진 때 받은 초음파 사진을 주수와 함께\n보관해서 나중에 쭉 돌아볼 수 있어요",
+        "pillLabel": "12주 · 첫 초음파"
+      },
+      "page3": {
+        "title": "한 권의 태교일기로",
+        "desc": "출산 후엔 임신 1주부터 40주까지를\n한 권의 추억 앨범으로 만들 수 있어요",
+        "coverTitle": "우리 아기 태교일기",
+        "coverSub": "임신 1주 ~ 40주"
+      }
+    },
+    "pregnancyJourney": {
+      "steps": {
+        "early": "초기 (~13주)",
+        "stable": "안정기 (~27주)",
+        "late": "후기 (~36주)",
+        "imminent": "출산 임박",
+        "birth": "출산 🎉"
+      },
+      "page1": {
+        "title": "임신 여정을 5단계로 안내해요",
+        "desc": "초기부터 출산까지 단계로 나눠\n지금 내가 어디쯤인지 보여줘요"
+      },
+      "page2": {
+        "title": "지금 단계에 필요한 것만",
+        "desc": "단계마다 챙길 검진·영양제·운동·주의할 점을\n쉬운 말로 콕 집어 알려줘요",
+        "captionLabel": "✅  안정기에 할 일",
+        "task1": "정밀 초음파 받기",
+        "task2": "철분·칼슘 챙기기",
+        "task3": "가벼운 운동하기"
+      },
+      "page3": {
+        "title": "출산까지 함께 가요",
+        "desc": "한 단계가 지나면 다음 단계에 맞는\n안내로 자동으로 바뀌어요",
+        "captionLabel": "➡️  다음 단계",
+        "pillStable": "안정기",
+        "pillLateGuide": "후기 안내"
+      }
+    },
+    "sos": {
+      "page1": {
+        "title": "아이가 아플 때, 먼저 확인하세요",
+        "desc": "증상을 선택하면 위험도를 4단계로 알려드려요.\n색깔의 뜻을 꼭 기억해주세요",
+        "levelEmergencyName": "응급 (빨강)",
+        "levelEmergencyDesc": "즉시 119 — 한시가 급해요",
+        "levelHospitalName": "병원 (주황)",
+        "levelHospitalDesc": "바로 병원·응급실로",
+        "levelCautionName": "주의 (노랑)",
+        "levelCautionDesc": "안전 아님! 잘 지켜보세요",
+        "levelObserveName": "관찰 (초록)",
+        "levelObserveDesc": "집에서 경과를 지켜봐요"
+      },
+      "page2": {
+        "title": "증상을 선택만 하면 돼요",
+        "desc": "열·구토·발진 등 증상을 고르고\n체온을 입력하면 더 정확하게 안내해요",
+        "symptoms": [
+          "🌡️ 열",
+          "🤮 구토",
+          "😮‍💨 호흡곤란",
+          "🩸 출혈",
+          "🔴 발진",
+          "😵 경련"
+        ],
+        "note": "⚠️ 이 기능은 참고용이에요. \"관찰\" 결과여도 아이 상태가 이상하면 망설이지 말고 병원에 가세요."
+      },
+      "page3": {
+        "title": "CPR·응급처치도 바로 옆에",
+        "desc": "CPR, 하임리히(이물질), 화상 등\n월령에 맞는 응급처치 가이드를 단계별로 보여줘요",
+        "items": [
+          "❤️ 심폐소생",
+          "🫁 하임리히",
+          "🔥 화상",
+          "🧩 이물질"
+        ],
+        "note": "👶 영아(12개월 미만)와 그 이상은 처치법이 달라요 — 아이 월령에 맞는 안내를 따라주세요."
+      }
+    },
+    "trait": {
+      "page1": {
+        "title": "기질이란 무엇인가요?",
+        "desc": "아이가 타고난 성향·에너지의 균형이에요.\n탐구·활동·안정·분석·감성 다섯 가지로 풀어서 보여드려요",
+        "cap": "🌱  우리 아이 에너지 분포"
+      },
+      "energyLabels": {
+        "explore": "탐구",
+        "active": "활동",
+        "stable": "안정",
+        "analytic": "분석",
+        "emotional": "감성"
+      },
+      "page2": {
+        "title": "어떻게 분석하나요?",
+        "desc": "생년월일·시간으로 타고난 성향을 분석하고,\n간단한 관찰 질문으로 더 정교하게 다듬어요",
+        "flowBirth": "🎂 생년월일시",
+        "flowQuestion": "📝 관찰 질문",
+        "flowResult": "우리 아이만의 기질 리포트"
+      },
+      "page3": {
+        "title": "어디에 쓰이나요?",
+        "desc": "기질은 단순 결과가 아니라,\n상담·추천이 우리 아이에 맞게 조정되는 기준이 돼요",
+        "useChat": "상담이모가 기질에 맞춰 답해줘요",
+        "useRecommend": "음식·놀이·학습 추천이 달라져요",
+        "useTips": "수면·훈육 팁도 성향에 맞게 제안돼요"
+      }
+    },
+    "vaccination": {
+      "page1": {
+        "title": "국가 예방접종을 자동 정리",
+        "desc": "우리 아이 개월수에 맞는 무료 국가접종을\n순서대로 정리해서 보여줘요",
+        "vaccineBcg": "BCG (결핵)",
+        "statusDone": "완료",
+        "vaccineDtap": "DTaP 3차",
+        "statusUpcoming": "예정",
+        "vaccinePneumo": "폐렴구균",
+        "statusOverdue": "지남"
+      },
+      "page2": {
+        "title": "맞을 때를 놓치지 않아요",
+        "desc": "다가오는 접종은 며칠 남았는지 D-day로,\n지난 접종은 빨갛게 표시해 챙겨드려요",
+        "ddaySub": "DTaP 3차 · 6월 11일",
+        "notifyPill": "🔔 알림으로 미리 알려드려요"
+      },
+      "page3": {
+        "title": "맞은 접종은 체크!",
+        "desc": "맞은 날·병원을 기록하고 완료를 체크하면\n전체 진행률을 한눈에 볼 수 있어요",
+        "cap": "✅  접종 진행률",
+        "progressText": "14 / 20 완료 (70%)"
+      }
+    },
+    "weeklyDev": {
+      "page1": {
+        "title": "이번 주 아기 발달을 알려줘요",
+        "desc": "지금 주수에 맞춰 아기 키·몸무게와\n어떤 변화가 생기는지 보여줘요",
+        "weekBadge": "임신 20주차",
+        "heightLabel": "키",
+        "heightVal": "약 25cm",
+        "weightLabel": "몸무게",
+        "weightVal": "약 300g"
+      },
+      "page2": {
+        "title": "크기를 과일로 쉽게 비교해요",
+        "desc": "“이번 주는 바나나만 해요”처럼\n친숙한 것에 비유해 크기를 느낄 수 있어요",
+        "compare": "지금은 바나나만 해요",
+        "week12": "🫐 12주",
+        "week20": "🍌 20주",
+        "week36": "🎃 36주"
+      },
+      "page3": {
+        "title": "매주 자동으로 바뀌어요",
+        "desc": "주수가 지나면 발달 내용이\n다음 주로 알아서 업데이트돼요",
+        "cap": "🔄  자동 업데이트",
+        "week20": "20주",
+        "week21": "21주 발달"
+      }
+    }
+  },
+  "pushNotifications": {
+    "appName": "아맞다",
+    "channels": {
+      "default": "아맞다 알림",
+      "engagement": "아맞다 리마인더"
+    },
+    "permissionAlert": {
+      "message": "아이 발달 단계별 팁, 백신/병원 일정, 일일 기록 리마인더를 보내드릴게요.\n\n언제든 설정에서 끌 수 있어요.",
+      "allow": "허용"
+    },
+    "reengagement3d": {
+      "body": "우리 아기 잘 지내고 있나요? 요즘 어떻게 지내는지 궁금해요!"
+    },
+    "reengagement7d": {
+      "body": "성장일기가 많이 밀렸어요! 잠깐만 시간 내주시면 소중한 기록이 됩니다"
+    },
+    "reengagement10d": {
+      "body": "육아일지가 많이 밀렸어요! 데이터를 누적해주면 분석해서 부족한 부분을 채울 수 있어요"
+    },
+    "reengagement14d": {
+      "body": "우리 아기의 성장, 놓치지 마세요! 오늘 잠깐이라도 기록해볼까요?"
+    },
+    "morning": {
+      "body": "좋은 아침! 어젯밤 우리 아기는 잘 잤나요?"
+    },
+    "afternoon": {
+      "body": "지금 우리 아기와 15분 놀이 시간 어때요?"
+    },
+    "evening": {
+      "body": "오늘의 육아일기가 준비됐어요"
+    },
+    "weeklyReport": {
+      "body": "이번 주 육아 리포트가 도착했어요"
+    },
+    "coachingFollowup": {
+      "body": "어제 상담 후 잘 지나갔나요? 궁금한 점이 있으면 말씀해 주세요"
+    },
+    "firstCoachingNudge": {
+      "title": "맞춤 육아 팁이 준비됐어요",
+      "body": "궁금한 거 뭐든 물어보세요. 상담이모가 기다리고 있어요!"
+    },
+    "nextDayNudge": {
+      "body": "우리 아기에게 딱 맞는 육아 코칭, 한번 써보세요!"
+    },
+    "dailyMission": {
+      "title": "똑똑! 👶 엄마",
+      "body": "오늘 영양제 챙기셨나요? 시원한 물 한 잔도 잊지 마세요! ✨"
+    },
+    "feverRecheck": {
+      "title": "🌡 체온 재측정 알림",
+      "body": "체온을 측정한 지 1시간이 지났어요! 지금 상태를 다시 한번 체크해 주세요."
+    },
+    "pregnancyExams": {
+      "nt": {
+        "title": "1차 기형아 검사 (NT)",
+        "body": "11~13주 목투명대 검사 시기예요. 병원 예약을 확인해 주세요."
+      },
+      "quad": {
+        "title": "쿼드 검사",
+        "body": "15~20주 쿼드 검사 시기예요. 예약했는지 확인해 주세요."
+      },
+      "ultrasound": {
+        "title": "정밀 초음파",
+        "body": "20~24주 정밀초음파 시기예요. 아기의 발달을 자세히 볼 수 있어요."
+      },
+      "hospitalRegHighRisk": {
+        "title": "분만 병원 등록 권유 (고위험)",
+        "body": "고위험 임신은 조산 가능성이 있어요. 분만 병원 번호를 미리 등록해 두세요."
+      },
+      "gct": {
+        "title": "임당 검사 (GCT)",
+        "body": "24~28주 임신성 당뇨 검사 시기예요."
+      },
+      "hospitalReg": {
+        "title": "분만 병원 등록 권유",
+        "body": "출산이 가까워지고 있어요. 급한 순간 바로 전화할 수 있도록 분만 병원 번호를 등록해 두세요."
+      },
+      "nst": {
+        "title": "태동 검사 (NST)",
+        "body": "32주 전후 NST 검사 시기예요."
+      },
+      "gbs": {
+        "title": "GBS 검사",
+        "body": "36주 B형 연쇄상구균 검사 시기예요."
+      },
+      "birthBag": {
+        "title": "출산 가방 준비",
+        "body": "출산 가방 체크리스트를 확인해 주세요."
+      }
+    },
+    "pregnancyCountdown": {
+      "d7": {
+        "title": "출산 D-7",
+        "body": "출산까지 일주일! 가방과 서류를 최종 점검해 주세요."
+      },
+      "d3": {
+        "title": "출산 D-3",
+        "body": "진통 간격 타이머를 미리 확인해 두세요."
+      },
+      "dday": {
+        "title": "출산예정일 D-Day",
+        "body": "예정일이에요. 진통 시작되면 바로 병원에 연락하세요."
+      }
+    }
+  },
+  "otaCheck": {
+    "updateFailed": {
+      "title": "업데이트 실패",
+      "message": "네트워크 상태를 확인하고 앱을 다시 시작해주세요."
+    },
+    "updateAvailable": {
+      "title": "새 버전이 준비됐어요",
+      "message": "앱이 최신 서버와 맞지 않아 일부 기능이 동작하지 않을 수 있어요.\n지금 업데이트할까요?",
+      "updateButton": "업데이트"
+    }
+  },
+  "checkup": {
+    "dateFormat": "{{yyyy}}-{{mm}}-{{dd}} ({{dow}})"
+  },
+  "socialAuth": {
+    "appName": "아맞다",
+    "errors": {
+      "kakaoSdk": "카카오 SDK: {{message}}",
+      "naverEnvMissing": "네이버 로그인 환경변수(EXPO_PUBLIC_NAVER_CLIENT_ID/SECRET)가 설정되지 않았습니다.",
+      "naverLoginFailed": "네이버 로그인 실패: {{message}}",
+      "naverSdk": "네이버 SDK: {{message}}",
+      "googleEnvMissing": "구글 로그인 환경변수(EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID)가 설정되지 않았습니다.",
+      "googleTokenMissing": "accessToken을 받지 못했습니다.",
+      "googleSdk": "구글 SDK: {{message}}",
+      "clientIdMissing": "[social-auth] {{provider}} clientId 미설정 — 프로덕션에서 mock 토큰 불가",
+      "appleIosOnly": "Apple 로그인은 iOS에서만 지원됩니다.",
+      "appleUnavailable": "이 기기에서는 Apple 로그인을 사용할 수 없습니다.",
+      "appleTokenMissing": "Apple identityToken 을 받지 못했습니다.",
+      "appleLogin": "Apple 로그인: {{message}}",
+      "unknownError": "알 수 없는 오류"
+    }
+  },
+  "imagePicker": {
+    "galleryUnavailable": {
+      "title": "갤러리를 열 수 없어요",
+      "desc": "기기의 기본 갤러리 앱이 없거나 비활성화되어 있어요.\n설정 > 앱에서 갤러리/사진 앱을 활성화해주세요."
+    },
+    "loadFailed": "사진을 불러오지 못했어요. 다시 시도해주세요.",
+    "cameraPermissionRequired": {
+      "title": "권한 필요",
+      "desc": "카메라 권한이 필요합니다. 설정에서 허용해주세요."
+    },
+    "cameraUnavailable": {
+      "title": "카메라를 열 수 없어요",
+      "desc": "기기에서 카메라 앱을 찾을 수 없어요."
+    },
+    "cameraOpenFailed": "카메라를 열지 못했어요. 다시 시도해주세요."
+  },
+  "deliveryHospital": {
+    "label": {
+      "highRiskCenterWard": "고위험 산모센터(MFICU) / 분만실",
+      "deliveryWardDirect": "분만실 직통",
+      "deliveryHospitalMain": "분만 병원 대표",
+      "clinicHospitalWard": "진료 병원 분만실",
+      "outpatientMain": "외래 대표"
+    },
+    "subLabel": {
+      "universityEmergency247": "대학병원 — 24시간 응급 연결",
+      "nightWeekendPriority": "밤/주말 우선",
+      "requestTransferViaOperator": "교환 통해 분만실 연결 요청",
+      "daytimeHoursPriority": "낮 진료시간 우선"
+    }
+  },
+  "payment": {
+    "product": {
+      "monthlyName": "아맞다 VIP 월간",
+      "yearlyName": "아맞다 VIP 연간"
+    },
+    "method": {
+      "autoPlatformDesc": "플랫폼 자동 결제 (권장)",
+      "kakaopay": "카카오페이",
+      "naverpay": "네이버페이",
+      "tosspay": "토스페이",
+      "card": "신용/체크카드",
+      "transfer": "계좌이체"
+    },
+    "error": {
+      "iapUnavailable": "인앱결제 기능을 사용할 수 없습니다.",
+      "loadPurchaseHistoryFailed": "구매 내역을 불러오지 못했습니다: {{error}}",
+      "serverVerificationFailed": "서버 검증에 실패했습니다. 잠시 후 다시 시도해주세요.",
+      "iapAvailableNextUpdate": "인앱결제 기능은 다음 업데이트에서 사용 가능합니다.",
+      "iapConnectionFailed": "IAP 연결 실패: {{error}}",
+      "subscriptionProductLoadFailed": "구독 상품 정보를 불러오지 못했습니다. Play Store 등록 상태를 확인해주세요.",
+      "productQueryFailed": "상품 조회 실패: {{error}}",
+      "iapModuleNotInitialized": "IAP 모듈이 초기화되지 않았습니다.",
+      "purchaseCancelledOrNoResponse": "결제가 취소되었거나 응답을 받지 못했습니다.",
+      "iapCancelledOrFailed": "IAP 결제 취소 또는 실패: {{error}}",
+      "receiptTokenNotFound": "영수증 토큰을 찾을 수 없습니다.",
+      "transactionIdNotFound": "거래 ID를 찾을 수 없습니다.",
+      "paymentServerTemporarilyUnavailable": "결제 서버를 일시적으로 사용할 수 없어요. 잠시 후 다시 시도해주세요.",
+      "paymentVerificationFailed": "결제 검증에 실패했어요. 잠시 후 다시 시도하거나 \"구매 복원\"을 눌러주세요."
+    },
+    "success": {
+      "purchaseRestored": "구매가 복원되었습니다."
+    }
+  },
+  "traitReportHtml": {
+    "footer": "— 아맞다 앱에서 분석 · {{date}}",
+    "section": {
+      "personality": "🎭 성격 특성",
+      "strengths": "💪 강점",
+      "weaknesses": "⚠️ 주의할 점",
+      "studyStyle": "📚 학습 스타일",
+      "bestSubjects": "⭐ 잘 맞는 과목",
+      "weakAreas": "💡 보완할 영역",
+      "academyStyle": "🏫 학원 추천 스타일",
+      "educationDirection": "🎓 교육 방향",
+      "futureFields": "🚀 어울리는 미래 직업",
+      "sportsMatch": "🏃 추천 운동",
+      "goodFoods": "🥗 잘 맞는 음식",
+      "badFoods": "🚫 피할 음식",
+      "specialTalent": "🏆 특별한 재능",
+      "parentingTip": "🤱 양육 팁",
+      "dailyRoutineTip": "☀️ 일상 루틴 팁",
+      "socialTip": "🤝 사회성 팁",
+      "emotionalTip": "💖 감정 팁",
+      "doList": "✅ 추천 (Do)",
+      "dontList": "❌ 비추천 (Don't)"
     }
   }
 }

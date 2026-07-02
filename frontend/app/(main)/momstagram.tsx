@@ -56,9 +56,9 @@ export default function MomstagramScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchFeed();
+      fetchFeed(t);
       loadPrivatePosts();
-    }, [fetchFeed, loadPrivatePosts]),
+    }, [fetchFeed, loadPrivatePosts, t]),
   );
 
   const allPosts = useMemo(() => {
@@ -76,9 +76,9 @@ export default function MomstagramScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refresh();
+    await refresh(t);
     setRefreshing(false);
-  }, [refresh]);
+  }, [refresh, t]);
 
   const handleShare = useCallback((_postId: string) => {
     Alert.alert(t('momstagram.shareAlert.title'), t('momstagram.shareAlert.desc'));
@@ -103,7 +103,7 @@ export default function MomstagramScreen() {
     try {
       await momstagramApi.reportPost(postId, reason);
       Alert.alert(t('momstagram.reportDoneAlert.title'), t('momstagram.reportDoneAlert.desc'));
-      refresh();
+      refresh(t);
     } catch {
       Alert.alert(t('common.error'), t('momstagram.reportFailAlert.desc'));
     }
@@ -122,7 +122,7 @@ export default function MomstagramScreen() {
             try {
               await momstagramApi.blockUser(targetUserId);
               Alert.alert(t('momstagram.blockDoneAlert.title'), t('momstagram.blockDoneAlert.desc'));
-              refresh();
+              refresh(t);
             } catch {
               Alert.alert(t('common.error'), t('momstagram.blockFailAlert.desc'));
             }
@@ -194,12 +194,12 @@ export default function MomstagramScreen() {
   }, [allPosts, deletePost, currentUserId, handleReportPost, handleBlockUser, t]);
 
   const handleEditPickImage = useCallback(async () => {
-    const picked = await pickImageFromLibrary({ quality: 0.8 });
+    const picked = await pickImageFromLibrary(t, { quality: 0.8 });
     if (picked?.uri) {
       setEditImage(picked.uri);
       setEditImageChanged(true);
     }
-  }, []);
+  }, [t]);
 
   const handleEditRemoveImage = useCallback(() => {
     setEditImage(null);
@@ -260,9 +260,9 @@ export default function MomstagramScreen() {
   const handleCommentSubmit = useCallback(
     (text: string) => {
       if (!commentPostId) return;
-      addCommentViaApi(commentPostId, text);
+      addCommentViaApi(commentPostId, text, t);
     },
-    [commentPostId, addCommentViaApi],
+    [commentPostId, addCommentViaApi, t],
   );
 
   const renderItem = useCallback(

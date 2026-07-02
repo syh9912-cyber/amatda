@@ -33,7 +33,7 @@ export function CoachingInput({
 }: Props) {
   const { t } = useTranslation();
   const handlePhoto = async () => {
-    const picked = await pickImageFromLibrary({ quality: 0.8 });
+    const picked = await pickImageFromLibrary(t, { quality: 0.8 });
     if (picked) onPhoto(picked.uri);
   };
 

@@ -15,6 +15,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
+import i18n from '../i18n';
 
 const KEY = (childId: string) => `amatda_next_checkup_${childId}`;
 
@@ -72,13 +73,22 @@ export function formatDday(days: number): string {
   return `D+${Math.abs(days)}`;
 }
 
-/** ISO date → 한국어 상세 ("2026-05-15 (월)"). */
+/** ISO date → 현지화된 상세 날짜 ("2026-05-15 (월)"). */
 export function formatKoreanDate(isoDate: string): string {
   const d = new Date(isoDate + 'T00:00:00');
   if (isNaN(d.getTime())) return isoDate;
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
-  const dow = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
-  return `${yyyy}-${mm}-${dd} (${dow})`;
+  const weekdays = [
+    i18n.t('components.observationCard.weekday.sun'),
+    i18n.t('components.observationCard.weekday.mon'),
+    i18n.t('components.observationCard.weekday.tue'),
+    i18n.t('components.observationCard.weekday.wed'),
+    i18n.t('components.observationCard.weekday.thu'),
+    i18n.t('components.observationCard.weekday.fri'),
+    i18n.t('components.observationCard.weekday.sat'),
+  ];
+  const dow = weekdays[d.getDay()];
+  return i18n.t('checkup.dateFormat', { yyyy, mm, dd, dow });
 }

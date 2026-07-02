@@ -30,7 +30,7 @@ import { getHospital } from '../../services/deliveryHospital';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideButton } from '../../components/common/GuideButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
-import { BIRTHBAG_GUIDE } from '../../features/guide/birthBagGuide';
+import { getBirthBagGuide } from '../../features/guide/birthBagGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
 /* PNG 아이콘 (기본 이모지 대신 — 우리 앱 일러스트 톤 유지) */
@@ -928,7 +928,7 @@ export default function BirthBagScreen() {
         </Pressable>
       </Modal>
 
-      <GuideCarousel visible={guideVisible} pages={BIRTHBAG_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#7CA46E" />
+      <GuideCarousel visible={guideVisible} pages={getBirthBagGuide(t)} onClose={closeGuide} onComplete={closeGuide} accent="#7CA46E" />
     </View>
   );
 }

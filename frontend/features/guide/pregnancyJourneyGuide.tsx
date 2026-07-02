@@ -1,5 +1,6 @@
 /** 임신여정 가이드 — 5단계 여정 · 단계별 할 일 · 다음 단계 안내 (실제 기능 기반) */
 import { View, Text, Image, StyleSheet } from 'react-native';
+import type { TFunction } from 'i18next';
 import { GuideFrame, GuidePill, GUIDE_C, type GuidePage } from '../../components/common/GuideCarousel';
 
 const IC_LEAF = require('../../assets/preg-leaf.png') as number;
@@ -22,60 +23,65 @@ const g = StyleSheet.create({
   arrow: { fontSize: 14, color: GUIDE_C.textLight, fontWeight: '800' },
 });
 
-const STEPS = [
-  { n: '1', label: '초기 (~13주)', c: GUIDE_C.green },
-  { n: '2', label: '안정기 (~27주)', c: GUIDE_C.blue },
-  { n: '3', label: '후기 (~36주)', c: GUIDE_C.gold },
-  { n: '4', label: '출산 임박', c: GUIDE_C.accent },
-  { n: '5', label: '출산 🎉', c: GUIDE_C.red },
-];
+function getSteps(t: TFunction) {
+  return [
+    { n: '1', label: t('guides.pregnancyJourney.steps.early'), c: GUIDE_C.green },
+    { n: '2', label: t('guides.pregnancyJourney.steps.stable'), c: GUIDE_C.blue },
+    { n: '3', label: t('guides.pregnancyJourney.steps.late'), c: GUIDE_C.gold },
+    { n: '4', label: t('guides.pregnancyJourney.steps.imminent'), c: GUIDE_C.accent },
+    { n: '5', label: t('guides.pregnancyJourney.steps.birth'), c: GUIDE_C.red },
+  ];
+}
 
-export const PREGNANCY_JOURNEY_GUIDE: GuidePage[] = [
-  {
-    title: '임신 여정을 5단계로 안내해요',
-    desc: '초기부터 출산까지 단계로 나눠\n지금 내가 어디쯤인지 보여줘요',
-    visual: (
-      <GuideFrame>
-        <Image source={IC_LEAF} style={g.hero} resizeMode="contain" />
-        <View style={g.steps}>
-          {STEPS.map((s) => (
-            <View key={s.n} style={g.step}>
-              <View style={[g.stepDot, { backgroundColor: s.c }]}><Text style={g.stepNum}>{s.n}</Text></View>
-              <Text style={g.stepLabel}>{s.label}</Text>
-            </View>
-          ))}
-        </View>
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '지금 단계에 필요한 것만',
-    desc: '단계마다 챙길 검진·영양제·운동·주의할 점을\n쉬운 말로 콕 집어 알려줘요',
-    visual: (
-      <GuideFrame>
-        <Image source={IC_STETH} style={g.hero} resizeMode="contain" />
-        <Text style={g.cap}>✅  안정기에 할 일</Text>
-        <View style={g.card}>
-          <View style={g.line}><Text style={g.bullet}>🩺</Text><Text style={g.lineText}>정밀 초음파 받기</Text></View>
-          <View style={g.line}><Text style={g.bullet}>💊</Text><Text style={g.lineText}>철분·칼슘 챙기기</Text></View>
-          <View style={g.line}><Text style={g.bullet}>🧘</Text><Text style={g.lineText}>가벼운 운동하기</Text></View>
-        </View>
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '출산까지 함께 가요',
-    desc: '한 단계가 지나면 다음 단계에 맞는\n안내로 자동으로 바뀌어요',
-    visual: (
-      <GuideFrame>
-        <Image source={IC_RIBBON} style={g.hero} resizeMode="contain" />
-        <Text style={g.cap}>➡️  다음 단계</Text>
-        <View style={g.row}>
-          <GuidePill label="안정기" color={GUIDE_C.textSub} bg="#EFEFF3" />
-          <Text style={g.arrow}>→</Text>
-          <GuidePill label="후기 안내" color="#FFF" filled bg={GUIDE_C.gold} />
-        </View>
-      </GuideFrame>
-    ),
-  },
-];
+export function getPregnancyJourneyGuide(t: TFunction): GuidePage[] {
+  const STEPS = getSteps(t);
+  return [
+    {
+      title: t('guides.pregnancyJourney.page1.title'),
+      desc: t('guides.pregnancyJourney.page1.desc'),
+      visual: (
+        <GuideFrame>
+          <Image source={IC_LEAF} style={g.hero} resizeMode="contain" />
+          <View style={g.steps}>
+            {STEPS.map((s) => (
+              <View key={s.n} style={g.step}>
+                <View style={[g.stepDot, { backgroundColor: s.c }]}><Text style={g.stepNum}>{s.n}</Text></View>
+                <Text style={g.stepLabel}>{s.label}</Text>
+              </View>
+            ))}
+          </View>
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('guides.pregnancyJourney.page2.title'),
+      desc: t('guides.pregnancyJourney.page2.desc'),
+      visual: (
+        <GuideFrame>
+          <Image source={IC_STETH} style={g.hero} resizeMode="contain" />
+          <Text style={g.cap}>{t('guides.pregnancyJourney.page2.captionLabel')}</Text>
+          <View style={g.card}>
+            <View style={g.line}><Text style={g.bullet}>🩺</Text><Text style={g.lineText}>{t('guides.pregnancyJourney.page2.task1')}</Text></View>
+            <View style={g.line}><Text style={g.bullet}>💊</Text><Text style={g.lineText}>{t('guides.pregnancyJourney.page2.task2')}</Text></View>
+            <View style={g.line}><Text style={g.bullet}>🧘</Text><Text style={g.lineText}>{t('guides.pregnancyJourney.page2.task3')}</Text></View>
+          </View>
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('guides.pregnancyJourney.page3.title'),
+      desc: t('guides.pregnancyJourney.page3.desc'),
+      visual: (
+        <GuideFrame>
+          <Image source={IC_RIBBON} style={g.hero} resizeMode="contain" />
+          <Text style={g.cap}>{t('guides.pregnancyJourney.page3.captionLabel')}</Text>
+          <View style={g.row}>
+            <GuidePill label={t('guides.pregnancyJourney.page3.pillStable')} color={GUIDE_C.textSub} bg="#EFEFF3" />
+            <Text style={g.arrow}>→</Text>
+            <GuidePill label={t('guides.pregnancyJourney.page3.pillLateGuide')} color="#FFF" filled bg={GUIDE_C.gold} />
+          </View>
+        </GuideFrame>
+      ),
+    },
+  ];
+}

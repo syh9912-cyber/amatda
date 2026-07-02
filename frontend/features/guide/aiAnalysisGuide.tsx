@@ -1,5 +1,6 @@
 /** AI분석 가이드 페이지 — 육아패턴 · 대변 · 울음 3가지 분석 (커스텀 아이콘 사용) */
 import { View, Text, Image, StyleSheet } from 'react-native';
+import type { TFunction } from 'i18next';
 import { GuideFrame, GUIDE_C, type GuidePage } from '../../components/common/GuideCarousel';
 
 const IC_PATTERN = require('../../assets/quick-report.png') as number;
@@ -31,47 +32,49 @@ const g = StyleSheet.create({
   warn: { fontSize: 11.5, color: GUIDE_C.red, fontWeight: '700', textAlign: 'center', marginTop: 10 },
 });
 
-export const AIANALYSIS_GUIDE: GuidePage[] = [
-  {
-    title: 'AI가 우리 아이를 분석해요',
-    desc: '세 가지로 분석해요 — 육아패턴, 대변, 울음.\n원하는 분석을 골라 시작하면 돼요',
-    visual: (
-      <GuideFrame>
-        <View style={g.modeRow}>
-          <View style={[g.mode, { backgroundColor: GUIDE_C.purpleLight }]}><Image source={IC_PATTERN} style={g.modeIcon} resizeMode="contain" /><Text style={[g.modeText, { color: GUIDE_C.purple }]}>육아패턴</Text></View>
-          <View style={[g.mode, { backgroundColor: GUIDE_C.goldLight }]}><Image source={IC_POOP} style={g.modeIcon} resizeMode="contain" /><Text style={[g.modeText, { color: GUIDE_C.gold }]}>대변</Text></View>
-          <View style={[g.mode, { backgroundColor: GUIDE_C.blueLight }]}><Image source={IC_CRY} style={g.modeIcon} resizeMode="contain" /><Text style={[g.modeText, { color: GUIDE_C.blue }]}>울음</Text></View>
-        </View>
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '기록만 하면 패턴이 분석돼요',
-    desc: '아기시간에 쌓인 배변·수유·수면을\nAI가 표준과 비교해 종합 평가해줘요 (따로 입력 안 해도 돼요)',
-    visual: (
-      <GuideFrame>
-        <Text style={g.cap}>📊  오늘의 육아패턴</Text>
-        <View style={g.metricRow}><Text style={g.metricLabel}>수유</Text><Text style={g.metricVal}>7회</Text><View style={g.okPill}><Text style={g.okText}>적정</Text></View></View>
-        <View style={g.metricRow}><Text style={g.metricLabel}>수면</Text><Text style={g.metricVal}>13시간</Text><View style={g.okPill}><Text style={g.okText}>적정</Text></View></View>
-        <View style={g.metricRow}><Text style={g.metricLabel}>배변</Text><Text style={g.metricVal}>3회</Text><View style={g.okPill}><Text style={g.okText}>적정</Text></View></View>
-        <View style={g.evalPill}><Text style={g.evalText}>🤖  전반적으로 안정적인 하루였어요</Text></View>
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '사진·소리로 대변·울음도 분석',
-    desc: '대변은 사진, 울음은 녹음을 올리면\nAI가 원인과 대처법을 알려줘요',
-    visual: (
-      <GuideFrame>
-        <View style={g.inputRow}>
-          <View style={[g.inputCard, { backgroundColor: GUIDE_C.goldLight }]}><Image source={IC_CAMERA} style={g.inputIcon} resizeMode="contain" /><Text style={[g.inputText, { color: GUIDE_C.gold }]}>대변 사진</Text><Text style={[g.inputSub, { color: GUIDE_C.gold }]}>밝은 곳에서 또렷이</Text></View>
-          <View style={[g.inputCard, { backgroundColor: GUIDE_C.blueLight }]}><Image source={IC_MIC} style={g.inputIcon} resizeMode="contain" /><Text style={[g.inputText, { color: GUIDE_C.blue }]}>울음 녹음</Text><Text style={[g.inputSub, { color: GUIDE_C.blue }]}>조용한 곳에서 가까이</Text></View>
-        </View>
-        <View style={g.note}>
-          <Text style={g.noteText}>👶  대변 분석은 0~72개월, 울음 분석은 0~24개월 아이에게 맞춰져 있어요.</Text>
-        </View>
-        <Text style={g.warn}>참고용이에요. 이상 증상이 보이면 꼭 병원에 가세요</Text>
-      </GuideFrame>
-    ),
-  },
-];
+export function getAiAnalysisGuide(t: TFunction): GuidePage[] {
+  return [
+    {
+      title: t('guides.aiAnalysis.page1.title'),
+      desc: t('guides.aiAnalysis.page1.desc'),
+      visual: (
+        <GuideFrame>
+          <View style={g.modeRow}>
+            <View style={[g.mode, { backgroundColor: GUIDE_C.purpleLight }]}><Image source={IC_PATTERN} style={g.modeIcon} resizeMode="contain" /><Text style={[g.modeText, { color: GUIDE_C.purple }]}>{t('aiAnalysis.tabs.pattern.label')}</Text></View>
+            <View style={[g.mode, { backgroundColor: GUIDE_C.goldLight }]}><Image source={IC_POOP} style={g.modeIcon} resizeMode="contain" /><Text style={[g.modeText, { color: GUIDE_C.gold }]}>{t('aiAnalysis.tabs.poop.label')}</Text></View>
+            <View style={[g.mode, { backgroundColor: GUIDE_C.blueLight }]}><Image source={IC_CRY} style={g.modeIcon} resizeMode="contain" /><Text style={[g.modeText, { color: GUIDE_C.blue }]}>{t('aiAnalysis.tabs.cry.label')}</Text></View>
+          </View>
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('guides.aiAnalysis.page2.title'),
+      desc: t('guides.aiAnalysis.page2.desc'),
+      visual: (
+        <GuideFrame>
+          <Text style={g.cap}>{t('guides.aiAnalysis.page2.cardTitle')}</Text>
+          <View style={g.metricRow}><Text style={g.metricLabel}>{t('guides.aiAnalysis.page2.feeding')}</Text><Text style={g.metricVal}>{t('guides.aiAnalysis.page2.feedingCount')}</Text><View style={g.okPill}><Text style={g.okText}>{t('guides.aiAnalysis.page2.ok')}</Text></View></View>
+          <View style={g.metricRow}><Text style={g.metricLabel}>{t('guides.aiAnalysis.page2.sleep')}</Text><Text style={g.metricVal}>{t('guides.aiAnalysis.page2.sleepHours')}</Text><View style={g.okPill}><Text style={g.okText}>{t('guides.aiAnalysis.page2.ok')}</Text></View></View>
+          <View style={g.metricRow}><Text style={g.metricLabel}>{t('guides.aiAnalysis.page2.poop')}</Text><Text style={g.metricVal}>{t('guides.aiAnalysis.page2.poopCount')}</Text><View style={g.okPill}><Text style={g.okText}>{t('guides.aiAnalysis.page2.ok')}</Text></View></View>
+          <View style={g.evalPill}><Text style={g.evalText}>{t('guides.aiAnalysis.page2.evalText')}</Text></View>
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('guides.aiAnalysis.page3.title'),
+      desc: t('guides.aiAnalysis.page3.desc'),
+      visual: (
+        <GuideFrame>
+          <View style={g.inputRow}>
+            <View style={[g.inputCard, { backgroundColor: GUIDE_C.goldLight }]}><Image source={IC_CAMERA} style={g.inputIcon} resizeMode="contain" /><Text style={[g.inputText, { color: GUIDE_C.gold }]}>{t('guides.aiAnalysis.page3.poopPhoto')}</Text><Text style={[g.inputSub, { color: GUIDE_C.gold }]}>{t('guides.aiAnalysis.page3.poopHint')}</Text></View>
+            <View style={[g.inputCard, { backgroundColor: GUIDE_C.blueLight }]}><Image source={IC_MIC} style={g.inputIcon} resizeMode="contain" /><Text style={[g.inputText, { color: GUIDE_C.blue }]}>{t('guides.aiAnalysis.page3.cryRecording')}</Text><Text style={[g.inputSub, { color: GUIDE_C.blue }]}>{t('guides.aiAnalysis.page3.cryHint')}</Text></View>
+          </View>
+          <View style={g.note}>
+            <Text style={g.noteText}>{t('guides.aiAnalysis.page3.ageNote')}</Text>
+          </View>
+          <Text style={g.warn}>{t('guides.aiAnalysis.page3.warning')}</Text>
+        </GuideFrame>
+      ),
+    },
+  ];
+}

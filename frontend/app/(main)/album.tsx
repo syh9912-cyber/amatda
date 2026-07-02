@@ -37,7 +37,7 @@ import { PhotoViewer } from '../../components/album/PhotoViewer';
 import { BackButton } from '../../components/common/BackButton';
 import { GuideButton } from '../../components/common/GuideButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
-import { ALBUM_GUIDE } from '../../features/guide/albumGuide';
+import { getAlbumGuide } from '../../features/guide/albumGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import type { ImageSourcePropType } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -1698,15 +1698,15 @@ function BabyAlbum() {
   const pickImage = useCallback(async () => {
     // allowsEditing: true → 선택 후 바로 crop UI 표시 (동일 비율 강제)
     // aspect: [4, 3] → PDF 앨범 셀 비율에 맞게 통일
-    const picked = await pickImageFromLibrary({ quality: 0.9, allowsEditing: true, aspect: [4, 3] });
+    const picked = await pickImageFromLibrary(t, { quality: 0.9, allowsEditing: true, aspect: [4, 3] });
     if (picked) setPendingUri(picked.uri);
-  }, []);
+  }, [t]);
 
   const pickCoverImage = useCallback(async () => {
     // 표지 이미지는 A4 세로 비율(3:4)로 crop
-    const picked = await pickImageFromLibrary({ quality: 1.0, allowsEditing: true, aspect: [3, 4] });
+    const picked = await pickImageFromLibrary(t, { quality: 1.0, allowsEditing: true, aspect: [3, 4] });
     if (picked) setAlbumCoverUri(picked.uri);
-  }, []);
+  }, [t]);
 
   /* -- AI Diary -- */
   const generateDiary = useCallback(async () => {
@@ -2634,7 +2634,7 @@ function BabyAlbum() {
       </Modal>
 
       <AdSlot />
-      <GuideCarousel visible={guideVisible} pages={ALBUM_GUIDE} onClose={closeGuide} onComplete={closeGuide} />
+      <GuideCarousel visible={guideVisible} pages={getAlbumGuide(t)} onClose={closeGuide} onComplete={closeGuide} />
     </View>
   );
 }

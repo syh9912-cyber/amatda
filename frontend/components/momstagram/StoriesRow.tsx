@@ -37,7 +37,7 @@ export function StoriesRow() {
   const { t } = useTranslation();
   const storyUsers = useMemo(() => buildStoryUsers(t), [t]);
   const handleMyStory = async () => {
-    const picked = await pickImageFromLibrary({ quality: 0.8 });
+    const picked = await pickImageFromLibrary(t, { quality: 0.8 });
     if (picked) {
       router.push({
         pathname: '/(main)/momstagram-post',

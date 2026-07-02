@@ -1,5 +1,6 @@
 /** 응급/SOS 가이드 페이지 — 위험 4단계 색상 의미 강조 */
 import { View, Text, StyleSheet } from 'react-native';
+import type { TFunction } from 'i18next';
 import { GuideFrame, GUIDE_C, type GuidePage } from '../../components/common/GuideCarousel';
 
 const g = StyleSheet.create({
@@ -26,49 +27,51 @@ function Level({ name, desc, color, bg }: { name: string; desc: string; color: s
   );
 }
 
-export const SOS_GUIDE: GuidePage[] = [
-  {
-    title: '아이가 아플 때, 먼저 확인하세요',
-    desc: '증상을 선택하면 위험도를 4단계로 알려드려요.\n색깔의 뜻을 꼭 기억해주세요',
-    visual: (
-      <GuideFrame>
-        <Level name="응급 (빨강)" desc="즉시 119 — 한시가 급해요" color={GUIDE_C.red} bg={GUIDE_C.redLight} />
-        <Level name="병원 (주황)" desc="바로 병원·응급실로" color="#CF9352" bg="#FAF0E0" />
-        <Level name="주의 (노랑)" desc="안전 아님! 잘 지켜보세요" color="#BBA34A" bg="#F8F3DD" />
-        <Level name="관찰 (초록)" desc="집에서 경과를 지켜봐요" color={GUIDE_C.green} bg={GUIDE_C.greenLight} />
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '증상을 선택만 하면 돼요',
-    desc: '열·구토·발진 등 증상을 고르고\n체온을 입력하면 더 정확하게 안내해요',
-    visual: (
-      <GuideFrame>
-        <View style={g.symRow}>
-          {['🌡️ 열', '🤮 구토', '😮‍💨 호흡곤란', '🩸 출혈', '🔴 발진', '😵 경련'].map((s) => (
-            <View key={s} style={g.sym}><Text style={g.symText}>{s}</Text></View>
-          ))}
-        </View>
-        <View style={g.note}>
-          <Text style={g.noteText}>⚠️ 이 기능은 참고용이에요. "관찰" 결과여도 아이 상태가 이상하면 망설이지 말고 병원에 가세요.</Text>
-        </View>
-      </GuideFrame>
-    ),
-  },
-  {
-    title: 'CPR·응급처치도 바로 옆에',
-    desc: 'CPR, 하임리히(이물질), 화상 등\n월령에 맞는 응급처치 가이드를 단계별로 보여줘요',
-    visual: (
-      <GuideFrame>
-        <View style={g.symRow}>
-          {['❤️ 심폐소생', '🫁 하임리히', '🔥 화상', '🧩 이물질'].map((s) => (
-            <View key={s} style={g.sym}><Text style={g.symText}>{s}</Text></View>
-          ))}
-        </View>
-        <View style={[g.note, { backgroundColor: GUIDE_C.accentSoft }]}>
-          <Text style={[g.noteText, { color: '#C2703B' }]}>👶 영아(12개월 미만)와 그 이상은 처치법이 달라요 — 아이 월령에 맞는 안내를 따라주세요.</Text>
-        </View>
-      </GuideFrame>
-    ),
-  },
-];
+export function getSosGuide(t: TFunction): GuidePage[] {
+  return [
+    {
+      title: t('guides.sos.page1.title'),
+      desc: t('guides.sos.page1.desc'),
+      visual: (
+        <GuideFrame>
+          <Level name={t('guides.sos.page1.levelEmergencyName')} desc={t('guides.sos.page1.levelEmergencyDesc')} color={GUIDE_C.red} bg={GUIDE_C.redLight} />
+          <Level name={t('guides.sos.page1.levelHospitalName')} desc={t('guides.sos.page1.levelHospitalDesc')} color="#CF9352" bg="#FAF0E0" />
+          <Level name={t('guides.sos.page1.levelCautionName')} desc={t('guides.sos.page1.levelCautionDesc')} color="#BBA34A" bg="#F8F3DD" />
+          <Level name={t('guides.sos.page1.levelObserveName')} desc={t('guides.sos.page1.levelObserveDesc')} color={GUIDE_C.green} bg={GUIDE_C.greenLight} />
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('guides.sos.page2.title'),
+      desc: t('guides.sos.page2.desc'),
+      visual: (
+        <GuideFrame>
+          <View style={g.symRow}>
+            {(t('guides.sos.page2.symptoms', { returnObjects: true }) as string[]).map((sm) => (
+              <View key={sm} style={g.sym}><Text style={g.symText}>{sm}</Text></View>
+            ))}
+          </View>
+          <View style={g.note}>
+            <Text style={g.noteText}>{t('guides.sos.page2.note')}</Text>
+          </View>
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('guides.sos.page3.title'),
+      desc: t('guides.sos.page3.desc'),
+      visual: (
+        <GuideFrame>
+          <View style={g.symRow}>
+            {(t('guides.sos.page3.items', { returnObjects: true }) as string[]).map((it) => (
+              <View key={it} style={g.sym}><Text style={g.symText}>{it}</Text></View>
+            ))}
+          </View>
+          <View style={[g.note, { backgroundColor: GUIDE_C.accentSoft }]}>
+            <Text style={[g.noteText, { color: '#C2703B' }]}>{t('guides.sos.page3.note')}</Text>
+          </View>
+        </GuideFrame>
+      ),
+    },
+  ];
+}

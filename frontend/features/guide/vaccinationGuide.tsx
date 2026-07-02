@@ -1,5 +1,6 @@
 /** 접종달력 가이드 — 국가접종 자동 정리 · D-day 알림 · 완료 진행률 (실제 기능 기반) */
 import { View, Text, Image, StyleSheet } from 'react-native';
+import type { TFunction } from 'i18next';
 import { GuideFrame, GuidePill, GUIDE_C, type GuidePage } from '../../components/common/GuideCarousel';
 
 const IC_SYRINGE = require('../../assets/quick-syringe.png') as number;
@@ -21,61 +22,63 @@ const g = StyleSheet.create({
   row: { flexDirection: 'row', gap: 6, justifyContent: 'center', flexWrap: 'wrap', marginTop: 8 },
 });
 
-export const VACCINATION_GUIDE: GuidePage[] = [
-  {
-    title: '국가 예방접종을 자동 정리',
-    desc: '우리 아이 개월수에 맞는 무료 국가접종을\n순서대로 정리해서 보여줘요',
-    visual: (
-      <GuideFrame>
-        <Image source={IC_SYRINGE} style={g.hero} resizeMode="contain" />
-        <View style={g.card}>
-          <View style={g.line}>
-            <View style={[g.dot, { backgroundColor: GUIDE_C.green }]}><Text style={g.check}>✓</Text></View>
-            <Text style={g.name}>BCG (결핵)</Text>
-            <GuidePill label="완료" color={GUIDE_C.green} bg={GUIDE_C.greenLight} />
+export function getVaccinationGuide(t: TFunction): GuidePage[] {
+  return [
+    {
+      title: t('guides.vaccination.page1.title'),
+      desc: t('guides.vaccination.page1.desc'),
+      visual: (
+        <GuideFrame>
+          <Image source={IC_SYRINGE} style={g.hero} resizeMode="contain" />
+          <View style={g.card}>
+            <View style={g.line}>
+              <View style={[g.dot, { backgroundColor: GUIDE_C.green }]}><Text style={g.check}>✓</Text></View>
+              <Text style={g.name}>{t('guides.vaccination.page1.vaccineBcg')}</Text>
+              <GuidePill label={t('guides.vaccination.page1.statusDone')} color={GUIDE_C.green} bg={GUIDE_C.greenLight} />
+            </View>
+            <View style={g.line}>
+              <View style={[g.dot, { backgroundColor: GUIDE_C.accent }]} />
+              <Text style={g.name}>{t('guides.vaccination.page1.vaccineDtap')}</Text>
+              <GuidePill label={t('guides.vaccination.page1.statusUpcoming')} color={GUIDE_C.accent} bg={GUIDE_C.accentSoft} />
+            </View>
+            <View style={g.line}>
+              <View style={[g.dot, { backgroundColor: GUIDE_C.red }]} />
+              <Text style={g.name}>{t('guides.vaccination.page1.vaccinePneumo')}</Text>
+              <GuidePill label={t('guides.vaccination.page1.statusOverdue')} color={GUIDE_C.red} bg={GUIDE_C.redLight} />
+            </View>
           </View>
-          <View style={g.line}>
-            <View style={[g.dot, { backgroundColor: GUIDE_C.accent }]} />
-            <Text style={g.name}>DTaP 3차</Text>
-            <GuidePill label="예정" color={GUIDE_C.accent} bg={GUIDE_C.accentSoft} />
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('guides.vaccination.page2.title'),
+      desc: t('guides.vaccination.page2.desc'),
+      visual: (
+        <GuideFrame>
+          <Image source={IC_SYRINGE} style={g.hero} resizeMode="contain" />
+          <View style={g.ddayWrap}>
+            <Text style={g.dday}>D-5</Text>
+            <Text style={g.ddaySub}>{t('guides.vaccination.page2.ddaySub')}</Text>
           </View>
-          <View style={g.line}>
-            <View style={[g.dot, { backgroundColor: GUIDE_C.red }]} />
-            <Text style={g.name}>폐렴구균</Text>
-            <GuidePill label="지남" color={GUIDE_C.red} bg={GUIDE_C.redLight} />
+          <View style={[g.row, { marginTop: 0 }]}>
+            <GuidePill label={t('guides.vaccination.page2.notifyPill')} color={GUIDE_C.accent} bg={GUIDE_C.accentSoft} />
           </View>
-        </View>
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '맞을 때를 놓치지 않아요',
-    desc: '다가오는 접종은 며칠 남았는지 D-day로,\n지난 접종은 빨갛게 표시해 챙겨드려요',
-    visual: (
-      <GuideFrame>
-        <Image source={IC_SYRINGE} style={g.hero} resizeMode="contain" />
-        <View style={g.ddayWrap}>
-          <Text style={g.dday}>D-5</Text>
-          <Text style={g.ddaySub}>DTaP 3차 · 6월 11일</Text>
-        </View>
-        <View style={[g.row, { marginTop: 0 }]}>
-          <GuidePill label="🔔 알림으로 미리 알려드려요" color={GUIDE_C.accent} bg={GUIDE_C.accentSoft} />
-        </View>
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '맞은 접종은 체크!',
-    desc: '맞은 날·병원을 기록하고 완료를 체크하면\n전체 진행률을 한눈에 볼 수 있어요',
-    visual: (
-      <GuideFrame>
-        <Image source={IC_SYRINGE} style={g.hero} resizeMode="contain" />
-        <Text style={g.cap}>✅  접종 진행률</Text>
-        <View style={g.card}>
-          <View style={g.progressTrack}><View style={g.progressFill} /></View>
-          <Text style={g.progressText}>14 / 20 완료 (70%)</Text>
-        </View>
-      </GuideFrame>
-    ),
-  },
-];
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('guides.vaccination.page3.title'),
+      desc: t('guides.vaccination.page3.desc'),
+      visual: (
+        <GuideFrame>
+          <Image source={IC_SYRINGE} style={g.hero} resizeMode="contain" />
+          <Text style={g.cap}>{t('guides.vaccination.page3.cap')}</Text>
+          <View style={g.card}>
+            <View style={g.progressTrack}><View style={g.progressFill} /></View>
+            <Text style={g.progressText}>{t('guides.vaccination.page3.progressText')}</Text>
+          </View>
+        </GuideFrame>
+      ),
+    },
+  ];
+}

@@ -13,6 +13,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { TFunction } from 'i18next';
 
 export type HospitalKind = 'clinic' | 'delivery';
 
@@ -115,6 +116,7 @@ function isClinicHours(now: Date = new Date()): boolean {
  * options.now 로 테스트 가능.
  */
 function buildCandidates(
+  t: TFunction,
   delivery: HospitalInfo | null,
   clinic: HospitalInfo | null,
 ): { phone?: string; source: PhoneSource; label: string; subLabel?: string; hospitalName?: string }[] {
@@ -123,29 +125,33 @@ function buildCandidates(
     {
       phone: delivery?.deliveryWardPhone,
       source: 'delivery_ward',
-      label: isUni ? '고위험 산모센터(MFICU) / 분만실' : '분만실 직통',
-      subLabel: isUni ? '대학병원 — 24시간 응급 연결' : '밤/주말 우선',
+      label: isUni
+        ? t('deliveryHospital.label.highRiskCenterWard')
+        : t('deliveryHospital.label.deliveryWardDirect'),
+      subLabel: isUni
+        ? t('deliveryHospital.subLabel.universityEmergency247')
+        : t('deliveryHospital.subLabel.nightWeekendPriority'),
       hospitalName: delivery?.name,
     },
     {
       phone: delivery?.mainPhone,
       source: 'delivery_main',
-      label: '분만 병원 대표',
-      subLabel: isUni ? '교환 통해 분만실 연결 요청' : undefined,
+      label: t('deliveryHospital.label.deliveryHospitalMain'),
+      subLabel: isUni ? t('deliveryHospital.subLabel.requestTransferViaOperator') : undefined,
       hospitalName: delivery?.name,
     },
     {
       phone: clinic?.deliveryWardPhone,
       source: 'clinic_ward',
-      label: '진료 병원 분만실',
-      subLabel: '밤/주말 우선',
+      label: t('deliveryHospital.label.clinicHospitalWard'),
+      subLabel: t('deliveryHospital.subLabel.nightWeekendPriority'),
       hospitalName: clinic?.name,
     },
     {
       phone: clinic?.mainPhone,
       source: 'clinic_main',
-      label: '외래 대표',
-      subLabel: '낮 진료시간 우선',
+      label: t('deliveryHospital.label.outpatientMain'),
+      subLabel: t('deliveryHospital.subLabel.daytimeHoursPriority'),
       hospitalName: clinic?.name,
     },
   ];
@@ -169,6 +175,7 @@ function buildOrder(
 }
 
 export async function pickDeliveryPhone(
+  t: TFunction,
   childId: string,
   options?: { now?: Date; isEmergency?: boolean },
 ): Promise<PickedPhone | null> {
@@ -176,7 +183,7 @@ export async function pickDeliveryPhone(
   const clinic = await getHospital(childId, 'clinic');
   const clinicTime = isClinicHours(options?.now);
 
-  const all = buildCandidates(delivery, clinic);
+  const all = buildCandidates(t, delivery, clinic);
   const order = buildOrder(delivery, clinicTime);
 
   for (const src of order) {
@@ -204,6 +211,7 @@ export async function pickDeliveryPhone(
  *   대낮이라도 외래로는 응급 안 받으므로 분만실/MFICU 직통과 분만 병원 대표(교환→분만실)만 노출.
  */
 export async function pickAllPhones(
+  t: TFunction,
   childId: string,
   options?: { now?: Date; isEmergency?: boolean },
 ): Promise<PickedPhone[]> {
@@ -211,7 +219,7 @@ export async function pickAllPhones(
   const clinic = await getHospital(childId, 'clinic');
   const clinicTime = isClinicHours(options?.now);
 
-  const all = buildCandidates(delivery, clinic);
+  const all = buildCandidates(t, delivery, clinic);
   const order = buildOrder(delivery, clinicTime);
 
   const out: PickedPhone[] = [];

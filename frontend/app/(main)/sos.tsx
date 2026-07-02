@@ -23,7 +23,7 @@ import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
 import { MedicalCitation } from '../../components/common/MedicalCitation';
-import { SOS_GUIDE } from '../../features/guide/sosGuide';
+import { getSosGuide } from '../../features/guide/sosGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { sosApi } from '../../services/api';
@@ -376,7 +376,7 @@ export default function SOSScreen() {
 
   const callDeliveryWard = useCallback(async () => {
     if (!selectedChild?.id) return;
-    const picked = await pickDeliveryPhone(selectedChild.id);
+    const picked = await pickDeliveryPhone(t, selectedChild.id);
     if (!picked) {
       // 등록된 번호 없음 → 등록 모달 열기
       Alert.alert(
@@ -722,7 +722,7 @@ export default function SOSScreen() {
         />
       ) : null}
 
-      <GuideCarousel visible={guideVisible} pages={SOS_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#DB6A5F" />
+      <GuideCarousel visible={guideVisible} pages={getSosGuide(t)} onClose={closeGuide} onComplete={closeGuide} accent="#DB6A5F" />
     </View>
   );
 }

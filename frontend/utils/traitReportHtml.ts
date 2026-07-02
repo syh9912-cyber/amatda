@@ -7,6 +7,7 @@
  *
  * 디자인: Editorial Magazine Dark 풍 — trait-detail 표지와 통일된 톤.
  */
+import type { TFunction } from 'i18next';
 import type { AnalysisReport } from '../stores/childStore';
 
 function escapeHtml(str: string | null | undefined): string {
@@ -77,65 +78,80 @@ interface BuildArgs {
 }
 
 type FiveKey = 'wood' | 'fire' | 'earth' | 'metal' | 'water';
-const TRAIT_LABELS: Array<{ key: FiveKey; label: string }> = [
-  { key: 'wood', label: '탐구' },
-  { key: 'fire', label: '활동' },
-  { key: 'earth', label: '안정' },
-  { key: 'metal', label: '결단' },
-  { key: 'water', label: '지혜' },
-];
 
-const TYPE_ARCHETYPE: Record<string, string> = {
-  탐구형: '탐구형 활동가',
-  활동형: '활동형 도전자',
-  조화형: '안정형 협력가',
-  분석형: '지혜형 연구가',
-  감성형: '감성형 공감가',
-};
-
-const TYPE_PRIMARY: Record<string, string> = {
-  탐구형: '탐구',
-  활동형: '활동',
-  조화형: '안정',
-  분석형: '결단',
-  감성형: '지혜',
-};
-
-const TYPE_DESC: Record<string, string> = {
-  탐구형: '호기심이 많고 새 것을 좋아해요\n손으로 만지며 배우는 걸 즐겨요\n자극이 풍부할 때 가장 빛나요',
-  활동형: '몸으로 움직일 때 즐거워요\n달리고 뛰는 활동을 좋아해요\n직접 해봐야 만족하는 아이예요',
-  조화형: '익숙한 사람·환경에서 편해요\n친구·가족과 어울려 잘 놀아요\n다정하고 협력적인 아이예요',
-  분석형: '규칙·순서를 잘 지켜요\n관찰하며 차근차근 익혀요\n반복과 정리를 즐겨요',
-  감성형: '주변 분위기를 잘 알아채요\n다른 사람 마음에 공감해요\n섬세하고 표현이 풍부해요',
-};
-
-function ageLabel(months: number): string {
-  if (months <= 0) return '신생아';
-  if (months < 12) return `${months}개월`;
-  const yrs = Math.floor(months / 12);
-  const rem = months % 12;
-  return rem === 0 ? `${yrs}세` : `${yrs}세 ${rem}개월`;
+function getTraitLabels(t: TFunction): Array<{ key: FiveKey; label: string }> {
+  return [
+    { key: 'wood', label: t('components.editorialCover.traitShort.wood') },
+    { key: 'fire', label: t('components.editorialCover.traitShort.fire') },
+    { key: 'earth', label: t('components.editorialCover.traitShort.earth') },
+    { key: 'metal', label: t('components.editorialCover.traitShort.metal') },
+    { key: 'water', label: t('components.editorialCover.traitShort.water') },
+  ];
 }
 
-export function buildFullReportHtml({
-  childName,
-  ageMonths,
-  analysisDate,
-  dominantType,
-  label,
-  fiveElements,
-  report,
-}: BuildArgs): string {
-  const r = report ?? null;
-  const archetype = TYPE_ARCHETYPE[dominantType] || label || dominantType;
-  const primary = TYPE_PRIMARY[dominantType] || '균형';
-  const desc = TYPE_DESC[dominantType] || '아이만의 고유한 기질이에요.';
+function getTypeArchetype(t: TFunction): Record<string, string> {
+  return {
+    탐구형: t('components.editorialCover.archetype.explorer'),
+    활동형: t('components.editorialCover.archetype.active'),
+    조화형: t('components.editorialCover.archetype.harmony'),
+    분석형: t('components.editorialCover.archetype.analytic'),
+    감성형: t('components.editorialCover.archetype.emotional'),
+  };
+}
 
+function getTypePrimary(t: TFunction): Record<string, string> {
+  return {
+    탐구형: t('components.editorialCover.traitShort.wood'),
+    활동형: t('components.editorialCover.traitShort.fire'),
+    조화형: t('components.editorialCover.traitShort.earth'),
+    분석형: t('components.editorialCover.traitShort.metal'),
+    감성형: t('components.editorialCover.traitShort.water'),
+  };
+}
+
+function getTypeDesc(t: TFunction): Record<string, string> {
+  return {
+    탐구형: t('components.editorialCover.typeDesc.explorer'),
+    활동형: t('components.editorialCover.typeDesc.active'),
+    조화형: t('components.editorialCover.typeDesc.harmony'),
+    분석형: t('components.editorialCover.typeDesc.analytic'),
+    감성형: t('components.editorialCover.typeDesc.emotional'),
+  };
+}
+
+function ageLabel(t: TFunction, months: number): string {
+  if (months <= 0) return t('components.editorialCover.newborn');
+  if (months < 12) return t('components.profileCard.ageMonths', { count: months });
+  const yrs = Math.floor(months / 12);
+  const rem = months % 12;
+  return rem === 0
+    ? t('components.profileCard.ageYears', { years: yrs })
+    : t('components.profileCard.ageYearsMonths', { years: yrs, months: rem });
+}
+
+export function buildFullReportHtml(
+  t: TFunction,
+  {
+    childName,
+    ageMonths,
+    analysisDate,
+    dominantType,
+    label,
+    fiveElements,
+    report,
+  }: BuildArgs,
+): string {
+  const r = report ?? null;
+  const archetype = getTypeArchetype(t)[dominantType] || label || dominantType;
+  const primary = getTypePrimary(t)[dominantType] || t('components.editorialCover.balanced');
+  const desc = getTypeDesc(t)[dominantType] || t('components.editorialCover.defaultDesc');
+
+  const traitLabels = getTraitLabels(t);
   const stats = fiveElements
-    ? TRAIT_LABELS.map((t) => {
-        const v = fiveElements[t.key];
+    ? traitLabels.map((tr) => {
+        const v = fiveElements[tr.key];
         const num = typeof v === 'number' ? Math.round(Math.max(0, Math.min(100, v))) : 0;
-        return `<div class="stat"><div class="stat-label">${escapeHtml(t.label)}</div><div class="stat-value">${num}</div></div>`;
+        return `<div class="stat"><div class="stat-label">${escapeHtml(tr.label)}</div><div class="stat-value">${num}</div></div>`;
       }).join('')
     : '';
 
@@ -144,32 +160,32 @@ export function buildFullReportHtml({
     : '';
 
   const personalityHtml = r?.personality?.length
-    ? listSection('🎭 성격 특성', r.personality, '#FFB088')
+    ? listSection(t('traitReportHtml.section.personality'), r.personality, '#FFB088')
     : '';
-  const strengthsHtml = detailListSection('💪 강점', r?.strengthsDetail, '#7DD3A3');
-  const weaknessesHtml = detailListSection('⚠️ 주의할 점', r?.weaknessesDetail, '#F4A4A4');
-  const studyHtml = paragraphSection('📚 학습 스타일', r?.studyStyle, '#A8C8FF');
-  const subjectsHtml = listSection('⭐ 잘 맞는 과목', r?.bestSubjects, '#A8C8FF');
-  const weakAreasHtml = listSection('💡 보완할 영역', r?.weakAreas, '#A8C8FF');
-  const academyHtml = paragraphSection('🏫 학원 추천 스타일', r?.academyStyle, '#A8C8FF');
-  const educationHtml = paragraphSection('🎓 교육 방향', r?.educationDirection, '#A8C8FF');
-  const futureHtml = listSection('🚀 어울리는 미래 직업', r?.futureFields, '#FFD37A');
-  const sportsHtml = listSection('🏃 추천 운동', r?.sportsMatch, '#FFD37A');
-  const goodFoodsHtml = listSection('🥗 잘 맞는 음식', r?.goodFoods, '#7DD3A3');
-  const badFoodsHtml = listSection('🚫 피할 음식', r?.badFoods, '#F4A4A4');
-  const talentHtml = paragraphSection('🏆 특별한 재능', r?.specialTalent, '#FFD37A');
-  const parentingHtml = paragraphSection('🤱 양육 팁', r?.parentingTip, '#FFB088');
-  const routineHtml = paragraphSection('☀️ 일상 루틴 팁', r?.dailyRoutineTip, '#FFB088');
-  const socialHtml = paragraphSection('🤝 사회성 팁', r?.socialTip, '#FFB088');
-  const emotionalHtml = paragraphSection('💖 감정 팁', r?.emotionalTip, '#FFB088');
-  const doHtml = listSection('✅ 추천 (Do)', r?.doList, '#7DD3A3');
-  const dontHtml = listSection("❌ 비추천 (Don't)", r?.dontList, '#F4A4A4');
+  const strengthsHtml = detailListSection(t('traitReportHtml.section.strengths'), r?.strengthsDetail, '#7DD3A3');
+  const weaknessesHtml = detailListSection(t('traitReportHtml.section.weaknesses'), r?.weaknessesDetail, '#F4A4A4');
+  const studyHtml = paragraphSection(t('traitReportHtml.section.studyStyle'), r?.studyStyle, '#A8C8FF');
+  const subjectsHtml = listSection(t('traitReportHtml.section.bestSubjects'), r?.bestSubjects, '#A8C8FF');
+  const weakAreasHtml = listSection(t('traitReportHtml.section.weakAreas'), r?.weakAreas, '#A8C8FF');
+  const academyHtml = paragraphSection(t('traitReportHtml.section.academyStyle'), r?.academyStyle, '#A8C8FF');
+  const educationHtml = paragraphSection(t('traitReportHtml.section.educationDirection'), r?.educationDirection, '#A8C8FF');
+  const futureHtml = listSection(t('traitReportHtml.section.futureFields'), r?.futureFields, '#FFD37A');
+  const sportsHtml = listSection(t('traitReportHtml.section.sportsMatch'), r?.sportsMatch, '#FFD37A');
+  const goodFoodsHtml = listSection(t('traitReportHtml.section.goodFoods'), r?.goodFoods, '#7DD3A3');
+  const badFoodsHtml = listSection(t('traitReportHtml.section.badFoods'), r?.badFoods, '#F4A4A4');
+  const talentHtml = paragraphSection(t('traitReportHtml.section.specialTalent'), r?.specialTalent, '#FFD37A');
+  const parentingHtml = paragraphSection(t('traitReportHtml.section.parentingTip'), r?.parentingTip, '#FFB088');
+  const routineHtml = paragraphSection(t('traitReportHtml.section.dailyRoutineTip'), r?.dailyRoutineTip, '#FFB088');
+  const socialHtml = paragraphSection(t('traitReportHtml.section.socialTip'), r?.socialTip, '#FFB088');
+  const emotionalHtml = paragraphSection(t('traitReportHtml.section.emotionalTip'), r?.emotionalTip, '#FFB088');
+  const doHtml = listSection(t('traitReportHtml.section.doList'), r?.doList, '#7DD3A3');
+  const dontHtml = listSection(t('traitReportHtml.section.dontList'), r?.dontList, '#F4A4A4');
 
   return `<!doctype html>
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
-<title>${escapeHtml(childName)}의 기질 분석 리포트</title>
+<title>${escapeHtml(t('traitDetail.shareDialogTitle', { name: childName }))}</title>
 <style>
   @page { size: A4; margin: 14mm 12mm; }
   * { box-sizing: border-box; }
@@ -344,8 +360,8 @@ export function buildFullReportHtml({
       <span>${escapeHtml(analysisDate)}</span>
     </div>
     <div class="cover-vol">VOL. 01</div>
-    <div class="cover-subject">${escapeHtml(childName)} · ${escapeHtml(ageLabel(ageMonths))}</div>
-    <div class="cover-primary">주성향 · ${escapeHtml(primary)}</div>
+    <div class="cover-subject">${escapeHtml(childName)} · ${escapeHtml(ageLabel(t, ageMonths))}</div>
+    <div class="cover-primary">${escapeHtml(t('components.editorialCover.primaryLabel', { primary }))}</div>
     <div class="cover-title">${escapeHtml(archetype)}</div>
     <div class="cover-desc">${escapeHtml(desc)}</div>
     ${stats ? `<div class="stats-row">${stats}</div>` : ''}
@@ -384,7 +400,7 @@ export function buildFullReportHtml({
     ${dontHtml}
   </div>
 
-  <div class="footer">— 아맞다 앱에서 분석 · ${escapeHtml(analysisDate)}</div>
+  <div class="footer">${escapeHtml(t('traitReportHtml.footer', { date: analysisDate }))}</div>
 </body>
 </html>`;
 }

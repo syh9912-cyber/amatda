@@ -11,7 +11,7 @@ interface PhotoPickerProps {
 export function PhotoPicker({ photoUri, onChangePhoto }: PhotoPickerProps) {
   const { t } = useTranslation();
   const handlePress = async () => {
-    const picked = await pickImageFromLibrary({ quality: 0.7 });
+    const picked = await pickImageFromLibrary(t, { quality: 0.7 });
     if (picked) onChangePhoto(picked.uri);
   };
 

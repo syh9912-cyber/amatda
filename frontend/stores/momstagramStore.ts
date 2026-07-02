@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { TFunction } from 'i18next';
 import { momstagramApi } from '../services/api';
 
 export type PostCategory = '일상' | '학습' | '여행' | '기념일' | '기타';
@@ -41,12 +42,12 @@ interface MomstagramState {
   hasMore: boolean;
   loading: boolean;
   error: string | null;
-  fetchFeed: () => Promise<void>;
-  loadMoreFeed: () => Promise<void>;
-  refresh: () => Promise<void>;
+  fetchFeed: (t?: TFunction) => Promise<void>;
+  loadMoreFeed: (t?: TFunction) => Promise<void>;
+  refresh: (t?: TFunction) => Promise<void>;
   toggleLike: (postId: string) => void;
   addComment: (postId: string, comment: MomstagramComment) => void;
-  addCommentViaApi: (postId: string, content: string) => Promise<void>;
+  addCommentViaApi: (postId: string, content: string, t?: TFunction) => Promise<void>;
   addPost: (post: MomstagramPost) => void;
   addPrivatePost: (post: MomstagramPost) => void;
   deletePost: (postId: string) => Promise<void>;
@@ -136,13 +137,18 @@ interface ApiComment {
   createdAt: string;
 }
 
-function mapApiPostToStore(p: ApiFeedPost): MomstagramPost {
+/** API가 작성자명을 못 내려줄 때의 표시용 폴백. t 없으면(레거시 호출부) 한국어 기본값 유지. */
+function anonymousFallback(t?: TFunction): string {
+  return t ? t('momstagramPost.anonymous') : '익명';
+}
+
+function mapApiPostToStore(p: ApiFeedPost, t?: TFunction): MomstagramPost {
   const hasVideo = !!p.videoUrl || p.mediaType === 'video';
   const hasImage = !!p.imageUrl || !!p.thumbnailUrl;
   return {
     id: p.id,
     userId: p.userId,
-    userName: p.userName ?? p.authorName ?? '익명',
+    userName: p.userName ?? p.authorName ?? anonymousFallback(t),
     childGender: (p.childGender === 'F' ? 'F' : 'M') as 'M' | 'F',
     childAge: p.childAge ?? '',
     dominantType: p.dominantType ?? '',
@@ -156,7 +162,7 @@ function mapApiPostToStore(p: ApiFeedPost): MomstagramPost {
     liked: p.liked ?? p.isLiked ?? false,
     comments: (p.comments ?? []).map((c) => ({
       id: c.id,
-      userName: c.userName ?? c.authorName ?? '익명',
+      userName: c.userName ?? c.authorName ?? anonymousFallback(t),
       text: c.content ?? c.text ?? '',
       createdAt: c.createdAt,
     })),
@@ -174,7 +180,7 @@ export const useMomstagramStore = create<MomstagramState>((set, get) => ({
   loading: false,
   error: null,
 
-  fetchFeed: async () => {
+  fetchFeed: async (t) => {
     // 1단계: 캐시가 있으면 즉시 표시 (loading=false로 빠른 체감)
     const currentPosts = get().posts;
     if (currentPosts.length === 0) {
@@ -196,7 +202,7 @@ export const useMomstagramStore = create<MomstagramState>((set, get) => ({
       const raw = res.data;
       const inner = raw?.data ?? raw;
       const feedPosts: ApiFeedPost[] = inner?.posts ?? (Array.isArray(inner) ? inner : []);
-      const mapped = feedPosts.map(mapApiPostToStore);
+      const mapped = feedPosts.map((p) => mapApiPostToStore(p, t));
 
       // 최근 로컬에서 추가된 게시물이 서버 응답에 없으면 보존
       const latest = get().posts;
@@ -220,7 +226,7 @@ export const useMomstagramStore = create<MomstagramState>((set, get) => ({
     }
   },
 
-  loadMoreFeed: async () => {
+  loadMoreFeed: async (t) => {
     const state = get();
     if (state.loading || !state.hasMore) return;
     const nextPage = state.page + 1;
@@ -230,7 +236,7 @@ export const useMomstagramStore = create<MomstagramState>((set, get) => ({
       const raw = res.data;
       const inner = raw?.data ?? raw;
       const feedPosts: ApiFeedPost[] = inner?.posts ?? (Array.isArray(inner) ? inner : []);
-      const mapped = feedPosts.map(mapApiPostToStore);
+      const mapped = feedPosts.map((p) => mapApiPostToStore(p, t));
       set((s) => ({
         posts: [...s.posts, ...mapped],
         page: nextPage,
@@ -242,8 +248,8 @@ export const useMomstagramStore = create<MomstagramState>((set, get) => ({
     }
   },
 
-  refresh: async () => {
-    await get().fetchFeed();
+  refresh: async (t) => {
+    await get().fetchFeed(t);
   },
 
   toggleLike: (postId) => {
@@ -288,14 +294,15 @@ export const useMomstagramStore = create<MomstagramState>((set, get) => ({
     }));
   },
 
-  addCommentViaApi: async (postId, content) => {
+  addCommentViaApi: async (postId, content, t) => {
+    const meLabel = t ? t('momstagramPost.me') : '나';
     try {
       const res = await momstagramApi.addComment(postId, content);
       const data = res.data;
       const apiComment = data.data ?? data.comment ?? data;
       const comment: MomstagramComment = {
         id: apiComment?.id ?? Date.now().toString(36),
-        userName: apiComment?.userName ?? apiComment?.authorName ?? '나',
+        userName: apiComment?.userName ?? apiComment?.authorName ?? meLabel,
         text: apiComment?.content ?? apiComment?.text ?? content,
         createdAt: apiComment?.createdAt ?? new Date().toISOString(),
       };
@@ -304,7 +311,7 @@ export const useMomstagramStore = create<MomstagramState>((set, get) => ({
       // Fallback: add locally even if API fails
       const comment: MomstagramComment = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-        userName: '나',
+        userName: meLabel,
         text: content,
         createdAt: new Date().toISOString(),
       };

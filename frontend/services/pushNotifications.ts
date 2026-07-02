@@ -3,6 +3,7 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import i18n from '../i18n';
 
 // --- Types ---
 
@@ -91,23 +92,23 @@ const EMPTY_IDS: ScheduledIds = {
  */
 const REENGAGEMENT_MESSAGES = {
   '3d': {
-    title: '아맞다',
-    body: (_name: string) => `우리 아기 잘 지내고 있나요? 요즘 어떻게 지내는지 궁금해요!`,
+    title: () => i18n.t('pushNotifications.appName'),
+    body: (_name: string) => i18n.t('pushNotifications.reengagement3d.body'),
     screen: 'home',
   },
   '7d': {
-    title: '아맞다',
-    body: (_name: string) => `성장일기가 많이 밀렸어요! 잠깐만 시간 내주시면 소중한 기록이 됩니다`,
+    title: () => i18n.t('pushNotifications.appName'),
+    body: (_name: string) => i18n.t('pushNotifications.reengagement7d.body'),
     screen: 'diary',
   },
   '10d': {
-    title: '아맞다',
-    body: () => '육아일지가 많이 밀렸어요! 데이터를 누적해주면 분석해서 부족한 부분을 채울 수 있어요',
+    title: () => i18n.t('pushNotifications.appName'),
+    body: () => i18n.t('pushNotifications.reengagement10d.body'),
     screen: 'diary',
   },
   '14d': {
-    title: '아맞다',
-    body: (_name: string) => `우리 아기의 성장, 놓치지 마세요! 오늘 잠깐이라도 기록해볼까요?`,
+    title: () => i18n.t('pushNotifications.appName'),
+    body: (_name: string) => i18n.t('pushNotifications.reengagement14d.body'),
     screen: 'home',
   },
 } as const;
@@ -135,7 +136,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
   if (Platform.OS === 'android') {
     // Main notification channel
     await Notifications.setNotificationChannelAsync('default', {
-      name: '아맞다 알림',
+      name: i18n.t('pushNotifications.channels.default'),
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#FF8C5A',
@@ -144,7 +145,7 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
     // Engagement notification channel (longer vibration, same sound)
     await Notifications.setNotificationChannelAsync('engagement', {
-      name: '아맞다 리마인더',
+      name: i18n.t('pushNotifications.channels.engagement'),
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 300, 200, 300, 200, 400],
       lightColor: '#4338CA',
@@ -163,11 +164,11 @@ export async function registerForPushNotifications(): Promise<string | null> {
     if (existingStatus === 'undetermined') {
       const allowed = await new Promise<boolean>((resolve) => {
         Alert.alert(
-          '알림으로 코칭 받기',
-          '아이 발달 단계별 팁, 백신/병원 일정, 일일 기록 리마인더를 보내드릴게요.\n\n언제든 설정에서 끌 수 있어요.',
+          i18n.t('onboardingNotificationPermission.title'),
+          i18n.t('pushNotifications.permissionAlert.message'),
           [
-            { text: '나중에', onPress: () => resolve(false), style: 'cancel' },
-            { text: '허용', onPress: () => resolve(true) },
+            { text: i18n.t('onboardingNotificationPermission.later'), onPress: () => resolve(false), style: 'cancel' },
+            { text: i18n.t('pushNotifications.permissionAlert.allow'), onPress: () => resolve(true) },
           ],
           { cancelable: false },
         );
@@ -291,8 +292,8 @@ async function scheduleMorning(childId: string, childName: string, time: string)
   const { hour, minute } = parseHM(time, 8, 0);
   return Notifications.scheduleNotificationAsync({
     content: {
-      title: '아맞다',
-      body: `좋은 아침! 어젯밤 우리 아기는 잘 잤나요?`, // #17 PII 제거
+      title: i18n.t('pushNotifications.appName'),
+      body: i18n.t('pushNotifications.morning.body'), // #17 PII 제거
       data: { screen: 'chatbot', childId, childName },
       sound: 'amatda_chime.wav',
     },
@@ -309,8 +310,8 @@ async function scheduleAfternoon(childId: string, childName: string, time: strin
   const { hour, minute } = parseHM(time, 15, 0);
   return Notifications.scheduleNotificationAsync({
     content: {
-      title: '아맞다',
-      body: `지금 우리 아기와 15분 놀이 시간 어때요?`, // #17 PII 제거
+      title: i18n.t('pushNotifications.appName'),
+      body: i18n.t('pushNotifications.afternoon.body'), // #17 PII 제거
       data: { screen: 'play-learning', childId, childName },
       sound: 'amatda_chime.wav',
     },
@@ -327,8 +328,8 @@ async function scheduleEvening(childId: string, time: string): Promise<string> {
   const { hour, minute } = parseHM(time, 21, 0);
   return Notifications.scheduleNotificationAsync({
     content: {
-      title: '아맞다',
-      body: '오늘의 육아일기가 준비됐어요',
+      title: i18n.t('pushNotifications.appName'),
+      body: i18n.t('pushNotifications.evening.body'),
       data: { screen: 'diary', childId },
       sound: 'amatda_chime.wav',
     },
@@ -344,8 +345,8 @@ async function scheduleEvening(childId: string, time: string): Promise<string> {
 async function scheduleWeeklyReport(childId: string): Promise<string> {
   return Notifications.scheduleNotificationAsync({
     content: {
-      title: '아맞다',
-      body: '이번 주 육아 리포트가 도착했어요',
+      title: i18n.t('pushNotifications.appName'),
+      body: i18n.t('pushNotifications.weeklyReport.body'),
       data: { screen: 'report', childId },
       sound: 'amatda_chime.wav',
     },
@@ -376,8 +377,8 @@ export async function scheduleCoachingFollowup(childId: string, childName: strin
 
   ids.coachingFollowup = await Notifications.scheduleNotificationAsync({
     content: {
-      title: '아맞다',
-      body: `어제 상담 후 잘 지나갔나요? 궁금한 점이 있으면 말씀해 주세요`, // #17 PII (childName) 제거
+      title: i18n.t('pushNotifications.appName'),
+      body: i18n.t('pushNotifications.coachingFollowup.body'), // #17 PII (childName) 제거
       data: { screen: 'chatbot', childId, childName },
       sound: 'amatda_chime.wav',
     },
@@ -422,7 +423,7 @@ async function scheduleReengagement(childId: string, childName: string): Promise
 
     ids[s.key] = await Notifications.scheduleNotificationAsync({
       content: {
-        title: msg.title,
+        title: msg.title(),
         body: msg.body(childName),
         data: { screen: msg.screen, childId, childName },
         sound: 'amatda_chime.wav',
@@ -572,23 +573,23 @@ const PREGNANCY_NOTIF_IDS_KEY = (childId: string) => `amatda_pregnancy_notif_ids
 
 interface PregnancyExamSchedule {
   weekFromLMP: number;
-  title: string;
-  body: string;
+  /** i18n key suffix under pushNotifications.pregnancyExams.<key>.title/body */
+  key: string;
   highRiskOnly?: boolean;  // #16 고위험 임신부 전용 알림
 }
 
 const PREGNANCY_EXAMS: PregnancyExamSchedule[] = [
-  { weekFromLMP: 12, title: '1차 기형아 검사 (NT)', body: '11~13주 목투명대 검사 시기예요. 병원 예약을 확인해 주세요.' },
-  { weekFromLMP: 16, title: '쿼드 검사', body: '15~20주 쿼드 검사 시기예요. 예약했는지 확인해 주세요.' },
-  { weekFromLMP: 20, title: '정밀 초음파', body: '20~24주 정밀초음파 시기예요. 아기의 발달을 자세히 볼 수 있어요.' },
+  { weekFromLMP: 12, key: 'nt' },
+  { weekFromLMP: 16, key: 'quad' },
+  { weekFromLMP: 20, key: 'ultrasound' },
   // #16 고위험 임신부: 24주부터 분만 병원 등록 권유 (조산 가능성 대비)
-  { weekFromLMP: 24, title: '분만 병원 등록 권유 (고위험)', body: '고위험 임신은 조산 가능성이 있어요. 분만 병원 번호를 미리 등록해 두세요.', highRiskOnly: true },
-  { weekFromLMP: 25, title: '임당 검사 (GCT)', body: '24~28주 임신성 당뇨 검사 시기예요.' },
+  { weekFromLMP: 24, key: 'hospitalRegHighRisk', highRiskOnly: true },
+  { weekFromLMP: 25, key: 'gct' },
   // 일반 임신부: 30주부터 분만 병원 등록 권유
-  { weekFromLMP: 30, title: '분만 병원 등록 권유', body: '출산이 가까워지고 있어요. 급한 순간 바로 전화할 수 있도록 분만 병원 번호를 등록해 두세요.' },
-  { weekFromLMP: 32, title: '태동 검사 (NST)', body: '32주 전후 NST 검사 시기예요.' },
-  { weekFromLMP: 36, title: 'GBS 검사', body: '36주 B형 연쇄상구균 검사 시기예요.' },
-  { weekFromLMP: 38, title: '출산 가방 준비', body: '출산 가방 체크리스트를 확인해 주세요.' },
+  { weekFromLMP: 30, key: 'hospitalReg' },
+  { weekFromLMP: 32, key: 'nst' },
+  { weekFromLMP: 36, key: 'gbs' },
+  { weekFromLMP: 38, key: 'birthBag' },
 ];
 
 function dueDateToLMP(dueDate: Date): Date {
@@ -641,8 +642,8 @@ export async function schedulePregnancyReminders(
 
     const id = await Notifications.scheduleNotificationAsync({
       content: {
-        title: `아맞다 · ${exam.title}`,
-        body: exam.body,
+        title: `${i18n.t('pushNotifications.appName')} · ${i18n.t(`pushNotifications.pregnancyExams.${exam.key}.title`)}`,
+        body: i18n.t(`pushNotifications.pregnancyExams.${exam.key}.body`),
         data: { screen: 'pregnancy', childId },
         sound: 'amatda_chime.wav',
       },
@@ -655,10 +656,10 @@ export async function schedulePregnancyReminders(
     scheduledIds.push(id);
   }
 
-  const countdownDays: { offset: number; title: string; body: string }[] = [
-    { offset: -7, title: '출산 D-7', body: '출산까지 일주일! 가방과 서류를 최종 점검해 주세요.' },
-    { offset: -3, title: '출산 D-3', body: '진통 간격 타이머를 미리 확인해 두세요.' },
-    { offset: 0, title: '출산예정일 D-Day', body: '예정일이에요. 진통 시작되면 바로 병원에 연락하세요.' },
+  const countdownDays: { offset: number; key: string }[] = [
+    { offset: -7, key: 'd7' },
+    { offset: -3, key: 'd3' },
+    { offset: 0, key: 'dday' },
   ];
 
   for (const c of countdownDays) {
@@ -669,8 +670,8 @@ export async function schedulePregnancyReminders(
 
     const id = await Notifications.scheduleNotificationAsync({
       content: {
-        title: `아맞다 · ${c.title}`,
-        body: c.body,
+        title: `${i18n.t('pushNotifications.appName')} · ${i18n.t(`pushNotifications.pregnancyCountdown.${c.key}.title`)}`,
+        body: i18n.t(`pushNotifications.pregnancyCountdown.${c.key}.body`),
         // #17 D-3/D-Day 는 진통 가능성 → labor-monitor 로 라우팅 (PII 없는 generic)
         data: c.offset >= -3
           ? { screen: 'labor-monitor', tab: 'contraction', childId }
@@ -708,8 +709,8 @@ export async function scheduleFirstCoachingNudge(childId: string, childName: str
 
   const id = await Notifications.scheduleNotificationAsync({
     content: {
-      title: `맞춤 육아 팁이 준비됐어요`, // #17 PII 제거
-      body: '궁금한 거 뭐든 물어보세요. 상담이모가 기다리고 있어요!',
+      title: i18n.t('pushNotifications.firstCoachingNudge.title'), // #17 PII 제거
+      body: i18n.t('pushNotifications.firstCoachingNudge.body'),
       data: { screen: 'chatbot', childId, childName },
       sound: 'amatda_chime.wav',
     },
@@ -747,8 +748,8 @@ export async function scheduleNextDayNudge(childId: string, childName: string): 
 
   const id = await Notifications.scheduleNotificationAsync({
     content: {
-      title: '아맞다',
-      body: `우리 아기에게 딱 맞는 육아 코칭, 한번 써보세요!`, // #17 PII 제거
+      title: i18n.t('pushNotifications.appName'),
+      body: i18n.t('pushNotifications.nextDayNudge.body'), // #17 PII 제거
       data: { screen: 'chatbot', childId, childName },
       sound: 'amatda_chime.wav',
     },
@@ -789,8 +790,8 @@ export async function scheduleDailyMissionReminder(): Promise<void> {
 
   const id = await Notifications.scheduleNotificationAsync({
     content: {
-      title: '똑똑! 👶 엄마',
-      body: '오늘 영양제 챙기셨나요? 시원한 물 한 잔도 잊지 마세요! ✨',
+      title: i18n.t('pushNotifications.dailyMission.title'),
+      body: i18n.t('pushNotifications.dailyMission.body'),
       data: { screen: 'home', source: 'daily_mission' },
       sound: 'amatda_chime.wav',
     },
@@ -844,8 +845,8 @@ export async function scheduleFeverRecheckReminder(
   const trigger = new Date(Date.now() + 60 * 60 * 1000); // 1시간 뒤
   const id = await Notifications.scheduleNotificationAsync({
     content: {
-      title: '🌡 체온 재측정 알림',
-      body: `체온을 측정한 지 1시간이 지났어요! 지금 상태를 다시 한번 체크해 주세요.`, // #17 PII 제거
+      title: i18n.t('pushNotifications.feverRecheck.title'),
+      body: i18n.t('pushNotifications.feverRecheck.body'), // #17 PII 제거
       data: { screen: 'fever', source: 'fever_recheck' },
       sound: 'amatda_chime.wav',
     },

@@ -4216,7 +4216,8 @@
     "privateHintOn": "這則貼文僅自己可見",
     "privateHintOff": "將分享給家人",
     "saveBtn": "儲存",
-    "shareBtn": "分享"
+    "shareBtn": "分享",
+    "anonymous": "匿名"
   },
   "aiAnalysis": {
     "screenTitle": "AI分析",
@@ -5675,6 +5676,757 @@
         "question": "這週的孕期生活中有什麼特別的時刻嗎?",
         "hint": "例如：去照超音波、決定胎名、準備嬰兒房等"
       }
+    }
+  },
+  "guides": {
+    "aiAnalysis": {
+      "page1": {
+        "title": "AI 為您的孩子進行分析",
+        "desc": "分三種方式分析 — 育兒模式、大便、哭聲。\n選擇想要的分析開始吧"
+      },
+      "page2": {
+        "title": "只要記錄，模式就會自動分析",
+        "desc": "AI 會比對「寶寶時間」中累積的排便、餵食、睡眠紀錄與標準值，\n給出綜合評估（不需另外輸入）",
+        "cardTitle": "📊  今日的育兒模式",
+        "feeding": "餵食",
+        "feedingCount": "7次",
+        "sleep": "睡眠",
+        "sleepHours": "13小時",
+        "poop": "排便",
+        "poopCount": "3次",
+        "ok": "適當",
+        "evalText": "🤖  整體來說是穩定的一天"
+      },
+      "page3": {
+        "title": "用照片、聲音也能分析大便、哭聲",
+        "desc": "上傳大便照片、哭聲錄音，\nAI 就會告訴您原因和應對方法",
+        "poopPhoto": "大便照片",
+        "poopHint": "在明亮處清楚拍攝",
+        "cryRecording": "哭聲錄音",
+        "cryHint": "在安靜處靠近錄音",
+        "ageNote": "👶  大便分析適用於0~72個月，哭聲分析適用於0~24個月的孩子。",
+        "warning": "僅供參考。若出現異常症狀請務必就醫"
+      }
+    },
+    "album": {
+      "page1": {
+        "title": "用照片記錄成長",
+        "desc": "從相簿或相機新增照片，\n就會依日期順序整齊排列",
+        "cardTitle": "📸  孩子的照片"
+      },
+      "page2": {
+        "title": "發展階段會自動標註",
+        "desc": "「第一步」、「第一次微笑」等發展階段，\n會依月齡自動建議",
+        "firstStep": "第一步",
+        "firstWord": "第一句話",
+        "firstSmile": "第一次微笑"
+      },
+      "page3": {
+        "title": "一次新增多張照片",
+        "desc": "從相簿選擇多張照片一次上傳，\n每張照片都能個別設定家庭動態分享、備註",
+        "cardTitle": "🖼️  新增多張、檢視",
+        "sampleMemo": "「第一次挑戰副食品！」",
+        "feedShare": "分享動態"
+      },
+      "page4": {
+        "title": "AI 幫您把一天寫成日記",
+        "desc": "匯集當天的寶寶時間紀錄與諮詢內容，\nAI 會以父母的心情寫出溫暖的日記",
+        "sampleDate": "6月6日 星期六",
+        "sampleDiary": "今天允道奶粉喝得很好，午覺也睡得很熟。每次換尿布都對我微笑，是幸福的一天…",
+        "sourceBabyTracker": "🍼 寶寶時間紀錄",
+        "sourceCoaching": "💬 諮詢內容"
+      },
+      "page5": {
+        "title": "製作成一本相簿",
+        "desc": "只要選擇期間，就能收到\n依月份整理的 PDF 照片相簿",
+        "sampleCoverTitle": "允道的成長相簿",
+        "sampleCoverRange": "2025.06 ~ 2026.05",
+        "saveAsAlbum": "儲存為相簿"
+      }
+    },
+    "birthBag": {
+      "page1": {
+        "title": "取得符合您狀況的清單",
+        "desc": "選擇分娩方式與產後計畫，\n就會篩選出最符合的準備物品",
+        "birthTypeLabel": "分娩方式",
+        "postpartumPlanLabel": "產後計畫",
+        "postpartumCenter": "月子中心",
+        "postpartumHome": "回家"
+      },
+      "page2": {
+        "title": "設定狀態、負責人並打勾",
+        "desc": "為每個項目標記需購買/已準備完成，\n分配媽媽、爸爸的負責項目來累積進度",
+        "sampleItemPad": "產婦護墊",
+        "sampleItemCarSeat": "汽車安全座椅",
+        "progressText": "62% 準備完成"
+      },
+      "page3": {
+        "title": "和爸爸一起，用連結分享",
+        "desc": "用爸爸模式只看爸爸負責的項目，\n用連結和家人一起準備",
+        "dadModeLabel": "爸爸模式 — 只看爸爸負責項目",
+        "shareVia": "LINE、連結分享"
+      }
+    },
+    "chatbot": {
+      "page1": {
+        "title": "輕鬆向諮詢阿姨提問",
+        "desc": "了解孩子氣質後回答的 AI 諮詢。\n有任何疑問都能像聊天一樣詢問",
+        "bubble1": "副食品一直吐出來，該怎麼辦？",
+        "bubble2": "可能還不習慣新的口感。活動型的孩子可以少量多次，從喜歡的食材開始混合，能減少排斥感。",
+        "bubble3": "應該多久餵一次？"
+      },
+      "page2": {
+        "title": "用分類更快提問",
+        "desc": "選擇主題後問題會自動填入。\n可以直接傳送或自由修改後提問",
+        "topicSelect": "選擇主題",
+        "topics": [
+          "餵食、飲食",
+          "睡眠",
+          "發展",
+          "教養",
+          "健康",
+          "遊戲"
+        ],
+        "samplePrompt": "孩子的睡眠讓我有點困擾…"
+      },
+      "page3": {
+        "title": "也能分析哭聲、大便",
+        "desc": "在諮詢畫面中上傳哭聲、大便照片，\nAI 就會分析原因與應對方法",
+        "note": "🔊  錄音5~15秒，靠近孩子錄製較準確{'\\n'}💩  請在明亮處清楚拍攝"
+      },
+      "page4": {
+        "title": "諮詢後也會持續關心您",
+        "desc": "諮詢過的內容會在隔天早上\n以「後來怎麼樣了呢？」的追蹤訊息再次關心您",
+        "bubble": "🌙 昨天諮詢的睡眠作息，今天過得如何呢？",
+        "note": "💡 諮詢阿姨僅供參考。若孩子生病或緊急狀況，請務必先就醫或撥打119。",
+        "warning": "緊急症狀請使用首頁的 SOS（緊急）功能"
+      }
+    },
+    "coparenting": {
+      "page1": {
+        "title": "和家人一起養育孩子",
+        "desc": "邀請配偶、祖父母後，就能一起記錄同一個孩子，\n也能共享諮詢紀錄"
+      },
+      "page2": {
+        "title": "邀請只需一組代碼",
+        "desc": "建立邀請後會產生代碼／連結。\n傳送 LINE、簡訊給對方，對方點擊後就能立即連結",
+        "inviteCode": "邀請代碼",
+        "kakao": "LINE",
+        "sms": "簡訊",
+        "link": "連結"
+      },
+      "page3": {
+        "title": "依角色設定權限",
+        "desc": "例如：父母可記錄、諮詢全部功能，祖父母僅能檢視。\n邀請時選擇角色，權限就會自動對應",
+        "roleParent": "媽媽、爸爸（父母）",
+        "permParent": "記錄、諮詢、全部",
+        "roleGrandma": "奶奶（祖父母）",
+        "permViewOnly": "僅檢視",
+        "roleHelper": "照護幫手",
+        "permRecordOnly": "僅記錄",
+        "badgeCanRecord": "可記錄",
+        "badgeViewOnly": "僅檢視"
+      },
+      "page4": {
+        "title": "隨時可以整理連結關係",
+        "desc": "擁有者取消連結後，孩子會從對方的應用程式中消失。\n受邀者也能透過「退出」自行解除連結",
+        "note": "🔑  建立孩子檔案的人就是擁有者。{'\\n'}🔁  紀錄會即時分享給所有人。{'\\n'}🚪  若不再共同使用，取消連結即可。"
+      }
+    },
+    "fever": {
+      "page1": {
+        "title": "快速記錄體溫",
+        "desc": "選擇是耳溫、額溫還是腋溫，\n就會依部位自動校正整理",
+        "currentTemp": "🌡️  目前體溫",
+        "tempSub": "腋溫測量・已校正 +0.5°",
+        "morningTemp": "早上 37.1°",
+        "eveningTemp": "晚上 38.2°"
+      },
+      "page2": {
+        "title": "用顏色標示危險發燒程度",
+        "desc": "用顏色顯示體溫等級，\n立即告知何時該就醫",
+        "normal": "正常 ~37.4°",
+        "mild": "微燒 ~38°",
+        "high": "高燒 38°+",
+        "hospitalRecommend": "建議就醫"
+      },
+      "page3": {
+        "title": "依體重計算的退燒藥劑量",
+        "desc": "只要輸入孩子體重，泰諾、依普芬的\n服用量（ml）就會自動計算",
+        "weightBasis": "以體重12kg為基準",
+        "tylenol": "泰諾（乙醯胺酚）",
+        "ibuprofen": "依普芬（布洛芬）",
+        "tylenolShort": "泰諾"
+      },
+      "page4": {
+        "title": "交叉服藥也不會搞混",
+        "desc": "同款藥物間隔4~6小時，若與其他藥物交叉服用，\n最少間隔2小時，會告知下次服用時間",
+        "doseLogTitle": "💊  服藥紀錄與下次時間",
+        "sampleDoseTime": "下午7:00・5ml",
+        "crossDoseAvailable": "可交叉服用依普芬",
+        "sampleNextTime": "下午9:00起",
+        "overdosePrevention": "自動防止過量服用"
+      }
+    },
+    "gdm": {
+      "page1": {
+        "title": "依時段記錄血糖",
+        "desc": "搭配空腹、飯後時段記錄，就能看出變化趨勢。\n基準線隨時顯示，方便一眼比較",
+        "targetBaseline": "目標基準線",
+        "fastingTarget": "95以下",
+        "after1hTarget": "140以下",
+        "after2hTarget": "120以下",
+        "sampleTime": "今早・空腹"
+      },
+      "page2": {
+        "title": "用照片輕鬆記錄飲食",
+        "desc": "上傳食物照片，AI 就會推估碳水化合物、卡路里。\n也會一併告知每餐建議攝取的碳水量",
+        "sampleMeal": "糙米飯＋涼拌野菜",
+        "sampleCarb": "碳水45g",
+        "sampleCalories": "320 kcal",
+        "aiAnalyzeByPhoto": "用照片進行AI分析"
+      },
+      "page3": {
+        "title": "用週間 AI 報告來管理",
+        "desc": "綜合一週的血糖與飲食，\n提供做得好的地方與需注意事項的指導",
+        "reportLine1": "✅ 飯後血糖穩定",
+        "reportLine2": "⚠️ 晚餐的碳水化合物要不要減少一點呢？",
+        "note": "🩺 數值、分析僅供參考。準確的妊娠糖尿病管理請諮詢主治醫療團隊。"
+      }
+    },
+    "growth": {
+      "page1": {
+        "title": "用身高·體重繪製成長曲線",
+        "desc": "留下紀錄後，會用成長曲線上的點\n顯示與同齡兒童相比的位置",
+        "captionLabel": "📈  體重成長曲線",
+        "legendNormal": "正常範圍",
+        "legendMyChild": "我家寶貝"
+      },
+      "page2": {
+        "title": "百分位（%）是什麼意思？",
+        "desc": "意思是「同齡100人中排第幾名」。\n50%就是剛好平均。比起數值過高或過低，\n沿著曲線穩定成長更重要",
+        "pctPill": "體重62百分位·身高58百分位",
+        "explain": "若把100位同齡兒童排成一列，{'\\n'}我家寶貝大約排在第62位左右{'\\n'}（比平均稍微大一點）"
+      },
+      "page3": {
+        "title": "精準測量很重要",
+        "desc": "要用相同的方法測量，曲線才不會忽高忽低",
+        "tip1": "量體重時脫掉尿布，盡量在早上固定時間測量",
+        "tip2": "24個月前躺著量身高，之後改為站立測量",
+        "tip3": "每個月固定記錄1~2次，變化趨勢會更清楚"
+      }
+    },
+    "laborMonitor": {
+      "page1": {
+        "title": "用開始·結束來測量陣痛",
+        "desc": "陣痛開始時按一下按鈕，結束時再按一次。\n間隔和持續時間會自動記錄",
+        "btnLabel": "陣痛開始",
+        "btnSub": "按下開始測量",
+        "flow": "開始 → 陣痛結束後再按一次結束"
+      },
+      "page2": {
+        "title": "告訴你該去醫院的時機",
+        "desc": "區分假性陣痛與真陣痛，\n幫你抓準該去醫院的時機",
+        "falseLaborTitle": "假性陣痛",
+        "falseLaborDesc": "不規則{'\\n'}換姿勢會緩解",
+        "trueLaborTitle": "真陣痛",
+        "trueLaborDesc": "規律·間隔漸漸縮短{'\\n'}換姿勢也還是痛",
+        "rule511": "5-1-1·若5分鐘間隔的陣痛持續1小時，請前往醫院！"
+      },
+      "page3": {
+        "title": "胎動也要數，緊急狀況立刻處理",
+        "desc": "寶寶每動一下就按一次按鈕計數。\n感覺不到胎動時可看安心指南，緊急時請聯絡119·待產室",
+        "counterSub": "30分鐘內8次·健康信號",
+        "warn": "測量·分析僅供參考。若有緊急症狀，請先聯絡119·待產室，而非依賴本App。"
+      }
+    },
+    "lullaby": {
+      "page1": {
+        "title": "挑選好入睡的聲音",
+        "desc": "從莫札特·布拉姆斯搖籃曲\n到雨聲·海浪聲等白噪音都有",
+        "trackTitle": "莫札特搖籃曲",
+        "trackSub": "讓人安心入睡·3:20",
+        "pillLullaby": "🎵 搖籃曲",
+        "pillWhiteNoise": "🌧️ 白噪音"
+      },
+      "page2": {
+        "title": "哭泣時自動播放",
+        "desc": "開啟哭聲偵測後，寶寶哭泣時\n會自動播放搖籃曲",
+        "captionLabel": "👂  哭聲偵測自動播放",
+        "detecting": "偵測哭聲中…",
+        "pillCryToLullaby": "哭聲偵測 → 搖籃曲 ON"
+      },
+      "page3": {
+        "title": "用媽媽的聲音錄音",
+        "desc": "用媽媽的聲音錄下搖籃曲或問候語，\n可以直接播放給寶寶聽",
+        "captionLabel": "🎙️  媽媽的聲音錄音",
+        "trackTitle": "媽媽的搖籃曲",
+        "trackSub": "錄好後隨時播放給寶寶聽"
+      },
+      "page4": {
+        "title": "用計時器自動結束",
+        "desc": "設定好時間後，寶寶睡著後\n音樂會自動關閉",
+        "timerSub": "30分鐘後自動結束",
+        "min15": "15分鐘",
+        "min30": "30分鐘",
+        "min60": "60分鐘"
+      },
+      "prenatalPage1": {
+        "title": "播放給寶寶聽的胎教音樂",
+        "desc": "挑選柔和的古典樂與舒適的聲音，\n播放給肚子裡的寶寶聽",
+        "trackTitle": "柔和古典樂",
+        "trackSub": "讓心情平靜·4:10"
+      },
+      "prenatalPage2": {
+        "title": "播放媽媽的聲音給寶寶聽",
+        "desc": "事先錄好媽媽的聲音，\n就能每天播放給肚子裡的寶寶聽",
+        "captionLabel": "🎙️  媽媽的聲音錄音",
+        "trackTitle": "寶貝你好",
+        "trackSub": "媽媽的聲音有助於胎教"
+      },
+      "prenatalPage3": {
+        "title": "用子宮音讓寶寶安心",
+        "desc": "搭配子宮音·心跳聲等舒適的聲音，\n並用計時器每天輕鬆播放給寶寶聽",
+        "timerSub": "20分鐘後自動結束",
+        "pillWomb": "子宮音",
+        "pillHeartbeat": "心跳聲"
+      }
+    },
+    "momGroup": {
+      "page1": {
+        "title": "和同時期的媽媽們聊聊天",
+        "desc": "和養育相近月齡孩子的媽媽們\n互相提問、聊天、分享資訊",
+        "monthRoomName": "月房",
+        "monthRoomDesc": "相同出生·預產月份的媽媽們聚集在這裡",
+        "localRoomName": "我的社區",
+        "localRoomDesc": "與附近社區+相近月齡孩子的媽媽們互相連結"
+      },
+      "page2": {
+        "title": "發布疑問，透過留言互相交流",
+        "desc": "用標題·內容·照片撰寫文章，\n並選擇主題（提問·聊天·資訊·煩惱·祝賀）",
+        "catQuestion": "提問",
+        "catChat": "聊天",
+        "catInfo": "資訊",
+        "catWorry": "煩惱",
+        "catCelebration": "祝賀",
+        "samplePostTitle": "開始長牙痛了，大家怎麼處理？",
+        "samplePostMeta": "匿名媽媽·瀏覽24·留言6"
+      },
+      "page3": {
+        "title": "用匿名·檢舉維護安全",
+        "desc": "難以啟齒的話題可以匿名發表，\n不當內容可檢舉，共同守護社群",
+        "anonNote": "以匿名發表時，在該聊天室會維持相同的暱稱，例如「匿名媽媽#1234」。",
+        "reportNote": "辱罵·廣告·個人資訊等內容都可以檢舉，被多次檢舉後會自動隱藏。"
+      }
+    },
+    "momWellness": {
+      "page1": {
+        "title": "每天輕鬆記錄心情",
+        "desc": "用5階段心情與一句話記錄今天。\n只會儲存在裝置上，可以放心記錄",
+        "captionLabel": "今天心情如何？"
+      },
+      "page2": {
+        "title": "用EPDS檢測心理狀態",
+        "desc": "全球標準的產前·產後憂鬱自我檢測（10題）。\n10分以上須留意，13分以上建議尋求專家諮詢",
+        "sampleQuestion": "Q. 有沒有莫名感到不安或擔心？",
+        "optNever": "完全不會",
+        "optSometimes": "偶爾會",
+        "optOften": "經常會",
+        "scaleLabel": "穩定 → 注意 → 輕微憂鬱感 → 明顯"
+      },
+      "page3": {
+        "title": "若獨自難以承受，就一起守護",
+        "desc": "憂鬱程度達中等以上時，才會通知家人。\n若感到非常辛苦，會直接連結到專業諮詢",
+        "shareText": "與先生·家人分享",
+        "crisisText": "💙 自我檢測不能取代醫療診斷。若感到非常辛苦，請務必聯絡心理健康諮詢1577-0199·自殺防治1393。"
+      }
+    },
+    "pregnancyAlbum": {
+      "page1": {
+        "title": "依週數記錄大肚子的每個瞬間",
+        "desc": "每個週數都留下肚子的照片，\n就能累積漸漸隆起的變化",
+        "weekTile": "第{{week}}週"
+      },
+      "page2": {
+        "title": "超音波照片也集中保存",
+        "desc": "將產檢時拿到的超音波照片連同週數一起\n保存，之後可以慢慢回顧",
+        "pillLabel": "12週·首次超音波"
+      },
+      "page3": {
+        "title": "集結成一本胎教日記",
+        "desc": "產後可以將懷孕第1週到第40週\n製作成一本回憶相簿",
+        "coverTitle": "我家寶貝的胎教日記",
+        "coverSub": "懷孕第1週~第40週"
+      }
+    },
+    "pregnancyJourney": {
+      "steps": {
+        "early": "初期（~13週）",
+        "stable": "穩定期（~27週）",
+        "late": "後期（~36週）",
+        "imminent": "即將臨盆",
+        "birth": "生產 🎉"
+      },
+      "page1": {
+        "title": "用5個階段引導你的孕期旅程",
+        "desc": "從初期到生產分成幾個階段，\n讓你知道現在走到哪裡"
+      },
+      "page2": {
+        "title": "只提供現階段所需的資訊",
+        "desc": "針對每個階段該做的檢查·營養品·運動·注意事項，\n用簡單易懂的話明確告訴你",
+        "captionLabel": "✅  穩定期該做的事",
+        "task1": "接受精密超音波檢查",
+        "task2": "補充鐵質·鈣質",
+        "task3": "進行輕度運動"
+      },
+      "page3": {
+        "title": "一起陪你走到生產",
+        "desc": "每過一個階段，就會自動切換成\n符合下個階段的指南",
+        "captionLabel": "➡️  下一階段",
+        "pillStable": "穩定期",
+        "pillLateGuide": "後期指南"
+      }
+    },
+    "sos": {
+      "page1": {
+        "title": "孩子不舒服時，請先確認",
+        "desc": "選擇症狀後，會以4個等級告訴您危險程度。\n請務必記住顏色代表的意義",
+        "levelEmergencyName": "緊急（紅色）",
+        "levelEmergencyDesc": "立即撥打119 — 刻不容緩",
+        "levelHospitalName": "就醫（橘色）",
+        "levelHospitalDesc": "請立即前往醫院或急診室",
+        "levelCautionName": "注意（黃色）",
+        "levelCautionDesc": "並非安全！請仔細觀察",
+        "levelObserveName": "觀察（綠色）",
+        "levelObserveDesc": "在家中觀察狀況"
+      },
+      "page2": {
+        "title": "只要選擇症狀即可",
+        "desc": "選擇發燒、嘔吐、疹子等症狀，\n輸入體溫後可獲得更精確的指引",
+        "symptoms": [
+          "🌡️ 發燒",
+          "🤮 嘔吐",
+          "😮‍💨 呼吸困難",
+          "🩸 出血",
+          "🔴 疹子",
+          "😵 抽搐"
+        ],
+        "note": "⚠️ 此功能僅供參考。即使結果為「觀察」，若孩子狀況異常，請勿猶豫立即就醫。"
+      },
+      "page3": {
+        "title": "CPR、急救處置也在身邊",
+        "desc": "CPR、哈姆立克法（異物哽塞）、燒燙傷等\n依月齡提供分步驟的急救指引",
+        "items": [
+          "❤️ 心肺復甦",
+          "🫁 哈姆立克法",
+          "🔥 燒燙傷",
+          "🧩 異物哽塞"
+        ],
+        "note": "👶 嬰兒（未滿12個月）與較大孩童的處置方式不同 — 請依孩子的月齡遵循指引。"
+      }
+    },
+    "trait": {
+      "page1": {
+        "title": "什麼是氣質？",
+        "desc": "這是孩子與生俱來的性向與能量平衡。\n以探索、活動、穩定、分析、情感五個面向為您呈現",
+        "cap": "🌱  孩子的能量分布"
+      },
+      "energyLabels": {
+        "explore": "探索",
+        "active": "活動",
+        "stable": "穩定",
+        "analytic": "分析",
+        "emotional": "情感"
+      },
+      "page2": {
+        "title": "如何分析？",
+        "desc": "透過出生年月日與時間分析與生俱來的性向，\n再以簡單的觀察問題進一步精細調整",
+        "flowBirth": "🎂 出生年月日時",
+        "flowQuestion": "📝 觀察問題",
+        "flowResult": "專屬孩子的氣質報告"
+      },
+      "page3": {
+        "title": "應用在哪裡？",
+        "desc": "氣質不只是單純的結果，\n更是諮詢與推薦內容依孩子調整的依據",
+        "useChat": "諮詢阿姨會依據氣質給予回覆",
+        "useRecommend": "飲食、遊戲、學習推薦會因此不同",
+        "useTips": "睡眠、教養小技巧也會依性向提供建議"
+      }
+    },
+    "vaccination": {
+      "page1": {
+        "title": "自動整理國家預防接種",
+        "desc": "依孩子月齡整理適合的免費國家接種項目，\n按順序為您呈現",
+        "vaccineBcg": "卡介苗（結核病）",
+        "statusDone": "已完成",
+        "vaccineDtap": "DTaP 第3劑",
+        "statusUpcoming": "預定",
+        "vaccinePneumo": "肺炎鏈球菌",
+        "statusOverdue": "已逾期"
+      },
+      "page2": {
+        "title": "不錯過接種時機",
+        "desc": "即將到來的接種以D-day顯示剩餘天數，\n已過期的接種則以紅色標示提醒您",
+        "ddaySub": "DTaP 第3劑・6月11日",
+        "notifyPill": "🔔 提前透過通知提醒您"
+      },
+      "page3": {
+        "title": "已接種項目打勾確認！",
+        "desc": "記錄接種日期與醫院並勾選完成後，\n可一目了然查看整體進度",
+        "cap": "✅  接種進度",
+        "progressText": "14 / 20 已完成（70%）"
+      }
+    },
+    "weeklyDev": {
+      "page1": {
+        "title": "告訴您本週寶寶的發育狀況",
+        "desc": "依目前週數呈現寶寶的身高、體重\n以及會發生哪些變化",
+        "weekBadge": "懷孕第20週",
+        "heightLabel": "身高",
+        "heightVal": "約25公分",
+        "weightLabel": "體重",
+        "weightVal": "約300公克"
+      },
+      "page2": {
+        "title": "用水果輕鬆比較大小",
+        "desc": "就像「本週像香蕉一樣大」，\n用熟悉的事物比喻讓您感受大小",
+        "compare": "現在像香蕉一樣大",
+        "week12": "🫐 12週",
+        "week20": "🍌 20週",
+        "week36": "🎃 36週"
+      },
+      "page3": {
+        "title": "每週自動更新",
+        "desc": "隨著週數推進，發育內容\n會自動更新到下一週",
+        "cap": "🔄  自動更新",
+        "week20": "20週",
+        "week21": "21週發育"
+      }
+    }
+  },
+  "pushNotifications": {
+    "appName": "아맞다",
+    "channels": {
+      "default": "아맞다通知",
+      "engagement": "아맞다提醒"
+    },
+    "permissionAlert": {
+      "message": "我們會傳送孩子發育階段小提示、疫苗/看診行程、每日記錄提醒。\n\n隨時可以在設定中關閉。",
+      "allow": "允許"
+    },
+    "reengagement3d": {
+      "body": "寶寶最近過得好嗎?想知道最近的狀況!"
+    },
+    "reengagement7d": {
+      "body": "成長日記累積很多了!只要花一點時間,就能留下珍貴的記錄"
+    },
+    "reengagement10d": {
+      "body": "育兒日誌累積很多了!累積資料後可以分析並補齊不足之處"
+    },
+    "reengagement14d": {
+      "body": "別錯過寶寶的成長!今天要不要花一點時間記錄看看?"
+    },
+    "morning": {
+      "body": "早安!寶寶昨晚睡得好嗎?"
+    },
+    "afternoon": {
+      "body": "現在和寶寶來15分鐘的遊戲時間如何?"
+    },
+    "evening": {
+      "body": "今天的育兒日誌已經準備好了"
+    },
+    "weeklyReport": {
+      "body": "本週的育兒報告已送達"
+    },
+    "coachingFollowup": {
+      "body": "昨天諮詢後狀況還好嗎?有任何疑問歡迎告訴我們"
+    },
+    "firstCoachingNudge": {
+      "title": "為您量身打造的育兒小提示已經準備好了",
+      "body": "有任何疑問都可以問。諮詢小幫手在等您!"
+    },
+    "nextDayNudge": {
+      "body": "為寶寶量身打造的育兒指導,來試試看吧!"
+    },
+    "dailyMission": {
+      "title": "叩叩!👶 媽媽",
+      "body": "今天吃營養補充品了嗎?別忘了喝杯涼開水! ✨"
+    },
+    "feverRecheck": {
+      "title": "🌡 體溫再次測量提醒",
+      "body": "距離上次量體溫已經過了1小時!請再次確認目前的狀況。"
+    },
+    "pregnancyExams": {
+      "nt": {
+        "title": "第一次唐氏症篩檢 (NT)",
+        "body": "現在是11~13週的頸部透明帶檢查時期,請確認醫院預約。"
+      },
+      "quad": {
+        "title": "四指標篩檢",
+        "body": "現在是15~20週的四指標篩檢時期,請確認是否已預約。"
+      },
+      "ultrasound": {
+        "title": "高層次超音波",
+        "body": "現在是20~24週的高層次超音波時期,可以詳細觀察寶寶的發育情況。"
+      },
+      "hospitalRegHighRisk": {
+        "title": "建議登記生產醫院 (高風險)",
+        "body": "高風險妊娠有早產的可能性,請先登記好生產醫院的電話號碼。"
+      },
+      "gct": {
+        "title": "妊娠糖尿病篩檢 (GCT)",
+        "body": "現在是24~28週的妊娠糖尿病篩檢時期。"
+      },
+      "hospitalReg": {
+        "title": "建議登記生產醫院",
+        "body": "即將迎接生產。請先登記好生產醫院的電話號碼,緊急時可以立即撥打。"
+      },
+      "nst": {
+        "title": "胎動監測 (NST)",
+        "body": "現在是32週前後的NST胎動監測時期。"
+      },
+      "gbs": {
+        "title": "B型鏈球菌篩檢 (GBS)",
+        "body": "現在是36週的B型鏈球菌篩檢時期。"
+      },
+      "birthBag": {
+        "title": "準備待產包",
+        "body": "請確認待產包的檢查清單。"
+      }
+    },
+    "pregnancyCountdown": {
+      "d7": {
+        "title": "生產倒數7天",
+        "body": "距離生產只剩一週!請做最後的待產包與文件檢查。"
+      },
+      "d3": {
+        "title": "生產倒數3天",
+        "body": "請先確認陣痛間隔計時器的使用方式。"
+      },
+      "dday": {
+        "title": "預產期 D-Day",
+        "body": "今天是預產期。陣痛開始請立即聯絡醫院。"
+      }
+    }
+  },
+  "otaCheck": {
+    "updateFailed": {
+      "title": "更新失敗",
+      "message": "請確認網路連線狀態並重新啟動應用程式。"
+    },
+    "updateAvailable": {
+      "title": "新版本已準備就緒",
+      "message": "應用程式版本與最新伺服器不相符,部分功能可能無法正常運作。\n要立即更新嗎?",
+      "updateButton": "更新"
+    }
+  },
+  "checkup": {
+    "dateFormat": "{{yyyy}}-{{mm}}-{{dd}} ({{dow}})"
+  },
+  "socialAuth": {
+    "appName": "아맞다",
+    "errors": {
+      "kakaoSdk": "Kakao SDK錯誤：{{message}}",
+      "naverEnvMissing": "Naver登入環境變數（EXPO_PUBLIC_NAVER_CLIENT_ID/SECRET）未設定。",
+      "naverLoginFailed": "Naver登入失敗：{{message}}",
+      "naverSdk": "Naver SDK錯誤：{{message}}",
+      "googleEnvMissing": "Google登入環境變數（EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID）未設定。",
+      "googleTokenMissing": "未取得到 accessToken。",
+      "googleSdk": "Google SDK錯誤：{{message}}",
+      "clientIdMissing": "[social-auth] {{provider}} 未設定 clientId — 正式環境無法使用模擬權杖",
+      "appleIosOnly": "Apple登入僅支援iOS。",
+      "appleUnavailable": "此裝置無法使用Apple登入。",
+      "appleTokenMissing": "未取得到 Apple identityToken。",
+      "appleLogin": "Apple登入錯誤：{{message}}",
+      "unknownError": "未知的錯誤"
+    }
+  },
+  "imagePicker": {
+    "galleryUnavailable": {
+      "title": "無法開啟相簿",
+      "desc": "裝置的預設相簿應用程式不存在或已停用。\n請至設定 > 應用程式中啟用相簿/照片應用程式。"
+    },
+    "loadFailed": "無法載入照片，請再試一次。",
+    "cameraPermissionRequired": {
+      "title": "需要權限",
+      "desc": "需要相機權限，請至設定中允許。"
+    },
+    "cameraUnavailable": {
+      "title": "無法開啟相機",
+      "desc": "在裝置上找不到相機應用程式。"
+    },
+    "cameraOpenFailed": "無法開啟相機，請再試一次。"
+  },
+  "deliveryHospital": {
+    "label": {
+      "highRiskCenterWard": "高風險孕產婦中心(MFICU) / 分娩室",
+      "deliveryWardDirect": "分娩室直撥",
+      "deliveryHospitalMain": "分娩醫院 總機",
+      "clinicHospitalWard": "就診醫院分娩室",
+      "outpatientMain": "門診總機"
+    },
+    "subLabel": {
+      "universityEmergency247": "大學醫院 — 24小時急診連線",
+      "nightWeekendPriority": "夜間/週末優先",
+      "requestTransferViaOperator": "透過總機轉接分娩室",
+      "daytimeHoursPriority": "白天門診時間優先"
+    }
+  },
+  "payment": {
+    "product": {
+      "monthlyName": "Amatda VIP 月繳方案",
+      "yearlyName": "Amatda VIP 年繳方案"
+    },
+    "method": {
+      "autoPlatformDesc": "平台自動付款（推薦）",
+      "kakaopay": "Kakao Pay",
+      "naverpay": "NAVER Pay",
+      "tosspay": "Toss Pay",
+      "card": "信用卡/金融卡",
+      "transfer": "銀行轉帳"
+    },
+    "error": {
+      "iapUnavailable": "無法使用應用程式內購買功能。",
+      "loadPurchaseHistoryFailed": "無法載入購買紀錄：{{error}}",
+      "serverVerificationFailed": "伺服器驗證失敗，請稍後再試一次。",
+      "iapAvailableNextUpdate": "應用程式內購買功能將於下次更新後提供。",
+      "iapConnectionFailed": "應用程式內購買連線失敗：{{error}}",
+      "subscriptionProductLoadFailed": "無法載入訂閱商品資訊，請確認 Play 商店的註冊狀態。",
+      "productQueryFailed": "商品查詢失敗：{{error}}",
+      "iapModuleNotInitialized": "應用程式內購買模組尚未初始化。",
+      "purchaseCancelledOrNoResponse": "付款已取消或未收到回應。",
+      "iapCancelledOrFailed": "應用程式內購買已取消或失敗：{{error}}",
+      "receiptTokenNotFound": "找不到收據權杖(Token)。",
+      "transactionIdNotFound": "找不到交易編號。",
+      "paymentServerTemporarilyUnavailable": "付款伺服器暫時無法使用，請稍後再試一次。",
+      "paymentVerificationFailed": "付款驗證失敗，請稍後再試，或點選「恢復購買」。"
+    },
+    "success": {
+      "purchaseRestored": "已恢復購買。"
+    }
+  },
+  "traitReportHtml": {
+    "footer": "— Amatda App 分析 · {{date}}",
+    "section": {
+      "personality": "🎭 性格特質",
+      "strengths": "💪 優點",
+      "weaknesses": "⚠️ 注意事項",
+      "studyStyle": "📚 學習風格",
+      "bestSubjects": "⭐ 適合科目",
+      "weakAreas": "💡 待加強領域",
+      "academyStyle": "🏫 推薦補習班風格",
+      "educationDirection": "🎓 教育方向",
+      "futureFields": "🚀 適合的未來職業",
+      "sportsMatch": "🏃 推薦運動",
+      "goodFoods": "🥗 適合的食物",
+      "badFoods": "🚫 應避免的食物",
+      "specialTalent": "🏆 特殊天賦",
+      "parentingTip": "🤱 育兒小提示",
+      "dailyRoutineTip": "☀️ 日常作息小提示",
+      "socialTip": "🤝 社交能力小提示",
+      "emotionalTip": "💖 情緒小提示",
+      "doList": "✅ 建議 (Do)",
+      "dontList": "❌ 不建議 (Don't)"
     }
   }
 }

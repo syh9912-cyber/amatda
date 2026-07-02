@@ -10,6 +10,7 @@
  *  - 취소/없음   → onClose()
  */
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { pickMultipleFromLibrary } from '../../utils/imagePicker';
 
 interface Props {
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export function RecentPhotosGrid({ visible, onClose, onPicked }: Props) {
+  const { t } = useTranslation();
   // visible 가 false→true 로 바뀔 때 1회만 피커를 연다 (재진입 방지).
   const openedRef = useRef(false);
 
@@ -32,14 +34,14 @@ export function RecentPhotosGrid({ visible, onClose, onPicked }: Props) {
 
     (async () => {
       try {
-        const picked = await pickMultipleFromLibrary({ quality: 0.9, selectionLimit: 20 });
+        const picked = await pickMultipleFromLibrary(t, { quality: 0.9, selectionLimit: 20 });
         if (picked.length > 0) onPicked(picked.map((p) => p.uri));
         else onClose();
       } catch {
         onClose();
       }
     })();
-  }, [visible, onPicked, onClose]);
+  }, [visible, onPicked, onClose, t]);
 
   return null;
 }

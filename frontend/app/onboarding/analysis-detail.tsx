@@ -121,7 +121,7 @@ export default function AnalysisDetailScreen() {
     setSharing(true);
     try {
       const analysisDate = child.birthDate ? child.birthDate.replace(/-/g, '.') : '';
-      const html = buildFullReportHtml({
+      const html = buildFullReportHtml(t, {
         childName: safeString(child.name),
         ageMonths: child.ageInfo?.months ?? 0,
         analysisDate,

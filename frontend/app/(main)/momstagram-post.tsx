@@ -50,7 +50,7 @@ export default function MomstagramPostScreen() {
   const dominantType = selectedChild?.innateData?.dominantType ?? '';
 
   const pickImage = async () => {
-    const picked = await pickImageFromLibrary({ quality: 0.8 });
+    const picked = await pickImageFromLibrary(t, { quality: 0.8 });
     if (picked) setImageUri(picked.uri);
   };
 

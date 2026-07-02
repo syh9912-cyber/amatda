@@ -19,7 +19,7 @@ import { AdSlot } from '../../components/ads/AdSlot';
 import { BackButton } from '../../components/common/BackButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
-import { TRAIT_GUIDE } from '../../features/guide/traitGuide';
+import { getTraitGuide } from '../../features/guide/traitGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { TraitTabBar } from '../../components/trait/TraitTabBar';
 import { TraitTypeCard } from '../../components/trait/TraitTypeCard';
@@ -191,7 +191,7 @@ export default function TraitDetailScreen() {
       </ScrollView>
 
       <AdSlot />
-      <GuideCarousel visible={guideVisible} pages={TRAIT_GUIDE} onClose={closeGuide} onComplete={closeGuide} />
+      <GuideCarousel visible={guideVisible} pages={getTraitGuide(t)} onClose={closeGuide} onComplete={closeGuide} />
     </View>
   );
 }

@@ -26,7 +26,7 @@ import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideButton } from '../../components/common/GuideButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { MedicalCitation } from '../../components/common/MedicalCitation';
-import { LABORMONITOR_GUIDE } from '../../features/guide/laborMonitorGuide';
+import { getLaborMonitorGuide } from '../../features/guide/laborMonitorGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
 type Tab = 'kick' | 'contraction';
@@ -60,6 +60,7 @@ export default function LaborMonitorScreen() {
   const childId = selectedChild?.id ?? '';
   const currentWeek = getCurrentWeek(selectedChild?.dueDate);
 
+  const laborMonitorGuide = useMemo(() => getLaborMonitorGuide(t), [t]);
   const [guideVisible, setGuideVisible] = useState(false);
   useEffect(() => { shouldAutoShowGuide('labor-monitor').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
   const closeGuide = () => { setGuideVisible(false); markGuideSeen('labor-monitor'); };
@@ -350,9 +351,9 @@ export default function LaborMonitorScreen() {
 
   const refreshHospitalRegistered = useCallback(async () => {
     if (!childId) return;
-    const all = await pickAllPhones(childId);
+    const all = await pickAllPhones(t, childId);
     setHasRegisteredHospital(all.length > 0);
-  }, [childId]);
+  }, [childId, t]);
 
   useEffect(() => {
     refreshHospitalRegistered();
@@ -373,7 +374,7 @@ export default function LaborMonitorScreen() {
     if (!childId) return;
     // 양수 파수 = 즉시 emergency. (현 contractionGuide.tone === 'emergency' 와 동일 조건)
     const isEmergency = diagAnswers.ruptured === true;
-    const all = await pickAllPhones(childId, { isEmergency });
+    const all = await pickAllPhones(t, childId, { isEmergency });
     if (all.length === 0) {
       // 미등록 — 진통 위급 상황에서 119로 안내 + 즉시 등록 가능한 모달
       Alert.alert(
@@ -972,7 +973,7 @@ export default function LaborMonitorScreen() {
         }}
       />
 
-      <GuideCarousel visible={guideVisible} pages={LABORMONITOR_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#DB6A5F" />
+      <GuideCarousel visible={guideVisible} pages={laborMonitorGuide} onClose={closeGuide} onComplete={closeGuide} accent="#DB6A5F" />
     </View>
   );
 }

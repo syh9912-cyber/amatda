@@ -32,7 +32,7 @@ import { AdSlot } from '../../components/ads/AdSlot';
 import { BackButton } from '../../components/common/BackButton';
 import { GuideButton } from '../../components/common/GuideButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
-import { AIANALYSIS_GUIDE } from '../../features/guide/aiAnalysisGuide';
+import { getAiAnalysisGuide } from '../../features/guide/aiAnalysisGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
 const IC_REPORT = require('../../assets/quick-report.png') as ImageSourcePropType;
@@ -495,7 +495,7 @@ export default function AIAnalysisScreen() {
         </View>
       </Modal>
 
-      <GuideCarousel visible={guideVisible} pages={AIANALYSIS_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#9D8CC6" />
+      <GuideCarousel visible={guideVisible} pages={getAiAnalysisGuide(t)} onClose={closeGuide} onComplete={closeGuide} accent="#9D8CC6" />
     </View>
   );
 }

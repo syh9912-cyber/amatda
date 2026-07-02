@@ -33,7 +33,7 @@ import {
 import { useChildPermissions } from '../../features/coparenting/permissions';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
-import { CHATBOT_GUIDE } from '../../features/guide/chatbotGuide';
+import { getChatbotGuide } from '../../features/guide/chatbotGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 
 // 의료/건강 정보 출처 (App Store Guideline 1.4.1) — 신뢰 가능한 공신력 있는 기관.
@@ -592,7 +592,7 @@ export default function CoachingScreen() {
         />
       )}
 
-      <GuideCarousel visible={guideVisible} pages={CHATBOT_GUIDE} onClose={closeGuide} onComplete={closeGuide} />
+      <GuideCarousel visible={guideVisible} pages={getChatbotGuide(t)} onClose={closeGuide} onComplete={closeGuide} />
     </KeyboardAvoidingView>
   );
 }

@@ -4216,7 +4216,8 @@
     "privateHintOn": "この投稿は自分だけに表示されます",
     "privateHintOff": "家族にシェアされます",
     "saveBtn": "保存する",
-    "shareBtn": "シェアする"
+    "shareBtn": "シェアする",
+    "anonymous": "匿名"
   },
   "aiAnalysis": {
     "screenTitle": "AI分析",
@@ -5675,6 +5676,757 @@
         "question": "今週の妊娠生活で特別だった瞬間はありますか?",
         "hint": "例: 超音波検査に行った、胎児のニックネームを決めた、赤ちゃんの部屋の準備など"
       }
+    }
+  },
+  "guides": {
+    "aiAnalysis": {
+      "page1": {
+        "title": "AIがお子さんを分析します",
+        "desc": "3つの方法で分析します — 育児パターン、うんち、泣き声。\n希望する分析を選んで始めましょう"
+      },
+      "page2": {
+        "title": "記録するだけでパターンが分析されます",
+        "desc": "育児タイムに記録された排便・授乳・睡眠を\nAIが標準と比較して総合評価します（別途入力不要）",
+        "cardTitle": "📊  今日の育児パターン",
+        "feeding": "授乳",
+        "feedingCount": "7回",
+        "sleep": "睡眠",
+        "sleepHours": "13時間",
+        "poop": "排便",
+        "poopCount": "3回",
+        "ok": "適正",
+        "evalText": "🤖  全体的に安定した一日でした"
+      },
+      "page3": {
+        "title": "写真・音声でうんち・泣き声も分析",
+        "desc": "うんちは写真、泣き声は録音をアップロードすると\nAIが原因と対処法を教えてくれます",
+        "poopPhoto": "うんち写真",
+        "poopHint": "明るい場所ではっきりと",
+        "cryRecording": "泣き声録音",
+        "cryHint": "静かな場所で近くから",
+        "ageNote": "👶  うんち分析は0〜72ヶ月、泣き声分析は0〜24ヶ月のお子さんに対応しています。",
+        "warning": "参考用です。異常な症状が見られたら必ず病院へ行ってください"
+      }
+    },
+    "album": {
+      "page1": {
+        "title": "写真で成長を記録します",
+        "desc": "ギャラリーやカメラで写真を追加すると\n日付順にきちんと整理されます",
+        "cardTitle": "📸  お子さんの写真"
+      },
+      "page2": {
+        "title": "発達段階が自動で付きます",
+        "desc": "「はじめての一歩」「はじめての笑顔」のような発達段階を\n月齢に合わせて自動で提案します",
+        "firstStep": "はじめての一歩",
+        "firstWord": "はじめての言葉",
+        "firstSmile": "はじめての笑顔"
+      },
+      "page3": {
+        "title": "写真を複数枚まとめて",
+        "desc": "ギャラリーから複数枚選んで一度にアップロードし、\n写真ごとに家族フィード共有・メモを設定できます",
+        "cardTitle": "🖼️  複数枚追加・確認",
+        "sampleMemo": "「はじめての離乳食に挑戦！」",
+        "feedShare": "フィード共有"
+      },
+      "page4": {
+        "title": "一日をAIが日記に書いてくれます",
+        "desc": "その日の育児タイム記録と相談内容を集めて\nAIが親の心で温かい日記を書きます",
+        "sampleDate": "6月6日 土曜日",
+        "sampleDiary": "今日ユンドは粉ミルクをよく飲み、昼寝もぐっすりした。おむつを替えるたびにニッコリ笑ってくれて一日中幸せだった…",
+        "sourceBabyTracker": "🍼 育児タイム記録",
+        "sourceCoaching": "💬 相談内容"
+      },
+      "page5": {
+        "title": "一冊のアルバムにします",
+        "desc": "期間を選ぶだけで月別に整理された\n写真アルバムをPDFで受け取れます",
+        "sampleCoverTitle": "ユンドの成長アルバム",
+        "sampleCoverRange": "2025.06 ~ 2026.05",
+        "saveAsAlbum": "アルバムとして保存"
+      }
+    },
+    "birthBag": {
+      "page1": {
+        "title": "自分の状況に合ったリストがもらえます",
+        "desc": "分娩形態と産後計画を選ぶと\nちょうど合った準備物だけを選んで表示します",
+        "birthTypeLabel": "分娩形態",
+        "postpartumPlanLabel": "産後計画",
+        "postpartumCenter": "産後ケアセンター",
+        "postpartumHome": "自宅へ"
+      },
+      "page2": {
+        "title": "状態・担当を決めてチェックします",
+        "desc": "項目ごとに購入必要/準備完了をタグ付けし\nママ・パパの担当を分けて進行率を埋めます",
+        "sampleItemPad": "産褥パッド",
+        "sampleItemCarSeat": "チャイルドシート",
+        "progressText": "62% 準備完了"
+      },
+      "page3": {
+        "title": "パパと一緒に、リンクで共有",
+        "desc": "パパモードでパパ担当だけをまとめて見て\nリンクで家族と一緒に準備します",
+        "dadModeLabel": "パパモード — パパ担当のみ表示",
+        "shareVia": "LINE・リンクで共有"
+      }
+    },
+    "chatbot": {
+      "page1": {
+        "title": "相談おばさんに気軽に聞いてみましょう",
+        "desc": "お子さんの気質を理解して答えてくれるAI相談。\n気になることは何でも会話するように聞いてみましょう",
+        "bubble1": "離乳食をよく吐き出します。どうすればいいですか？",
+        "bubble2": "まだ新しい食感に慣れていないのかもしれません。活動型のお子さんは少しずつ、好きな食材から混ぜてあげると抵抗感が減ります。",
+        "bubble3": "どのくらいの頻度で与えればいいですか？"
+      },
+      "page2": {
+        "title": "カテゴリでもっと早く",
+        "desc": "テーマを選ぶと質問が自動で入力されます。\nそのまま送るか自由に編集して聞いてみましょう",
+        "topicSelect": "テーマ選択",
+        "topics": [
+          "授乳・食事",
+          "睡眠",
+          "発達",
+          "しつけ",
+          "健康",
+          "遊び"
+        ],
+        "samplePrompt": "子どもの睡眠について悩みがあります…"
+      },
+      "page3": {
+        "title": "泣き声・うんちも分析します",
+        "desc": "相談画面内で泣き声・うんちの写真をアップロードすると\nAIが原因と対処法を分析します",
+        "note": "🔊  5〜15秒、お子さんの近くで録音すると正確です{'\\n'}💩  明るい場所ではっきりと撮影してください"
+      },
+      "page4": {
+        "title": "相談後もフォローします",
+        "desc": "相談した内容は翌朝\n「その後どうですか？」というフォローアップで再確認します",
+        "bubble": "🌙 昨日相談した睡眠ルーティン、今日はいかがでしたか？",
+        "note": "💡 相談おばさんは参考用です。お子さんが体調不良や緊急の場合は必ず病院・119番を先にご利用ください。",
+        "warning": "緊急症状の場合はホームのSOS（緊急）機能をご利用ください"
+      }
+    },
+    "coparenting": {
+      "page1": {
+        "title": "家族と一緒に子育てをします",
+        "desc": "配偶者・祖父母を招待すると同じお子さんを\n一緒に記録し、相談履歴も共有できます"
+      },
+      "page2": {
+        "title": "招待はコード一回で完了",
+        "desc": "招待を作成するとコード/リンクが生成されます。\nLINE・SMSで送ると相手がタップしてすぐつながります",
+        "inviteCode": "招待コード",
+        "kakao": "LINE",
+        "sms": "SMS",
+        "link": "リンク"
+      },
+      "page3": {
+        "title": "役割ごとに権限を設定します",
+        "desc": "例：親は記録・相談すべて、祖父母は閲覧のみ。\n招待時に役割を選ぶと権限が自動で設定されます",
+        "roleParent": "ママ・パパ（親）",
+        "permParent": "記録・相談・全て",
+        "roleGrandma": "おばあちゃん（祖父母）",
+        "permViewOnly": "閲覧のみ",
+        "roleHelper": "保育ヘルパー",
+        "permRecordOnly": "記録のみ",
+        "badgeCanRecord": "記録可能",
+        "badgeViewOnly": "閲覧のみ"
+      },
+      "page4": {
+        "title": "連携はいつでも解除できます",
+        "desc": "所有者が連携を解除すると相手のアプリから子どもが消えます。\n招待された方は「退出」で自ら連携を解除できます",
+        "note": "🔑  子どもを作成した人が所有者です。{'\\n'}🔁  記録は全員にリアルタイムで共有されます。{'\\n'}🚪  もう一緒にしない場合は連携を解除すればいいです。"
+      }
+    },
+    "fever": {
+      "page1": {
+        "title": "体温をすばやく記録します",
+        "desc": "耳・額・脇の下のどこで測ったか選ぶと\n部位に合わせて自動補正して整理します",
+        "currentTemp": "🌡️  現在の体温",
+        "tempSub": "脇の下測定・+0.5°補正済み",
+        "morningTemp": "朝 37.1°",
+        "eveningTemp": "夜 38.2°"
+      },
+      "page2": {
+        "title": "危険な発熱を色で知らせます",
+        "desc": "体温段階を色で表示し\n病院に行くべき時をすぐに案内します",
+        "normal": "正常 ~37.4°",
+        "mild": "微熱 ~38°",
+        "high": "高熱 38°+",
+        "hospitalRecommend": "病院受診推奨"
+      },
+      "page3": {
+        "title": "体重に合わせた解熱剤の用量",
+        "desc": "お子さんの体重を入力するだけでタイレノール・ブルフェンの\n服用量(ml)を自動で計算します",
+        "weightBasis": "体重12kg基準",
+        "tylenol": "タイレノール（アセトアミノフェン）",
+        "ibuprofen": "ブルフェン（イブプロフェン）",
+        "tylenolShort": "タイレノール"
+      },
+      "page4": {
+        "title": "交互服用も迷わないように",
+        "desc": "同じ薬は4〜6時間、他の薬と交互にする場合は\n最低2時間の間隔で次の時間を教えます",
+        "doseLogTitle": "💊  服用記録＆次回時間",
+        "sampleDoseTime": "午後7:00・5ml",
+        "crossDoseAvailable": "ブルフェン交互可能",
+        "sampleNextTime": "午後9:00から",
+        "overdosePrevention": "過剰摂取を自動防止"
+      }
+    },
+    "gdm": {
+      "page1": {
+        "title": "血糖値を時点別に記録します",
+        "desc": "空腹時・食後の時点と一緒に記録すると推移が見えます。\n基準線が常に表示され一目で比較できます",
+        "targetBaseline": "目標基準線",
+        "fastingTarget": "95以下",
+        "after1hTarget": "140以下",
+        "after2hTarget": "120以下",
+        "sampleTime": "今朝・空腹時"
+      },
+      "page2": {
+        "title": "食事は写真で簡単に",
+        "desc": "食事の写真をアップロードするとAIが炭水化物・カロリーを推定します。\n食事ごとの推奨炭水化物量も一緒にお知らせします",
+        "sampleMeal": "玄米ご飯＋ナムル",
+        "sampleCarb": "炭水化物45g",
+        "sampleCalories": "320 kcal",
+        "aiAnalyzeByPhoto": "写真でAI分析"
+      },
+      "page3": {
+        "title": "週間AIレポートで管理します",
+        "desc": "一週間の血糖値・食事を総合して\n良かった点と注意すべき点をコーチングします",
+        "reportLine1": "✅ 食後の血糖値が安定しています",
+        "reportLine2": "⚠️ 夕食の炭水化物を少し減らしてみましょうか？",
+        "note": "🩺 数値・分析は参考用です。正確な妊娠糖尿病管理は担当医療スタッフにご相談ください。"
+      }
+    },
+    "growth": {
+      "page1": {
+        "title": "身長・体重で成長曲線を描きます",
+        "desc": "記録を残すと、同年齢の子と比べた位置を\n成長曲線上に点で表示します",
+        "captionLabel": "📈  体重の成長曲線",
+        "legendNormal": "正常範囲",
+        "legendMyChild": "うちの子"
+      },
+      "page2": {
+        "title": "パーセンタイル(%)って何ですか？",
+        "desc": "「同年齢100人中で何番目か」という意味です。\n50%ならちょうど平均。高すぎたり低すぎたりより\n曲線に沿って着実に成長しているかが大切です",
+        "pctPill": "体重62パーセンタイル・身長58パーセンタイル",
+        "explain": "同年齢100人を並べると、{'\\n'}うちの子は約62番目くらいです{'\\n'}（平均より少し大きめ）"
+      },
+      "page3": {
+        "title": "正確に測ることが大切です",
+        "desc": "同じ方法で測らないと曲線がガタガタになります",
+        "tip1": "体重はおむつを外し、できるだけ朝の同じ時間に",
+        "tip2": "身長は24か月未満は寝かせて、それ以降は立たせて",
+        "tip3": "月1〜2回くらい継続して記録すると変化がはっきり見えます"
+      }
+    },
+    "laborMonitor": {
+      "page1": {
+        "title": "陣痛を開始・終了で測定します",
+        "desc": "陣痛が来たらボタンを押し、終わったらもう一度押します。\n間隔と持続時間が自動で記録されます",
+        "btnLabel": "陣痛開始",
+        "btnSub": "押すと測定開始",
+        "flow": "開始 → 陣痛が終わったら再度押して終了"
+      },
+      "page2": {
+        "title": "病院へ行くタイミングを教えます",
+        "desc": "前駆陣痛と本陣痛を区別して\n病院へ行くタイミングをお知らせします",
+        "falseLaborTitle": "前駆陣痛",
+        "falseLaborDesc": "不規則{'\\n'}姿勢を変えると楽になる",
+        "trueLaborTitle": "本陣痛",
+        "trueLaborDesc": "規則的・間隔が徐々に短くなる{'\\n'}姿勢を変えても痛い",
+        "rule511": "5-1-1 · 5分間隔の陣痛が1時間続いたら病院へ！"
+      },
+      "page3": {
+        "title": "胎動も数えて、緊急時はすぐに",
+        "desc": "赤ちゃんが動くたびにボタンを押してカウントします。\n感じられない時は安心ガイド、緊急時は119・分娩室へ",
+        "counterSub": "30分間で8回・健康的なサイン",
+        "warn": "測定・分析は参考用です。緊急な症状はアプリより先に119・分娩室へ連絡してください。"
+      }
+    },
+    "lullaby": {
+      "page1": {
+        "title": "眠りにつきやすい音を選びます",
+        "desc": "モーツァルト・ブラームスの子守歌から\n雨音・波の音のようなホワイトノイズまで",
+        "trackTitle": "モーツァルトの子守歌",
+        "trackSub": "心地よく眠れます · 3:20",
+        "pillLullaby": "🎵 子守歌",
+        "pillWhiteNoise": "🌧️ ホワイトノイズ"
+      },
+      "page2": {
+        "title": "泣いたら自動で流します",
+        "desc": "泣き声検知をオンにすると、赤ちゃんが泣いた時に\n子守歌が自動で再生されます",
+        "captionLabel": "👂  泣き声検知で自動再生",
+        "detecting": "泣き声検知中…",
+        "pillCryToLullaby": "泣き声検知 → 子守歌 ON"
+      },
+      "page3": {
+        "title": "ママの声で録音します",
+        "desc": "ママの声で子守歌や挨拶を録音して\n赤ちゃんに直接聞かせることができます",
+        "captionLabel": "🎙️  ママの声を録音",
+        "trackTitle": "ママの子守歌",
+        "trackSub": "録音していつでも聞かせる"
+      },
+      "page4": {
+        "title": "タイマーで自動終了",
+        "desc": "時間を設定しておくと、赤ちゃんが眠った後\n音楽が自動で止まります",
+        "timerSub": "30分後に自動終了",
+        "min15": "15分",
+        "min30": "30分",
+        "min60": "60分"
+      },
+      "prenatalPage1": {
+        "title": "赤ちゃんに聞かせる胎教音楽",
+        "desc": "穏やかなクラシックと心地よい音を選んで\nお腹の赤ちゃんに聞かせることができます",
+        "trackTitle": "穏やかなクラシック",
+        "trackSub": "心が落ち着きます · 4:10"
+      },
+      "prenatalPage2": {
+        "title": "ママの声を聞かせましょう",
+        "desc": "ママの声を録音しておけば\nお腹の赤ちゃんに毎日聞かせることができます",
+        "captionLabel": "🎙️  ママの声を録音",
+        "trackTitle": "あかちゃんこんにちは",
+        "trackSub": "ママの声は胎教にいいです"
+      },
+      "prenatalPage3": {
+        "title": "子宮の音で心地よく",
+        "desc": "子宮の音・心音のような心地よい音と\nタイマーで毎日楽に聞かせてください",
+        "timerSub": "20分後に自動終了",
+        "pillWomb": "子宮の音",
+        "pillHeartbeat": "心音"
+      }
+    },
+    "momGroup": {
+      "page1": {
+        "title": "同じ時期のママたちと話しましょう",
+        "desc": "似た年齢の子を育てるママたちと\n質問したり、おしゃべりしたり、情報を交換しましょう",
+        "monthRoomName": "月部屋",
+        "monthRoomDesc": "同じ出産・予定月のママたちが集まります",
+        "localRoomName": "近所",
+        "localRoomDesc": "近くの地域＋同年齢の子を持つママたちとつながります"
+      },
+      "page2": {
+        "title": "気になることを投稿してコメントで交流しましょう",
+        "desc": "タイトル・内容・写真で投稿を書き\nテーマ（質問・雑談・情報・悩み・お祝い）を選びます",
+        "catQuestion": "質問",
+        "catChat": "雑談",
+        "catInfo": "情報",
+        "catWorry": "悩み",
+        "catCelebration": "お祝い",
+        "samplePostTitle": "歯が生え始めたんですが、どうしていますか？",
+        "samplePostMeta": "匿名ママ · 閲覧24 · コメント6"
+      },
+      "page3": {
+        "title": "匿名・通報で安全に",
+        "desc": "話しにくい内容は匿名で、\n不快な投稿は通報して一緒に守りましょう",
+        "anonNote": "匿名で投稿すると、その部屋では「匿名ママ#1234」のように同じニックネームが維持されます。",
+        "reportNote": "誹謗中傷・広告・個人情報などは通報でき、複数回通報されると自動的に非表示になります。"
+      }
+    },
+    "momWellness": {
+      "page1": {
+        "title": "毎日気軽に気分を記録しましょう",
+        "desc": "5段階の気分と一言メモで今日を記録します。\n端末にのみ保存されるので気軽に残せます",
+        "captionLabel": "今日の気分はどうですか？"
+      },
+      "page2": {
+        "title": "EPDSで心の状態をチェックします",
+        "desc": "世界標準の産前・産後うつ自己検査（10問）。\n10点以上は注意、13点以上は専門家への相談をおすすめします",
+        "sampleQuestion": "Q. 特に理由もなく不安や心配を感じましたか？",
+        "optNever": "全くそうではない",
+        "optSometimes": "たまにそうだった",
+        "optOften": "よくそうだった",
+        "scaleLabel": "安定 → 注意 → 軽い抑うつ感 → 明確"
+      },
+      "page3": {
+        "title": "一人でつらい時は一緒に見守ります",
+        "desc": "抑うつ感が中程度以上の時だけ家族に通知が届きます。\nつらい時はすぐに専門相談につながります",
+        "shareText": "夫・家族と共有",
+        "crisisText": "💙 自己検査は診断の代わりにはなりません。つらい時は精神健康相談1577-0199・自殺予防1393へ必ずご連絡ください。"
+      }
+    },
+    "pregnancyAlbum": {
+      "page1": {
+        "title": "お腹の膨らみを週数ごとに",
+        "desc": "週数ごとにお腹の写真を残すと\n少しずつ大きくなる変化が集まります",
+        "weekTile": "{{week}}週"
+      },
+      "page2": {
+        "title": "エコー写真も一か所に",
+        "desc": "検診で受け取ったエコー写真を週数と一緒に\n保管して、後でじっくり振り返ることができます",
+        "pillLabel": "12週・初エコー"
+      },
+      "page3": {
+        "title": "一冊の胎教日記に",
+        "desc": "出産後は妊娠1週から40週までを\n一冊の思い出アルバムにまとめることができます",
+        "coverTitle": "わが子の胎教日記",
+        "coverSub": "妊娠1週〜40週"
+      }
+    },
+    "pregnancyJourney": {
+      "steps": {
+        "early": "初期（〜13週）",
+        "stable": "安定期（〜27週）",
+        "late": "後期（〜36週）",
+        "imminent": "出産間近",
+        "birth": "出産 🎉"
+      },
+      "page1": {
+        "title": "妊娠の旅を5段階でご案内します",
+        "desc": "初期から出産まで段階を分けて\n今どのあたりにいるかを示します"
+      },
+      "page2": {
+        "title": "今の段階に必要なものだけ",
+        "desc": "段階ごとに必要な検診・サプリ・運動・注意点を\nわかりやすい言葉ではっきりお伝えします",
+        "captionLabel": "✅  安定期にすべきこと",
+        "task1": "精密エコー検査を受ける",
+        "task2": "鉄分・カルシウムを摂る",
+        "task3": "軽い運動をする"
+      },
+      "page3": {
+        "title": "出産まで一緒に歩みましょう",
+        "desc": "一つの段階が終わると次の段階に合った\n案内に自動で切り替わります",
+        "captionLabel": "➡️  次の段階",
+        "pillStable": "安定期",
+        "pillLateGuide": "後期ガイド"
+      }
+    },
+    "sos": {
+      "page1": {
+        "title": "お子さまが体調を崩したら、まず確認してください",
+        "desc": "症状を選ぶと危険度を4段階でお知らせします。\n色の意味を必ず覚えておいてください",
+        "levelEmergencyName": "緊急（赤）",
+        "levelEmergencyDesc": "すぐに救急（119）へ — 一刻を争います",
+        "levelHospitalName": "病院（オレンジ）",
+        "levelHospitalDesc": "すぐに病院・救急外来へ",
+        "levelCautionName": "注意（黄）",
+        "levelCautionDesc": "安全とは限りません！しっかり様子を見てください",
+        "levelObserveName": "経過観察（緑）",
+        "levelObserveDesc": "自宅で経過を見守りましょう"
+      },
+      "page2": {
+        "title": "症状を選ぶだけでOK",
+        "desc": "発熱・嘔吐・発疹などの症状を選び、\n体温を入力するとより正確に案内します",
+        "symptoms": [
+          "🌡️ 発熱",
+          "🤮 嘔吐",
+          "😮‍💨 呼吸困難",
+          "🩸 出血",
+          "🔴 発疹",
+          "😵 けいれん"
+        ],
+        "note": "⚠️ この機能は参考用です。「経過観察」の結果でも、お子さまの様子がおかしければ迷わず病院へ行ってください。"
+      },
+      "page3": {
+        "title": "CPR・応急処置もすぐそばに",
+        "desc": "CPR、ハイムリック法（異物）、やけどなど\n月齢に合わせた応急処置ガイドを段階的に表示します",
+        "items": [
+          "❤️ 心肺蘇生",
+          "🫁 ハイムリック法",
+          "🔥 やけど",
+          "🧩 異物"
+        ],
+        "note": "👶 乳児（12ヶ月未満）とそれ以上では処置法が異なります — お子さまの月齢に合った案内に従ってください。"
+      }
+    },
+    "trait": {
+      "page1": {
+        "title": "気質とは何ですか？",
+        "desc": "お子さまが生まれ持った性向・エネルギーのバランスです。\n探求・活動・安定・分析・感性の5つで分かりやすく示します",
+        "cap": "🌱  お子さまのエネルギー分布"
+      },
+      "energyLabels": {
+        "explore": "探求",
+        "active": "活動",
+        "stable": "安定",
+        "analytic": "分析",
+        "emotional": "感性"
+      },
+      "page2": {
+        "title": "どのように分析しますか？",
+        "desc": "生年月日・時間から生まれ持った性向を分析し、\n簡単な観察質問でさらに精密に仕上げます",
+        "flowBirth": "🎂 生年月日時",
+        "flowQuestion": "📝 観察質問",
+        "flowResult": "お子さまだけの気質レポート"
+      },
+      "page3": {
+        "title": "どこで使われますか？",
+        "desc": "気質は単なる結果ではなく、\n相談・おすすめがお子さまに合わせて調整される基準になります",
+        "useChat": "相談員がお子さまの気質に合わせて答えてくれます",
+        "useRecommend": "食事・遊び・学習のおすすめが変わります",
+        "useTips": "睡眠・しつけのヒントも性向に合わせて提案されます"
+      }
+    },
+    "vaccination": {
+      "page1": {
+        "title": "国の予防接種を自動整理",
+        "desc": "お子さまの月齢に合った無料の国の予防接種を\n順番に整理して表示します",
+        "vaccineBcg": "BCG（結核）",
+        "statusDone": "完了",
+        "vaccineDtap": "DTaP 3回目",
+        "statusUpcoming": "予定",
+        "vaccinePneumo": "肺炎球菌",
+        "statusOverdue": "期限超過"
+      },
+      "page2": {
+        "title": "接種時期を逃しません",
+        "desc": "近づく接種は残り日数をD-dayで表示し、\n過ぎた接種は赤く表示してお知らせします",
+        "ddaySub": "DTaP 3回目・6月11日",
+        "notifyPill": "🔔 通知で事前にお知らせします"
+      },
+      "page3": {
+        "title": "接種済みはチェック！",
+        "desc": "接種日・病院を記録して完了をチェックすると、\n全体の進捗率が一目でわかります",
+        "cap": "✅  接種進捗率",
+        "progressText": "14 / 20 完了（70%）"
+      }
+    },
+    "weeklyDev": {
+      "page1": {
+        "title": "今週の赤ちゃんの発達をお知らせします",
+        "desc": "現在の週数に合わせて赤ちゃんの身長・体重と\nどんな変化が起きるかをお見せします",
+        "weekBadge": "妊娠20週目",
+        "heightLabel": "身長",
+        "heightVal": "約25cm",
+        "weightLabel": "体重",
+        "weightVal": "約300g"
+      },
+      "page2": {
+        "title": "大きさを果物で分かりやすく比較します",
+        "desc": "「今週はバナナくらいです」のように\n身近なものに例えて大きさを感じられます",
+        "compare": "今はバナナくらいの大きさです",
+        "week12": "🫐 12週",
+        "week20": "🍌 20週",
+        "week36": "🎃 36週"
+      },
+      "page3": {
+        "title": "毎週自動的に切り替わります",
+        "desc": "週数が進むと発達内容が\n次の週へ自動的に更新されます",
+        "cap": "🔄  自動更新",
+        "week20": "20週",
+        "week21": "21週の発達"
+      }
+    }
+  },
+  "pushNotifications": {
+    "appName": "アマッタ",
+    "channels": {
+      "default": "アマッタ通知",
+      "engagement": "アマッタ リマインダー"
+    },
+    "permissionAlert": {
+      "message": "お子さまの発達段階に合わせたヒント、予防接種・通院スケジュール、毎日の記録リマインダーをお届けします。\n\nいつでも設定でオフにできます。",
+      "allow": "許可"
+    },
+    "reengagement3d": {
+      "body": "赤ちゃんは元気に過ごしていますか?最近どう過ごしているか気になります!"
+    },
+    "reengagement7d": {
+      "body": "成長日記がだいぶ溜まっています!少しだけ時間をいただければ大切な記録になります"
+    },
+    "reengagement10d": {
+      "body": "育児日誌がだいぶ溜まっています!データを蓄積いただくと分析して足りない部分を補えます"
+    },
+    "reengagement14d": {
+      "body": "赤ちゃんの成長を見逃さないで!今日少しだけでも記録してみませんか?"
+    },
+    "morning": {
+      "body": "おはようございます!昨夜、赤ちゃんはよく眠れましたか?"
+    },
+    "afternoon": {
+      "body": "今、赤ちゃんと15分間の遊び時間はいかがですか?"
+    },
+    "evening": {
+      "body": "今日の育児日誌の準備ができました"
+    },
+    "weeklyReport": {
+      "body": "今週の育児レポートが届きました"
+    },
+    "coachingFollowup": {
+      "body": "昨日の相談の後、いかがでしたか?気になることがあればお聞かせください"
+    },
+    "firstCoachingNudge": {
+      "title": "パーソナライズされた育児のヒントが準備できました",
+      "body": "気になることは何でも聞いてください。相談員がお待ちしています!"
+    },
+    "nextDayNudge": {
+      "body": "赤ちゃんにぴったりの育児コーチングを試してみませんか?"
+    },
+    "dailyMission": {
+      "title": "コンコン!👶 ママ",
+      "body": "今日サプリメントは飲みましたか?冷たい水を一杯飲むのも忘れずに! ✨"
+    },
+    "feverRecheck": {
+      "title": "🌡 体温再測定のお知らせ",
+      "body": "体温を測定してから1時間が経過しました!今の状態をもう一度確認してください。"
+    },
+    "pregnancyExams": {
+      "nt": {
+        "title": "第1次奇形児検査 (NT)",
+        "body": "11~13週の頸部透過性検査の時期です。病院の予約を確認してください。"
+      },
+      "quad": {
+        "title": "クアッドテスト",
+        "body": "15~20週のクアッドテストの時期です。予約したか確認してください。"
+      },
+      "ultrasound": {
+        "title": "精密超音波検査",
+        "body": "20~24週の精密超音波検査の時期です。赤ちゃんの発達を詳しく見ることができます。"
+      },
+      "hospitalRegHighRisk": {
+        "title": "分娩病院登録のご案内 (高リスク)",
+        "body": "高リスク妊娠は早産の可能性があります。分娩病院の電話番号を事前に登録しておきましょう。"
+      },
+      "gct": {
+        "title": "妊娠糖尿病検査 (GCT)",
+        "body": "24~28週の妊娠糖尿病検査の時期です。"
+      },
+      "hospitalReg": {
+        "title": "分娩病院登録のご案内",
+        "body": "出産が近づいています。緊急時にすぐ電話できるよう、分娩病院の電話番号を登録しておきましょう。"
+      },
+      "nst": {
+        "title": "胎動検査 (NST)",
+        "body": "32週前後のNST検査の時期です。"
+      },
+      "gbs": {
+        "title": "GBS検査",
+        "body": "36週のB群溶血性連鎖球菌検査の時期です。"
+      },
+      "birthBag": {
+        "title": "入院バッグの準備",
+        "body": "入院バッグのチェックリストを確認してください。"
+      }
+    },
+    "pregnancyCountdown": {
+      "d7": {
+        "title": "出産D-7",
+        "body": "出産まで1週間!バッグと書類を最終チェックしてください。"
+      },
+      "d3": {
+        "title": "出産D-3",
+        "body": "陣痛間隔タイマーを事前に確認しておきましょう。"
+      },
+      "dday": {
+        "title": "出産予定日D-Day",
+        "body": "予定日です。陣痛が始まったらすぐに病院に連絡してください。"
+      }
+    }
+  },
+  "otaCheck": {
+    "updateFailed": {
+      "title": "アップデート失敗",
+      "message": "ネットワーク状態を確認し、アプリを再起動してください。"
+    },
+    "updateAvailable": {
+      "title": "新しいバージョンが準備できました",
+      "message": "アプリが最新サーバーと一致しておらず、一部機能が動作しない可能性があります。\n今すぐアップデートしますか?",
+      "updateButton": "アップデート"
+    }
+  },
+  "checkup": {
+    "dateFormat": "{{yyyy}}-{{mm}}-{{dd}} ({{dow}})"
+  },
+  "socialAuth": {
+    "appName": "アマッタ",
+    "errors": {
+      "kakaoSdk": "Kakaoログイン SDK エラー: {{message}}",
+      "naverEnvMissing": "Naverログインの環境変数(EXPO_PUBLIC_NAVER_CLIENT_ID/SECRET)が設定されていません。",
+      "naverLoginFailed": "Naverログインに失敗しました: {{message}}",
+      "naverSdk": "Naverログイン SDK エラー: {{message}}",
+      "googleEnvMissing": "Googleログインの環境変数(EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID)が設定されていません。",
+      "googleTokenMissing": "アクセストークンを取得できませんでした。",
+      "googleSdk": "Googleログイン SDK エラー: {{message}}",
+      "clientIdMissing": "[social-auth] {{provider}} の clientId が未設定です — 本番環境ではモックトークンを使用できません",
+      "appleIosOnly": "Appleログインは iOS でのみご利用いただけます。",
+      "appleUnavailable": "このデバイスでは Apple ログインをご利用いただけません。",
+      "appleTokenMissing": "Apple の identityToken を取得できませんでした。",
+      "appleLogin": "Apple ログインエラー: {{message}}",
+      "unknownError": "不明なエラー"
+    }
+  },
+  "imagePicker": {
+    "galleryUnavailable": {
+      "title": "ギャラリーを開けません",
+      "desc": "端末の標準ギャラリーアプリがないか無効になっています。\n設定 > アプリ からギャラリー/写真アプリを有効にしてください。"
+    },
+    "loadFailed": "写真を読み込めませんでした。もう一度お試しください。",
+    "cameraPermissionRequired": {
+      "title": "権限が必要です",
+      "desc": "カメラの権限が必要です。設定から許可してください。"
+    },
+    "cameraUnavailable": {
+      "title": "カメラを開けません",
+      "desc": "端末でカメラアプリが見つかりません。"
+    },
+    "cameraOpenFailed": "カメラを開けませんでした。もう一度お試しください。"
+  },
+  "deliveryHospital": {
+    "label": {
+      "highRiskCenterWard": "ハイリスク母体センター(MFICU) / 分娩室",
+      "deliveryWardDirect": "分娩室直通",
+      "deliveryHospitalMain": "分娩予定病院 代表番号",
+      "clinicHospitalWard": "かかりつけ病院の分娩室",
+      "outpatientMain": "外来代表番号"
+    },
+    "subLabel": {
+      "universityEmergency247": "大学病院 — 24時間救急対応",
+      "nightWeekendPriority": "夜間・週末優先",
+      "requestTransferViaOperator": "交換台経由で分娩室に接続依頼",
+      "daytimeHoursPriority": "日中診療時間優先"
+    }
+  },
+  "payment": {
+    "product": {
+      "monthlyName": "アマッタ VIP 月額プラン",
+      "yearlyName": "アマッタ VIP 年額プラン"
+    },
+    "method": {
+      "autoPlatformDesc": "プラットフォーム自動決済（推奨）",
+      "kakaopay": "カカオペイ",
+      "naverpay": "NAVER Pay",
+      "tosspay": "トスペイ",
+      "card": "クレジット／デビットカード",
+      "transfer": "銀行振込"
+    },
+    "error": {
+      "iapUnavailable": "アプリ内課金機能を利用できません。",
+      "loadPurchaseHistoryFailed": "購入履歴を読み込めませんでした：{{error}}",
+      "serverVerificationFailed": "サーバー検証に失敗しました。しばらくしてから再度お試しください。",
+      "iapAvailableNextUpdate": "アプリ内課金機能は次回アップデートでご利用いただけます。",
+      "iapConnectionFailed": "アプリ内課金への接続に失敗しました：{{error}}",
+      "subscriptionProductLoadFailed": "定期購入商品の情報を読み込めませんでした。Play ストアの登録状況をご確認ください。",
+      "productQueryFailed": "商品情報の取得に失敗しました：{{error}}",
+      "iapModuleNotInitialized": "アプリ内課金モジュールが初期化されていません。",
+      "purchaseCancelledOrNoResponse": "決済がキャンセルされたか、応答がありませんでした。",
+      "iapCancelledOrFailed": "アプリ内課金がキャンセルされたか失敗しました：{{error}}",
+      "receiptTokenNotFound": "レシートトークンが見つかりません。",
+      "transactionIdNotFound": "取引IDが見つかりません。",
+      "paymentServerTemporarilyUnavailable": "決済サーバーが一時的にご利用いただけません。しばらくしてから再度お試しください。",
+      "paymentVerificationFailed": "決済の検証に失敗しました。しばらくしてから再度お試しいただくか、「購入を復元」をタップしてください。"
+    },
+    "success": {
+      "purchaseRestored": "購入を復元しました。"
+    }
+  },
+  "traitReportHtml": {
+    "footer": "— アマッタアプリで分析 · {{date}}",
+    "section": {
+      "personality": "🎭 性格特性",
+      "strengths": "💪 強み",
+      "weaknesses": "⚠️ 注意点",
+      "studyStyle": "📚 学習スタイル",
+      "bestSubjects": "⭐ 得意な科目",
+      "weakAreas": "💡 補うべき分野",
+      "academyStyle": "🏫 おすすめの塾スタイル",
+      "educationDirection": "🎓 教育の方向性",
+      "futureFields": "🚀 向いている将来の職業",
+      "sportsMatch": "🏃 おすすめの運動",
+      "goodFoods": "🥗 相性の良い食べ物",
+      "badFoods": "🚫 避けるべき食べ物",
+      "specialTalent": "🏆 特別な才能",
+      "parentingTip": "🤱 子育てのヒント",
+      "dailyRoutineTip": "☀️ 日常ルーティンのヒント",
+      "socialTip": "🤝 社会性のヒント",
+      "emotionalTip": "💖 感情面のヒント",
+      "doList": "✅ おすすめ (Do)",
+      "dontList": "❌ 非推奨 (Don't)"
     }
   }
 }

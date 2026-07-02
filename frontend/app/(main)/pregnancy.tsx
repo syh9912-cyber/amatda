@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import {
@@ -27,7 +27,7 @@ import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
 import { MedicalCitation } from '../../components/common/MedicalCitation';
-import { PREGNANCY_ALBUM_GUIDE } from '../../features/guide/pregnancyAlbumGuide';
+import { getPregnancyAlbumGuide } from '../../features/guide/pregnancyAlbumGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChildStore } from '../../stores/childStore';
@@ -595,6 +595,7 @@ export default function PregnancyScreen() {
     shouldAutoShowGuide('pregnancy_album').then((sh) => { if (sh) setGuideVisible(true); });
   }, []);
   const closeGuide = () => { setGuideVisible(false); markGuideSeen('pregnancy_album'); };
+  const pregnancyAlbumGuide = useMemo(() => getPregnancyAlbumGuide(t), [t]);
 
   // Timeline
   const [timeline, setTimeline] = useState<TimelineWeek[]>([]);
@@ -1826,7 +1827,7 @@ export default function PregnancyScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-      <GuideCarousel visible={guideVisible} pages={PREGNANCY_ALBUM_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#E91E63" />
+      <GuideCarousel visible={guideVisible} pages={pregnancyAlbumGuide} onClose={closeGuide} onComplete={closeGuide} accent="#E91E63" />
     </View>
   );
 }

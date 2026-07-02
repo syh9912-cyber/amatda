@@ -34,7 +34,7 @@ import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
 import { MedicalCitation } from '../../components/common/MedicalCitation';
-import { FEVER_GUIDE } from '../../features/guide/feverGuide';
+import { getFeverGuide } from '../../features/guide/feverGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 // 열 관리는 긴급 관련 페이지 — 광고 없음 (VIP 여부 무관)
 
@@ -1442,7 +1442,7 @@ export default function FeverScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      <GuideCarousel visible={guideVisible} pages={FEVER_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#DB6A5F" />
+      <GuideCarousel visible={guideVisible} pages={getFeverGuide(t)} onClose={closeGuide} onComplete={closeGuide} accent="#DB6A5F" />
     </View>
   );
 }

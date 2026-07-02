@@ -1,5 +1,6 @@
 /** 임신앨범 가이드 — 주수별 사진 · 초음파 보관 · 태교일기 앨범 (실제 기능 기반) */
 import { View, Text, Image, StyleSheet } from 'react-native';
+import type { TFunction } from 'i18next';
 import { GuideFrame, GuidePill, GUIDE_C, type GuidePage } from '../../components/common/GuideCarousel';
 
 const IC_TEST = require('../../assets/preg-test.png') as number;
@@ -25,47 +26,49 @@ const g = StyleSheet.create({
 
 const TILE_TINTS = ['#F3E7DE', '#E7EFF1', '#EDE8F4', '#E9F1E5'];
 
-export const PREGNANCY_ALBUM_GUIDE: GuidePage[] = [
-  {
-    title: '배부른 순간을 주수별로',
-    desc: '주수마다 배 사진을 남기면\n조금씩 불러오는 변화가 모여요',
-    visual: (
-      <GuideFrame>
-        <Image source={IC_TEST} style={g.hero} resizeMode="contain" />
-        <View style={g.grid}>
-          {TILE_TINTS.map((c, i) => (
-            <View key={i} style={[g.tile, { backgroundColor: c }]}><Text style={g.tileWk}>{(i + 1) * 8}주</Text></View>
-          ))}
-          <View style={g.addTile}><Text style={g.addText}>＋</Text></View>
-        </View>
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '초음파 사진도 한곳에',
-    desc: '검진 때 받은 초음파 사진을 주수와 함께\n보관해서 나중에 쭉 돌아볼 수 있어요',
-    visual: (
-      <GuideFrame>
-        <Image source={IC_ULTRASOUND} style={g.hero} resizeMode="contain" />
-        <View style={g.card}>
-          <View style={g.scanBox}><Text style={g.scanEmoji}>👶</Text></View>
-          <GuidePill label="12주 · 첫 초음파" color={GUIDE_C.accent} bg={GUIDE_C.accentSoft} />
-        </View>
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '한 권의 태교일기로',
-    desc: '출산 후엔 임신 1주부터 40주까지를\n한 권의 추억 앨범으로 만들 수 있어요',
-    visual: (
-      <GuideFrame>
-        <Image source={IC_RIBBON} style={g.hero} resizeMode="contain" />
-        <View style={g.cover}>
-          <View style={g.coverBox}><Text style={{ fontSize: 28 }}>📖</Text></View>
-          <Text style={g.coverTitle}>우리 아기 태교일기</Text>
-          <Text style={g.coverSub}>임신 1주 ~ 40주</Text>
-        </View>
-      </GuideFrame>
-    ),
-  },
-];
+export function getPregnancyAlbumGuide(t: TFunction): GuidePage[] {
+  return [
+    {
+      title: t('guides.pregnancyAlbum.page1.title'),
+      desc: t('guides.pregnancyAlbum.page1.desc'),
+      visual: (
+        <GuideFrame>
+          <Image source={IC_TEST} style={g.hero} resizeMode="contain" />
+          <View style={g.grid}>
+            {TILE_TINTS.map((c, i) => (
+              <View key={i} style={[g.tile, { backgroundColor: c }]}><Text style={g.tileWk}>{t('guides.pregnancyAlbum.page1.weekTile', { week: (i + 1) * 8 })}</Text></View>
+            ))}
+            <View style={g.addTile}><Text style={g.addText}>＋</Text></View>
+          </View>
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('guides.pregnancyAlbum.page2.title'),
+      desc: t('guides.pregnancyAlbum.page2.desc'),
+      visual: (
+        <GuideFrame>
+          <Image source={IC_ULTRASOUND} style={g.hero} resizeMode="contain" />
+          <View style={g.card}>
+            <View style={g.scanBox}><Text style={g.scanEmoji}>👶</Text></View>
+            <GuidePill label={t('guides.pregnancyAlbum.page2.pillLabel')} color={GUIDE_C.accent} bg={GUIDE_C.accentSoft} />
+          </View>
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('guides.pregnancyAlbum.page3.title'),
+      desc: t('guides.pregnancyAlbum.page3.desc'),
+      visual: (
+        <GuideFrame>
+          <Image source={IC_RIBBON} style={g.hero} resizeMode="contain" />
+          <View style={g.cover}>
+            <View style={g.coverBox}><Text style={{ fontSize: 28 }}>📖</Text></View>
+            <Text style={g.coverTitle}>{t('guides.pregnancyAlbum.page3.coverTitle')}</Text>
+            <Text style={g.coverSub}>{t('guides.pregnancyAlbum.page3.coverSub')}</Text>
+          </View>
+        </GuideFrame>
+      ),
+    },
+  ];
+}

@@ -28,7 +28,7 @@ import { BackButton } from '../../components/common/BackButton';
 import { GuideButton } from '../../components/common/GuideButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { MedicalCitation } from '../../components/common/MedicalCitation';
-import { GDM_GUIDE } from '../../features/guide/gdmGuide';
+import { getGdmGuide } from '../../features/guide/gdmGuide';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { pickImageFromLibrary, pickImageFromCamera } from '../../utils/imagePicker';
 import type { ImageSourcePropType } from 'react-native';
@@ -308,7 +308,7 @@ export default function GdmScreen() {
 
   const handlePickPhoto = async (source: 'library' | 'camera') => {
     const pick = source === 'library' ? pickImageFromLibrary : pickImageFromCamera;
-    const result = await pick({ quality: 0.7 });
+    const result = await pick(t, { quality: 0.7 });
     if (!result) return;
     setPhotoUri(result.uri);
     setPhotoMime(result.mimeType || 'image/jpeg');
@@ -1014,7 +1014,7 @@ export default function GdmScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      <GuideCarousel visible={guideVisible} pages={GDM_GUIDE} onClose={closeGuide} onComplete={closeGuide} accent="#7FB1BB" />
+      <GuideCarousel visible={guideVisible} pages={getGdmGuide(t)} onClose={closeGuide} onComplete={closeGuide} accent="#7FB1BB" />
     </View>
   );
 }

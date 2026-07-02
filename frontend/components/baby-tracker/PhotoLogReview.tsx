@@ -141,14 +141,14 @@ export function PhotoLogReview({ visible, childId, onClose, onSaved }: Props) {
   }, [reset, t]);
 
   const pickCamera = useCallback(async () => {
-    const p = await pickImageFromCamera({ quality: 0.9 });
+    const p = await pickImageFromCamera(t, { quality: 0.9 });
     if (p) runParse(p.uri);
-  }, [runParse]);
+  }, [runParse, t]);
 
   const pickGallery = useCallback(async () => {
-    const p = await pickImageFromLibrary({ quality: 0.9 });
+    const p = await pickImageFromLibrary(t, { quality: 0.9 });
     if (p) runParse(p.uri);
-  }, [runParse]);
+  }, [runParse, t]);
 
   const toggleInclude = useCallback((id: string) => {
     setItems((prev) => prev.map((it) => (it._id === id ? { ...it, include: !it.include } : it)));

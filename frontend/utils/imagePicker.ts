@@ -12,6 +12,7 @@
 
 import * as ImagePicker from 'expo-image-picker';
 import { Alert } from 'react-native';
+import type { TFunction } from 'i18next';
 
 export interface PickImageResult {
   uri: string;
@@ -25,11 +26,14 @@ export interface PickImageResult {
  * 권한 없거나 취소하면 null 반환
  * allowsEditing: true + aspect 지정 시 선택 즉시 crop UI 표시
  */
-export async function pickImageFromLibrary(options?: {
-  quality?: number;
-  allowsEditing?: boolean;
-  aspect?: [number, number];
-}): Promise<PickImageResult | null> {
+export async function pickImageFromLibrary(
+  t: TFunction,
+  options?: {
+    quality?: number;
+    allowsEditing?: boolean;
+    aspect?: [number, number];
+  },
+): Promise<PickImageResult | null> {
   try {
     // Android 사진 선택 도구(Photo Picker) 사용 — 별도 미디어 권한 요청 불필요 (Google Play 정책 준수)
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -56,11 +60,11 @@ export async function pickImageFromLibrary(options?: {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes('No Activity') || msg.includes('activity') || msg.includes('설치')) {
       Alert.alert(
-        '갤러리를 열 수 없어요',
-        '기기의 기본 갤러리 앱이 없거나 비활성화되어 있어요.\n설정 > 앱에서 갤러리/사진 앱을 활성화해주세요.',
+        t('imagePicker.galleryUnavailable.title'),
+        t('imagePicker.galleryUnavailable.desc'),
       );
     } else {
-      Alert.alert('오류', '사진을 불러오지 못했어요. 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('imagePicker.loadFailed'));
     }
     return null;
   }
@@ -70,10 +74,13 @@ export async function pickImageFromLibrary(options?: {
  * 갤러리에서 여러 장 선택 (일괄 추가용)
  * 권한 없거나 취소하면 빈 배열 반환
  */
-export async function pickMultipleFromLibrary(options?: {
-  quality?: number;
-  selectionLimit?: number;
-}): Promise<PickImageResult[]> {
+export async function pickMultipleFromLibrary(
+  t: TFunction,
+  options?: {
+    quality?: number;
+    selectionLimit?: number;
+  },
+): Promise<PickImageResult[]> {
   try {
     // Android 사진 선택 도구(Photo Picker) 사용 — 별도 미디어 권한 요청 불필요 (Google Play 정책 준수)
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -97,11 +104,11 @@ export async function pickMultipleFromLibrary(options?: {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes('No Activity') || msg.includes('activity') || msg.includes('설치')) {
       Alert.alert(
-        '갤러리를 열 수 없어요',
-        '기기의 기본 갤러리 앱이 없거나 비활성화되어 있어요.\n설정 > 앱에서 갤러리/사진 앱을 활성화해주세요.',
+        t('imagePicker.galleryUnavailable.title'),
+        t('imagePicker.galleryUnavailable.desc'),
       );
     } else {
-      Alert.alert('오류', '사진을 불러오지 못했어요. 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('imagePicker.loadFailed'));
     }
     return [];
   }
@@ -111,13 +118,16 @@ export async function pickMultipleFromLibrary(options?: {
  * 카메라로 사진 촬영
  * 권한 없거나 취소하면 null 반환
  */
-export async function pickImageFromCamera(options?: {
-  quality?: number;
-}): Promise<PickImageResult | null> {
+export async function pickImageFromCamera(
+  t: TFunction,
+  options?: {
+    quality?: number;
+  },
+): Promise<PickImageResult | null> {
   try {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('권한 필요', '카메라 권한이 필요합니다. 설정에서 허용해주세요.');
+      Alert.alert(t('imagePicker.cameraPermissionRequired.title'), t('imagePicker.cameraPermissionRequired.desc'));
       return null;
     }
 
@@ -138,9 +148,9 @@ export async function pickImageFromCamera(options?: {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes('No Activity') || msg.includes('activity')) {
-      Alert.alert('카메라를 열 수 없어요', '기기에서 카메라 앱을 찾을 수 없어요.');
+      Alert.alert(t('imagePicker.cameraUnavailable.title'), t('imagePicker.cameraUnavailable.desc'));
     } else {
-      Alert.alert('오류', '카메라를 열지 못했어요. 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('imagePicker.cameraOpenFailed'));
     }
     return null;
   }
