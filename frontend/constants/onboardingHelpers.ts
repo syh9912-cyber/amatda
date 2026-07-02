@@ -1,7 +1,8 @@
+import type { TFunction } from 'i18next';
 import {
   type SurveyQuestion,
   LIKERT_OPTIONS,
-  getQuestionsByAgeGroup as getFilteredQuestions,
+  getTranslatedQuestionsByAgeGroup,
   getAgeGroupFromMonths,
 } from './onboardingQuestions';
 
@@ -23,9 +24,9 @@ export function getAgeGroup(months: number): AgeGroup {
   return getAgeGroupFromMonths(months);
 }
 
-/** Get the 20 survey questions for a given age group */
-export function getSurveyQuestions(ageGroup: AgeGroup): SurveyQuestion[] {
-  return getFilteredQuestions(ageGroup);
+/** Get the 20 survey questions (translated) for a given age group */
+export function getSurveyQuestions(t: TFunction, ageGroup: AgeGroup): SurveyQuestion[] {
+  return getTranslatedQuestionsByAgeGroup(t, ageGroup);
 }
 
 /** Convert SurveyQuestion[] to legacy OnboardingQuestion[] for API fallback compat */

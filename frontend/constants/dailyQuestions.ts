@@ -1,3 +1,5 @@
+import type { TFunction } from 'i18next';
+
 export interface DailyQuestion {
   dayOfWeek: number; // 0=Sunday ~ 6=Saturday
   question: string;
@@ -155,10 +157,30 @@ export const DAILY_QUESTIONS: Record<string, DailyQuestion[]> = {
   ],
 };
 
-export function getTodayQuestion(ageGroup: string): DailyQuestion {
+/**
+ * DAILY_QUESTIONS(한국어 원본)를 i18next 번역으로 치환한 질문 하나를 반환.
+ * question/hint 는 i18next 네임스페이스
+ * `dailyQuestions.<ageTier>.<dayOfWeek>.question` / `.hint` 로 해석된다.
+ * dayOfWeek 등 구조적 데이터는 한국어 원본을 그대로 유지한다.
+ */
+function translateQuestion(
+  t: TFunction,
+  ageTier: string,
+  q: DailyQuestion,
+): DailyQuestion {
+  return {
+    ...q,
+    question: t(`dailyQuestions.${ageTier}.${q.dayOfWeek}.question`),
+    hint: t(`dailyQuestions.${ageTier}.${q.dayOfWeek}.hint`),
+  };
+}
+
+export function getTodayQuestion(t: TFunction, ageGroup: string): DailyQuestion {
   const dayOfWeek = new Date().getDay();
-  const group = DAILY_QUESTIONS[ageGroup] ?? DAILY_QUESTIONS.toddler;
-  return group.find((q) => q.dayOfWeek === dayOfWeek) ?? group[0];
+  const ageTier = DAILY_QUESTIONS[ageGroup] ? ageGroup : 'toddler';
+  const group = DAILY_QUESTIONS[ageTier] ?? DAILY_QUESTIONS.toddler;
+  const q = group.find((item) => item.dayOfWeek === dayOfWeek) ?? group[0];
+  return translateQuestion(t, ageTier, q);
 }
 
 /**
@@ -166,13 +188,16 @@ export function getTodayQuestion(ageGroup: string): DailyQuestion {
  * 7개 질문을 answeredCount 기준으로 순환하여 매번 새 질문이 보이도록 한다.
  */
 export function getQuestionByProgress(
+  t: TFunction,
   ageGroup: string,
   answeredCount: number,
 ): DailyQuestion {
-  const group = DAILY_QUESTIONS[ageGroup] ?? DAILY_QUESTIONS.toddler;
+  const ageTier = DAILY_QUESTIONS[ageGroup] ? ageGroup : 'toddler';
+  const group = DAILY_QUESTIONS[ageTier] ?? DAILY_QUESTIONS.toddler;
   if (group.length === 0) return { dayOfWeek: 0, question: '', hint: '' };
   const idx = ((answeredCount % group.length) + group.length) % group.length;
-  return group[idx] ?? group[0];
+  const q = group[idx] ?? group[0];
+  return translateQuestion(t, ageTier, q);
 }
 
 export function getQuestionCount(ageGroup: string): number {

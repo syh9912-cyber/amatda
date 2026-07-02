@@ -2311,9 +2311,9 @@ function TraitTab() {
 
   const dailyQuestion = useMemo(() => {
     if (!selectedChild) return null;
-    return getQuestionByProgress(selectedChild.ageInfo.group, responseCount);
+    return getQuestionByProgress(t, selectedChild.ageInfo.group, responseCount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChild?.ageInfo.group, responseCount]);
+  }, [selectedChild?.ageInfo.group, responseCount, t]);
 
   const totalQuestions = selectedChild
     ? getQuestionCount(selectedChild.ageInfo.group)

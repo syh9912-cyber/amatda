@@ -52,7 +52,7 @@ export default function QuestionsScreen() {
   const child = children.find((c) => c.id === childId);
 
   const ageGroup = child ? getAgeGroup(child.ageInfo.months) : 'toddler';
-  const questions: SurveyQuestion[] = getSurveyQuestions(ageGroup);
+  const questions: SurveyQuestion[] = getSurveyQuestions(t, ageGroup);
 
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});

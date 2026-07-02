@@ -50,10 +50,10 @@ export default function DiaryScreen() {
   const dailyQuestion = useMemo(() => {
     if (!selectedChild) return undefined;
     const ageGroup = selectedChild.ageInfo.group;
-    const q = getTodayQuestion(ageGroup);
+    const q = getTodayQuestion(t, ageGroup);
     return { question: q.question, hint: q.hint };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChild?.ageInfo.group]);
+  }, [selectedChild?.ageInfo.group, t]);
 
   useEffect(() => {
     if (selectedChild) loadObservations();

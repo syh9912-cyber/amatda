@@ -17,7 +17,13 @@
  * 채점: 각 질문은 하나의 기질 유형을 측정한다.
  *       리커트 응답(1~5)이 해당 기질의 점수가 된다.
  *       기질당 4문항 x 5기질 = 20문항/연령그룹
+ *
+ * i18n: question/category/options[].text 는 getSurveyQuestions(t) 팩토리에서
+ *       i18next 네임스페이스 `onboardingQuestions.<id>.*` 로 런타임에 해석된다.
+ *       id/ageGroup/order/temperamentTarget/options[].trait 는 구조적 데이터이며
+ *       번역 대상이 아니다 (calculateTemperament 채점 로직이 의존함, 변경 금지).
  */
+import type { TFunction } from 'i18next';
 
 export interface TemperamentScores {
   explorer: number;
@@ -887,6 +893,13 @@ const ELEMENTARY_QUESTIONS: SurveyQuestion[] = [
 
 // ============================================================
 //  통합 목록 + 유틸리티
+//
+//  SURVEY_QUESTIONS 는 한국어 원본(raw) 데이터다.
+//  id/ageGroup/order/temperamentTarget/options[].trait 는 구조적 데이터로
+//  그대로 사용하고, question/category/options[].text (표시용 텍스트)는
+//  getSurveyQuestions(t) 팩토리를 통해 i18next 번역으로 치환해서 사용한다.
+//  (calculateTemperament 는 아래 한국어 원본 SURVEY_QUESTIONS 를 그대로 참조 —
+//   trait/temperamentTarget 매칭에는 언어가 관여하지 않으므로 안전하다)
 // ============================================================
 export const SURVEY_QUESTIONS: SurveyQuestion[] = [
   ...INFANT_QUESTIONS,
@@ -894,9 +907,36 @@ export const SURVEY_QUESTIONS: SurveyQuestion[] = [
   ...ELEMENTARY_QUESTIONS,
 ];
 
-/** 연령 그룹별 질문 필터 */
+/** 연령 그룹별 질문 필터 (한국어 원본 — 구조 참조용) */
 export function getQuestionsByAgeGroup(ageGroup: SurveyQuestion['ageGroup']): SurveyQuestion[] {
   return SURVEY_QUESTIONS.filter((q) => q.ageGroup === ageGroup);
+}
+
+/**
+ * 번역된 설문 문항 전체 목록.
+ * question/category/options[].text 는 i18next 네임스페이스
+ * `onboardingQuestions.<id>.question` / `.category` / `.options.<index>` 로 해석된다.
+ * id/ageGroup/order/temperamentTarget/options[].trait 는 SURVEY_QUESTIONS(한국어 원본)의
+ * 구조적 데이터를 그대로 유지한다 — calculateTemperament 채점 로직과 완전히 호환된다.
+ */
+export function getTranslatedSurveyQuestions(t: TFunction): SurveyQuestion[] {
+  return SURVEY_QUESTIONS.map((q) => ({
+    ...q,
+    question: t(`onboardingQuestions.${q.id}.question`),
+    category: t(`onboardingQuestions.${q.id}.category`),
+    options: q.options?.map((o, idx) => ({
+      ...o,
+      text: t(`onboardingQuestions.${q.id}.options.${idx}`),
+    })),
+  }));
+}
+
+/** 연령 그룹별 번역된 질문 필터 */
+export function getTranslatedQuestionsByAgeGroup(
+  t: TFunction,
+  ageGroup: SurveyQuestion['ageGroup'],
+): SurveyQuestion[] {
+  return getTranslatedSurveyQuestions(t).filter((q) => q.ageGroup === ageGroup);
 }
 
 /** 월령으로 연령 그룹 판별 */
