@@ -220,6 +220,31 @@ export async function fetchIAPSubscriptions(): Promise<unknown[]> {
   return [];
 }
 
+export interface LocalizedProductPrice {
+  displayPrice: string;
+  currency: string;
+}
+
+/**
+ * 스토어(App Store/Google Play) 실제 지역화 가격 조회.
+ * 해외 로케일(ja/zh-Hant)에서 결제 화면에 표시할 실제 통화 가격 — 하드코딩 KRW 라벨 대체용.
+ * IAP 미지원/조회 실패 시 빈 객체 반환(호출부는 기존 하드코딩 라벨로 fallback).
+ */
+export async function fetchLocalizedPrices(): Promise<Partial<Record<ProductId, LocalizedProductPrice>>> {
+  const subs = await fetchIAPSubscriptions();
+  const result: Partial<Record<ProductId, LocalizedProductPrice>> = {};
+  for (const s of subs) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sub = s as any;
+    const id = (sub?.id ?? sub?.productId) as ProductId | undefined;
+    const displayPrice = sub?.displayPrice as string | undefined;
+    if (id && displayPrice) {
+      result[id] = { displayPrice, currency: (sub?.currency as string | undefined) ?? '' };
+    }
+  }
+  return result;
+}
+
 /**
  * Android Google Play Billing v5+: subscription 구매 시 offerToken 필수.
  * fetchProducts 결과에서 첫 번째 base plan offer 의 token 추출.

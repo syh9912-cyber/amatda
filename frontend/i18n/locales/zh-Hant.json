@@ -2565,7 +2565,9 @@
         "adFree": "移除廣告",
         "allMonthlyFeatures": "VIP 月繳方案的所有功能",
         "yearlyPerMonth": "平均每月約 3,325 韓元"
-      }
+      },
+      "pricePerMonth": "{{price}}/月",
+      "pricePerYear": "{{price}}/年"
     },
     "compare": {
       "consult": "育兒諮詢",

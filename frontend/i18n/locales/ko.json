@@ -2565,7 +2565,9 @@
         "adFree": "광고 제거",
         "allMonthlyFeatures": "VIP 월간의 모든 기능",
         "yearlyPerMonth": "월 3,325원꼴"
-      }
+      },
+      "pricePerMonth": "{{price}}/월",
+      "pricePerYear": "{{price}}/년"
     },
     "compare": {
       "consult": "상담이모",

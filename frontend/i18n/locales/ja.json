@@ -2565,7 +2565,9 @@
         "adFree": "広告非表示",
         "allMonthlyFeatures": "VIP月額プランの全機能",
         "yearlyPerMonth": "月あたり約3,325ウォン"
-      }
+      },
+      "pricePerMonth": "{{price}}/月",
+      "pricePerYear": "{{price}}/年"
     },
     "compare": {
       "consult": "育児相談",

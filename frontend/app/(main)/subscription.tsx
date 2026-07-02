@@ -28,8 +28,10 @@ import {
   getPaymentMethodOptions,
   purchaseIAP,
   restoreIAP,
+  fetchLocalizedPrices,
   type PaymentMethod,
   type ProductId,
+  type LocalizedProductPrice,
 } from '../../services/payment';
 import { analytics } from '../../services/analytics';
 
@@ -117,7 +119,7 @@ const getFeatureGuides = (t: TFunction): FeatureGuide[] => [
 // (PortOne 환경변수 등록 여부에 따라 자동 표시/숨김)
 
 export default function SubscriptionScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [plans, setPlans] = useState<PremiumPlan[]>(() => getFallbackPlans(t));
   const [status, setStatus] = useState<PremiumStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -128,6 +130,8 @@ export default function SubscriptionScreen() {
   const [portOneParams, setPortOneParams] = useState<PortOneCheckoutParams | null>(null);
   const [portOneVisible, setPortOneVisible] = useState(false);
   const paymentMethodOptions = getPaymentMethodOptions(t);
+  // 스토어 실제 지역화 가격(비한국어 로케일 표시용) — 한국어는 항상 기존 KRW 라벨 그대로 유지.
+  const [localizedPrices, setLocalizedPrices] = useState<Partial<Record<ProductId, LocalizedProductPrice>>>({});
 
   const loadData = useCallback(async () => {
     try {
@@ -152,9 +156,25 @@ export default function SubscriptionScreen() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (i18n.language === 'ko') return;
+    fetchLocalizedPrices().then(setLocalizedPrices).catch(() => {});
+  }, [i18n.language]);
+
   // selectedPlan('yearly'/'monthly') → ProductId('premium_yearly'/...)
   function planToProductId(plan: string): ProductId {
     return plan === 'yearly' ? 'premium_yearly' : 'premium_monthly';
+  }
+
+  // 비한국어 로케일 + 스토어 가격 조회 성공 시에만 실제 지역화 가격으로 대체.
+  // 한국어이거나 아직 조회 전이면 기존 하드코딩 라벨(KRW) 그대로 — 동작 변화 없음.
+  function resolvePriceLabel(plan: PremiumPlan): string {
+    if (i18n.language === 'ko') return plan.priceLabel;
+    const localized = localizedPrices[planToProductId(plan.period)];
+    if (!localized) return plan.priceLabel;
+    return plan.period === 'yearly'
+      ? t('subscription.plan.pricePerYear', { price: localized.displayPrice })
+      : t('subscription.plan.pricePerMonth', { price: localized.displayPrice });
   }
 
   const handleSubscribe = async () => {
@@ -387,7 +407,7 @@ export default function SubscriptionScreen() {
                       </View>
                     )}
                   </View>
-                  <Text style={styles.planPrice}>{plan.priceLabel}</Text>
+                  <Text style={styles.planPrice}>{resolvePriceLabel(plan)}</Text>
                 </View>
                 <View style={styles.featureList}>
                   {plan.features.map((f) => (
