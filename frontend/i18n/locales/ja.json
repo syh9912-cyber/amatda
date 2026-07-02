@@ -1008,6 +1008,13 @@
       "tw": "台灣",
       "hk": "香港"
     },
+    "doseSchedule": {
+      "acetInterval": "4～6時間ごと",
+      "acetMaxDaily": "1日最大5回まで",
+      "ibuInterval": "6～8時間ごと",
+      "ibuMaxDaily": "1日最大3回まで",
+      "ibuAgeRestriction": "生後6か月未満の乳児にはイブプロフェンを使用しないでください"
+    },
     "refMlNote": "≈ {{ml}}ml（{{conc}}mg/ml の製品の場合・実際の製品濃度で必ず再確認してください）",
     "notifyButton": {
       "in4h": "4時間後に通知",

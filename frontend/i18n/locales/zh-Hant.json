@@ -777,8 +777,8 @@
   "fever": {
     "screenTitle": "發燒發燒",
     "subtitle": "{{name}}的體溫照護",
-    "emergencyCallShort": "119緊急電話",
-    "emergencyCallFull": "撥打119",
+    "emergencyCallShort": "{{tel}}緊急電話",
+    "emergencyCallFull": "撥打{{tel}}",
     "syrupApprox": "糖漿約{{ml}}ml",
     "level": {
       "normal": {
@@ -799,11 +799,11 @@
       },
       "danger": {
         "label": "立即就醫",
-        "advice": "屬於危險的高燒程度。請勿等待退燒藥見效，立即前往小兒科或急診室。若出現抽搐或意識不清，請立刻撥打119。"
+        "advice": "屬於危險的高燒程度。請勿等待退燒藥見效，立即前往小兒科或急診室。若出現抽搐或意識不清，請立刻撥打{{tel}}。"
       },
       "emergency": {
-        "label": "緊急 — 撥打119",
-        "advice": "這是可能危及生命的超高燒。請立即撥打119或前往急診室。移動途中也請讓孩子穿薄一點，用溫水擦拭身體以降溫。"
+        "label": "緊急 — 撥打{{tel}}",
+        "advice": "這是可能危及生命的超高燒。請立即撥打{{tel}}或前往急診室。移動途中也請讓孩子穿薄一點，用溫水擦拭身體以降溫。"
       }
     },
     "method": {
@@ -814,7 +814,7 @@
     "actionGuide": {
       "emergency": {
         "label": "緊急",
-        "headline": "請立刻撥打119！",
+        "headline": "請立刻撥打{{tel}}！",
         "emotion": "媽媽請保持冷靜，讓孩子穿薄一點，用溫水毛巾擦拭身體，同時前往急診室。"
       },
       "danger": {
@@ -905,8 +905,8 @@
       "clearHistoryTitle": "刪除記錄",
       "clearHistoryMessage": "是否要刪除所有體溫記錄？",
       "callFailedTitle": "撥號失敗",
-      "callFailedMessage": "請直接撥打119。",
-      "callFailedDeviceMessage": "裝置無法開啟電話應用程式，請直接撥打119。"
+      "callFailedMessage": "請直接撥打{{tel}}。",
+      "callFailedDeviceMessage": "裝置無法開啟電話應用程式，請直接撥打{{tel}}。"
     },
     "notification": {
       "doseTimeTitle": "退燒藥服用時間",
@@ -1007,6 +1007,13 @@
       "label": "地區選擇（產品濃度不同）",
       "tw": "台灣",
       "hk": "香港"
+    },
+    "doseSchedule": {
+      "acetInterval": "每4-6小時",
+      "acetMaxDaily": "每日最多5次",
+      "ibuInterval": "每6-8小時",
+      "ibuMaxDaily": "每日最多3次",
+      "ibuAgeRestriction": "未滿6個月的嬰兒請勿使用布洛芬（Ibuprofen）"
     },
     "refMlNote": "≈ {{ml}}ml（以{{conc}}mg/ml產品計算・請務必依實際產品濃度重新確認）",
     "notifyButton": {

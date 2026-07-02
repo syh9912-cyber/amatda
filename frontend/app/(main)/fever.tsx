@@ -161,7 +161,7 @@ interface FeverLevelConfig {
   advice: string;
 }
 
-function getFeverLevel(t: TFunction): Record<FeverLevel, FeverLevelConfig> {
+function getFeverLevel(t: TFunction, tel: string): Record<FeverLevel, FeverLevelConfig> {
   return {
     normal: {
       color: '#34C759',
@@ -196,14 +196,14 @@ function getFeverLevel(t: TFunction): Record<FeverLevel, FeverLevelConfig> {
       bgColor: '#FFEBEE',
       label: t('fever.level.danger.label'),
       icon: IC_HOSPITAL,
-      advice: t('fever.level.danger.advice'),
+      advice: t('fever.level.danger.advice', { tel }),
     },
     emergency: {
       color: '#B71C1C',
       bgColor: '#FFCDD2',
-      label: t('fever.level.emergency.label'),
+      label: t('fever.level.emergency.label', { tel }),
       icon: IC_REDFLAG,
-      advice: t('fever.level.emergency.advice'),
+      advice: t('fever.level.emergency.advice', { tel }),
     },
   };
 }
@@ -265,6 +265,7 @@ function buildActionGuide(
   history: HistoryEntry[],
   medLog: MedLogEntry[],
   t: TFunction,
+  tel: string,
 ): ActionGuide {
   const adj = current.adjusted;
   // 1) 회복 추세 감지 (직전 기록 vs 현재)
@@ -282,7 +283,7 @@ function buildActionGuide(
   if (current.level === 'emergency') {
     return {
       label: t('fever.actionGuide.emergency.label'),
-      headline: t('fever.actionGuide.emergency.headline'),
+      headline: t('fever.actionGuide.emergency.headline', { tel }),
       emotion: t('fever.actionGuide.emergency.emotion'),
       bgColor: '#FFEBEE',
       borderColor: '#C62828',
@@ -654,9 +655,11 @@ function FastTimeInput({
 /* ------------------------------------------------------------------ */
 
 export default function FeverScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { selectedChild } = useChildStore();
+  // 응급번호는 로케일/지역 기반 (홍콩 999, 그 외 119) — 하드코딩 119 대체
+  const emergencyTel = getEmergencyTel(i18n.language);
 
   /* -- State -- */
   const [temperature, setTemperature] = useState('');
@@ -930,7 +933,7 @@ export default function FeverScreen() {
   }, [selectedChild, t]);
 
   /* -- Render -- */
-  const feverLevel = getFeverLevel(t);
+  const feverLevel = getFeverLevel(t, emergencyTel);
   const methodLabels = getMethodLabels(t);
   const levelConfig = checkedResult ? feverLevel[checkedResult.level] : null;
   const showMedicine = checkedResult && checkedResult.level !== 'normal';
@@ -957,7 +960,7 @@ export default function FeverScreen() {
         {/* 행동 가이드 카드 (체온 입력 후 노출 — 결과보다 위) */}
         {/* ============================================ */}
         {checkedResult && (() => {
-          const guide = buildActionGuide(checkedResult, history, medLog, t);
+          const guide = buildActionGuide(checkedResult, history, medLog, t, emergencyTel);
           return (
             <View style={[styles.actionCard, { backgroundColor: guide.bgColor, borderColor: guide.borderColor }]}>
               <Text style={[styles.actionLabel, { color: guide.accentColor }]}>{guide.label}</Text>
@@ -973,12 +976,12 @@ export default function FeverScreen() {
                   style={styles.actionEmergency}
                   activeOpacity={0.85}
                   onPress={() => {
-                    Linking.openURL('tel:119').catch(() => {
-                      Alert.alert(t('fever.alert.callFailedTitle'), t('fever.alert.callFailedMessage'));
+                    Linking.openURL(`tel:${emergencyTel}`).catch(() => {
+                      Alert.alert(t('fever.alert.callFailedTitle'), t('fever.alert.callFailedMessage', { tel: emergencyTel }));
                     });
                   }}
                 >
-                  <Text style={styles.actionEmergencyText}>{t('fever.emergencyCallShort')}</Text>
+                  <Text style={styles.actionEmergencyText}>{t('fever.emergencyCallShort', { tel: emergencyTel })}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -1093,12 +1096,12 @@ export default function FeverScreen() {
                 style={styles.emergencyCallButton}
                 activeOpacity={0.85}
                 onPress={() => {
-                  Linking.openURL('tel:119').catch(() => {
-                    Alert.alert(t('fever.alert.callFailedTitle'), t('fever.alert.callFailedDeviceMessage'));
+                  Linking.openURL(`tel:${emergencyTel}`).catch(() => {
+                    Alert.alert(t('fever.alert.callFailedTitle'), t('fever.alert.callFailedDeviceMessage', { tel: emergencyTel }));
                   });
                 }}
               >
-                <Text style={styles.emergencyCallButtonText}>{t('fever.emergencyCallFull')}</Text>
+                <Text style={styles.emergencyCallButtonText}>{t('fever.emergencyCallFull', { tel: emergencyTel })}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1502,6 +1505,12 @@ function detectZhRegion(): ZhRegion {
   }
 }
 
+/** 응급 전화번호 — 한국/일본/대만은 119, 홍콩(및 마카오)은 999. */
+function getEmergencyTel(lang: string): string {
+  if (lang === 'zh-Hant' && detectZhRegion() === 'HK') return '999';
+  return '119';
+}
+
 const ZH_REGION_STORAGE_KEY = 'fever_zh_region';
 
 function recalcSyrup(weight: number, t: TFunction, acetConcMgPerMl = 32, ibuConcMgPerMl = 20) {
@@ -1669,8 +1678,14 @@ function MedicineSection({
     return champType === 'red' ? t('fever.brand.champRed') : t('fever.brand.champBlue');
   })();
   const drugColor = isAcet ? TYLENOL_COLOR : BRUFEN_COLOR;
-  const interval = isAcet ? dose.acetaminophen.interval : dose.ibuprofen.interval;
-  const maxDaily = isAcet ? dose.acetaminophen.maxDaily : dose.ibuprofen.maxDaily;
+  // 복용 간격·1일 최대 횟수: 값 자체는 각국 공통(공식 자료 교차검증). 비한국어는 백엔드 한국어
+  // 문자열 대신 로케일 문자열로 표시(추가형). 한국어는 기존 백엔드 값 그대로.
+  const interval = isNonKoLocale
+    ? (isAcet ? t('fever.doseSchedule.acetInterval') : t('fever.doseSchedule.ibuInterval'))
+    : (isAcet ? dose.acetaminophen.interval : dose.ibuprofen.interval);
+  const maxDaily = isNonKoLocale
+    ? (isAcet ? t('fever.doseSchedule.acetMaxDaily') : t('fever.doseSchedule.ibuMaxDaily'))
+    : (isAcet ? dose.acetaminophen.maxDaily : dose.ibuprofen.maxDaily);
 
   // 동적 감성 헤드라인 — 선택한 약·용량 실시간 연동 (단일 행동 강조)
   // 비한국어는 농도 무관 정확값인 mg을 헤드라인에 사용(제품 농도가 국가마다 달라 mL은 부차 표시).
@@ -1898,11 +1913,13 @@ function MedicineSection({
         </Text>
       </TouchableOpacity>
 
-      {/* Age restriction (이부프로펜계) */}
+      {/* Age restriction (이부프로펜계) — 비한국어는 로케일 문자열, 한국어는 백엔드 값 */}
       {!isAcet && dose.ibuprofen.ageRestriction && (
         <View style={styles.warningBox}>
           <Image source={IC_REDFLAG} style={styles.warningIconImg} resizeMode="contain" />
-          <Text style={styles.warningText}>{dose.ibuprofen.ageRestriction}</Text>
+          <Text style={styles.warningText}>
+            {isNonKoLocale ? t('fever.doseSchedule.ibuAgeRestriction') : dose.ibuprofen.ageRestriction}
+          </Text>
         </View>
       )}
     </View>
