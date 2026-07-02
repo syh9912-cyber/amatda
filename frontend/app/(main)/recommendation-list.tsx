@@ -44,7 +44,7 @@ interface RecoItem {
 /* ------------------------------------------------------------------ */
 
 export default function RecommendationListScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{ category: string }>();
   const category = params.category ?? '';
@@ -83,7 +83,7 @@ export default function RecommendationListScreen() {
           : 'elementary_high';
       }
       const temperament = selectedChild.innateData?.dominantType ?? '안정형';
-      const res = await recommendationApi.list(category, ageGroup, temperament);
+      const res = await recommendationApi.list(category, ageGroup, temperament, i18n.language);
       const data = res.data?.data as { items?: RecoItem[] } | undefined;
       setItems(data?.items ?? []);
     } catch {

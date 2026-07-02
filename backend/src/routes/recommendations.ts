@@ -30,7 +30,9 @@ const router = Router();
 /* ------------------------------------------------------------------ */
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { title, ageGroup, temperament, childId } = req.query as Record<string, string>;
+    const { title, ageGroup, temperament, childId, locale } = req.query as Record<string, string>;
+    // 비한국어 로케일은 캐시 조회/저장 시 locale 필드로 구분(추가형) — 기존 한국어(locale 미지정) 캐시와 절대 섞이지 않음
+    const isNonKo = locale === 'ja' || locale === 'zh-Hant';
 
     if (!title || !ageGroup || !temperament) {
       error(res, 'title, ageGroup, temperament 파라미터가 필요합니다');
@@ -38,12 +40,12 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     }
 
     // 1. DB에서 검색 (정확 매칭)
-    const snap = await collections.recommendationCache
+    let cacheQuery = collections.recommendationCache
       .where('title', '==', title)
       .where('ageGroup', '==', ageGroup)
-      .where('temperament', '==', temperament)
-      .limit(1)
-      .get();
+      .where('temperament', '==', temperament);
+    if (isNonKo) cacheQuery = cacheQuery.where('locale', '==', locale);
+    const snap = await cacheQuery.limit(1).get();
 
     if (!snap.empty) {
       const cached = snap.docs[0].data();
@@ -58,12 +60,12 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     }
 
     // 2. DB에 없으면 — 같은 ageGroup의 다른 temperament라도 있는지 확인
-    //    (base 내용이라도 활용)
-    const fallbackSnap = await collections.recommendationCache
+    //    (base 내용이라도 활용, 단 같은 locale 내에서만)
+    let fallbackQuery = collections.recommendationCache
       .where('title', '==', title)
-      .where('ageGroup', '==', ageGroup)
-      .limit(1)
-      .get();
+      .where('ageGroup', '==', ageGroup);
+    if (isNonKo) fallbackQuery = fallbackQuery.where('locale', '==', locale);
+    const fallbackSnap = await fallbackQuery.limit(1).get();
 
     // 3. AI 호출 (coaching API 내부 사용)
     if (childId) {
@@ -71,7 +73,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
         const { callGeminiText } = await import('../services/coaching/gemini.client');
 
         const prompt = buildRecommendationPrompt(title, ageGroup, temperament,
-          fallbackSnap.empty ? null : fallbackSnap.docs[0].data() as Record<string, unknown>);
+          fallbackSnap.empty ? null : fallbackSnap.docs[0].data() as Record<string, unknown>, locale);
 
         const aiResult = await callGeminiText(prompt, { maxTokens: 800, temperature: 0.5 });
         const parsed = parseAIResponse(aiResult);
@@ -89,6 +91,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
           personalNote: parsed.personalNote,
           source: 'ai',
           createdAt: new Date().toISOString(),
+          ...(isNonKo ? { locale } : {}),
         });
 
         success(res, { ...parsed, source: 'ai_generated' });
@@ -125,20 +128,24 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 /* ------------------------------------------------------------------ */
 router.get('/list', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { category, ageGroup, temperament } = req.query as Record<string, string>;
+    const { category, ageGroup, temperament, locale } = req.query as Record<string, string>;
+    const isNonKo = locale === 'ja' || locale === 'zh-Hant';
 
     if (!category || !ageGroup) {
       error(res, 'category, ageGroup 파라미터가 필요합니다');
       return;
     }
 
-    // 1. DB(캐시)에서 해당 카테고리 항목 검색
+    // 1. DB(캐시)에서 해당 카테고리 항목 검색 (비한국어는 locale 필드로 캐시 분리)
     let query = collections.recommendationCache
       .where('category', '==', category)
       .where('ageGroup', '==', ageGroup);
 
     if (temperament) {
       query = query.where('temperament', '==', temperament);
+    }
+    if (isNonKo) {
+      query = query.where('locale', '==', locale);
     }
 
     const snap = await query.get();
@@ -166,6 +173,12 @@ router.get('/list', authMiddleware, async (req: Request, res: Response) => {
     }
 
     // 2. DB에 없으면 시드 데이터에서 직접 검색
+    //    시드 데이터는 아직 한국어만 있음 — 비한국어는 원문 노출 대신 빈 목록 반환(추후 AI 캐시로 채워짐)
+    if (isNonKo) {
+      success(res, { items: [], source: 'empty' });
+      return;
+    }
+
     const seedItems = RECOMMENDATION_SEEDS
       .filter((s) => s.category === category && s.ageGroup === ageGroup)
       .map((s) => ({
@@ -197,6 +210,7 @@ function buildRecommendationPrompt(
   ageGroup: string,
   temperament: string,
   fallbackData: Record<string, unknown> | null,
+  locale?: string,
 ): string {
   const AGE_LABELS: Record<string, string> = {
     infant: '영아(0~3세)',
@@ -211,7 +225,7 @@ function buildRecommendationPrompt(
     reference = `\n\n참고 (다른 성향 아이 기준 내용):\n${fallbackData.answer as string}\n`;
   }
 
-  return `당신은 한국의 전문 육아 상담사입니다.
+  const basePrompt = `당신은 한국의 전문 육아 상담사입니다.
 아래 주제에 대해 ${ageLabel}, ${temperament} 기질 아이에게 맞는 맞춤 육아 조언을 작성해 주세요.
 ${reference}
 주제: ${title}
@@ -225,6 +239,14 @@ ${reference}
   "actions": ["실천방법1", "실천방법2", "실천방법3", "실천방법4"],
   "personalNote": "${temperament} 기질 아이에게 맞는 맞춤 조언 (1~2문장)"
 }`;
+
+  const localeHint = locale === 'ja'
+    ? '\n\n[重要] 「韓国の」という前提は無視し、一般的な育児相談専門家として答えろ。JSON の全ての値(answer, reasons[], actions[], personalNote)は自然な日本語で作成しろ。JSON のキー名は英語のまま維持しろ。'
+    : locale === 'zh-Hant'
+      ? '\n\n[重要] 請忽略「韓國的」這個設定，以一般育兒諮詢專家的身份回答。JSON 中所有的值(answer, reasons[], actions[], personalNote)請以自然的繁體中文書寫。JSON 的鍵名請保持英文原樣。'
+      : undefined;
+
+  return localeHint ? basePrompt + localeHint : basePrompt;
 }
 
 function parseAIResponse(raw: string): {

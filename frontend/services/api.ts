@@ -360,13 +360,13 @@ export const paymentApi = {
 
 // Recommendations (DB캐시 + AI 폴백)
 export const recommendationApi = {
-  get: (title: string, ageGroup: string, temperament: string, childId: string, category?: string) =>
+  get: (title: string, ageGroup: string, temperament: string, childId: string, category?: string, locale?: string) =>
     api.get('/recommendations', {
-      params: { title, ageGroup, temperament, childId, category: category ?? '' },
+      params: { title, ageGroup, temperament, childId, category: category ?? '', ...(locale ? { locale } : {}) },
     }),
-  list: (category: string, ageGroup: string, temperament: string) =>
+  list: (category: string, ageGroup: string, temperament: string, locale?: string) =>
     api.get('/recommendations/list', {
-      params: { category, ageGroup, temperament },
+      params: { category, ageGroup, temperament, ...(locale ? { locale } : {}) },
     }),
 };
 

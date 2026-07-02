@@ -71,7 +71,7 @@ function parseAIResponse(text: string): ParsedSection[] {
 /* ------------------------------------------------------------------ */
 
 export default function RecommendationDetailScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{
     title: string;
@@ -103,7 +103,7 @@ export default function RecommendationDetailScreen() {
       const temperament = selectedChild.innateData?.dominantType ?? '안정형';
 
       const res = await recommendationApi.get(
-        title, ageGroup, temperament, selectedChild.id, category,
+        title, ageGroup, temperament, selectedChild.id, category, i18n.language,
       );
       const data = res.data?.data as Record<string, unknown> | undefined;
 
