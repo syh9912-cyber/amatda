@@ -8,9 +8,66 @@ import { COACHING_KNOWLEDGE_ELEM_HIGH2 } from '../coaching.knowledge.elementary-
 import { COACHING_KNOWLEDGE_ELEM_HIGH3 } from '../coaching.knowledge.elementary-high3';
 import { COACHING_KNOWLEDGE_PREGNANT } from '../coaching.knowledge.pregnant';
 import { COACHING_KNOWLEDGE_PREGNANT2 } from '../coaching.knowledge.pregnant2';
+// ─── 비한국어 로케일 DB (추가형) — 기존 한국어 import/로직은 위 그대로 유지 ───
+import { COACHING_KNOWLEDGE_JA } from '../coaching.knowledge.ja';
+import { COACHING_KNOWLEDGE_ELEM_LOW_JA } from '../coaching.knowledge.elementary-low.ja';
+import { COACHING_KNOWLEDGE_ELEM_LOW2_JA } from '../coaching.knowledge.elementary-low2.ja';
+import { COACHING_KNOWLEDGE_ELEM_LOW3_JA } from '../coaching.knowledge.elementary-low3.ja';
+import { COACHING_KNOWLEDGE_ELEM_HIGH_JA } from '../coaching.knowledge.elementary-high.ja';
+import { COACHING_KNOWLEDGE_ELEM_HIGH2_JA } from '../coaching.knowledge.elementary-high2.ja';
+import { COACHING_KNOWLEDGE_ELEM_HIGH3_JA } from '../coaching.knowledge.elementary-high3.ja';
+import { COACHING_KNOWLEDGE_PREGNANT_JA } from '../coaching.knowledge.pregnant.ja';
+import { COACHING_KNOWLEDGE_PREGNANT2_JA } from '../coaching.knowledge.pregnant2.ja';
+import { COACHING_KNOWLEDGE_ZH } from '../coaching.knowledge.zh-hant';
+import { COACHING_KNOWLEDGE_ELEM_LOW_ZH } from '../coaching.knowledge.elementary-low.zh-hant';
+import { COACHING_KNOWLEDGE_ELEM_LOW2_ZH } from '../coaching.knowledge.elementary-low2.zh-hant';
+import { COACHING_KNOWLEDGE_ELEM_LOW3_ZH } from '../coaching.knowledge.elementary-low3.zh-hant';
+import { COACHING_KNOWLEDGE_ELEM_HIGH_ZH } from '../coaching.knowledge.elementary-high.zh-hant';
+import { COACHING_KNOWLEDGE_ELEM_HIGH2_ZH } from '../coaching.knowledge.elementary-high2.zh-hant';
+import { COACHING_KNOWLEDGE_ELEM_HIGH3_ZH } from '../coaching.knowledge.elementary-high3.zh-hant';
+import { COACHING_KNOWLEDGE_PREGNANT_ZH } from '../coaching.knowledge.pregnant.zh-hant';
+import { COACHING_KNOWLEDGE_PREGNANT2_ZH } from '../coaching.knowledge.pregnant2.zh-hant';
 
-/** 연령대별 DB 선택 (isPregnant이면 임산부 DB) */
-function getKnowledgeByAge(ageMonths: number, isPregnant = false): CoachingEntry[] {
+/** 연령대별 DB 선택 (isPregnant이면 임산부 DB). locale이 ja/zh-Hant면 번역 DB 사용(추가형). */
+function getKnowledgeByAge(ageMonths: number, isPregnant = false, locale?: string): CoachingEntry[] {
+  if (locale === 'ja') {
+    if (isPregnant) {
+      return [...COACHING_KNOWLEDGE_PREGNANT_JA, ...COACHING_KNOWLEDGE_PREGNANT2_JA];
+    }
+    if (ageMonths <= 72) return COACHING_KNOWLEDGE_JA;
+    if (ageMonths <= 108) {
+      return [
+        ...COACHING_KNOWLEDGE_ELEM_LOW_JA,
+        ...COACHING_KNOWLEDGE_ELEM_LOW2_JA,
+        ...COACHING_KNOWLEDGE_ELEM_LOW3_JA,
+      ];
+    }
+    return [
+      ...COACHING_KNOWLEDGE_ELEM_HIGH_JA,
+      ...COACHING_KNOWLEDGE_ELEM_HIGH2_JA,
+      ...COACHING_KNOWLEDGE_ELEM_HIGH3_JA,
+    ];
+  }
+  if (locale === 'zh-Hant') {
+    if (isPregnant) {
+      return [...COACHING_KNOWLEDGE_PREGNANT_ZH, ...COACHING_KNOWLEDGE_PREGNANT2_ZH];
+    }
+    if (ageMonths <= 72) return COACHING_KNOWLEDGE_ZH;
+    if (ageMonths <= 108) {
+      return [
+        ...COACHING_KNOWLEDGE_ELEM_LOW_ZH,
+        ...COACHING_KNOWLEDGE_ELEM_LOW2_ZH,
+        ...COACHING_KNOWLEDGE_ELEM_LOW3_ZH,
+      ];
+    }
+    return [
+      ...COACHING_KNOWLEDGE_ELEM_HIGH_ZH,
+      ...COACHING_KNOWLEDGE_ELEM_HIGH2_ZH,
+      ...COACHING_KNOWLEDGE_ELEM_HIGH3_ZH,
+    ];
+  }
+
+  // ─── 기존 한국어 로직 (locale 미지정/ko) — 완전 무변경 ───
   if (isPregnant) {
     // 임산부 DB (77개: 증상15 + 영양12 + 운동10 + 감정10 + 검진15 + 출산준비15)
     return [
@@ -94,9 +151,10 @@ export function findTopCoachingEntries(
   dominantType?: string,
   limit = 3,
   ageMonths = 12,
-  isPregnant = false
+  isPregnant = false,
+  locale?: string
 ): DBCandidate[] {
-  const db = getKnowledgeByAge(ageMonths, isPregnant);
+  const db = getKnowledgeByAge(ageMonths, isPregnant, locale);
   const scored: Array<{ entry: CoachingEntry; score: number }> = [];
 
   for (const entry of db) {

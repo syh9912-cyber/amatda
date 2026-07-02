@@ -319,7 +319,7 @@ export function registerAskHandler(router: Router): void {
 
       const [dbCandidates, tracking, conversation] = await Promise.all([
         Promise.resolve(findTopCoachingEntries(
-          message, category, child.temperament, config.dbCandidateCount, child.ageMonths
+          message, category, child.temperament, config.dbCandidateCount, child.ageMonths, undefined, locale
         )),
         buildTrackingSummary(childId, config.contextDays),
         getConversationContext(req.userId!, childId, tier),
