@@ -81,6 +81,98 @@ const PREGNANT_FLAG_RULES: FlagRule[] = [
 const FLAG_RULES = CHILD_FLAG_RULES;
 void FLAG_RULES;  // 외부 명시 export 없음 — 내부 참조용
 
+// ─── 로케일별 라벨/메시지 번역 (추가형) ───
+// 위험 감지 자체(정규식 매칭 대상 텍스트)는 한국어 입력 기준 그대로 유지 —
+// 라벨/메시지는 감지 이후 "사용자에게 보여줄 텍스트"만 번역한다.
+// EMERGENCY 단계는 AI를 거치지 않고 이 메시지가 그대로 노출되므로 번역이 특히 중요.
+const LABEL_JA: Record<string, string> = {
+  '38도 이상 발열': '38度以上の発熱',
+  '고열': '高熱',
+  '체온 관련 이모지': '体温に関する絵文字',
+  '경련/발작': 'けいれん/発作',
+  '의식 저하': '意識低下',
+  '호흡 곤란': '呼吸困難',
+  '혈변 의심': '血便の疑い',
+  '타르변(흑색변)': 'タール便(黒色便)',
+  '백색/회색변': '白色/灰色便',
+  '탈수 의심': '脱水の疑い',
+  '비명성 지속 울음': '悲鳴のような泣き声が続く',
+  '반복 구토': '繰り返す嘔吐',
+  '24시간 이상 식사 거부': '24時間以上の食事拒否',
+  '2시간 이상 지속 울음': '2時間以上続く泣き',
+  '심한 처짐/무기력': 'ひどいぐったり感/無気力',
+  '전신 발진': '全身の発疹',
+  '미열 (37.5~37.9도)': '微熱(37.5〜37.9度)',
+  '지속 감기 증상': '続く風邪症状',
+  '지속 설사': '続く下痢',
+  '양수 파수 의심': '破水の疑い',
+  '조기진통 의심': '早産兆候(陣痛)の疑い',
+  '대량 출혈': '大量出血',
+  '전자간증 의심': '子癇前症の疑い',
+  '전자간증 증상(두통+시야변화)': '子癇前症の症状(頭痛+視野変化)',
+  '태동 감소/소실': '胎動減少/消失',
+  '경련/의식소실': 'けいれん/意識消失',
+  '탯줄 탈출 의심': '臍帯脱出の疑い',
+  '질 출혈': '性器出血',
+  '규칙적 자궁 수축': '規則的な子宮収縮',
+  '심한 복통': 'ひどい腹痛',
+  '급격한 부종': '急激なむくみ',
+  '소변량 급감': '尿量の急激な減少',
+  '심한 구토(임신오조 의심)': 'ひどい嘔吐(妊娠悪阻の疑い)',
+  '혈압 상승': '血圧上昇',
+  '간헐적 배 뭉침': '間欠的なお腹の張り',
+  '비정상 분비물': '異常なおりもの',
+  '소량 출혈/이슬': '少量の出血/おしるし',
+  '심한 입덧': 'ひどいつわり',
+};
+
+const LABEL_ZH: Record<string, string> = {
+  '38도 이상 발열': '38度以上發燒',
+  '고열': '高燒',
+  '체온 관련 이모지': '體溫相關表情符號',
+  '경련/발작': '抽搐/發作',
+  '의식 저하': '意識不清',
+  '호흡 곤란': '呼吸困難',
+  '혈변 의심': '疑似血便',
+  '타르변(흑색변)': '瀝青便(黑便)',
+  '백색/회색변': '白色/灰色便',
+  '탈수 의심': '疑似脫水',
+  '비명성 지속 울음': '持續尖叫般哭鬧',
+  '반복 구토': '反覆嘔吐',
+  '24시간 이상 식사 거부': '超過24小時拒絕進食',
+  '2시간 이상 지속 울음': '持續哭鬧超過2小時',
+  '심한 처짐/무기력': '嚴重無力/精神不振',
+  '전신 발진': '全身出疹',
+  '미열 (37.5~37.9도)': '輕微發燒(37.5~37.9度)',
+  '지속 감기 증상': '持續感冒症狀',
+  '지속 설사': '持續腹瀉',
+  '양수 파수 의심': '疑似破水',
+  '조기진통 의심': '疑似早產陣痛',
+  '대량 출혈': '大量出血',
+  '전자간증 의심': '疑似子癇前症',
+  '전자간증 증상(두통+시야변화)': '子癇前症症狀(頭痛+視力變化)',
+  '태동 감소/소실': '胎動減少/消失',
+  '경련/의식소실': '抽搐/意識喪失',
+  '탯줄 탈출 의심': '疑似臍帶脫垂',
+  '질 출혈': '陰道出血',
+  '규칙적 자궁 수축': '規律性子宮收縮',
+  '심한 복통': '嚴重腹痛',
+  '급격한 부종': '急遽水腫',
+  '소변량 급감': '尿量驟減',
+  '심한 구토(임신오조 의심)': '嚴重嘔吐(疑似妊娠劇吐)',
+  '혈압 상승': '血壓升高',
+  '간헐적 배 뭉침': '間歇性腹部緊繃',
+  '비정상 분비물': '異常分泌物',
+  '소량 출혈/이슬': '少量出血/落紅',
+  '심한 입덧': '嚴重孕吐',
+};
+
+function localizeFlagLabel(label: string, locale?: string): string {
+  if (locale === 'ja') return LABEL_JA[label] ?? label;
+  if (locale === 'zh-Hant') return LABEL_ZH[label] ?? label;
+  return label;
+}
+
 /**
  * 매칭 전 텍스트 정규화 — 우회 방어:
  *  - NFKC: 전각/반각 통일 (예: '３９도' → '39도')
@@ -91,7 +183,7 @@ function normalizeMessage(s: string): string {
   return s.normalize('NFKC').toLowerCase();
 }
 
-export function detectRedFlags(message: string, isPregnant = false): RedFlagResult {
+export function detectRedFlags(message: string, isPregnant = false, locale?: string): RedFlagResult {
   const rules = isPregnant ? PREGNANT_FLAG_RULES : CHILD_FLAG_RULES;
   const flags: string[] = [];
   let highestUrgency: 'emergency' | 'urgent' | 'monitor' | 'none' = 'none';
@@ -111,18 +203,41 @@ export function detectRedFlags(message: string, isPregnant = false): RedFlagResu
     return { detected: false, flags: [], urgency: 'none' };
   }
 
-  const hospitalLabel = isPregnant ? '산부인과나 응급실' : '소아과나 응급실';
-  const clinicLabel = isPregnant ? '산부인과' : '소아과';
+  // 비한국어 로케일이면 사용자에게 보여줄 라벨/메시지만 번역(추가형) — 감지 로직/내부 flags는 무변경
+  const displayFlags = flags.map((f) => localizeFlagLabel(f, locale));
 
-  const messages: Record<string, string> = {
-    emergency: `주의가 필요해요. ${flags.join(', ')} 증상이 있다면, 가까운 ${hospitalLabel} 방문을 먼저 권합니다. 아래 조언은 참고용이에요.`,
-    urgent: `${flags.join(', ')} 증상이 보이시면 오늘 중으로 ${clinicLabel} 진료를 받아보시는 게 좋겠어요.`,
-    monitor: `${flags.join(', ')}이 있으시군요. 경과를 지켜보시되, 악화되면 ${clinicLabel} 방문을 권합니다.`,
-  };
+  const hospitalLabel = locale === 'ja'
+    ? (isPregnant ? '産婦人科や救急外来' : '小児科や救急外来')
+    : locale === 'zh-Hant'
+      ? (isPregnant ? '婦產科或急診' : '小兒科或急診')
+      : (isPregnant ? '산부인과나 응급실' : '소아과나 응급실');
+  const clinicLabel = locale === 'ja'
+    ? (isPregnant ? '産婦人科' : '小児科')
+    : locale === 'zh-Hant'
+      ? (isPregnant ? '婦產科' : '小兒科')
+      : (isPregnant ? '산부인과' : '소아과');
+
+  const messages: Record<string, string> = locale === 'ja'
+    ? {
+        emergency: `注意が必要です。${displayFlags.join('、')}の症状がある場合は、まず近くの${hospitalLabel}への受診をおすすめします。以下のアドバイスは参考程度にご覧ください。`,
+        urgent: `${displayFlags.join('、')}の症状が見られる場合は、今日中に${clinicLabel}を受診されることをおすすめします。`,
+        monitor: `${displayFlags.join('、')}があるのですね。経過を見つつ、悪化するようであれば${clinicLabel}への受診をおすすめします。`,
+      }
+    : locale === 'zh-Hant'
+      ? {
+          emergency: `需要留意。若有${displayFlags.join('、')}等症狀，建議先前往附近的${hospitalLabel}就診。以下建議僅供參考。`,
+          urgent: `若出現${displayFlags.join('、')}等症狀，建議今天內至${clinicLabel}就診。`,
+          monitor: `有${displayFlags.join('、')}的狀況。請先觀察病情變化，若惡化建議前往${clinicLabel}就診。`,
+        }
+      : {
+          emergency: `주의가 필요해요. ${displayFlags.join(', ')} 증상이 있다면, 가까운 ${hospitalLabel} 방문을 먼저 권합니다. 아래 조언은 참고용이에요.`,
+          urgent: `${displayFlags.join(', ')} 증상이 보이시면 오늘 중으로 ${clinicLabel} 진료를 받아보시는 게 좋겠어요.`,
+          monitor: `${displayFlags.join(', ')}이 있으시군요. 경과를 지켜보시되, 악화되면 ${clinicLabel} 방문을 권합니다.`,
+        };
 
   return {
     detected: true,
-    flags,
+    flags: displayFlags,
     urgency: highestUrgency,
     message: messages[highestUrgency],
   };

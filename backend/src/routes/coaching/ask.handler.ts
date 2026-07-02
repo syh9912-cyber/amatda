@@ -280,7 +280,7 @@ export function registerAskHandler(router: Router): void {
       }
 
       // ─── Step 4: 레드 플래그 검사 ───
-      const redFlag = detectRedFlags(message);
+      const redFlag = detectRedFlags(message, undefined, locale);
 
       // ─── Step 5: 사용자 티어 확인 ───
       const tier = await getUserTier(req.userId!);
