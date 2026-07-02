@@ -259,8 +259,8 @@ export const memoriesApi = {
 // Coaching (상담이모) — coachingAxios 사용 (별도 Cloud Run 인스턴스)
 // 코칭 API가 느려져도 auth/children/food 등 경량 API는 무영향
 export const coachingApi = {
-  send: (childId: string, message: string, category?: string) =>
-    coachingAxios.post('coaching/ask', { childId, message, category }),
+  send: (childId: string, message: string, category?: string, locale?: string) =>
+    coachingAxios.post('coaching/ask', { childId, message, category, locale }),
   history: (childId: string) =>
     coachingAxios.get(`coaching/history/${childId}`),
   followups: (childId: string) =>

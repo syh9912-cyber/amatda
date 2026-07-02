@@ -58,7 +58,7 @@ function parentGreetingSuffix(t: TFunction, role?: string): string {
 }
 
 export default function CoachingScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { firstMessage } = useLocalSearchParams<{ firstMessage?: string }>();
   const child = useChildStore((s) => s.selectedChild);
@@ -243,7 +243,7 @@ export default function CoachingScreen() {
       scrollToBottom();
 
       try {
-        const res = await coachingApi.send(child.id, text.trim(), category);
+        const res = await coachingApi.send(child.id, text.trim(), category, i18n.language);
         const reply = res.data?.data as Record<string, unknown> | undefined;
         // followup from API can be { days, question } object or string
         const rawFollowup = reply?.followup;
@@ -297,7 +297,7 @@ export default function CoachingScreen() {
         scrollToBottom();
       }
     },
-    [sending, child, photoUri, scrollToBottom, canUseCoaching, t]
+    [sending, child, photoUri, scrollToBottom, canUseCoaching, t, i18n.language]
   );
 
   const handleFirstTalkSelect = useCallback(

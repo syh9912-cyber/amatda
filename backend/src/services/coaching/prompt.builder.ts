@@ -202,6 +202,25 @@ const PREGNANT_SYSTEM_PROMPT = `너는 "아맞다"라는 육아 앱의 임산부
 - 전체 200~400자 권장. 너무 길게 늘이지만 마라.
 - 군더더기 금지: "조금은", "것 같아요", "~시군요", "~ㄹ 수 있어요" 남발 X.`;
 
+// ─── 응답 언어 힌트 (추가형) — 비한국어 로케일일 때만 systemPrompt 뒤에 append.
+// 위 SYSTEM_PROMPT / PREGNANT_SYSTEM_PROMPT 본문은 절대 수정하지 않음(한국어 사용자는 byte-identical).
+const LOCALE_RESPONSE_HINT: Partial<Record<'ja' | 'zh-Hant', string>> = {
+  ja: `
+
+[응답 언어 — 중요]
+사용자의 앱 언어는 일본어(日本語)다. 위의 모든 지침(말투/원칙/형식)은 그대로 따르되,
+아래 JSON 의 모든 텍스트 값(judgement, reasons, actions, medical, personalNote, followupQuestions)은
+반드시 자연스러운 일본어로 작성하라. JSON 키 이름은 절대 번역하지 말고 영문 그대로 유지하라.
+한국 특유의 제도/표현(예: 어린이집, 원 단위 금액)은 일본 상황에 맞게 자연스럽게 바꿔 표현하라.`,
+  'zh-Hant': `
+
+[應答語言 — 重要]
+使用者的應用程式語言是繁體中文（台灣/香港用語）。上述所有指示（語氣/原則/格式）請照舊遵守，
+但下方 JSON 中的所有文字內容（judgement, reasons, actions, medical, personalNote, followupQuestions）
+必須以自然的繁體中文書寫。JSON 的鍵名絕對不要翻譯，請保持英文原樣。
+若出現韓國特有制度或用語（例如「어린이집」、韓元金額等），請自然轉換為當地慣用說法。`,
+};
+
 // ─── Prompt Injection 방어 (#9 출시 전 보안 강화) ───
 //
 // 사용자 입력을 직접 prompt 에 끼워넣으면 다음 같은 공격이 가능:
@@ -246,10 +265,13 @@ function fenceUserMessage(userMessage: string | null | undefined): string {
 
 // ─── Runtime Prompt 빌더 ───
 
-export function buildPrompt(ctx: PromptContext, pregnant?: PregnantPromptExtra): {
+export function buildPrompt(ctx: PromptContext, pregnant?: PregnantPromptExtra, locale?: string): {
   systemPrompt: string;
   runtimePrompt: string;
 } {
+  const localeHint = locale && locale !== 'ko'
+    ? LOCALE_RESPONSE_HINT[locale as 'ja' | 'zh-Hant']
+    : undefined;
   const dbSection = ctx.dbCandidates.length > 0
     ? ctx.dbCandidates.map((c, i) => `${i + 1}. ${c}`).join('\n')
     : '(매칭되는 참고자료 없음)';
@@ -314,7 +336,8 @@ ${dbSection}
 - 정보 부족하면 1~2개만 물어라
 - JSON만 출력`;
 
-    return { systemPrompt: PREGNANT_SYSTEM_PROMPT, runtimePrompt };
+    const finalPregnantSystemPrompt = localeHint ? PREGNANT_SYSTEM_PROMPT + localeHint : PREGNANT_SYSTEM_PROMPT;
+    return { systemPrompt: finalPregnantSystemPrompt, runtimePrompt };
   }
 
   // ─── 기본 모드 (아이 상담) ───
@@ -357,5 +380,6 @@ ${dbSection}
 - 정보 부족하면 1~2개만 물어라
 - JSON만 출력`;
 
-  return { systemPrompt: SYSTEM_PROMPT, runtimePrompt };
+  const finalSystemPrompt = localeHint ? SYSTEM_PROMPT + localeHint : SYSTEM_PROMPT;
+  return { systemPrompt: finalSystemPrompt, runtimePrompt };
 }

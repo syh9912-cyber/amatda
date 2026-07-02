@@ -35,6 +35,7 @@ const AskBodySchema = z.object({
   category: z.string().max(32).optional(),
   photoUrl: z.string().url().max(2048).optional(),
   audioUrl: z.string().url().max(2048).optional(),
+  locale: z.enum(['ko', 'ja', 'zh-Hant']).optional(),
 });
 
 // ─── 카테고리 매핑 ───
@@ -236,7 +237,7 @@ export function registerAskHandler(router: Router): void {
     try {
       const body = parseBody(req, res, AskBodySchema);
       if (!body) return;
-      const { childId, message, category, photoUrl, audioUrl } = body;
+      const { childId, message, category, photoUrl, audioUrl, locale } = body;
 
       // ─── Step 1: 카테고리 확인 ───
       const categoryKo = category ? (CATEGORY_KO[category] ?? category) : '기타';
@@ -362,7 +363,7 @@ export function registerAskHandler(router: Router): void {
         observedTraits: child.observedTraits,
         timeEmpathyHint: timeCtx.empathyHint,
         milestoneContext: milestones.combined,
-      });
+      }, undefined, locale);
 
       // ─── Step 9: AI 호출 ───
       // CLAUDE.md: EMERGENCY 는 AI 응답 없이 즉시 119 안내. Gemini 호출 비용 + 응답 지연 회피.
