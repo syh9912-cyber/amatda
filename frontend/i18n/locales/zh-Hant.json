@@ -3085,10 +3085,12 @@
     "historyScoreUnit": "{{score}}分",
     "historyFamilyShared": "與家人分享",
     "emergencyTitle": "若您現在感到非常辛苦",
-    "emergencyLine1": "精神健康危機諮詢專線",
+    "emergencyLine1": "安心專線",
     "emergencyLine1Suffix": "（24小時免費）",
-    "emergencyLine2": "自殺防治諮詢專線",
-    "emergencyLine3": "保健所母嬰健康事業（各地區電話）"
+    "emergencyLine1Number": "1925",
+    "emergencyLine2": "生命線協談專線",
+    "emergencyLine2Number": "1995",
+    "emergencyLine3": "各地區衛生所（母嬰健康服務）"
   },
   "traitDetail": {
     "noChild": {
@@ -6081,7 +6083,7 @@
         "title": "若獨自難以承受，就一起守護",
         "desc": "憂鬱程度達中等以上時，才會通知家人。\n若感到非常辛苦，會直接連結到專業諮詢",
         "shareText": "與先生·家人分享",
-        "crisisText": "💙 自我檢測不能取代醫療診斷。若感到非常辛苦，請務必聯絡心理健康諮詢1577-0199·自殺防治1393。"
+        "crisisText": "💙 自我檢測不能取代醫療診斷。若感到非常辛苦，請務必聯絡安心專線1925（24小時免費）或生命線協談專線1995。"
       }
     },
     "pregnancyAlbum": {

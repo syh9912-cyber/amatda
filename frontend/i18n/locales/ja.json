@@ -612,8 +612,8 @@
     "coverImageLabel": "表紙画像（任意）",
     "defaultCoverHint": "デフォルト表紙 ・ タップして変更",
     "startGenerateAlbum": "アルバム作成を開始",
-    "citationChildcarePortal": "保健福祉部・妊娠育児総合ポータル「アイサラン」妊娠週数別情報",
-    "citationKsog": "大韓産婦人科学会 妊娠・出産情報",
+    "citationChildcarePortal": "こども家庭庁 妊娠・出産・子育て情報",
+    "citationKsog": "日本産科婦人科学会 妊娠・出産情報",
     "backCancel": "< キャンセル",
     "editRecordTitle": "記録を編集",
     "changePhoto": "📷 写真を変更",
@@ -654,8 +654,8 @@
     "percentileSmall": "小さめ・下位{{value}}%",
     "weeklyDevTitle": "週数別発達",
     "weeklyDevCitationNote": "週数別の発達情報は一般的な参考用です。個々の状態については産婦人科の専門医にご相談ください。",
-    "citationSourceChildcare": "韓国保健福祉部・妊娠育児総合ポータル「アイサラン」妊娠週数別情報",
-    "citationSourceKsog": "大韓産婦人科学会（韓国）妊娠・出産情報",
+    "citationSourceChildcare": "日本産科婦人科学会 妊娠週数別情報",
+    "citationSourceKsog": "日本産科婦人科学会 妊娠・出産情報",
     "growthCitationNote": "成長パーセンタイル・統計は韓国の標準成長曲線に基づく参考用です。日本の成長曲線とは異なる場合があります。個々の評価は小児科の専門医にご相談ください。",
     "citationSourceKdca": "韓国疾病管理庁・大韓小児科学会「2017年 小児青少年成長曲線」",
     "citationSourceWho": "WHO Child Growth Standards（0〜5歳）",
@@ -948,8 +948,8 @@
     },
     "citation": {
       "note": "解熱剤の用量・服用間隔は一般的な基準です。実際の投薬は必ず小児科医・薬剤師の指示に従ってください。",
-      "source1": "大韓小児科学会 子どもの健康情報（発熱・解熱剤）",
-      "source2": "疾病管理庁 国家健康情報ポータル（小児の発熱）"
+      "source1": "日本小児科学会 こどもの健康情報（発熱・解熱剤）",
+      "source2": "厚生労働省 こどもの救急・健康情報（発熱）"
     },
     "medModal": {
       "title": "{{brandName}}の記録",
@@ -1444,8 +1444,8 @@
     }
   },
   "pregnancyJourneyDetail": {
-    "citationChildcarePortal": "保健福祉部・妊娠育児総合ポータル「アイサラン」",
-    "citationKsog": "大韓産婦人科学会 妊娠・出産情報",
+    "citationChildcarePortal": "こども家庭庁 妊娠・出産・子育て情報",
+    "citationKsog": "日本産科婦人科学会 妊娠・出産情報",
     "disclaimer": "⚠️ この情報は一般的なご案内です。医療に関する判断は必ず産婦人科の専門医にご相談ください。",
     "stageLabels": {
       "early": "初期（1〜12週）",
@@ -2010,8 +2010,8 @@
     "resetAll": "すべてリセット",
     "medicalDisclaimerTitle": "⚕️ 医療免責事項",
     "medicalDisclaimerFooter": "本ガイドは入力データに基づく一般情報であり、医学的診断に代わるものではありません。緊急時には必ず医療機関の助けを受けてください。",
-    "citationKsog": "大韓産婦人科学会 妊娠・出産情報（陣痛・胎動）",
-    "citationChildcare": "保健福祉部・妊娠育児総合ポータル「アイサラン」",
+    "citationKsog": "日本産科婦人科学会 妊娠・出産情報（陣痛・胎動）",
+    "citationChildcare": "こども家庭庁 妊娠・出産・子育て情報",
     "kickGuideModal": {
       "title": "胎動がいつもより感じられませんか？",
       "subtitle": "下記の方法を試してみてください 👇",
@@ -2195,8 +2195,8 @@
     "medicalCitationNote": "応急処置の案内は参考情報です。緊急時は直ちに119番へ通報し、医療スタッフの指示に従ってください。",
     "citationSource": {
       "nfa": "消防庁119応急処置ガイド",
-      "kdca": "疾病管理庁 国家健康情報ポータル（応急処置）",
-      "redcross": "大韓赤十字社 応急処置ガイド"
+      "kdca": "厚生労働省 救急・健康情報（応急手当）",
+      "redcross": "日本赤十字社 応急手当ガイド"
     },
     "doNowLabel": "👉 今すぐすべきこと",
     "findNearbyHospitalButton": "近くの病院を探す",
@@ -2371,7 +2371,7 @@
     "tabGlucose": "血糖",
     "tabFood": "食事",
     "citationNote": "血糖・食事に関する推奨は一般的な基準であり、個人ごとの目標は担当医にご相談ください。",
-    "citationSourceDiabetesSociety": "大韓糖尿病学会（韓国）「糖尿病診療指針」（妊娠糖尿病）",
+    "citationSourceDiabetesSociety": "日本糖尿病学会「妊娠と糖尿病 診療ガイド」",
     "citationSourceFoodSafety": "韓国食品医薬品安全処 食品栄養成分データベース",
     "reportBtnText": "今週のAI分析を受ける",
     "reportBtnSub": "直近7日間の血糖＋食事の総合コーチング",
@@ -2592,9 +2592,9 @@
     "paidSub": "すべてのプレミアム機能をご利用いただけます！",
     "plan": {
       "monthlyName": "VIP月額",
-      "monthlyPriceLabel": "月額3,900ウォン",
+      "monthlyPriceLabel": "月額プラン",
       "yearlyName": "VIP年額",
-      "yearlyPriceLabel": "年額39,900ウォン",
+      "yearlyPriceLabel": "年額プラン",
       "yearlyDiscount": "15%オフ",
       "feature": {
         "unlimitedConsult": "育児相談 無制限",
@@ -2605,7 +2605,7 @@
         "unlimitedPatternAnalysis": "育児パターン分析 無制限",
         "adFree": "広告非表示",
         "allMonthlyFeatures": "VIP月額プランの全機能",
-        "yearlyPerMonth": "月あたり約3,325ウォン"
+        "yearlyPerMonth": "月額より年額の方がお得です"
       },
       "pricePerMonth": "{{price}}/月",
       "pricePerYear": "{{price}}/年"
@@ -3023,7 +3023,7 @@
     "selectChildPrompt": "お子さまを選択してください",
     "medicalCitationNote": "セルフチェックの結果は参考用であり、医学的診断ではありません。気分の落ち込みが続く場合は専門家にご相談ください。",
     "citationEpds": "エジンバラ産後うつ病質問票（EPDS）— Cox, Holden & Sagovsky（1987）",
-    "citationMohw": "保健福祉部 国家精神健康情報ポータル",
+    "citationMohw": "厚生労働省 こころの健康・精神保健情報",
     "moodCardTitle": "今日の気分",
     "moodCardHint": "絵文字をタップして記録しましょう。EPDSとは別に、毎日気軽に残せます。",
     "moodGreat": "とても良い",
@@ -3085,10 +3085,12 @@
     "historyScoreUnit": "{{score}}点",
     "historyFamilyShared": "家族と共有",
     "emergencyTitle": "今とてもつらいときは",
-    "emergencyLine1": "精神保健危機相談電話",
+    "emergencyLine1": "よりそいホットライン",
     "emergencyLine1Suffix": "（24時間無料）",
-    "emergencyLine2": "自殺予防相談電話",
-    "emergencyLine3": "保健所 母子保健事業（地域別電話）"
+    "emergencyLine1Number": "0120-279-338",
+    "emergencyLine2": "こころの健康相談統一ダイヤル",
+    "emergencyLine2Number": "0570-064-556",
+    "emergencyLine3": "お住まいの地域の保健センター（母子保健窓口）"
   },
   "traitDetail": {
     "noChild": {
@@ -4129,8 +4131,8 @@
     "recordingTipText": "・スマートフォンの標準録音アプリで5〜15秒ほど録音してください\n・お子さまの近くで録音すると精度が上がります\n・周囲の騒音が少ないほど良いです\n・録音後、この画面でファイルを選択してください",
     "citation": {
       "note": "泣き声分析の結果は参考用の推定であり、医学的診断ではありません。普段と違う泣き方・症状が続く場合は小児科を受診してください。",
-      "source1": "大韓小児科学会 子どもの健康情報（乳児の泣き声）",
-      "source2": "疾病管理庁 国家健康情報ポータル"
+      "source1": "日本小児科学会 こどもの健康情報（乳児の泣き）",
+      "source2": "厚生労働省 こどもの健康情報"
     },
     "hospitalCheckTitle": "病院での確認が必要です",
     "hospitalCheckDesc": "普段と違う泣き方が続く場合は小児科の受診をおすすめします。",
@@ -4317,8 +4319,8 @@
   },
   "chatbot": {
     "medicalSource": {
-      "kdca": "疾病管理庁 国家健康情報ポータル",
-      "pediatrics": "大韓小児青少年科学会"
+      "kdca": "厚生労働省 健康情報",
+      "pediatrics": "日本小児科学会"
     },
     "parentSuffix": {
       "dad": "パパ",
@@ -4358,7 +4360,7 @@
     "latLabel": "緯度（latitude）",
     "lngLabel": "経度（longitude）",
     "labelLabel": "表示名（任意）",
-    "labelPlaceholder": "ソウル特別市中区",
+    "labelPlaceholder": "例：東京都新宿区",
     "sameAgeMatch": {
       "title": "同い年マッチング",
       "withYear": "うちの子は{{year}}年生まれ → 同じ{{year}}年生まれのママたちとマッチング",
@@ -4435,8 +4437,8 @@
     "selectFileFirstButton": "先に写真を選択してください",
     "mainDisclaimer": "この分析は医学的診断に代わるものではありません。気になる症状がある場合は必ず小児科専門医にご相談ください。",
     "citation": {
-      "source1": "大韓小児科学会 子どもの健康情報（乳幼児の排便）",
-      "source2": "疾病管理庁 国家健康情報ポータル"
+      "source1": "日本小児科学会 こどもの健康情報（乳幼児の排便）",
+      "source2": "厚生労働省 こどもの健康情報"
     },
     "hospitalCheckTitle": "受診をおすすめします",
     "hospitalCheckDesc": "分析結果、注意が必要な兆候が見つかりました。小児科を受診してください。",
@@ -5503,7 +5505,7 @@
       "guideDeliveryRest": "時間に合わせて賢く接続します。",
       "guideClinic": "普段定期検診を受けている主治医の病院情報です。",
       "universityHospitalCheckbox": "🏥 大学病院（上級総合病院）です",
-      "universityHospitalExample": "例：ソウル大学病院、三星ソウル病院、車病院本院など",
+      "universityHospitalExample": "例：○○大学病院、△△医療センター、□□レディースクリニックなど",
       "uniInfoPrefix": "💡 病院の案内に従って最も早くつながる番号を登録してください。",
       "uniInfoEmphasis": "大学病院は分娩室または高危険妊産婦センター（MFICU）の直通番号",
       "uniInfoSuffix": "の登録をおすすめします。",
@@ -5511,14 +5513,14 @@
       "namePlaceholder": "例：車病院江南",
       "mainPhoneLabel": "📞 緊急時にすぐつながる番号 *",
       "mainPhoneSubLabel": "昼は外来、夜・休日は分娩室 — 最も早くつながる番号を1つ入力するだけでOK",
-      "mainPhonePlaceholder": "例：02-3468-3000",
+      "mainPhonePlaceholder": "例：03-1234-5678",
       "accordionCollapse": "▾ 追加情報を閉じる",
       "accordionExpand": "▸ 追加情報を入力する（任意）",
       "accordionSub": "分娩室直通・住所・メモ",
       "deliveryWardPhoneLabel": "分娩室／産婦人科直通番号（任意）",
       "deliveryWardPhoneSubUniversity": "大学病院は高危険妊産婦センター（MFICU）の番号を登録するとよいです",
       "deliveryWardPhoneSubDefault": "夜間や休日、緊急事態発生時に分娩室へ即座につながる番号です",
-      "deliveryWardPhonePlaceholder": "例：02-3468-3010",
+      "deliveryWardPhonePlaceholder": "例：03-1234-5679",
       "addressLabel": "住所（任意）",
       "addressPlaceholder": "住所を入力してください",
       "mapButton": "🗺️ 地図",
@@ -6081,7 +6083,7 @@
         "title": "一人でつらい時は一緒に見守ります",
         "desc": "抑うつ感が中程度以上の時だけ家族に通知が届きます。\nつらい時はすぐに専門相談につながります",
         "shareText": "夫・家族と共有",
-        "crisisText": "💙 自己検査は診断の代わりにはなりません。つらい時は精神健康相談1577-0199・自殺予防1393へ必ずご連絡ください。"
+        "crisisText": "💙 自己検査は診断の代わりにはなりません。つらい時はよりそいホットライン0120-279-338（24時間無料）・こころの健康相談統一ダイヤル0570-064-556へ必ずご連絡ください。"
       }
     },
     "pregnancyAlbum": {

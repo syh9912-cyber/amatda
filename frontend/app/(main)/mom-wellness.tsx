@@ -602,8 +602,8 @@ export default function MomWellnessScreen() {
         <View style={styles.emergencyCard}>
           <Text style={styles.emergencyTitle}>🆘 {t('momWellness.emergencyTitle')}</Text>
           <Text style={styles.emergencyText}>
-            {t('momWellness.emergencyLine1')} {'⁠'}<Text style={styles.emergencyNum}>1577-0199</Text>{'⁠'} {t('momWellness.emergencyLine1Suffix')}
-            {'\n'}{t('momWellness.emergencyLine2')} {'⁠'}<Text style={styles.emergencyNum}>1393</Text>
+            {t('momWellness.emergencyLine1')} {'⁠'}<Text style={styles.emergencyNum}>{t('momWellness.emergencyLine1Number')}</Text>{'⁠'} {t('momWellness.emergencyLine1Suffix')}
+            {'\n'}{t('momWellness.emergencyLine2')} {'⁠'}<Text style={styles.emergencyNum}>{t('momWellness.emergencyLine2Number')}</Text>
             {'\n'}{t('momWellness.emergencyLine3')}
           </Text>
         </View>
