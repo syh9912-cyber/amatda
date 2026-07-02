@@ -6430,3 +6430,15 @@ sleepKnowledgeCache, dailyTraits, milestonePhotos, kakaoOAuthState
 - 검증: `frontend && npx tsc --noEmit`, `frontend && npx expo lint` 모두 0 error. 키 파리티(ko/ja/zh-Hant
   4524개 동일) 확인.
 - **국제 출시 4대 갭(①AI 참고자료 ②사진분석 프롬프트 ③상담이모 응답언어 ④결제 통화) 전체 완료.**
+
+
+---
+
+## 2026-07-02 — 최종 번역 검증 스윕 (사용자 요청: 순서대로 빠짐없이 확인)
+- 전체 프론트엔드(app/components/features/constants/services/stores/utils) 재감사 → 하드코딩 한국어 후보 25개 발견, 6개 파일로 그룹화해 순서대로 처리.
+- **죽은 코드로 확인되어 스킵(4건)**: `baby-tracker.tsx`의 `SleepSessionCard`(주석에 "제거" 명시, JSX 호출 0건), `trait-detail.tsx`의 `DetailContent`(lint "never used" 기존 경고와 일치), `voice-settings.tsx`의 `BIXBY_GUIDE`/`GOOGLE_GUIDE`(이전 세션에 이미 확인된 죽은 코드), `album.tsx`의 `getMonthKey()`(실제로는 `MILESTONE_PRESETS` 내부 조회 키일 뿐 — 화면 표시는 이미 번역된 `getMonthLabel()`이 담당, 오탐).
+- **실제 수정(2건)**:
+  - `features/baby-tracker/utils/time.ts`: `formatDateKorean`/`getRelativeTime`/`formatMinutes`가 '월/일/분/시간/방금 전' 등을 하드코딩 반환 → `TFunction` 파라미터 추가, `common.time.*` 신규 키(9개) ko/ja/zh-Hant 추가. `baby-tracker.tsx`의 실사용 호출부(`BabyTrackerInner`, `TimelineEntry`) 전부 갱신 + 죽은 코드(`RecordCard`/`SleepSessionCard`) 호출부도 타입 정합성만 맞춤.
+  - `album.tsx`: 임신 앨범 타임라인의 "임신 {week}주차" 배지 2곳 — 기존에 동일한 문구의 `components.profileCard.pregnancyWeek` 키가 있어 재사용(신규 키 불필요).
+- 검증: 매 배치 `frontend && npx tsc --noEmit`(0 error), `frontend && npx expo lint`(96 warnings, 기존과 동일 — 회귀 없음), 키 파리티(ko/ja/zh-Hant 4539개 동일) 확인.
+- **이번 감사에서 발견된 진짜 미번역 텍스트는 모두 처리 완료. 프론트엔드 전체 번역 스윕 최종 마무리.**
