@@ -1162,7 +1162,7 @@ const PREG_EMOJI_IMGS: Record<string, ImageSourcePropType> = {
 };
 
 function PregnancyTimeline() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const child = useChildStore((s) => s.selectedChild);
   const childId = child?.id ?? '';
   const currentWeek = child?.pregnancyWeeks ?? 0;
@@ -1264,7 +1264,7 @@ function PregnancyTimeline() {
     if (!childId) return;
     setDiaryLoading(true);
     try {
-      const res = await coachingApi.dailyDiary(childId);
+      const res = await coachingApi.dailyDiary(childId, i18n.language);
       const data = res.data?.data as { diary?: string; date?: string } | undefined;
       if (data?.diary) {
         setDiaryText(data.diary);
@@ -1277,7 +1277,7 @@ function PregnancyTimeline() {
     } finally {
       setDiaryLoading(false);
     }
-  }, [childId, t]);
+  }, [childId, t, i18n.language]);
 
   return (
     <View style={styles.container}>
@@ -1596,7 +1596,7 @@ export default function AlbumScreen() {
 
 
 function BabyAlbum() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [photos, setPhotos] = useState<MilestonePhoto[]>([]);
   const [guideVisible, setGuideVisible] = useState(false);
   useEffect(() => { shouldAutoShowGuide('album').then((sh) => { if (sh) setGuideVisible(true); }); }, []);
@@ -1713,7 +1713,7 @@ function BabyAlbum() {
     if (!selectedChild) return;
     setDiaryLoading(true);
     try {
-      const res = await coachingApi.dailyDiary(selectedChild.id);
+      const res = await coachingApi.dailyDiary(selectedChild.id, i18n.language);
       const data = res.data?.data as { diary?: string; date?: string } | undefined;
       if (data?.diary) {
         setDiaryText(data.diary);
@@ -1724,7 +1724,7 @@ function BabyAlbum() {
     } finally {
       setDiaryLoading(false);
     }
-  }, [selectedChild, t]);
+  }, [selectedChild, t, i18n.language]);
 
   /* -- "하고 싶은 이야기" 메모란에 AI 오늘 일기 채우기 --
      그날의 아기시간 기록·상담 내용으로 일기를 생성해 메모에 삽입.
@@ -1733,7 +1733,7 @@ function BabyAlbum() {
     if (!selectedChild || memoDiaryLoading) return;
     setMemoDiaryLoading(true);
     try {
-      const res = await coachingApi.dailyDiary(selectedChild.id);
+      const res = await coachingApi.dailyDiary(selectedChild.id, i18n.language);
       const data = res.data?.data as { diary?: string } | undefined;
       const diary = data?.diary?.trim();
       if (diary) {
@@ -1746,7 +1746,7 @@ function BabyAlbum() {
     } finally {
       setMemoDiaryLoading(false);
     }
-  }, [selectedChild, memoDiaryLoading, t]);
+  }, [selectedChild, memoDiaryLoading, t, i18n.language]);
 
   /* -- Save entry (thumb 400px + print 1800px 두 버전 저장) -- */
   const saveEntry = useCallback(async () => {

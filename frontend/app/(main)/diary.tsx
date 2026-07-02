@@ -37,7 +37,7 @@ interface AiDiaryData {
 }
 
 export default function DiaryScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [content, setContent] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -82,7 +82,7 @@ export default function DiaryScreen() {
     }
     setAiDiaryLoading(true);
     try {
-      const res = await coachingApi.dailyDiary(selectedChild.id);
+      const res = await coachingApi.dailyDiary(selectedChild.id, i18n.language);
       const data = res.data?.data as AiDiaryData | undefined;
       if (data?.diary) {
         setAiDiary(data);

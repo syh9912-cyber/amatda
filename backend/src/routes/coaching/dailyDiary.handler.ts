@@ -11,7 +11,15 @@ import { containsForbiddenTerms } from '../../services/coaching/forbidden.filter
 
 const DiaryBodySchema = z.object({
   childId: z.string().min(1).max(128),
+  locale: z.enum(['ko', 'ja', 'zh-Hant']).optional(),
 });
+
+// ── 로케일별 폴백 문구 (AI 미사용/실패 시에도 사용자에게 한국어가 노출되지 않도록) ──
+const NO_RECORDS_MESSAGE: Record<'ko' | 'ja' | 'zh-Hant', string> = {
+  ko: '오늘은 아직 기록이 없어요. 아이와의 하루를 기록하면 AI가 따뜻한 일기를 만들어드려요!',
+  ja: '今日はまだ記録がありません。お子さんとの一日を記録すると、AIが温かい日記を作ってくれますよ！',
+  'zh-Hant': '今天還沒有記錄喔。記錄下與孩子的一天，AI 就會幫你寫出溫暖的日記！',
+};
 
 /**
  * 사용자 입력이 prompt 의 일부로 들어가는 경우(e.g. 이전 세션 메시지),
@@ -69,7 +77,33 @@ function buildTrackingText(data: Record<string, unknown>): string {
   return parts.length > 0 ? parts.join(', ') : '기록 없음';
 }
 
-function buildMockDiary(name: string, temperament: string, sessionCount: number): string {
+// 목업 폴백 문장에만 쓰이는 최소 매핑 — child.temperament 는 로케일과 무관하게
+// 항상 한국어 고정 라벨(탐구형 등)로 들어오므로, ja/zh 문장에 그대로 섞이지 않도록 변환.
+const TEMPERAMENT_LABEL: Record<'ja' | 'zh-Hant', Record<string, string>> = {
+  ja: { 탐구형: '探求タイプ', 활동형: '活動タイプ', 조화형: '調和タイプ', 분석형: '分析タイプ', 감성형: '感性タイプ' },
+  'zh-Hant': { 탐구형: '探索型', 활동형: '活動型', 조화형: '協調型', 분석형: '分析型', 감성형: '感性型' },
+};
+function localizeTemperament(temperament: string, locale?: string): string {
+  if (locale === 'ja' || locale === 'zh-Hant') {
+    return TEMPERAMENT_LABEL[locale][temperament] ?? temperament;
+  }
+  return temperament;
+}
+
+function buildMockDiary(name: string, temperamentRaw: string, sessionCount: number, locale?: string): string {
+  const temperament = localizeTemperament(temperamentRaw, locale);
+  if (locale === 'ja') {
+    if (sessionCount === 0) {
+      return `今日は${name}と静かな一日を過ごした。${temperament}らしく自分なりのやり方で世界を探索する姿が頼もしかった。明日はどんな姿を見せてくれるか楽しみだ。`;
+    }
+    return `今日は${name}について${sessionCount}件のことを考えた。${temperament}の子育てをしながら毎日新しいことを学んでいる。心配もあるけど、${name}が元気に育つ姿を見ると悩みが消えていく。明日も一緒に成長しよう。`;
+  }
+  if (locale === 'zh-Hant') {
+    if (sessionCount === 0) {
+      return `今天和${name}度過了安靜的一天。展現出${temperament}特有的方式探索世界，讓人感到欣慰。很期待明天又會看到什麼樣的一面。`;
+    }
+    return `今天為${name}想了${sessionCount}件事。養育${temperament}的孩子每天都在學習新的東西。雖然會擔心，但看到${name}健康成長，所有煩惱都消失了。明天也要一起成長。`;
+  }
   if (sessionCount === 0) {
     return `오늘 ${name}이와 조용한 하루를 보냈다. ${temperament} 기질답게 자기만의 방식으로 세상을 탐색하는 모습이 대견했다. 내일은 어떤 모습을 보여줄지 기대된다.`;
   }
@@ -83,7 +117,7 @@ export function registerDailyDiaryHandler(router: Router): void {
     try {
       const body = parseBody(req, res, DiaryBodySchema);
       if (!body) return;
-      const { childId } = body;
+      const { childId, locale } = body;
 
       const child = await buildChildContext(childId, req.userId!);
       if (!child) { error(res, '자녀 정보 없음', 404); return; }
@@ -130,7 +164,7 @@ export function registerDailyDiaryHandler(router: Router): void {
         success(res, {
           childName: child.name,
           date: todayStr,
-          diary: '오늘은 아직 기록이 없어요. 아이와의 하루를 기록하면 AI가 따뜻한 일기를 만들어드려요!',
+          diary: NO_RECORDS_MESSAGE[(locale ?? 'ko') as 'ko' | 'ja' | 'zh-Hant'] ?? NO_RECORDS_MESSAGE.ko,
         });
         return;
       }
@@ -152,13 +186,13 @@ export function registerDailyDiaryHandler(router: Router): void {
         success(res, {
           childName: child.name,
           date: diaryDate,
-          diary: buildMockDiary(child.name, child.temperament, sessions.length),
+          diary: buildMockDiary(child.name, child.temperament, sessions.length, locale),
         });
         return;
       }
 
       try {
-        const prompt = `너는 따뜻한 육아일기 작가야. 부모가 아이와 보낸 그날 기록을 바탕으로 짧고 따뜻한 육아일기를 한국어로 작성해.
+        const basePrompt = `너는 따뜻한 육아일기 작가야. 부모가 아이와 보낸 그날 기록을 바탕으로 짧고 따뜻한 육아일기를 한국어로 작성해.
 
 아이: ${child.ageInfo}, ${child.gender}, ${child.temperament}
 날짜: ${diaryDate}
@@ -177,6 +211,14 @@ ${trackingSummaryText}
 - 따뜻하고 일상적인 톤으로
 - JSON 없이 일기 텍스트만 출력`;
 
+        // 비한국어 로케일이면 응답 언어 힌트만 추가(추가형) — 위 한국어 프롬프트 본문은 그대로 유지
+        const localeHint = locale === 'ja'
+          ? '\n\n[重要] 上記の「韓国語で作成して」という指示は無視し、必ず自然な日本語で日記を書け。[[NAME]] トークンはそのまま維持しろ。'
+          : locale === 'zh-Hant'
+            ? '\n\n[重要] 請忽略上方「用韓文寫」的指示，務必以自然的繁體中文書寫日記。[[NAME]] 標記請維持原樣。'
+            : '';
+        const prompt = basePrompt + localeHint;
+
         const aiText = await callGeminiText(prompt, {
           temperature: 0.7,
           maxTokens: 240,
@@ -184,7 +226,7 @@ ${trackingSummaryText}
 
         // 응답 후처리: 사주/오행 등 금지 용어 검출 시 fallback
         const raw = containsForbiddenTerms(aiText)
-          ? buildMockDiary(child.name, child.temperament, sessions.length)
+          ? buildMockDiary(child.name, child.temperament, sessions.length, locale)
           : aiText.trim();
         // 마스킹 복원: [[NAME]] 토큰 + 모델이 임의로 넣은 placeholder 를 실명으로 치환
         const safeText = raw
@@ -195,13 +237,13 @@ ${trackingSummaryText}
         success(res, {
           childName: child.name,
           date: diaryDate,
-          diary: safeText || buildMockDiary(child.name, child.temperament, sessions.length),
+          diary: safeText || buildMockDiary(child.name, child.temperament, sessions.length, locale),
         });
       } catch {
         success(res, {
           childName: child.name,
           date: diaryDate,
-          diary: buildMockDiary(child.name, child.temperament, sessions.length),
+          diary: buildMockDiary(child.name, child.temperament, sessions.length, locale),
         });
       }
     } catch (err: unknown) {

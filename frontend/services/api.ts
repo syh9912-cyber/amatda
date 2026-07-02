@@ -269,8 +269,8 @@ export const coachingApi = {
     coachingAxios.post(`coaching/followup/${followupId}/respond`, { answer: '나중에' }),
   respondFollowup: (followupId: string, response: string) =>
     coachingAxios.post(`coaching/followup/${followupId}/respond`, { answer: response }),
-  dailyDiary: (childId: string) =>
-    coachingAxios.post('coaching/daily-diary', { childId }),
+  dailyDiary: (childId: string, locale?: string) =>
+    coachingAxios.post('coaching/daily-diary', { childId, locale }),
   analyzeMedia: (childId: string, type: 'cry' | 'poop', description?: string, mediaBase64?: string, mediaMimeType?: string) =>
     coachingAxios.post('coaching/analyze-media', { childId, type, description, mediaBase64, mediaMimeType }),
   firstTalk: (childId: string) =>

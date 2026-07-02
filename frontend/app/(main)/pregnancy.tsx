@@ -580,7 +580,7 @@ const checkupStyles = StyleSheet.create({
 /* ================================================================== */
 
 export default function PregnancyScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const child = useChildStore((s) => s.selectedChild);
   const childId = child?.id ?? '';
@@ -681,7 +681,7 @@ export default function PregnancyScreen() {
     if (!childId) return;
     setDiaryLoading(true);
     try {
-      const res = await coachingApi.dailyDiary(childId);
+      const res = await coachingApi.dailyDiary(childId, i18n.language);
       const data = res.data?.data as { diary?: string; date?: string } | undefined;
       if (data?.diary) {
         setDiaryText(data.diary);
@@ -694,7 +694,7 @@ export default function PregnancyScreen() {
     } finally {
       setDiaryLoading(false);
     }
-  }, [childId, t]);
+  }, [childId, t, i18n.language]);
 
   /* ── 앨범 표지 이미지 선택 ── */
   const pickCoverImage = useCallback(async () => {
