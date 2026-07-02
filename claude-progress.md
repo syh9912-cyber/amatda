@@ -6395,3 +6395,17 @@ sleepKnowledgeCache, dailyTraits, milestonePhotos, kakaoOAuthState
 - **확인된 죽은 코드(번역 불필요)**: `cryAnalysisData.ts`, `poopAnalysisData.ts`, `learningActivities.ts` — grep으로 전체 codebase import 0건 확인. `cry-analyzer.tsx`/`poop-analyzer.tsx`는 백엔드 Gemini(`coachingApi`)를 직접 호출하고 이 상수들을 쓰지 않음.
 - 검증: 매 배치마다 `backend && npx tsc --noEmit`, `frontend && npx tsc --noEmit`, `frontend && npx expo lint` 실행 — 전부 0 error(기존 경고만 존재).
 - 남은 작업(사용자 지시 "1234전부 + 안된곳 차례대로"): ③ 상담이모(coaching AI) 응답 언어가 실제 UI 언어를 따르는지 미확인 — 조사 중. ④ `services/payment.ts` KRW 고정 가격 — 다국가 통화 처리 방식 미정, 사용자 논의 필요.
+
+
+---
+
+## 2026-07-02 — 상담이모(코칭 AI) 다국어 응답 힌트 추가 (사용자 명시 승인, 추가형)
+- 감사 결과: `backend/src/services/coaching/prompt.builder.ts`의 SYSTEM_PROMPT/PREGNANT_SYSTEM_PROMPT가 완전 한국어 하드코딩, `AskBodySchema`에 locale 필드 자체가 없었음(voice/photo-parse와 달리 미대응 확인).
+- 사용자 승인("진행 (추가형)") 하에 tracker.ts와 동일 패턴 적용:
+  - `prompt.builder.ts`: `LOCALE_RESPONSE_HINT`(ja/zh-Hant) 신설, `buildPrompt(ctx, pregnant?, locale?)`로 3번째 파라미터 추가 — locale이 ko가 아닐 때만 기존 systemPrompt 뒤에 "이 언어로 응답하라" 힌트 append. JSON 필드명(judgement 등) 번역 금지 명시. 기존 한국어 프롬프트 본문 완전 미수정.
+  - `ask.handler.ts`: `AskBodySchema`에 `locale` 필드 추가, `buildPrompt` 호출에 locale 전달.
+  - `frontend/services/api.ts`의 `coachingApi.send()`에 `locale?: string` 파라미터 추가.
+  - `chatbot.tsx`: `useTranslation()`에서 `i18n` 추가 구조분해, `coachingApi.send()` 호출에 `i18n.language` 전달, `sendMessage` useCallback deps에 `i18n.language` 추가.
+- 참고: `buildPrompt`의 pregnant 분기(PREGNANT_SYSTEM_PROMPT)는 현재 ask.handler.ts에서 pregnant 파라미터를 전달하지 않아 실질적으로 호출되지 않음(기존부터 존재하던 상태, 이번 세션에서 발견했으나 범위 밖이라 미수정).
+- 검증: `backend && npx tsc --noEmit`, `frontend && npx tsc --noEmit`, `frontend && npx expo lint` 전부 0 error.
+- 남은 작업: `services/payment.ts` KRW 고정 가격 — 다국가 통화 처리 방식 사용자와 논의 필요.
