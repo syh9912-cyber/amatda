@@ -6409,3 +6409,24 @@ sleepKnowledgeCache, dailyTraits, milestonePhotos, kakaoOAuthState
 - 참고: `buildPrompt`의 pregnant 분기(PREGNANT_SYSTEM_PROMPT)는 현재 ask.handler.ts에서 pregnant 파라미터를 전달하지 않아 실질적으로 호출되지 않음(기존부터 존재하던 상태, 이번 세션에서 발견했으나 범위 밖이라 미수정).
 - 검증: `backend && npx tsc --noEmit`, `frontend && npx tsc --noEmit`, `frontend && npx expo lint` 전부 0 error.
 - 남은 작업: `services/payment.ts` KRW 고정 가격 — 다국가 통화 처리 방식 사용자와 논의 필요.
+
+
+---
+
+## 2026-07-02 — 해외 출시 후속 마무리: 결제화면 통화 표시 수정
+- 발견: `subscription.tsx`의 요금제 가격 라벨(`t('subscription.plan.monthlyPriceLabel')` 등)이 ja/zh-Hant로도
+  "3,900 한국원/월"처럼 그대로 번역되어 있었음(이전 세션 번역 스윕에서 문장 자체는 정확히 번역했으나
+  실제 IAP 결제 통화와 무관한 KRW 문구가 남아있던 것). 사용자 확인 후("코드만 먼저 수정") 진행.
+- `frontend/services/payment.ts`: `fetchLocalizedPrices()` 신설 — `fetchIAPSubscriptions()`(App Store/Play
+  Console 실제 상품 조회) 결과에서 `displayPrice`(현지 통화 포맷 완성 문자열)를 추출해 ProductId별로 반환.
+- `frontend/app/(main)/subscription.tsx`: `i18n.language !== 'ko'`일 때만 마운트 시 `fetchLocalizedPrices()`
+  호출 → 조회 성공 시 새 번역 키(`subscription.plan.pricePerMonth`/`pricePerYear`, `{{price}}/월`·`/月`·`/年`
+  형식)로 가격 라벨 재구성. 한국어 로케일이거나 조회 실패/로딩 전이면 기존 하드코딩 라벨(KRW) 그대로 유지 —
+  한국 사용자는 완전히 동일한 동작.
+- 부수 발견(범위 밖, 별도 태스크로 분리): `backend/routes/subscription.ts`의 `/premium/plans` 응답이
+  `{ data: { plans: [...] } }` 형태인데 프론트 `loadData()`는 `plansRes.data?.data?.length`로 체크해서
+  실제로는 서버 데이터가 한 번도 반영되지 않고 항상 클라 하드코딩 fallback만 사용되는 기존 버그 확인.
+  현재는 fallback 값이 서버 값과 동일해서 사용자 영향 없음 — spawn_task로 별도 세션에 위임.
+- 검증: `frontend && npx tsc --noEmit`, `frontend && npx expo lint` 모두 0 error. 키 파리티(ko/ja/zh-Hant
+  4524개 동일) 확인.
+- **국제 출시 4대 갭(①AI 참고자료 ②사진분석 프롬프트 ③상담이모 응답언어 ④결제 통화) 전체 완료.**
