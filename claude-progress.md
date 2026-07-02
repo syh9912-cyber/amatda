@@ -1,5 +1,65 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-06-23 — 예측 알람(수유/수면/기상) 풀스택 구현 + 6개월 기질설문 게이트
+> 최종 업데이트: 2026-07-02 — 일본/대만·홍콩 출시 대비 앱 전체 다국어화(i18n) 완료
+
+---
+
+## 2026-07-02 — 일본/대만·홍콩 출시 대비 전체 화면 다국어화(i18n)
+
+### 목적
+`ja`(일본어)/`zh-Hant`(대만·홍콩용 번체 중국어) 지원 확대를 위해 프론트엔드 전체
+(`app/`, `components/`, `features/`, `services/`, `stores/`, `utils/`, `constants/`)에서
+하드코딩된 한국어 문자열을 `react-i18next` `t()` 호출로 전환. 페이지 단위로 순차 진행,
+누락분은 발견 즉시 후속 태스크로 마무리.
+
+### 수정 범위 (요약)
+- **화면(app/)**: main/onboarding/auth 전체 스크린 약 60개+ 완료 (album, growth-stats, fever,
+  pregnancy, mom-group, birth-bag, labor-monitor, sos, voice/voice-settings, gdm, privacy/terms,
+  subscription, coparenting, mom-wellness, lullaby, child-edit, vaccination, trait-detail,
+  onboarding 10종, momstagram/-post, ai-analysis, chatbot, poop-analyzer, edit-profile,
+  recommendations 3종, mom-location-setup, profile, splash/support, notification-settings,
+  timer, diary, alarm-settings, register/login, nutrition, clinic, monthly-characteristic,
+  play-learning, home.tsx, baby-tracker.tsx)
+- **components/** 전체(common/ads/coaching/profile/ui/trait/home/pregnancy/album/
+  baby-tracker/diary/momstagram/onboarding/payment/vaccination/report) — 62개 파일
+- **features/guide/*** 20개 도움말 캐러셀 콘텐츠 전체 (화면별 "?" 버튼 안내 팝업)
+- **constants/**: `onboardingQuestions.ts`(온보딩 기질설문 60문항 전체), `dailyQuestions.ts`
+  (일기 "오늘의 질문" 콘텐츠) — 둘 다 처음엔 "대용량 참고자료"로 오분류돼 건너뛸 뻔했으나
+  실제로는 모든 신규 사용자가 보는 핵심 인터랙티브 콘텐츠임을 확인 후 번역
+- **services/**: `pushNotifications.ts`(OS 푸시알림 제목/본문, 임신주차 알림 포함),
+  `otaCheck.ts`, `checkup.ts`, `social-auth.ts`, `deliveryHospital.ts`(SOS 분만병원 연락),
+  `payment.ts`(결제수단/상품명), `api.ts`/`imageUpload.ts`(에러 메시지 — 실제 표시 여부 개별 확인)
+- **utils/**: `imagePicker.ts`, `traitReportHtml.ts`(기질 리포트 PDF 공유)
+- **stores/**: `momstagramStore.ts`(익명/나 기본 표시명)
+- **hooks/**: `useLoginHandlers.ts`(소셜/이메일 로그인 실패 메시지)
+
+### 핵심 원칙 (Rule of Two 미해당 — 문자열 교체만, 로직 변경 없음)
+- 결제(`payment.ts`)/SOS 통화(`deliveryHospital.ts`)/인증(`social-auth.ts`) 파일은
+  표시 문자열만 `t()`로 교체, 결제 처리·통화 우선순위·인증 흐름 로직은 전혀 건드리지 않음.
+- Firestore 저장/매칭용 리터럴(`PostCategory`, `dominantType` 키, 배지 라벨 등)은 원문 유지 —
+  표시되는 라벨만 번역, 저장/조회 키는 그대로.
+- 죽은 코드(미사용 export)로 확인된 항목은 번역하지 않고 그대로 둠
+  (예: `voice-settings.tsx`의 `BIXBY_GUIDE`/`GOOGLE_GUIDE`, `ageFeatures.ts`의
+  `ELEMENT_BOOST_ACTIVITIES`, `baby-tracker.tsx`의 `FEEDING_OPTIONS`/`SleepSessionCard`).
+- 사주/오행 등 역술 용어는 어디에도 노출하지 않음(기질/에너지/성향 표현만 사용) — 전 구간 확인.
+- zh 번역은 번체(대만·홍콩)만 사용 — 서브에이전트가 간체를 섞어 쓰는 실수가 반복돼
+  매 배치마다 문자 단위 재검증 절차를 프롬프트에 명시.
+
+### 검증
+- `cd frontend && npx tsc --noEmit` / `npx expo lint` 매 배치마다 통과 확인, 최종 전체 통과.
+- `cd backend && npx tsc --noEmit` 통과(백엔드는 이번 작업 대상 아님, 회귀 없음 확인).
+- `i18n/locales/{ko,ja,zh-Hant}.json` 3개 파일 키 개수 매 배치마다 일치 확인(최종 4259개 동일).
+- 각 배치마다 정규식 스윕 2종(따옴표 문자열 + JSX 텍스트)으로 잔여 한국어 확인 —
+  남은 건 전부 주석/죽은 코드/Firestore 리터럴/대용량 참고자료뿐임을 개별 확인.
+
+### 남은 이슈 (후속 확인 필요, 별도 세션 스폰됨)
+1. **`app/voice.tsx` 음성 기록 기능**: 음성인식이 한국어 문법 매칭 기반이라 일본/대만·홍콩
+   출시 시 이 기능을 그대로 노출할지, 로케일 게이트를 걸지 제품 결정 필요.
+   (`'왼쪽'`/`'오른쪽'` 등 일부 값이 `baby-tracker.tsx`에서 원문 그대로 노출됨)
+2. **`components/report/EditorialCover.tsx`, `poop-analyzer.tsx`**: `\uXXXX` 유니코드 이스케이프
+   사용(CLAUDE.md 규칙 5 위반, 이번 세션 이전부터 있던 기존 코드) — 리터럴 한글로 교체 필요.
+3. **`features/coaching/CategoryBar.tsx`** 등 일부 파일에서 확인된 대용량 상수(`foodRecommendations.ts`,
+   `monthlyCharacteristics.ts`, `playActivities.ts`, `learningActivities.ts`, `cryAnalysisData.ts`,
+   `poopAnalysisData.ts`)는 기존 원칙대로 번역 대상에서 제외(AI 참고자료 성격) — 필요 시 재검토.
 
 ---
 
