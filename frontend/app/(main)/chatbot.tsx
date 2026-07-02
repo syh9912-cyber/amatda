@@ -334,26 +334,26 @@ export default function CoachingScreen() {
   const handleFollowupRespond = useCallback(
     async (id: string, response: string) => {
       try {
-        await coachingApi.respondFollowup(id, response);
+        await coachingApi.respondFollowup(id, response, i18n.language);
       } catch {
         // ignore
       }
       setFollowups((prev) => prev.filter((f) => f.id !== id));
       sendMessage(response);
     },
-    [sendMessage]
+    [sendMessage, i18n.language]
   );
 
   const handleFollowupDismiss = useCallback(
     async (id: string) => {
       try {
-        await coachingApi.dismissFollowup(id);
+        await coachingApi.dismissFollowup(id, i18n.language);
       } catch {
         // ignore
       }
       setFollowups((prev) => prev.filter((f) => f.id !== id));
     },
-    []
+    [i18n.language]
   );
 
   // Auto-send firstMessage from analysis report navigation

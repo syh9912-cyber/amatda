@@ -265,10 +265,10 @@ export const coachingApi = {
     coachingAxios.get(`coaching/history/${childId}`),
   followups: (childId: string) =>
     coachingAxios.get(`coaching/followups/${childId}`),
-  dismissFollowup: (followupId: string) =>
-    coachingAxios.post(`coaching/followup/${followupId}/respond`, { answer: '나중에' }),
-  respondFollowup: (followupId: string, response: string) =>
-    coachingAxios.post(`coaching/followup/${followupId}/respond`, { answer: response }),
+  dismissFollowup: (followupId: string, locale?: string) =>
+    coachingAxios.post(`coaching/followup/${followupId}/respond`, { answer: '나중에', locale }),
+  respondFollowup: (followupId: string, response: string, locale?: string) =>
+    coachingAxios.post(`coaching/followup/${followupId}/respond`, { answer: response, locale }),
   dailyDiary: (childId: string, locale?: string) =>
     coachingAxios.post('coaching/daily-diary', { childId, locale }),
   analyzeMedia: (childId: string, type: 'cry' | 'poop', description?: string, mediaBase64?: string, mediaMimeType?: string, locale?: string) =>
