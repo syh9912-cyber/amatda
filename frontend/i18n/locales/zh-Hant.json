@@ -2664,15 +2664,15 @@
       "autoRenew": "．訂閱將依您選擇的週期（月繳／年繳）自動續訂。",
       "trialAutoCharge": "．7 天免費體驗結束後，將自動收取您所選方案的費用。",
       "cancelBefore24h": "．若未於續訂前 24 小時取消，將自動扣款。",
-      "cancelIOS": "．取消訂閱：設定 App → 您的 Apple 帳號 → 訂閱 → 아맞다 → 取消訂閱",
-      "cancelAndroid": "．取消訂閱：Play 商店 → 個人資料 → 付款與訂閱 → 訂閱 → 아맞다",
+      "cancelIOS": "．取消訂閱：設定 App → 您的 Apple 帳號 → 訂閱 → Amatda → 取消訂閱",
+      "cancelAndroid": "．取消訂閱：Play 商店 → 個人資料 → 付款與訂閱 → 訂閱 → Amatda",
       "cancelStillUsableUntilExpiry": "．即使在訂閱期間內取消，仍可使用至到期日為止。"
     },
     "refundNotice": {
-      "title": "退款政策：",
-      "within7DaysUnused": "．付款後 7 天內未使用：全額退款",
-      "within7DaysUsed": "．付款後 7 天內已使用：扣除已使用天數後退款",
-      "after14Days": "．付款後超過 14 天：若無本公司過失，恕不接受退款",
+      "title": "關於退款：",
+      "within7DaysUnused": "．付款透過 App Store／Google Play 進行，退款將依各平台之退款政策辦理",
+      "within7DaysUsed": "．App Store 付款：請至 https://reportaproblem.apple.com 申請",
+      "after14Days": "．Google Play 付款：於 Play 商店＞付款與訂閱＞預算與訂單紀錄中申請",
       "seeTerms": "．詳細請參閱〔服務條款 > 第 12 條〕"
     }
   },

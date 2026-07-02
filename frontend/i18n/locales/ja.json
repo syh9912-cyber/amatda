@@ -2669,10 +2669,10 @@
       "cancelStillUsableUntilExpiry": "・登録期間中に解約しても、有効期限まではご利用いただけます。"
     },
     "refundNotice": {
-      "title": "返金ポリシー：",
-      "within7DaysUnused": "・決済後7日以内かつ未使用の場合：全額返金",
-      "within7DaysUsed": "・決済後7日以内に利用履歴がある場合：利用日数分を差し引いて返金",
-      "after14Days": "・決済後14日を超えた場合：当社に帰責事由がない限り返金不可",
+      "title": "返金について：",
+      "within7DaysUnused": "・決済はApp Store／Google Playを通じて行われるため、返金は各プラットフォームの返金ポリシーに従って処理されます",
+      "within7DaysUsed": "・App Store決済：https://reportaproblem.apple.com から申請",
+      "after14Days": "・Google Play決済：Playストア＞お支払いと定期購入＞予算と注文履歴から申請",
       "seeTerms": "・詳細は[利用規約 > 第12条]をご参照ください"
     }
   },
