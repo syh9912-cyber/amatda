@@ -1336,7 +1336,7 @@ function PregnancyTimeline() {
           <View key={weekGroup.week} style={pStyles.weekGroup}>
             <View style={pStyles.weekHeaderRow}>
               <View style={[pStyles.weekBadge, weekGroup.week === currentWeek && pStyles.weekBadgeCurrent]}>
-                <Text style={pStyles.weekBadgeText}>임신 {weekGroup.week}주차</Text>
+                <Text style={pStyles.weekBadgeText}>{t('components.profileCard.pregnancyWeek', { week: weekGroup.week })}</Text>
               </View>
               <View style={pStyles.weekLine} />
             </View>
@@ -1522,7 +1522,7 @@ function PregnancyMemoriesSection({ childId }: { childId: string }) {
             <View key={weekGroup.week} style={pStyles.weekGroup}>
               <View style={pStyles.weekHeaderRow}>
                 <View style={pStyles.weekBadge}>
-                  <Text style={pStyles.weekBadgeText}>임신 {weekGroup.week}주차</Text>
+                  <Text style={pStyles.weekBadgeText}>{t('components.profileCard.pregnancyWeek', { week: weekGroup.week })}</Text>
                 </View>
                 <View style={pStyles.weekLine} />
               </View>
