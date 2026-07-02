@@ -17,7 +17,7 @@ import {
   Dimensions,
   ImageSourcePropType,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, Redirect } from 'expo-router';
 import { BackButton } from '../../components/common/BackButton';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
@@ -333,7 +333,7 @@ const getGuideContent = (t: TFunction): Record<string, GuideData> => ({
 /* ------------------------------------------------------------------ */
 
 export default function SOSScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { selectedChild } = useChildStore();
   const isPregnant = selectedChild?.isPregnant === true;
@@ -493,6 +493,11 @@ export default function SOSScreen() {
   }, [regionName, t]);
 
   /* -- Render -- */
+  // 한국어 버전에서만 제공 (해외는 응급번호·기관이 국가별로 달라 미지원) — 딥링크 등 직접 진입 방어
+  if (i18n.language !== 'ko') {
+    return <Redirect href="/(main)/home" />;
+  }
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />

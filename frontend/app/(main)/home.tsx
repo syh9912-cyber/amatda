@@ -917,8 +917,8 @@ export default function HomeScreen() {
     {/* 화면 하단 배너 광고 — FREE 사용자만, 프리미엄/체험 사용자는 자동 숨김 (useShowAds) */}
     <AdSlot />
 
-    {/* Floating SOS Button — 모달/오버레이 활성 시 숨김 (선택지를 가리지 않게) */}
-    {overlayCount === 0 && (
+    {/* Floating SOS Button — 모달/오버레이 활성 시 숨김 (선택지를 가리지 않게) / 한국어 버전에서만 노출 (해외는 응급번호·기관이 국가별로 달라 미지원) */}
+    {overlayCount === 0 && i18n.language === 'ko' && (
       <TouchableOpacity
         style={styles.sosFab}
         onPress={() => router.push('/(main)/sos')}
