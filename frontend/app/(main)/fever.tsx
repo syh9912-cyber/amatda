@@ -658,8 +658,22 @@ export default function FeverScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { selectedChild } = useChildStore();
-  // 응급번호는 로케일/지역 기반 (홍콩 999, 그 외 119) — 하드코딩 119 대체
-  const emergencyTel = getEmergencyTel(i18n.language);
+
+  // zh-Hant 대만/홍콩 지역 — 응급번호와 해열제 농도가 일관되도록 상위에서 단일 관리.
+  // 기기 지역코드로 자동 추정 후, 계산기 토글로 재정의(AsyncStorage 저장).
+  const [zhRegion, setZhRegion] = useState<ZhRegion>(detectZhRegion);
+  useEffect(() => {
+    if (i18n.language !== 'zh-Hant') return;
+    AsyncStorage.getItem(ZH_REGION_STORAGE_KEY).then((v) => {
+      if (v === 'TW' || v === 'HK') setZhRegion(v);
+    }).catch(() => { /* 저장값 없으면 자동 추정값 유지 */ });
+  }, [i18n.language]);
+  const changeZhRegion = useCallback((r: ZhRegion) => {
+    setZhRegion(r);
+    AsyncStorage.setItem(ZH_REGION_STORAGE_KEY, r).catch(() => { /* 저장 실패 무시 */ });
+  }, []);
+  // 응급번호는 로케일/지역 기반 (홍콩 999, 그 외 119) — 하드코딩 119 대체, 사용자 선택 반영
+  const emergencyTel = getEmergencyTel(i18n.language, zhRegion);
 
   /* -- State -- */
   const [temperature, setTemperature] = useState('');
@@ -1141,6 +1155,8 @@ export default function FeverScreen() {
                 onChangeWeight={setInputWeight}
                 medLog={medLog}
                 medNow={medNow}
+                zhRegion={zhRegion}
+                onChangeZhRegion={changeZhRegion}
               />
             ) : (
               <Text style={styles.noDataText}>
@@ -1505,9 +1521,9 @@ function detectZhRegion(): ZhRegion {
   }
 }
 
-/** 응급 전화번호 — 한국/일본/대만은 119, 홍콩(및 마카오)은 999. */
-function getEmergencyTel(lang: string): string {
-  if (lang === 'zh-Hant' && detectZhRegion() === 'HK') return '999';
+/** 응급 전화번호 — 한국/일본/대만은 119, 홍콩(및 마카오)은 999. zhRegion(사용자 선택)이 있으면 우선. */
+function getEmergencyTel(lang: string, zhRegion?: ZhRegion): string {
+  if (lang === 'zh-Hant' && (zhRegion ?? detectZhRegion()) === 'HK') return '999';
   return '119';
 }
 
@@ -1531,6 +1547,8 @@ function MedicineSection({
   onChangeWeight,
   medLog,
   medNow,
+  zhRegion,
+  onChangeZhRegion,
 }: {
   dose: MedicineDose;
   onSchedule: (minutes: number, label: string) => void;
@@ -1538,25 +1556,16 @@ function MedicineSection({
   onChangeWeight: (v: string) => void;
   medLog: MedLogEntry[];
   medNow: number;
+  // zh-Hant 대만/홍콩 지역 — 응급번호와 일관되게 하려고 상위(FeverScreen)에서 관리해 내려받음
+  zhRegion: ZhRegion;
+  onChangeZhRegion: (r: ZhRegion) => void;
 }) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ja' || i18n.language === 'zh-Hant' ? i18n.language : undefined;
   const parsedWeight = parseFloat(inputWeight);
   const useInput = !isNaN(parsedWeight) && parsedWeight > 0 && parsedWeight < 100;
 
-  // zh-Hant는 대만/홍콩 아세트 농도가 2배(24 vs 50mg/ml) 다르므로 지역별로 분리 계산.
-  // 기기 지역코드로 기본값 자동 추정 후, 사용자가 토글로 재정의(AsyncStorage 저장).
-  const [zhRegion, setZhRegion] = useState<ZhRegion>(detectZhRegion);
-  useEffect(() => {
-    if (locale !== 'zh-Hant') return;
-    AsyncStorage.getItem(ZH_REGION_STORAGE_KEY).then((v) => {
-      if (v === 'TW' || v === 'HK') setZhRegion(v);
-    }).catch(() => { /* 저장값 없으면 자동 추정값 유지 */ });
-  }, [locale]);
-  const changeZhRegion = useCallback((r: ZhRegion) => {
-    setZhRegion(r);
-    AsyncStorage.setItem(ZH_REGION_STORAGE_KEY, r).catch(() => { /* 저장 실패 무시 */ });
-  }, []);
+  const changeZhRegion = onChangeZhRegion;
 
   // 농도 결정 — 챔프 ER 선택 시 48mg/ml, 그 외 32mg/ml. 이부는 고정 20mg/ml. (한국 로직 무변경)
   // 비한국어는 CONCENTRATION_BY_REGION 값 사용(추가형) — 일본은 이부프로펜 미제공(acet만),
