@@ -140,6 +140,29 @@
       "coparenting": "家庭共同育兒",
       "lifeLog": "生活紀錄",
       "playLearning": "遊戲學習"
+    },
+    "weeklyQuestion": {
+      "week6": "{{name}}的第一次超音波，確認了嗎？",
+      "week10": "聽到{{name}}的心跳聲了嗎？",
+      "week13": "{{name}}的頸部透明帶檢查做了嗎？",
+      "week16": "已進入穩定期！{{name}}長得順利嗎？",
+      "week20": "{{name}}是王子還是公主呢？",
+      "week24": "常感覺到{{name}}的胎動嗎？",
+      "week28": "{{name}}長高了嗎？長得順利嗎？",
+      "week32": "開始準備生產了嗎？",
+      "week36": "{{name}}的待產包準備好了嗎？",
+      "week39": "準備好迎接{{name}}了嗎？",
+      "week40plus": "見到{{name}}了嗎？",
+      "descBirthRegister": "點擊即可切換為生產登記",
+      "descTapIfBorn": "已生產的話請點擊",
+      "descTapToCare": "點擊即可切換為育兒模式"
+    },
+    "emptyState": {
+      "title": "尚未登記子女",
+      "subtitle": "登記子女並分析氣質吧",
+      "registerBtn": "登記子女",
+      "browseMomGroup": "瀏覽媽媽談",
+      "profile": "個人資料"
     }
   },
   "babyTracker": {
@@ -408,7 +431,8 @@
       "soundUpload": "上傳聲音"
     },
     "noRecordsYet": "還沒有記錄",
-    "noRecordsHint": "點下方按鈕記錄餵食·睡眠·尿布"
+    "noRecordsHint": "點下方按鈕記錄餵食·睡眠·尿布",
+    "emptyTimelineHint": "點擊下方的＋按鈕\n新增今天的{{label}}記錄吧"
   },
   "album": {
     "viewOnly": "僅限查看",
@@ -4842,6 +4866,33 @@
       },
       "disclaimer": "※本資訊為一般妊娠．哺乳指南，實際狀況可能因個人體質而異。準確的建議攝取量與服用時程，請諮詢您的婦產科醫師或藥師決定。",
       "closeButton": "了解了 💛"
+    },
+    "editorialCover": {
+      "traitShort": {
+        "wood": "探究",
+        "fire": "活動",
+        "earth": "安定",
+        "metal": "決斷",
+        "water": "智慧"
+      },
+      "archetype": {
+        "explorer": "探究型活動家",
+        "active": "活動型挑戰者",
+        "harmony": "安定型合作者",
+        "analytic": "智慧型研究家",
+        "emotional": "感性型共感者"
+      },
+      "typeDesc": {
+        "explorer": "好奇心旺盛，喜歡新事物\n喜歡用手觸摸來學習\n在刺激豐富的環境中最閃耀",
+        "active": "用身體活動時感到開心\n喜歡跑跑跳跳的活動\n要親自嘗試才會滿足的孩子",
+        "harmony": "在熟悉的人與環境中感到自在\n和朋友、家人相處融洽\n溫暖又懂得合作的孩子",
+        "analytic": "很能遵守規則與順序\n透過觀察一步步學習\n喜歡重複與整理",
+        "emotional": "很能察覺周圍氣氛\n能同理他人的心情\n細膩且表達豐富"
+      },
+      "newborn": "新生兒",
+      "balanced": "均衡",
+      "defaultDesc": "這是孩子獨有的氣質。",
+      "primaryLabel": "主要傾向 · {{primary}}"
     }
   }
 }

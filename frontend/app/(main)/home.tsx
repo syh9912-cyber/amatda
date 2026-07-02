@@ -52,18 +52,18 @@ import { TFunction } from 'i18next';
 /* Pregnancy week-appropriate questions                                */
 /* ------------------------------------------------------------------ */
 
-function getWeeklyQuestion(name: string, week: number): { emoji: string; text: string; desc: string } {
-  if (week <= 6) return { emoji: '🌱', text: `${name}의 첫 초음파, 확인하셨나요?`, desc: '탭하면 출산 등록으로 전환돼요' };
-  if (week <= 10) return { emoji: '💓', text: `${name} 심장소리는 들으셨나요?`, desc: '출산하셨다면 탭해주세요' };
-  if (week <= 13) return { emoji: '🔬', text: `${name} 목투명대 검사는 받으셨나요?`, desc: '출산하셨다면 탭해주세요' };
-  if (week <= 16) return { emoji: '🌿', text: `안정기에요! ${name}가 잘 크고 있나요?`, desc: '출산하셨다면 탭해주세요' };
-  if (week <= 20) return { emoji: '🎀', text: `${name}가 왕자인가요 공주인가요?`, desc: '출산하셨다면 탭해주세요' };
-  if (week <= 24) return { emoji: '🦶', text: `${name} 태동을 자주 느끼시나요?`, desc: '출산하셨다면 탭해주세요' };
-  if (week <= 28) return { emoji: '📋', text: `${name} 키는 많이 컸나요? 잘 크고 있나요?`, desc: '출산하셨다면 탭해주세요' };
-  if (week <= 32) return { emoji: '📚', text: `출산 준비는 시작하셨나요?`, desc: '출산하셨다면 탭해주세요' };
-  if (week <= 36) return { emoji: '🧳', text: `${name} 출산가방은 준비되었나요?`, desc: '출산하셨다면 탭해주세요' };
-  if (week <= 39) return { emoji: '🤰', text: `${name} 만날 준비 되셨나요?`, desc: '출산하셨다면 탭해주세요' };
-  return { emoji: '👶', text: `${name} 만나셨나요?`, desc: '탭하면 육아 모드로 전환됩니다' };
+function getWeeklyQuestion(name: string, week: number, t: TFunction): { emoji: string; text: string; desc: string } {
+  if (week <= 6) return { emoji: '🌱', text: t('home.weeklyQuestion.week6', { name }), desc: t('home.weeklyQuestion.descBirthRegister') };
+  if (week <= 10) return { emoji: '💓', text: t('home.weeklyQuestion.week10', { name }), desc: t('home.weeklyQuestion.descTapIfBorn') };
+  if (week <= 13) return { emoji: '🔬', text: t('home.weeklyQuestion.week13', { name }), desc: t('home.weeklyQuestion.descTapIfBorn') };
+  if (week <= 16) return { emoji: '🌿', text: t('home.weeklyQuestion.week16', { name }), desc: t('home.weeklyQuestion.descTapIfBorn') };
+  if (week <= 20) return { emoji: '🎀', text: t('home.weeklyQuestion.week20', { name }), desc: t('home.weeklyQuestion.descTapIfBorn') };
+  if (week <= 24) return { emoji: '🦶', text: t('home.weeklyQuestion.week24', { name }), desc: t('home.weeklyQuestion.descTapIfBorn') };
+  if (week <= 28) return { emoji: '📋', text: t('home.weeklyQuestion.week28', { name }), desc: t('home.weeklyQuestion.descTapIfBorn') };
+  if (week <= 32) return { emoji: '📚', text: t('home.weeklyQuestion.week32'), desc: t('home.weeklyQuestion.descTapIfBorn') };
+  if (week <= 36) return { emoji: '🧳', text: t('home.weeklyQuestion.week36', { name }), desc: t('home.weeklyQuestion.descTapIfBorn') };
+  if (week <= 39) return { emoji: '🤰', text: t('home.weeklyQuestion.week39', { name }), desc: t('home.weeklyQuestion.descTapIfBorn') };
+  return { emoji: '👶', text: t('home.weeklyQuestion.week40plus', { name }), desc: t('home.weeklyQuestion.descTapToCare') };
 }
 
 /* ------------------------------------------------------------------ */
@@ -155,12 +155,14 @@ function getAgeText(months: number, t: TFunction): string {
 
 /* ── 맞춤 추천 카테고리 (홈 + 마이페이지 동일) ── */
 
-const RECO_CATEGORIES = [
-  { icon: require('../../assets/cat-eating.png'), label: '음식 추천', category: '음식', desc: '기질에 맞는 영양 식단과 레시피', color: '#F4A98C', bg: '#FFF0E6' },
-  { icon: require('../../assets/cat-growth.png'), label: '생활습관', category: '생활습관', desc: '수면, 위생, 루틴 등 생활 가이드', color: '#4ECDC4', bg: '#E8FAF8' },
-  { icon: require('../../assets/cat-social.png'), label: '학원 추천', category: '학원', desc: '기질과 발달에 맞는 교육 활동', color: '#7C83EC', bg: '#EEEDFC' },
-  { icon: require('../../assets/play-activity.png'), label: '놀이학습', category: '놀이학습', desc: '집에서 할 수 있는 놀이와 활동', color: '#FFB344', bg: '#FFF8E1' },
-] as const;
+function getRecoCategories(t: TFunction) {
+  return [
+    { icon: require('../../assets/cat-eating.png'), label: t('recommendations.category.food.label'), category: '음식', desc: t('recommendations.category.food.description'), color: '#F4A98C', bg: '#FFF0E6' },
+    { icon: require('../../assets/cat-growth.png'), label: t('recommendations.category.lifestyle.label'), category: '생활습관', desc: t('recommendations.category.lifestyle.description'), color: '#4ECDC4', bg: '#E8FAF8' },
+    { icon: require('../../assets/cat-social.png'), label: t('recommendations.category.academy.label'), category: '학원', desc: t('recommendations.category.academy.description'), color: '#7C83EC', bg: '#EEEDFC' },
+    { icon: require('../../assets/play-activity.png'), label: t('recommendations.category.playLearning.label'), category: '놀이학습', desc: t('recommendations.category.playLearning.description'), color: '#FFB344', bg: '#FFF8E1' },
+  ] as const;
+}
 
 /* ------------------------------------------------------------------ */
 /* Main Screen                                                         */
@@ -1659,18 +1661,19 @@ const aiCardStyles = StyleSheet.create({
 });
 
 function EmptyState() {
+  const { t } = useTranslation();
   return (
     <View style={styles.center}>
       <Image source={require('../../assets/mascot-waving.png')} style={styles.emptyMascot} resizeMode="contain" />
-      <Text style={styles.emptyText}>등록된 자녀가 없습니다</Text>
+      <Text style={styles.emptyText}>{t('home.emptyState.title')}</Text>
       <Text style={styles.emptySubtext}>
-        자녀를 등록하고 기질을 분석해보세요
+        {t('home.emptyState.subtitle')}
       </Text>
       <TouchableOpacity
         style={styles.addButton}
         onPress={() => router.push('/onboarding/child-info')}
       >
-        <Text style={styles.addButtonText}>자녀 등록하기</Text>
+        <Text style={styles.addButtonText}>{t('home.emptyState.registerBtn')}</Text>
       </TouchableOpacity>
 
       {/* 자녀 미등록 사용자도 커뮤니티/프로필 접근 가능하게 */}
@@ -1679,13 +1682,13 @@ function EmptyState() {
           style={styles.emptySecondaryBtn}
           onPress={() => router.push('/(main)/mom-group')}
         >
-          <Text style={styles.emptySecondaryText}>맘스톡 둘러보기</Text>
+          <Text style={styles.emptySecondaryText}>{t('home.emptyState.browseMomGroup')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.emptySecondaryBtn}
           onPress={() => router.push('/(main)/profile')}
         >
-          <Text style={styles.emptySecondaryText}>프로필</Text>
+          <Text style={styles.emptySecondaryText}>{t('home.emptyState.profile')}</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -14,6 +14,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import Svg, { Path, RadialGradient, Defs, Stop, Circle } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -44,13 +46,15 @@ interface Props {
 }
 
 /** 기질 표시 매핑 — 내부 fiveElements 키 → 화면용 기질 라벨. 오행 단어 노출 금지. */
-const TRAITS: { key: keyof FiveElements; label: string }[] = [
-  { key: 'wood', label: '탐구' },
-  { key: 'fire', label: '활동' },
-  { key: 'earth', label: '안정' },
-  { key: 'metal', label: '결단' },
-  { key: 'water', label: '지혜' },
-];
+function getTraits(t: TFunction): { key: keyof FiveElements; label: string }[] {
+  return [
+    { key: 'wood', label: t('components.editorialCover.traitShort.wood') },
+    { key: 'fire', label: t('components.editorialCover.traitShort.fire') },
+    { key: 'earth', label: t('components.editorialCover.traitShort.earth') },
+    { key: 'metal', label: t('components.editorialCover.traitShort.metal') },
+    { key: 'water', label: t('components.editorialCover.traitShort.water') },
+  ];
+}
 
 /**
  * Hero disc — 일식/월식 풍 어두운 구체 + 외곽 골드 코로나 글로우 + 중앙 작은 4점 별.
@@ -132,13 +136,15 @@ function ConicDisc({ size, dominantType }: { size: number; dominantType: string 
 }
 
 /** dominantType → 주성향 한 단어 라벨 */
-const TYPE_PRIMARY_LABEL: Record<string, string> = {
-  탐구형: '탐구',
-  활동형: '활동',
-  조화형: '안정',
-  분석형: '결단',
-  감성형: '지혜',
-};
+function getTypePrimaryLabel(t: TFunction): Record<string, string> {
+  return {
+    탐구형: t('components.editorialCover.traitShort.wood'),
+    활동형: t('components.editorialCover.traitShort.fire'),
+    조화형: t('components.editorialCover.traitShort.earth'),
+    분석형: t('components.editorialCover.traitShort.metal'),
+    감성형: t('components.editorialCover.traitShort.water'),
+  };
+}
 
 /**
  * dominantType 별 다크 모드 그라디언트 — 원래 다크 브라운 베이스 유지 +
@@ -176,34 +182,40 @@ const TYPE_DISC_COLORS: Record<string, { halo: [string, string]; star: [string, 
 const DEFAULT_DISC_COLORS = TYPE_DISC_COLORS.분석형;
 
 /** dominantType → 5가지 아키타입 짧은 라벨 (예: "탐구형 활동가") */
-const TYPE_ARCHETYPE: Record<string, string> = {
-  탐구형: '탐구형 활동가',
-  활동형: '활동형 도전자',
-  조화형: '안정형 협력가',
-  분석형: '지혜형 연구가',
-  감성형: '감성형 공감가',
-};
+function getTypeArchetype(t: TFunction): Record<string, string> {
+  return {
+    탐구형: t('components.editorialCover.archetype.explorer'),
+    활동형: t('components.editorialCover.archetype.active'),
+    조화형: t('components.editorialCover.archetype.harmony'),
+    분석형: t('components.editorialCover.archetype.analytic'),
+    감성형: t('components.editorialCover.archetype.emotional'),
+  };
+}
 
 /** dominantType → 3줄 짧은 설명 (간결·구체적, 추상어 지양) */
-const TYPE_DESC: Record<string, string> = {
-  탐구형: '호기심이 많고 새 것을 좋아해요\n손으로 만지며 배우는 걸 즐겨요\n자극이 풍부할 때 가장 빛나요',
-  활동형: '몸으로 움직일 때 즐거워요\n달리고 뛰는 활동을 좋아해요\n직접 해봐야 만족하는 아이예요',
-  조화형: '익숙한 사람·환경에서 편해요\n친구·가족과 어울려 잘 놀아요\n다정하고 협력적인 아이예요',
-  분석형: '규칙·순서를 잘 지켜요\n관찰하며 차근차근 익혀요\n반복과 정리를 즐겨요',
-  감성형: '주변 분위기를 잘 알아채요\n다른 사람 마음에 공감해요\n섬세하고 표현이 풍부해요',
-};
+function getTypeDesc(t: TFunction): Record<string, string> {
+  return {
+    탐구형: t('components.editorialCover.typeDesc.explorer'),
+    활동형: t('components.editorialCover.typeDesc.active'),
+    조화형: t('components.editorialCover.typeDesc.harmony'),
+    분석형: t('components.editorialCover.typeDesc.analytic'),
+    감성형: t('components.editorialCover.typeDesc.emotional'),
+  };
+}
 
 function todayKo(): string {
   const d = new Date();
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function ageLabel(months: number): string {
-  if (months <= 0) return '신생아';
-  if (months < 12) return `${months}개월`;
+function ageLabel(t: TFunction, months: number): string {
+  if (months <= 0) return t('components.editorialCover.newborn');
+  if (months < 12) return t('components.profileCard.ageMonths', { count: months });
   const yrs = Math.floor(months / 12);
   const rem = months % 12;
-  return rem === 0 ? `${yrs}세` : `${yrs}세 ${rem}개월`;
+  return rem === 0
+    ? t('components.profileCard.ageYears', { years: yrs })
+    : t('components.profileCard.ageYearsMonths', { years: yrs, months: rem });
 }
 
 /** "(0~36개월) 탐구형 활동가" → "탐구형 활동가" 처럼 연령 prefix 제거 */
@@ -215,8 +227,8 @@ function stripAgePrefix(s: string): string {
  * dominantType 기반 아키타입 라벨 우선 반환.
  * 백엔드 label이 추상적이거나 길어도 "탐구형 활동가" 식으로 강제 정리.
  */
-function shortLabel(_label: string, dominantType: string): string {
-  return TYPE_ARCHETYPE[dominantType] ?? dominantType;
+function shortLabel(t: TFunction, _label: string, dominantType: string): string {
+  return getTypeArchetype(t)[dominantType] ?? dominantType;
 }
 
 export function EditorialCover({
@@ -230,13 +242,15 @@ export function EditorialCover({
   compact,
   onSeeDetail,
 }: Props) {
-  const primary = TYPE_PRIMARY_LABEL[dominantType] ?? '균형';
+  const { t } = useTranslation();
+  const primary = getTypePrimaryLabel(t)[dominantType] ?? t('components.editorialCover.balanced');
   const primaryColor = TYPE_PRIMARY_COLOR[dominantType] ?? '#93C5FD';
   // dominantType 별 코발트 톤 그라디언트
   const gradient = TYPE_GRADIENT[dominantType] ?? DEFAULT_GRADIENT;
   // 표지 설명은 항상 짧고 구체적인 fallback 사용 (백엔드 summary는 길고 추상적이라 상세 페이지에서만 표시)
-  const desc = TYPE_DESC[dominantType] || '아이만의 고유한 기질이에요.';
-  const titleText = shortLabel(label || dominantType, dominantType);
+  const desc = getTypeDesc(t)[dominantType] || t('components.editorialCover.defaultDesc');
+  const titleText = shortLabel(t, label || dominantType, dominantType);
+  const traits = getTraits(t);
   // description prop은 향후 확장용 (현재는 미사용)
   void description;
 
@@ -275,7 +289,7 @@ export function EditorialCover({
 
         {/* Vol */}
         <Text style={styles.vol}>{'VOL. 01'}</Text>
-        <Text style={styles.subject}>{`${childName} · ${ageLabel(ageMonths)}`}</Text>
+        <Text style={styles.subject}>{`${childName} · ${ageLabel(t, ageMonths)}`}</Text>
       </View>
 
       {/* Center hero — conic gradient disc, dominantType 별 halo/star 액센트 색 매칭.
@@ -285,7 +299,9 @@ export function EditorialCover({
           <ConicDisc size={heroSize} dominantType={dominantType} />
         </View>
 
-        <Text style={[styles.primaryLabel, { color: primaryColor }]}>{`주성향 · ${primary}`}</Text>
+        <Text style={[styles.primaryLabel, { color: primaryColor }]}>
+          {t('components.editorialCover.primaryLabel', { primary })}
+        </Text>
         <Text style={styles.title}>{titleText}</Text>
         <Text style={descStyle}>{desc}</Text>
       </View>
@@ -294,10 +310,10 @@ export function EditorialCover({
         {/* 5 stat boxes */}
         {fiveElements ? (
           <View style={styles.statsRow}>
-            {TRAITS.map((t) => (
-              <View key={t.key} style={styles.statBox}>
-                <Text style={styles.statLabel}>{t.label}</Text>
-                <Text style={styles.statValue}>{score(t.key)}</Text>
+            {traits.map((trait) => (
+              <View key={trait.key} style={styles.statBox}>
+                <Text style={styles.statLabel}>{trait.label}</Text>
+                <Text style={styles.statValue}>{score(trait.key)}</Text>
               </View>
             ))}
           </View>

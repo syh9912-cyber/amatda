@@ -140,6 +140,29 @@
       "coparenting": "가족육아",
       "lifeLog": "생활 기록",
       "playLearning": "놀이 학습"
+    },
+    "weeklyQuestion": {
+      "week6": "{{name}}의 첫 초음파, 확인하셨나요?",
+      "week10": "{{name}} 심장소리는 들으셨나요?",
+      "week13": "{{name}} 목투명대 검사는 받으셨나요?",
+      "week16": "안정기에요! {{name}}가 잘 크고 있나요?",
+      "week20": "{{name}}가 왕자인가요 공주인가요?",
+      "week24": "{{name}} 태동을 자주 느끼시나요?",
+      "week28": "{{name}} 키는 많이 컸나요? 잘 크고 있나요?",
+      "week32": "출산 준비는 시작하셨나요?",
+      "week36": "{{name}} 출산가방은 준비되었나요?",
+      "week39": "{{name}} 만날 준비 되셨나요?",
+      "week40plus": "{{name}} 만나셨나요?",
+      "descBirthRegister": "탭하면 출산 등록으로 전환돼요",
+      "descTapIfBorn": "출산하셨다면 탭해주세요",
+      "descTapToCare": "탭하면 육아 모드로 전환됩니다"
+    },
+    "emptyState": {
+      "title": "등록된 자녀가 없습니다",
+      "subtitle": "자녀를 등록하고 기질을 분석해보세요",
+      "registerBtn": "자녀 등록하기",
+      "browseMomGroup": "맘스톡 둘러보기",
+      "profile": "프로필"
     }
   },
   "babyTracker": {
@@ -408,7 +431,8 @@
       "soundUpload": "소리 업로드"
     },
     "noRecordsYet": "아직 기록이 없어요",
-    "noRecordsHint": "아래 버튼으로 수유·수면·기저귀를 기록해보세요"
+    "noRecordsHint": "아래 버튼으로 수유·수면·기저귀를 기록해보세요",
+    "emptyTimelineHint": "아래 + 버튼을 눌러\n오늘의 {{label}} 기록을 추가해보세요"
   },
   "album": {
     "viewOnly": "열람 전용",
@@ -4842,6 +4866,33 @@
       },
       "disclaimer": "※ 본 정보는 일반적인 임신·수유 가이드이며 개인 상태에 따라 다를 수 있어요. 정확한 권장량과 복용 일정은 담당 산부인과 의사 또는 약사와 상담해 결정하세요.",
       "closeButton": "알겠어요 💛"
+    },
+    "editorialCover": {
+      "traitShort": {
+        "wood": "탐구",
+        "fire": "활동",
+        "earth": "안정",
+        "metal": "결단",
+        "water": "지혜"
+      },
+      "archetype": {
+        "explorer": "탐구형 활동가",
+        "active": "활동형 도전자",
+        "harmony": "안정형 협력가",
+        "analytic": "지혜형 연구가",
+        "emotional": "감성형 공감가"
+      },
+      "typeDesc": {
+        "explorer": "호기심이 많고 새 것을 좋아해요\n손으로 만지며 배우는 걸 즐겨요\n자극이 풍부할 때 가장 빛나요",
+        "active": "몸으로 움직일 때 즐거워요\n달리고 뛰는 활동을 좋아해요\n직접 해봐야 만족하는 아이예요",
+        "harmony": "익숙한 사람·환경에서 편해요\n친구·가족과 어울려 잘 놀아요\n다정하고 협력적인 아이예요",
+        "analytic": "규칙·순서를 잘 지켜요\n관찰하며 차근차근 익혀요\n반복과 정리를 즐겨요",
+        "emotional": "주변 분위기를 잘 알아채요\n다른 사람 마음에 공감해요\n섬세하고 표현이 풍부해요"
+      },
+      "newborn": "신생아",
+      "balanced": "균형",
+      "defaultDesc": "아이만의 고유한 기질이에요.",
+      "primaryLabel": "주성향 · {{primary}}"
     }
   }
 }

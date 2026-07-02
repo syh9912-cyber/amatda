@@ -538,13 +538,15 @@ const rcStyles = StyleSheet.create({
 /* ---- Empty State ---- */
 
 function EmptyTimeline({ tab }: { tab: RecordType }) {
-  const cfg = TAB_CONFIG.find((t) => t.key === tab);
+  const { t } = useTranslation();
+  const cfg = TAB_CONFIG.find((tc) => tc.key === tab);
+  const label = cfg ? t(`babyTracker.tabs.${cfg.label}`) : '';
   return (
     <View style={emptyStyles.container}>
       <Image source={cfg?.icon ?? IC_EMPTY} style={emptyStyles.iconImg} resizeMode="contain" />
-      <Text style={emptyStyles.title}>아직 기록이 없어요</Text>
+      <Text style={emptyStyles.title}>{t('babyTracker.noRecordsYet')}</Text>
       <Text style={emptyStyles.sub}>
-        아래 + 버튼을 눌러{'\n'}오늘의 {cfg?.label ?? ''} 기록을 추가해보세요
+        {t('babyTracker.emptyTimelineHint', { label })}
       </Text>
     </View>
   );
