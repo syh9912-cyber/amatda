@@ -131,10 +131,10 @@ const VACCINE_ACTION: QuickAction = {
 function getActionsForAge(ageGroup: AgeGroupKey, locale: string, child?: Child | null): QuickAction[] {
   let filtered = ALL_ACTIONS.filter((a) => a.ages.includes(ageGroup));
 
-  // 예방접종은 한국 질병관리청 국가예방접종 일정 기반, 맘스톡은 한국 지역 기반 커뮤니티 —
-  // 비한국어 로케일에서는 숨김(현지 데이터 미지원).
+  // 예방접종은 한국 질병관리청 국가예방접종 일정 기반 — 한국어 로케일에서만 노출.
+  // (맘스톡은 개월수+GPS거리 기반이라 로케일 무관하게 유지 — 지역방은 이미 deprecated)
   if (locale !== 'ko') {
-    filtered = filtered.filter((a) => a.labelKey !== 'vaccination' && a.labelKey !== 'momGroup');
+    filtered = filtered.filter((a) => a.labelKey !== 'vaccination');
   }
 
   // 임산부: 출산 1달전부터 접종달력 표시 (한국어 로케일만)
@@ -1669,7 +1669,7 @@ const aiCardStyles = StyleSheet.create({
 });
 
 function EmptyState() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   return (
     <View style={styles.center}>
       <Image source={require('../../assets/mascot-waving.png')} style={styles.emptyMascot} resizeMode="contain" />
@@ -1684,16 +1684,14 @@ function EmptyState() {
         <Text style={styles.addButtonText}>{t('home.emptyState.registerBtn')}</Text>
       </TouchableOpacity>
 
-      {/* 자녀 미등록 사용자도 커뮤니티/프로필 접근 가능하게 (맘스톡은 한국 지역 기반 — 한국어만) */}
+      {/* 자녀 미등록 사용자도 커뮤니티/프로필 접근 가능하게 */}
       <View style={styles.emptySecondaryRow}>
-        {i18n.language === 'ko' && (
-          <TouchableOpacity
-            style={styles.emptySecondaryBtn}
-            onPress={() => router.push('/(main)/mom-group')}
-          >
-            <Text style={styles.emptySecondaryText}>{t('home.emptyState.browseMomGroup')}</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={styles.emptySecondaryBtn}
+          onPress={() => router.push('/(main)/mom-group')}
+        >
+          <Text style={styles.emptySecondaryText}>{t('home.emptyState.browseMomGroup')}</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={styles.emptySecondaryBtn}
           onPress={() => router.push('/(main)/profile')}

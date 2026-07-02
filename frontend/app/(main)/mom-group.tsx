@@ -18,7 +18,7 @@ import {
   ActionSheetIOS,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { Stack, router, useFocusEffect, Redirect } from 'expo-router';
+import { Stack, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useChildStore } from '../../stores/childStore';
@@ -232,7 +232,7 @@ function displayTitle(t: TFunction, p: Post): string {
 }
 
 export default function MomGroupScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const momGroupGuide = useMemo(() => getMomGroupGuide(t), [t]);
   const insets = useSafeAreaInsets();
   const { selectedChild } = useChildStore();
@@ -929,11 +929,6 @@ export default function MomGroupScreen() {
         ? loadingMine
         // honor / anonymous 는 posts 파생이므로 loading 상태 공유
         : loading;
-
-  // 맘스톡은 한국 지역 기반 커뮤니티 — 비한국어는 진입 차단(딥링크 방어)
-  if (i18n.language !== 'ko') {
-    return <Redirect href="/(main)/home" />;
-  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

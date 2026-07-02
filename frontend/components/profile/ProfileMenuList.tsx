@@ -185,16 +185,12 @@ function getCommonBottomItems(t: TFunction): MenuItem[] {
 }
 
 export function ProfileMenuList() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const isPregnant = selectedChild?.isPregnant === true;
 
   const modeItems = isPregnant ? getPregnancyItems(t) : getParentingItems(t);
-  let items: MenuItem[] = [...getCommonTopItems(t), ...modeItems, ...getCommonBottomItems(t)];
-  // 맘스톡(mom-group)은 한국 지역 기반 커뮤니티 — 비한국어 로케일에서는 숨김
-  if (i18n.language !== 'ko') {
-    items = items.filter((it) => it.route !== '/(main)/mom-group');
-  }
+  const items: MenuItem[] = [...getCommonTopItems(t), ...modeItems, ...getCommonBottomItems(t)];
 
   const getOnPress = (item: MenuItem) => {
     return () => router.push(item.route as never);
