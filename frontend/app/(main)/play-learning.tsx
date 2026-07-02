@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, Image, StyleSheet, ScrollView,
   TouchableOpacity,
@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useChildStore } from '../../stores/childStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import {
-  PLAY_ACTIVITIES,
+  getPlayActivities,
   resolvePlayTemperament,
 } from '../../constants/playActivities';
 import type { PlayActivity } from '../../constants/playActivities';
@@ -39,7 +39,8 @@ export default function PlayLearningScreen() {
   );
   const rawGroup = selectedChild?.ageInfo.group ?? 'toddler';
   const ageGroup = rawGroup === 'pregnant' ? 'infant' as const : rawGroup;
-  const allActivities = PLAY_ACTIVITIES[temperamentKey];
+  const playActivities = useMemo(() => getPlayActivities(t), [t]);
+  const allActivities = playActivities[temperamentKey];
   const filtered = allActivities.filter((a) =>
     a.ageGroups.includes(ageGroup),
   );
