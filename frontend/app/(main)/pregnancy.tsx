@@ -153,31 +153,36 @@ interface MilestoneOption {
   maxWeek: number;
 }
 
-const ALL_MILESTONES: MilestoneOption[] = [
-  { type: 'positive_test', title: '임신 테스트 양성', emoji: '🤰', minWeek: 1, maxWeek: 8 },
-  { type: 'prenatal_vitamins', title: '엽산/영양제 복용 시작', emoji: '💊', minWeek: 1, maxWeek: 12 },
-  { type: 'first_visit', title: '첫 산부인과 방문', emoji: '🏥', minWeek: 1, maxWeek: 10 },
-  { type: 'first_ultrasound', title: '첫 초음파 확인', emoji: '📸', minWeek: 1, maxWeek: 12 },
-  { type: 'first_heartbeat', title: '첫 심장소리 확인', emoji: '💓', minWeek: 6, maxWeek: 14 },
-  { type: 'nt_test', title: 'NT 검사 (목투명대)', emoji: '🔬', minWeek: 11, maxWeek: 14 },
-  { type: 'stable_period', title: '안정기 진입', emoji: '🌿', minWeek: 13, maxWeek: 16 },
-  { type: 'quad_test', title: '쿼드 검사 완료', emoji: '🧪', minWeek: 15, maxWeek: 20 },
-  { type: 'gender_reveal', title: '성별 확인', emoji: '🎀', minWeek: 16, maxWeek: 24 },
-  { type: 'first_kick', title: '첫 태동 느낌', emoji: '🦶', minWeek: 16, maxWeek: 24 },
-  { type: 'detailed_ultrasound', title: '정밀 초음파 완료', emoji: '📋', minWeek: 18, maxWeek: 24 },
-  { type: 'name_decided', title: '이름/태명 결정', emoji: '📝', minWeek: 12, maxWeek: 40 },
-  { type: 'gct_test', title: '임신성 당뇨 검사', emoji: '🩸', minWeek: 24, maxWeek: 28 },
-  { type: 'nursery_start', title: '아기방 준비 시작', emoji: '🏠', minWeek: 24, maxWeek: 36 },
-  { type: 'birth_class', title: '출산 준비 교실', emoji: '📚', minWeek: 28, maxWeek: 36 },
-  { type: 'gbs_test', title: 'GBS 검사', emoji: '🔬', minWeek: 35, maxWeek: 37 },
-  { type: 'hospital_bag', title: '출산가방 준비 완료', emoji: '🧳', minWeek: 32, maxWeek: 40 },
-  { type: 'maternity_photo', title: '만삭 사진 촬영', emoji: '📷', minWeek: 32, maxWeek: 40 },
-  { type: 'baby_shower', title: '베이비 샤워', emoji: '🎉', minWeek: 28, maxWeek: 38 },
-  { type: 'd_day', title: '출산!', emoji: '👶', minWeek: 36, maxWeek: 42 },
+// 마일스톤 정의 — title은 표시·저장 시 t()로 번역(키는 type 유지). emoji/주차는 로케일 무관.
+const MILESTONE_DEFS: { type: string; emoji: string; minWeek: number; maxWeek: number }[] = [
+  { type: 'positive_test', emoji: '🤰', minWeek: 1, maxWeek: 8 },
+  { type: 'prenatal_vitamins', emoji: '💊', minWeek: 1, maxWeek: 12 },
+  { type: 'first_visit', emoji: '🏥', minWeek: 1, maxWeek: 10 },
+  { type: 'first_ultrasound', emoji: '📸', minWeek: 1, maxWeek: 12 },
+  { type: 'first_heartbeat', emoji: '💓', minWeek: 6, maxWeek: 14 },
+  { type: 'nt_test', emoji: '🔬', minWeek: 11, maxWeek: 14 },
+  { type: 'stable_period', emoji: '🌿', minWeek: 13, maxWeek: 16 },
+  { type: 'quad_test', emoji: '🧪', minWeek: 15, maxWeek: 20 },
+  { type: 'gender_reveal', emoji: '🎀', minWeek: 16, maxWeek: 24 },
+  { type: 'first_kick', emoji: '🦶', minWeek: 16, maxWeek: 24 },
+  { type: 'detailed_ultrasound', emoji: '📋', minWeek: 18, maxWeek: 24 },
+  { type: 'name_decided', emoji: '📝', minWeek: 12, maxWeek: 40 },
+  { type: 'gct_test', emoji: '🩸', minWeek: 24, maxWeek: 28 },
+  { type: 'nursery_start', emoji: '🏠', minWeek: 24, maxWeek: 36 },
+  { type: 'birth_class', emoji: '📚', minWeek: 28, maxWeek: 36 },
+  { type: 'gbs_test', emoji: '🔬', minWeek: 35, maxWeek: 37 },
+  { type: 'hospital_bag', emoji: '🧳', minWeek: 32, maxWeek: 40 },
+  { type: 'maternity_photo', emoji: '📷', minWeek: 32, maxWeek: 40 },
+  { type: 'baby_shower', emoji: '🎉', minWeek: 28, maxWeek: 38 },
+  { type: 'd_day', emoji: '👶', minWeek: 36, maxWeek: 42 },
 ];
 
-function getMilestonesForWeek(week: number): MilestoneOption[] {
-  return ALL_MILESTONES.filter((m) => week >= m.minWeek && week <= m.maxWeek);
+function getAllMilestones(t: TFunction): MilestoneOption[] {
+  return MILESTONE_DEFS.map((m) => ({ ...m, title: t(`pregnancy.milestone.${m.type}`) }));
+}
+
+function getMilestonesForWeek(week: number, t: TFunction): MilestoneOption[] {
+  return getAllMilestones(t).filter((m) => week >= m.minWeek && week <= m.maxWeek);
 }
 
 /* ================================================================== */
@@ -202,20 +207,25 @@ function getWeeklyQuestion(name: string, week: number, t: TFunction): { emoji: s
 /*  Mom symptom presets (fallback if API fails)                        */
 /* ================================================================== */
 
-const FALLBACK_SYMPTOMS: SymptomPreset[] = [
-  { id: 'morning_sickness', label: '입덧', emoji: '🤢' },
-  { id: 'fatigue', label: '피로감', emoji: '😴' },
-  { id: 'back_pain', label: '허리/골반 통증', emoji: '🦴' },
-  { id: 'swelling', label: '부종', emoji: '🦶' },
-  { id: 'headache', label: '두통', emoji: '🤕' },
-  { id: 'insomnia', label: '불면', emoji: '🌙' },
-  { id: 'heartburn', label: '속쓰림', emoji: '🔥' },
-  { id: 'constipation', label: '변비', emoji: '😣' },
-  { id: 'cramp', label: '다리 쥐남', emoji: '🦵' },
-  { id: 'mood_swing', label: '감정 기복', emoji: '😢' },
-  { id: 'frequent_urination', label: '빈뇨', emoji: '🚽' },
-  { id: 'good', label: '컨디션 좋음', emoji: '😊' },
+// 증상 프리셋 (API 실패 시 fallback) — label은 t()로 번역(키는 id 유지).
+const SYMPTOM_DEFS: { id: string; emoji: string }[] = [
+  { id: 'morning_sickness', emoji: '🤢' },
+  { id: 'fatigue', emoji: '😴' },
+  { id: 'back_pain', emoji: '🦴' },
+  { id: 'swelling', emoji: '🦶' },
+  { id: 'headache', emoji: '🤕' },
+  { id: 'insomnia', emoji: '🌙' },
+  { id: 'heartburn', emoji: '🔥' },
+  { id: 'constipation', emoji: '😣' },
+  { id: 'cramp', emoji: '🦵' },
+  { id: 'mood_swing', emoji: '😢' },
+  { id: 'frequent_urination', emoji: '🚽' },
+  { id: 'good', emoji: '😊' },
 ];
+
+function getFallbackSymptoms(t: TFunction): SymptomPreset[] {
+  return SYMPTOM_DEFS.map((s) => ({ ...s, label: t(`pregnancy.symptom.${s.id}`) }));
+}
 
 /* ================================================================== */
 /*  PDF helpers (album.tsx와 동일 패턴)                                */
@@ -613,7 +623,7 @@ export default function PregnancyScreen() {
   const [selectedMilestones, setSelectedMilestones] = useState<string[]>([]);
 
   // Mom health fields
-  const [symptomPresets, setSymptomPresets] = useState<SymptomPreset[]>(FALLBACK_SYMPTOMS);
+  const [symptomPresets, setSymptomPresets] = useState<SymptomPreset[]>(() => getFallbackSymptoms(t));
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [severity, setSeverity] = useState(3);
   const [healthMemo, setHealthMemo] = useState('');
@@ -763,7 +773,7 @@ export default function PregnancyScreen() {
           const itAny = it as unknown as { milestoneEmoji?: string; milestoneType?: string };
           let emoji = itAny.milestoneEmoji;
           if (!emoji && itAny.milestoneType) {
-            const ms = ALL_MILESTONES.find((m) => m.type === itAny.milestoneType);
+            const ms = getAllMilestones(t).find((m) => m.type === itAny.milestoneType);
             if (ms) emoji = ms.emoji;
           }
           return {
@@ -912,7 +922,7 @@ export default function PregnancyScreen() {
 
       // 마일스톤 우선, 없으면 엄마기분, 없으면 doctor_note — 항상 1개만 저장
       if (composeMilestoneChip) {
-        const ms = ALL_MILESTONES.find((m) => m.type === composeMilestoneChip.id);
+        const ms = getAllMilestones(t).find((m) => m.type === composeMilestoneChip.id);
         const symptomNote = composeSymptomChip ? `[엄마기분: ${composeSymptomChip.label}]` : '';
         const content = [composeMemo.trim(), symptomNote].filter(Boolean).join('\n') || undefined;
         await pregnancyApi.createRecord({
@@ -943,7 +953,7 @@ export default function PregnancyScreen() {
         await pregnancyApi.createRecord({
           childId,
           type: 'doctor_note',
-          title: uploadedUri ? '초음파/영상' : '진료 기록',
+          title: uploadedUri ? t('pregnancy.recordTitle.ultrasound') : t('pregnancy.recordTitle.medicalRecord'),
           content: composeMemo.trim() || undefined,
           mediaUri: uploadedUri,
           mediaType: uploadedUri ? 'photo' : undefined,
@@ -1049,7 +1059,7 @@ export default function PregnancyScreen() {
           pregnancyApi.createRecord({
             childId,
             type: 'doctor_note',
-            title: hasDoctorNote ? '진료 기록' : '초음파/영상',
+            title: hasDoctorNote ? t('pregnancy.recordTitle.medicalRecord') : t('pregnancy.recordTitle.ultrasound'),
             content: doctorNote.trim() || undefined,
             mediaUri: mediaUri ?? undefined,
             mediaType: hasMedia ? mediaType : undefined,
@@ -1060,7 +1070,7 @@ export default function PregnancyScreen() {
 
       // 2. Milestones
       for (const msType of selectedMilestones) {
-        const ms = ALL_MILESTONES.find((m) => m.type === msType);
+        const ms = getAllMilestones(t).find((m) => m.type === msType);
         if (ms) {
           promises.push(
             pregnancyApi.createRecord({
@@ -1199,7 +1209,7 @@ export default function PregnancyScreen() {
   }
 
   const weekQuestion = getWeeklyQuestion(childName, currentWeek, t);
-  const availableMilestones = getMilestonesForWeek(currentWeek);
+  const availableMilestones = getMilestonesForWeek(currentWeek, t);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

@@ -638,7 +638,47 @@
     "aiTodayDiary": " AI 오늘 일기",
     "aiDiaryHeader": " AI 일기 - {{date}}",
     "nextCheckupLabel": "다음 검진 일정",
-    "tapToRegisterHint": "탭해서 등록 (홈에 D-day 표시)"
+    "tapToRegisterHint": "탭해서 등록 (홈에 D-day 표시)",
+    "milestone": {
+      "positive_test": "임신 테스트 양성",
+      "prenatal_vitamins": "엽산/영양제 복용 시작",
+      "first_visit": "첫 산부인과 방문",
+      "first_ultrasound": "첫 초음파 확인",
+      "first_heartbeat": "첫 심장소리 확인",
+      "nt_test": "NT 검사 (목투명대)",
+      "stable_period": "안정기 진입",
+      "quad_test": "쿼드 검사 완료",
+      "gender_reveal": "성별 확인",
+      "first_kick": "첫 태동 느낌",
+      "detailed_ultrasound": "정밀 초음파 완료",
+      "name_decided": "이름/태명 결정",
+      "gct_test": "임신성 당뇨 검사",
+      "nursery_start": "아기방 준비 시작",
+      "birth_class": "출산 준비 교실",
+      "gbs_test": "GBS 검사",
+      "hospital_bag": "출산가방 준비 완료",
+      "maternity_photo": "만삭 사진 촬영",
+      "baby_shower": "베이비 샤워",
+      "d_day": "출산!"
+    },
+    "symptom": {
+      "morning_sickness": "입덧",
+      "fatigue": "피로감",
+      "back_pain": "허리/골반 통증",
+      "swelling": "부종",
+      "headache": "두통",
+      "insomnia": "불면",
+      "heartburn": "속쓰림",
+      "constipation": "변비",
+      "cramp": "다리 쥐남",
+      "mood_swing": "감정 기복",
+      "frequent_urination": "빈뇨",
+      "good": "컨디션 좋음"
+    },
+    "recordTitle": {
+      "ultrasound": "초음파/영상",
+      "medicalRecord": "진료 기록"
+    }
   },
   "growthStats": {
     "tabPhysical": "키/몸무게/성장",

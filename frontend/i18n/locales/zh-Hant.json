@@ -638,7 +638,47 @@
     "aiTodayDiary": " AI今日日記",
     "aiDiaryHeader": " AI日記－{{date}}",
     "nextCheckupLabel": "下次產檢時間",
-    "tapToRegisterHint": "點擊登記（會顯示在首頁D-day）"
+    "tapToRegisterHint": "點擊登記（會顯示在首頁D-day）",
+    "milestone": {
+      "positive_test": "驗孕陽性",
+      "prenatal_vitamins": "開始服用葉酸／營養補充品",
+      "first_visit": "首次產檢",
+      "first_ultrasound": "首次超音波",
+      "first_heartbeat": "首次聽到心跳",
+      "nt_test": "NT檢查（頸部透明帶）",
+      "stable_period": "進入穩定期",
+      "quad_test": "四指標母血篩檢完成",
+      "gender_reveal": "得知性別",
+      "first_kick": "首次胎動",
+      "detailed_ultrasound": "高層次超音波完成",
+      "name_decided": "決定名字／小名",
+      "gct_test": "妊娠糖尿病篩檢",
+      "nursery_start": "開始佈置嬰兒房",
+      "birth_class": "產前媽媽教室",
+      "gbs_test": "GBS檢查（乙型鏈球菌）",
+      "hospital_bag": "待產包準備完成",
+      "maternity_photo": "孕婦寫真拍攝",
+      "baby_shower": "迎嬰派對",
+      "d_day": "生產！"
+    },
+    "symptom": {
+      "morning_sickness": "孕吐",
+      "fatigue": "疲倦",
+      "back_pain": "腰／骨盆疼痛",
+      "swelling": "水腫",
+      "headache": "頭痛",
+      "insomnia": "失眠",
+      "heartburn": "胃灼熱",
+      "constipation": "便秘",
+      "cramp": "腳抽筋",
+      "mood_swing": "情緒起伏",
+      "frequent_urination": "頻尿",
+      "good": "狀況良好"
+    },
+    "recordTitle": {
+      "ultrasound": "超音波／影像",
+      "medicalRecord": "看診記錄"
+    }
   },
   "growthStats": {
     "tabPhysical": "身高/體重/成長",

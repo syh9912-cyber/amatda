@@ -638,7 +638,47 @@
     "aiTodayDiary": " AI今日の日記",
     "aiDiaryHeader": " AI日記 - {{date}}",
     "nextCheckupLabel": "次の検診予定",
-    "tapToRegisterHint": "タップして登録（ホームにD-dayを表示）"
+    "tapToRegisterHint": "タップして登録（ホームにD-dayを表示）",
+    "milestone": {
+      "positive_test": "妊娠検査陽性",
+      "prenatal_vitamins": "葉酸・サプリ開始",
+      "first_visit": "初めての産婦人科受診",
+      "first_ultrasound": "初エコー確認",
+      "first_heartbeat": "心拍確認",
+      "nt_test": "NT検査（後頸部透亮帯）",
+      "stable_period": "安定期に入る",
+      "quad_test": "クアトロ検査完了",
+      "gender_reveal": "性別判明",
+      "first_kick": "初めての胎動",
+      "detailed_ultrasound": "精密エコー完了",
+      "name_decided": "名前・胎児ニックネーム決定",
+      "gct_test": "妊娠糖尿病検査",
+      "nursery_start": "ベビールーム準備開始",
+      "birth_class": "出産準備クラス",
+      "gbs_test": "GBS検査",
+      "hospital_bag": "入院バッグ準備完了",
+      "maternity_photo": "マタニティフォト撮影",
+      "baby_shower": "ベビーシャワー",
+      "d_day": "出産！"
+    },
+    "symptom": {
+      "morning_sickness": "つわり",
+      "fatigue": "疲労感",
+      "back_pain": "腰・骨盤の痛み",
+      "swelling": "むくみ",
+      "headache": "頭痛",
+      "insomnia": "不眠",
+      "heartburn": "胸やけ",
+      "constipation": "便秘",
+      "cramp": "足のつり",
+      "mood_swing": "気分の浮き沈み",
+      "frequent_urination": "頻尿",
+      "good": "体調良好"
+    },
+    "recordTitle": {
+      "ultrasound": "エコー・映像",
+      "medicalRecord": "受診記録"
+    }
   },
   "growthStats": {
     "tabPhysical": "身長・体重・成長",
