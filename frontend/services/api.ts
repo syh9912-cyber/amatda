@@ -273,8 +273,8 @@ export const coachingApi = {
     coachingAxios.post('coaching/daily-diary', { childId, locale }),
   analyzeMedia: (childId: string, type: 'cry' | 'poop', description?: string, mediaBase64?: string, mediaMimeType?: string) =>
     coachingAxios.post('coaching/analyze-media', { childId, type, description, mediaBase64, mediaMimeType }),
-  firstTalk: (childId: string) =>
-    coachingAxios.post('coaching/first-talk', { childId }),
+  firstTalk: (childId: string, locale?: string) =>
+    coachingAxios.post('coaching/first-talk', { childId, locale }),
   milestones: (childId: string) =>
     coachingAxios.get(`coaching/milestones/${childId}`),
   saveMilestoneChecks: (childId: string, checks: Record<string, boolean>) =>

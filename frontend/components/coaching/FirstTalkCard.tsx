@@ -22,7 +22,7 @@ interface Props {
 }
 
 export function FirstTalkCard({ childId, onSelect }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [data, setData] = useState<FirstTalkData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -35,7 +35,7 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
     setError(false);
 
     coachingApi
-      .firstTalk(childId)
+      .firstTalk(childId, i18n.language)
       .then((res) => {
         if (cancelled) return;
         const raw = res.data?.data;
@@ -63,7 +63,7 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [childId]);
+  }, [childId, i18n.language]);
 
   const handleSubmit = () => {
     const trimmed = answer.trim();

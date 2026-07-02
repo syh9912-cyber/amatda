@@ -93,7 +93,7 @@ function getSections(t: TFunction): SectionConfig[] {
 }
 
 export default function AnalysisDetailScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { childId } = useLocalSearchParams<{ childId: string }>();
   const children = useChildStore((s) => s.children);
   const selectChild = useChildStore((s) => s.selectChild);
@@ -186,7 +186,7 @@ export default function AnalysisDetailScreen() {
     if (!childId || !report || firstTalk || firstTalkLoading) return;
     setFirstTalkLoading(true);
     coachingApi
-      .firstTalk(childId)
+      .firstTalk(childId, i18n.language)
       .then((res) => {
         const raw = res.data?.data;
         if (raw && typeof raw === 'object') {
@@ -210,7 +210,7 @@ export default function AnalysisDetailScreen() {
         });
       })
       .finally(() => setFirstTalkLoading(false));
-  }, [childId, report, firstTalk, firstTalkLoading, t]);
+  }, [childId, report, firstTalk, firstTalkLoading, t, i18n.language]);
 
   const handleFirstTalkOption = (option: string) => {
     if (!childId) return;
