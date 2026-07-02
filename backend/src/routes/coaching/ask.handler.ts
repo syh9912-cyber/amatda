@@ -412,6 +412,7 @@ export function registerAskHandler(router: Router): void {
       aiResponse.followupQuestions = backfillFollowups(
         aiResponse.followupQuestions ?? [],
         categoryKo,
+        locale,
       );
       aiResponse.followupQuestion = aiResponse.followupQuestions[0] ?? aiResponse.followupQuestion;
 
