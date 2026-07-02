@@ -1,5 +1,7 @@
 import { View, Text, Image, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Stack, router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useChildStore } from '../../stores/childStore';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { BackButton } from '../../components/common/BackButton';
@@ -15,40 +17,42 @@ interface CategoryItem {
   bgColor: string;
 }
 
-const PARENTING_CATEGORIES: CategoryItem[] = [
-  {
-    icon: require('../../assets/cat-eating.png'),
-    label: '음식 추천',
-    description: '기질에 맞는 영양 식단과 레시피',
-    category: '음식',
-    color: '#FF8C5A',
-    bgColor: '#FFF0E6',
-  },
-  {
-    icon: require('../../assets/cat-growth.png'),
-    label: '생활습관',
-    description: '수면, 위생, 루틴 등 생활 가이드',
-    category: '생활습관',
-    color: '#4ECDC4',
-    bgColor: '#E8FAF8',
-  },
-  {
-    icon: require('../../assets/cat-social.png'),
-    label: '학원 추천',
-    description: '기질과 발달에 맞는 교육 활동',
-    category: '학원',
-    color: '#7C83EC',
-    bgColor: '#EEEDFC',
-  },
-  {
-    icon: require('../../assets/play-activity.png'),
-    label: '놀이학습',
-    description: '집에서 할 수 있는 놀이와 활동',
-    category: '놀이학습',
-    color: '#FFB344',
-    bgColor: '#FFF8E1',
-  },
-];
+function getParentingCategories(t: TFunction): CategoryItem[] {
+  return [
+    {
+      icon: require('../../assets/cat-eating.png'),
+      label: t('recommendations.category.food.label'),
+      description: t('recommendations.category.food.description'),
+      category: '음식',
+      color: '#FF8C5A',
+      bgColor: '#FFF0E6',
+    },
+    {
+      icon: require('../../assets/cat-growth.png'),
+      label: t('recommendations.category.lifestyle.label'),
+      description: t('recommendations.category.lifestyle.description'),
+      category: '생활습관',
+      color: '#4ECDC4',
+      bgColor: '#E8FAF8',
+    },
+    {
+      icon: require('../../assets/cat-social.png'),
+      label: t('recommendations.category.academy.label'),
+      description: t('recommendations.category.academy.description'),
+      category: '학원',
+      color: '#7C83EC',
+      bgColor: '#EEEDFC',
+    },
+    {
+      icon: require('../../assets/play-activity.png'),
+      label: t('recommendations.category.playLearning.label'),
+      description: t('recommendations.category.playLearning.description'),
+      category: '놀이학습',
+      color: '#FFB344',
+      bgColor: '#FFF8E1',
+    },
+  ];
+}
 
 type Trimester = 'early' | 'mid' | 'late';
 
@@ -58,32 +62,32 @@ function getTrimester(week: number): Trimester {
   return 'late';
 }
 
-function getPregnancyCategories(trimester: Trimester): CategoryItem[] {
+function getPregnancyCategories(t: TFunction, trimester: Trimester): CategoryItem[] {
   const FOOD_DESC: Record<Trimester, string> = {
-    early: '입덧 완화 식단과 엽산 식품',
-    mid: '철분·칼슘 풍부한 임산부 영양 식단',
-    late: '체중 관리와 부종 완화 식단',
+    early: t('recommendations.pregnancyCategory.food.early'),
+    mid: t('recommendations.pregnancyCategory.food.mid'),
+    late: t('recommendations.pregnancyCategory.food.late'),
   };
   const EXERCISE_DESC: Record<Trimester, string> = {
-    early: '가벼운 산책과 스트레칭',
-    mid: '임산부 요가와 케겔 운동',
-    late: '분만 호흡법과 출산 준비 운동',
+    early: t('recommendations.pregnancyCategory.exercise.early'),
+    mid: t('recommendations.pregnancyCategory.exercise.mid'),
+    late: t('recommendations.pregnancyCategory.exercise.late'),
   };
   const PRENATAL_DESC: Record<Trimester, string> = {
-    early: '태교 시작과 초기 음악·도서',
-    mid: '집중 태교와 추천 그림책',
-    late: '아기와 교감하는 태교 마무리',
+    early: t('recommendations.pregnancyCategory.prenatal.early'),
+    mid: t('recommendations.pregnancyCategory.prenatal.mid'),
+    late: t('recommendations.pregnancyCategory.prenatal.late'),
   };
   const SUPPLY_DESC: Record<Trimester, string> = {
-    early: '초기 임산부 필수 준비물',
-    mid: '아기방·기저귀·옷 준비 가이드',
-    late: '출산가방과 신생아 필수품',
+    early: t('recommendations.pregnancyCategory.supply.early'),
+    mid: t('recommendations.pregnancyCategory.supply.mid'),
+    late: t('recommendations.pregnancyCategory.supply.late'),
   };
 
   return [
     {
       icon: require('../../assets/cat-eating.png'),
-      label: '임산부 음식',
+      label: t('recommendations.pregnancyCategory.food.label'),
       description: FOOD_DESC[trimester],
       category: '임산부음식',
       color: '#FF8C5A',
@@ -91,7 +95,7 @@ function getPregnancyCategories(trimester: Trimester): CategoryItem[] {
     },
     {
       icon: require('../../assets/preg-foot.png'),
-      label: '운동·요가',
+      label: t('recommendations.pregnancyCategory.exercise.label'),
       description: EXERCISE_DESC[trimester],
       category: '임산부운동',
       color: '#4ECDC4',
@@ -99,7 +103,7 @@ function getPregnancyCategories(trimester: Trimester): CategoryItem[] {
     },
     {
       icon: require('../../assets/preg-leaf.png'),
-      label: '태교·책',
+      label: t('recommendations.pregnancyCategory.prenatal.label'),
       description: PRENATAL_DESC[trimester],
       category: '태교',
       color: '#7C83EC',
@@ -107,7 +111,7 @@ function getPregnancyCategories(trimester: Trimester): CategoryItem[] {
     },
     {
       icon: require('../../assets/preg-bag.png'),
-      label: '출산용품',
+      label: t('recommendations.pregnancyCategory.supply.label'),
       description: SUPPLY_DESC[trimester],
       category: '출산용품',
       color: '#E91E63',
@@ -116,31 +120,36 @@ function getPregnancyCategories(trimester: Trimester): CategoryItem[] {
   ];
 }
 
-const TRIMESTER_BADGE: Record<Trimester, string> = {
-  early: '초기 (1~13주)',
-  mid: '중기 (14~27주)',
-  late: '후기 (28주~)',
-};
+function getTrimesterBadge(t: TFunction): Record<Trimester, string> {
+  return {
+    early: t('recommendations.trimesterBadge.early'),
+    mid: t('recommendations.trimesterBadge.mid'),
+    late: t('recommendations.trimesterBadge.late'),
+  };
+}
 
 export default function RecommendationsScreen() {
+  const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const isPregnant = !!selectedChild?.isPregnant;
   const week = selectedChild?.pregnancyWeeks ?? 0;
   const trimester = getTrimester(week);
 
   const categories = isPregnant
-    ? getPregnancyCategories(trimester)
-    : PARENTING_CATEGORIES;
+    ? getPregnancyCategories(t, trimester)
+    : getParentingCategories(t);
+
+  const trimesterBadge = getTrimesterBadge(t);
 
   const introTitle = selectedChild
     ? isPregnant
-      ? `${selectedChild.name} 엄마를 위한 맞춤 추천`
-      : `${selectedChild.name}을(를) 위한 맞춤 추천`
-    : '우리 아이 맞춤 추천';
+      ? t('recommendations.introTitle.pregnantWithName', { name: selectedChild.name })
+      : t('recommendations.introTitle.childWithName', { name: selectedChild.name })
+    : t('recommendations.introTitle.default');
 
   const introDesc = isPregnant
-    ? `현재 ${week}주차 · ${TRIMESTER_BADGE[trimester]}\n주차에 맞는 임산부 가이드를 확인해보세요`
-    : '아이의 기질과 발달 단계에 맞춘\n실천 가능한 추천을 확인해보세요';
+    ? t('recommendations.introDesc.pregnant', { week, badge: trimesterBadge[trimester] })
+    : t('recommendations.introDesc.default');
 
   return (
     <View style={{ flex: 1 }}>
@@ -148,7 +157,7 @@ export default function RecommendationsScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.headerWrap}>
-        <ScreenHeader title="맞춤 추천" />
+        <ScreenHeader title={t('recommendations.headerTitle')} />
       </View>
 
       {/* 소개 카드 */}

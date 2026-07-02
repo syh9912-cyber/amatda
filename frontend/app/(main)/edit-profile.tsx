@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import apiInstance, { authApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
@@ -24,16 +25,27 @@ interface UserProfile {
 
 // 별명 유효성 — 저장 버튼 disabled 조건과 저장 검증을 동일 기준으로 통일
 function isValidNickname(name: string): boolean {
-  const t = name.trim();
-  return t.length >= 2 && t.length <= 10;
+  const trimmed = name.trim();
+  return trimmed.length >= 2 && trimmed.length <= 10;
 }
 
 /* ------------------------------------------------------------------ */
 /*  Main Screen                                                        */
 /* ------------------------------------------------------------------ */
 
+const PARENT_ROLES: { value: string; labelKey: string }[] = [
+  { value: '엄마', labelKey: 'onboardingSetNickname.roleMom' },
+  { value: '아빠', labelKey: 'onboardingSetNickname.roleDad' },
+  { value: '할머니', labelKey: 'onboardingSetNickname.roleGrandma' },
+  { value: '할아버지', labelKey: 'onboardingSetNickname.roleGrandpa' },
+  { value: '고모/이모', labelKey: 'onboardingSetNickname.roleAunt' },
+  { value: '삼촌', labelKey: 'onboardingSetNickname.roleUncle' },
+  { value: '기타', labelKey: 'onboardingSetNickname.roleOther' },
+];
+
 export default function EditProfileScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { userId, setUser } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
@@ -66,7 +78,7 @@ export default function EditProfileScreen() {
       setNickname(data.nickname ?? '');
       if (data.parentRole) setParentRole(data.parentRole);
     } catch {
-      Alert.alert('오류', '프로필 정보를 불러오지 못했어요.');
+      Alert.alert(t('common.error'), t('editProfile.alert.loadProfileFailed'));
     } finally {
       setLoading(false);
     }
@@ -75,7 +87,10 @@ export default function EditProfileScreen() {
   const handleSaveNickname = async () => {
     const trimmed = nickname.trim();
     if (!isValidNickname(trimmed)) {
-      Alert.alert('알림', trimmed.length === 0 ? '별명을 입력해주세요' : '별명은 2~10자로 입력해주세요');
+      Alert.alert(
+        t('common.notice'),
+        trimmed.length === 0 ? t('editProfile.alert.enterNickname') : t('editProfile.alert.nicknameLength'),
+      );
       return;
     }
 
@@ -83,11 +98,11 @@ export default function EditProfileScreen() {
     try {
       await apiInstance.put('/auth/nickname', { nickname: trimmed, parentRole });
       await setUser(userId ?? '', trimmed);
-      Alert.alert('완료', '별명이 변경되었습니다');
+      Alert.alert(t('common.complete'), t('editProfile.alert.nicknameChanged'));
       // Reload profile to reflect change
       if (profile) setProfile({ ...profile, nickname: trimmed });
     } catch {
-      Alert.alert('오류', '별명 변경에 실패했습니다. 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('editProfile.alert.nicknameChangeFailed'));
     } finally {
       setSaving(false);
     }
@@ -104,17 +119,17 @@ export default function EditProfileScreen() {
       await apiInstance.put('/auth/nickname', { nickname: currentNick, parentRole: role });
       if (profile) setProfile({ ...profile, parentRole: role });
     } catch {
-      Alert.alert('오류', '역할 저장에 실패했어요. 다시 시도해주세요.');
+      Alert.alert(t('common.error'), t('editProfile.alert.roleSaveFailed'));
     }
   };
 
   const handleChangePassword = async () => {
     if (!newPassword || newPassword.length < 6) {
-      Alert.alert('알림', '새 비밀번호는 6자 이상이어야 합니다');
+      Alert.alert(t('common.notice'), t('editProfile.alert.passwordTooShort'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('알림', '새 비밀번호가 일치하지 않습니다');
+      Alert.alert(t('common.notice'), t('editProfile.alert.passwordMismatch'));
       return;
     }
 
@@ -123,33 +138,33 @@ export default function EditProfileScreen() {
       setSaving(true);
       try {
         await apiInstance.post('/auth/set-password', { newPassword });
-        Alert.alert('완료', '비밀번호가 설정되었습니다');
+        Alert.alert(t('common.complete'), t('editProfile.alert.passwordSet'));
         setShowPasswordSection(false);
         setNewPassword('');
         setConfirmPassword('');
         // Reload profile
         await loadProfile();
       } catch {
-        Alert.alert('오류', '비밀번호 설정에 실패했습니다.');
+        Alert.alert(t('common.error'), t('editProfile.alert.passwordSetFailed'));
       } finally {
         setSaving(false);
       }
     } else {
       // Local user changing password
       if (!currentPassword) {
-        Alert.alert('알림', '현재 비밀번호를 입력해주세요');
+        Alert.alert(t('common.notice'), t('editProfile.alert.enterCurrentPassword'));
         return;
       }
       setSaving(true);
       try {
         await authApi.changePassword(currentPassword, newPassword);
-        Alert.alert('완료', '비밀번호가 변경되었습니다');
+        Alert.alert(t('common.complete'), t('editProfile.alert.passwordChanged'));
         setShowPasswordSection(false);
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
       } catch {
-        Alert.alert('오류', '비밀번호 변경에 실패했습니다.\n현재 비밀번호를 확인해주세요.');
+        Alert.alert(t('common.error'), t('editProfile.alert.passwordChangeFailed'));
       } finally {
         setSaving(false);
       }
@@ -173,7 +188,7 @@ export default function EditProfileScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.headerWrap}>
-        <ScreenHeader title="내 정보 수정" onBack={() => router.back()} />
+        <ScreenHeader title={t('editProfile.screenTitle')} onBack={() => router.back()} />
       </View>
 
       <ScrollView
@@ -184,17 +199,17 @@ export default function EditProfileScreen() {
       >
         {/* Account Info (read-only) */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>계정 정보</Text>
+          <Text style={styles.cardTitle}>{t('editProfile.accountInfo')}</Text>
           <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>이메일</Text>
+            <Text style={styles.fieldLabel}>{t('editProfile.email')}</Text>
             <Text style={styles.fieldValue}>{profile?.email ?? '-'}</Text>
           </View>
           <View style={styles.fieldRow}>
-            <Text style={styles.fieldLabel}>로그인 방식</Text>
+            <Text style={styles.fieldLabel}>{t('editProfile.loginMethod')}</Text>
             <View style={styles.providerBadge}>
               <Text style={styles.providerText}>
                 {profile?.authProvider === 'LOCAL'
-                  ? '이메일'
+                  ? t('editProfile.emailProvider')
                   : profile?.authProvider ?? '-'}
               </Text>
             </View>
@@ -203,12 +218,12 @@ export default function EditProfileScreen() {
 
         {/* Nickname Edit */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>별명</Text>
-          <Text style={styles.cardSubtitle}>앱에서 표시되는 이름이에요 (2~10자)</Text>
+          <Text style={styles.cardTitle}>{t('editProfile.nickname')}</Text>
+          <Text style={styles.cardSubtitle}>{t('editProfile.nicknameSubtitle')}</Text>
           <View style={styles.inputRow}>
             <TextInput
               style={styles.input}
-              placeholder="별명 입력"
+              placeholder={t('editProfile.nicknamePlaceholder')}
               placeholderTextColor={COLORS.textLight}
               value={nickname}
               onChangeText={setNickname}
@@ -224,7 +239,7 @@ export default function EditProfileScreen() {
               activeOpacity={0.7}
             >
               <Text style={styles.saveBtnText}>
-                {saving ? '...' : '저장'}
+                {saving ? '...' : t('common.save')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -232,18 +247,18 @@ export default function EditProfileScreen() {
 
         {/* Parent Role */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>부모 역할</Text>
-          <Text style={styles.cardSubtitle}>상담이모가 호칭에 사용해요</Text>
+          <Text style={styles.cardTitle}>{t('editProfile.parentRole')}</Text>
+          <Text style={styles.cardSubtitle}>{t('editProfile.parentRoleSubtitle')}</Text>
           <View style={styles.roleWrap}>
-            {['엄마', '아빠', '할머니', '할아버지', '고모/이모', '삼촌', '기타'].map((role) => (
+            {PARENT_ROLES.map(({ value, labelKey }) => (
               <TouchableOpacity
-                key={role}
-                style={[styles.roleBtn, parentRole === role && styles.roleBtnActive]}
-                onPress={() => handleSelectRole(role)}
+                key={value}
+                style={[styles.roleBtn, parentRole === value && styles.roleBtnActive]}
+                onPress={() => handleSelectRole(value)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.roleBtnText, parentRole === role && styles.roleBtnTextActive]}>
-                  {role}
+                <Text style={[styles.roleBtnText, parentRole === value && styles.roleBtnTextActive]}>
+                  {t(labelKey)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -254,7 +269,7 @@ export default function EditProfileScreen() {
         <View style={styles.card}>
           <View style={styles.cardTitleRow}>
             <Text style={styles.cardTitle}>
-              {isSocialUser ? '비밀번호 설정' : '비밀번호 변경'}
+              {isSocialUser ? t('editProfile.setPasswordTitle') : t('editProfile.changePasswordTitle')}
             </Text>
             {!showPasswordSection && (
               <TouchableOpacity
@@ -262,7 +277,7 @@ export default function EditProfileScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={styles.editLink}>
-                  {isSocialUser ? '설정하기' : '변경하기'}
+                  {isSocialUser ? t('editProfile.setUp') : t('common.change')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -270,7 +285,7 @@ export default function EditProfileScreen() {
 
           {isSocialUser && !showPasswordSection && (
             <Text style={styles.cardSubtitle}>
-              소셜 로그인 계정입니다. 비밀번호를 설정하면 이메일로도 로그인할 수 있어요.
+              {t('editProfile.socialUserPasswordHint')}
             </Text>
           )}
 
@@ -279,10 +294,10 @@ export default function EditProfileScreen() {
               {/* Current password (only for LOCAL users) */}
               {!isSocialUser && (
                 <View style={styles.fieldGroup}>
-                  <Text style={styles.inputLabel}>현재 비밀번호</Text>
+                  <Text style={styles.inputLabel}>{t('editProfile.currentPassword')}</Text>
                   <TextInput
                     style={styles.inputFull}
-                    placeholder="현재 비밀번호 입력"
+                    placeholder={t('editProfile.currentPasswordPlaceholder')}
                     placeholderTextColor={COLORS.textLight}
                     secureTextEntry
                     value={currentPassword}
@@ -294,11 +309,11 @@ export default function EditProfileScreen() {
               {/* New password */}
               <View style={styles.fieldGroup}>
                 <Text style={styles.inputLabel}>
-                  {isSocialUser ? '비밀번호' : '새 비밀번호'}
+                  {isSocialUser ? t('editProfile.password') : t('editProfile.newPassword')}
                 </Text>
                 <TextInput
                   style={styles.inputFull}
-                  placeholder="6자 이상 입력"
+                  placeholder={t('editProfile.newPasswordPlaceholder')}
                   placeholderTextColor={COLORS.textLight}
                   secureTextEntry
                   value={newPassword}
@@ -308,7 +323,7 @@ export default function EditProfileScreen() {
 
               {/* Confirm password */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.inputLabel}>비밀번호 확인</Text>
+                <Text style={styles.inputLabel}>{t('editProfile.confirmPassword')}</Text>
                 <TextInput
                   style={[
                     styles.inputFull,
@@ -316,17 +331,17 @@ export default function EditProfileScreen() {
                       confirmPassword !== newPassword &&
                       styles.inputError,
                   ]}
-                  placeholder="비밀번호 다시 입력"
+                  placeholder={t('editProfile.confirmPasswordPlaceholder')}
                   placeholderTextColor={COLORS.textLight}
                   secureTextEntry
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                 />
                 {confirmPassword.length > 0 && confirmPassword !== newPassword && (
-                  <Text style={styles.errorHint}>비밀번호가 일치하지 않아요</Text>
+                  <Text style={styles.errorHint}>{t('editProfile.passwordMismatchHint')}</Text>
                 )}
                 {confirmPassword.length > 0 && confirmPassword === newPassword && (
-                  <Text style={styles.matchHint}>비밀번호가 일치합니다</Text>
+                  <Text style={styles.matchHint}>{t('editProfile.passwordMatchHint')}</Text>
                 )}
               </View>
 
@@ -341,7 +356,7 @@ export default function EditProfileScreen() {
                     setConfirmPassword('');
                   }}
                 >
-                  <Text style={styles.cancelBtnText}>취소</Text>
+                  <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
@@ -355,10 +370,10 @@ export default function EditProfileScreen() {
                 >
                   <Text style={styles.pwSaveBtnText}>
                     {saving
-                      ? '처리 중...'
+                      ? t('editProfile.processing')
                       : isSocialUser
-                        ? '설정 완료'
-                        : '변경 완료'}
+                        ? t('editProfile.setComplete')
+                        : t('editProfile.changeComplete')}
                   </Text>
                 </TouchableOpacity>
               </View>

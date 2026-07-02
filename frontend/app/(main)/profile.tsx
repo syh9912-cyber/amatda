@@ -1,5 +1,6 @@
 import { Image, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, View } from 'react-native';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Stack, router } from 'expo-router';
 import { useChildStore } from '../../stores/childStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -20,6 +21,7 @@ import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { AdSlot } from '../../components/ads/AdSlot';
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const removeChild = useChildStore((s) => s.removeChild);
   const logout = useAuthStore((s) => s.logout);
@@ -28,12 +30,12 @@ export default function ProfileScreen() {
   const handleDeleteChild = () => {
     if (!selectedChild) return;
     Alert.alert(
-      '아이 삭제',
-      `${selectedChild.name}의 모든 데이터가 영구적으로 삭제됩니다.\n정말 삭제하시겠습니까?`,
+      t('profile.deleteChildAlert.title'),
+      t('profile.deleteChildAlert.desc', { name: selectedChild.name }),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '삭제',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -46,9 +48,9 @@ export default function ProfileScreen() {
                 await cancelAllPregnancyLocalNotifications(selectedChild.id);
               }
               removeChild(selectedChild.id);
-              Alert.alert('완료', '아이 정보가 삭제되었습니다.');
+              Alert.alert(t('common.complete'), t('profile.deleteChildAlert.successDesc'));
             } catch {
-              Alert.alert('오류', '아이 삭제에 실패했습니다.');
+              Alert.alert(t('common.error'), t('profile.deleteChildAlert.failDesc'));
             }
           },
         },
@@ -57,10 +59,10 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('profile.logoutAlert.title'), t('profile.logoutAlert.desc'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '로그아웃',
+        text: t('profile.logoutAlert.title'),
         style: 'destructive',
         onPress: async () => {
           // 즉시 로컬 정리 + 리다이렉트 (사용자 흐름 안 막음)
@@ -76,18 +78,18 @@ export default function ProfileScreen() {
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      '계정 삭제',
-      '정말 계정을 삭제하시겠습니까?\n\n모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.',
+      t('profile.deleteAccountAlert.title'),
+      t('profile.deleteAccountAlert.desc'),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '계정 삭제',
+          text: t('profile.deleteAccountAlert.title'),
           style: 'destructive',
           onPress: () => {
-            Alert.alert('최종 확인', '이 작업은 되돌릴 수 없습니다.', [
-              { text: '취소', style: 'cancel' },
+            Alert.alert(t('profile.deleteAccountAlert.finalConfirmTitle'), t('profile.deleteAccountAlert.finalConfirmDesc'), [
+              { text: t('common.cancel'), style: 'cancel' },
               {
-                text: '삭제 확인',
+                text: t('profile.deleteAccountAlert.confirmDeleteBtn'),
                 style: 'destructive',
                 onPress: async () => {
                   try {
@@ -101,7 +103,7 @@ export default function ProfileScreen() {
                     //    (서버가 이미 unlink했으므로 디바이스는 logout만 — unlink 호출 시 네이티브 크래시 위험)
                     clearAllSocialSessions().catch(() => {});
                   } catch {
-                    Alert.alert('오류', '계정 삭제에 실패했습니다.');
+                    Alert.alert(t('common.error'), t('profile.deleteAccountAlert.failDesc'));
                   }
                 },
               },
@@ -115,18 +117,18 @@ export default function ProfileScreen() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleChangePassword = () => {
     if (Platform.OS === 'ios') {
-      Alert.prompt('비밀번호 변경', '현재 비밀번호를 입력하세요', (currentPw) => {
+      Alert.prompt(t('profile.changePasswordAlert.title'), t('profile.changePasswordAlert.currentPwPrompt'), (currentPw) => {
         if (!currentPw) return;
-        Alert.prompt('비밀번호 변경', '새 비밀번호를 입력하세요 (8자 이상)', async (newPw) => {
+        Alert.prompt(t('profile.changePasswordAlert.title'), t('profile.changePasswordAlert.newPwPrompt'), async (newPw) => {
           if (!newPw || newPw.length < 8) {
-            Alert.alert('오류', '새 비밀번호는 8자 이상이어야 합니다');
+            Alert.alert(t('common.error'), t('profile.changePasswordAlert.tooShort'));
             return;
           }
           try {
             await authApi.changePassword(currentPw, newPw);
-            Alert.alert('완료', '비밀번호가 변경되었습니다');
+            Alert.alert(t('common.complete'), t('profile.changePasswordAlert.successDesc'));
           } catch {
-            Alert.alert('오류', '비밀번호 변경에 실패했습니다.');
+            Alert.alert(t('common.error'), t('profile.changePasswordAlert.failDesc'));
           }
         }, 'secure-text');
       }, 'secure-text');
@@ -141,13 +143,13 @@ export default function ProfileScreen() {
       <Stack.Screen options={{ headerShown: false }} />
 
       <ScreenHeader
-        title="마이페이지"
+        title={t('profile.title')}
         right={
           <TouchableOpacity
             onPress={() => router.push('/(main)/edit-profile')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
-            accessibilityLabel="설정"
+            accessibilityLabel={t('profile.settingsLabel')}
           >
             <Image source={require('../../assets/icon-settings.png')} style={{ width: 24, height: 24 }} resizeMode="contain" />
           </TouchableOpacity>

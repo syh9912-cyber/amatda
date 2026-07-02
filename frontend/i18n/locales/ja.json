@@ -3621,5 +3621,250 @@
     "poopAnalysis": "うんち分析",
     "cryAnalysis": "泣き声分析",
     "noPermissionPlaceholder": "相談機能の利用権限がありません(閲覧専用)"
+  },
+  "momLocationSetup": {
+    "title": "位置登録",
+    "introTitle": "近所のママたちと出会う",
+    "introSub": "位置を登録すると、5km／10km／50km／100km圏内のママたちとマッチングされます。\n位置情報は他のユーザーに公開されることはなく、距離の計算にのみ使用されます。",
+    "gpsBtn": "現在地を自動入力",
+    "latLabel": "緯度（latitude）",
+    "lngLabel": "経度（longitude）",
+    "labelLabel": "表示名（任意）",
+    "labelPlaceholder": "ソウル特別市中区",
+    "sameAgeMatch": {
+      "title": "同い年マッチング",
+      "withYear": "うちの子は{{year}}年生まれ → 同じ{{year}}年生まれのママたちとマッチング",
+      "noYear": "選択したお子さまの出生年の情報がありません。まずお子さまの登録・生年月日を設定してください。"
+    },
+    "removeSavedLocation": "保存した位置情報を削除",
+    "permissionAlert": {
+      "title": "位置情報の権限が必要です",
+      "desc": "位置情報の権限が拒否されました。設定で権限をオンにするか、手動で入力してください。"
+    },
+    "gpsFailAlert": {
+      "title": "GPS取得失敗",
+      "desc": "位置情報を取得できませんでした。手動で入力するか、設定をご確認ください。"
+    },
+    "coordErrorAlert": {
+      "title": "座標エラー",
+      "desc": "緯度（-90〜90）・経度（-180〜180）を正しく入力してください。"
+    },
+    "saveCompleteAlert": {
+      "title": "保存が完了しました",
+      "desc": "位置情報を保存しました。ママストークで範囲検索が有効になります。"
+    },
+    "saveFailAlert": {
+      "title": "保存に失敗しました",
+      "desc": "しばらくしてからもう一度お試しください。"
+    },
+    "removeConfirmAlert": {
+      "title": "位置情報を削除",
+      "desc": "保存した位置情報を削除しますか？範囲検索が無効になります。"
+    },
+    "removeCompleteAlert": "削除が完了しました",
+    "removeFailAlert": "削除に失敗しました"
+  },
+  "profile": {
+    "title": "マイページ",
+    "settingsLabel": "設定",
+    "deleteChildAlert": {
+      "title": "子どもを削除",
+      "desc": "{{name}}のすべてのデータが完全に削除されます。\n本当に削除しますか？",
+      "successDesc": "お子さまの情報が削除されました。",
+      "failDesc": "子どもの削除に失敗しました。"
+    },
+    "logoutAlert": {
+      "title": "ログアウト",
+      "desc": "本当にログアウトしますか？"
+    },
+    "deleteAccountAlert": {
+      "title": "アカウント削除",
+      "desc": "本当にアカウントを削除しますか？\n\nすべてのデータが完全に削除され、復元できません。",
+      "finalConfirmTitle": "最終確認",
+      "finalConfirmDesc": "この操作は取り消せません。",
+      "confirmDeleteBtn": "削除を確認",
+      "failDesc": "アカウントの削除に失敗しました。"
+    },
+    "changePasswordAlert": {
+      "title": "パスワード変更",
+      "currentPwPrompt": "現在のパスワードを入力してください",
+      "newPwPrompt": "新しいパスワードを入力してください（8文字以上）",
+      "tooShort": "新しいパスワードは8文字以上である必要があります",
+      "successDesc": "パスワードが変更されました",
+      "failDesc": "パスワードの変更に失敗しました。"
+    }
+  },
+  "poopAnalyzer": {
+    "screenTitle": "うんち分析器",
+    "guideTitle": "写真でうんちを分析します",
+    "guideDesc": "お子さまのうんちの写真を撮影するか、ギャラリーから選択すると\nAIが色・形・状態を分析します。",
+    "photoTipTitle": "📸 きれいに撮るコツ",
+    "photoTipText": "・明るい場所ではっきりと（影・ブレはNG）\n・うんちが画面いっぱいになるよう近づいて\n・オムツ・便器の背景はシンプルに",
+    "takePhoto": "カメラで撮影",
+    "selectFromGallery": "ギャラリーから選択",
+    "analyzing": "AI分析中...",
+    "analyzeButton": "写真を分析する",
+    "selectFileFirstButton": "先に写真を選択してください",
+    "mainDisclaimer": "この分析は医学的診断に代わるものではありません。気になる症状がある場合は必ず小児科専門医にご相談ください。",
+    "citation": {
+      "source1": "大韓小児科学会 子どもの健康情報（乳幼児の排便）",
+      "source2": "疾病管理庁 国家健康情報ポータル"
+    },
+    "hospitalCheckTitle": "受診をおすすめします",
+    "hospitalCheckDesc": "分析結果、注意が必要な兆候が見つかりました。小児科を受診してください。",
+    "analysisResultTitle": "分析結果",
+    "possibilitiesTitle": "可能性分析（参考推定）",
+    "recommendationsTitle": "おすすめの対応",
+    "usageSummary": "今月の分析 {{used}}/{{limit}}回使用（残り回数：{{remaining}}回）",
+    "disclaimer": "この分析は参考用の推定情報であり、診断や治療を目的とした医療行為ではありません。正確な診断は小児科医にご相談ください。",
+    "analyzeAgain": "もう一度分析する",
+    "historyDefaultSummary": "うんち分析完了",
+    "alert": {
+      "postpartumOnly": "出産後にご利用いただけます。",
+      "infantOnly": "うんち分析は乳幼児（0〜72か月）専用の機能です。",
+      "cameraPermissionTitle": "カメラの権限が必要です",
+      "cameraPermissionMessage": "写真を撮影するにはカメラの権限が必要です。設定 > アマッダで許可してください。",
+      "selectPhotoFirst": "先に写真を選択してください。",
+      "selectChildFirst": "先にお子さまを登録または選択してください。",
+      "viewOnlyTitle": "閲覧専用",
+      "viewOnlyMessage": "分析機能を使用する権限がありません。\n保護者に「相談員機能の使用」権限をリクエストしてください。",
+      "monthlyLimitReached": "今月の分析回数をすべて使い切りました。",
+      "analysisFailed": "分析に失敗しました。もう一度お試しください。"
+    }
+  },
+  "editProfile": {
+    "screenTitle": "マイプロフィール編集",
+    "accountInfo": "アカウント情報",
+    "email": "メールアドレス",
+    "loginMethod": "ログイン方法",
+    "emailProvider": "メール",
+    "nickname": "ニックネーム",
+    "nicknameSubtitle": "アプリに表示される名前です（2〜10文字）",
+    "nicknamePlaceholder": "ニックネームを入力",
+    "parentRole": "保護者の役割",
+    "parentRoleSubtitle": "相談員が呼びかけに使用します",
+    "setPasswordTitle": "パスワード設定",
+    "changePasswordTitle": "パスワード変更",
+    "setUp": "設定する",
+    "socialUserPasswordHint": "ソーシャルログインアカウントです。パスワードを設定すると、メールでもログインできるようになります。",
+    "currentPassword": "現在のパスワード",
+    "currentPasswordPlaceholder": "現在のパスワードを入力",
+    "password": "パスワード",
+    "newPassword": "新しいパスワード",
+    "newPasswordPlaceholder": "6文字以上で入力",
+    "confirmPassword": "パスワード確認",
+    "confirmPasswordPlaceholder": "パスワードを再入力",
+    "passwordMismatchHint": "パスワードが一致しません",
+    "passwordMatchHint": "パスワードが一致しています",
+    "processing": "処理中...",
+    "setComplete": "設定完了",
+    "changeComplete": "変更完了",
+    "alert": {
+      "loadProfileFailed": "プロフィール情報を読み込めませんでした。",
+      "enterNickname": "ニックネームを入力してください",
+      "nicknameLength": "ニックネームは2〜10文字で入力してください",
+      "nicknameChanged": "ニックネームが変更されました",
+      "nicknameChangeFailed": "ニックネームの変更に失敗しました。もう一度お試しください。",
+      "roleSaveFailed": "役割の保存に失敗しました。もう一度お試しください。",
+      "passwordTooShort": "新しいパスワードは6文字以上である必要があります",
+      "passwordMismatch": "新しいパスワードが一致しません",
+      "passwordSet": "パスワードが設定されました",
+      "passwordSetFailed": "パスワードの設定に失敗しました。",
+      "enterCurrentPassword": "現在のパスワードを入力してください",
+      "passwordChanged": "パスワードが変更されました",
+      "passwordChangeFailed": "パスワードの変更に失敗しました。\n現在のパスワードをご確認ください。"
+    }
+  },
+  "recommendations": {
+    "headerTitle": "個別おすすめ",
+    "category": {
+      "food": {
+        "label": "食事のおすすめ",
+        "description": "気質に合った栄養食と レシピ"
+      },
+      "lifestyle": {
+        "label": "生活習慣",
+        "description": "睡眠・衛生・生活リズムなどのガイド"
+      },
+      "academy": {
+        "label": "教室・習い事のおすすめ",
+        "description": "気質と発達に合った教育活動"
+      },
+      "playLearning": {
+        "label": "遊び学習",
+        "description": "家でできる遊びと活動"
+      }
+    },
+    "pregnancyCategory": {
+      "food": {
+        "label": "妊婦の食事",
+        "early": "つわり軽減の食事と葉酸食品",
+        "mid": "鉄分・カルシウムが豊富な妊婦向け栄養食",
+        "late": "体重管理とむくみ軽減の食事"
+      },
+      "exercise": {
+        "label": "運動・ヨガ",
+        "early": "軽い散歩とストレッチ",
+        "mid": "妊婦ヨガとケーゲル体操",
+        "late": "分娩呼吸法と出産準備運動"
+      },
+      "prenatal": {
+        "label": "胎教・絵本",
+        "early": "胎教の始めと初期の音楽・絵本",
+        "mid": "集中胎教とおすすめ絵本",
+        "late": "赤ちゃんと心を通わせる胎教のまとめ"
+      },
+      "supply": {
+        "label": "出産準備品",
+        "early": "妊娠初期の妊婦必需品",
+        "mid": "赤ちゃんの部屋・おむつ・服の準備ガイド",
+        "late": "入院バッグと新生児の必需品"
+      }
+    },
+    "trimesterBadge": {
+      "early": "初期（1〜13週）",
+      "mid": "中期（14〜27週）",
+      "late": "後期（28週〜）"
+    },
+    "introTitle": {
+      "pregnantWithName": "{{name}}ママのための個別おすすめ",
+      "childWithName": "{{name}}のための個別おすすめ",
+      "default": "わが子への個別おすすめ"
+    },
+    "introDesc": {
+      "pregnant": "現在{{week}}週目・{{badge}}\n週数に合った妊婦ガイドをご確認ください",
+      "default": "子どもの気質と発達段階に合わせた\n実践できるおすすめをご確認ください"
+    }
+  },
+  "recommendationList": {
+    "defaultChildName": "お子さま",
+    "empty": {
+      "registerChildTitle": "まずお子さまを登録してください",
+      "registerChildSubtitle": "お子さまの情報を登録すると個別のおすすめが受けられます",
+      "goHome": "ホームへ",
+      "preparingTitle": "現在準備中です",
+      "preparingSubtitle": "まもなく{{category}}のおすすめが追加されます"
+    },
+    "loading": "{{name}}に合った{{category}}のおすすめを読み込んでいます...",
+    "tapHint": "詳しく見る",
+    "section": {
+      "reasons": "知っておきましょう",
+      "actions": "実践方法"
+    },
+    "personalNoteLabel": "わが子に合わせたアドバイス"
+  },
+  "recommendationDetail": {
+    "defaultChildName": "お子さま",
+    "loading": "AIが{{name}}に合った情報を準備しています...",
+    "loadFailed": "情報の読み込みに失敗しました。もう一度お試しください。",
+    "contentPreparing": "関連情報を準備しています。",
+    "section": {
+      "reasons": "知っておきましょう",
+      "actions": "実践方法",
+      "personalNote": "個別アドバイス"
+    },
+    "askMore": "AIにもっと質問する",
+    "citationNote": "AIが生成した参考用のおすすめです。健康・食事に関する判断は小児科医など専門家にご相談ください。",
+    "citationSourceFoodSafety": "食品医薬品安全処 食品安全の国"
   }
 }

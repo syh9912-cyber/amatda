@@ -4,6 +4,7 @@ import {
   TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useChildStore } from '../../stores/childStore';
 import { recommendationApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
@@ -43,6 +44,7 @@ interface RecoItem {
 /* ------------------------------------------------------------------ */
 
 export default function RecommendationListScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{ category: string }>();
   const category = params.category ?? '';
@@ -104,28 +106,33 @@ export default function RecommendationListScreen() {
       {!selectedChild ? (
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyEmoji}>{catStyle.emoji}</Text>
-          <Text style={styles.emptyText}>아이를 먼저 등록해주세요</Text>
-          <Text style={styles.emptySubText}>아이 정보를 등록하면 맞춤 추천을 받을 수 있어요</Text>
+          <Text style={styles.emptyText}>{t('recommendationList.empty.registerChildTitle')}</Text>
+          <Text style={styles.emptySubText}>{t('recommendationList.empty.registerChildSubtitle')}</Text>
           <TouchableOpacity
             style={[styles.emptyCta, { backgroundColor: catStyle.color }]}
             onPress={() => router.replace('/(main)/home')}
             activeOpacity={0.85}
           >
-            <Text style={styles.emptyCtaText}>홈으로 가기</Text>
+            <Text style={styles.emptyCtaText}>{t('recommendationList.empty.goHome')}</Text>
           </TouchableOpacity>
         </View>
       ) : loading ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={catStyle.color} />
           <Text style={styles.loadingText}>
-            {selectedChild?.name ?? '아이'}에 맞는 {category} 추천을 불러오고 있어요...
+            {t('recommendationList.loading', {
+              name: selectedChild?.name ?? t('recommendationList.defaultChildName'),
+              category,
+            })}
           </Text>
         </View>
       ) : items.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyEmoji}>{catStyle.emoji}</Text>
-          <Text style={styles.emptyText}>아직 준비 중이에요</Text>
-          <Text style={styles.emptySubText}>곧 {category} 추천이 추가됩니다</Text>
+          <Text style={styles.emptyText}>{t('recommendationList.empty.preparingTitle')}</Text>
+          <Text style={styles.emptySubText}>
+            {t('recommendationList.empty.preparingSubtitle', { category })}
+          </Text>
         </View>
       ) : (
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -162,7 +169,7 @@ export default function RecommendationListScreen() {
                 {!isExpanded && (
                   <View style={styles.tapHintRow}>
                     <Text style={[styles.tapHintText, { color: catStyle.color }]}>
-                      {'자세히 보기'}
+                      {t('recommendationList.tapHint')}
                     </Text>
                     <Text style={[styles.tapHintArrow, { color: catStyle.color }]}>{'>'}</Text>
                   </View>
@@ -175,7 +182,7 @@ export default function RecommendationListScreen() {
                     {item.reasons.length > 0 && (
                       <View style={styles.section}>
                         <Text style={[styles.sectionLabel, { color: catStyle.color }]}>
-                          {'알아두세요'}
+                          {t('recommendationList.section.reasons')}
                         </Text>
                         {item.reasons.map((r, rIdx) => (
                           <View key={rIdx} style={styles.bulletRow}>
@@ -190,7 +197,7 @@ export default function RecommendationListScreen() {
                     {item.actions.length > 0 && (
                       <View style={styles.section}>
                         <Text style={[styles.sectionLabel, { color: catStyle.color }]}>
-                          {'실천 방법'}
+                          {t('recommendationList.section.actions')}
                         </Text>
                         {item.actions.map((a, aIdx) => (
                           <View key={aIdx} style={styles.stepRow}>
@@ -207,7 +214,7 @@ export default function RecommendationListScreen() {
                     {item.personalNote ? (
                       <View style={[styles.noteBox, { backgroundColor: catStyle.bg }]}>
                         <Text style={[styles.noteLabel, { color: catStyle.color }]}>
-                          {'우리 아이 맞춤 조언'}
+                          {t('recommendationList.personalNoteLabel')}
                         </Text>
                         <Text style={styles.noteText}>{item.personalNote}</Text>
                       </View>
@@ -220,7 +227,7 @@ export default function RecommendationListScreen() {
                       onPress={() => setExpandedIdx(null)}
                     >
                       <Text style={[styles.collapseBtnText, { color: catStyle.color }]}>
-                        {'접기 \u2303'}
+                        {`${t('common.collapse')} \u2303`}
                       </Text>
                     </TouchableOpacity>
                   </View>

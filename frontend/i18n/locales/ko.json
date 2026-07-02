@@ -3621,5 +3621,250 @@
     "poopAnalysis": "대변 분석",
     "cryAnalysis": "울음 분석",
     "noPermissionPlaceholder": "상담 사용 권한이 없어요 (열람 전용)"
+  },
+  "momLocationSetup": {
+    "title": "위치 등록",
+    "introTitle": "내 동네 맘들 만나기",
+    "introSub": "위치를 등록하면 5km / 10km / 50km / 100km 반경의 맘들과 매칭됩니다.\n위치는 절대 다른 사용자에게 노출되지 않고, 거리 계산에만 사용해요.",
+    "gpsBtn": "현재 위치 자동 입력",
+    "latLabel": "위도 (latitude)",
+    "lngLabel": "경도 (longitude)",
+    "labelLabel": "표시 이름 (선택)",
+    "labelPlaceholder": "서울특별시 중구",
+    "sameAgeMatch": {
+      "title": "동갑 매칭",
+      "withYear": "우리 아이 {{year}}년생 → 같은 {{year}}년생 맘들과 매칭",
+      "noYear": "선택된 자녀의 출생연도 정보가 없어요. 자녀 등록·생년월일을 먼저 설정해주세요."
+    },
+    "removeSavedLocation": "저장된 위치 삭제",
+    "permissionAlert": {
+      "title": "위치 권한 필요",
+      "desc": "위치 권한이 거부됐어요. 설정에서 권한을 켜거나 수동으로 입력해주세요."
+    },
+    "gpsFailAlert": {
+      "title": "GPS 실패",
+      "desc": "위치를 가져올 수 없습니다. 수동으로 입력하거나 설정을 확인해주세요."
+    },
+    "coordErrorAlert": {
+      "title": "좌표 오류",
+      "desc": "위도(-90~90)·경도(-180~180)를 올바르게 입력해주세요."
+    },
+    "saveCompleteAlert": {
+      "title": "저장 완료",
+      "desc": "위치가 저장됐어요. 맘스톡에서 반경 검색이 활성화됩니다."
+    },
+    "saveFailAlert": {
+      "title": "저장 실패",
+      "desc": "잠시 후 다시 시도해주세요."
+    },
+    "removeConfirmAlert": {
+      "title": "위치 삭제",
+      "desc": "저장된 위치를 삭제할까요? 반경 검색이 비활성화됩니다."
+    },
+    "removeCompleteAlert": "삭제 완료",
+    "removeFailAlert": "삭제 실패"
+  },
+  "profile": {
+    "title": "마이페이지",
+    "settingsLabel": "설정",
+    "deleteChildAlert": {
+      "title": "아이 삭제",
+      "desc": "{{name}}의 모든 데이터가 영구적으로 삭제됩니다.\n정말 삭제하시겠습니까?",
+      "successDesc": "아이 정보가 삭제되었습니다.",
+      "failDesc": "아이 삭제에 실패했습니다."
+    },
+    "logoutAlert": {
+      "title": "로그아웃",
+      "desc": "정말 로그아웃 하시겠습니까?"
+    },
+    "deleteAccountAlert": {
+      "title": "계정 삭제",
+      "desc": "정말 계정을 삭제하시겠습니까?\n\n모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.",
+      "finalConfirmTitle": "최종 확인",
+      "finalConfirmDesc": "이 작업은 되돌릴 수 없습니다.",
+      "confirmDeleteBtn": "삭제 확인",
+      "failDesc": "계정 삭제에 실패했습니다."
+    },
+    "changePasswordAlert": {
+      "title": "비밀번호 변경",
+      "currentPwPrompt": "현재 비밀번호를 입력하세요",
+      "newPwPrompt": "새 비밀번호를 입력하세요 (8자 이상)",
+      "tooShort": "새 비밀번호는 8자 이상이어야 합니다",
+      "successDesc": "비밀번호가 변경되었습니다",
+      "failDesc": "비밀번호 변경에 실패했습니다."
+    }
+  },
+  "poopAnalyzer": {
+    "screenTitle": "대변 분석기",
+    "guideTitle": "사진으로 대변을 분석해요",
+    "guideDesc": "아이의 대변 사진을 촬영하거나 갤러리에서 선택하면\nAI가 색상, 형태, 상태를 분석해 드려요.",
+    "photoTipTitle": "📸 잘 나오는 사진 팁",
+    "photoTipText": "• 밝은 곳에서 또렷하게 (그림자·흔들림 X)\n• 대변이 화면에 가득 차게 가까이서\n• 기저귀·변기 배경은 단순하게",
+    "takePhoto": "카메라 촬영",
+    "selectFromGallery": "갤러리 선택",
+    "analyzing": "AI 분석 중...",
+    "analyzeButton": "사진 분석하기",
+    "selectFileFirstButton": "사진을 먼저 선택해주세요",
+    "mainDisclaimer": "이 분석은 의학적 진단을 대체하지 않습니다. 걱정되는 증상이 있으면 반드시 소아과 전문의와 상담하세요.",
+    "citation": {
+      "source1": "대한소아과학회 어린이 건강정보 (영유아 배변)",
+      "source2": "질병관리청 국가건강정보포털"
+    },
+    "hospitalCheckTitle": "병원 방문을 권장합니다",
+    "hospitalCheckDesc": "분석 결과 주의가 필요한 징후가 발견되었습니다. 소아과를 방문해주세요.",
+    "analysisResultTitle": "분석 결과",
+    "possibilitiesTitle": "가능성 분석 (참고 추정)",
+    "recommendationsTitle": "권장 조치",
+    "usageSummary": "이번 달 분석 {{used}}/{{limit}}회 사용 (남은 횟수: {{remaining}}회)",
+    "disclaimer": "이 분석은 참고용 추정 정보이며, 진단이나 치료를 목적으로 하는 의료행위가 아닙니다. 정확한 진단은 소아과 의사와 상담하세요.",
+    "analyzeAgain": "다시 분석하기",
+    "historyDefaultSummary": "대변 분석 완료",
+    "alert": {
+      "postpartumOnly": "출산 후 이용 가능합니다.",
+      "infantOnly": "대변 분석은 영유아(0~72개월) 전용 기능이에요.",
+      "cameraPermissionTitle": "카메라 권한 필요",
+      "cameraPermissionMessage": "사진을 촬영하려면 카메라 권한이 필요해요. 설정 > 아맞다에서 허용해주세요.",
+      "selectPhotoFirst": "먼저 사진을 선택해주세요.",
+      "selectChildFirst": "먼저 아이를 등록하거나 선택해주세요.",
+      "viewOnlyTitle": "열람 전용",
+      "viewOnlyMessage": "분석 기능 사용 권한이 없어요.\n보호자에게 \"상담이모 사용\" 권한을 요청해주세요.",
+      "monthlyLimitReached": "이번 달 분석 횟수를 모두 사용했습니다.",
+      "analysisFailed": "분석에 실패했습니다. 다시 시도해주세요."
+    }
+  },
+  "editProfile": {
+    "screenTitle": "내 정보 수정",
+    "accountInfo": "계정 정보",
+    "email": "이메일",
+    "loginMethod": "로그인 방식",
+    "emailProvider": "이메일",
+    "nickname": "별명",
+    "nicknameSubtitle": "앱에서 표시되는 이름이에요 (2~10자)",
+    "nicknamePlaceholder": "별명 입력",
+    "parentRole": "부모 역할",
+    "parentRoleSubtitle": "상담이모가 호칭에 사용해요",
+    "setPasswordTitle": "비밀번호 설정",
+    "changePasswordTitle": "비밀번호 변경",
+    "setUp": "설정하기",
+    "socialUserPasswordHint": "소셜 로그인 계정입니다. 비밀번호를 설정하면 이메일로도 로그인할 수 있어요.",
+    "currentPassword": "현재 비밀번호",
+    "currentPasswordPlaceholder": "현재 비밀번호 입력",
+    "password": "비밀번호",
+    "newPassword": "새 비밀번호",
+    "newPasswordPlaceholder": "6자 이상 입력",
+    "confirmPassword": "비밀번호 확인",
+    "confirmPasswordPlaceholder": "비밀번호 다시 입력",
+    "passwordMismatchHint": "비밀번호가 일치하지 않아요",
+    "passwordMatchHint": "비밀번호가 일치합니다",
+    "processing": "처리 중...",
+    "setComplete": "설정 완료",
+    "changeComplete": "변경 완료",
+    "alert": {
+      "loadProfileFailed": "프로필 정보를 불러오지 못했어요.",
+      "enterNickname": "별명을 입력해주세요",
+      "nicknameLength": "별명은 2~10자로 입력해주세요",
+      "nicknameChanged": "별명이 변경되었습니다",
+      "nicknameChangeFailed": "별명 변경에 실패했습니다. 다시 시도해주세요.",
+      "roleSaveFailed": "역할 저장에 실패했어요. 다시 시도해주세요.",
+      "passwordTooShort": "새 비밀번호는 6자 이상이어야 합니다",
+      "passwordMismatch": "새 비밀번호가 일치하지 않습니다",
+      "passwordSet": "비밀번호가 설정되었습니다",
+      "passwordSetFailed": "비밀번호 설정에 실패했습니다.",
+      "enterCurrentPassword": "현재 비밀번호를 입력해주세요",
+      "passwordChanged": "비밀번호가 변경되었습니다",
+      "passwordChangeFailed": "비밀번호 변경에 실패했습니다.\n현재 비밀번호를 확인해주세요."
+    }
+  },
+  "recommendations": {
+    "headerTitle": "맞춤 추천",
+    "category": {
+      "food": {
+        "label": "음식 추천",
+        "description": "기질에 맞는 영양 식단과 레시피"
+      },
+      "lifestyle": {
+        "label": "생활습관",
+        "description": "수면, 위생, 루틴 등 생활 가이드"
+      },
+      "academy": {
+        "label": "학원 추천",
+        "description": "기질과 발달에 맞는 교육 활동"
+      },
+      "playLearning": {
+        "label": "놀이학습",
+        "description": "집에서 할 수 있는 놀이와 활동"
+      }
+    },
+    "pregnancyCategory": {
+      "food": {
+        "label": "임산부 음식",
+        "early": "입덧 완화 식단과 엽산 식품",
+        "mid": "철분·칼슘 풍부한 임산부 영양 식단",
+        "late": "체중 관리와 부종 완화 식단"
+      },
+      "exercise": {
+        "label": "운동·요가",
+        "early": "가벼운 산책과 스트레칭",
+        "mid": "임산부 요가와 케겔 운동",
+        "late": "분만 호흡법과 출산 준비 운동"
+      },
+      "prenatal": {
+        "label": "태교·책",
+        "early": "태교 시작과 초기 음악·도서",
+        "mid": "집중 태교와 추천 그림책",
+        "late": "아기와 교감하는 태교 마무리"
+      },
+      "supply": {
+        "label": "출산용품",
+        "early": "초기 임산부 필수 준비물",
+        "mid": "아기방·기저귀·옷 준비 가이드",
+        "late": "출산가방과 신생아 필수품"
+      }
+    },
+    "trimesterBadge": {
+      "early": "초기 (1~13주)",
+      "mid": "중기 (14~27주)",
+      "late": "후기 (28주~)"
+    },
+    "introTitle": {
+      "pregnantWithName": "{{name}} 엄마를 위한 맞춤 추천",
+      "childWithName": "{{name}}을(를) 위한 맞춤 추천",
+      "default": "우리 아이 맞춤 추천"
+    },
+    "introDesc": {
+      "pregnant": "현재 {{week}}주차 · {{badge}}\n주차에 맞는 임산부 가이드를 확인해보세요",
+      "default": "아이의 기질과 발달 단계에 맞춘\n실천 가능한 추천을 확인해보세요"
+    }
+  },
+  "recommendationList": {
+    "defaultChildName": "아이",
+    "empty": {
+      "registerChildTitle": "아이를 먼저 등록해주세요",
+      "registerChildSubtitle": "아이 정보를 등록하면 맞춤 추천을 받을 수 있어요",
+      "goHome": "홈으로 가기",
+      "preparingTitle": "아직 준비 중이에요",
+      "preparingSubtitle": "곧 {{category}} 추천이 추가됩니다"
+    },
+    "loading": "{{name}}에 맞는 {{category}} 추천을 불러오고 있어요...",
+    "tapHint": "자세히 보기",
+    "section": {
+      "reasons": "알아두세요",
+      "actions": "실천 방법"
+    },
+    "personalNoteLabel": "우리 아이 맞춤 조언"
+  },
+  "recommendationDetail": {
+    "defaultChildName": "아이",
+    "loading": "{{name}}에게 맞는 정보를 AI가 준비하고 있어요...",
+    "loadFailed": "정보를 불러오는데 실패했어요. 다시 시도해주세요.",
+    "contentPreparing": "관련 정보를 준비하고 있어요.",
+    "section": {
+      "reasons": "알아두세요",
+      "actions": "실천 방법",
+      "personalNote": "맞춤 조언"
+    },
+    "askMore": "AI에게 더 물어보기",
+    "citationNote": "AI가 생성한 참고용 추천입니다. 건강·식이 관련 결정은 소아과 의사 등 전문가와 상담하세요.",
+    "citationSourceFoodSafety": "식품의약품안전처 식품안전나라"
   }
 }

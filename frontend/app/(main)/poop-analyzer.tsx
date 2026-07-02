@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useChildStore } from '../../stores/childStore';
 import { canDo } from '../../features/coparenting/permissions';
@@ -80,23 +81,24 @@ function resolveLikelihoodConfig(likelihood: string): { color: string; bg: strin
 export default function PoopAnalyzerScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
 
   // 연령 제한: 영아+유아(0-72개월)만 접근 가능 (임신부 모드는 조용히 뒤로)
   useEffect(() => {
     if (selectedChild?.isPregnant) {
-      Alert.alert('안내', '출산 후 이용 가능합니다.', [
-        { text: '확인', onPress: () => router.back() },
+      Alert.alert(t('common.notice'), t('poopAnalyzer.alert.postpartumOnly'), [
+        { text: t('common.confirm'), onPress: () => router.back() },
       ]);
       return;
     }
     const ageGroup = selectedChild?.ageInfo?.group ?? 'infant';
     if (!isScreenAvailable('poop-analyzer', ageGroup)) {
-      Alert.alert('안내', '대변 분석은 영유아(0~72개월) 전용 기능이에요.', [
-        { text: '확인', onPress: () => router.back() },
+      Alert.alert(t('common.notice'), t('poopAnalyzer.alert.infantOnly'), [
+        { text: t('common.confirm'), onPress: () => router.back() },
       ]);
     }
-  }, [selectedChild, router]);
+  }, [selectedChild, router, t]);
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -125,7 +127,7 @@ export default function PoopAnalyzerScreen() {
       const ImagePicker = await import('expo-image-picker');
       const permResult = await ImagePicker.requestCameraPermissionsAsync();
       if (!permResult.granted) {
-        Alert.alert('카메라 권한 필요', '사진을 촬영하려면 카메라 권한이 필요해요. 설정 > 아맞다에서 허용해주세요.');
+        Alert.alert(t('poopAnalyzer.alert.cameraPermissionTitle'), t('poopAnalyzer.alert.cameraPermissionMessage'));
         return;
       }
       const pickerResult = await ImagePicker.launchCameraAsync({
@@ -138,22 +140,22 @@ export default function PoopAnalyzerScreen() {
         setResult(null);
       }
     } catch { /* not available */ }
-  }, []);
+  }, [t]);
 
   const handleAnalyze = useCallback(async () => {
     if (!photoUri) {
-      Alert.alert('안내', '먼저 사진을 선택해주세요.');
+      Alert.alert(t('common.notice'), t('poopAnalyzer.alert.selectPhotoFirst'));
       return;
     }
     if (!selectedChild) {
-      Alert.alert('안내', '먼저 아이를 등록하거나 선택해주세요.');
+      Alert.alert(t('common.notice'), t('poopAnalyzer.alert.selectChildFirst'));
       return;
     }
     setAnalyzing(true);
     try {
       // 공동육아: AI 분석은 useCoaching 권한 필요 (열람 전용 멤버 차단)
       if (!(await canDo(selectedChild.id, 'useCoaching'))) {
-        Alert.alert('열람 전용', '분석 기능 사용 권한이 없어요.\n보호자에게 "상담이모 사용" 권한을 요청해주세요.');
+        Alert.alert(t('poopAnalyzer.alert.viewOnlyTitle'), t('poopAnalyzer.alert.viewOnlyMessage'));
         return;
       }
       const base64 = await FileSystem.readAsStringAsync(photoUri, {
@@ -171,7 +173,7 @@ export default function PoopAnalyzerScreen() {
         setResult(data);
         void saveAnalysisHistory({
           type: 'poop',
-          summary: data.analysis?.slice(0, 80) ?? '대변 분석 완료',
+          summary: data.analysis?.slice(0, 80) ?? t('poopAnalyzer.historyDefaultSummary'),
           details: data.recommendations?.join(' · '),
           childId: selectedChild.id,
           childName: selectedChild.name,
@@ -192,7 +194,7 @@ export default function PoopAnalyzerScreen() {
         } else {
           const usage = axiosErr.response.data?.usage;
           setResult({
-            analysis: axiosErr.response.data?.error ?? '이번 달 분석 횟수를 모두 사용했습니다.',
+            analysis: axiosErr.response.data?.error ?? t('poopAnalyzer.alert.monthlyLimitReached'),
             possibilities: [],
             recommendations: [],
             needsDoctor: false,
@@ -201,7 +203,7 @@ export default function PoopAnalyzerScreen() {
         }
       } else {
         setResult({
-          analysis: '분석에 실패했습니다. 다시 시도해주세요.',
+          analysis: t('poopAnalyzer.alert.analysisFailed'),
           possibilities: [],
           recommendations: [],
           needsDoctor: false,
@@ -210,7 +212,7 @@ export default function PoopAnalyzerScreen() {
     } finally {
       setAnalyzing(false);
     }
-  }, [photoUri, selectedChild]);
+  }, [photoUri, selectedChild, t]);
 
   const handleReset = useCallback(() => {
     setResult(null);
@@ -220,7 +222,7 @@ export default function PoopAnalyzerScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScreenHeader title="대변 분석기" />
+      <ScreenHeader title={t('poopAnalyzer.screenTitle')} />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {result ? (
@@ -230,16 +232,16 @@ export default function PoopAnalyzerScreen() {
             {/* 안내 카드 */}
             <View style={styles.guideCard}>
               <Image source={require('../../assets/mascot-thinking.png')} style={styles.guideImage} resizeMode="contain" />
-              <Text style={styles.guideTitle}>{'사진으로 대변을 분석해요'}</Text>
+              <Text style={styles.guideTitle}>{t('poopAnalyzer.guideTitle')}</Text>
               <Text style={styles.guideDesc}>
-                {'아이의 대변 사진을 촬영하거나 갤러리에서 선택하면\nAI가 색상, 형태, 상태를 분석해 드려요.'}
+                {t('poopAnalyzer.guideDesc')}
               </Text>
             </View>
 
             {/* 촬영 팁 */}
             <View style={{ backgroundColor: '#FFF8F0', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#F0E0CC' }}>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#C2703B', marginBottom: 6 }}>{'📸 잘 나오는 사진 팁'}</Text>
-              <Text style={{ fontSize: 12.5, color: '#6B6B73', lineHeight: 19 }}>{'• 밝은 곳에서 또렷하게 (그림자·흔들림 X)\n• 대변이 화면에 가득 차게 가까이서\n• 기저귀·변기 배경은 단순하게'}</Text>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#C2703B', marginBottom: 6 }}>{t('poopAnalyzer.photoTipTitle')}</Text>
+              <Text style={{ fontSize: 12.5, color: '#6B6B73', lineHeight: 19 }}>{t('poopAnalyzer.photoTipText')}</Text>
             </View>
 
             {/* 사진 영역 */}
@@ -258,11 +260,11 @@ export default function PoopAnalyzerScreen() {
               <View style={styles.photoButtonRow}>
                 <TouchableOpacity style={styles.photoBtn} onPress={handleTakePhoto} activeOpacity={0.7}>
                   <Image source={IC_CAMERA} style={styles.photoBtnIconImg} resizeMode="contain" />
-                  <Text style={styles.photoBtnText}>{'카메라 촬영'}</Text>
+                  <Text style={styles.photoBtnText}>{t('poopAnalyzer.takePhoto')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.photoBtn} onPress={handlePickImage} activeOpacity={0.7}>
                   <Image source={IC_CAMERA} style={styles.photoBtnIconImg} resizeMode="contain" />
-                  <Text style={styles.photoBtnText}>{'갤러리 선택'}</Text>
+                  <Text style={styles.photoBtnText}>{t('poopAnalyzer.selectFromGallery')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -277,25 +279,25 @@ export default function PoopAnalyzerScreen() {
               {analyzing ? (
                 <View style={styles.analyzingRow}>
                   <ActivityIndicator size="small" color={COLORS.white} />
-                  <Text style={styles.analyzeBtnText}>{'AI 분석 중...'}</Text>
+                  <Text style={styles.analyzeBtnText}>{t('poopAnalyzer.analyzing')}</Text>
                 </View>
               ) : (
                 <Text style={styles.analyzeBtnText}>
-                  {photoUri ? '사진 분석하기' : '사진을 먼저 선택해주세요'}
+                  {photoUri ? t('poopAnalyzer.analyzeButton') : t('poopAnalyzer.selectFileFirstButton')}
                 </Text>
               )}
             </TouchableOpacity>
 
             <View style={styles.disclaimerBox}>
               <Text style={styles.disclaimerText}>
-                {'이 분석은 의학적 진단을 대체하지 않습니다. 걱정되는 증상이 있으면 반드시 소아과 전문의와 상담하세요.'}
+                {t('poopAnalyzer.mainDisclaimer')}
               </Text>
             </View>
 
             <MedicalCitation
               sources={[
-                { label: '대한소아과학회 어린이 건강정보 (영유아 배변)', url: 'https://www.pediatrics.or.kr' },
-                { label: '질병관리청 국가건강정보포털', url: 'https://health.kdca.go.kr' },
+                { label: t('poopAnalyzer.citation.source1'), url: 'https://www.pediatrics.or.kr' },
+                { label: t('poopAnalyzer.citation.source2'), url: 'https://health.kdca.go.kr' },
               ]}
             />
           </>
@@ -309,15 +311,16 @@ export default function PoopAnalyzerScreen() {
 
 /* ── 결과 화면 ── */
 function ResultView({ result, onReset }: { result: AnalysisResult; onReset: () => void }) {
+  const { t } = useTranslation();
   return (
     <View style={resultStyles.container}>
       {result.needsDoctor && (
         <View style={resultStyles.urgentBanner}>
           <Image source={IC_REDFLAG} style={resultStyles.urgentIconImg} resizeMode="contain" />
           <View style={resultStyles.urgentTextWrap}>
-            <Text style={resultStyles.urgentTitle}>{'병원 방문을 권장합니다'}</Text>
+            <Text style={resultStyles.urgentTitle}>{t('poopAnalyzer.hospitalCheckTitle')}</Text>
             <Text style={resultStyles.urgentDesc}>
-              {'분석 결과 주의가 필요한 징후가 발견되었습니다. 소아과를 방문해주세요.'}
+              {t('poopAnalyzer.hospitalCheckDesc')}
             </Text>
           </View>
         </View>
@@ -325,14 +328,14 @@ function ResultView({ result, onReset }: { result: AnalysisResult; onReset: () =
 
       {/* 분석 소견 */}
       <View style={resultStyles.analysisCard}>
-        <Text style={resultStyles.analysisTitle}>{'분석 결과'}</Text>
+        <Text style={resultStyles.analysisTitle}>{t('poopAnalyzer.analysisResultTitle')}</Text>
         <Text style={resultStyles.analysisText}>{result.analysis}</Text>
       </View>
 
       {/* 가능성 */}
       {result.possibilities.length > 0 && (
         <View style={resultStyles.sectionCard}>
-          <Text style={resultStyles.sectionTitle}>{'가능성 분석 (참고 추정)'}</Text>
+          <Text style={resultStyles.sectionTitle}>{t('poopAnalyzer.possibilitiesTitle')}</Text>
           {result.possibilities.map((p, i) => {
             const cfg = resolveLikelihoodConfig(p.likelihood);
             return (
@@ -350,7 +353,7 @@ function ResultView({ result, onReset }: { result: AnalysisResult; onReset: () =
       {/* 권장 조치 */}
       {result.recommendations.length > 0 && (
         <View style={[resultStyles.sectionCard, { backgroundColor: '#F0FAF8' }]}>
-          <Text style={resultStyles.sectionTitle}>{'권장 조치'}</Text>
+          <Text style={resultStyles.sectionTitle}>{t('poopAnalyzer.recommendationsTitle')}</Text>
           {result.recommendations.map((rec, i) => (
             <View key={i} style={resultStyles.bulletRow}>
               <Text style={resultStyles.bulletNum}>{`${i + 1}`}</Text>
@@ -363,19 +366,23 @@ function ResultView({ result, onReset }: { result: AnalysisResult; onReset: () =
       {result.usage && (
         <View style={resultStyles.usageBox}>
           <Text style={resultStyles.usageText}>
-            {'이번 달 분석 '}{result.usage.used}{'/'}{result.usage.limit}{'회 사용 (남은 횟수: '}{result.usage.remaining}{'회)'}
+            {t('poopAnalyzer.usageSummary', {
+              used: result.usage.used,
+              limit: result.usage.limit,
+              remaining: result.usage.remaining,
+            })}
           </Text>
         </View>
       )}
 
       <View style={resultStyles.disclaimerBox}>
         <Text style={resultStyles.disclaimerText}>
-          {'이 분석은 참고용 추정 정보이며, 진단이나 치료를 목적으로 하는 의료행위가 아닙니다. 정확한 진단은 소아과 의사와 상담하세요.'}
+          {t('poopAnalyzer.disclaimer')}
         </Text>
       </View>
 
       <TouchableOpacity style={resultStyles.resetBtn} onPress={onReset} activeOpacity={0.7}>
-        <Text style={resultStyles.resetBtnText}>{'다시 분석하기'}</Text>
+        <Text style={resultStyles.resetBtnText}>{t('poopAnalyzer.analyzeAgain')}</Text>
       </TouchableOpacity>
     </View>
   );

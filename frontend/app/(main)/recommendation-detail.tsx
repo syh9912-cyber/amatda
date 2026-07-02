@@ -4,6 +4,7 @@ import {
   TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useChildStore } from '../../stores/childStore';
 import { recommendationApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
@@ -70,6 +71,7 @@ function parseAIResponse(text: string): ParsedSection[] {
 /* ------------------------------------------------------------------ */
 
 export default function RecommendationDetailScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams<{
     title: string;
@@ -114,20 +116,20 @@ export default function RecommendationDetailScreen() {
       const parts: string[] = [];
       if (answer) parts.push(answer);
       if (reasons.length > 0) {
-        parts.push('\n**알아두세요**');
+        parts.push(`\n**${t('recommendationDetail.section.reasons')}**`);
         reasons.forEach((r) => parts.push(`- ${r}`));
       }
       if (actions.length > 0) {
-        parts.push('\n**실천 방법**');
+        parts.push(`\n**${t('recommendationDetail.section.actions')}**`);
         actions.forEach((a) => parts.push(`- ${a}`));
       }
       if (personalNote) {
-        parts.push(`\n**맞춤 조언**\n${personalNote}`);
+        parts.push(`\n**${t('recommendationDetail.section.personalNote')}**\n${personalNote}`);
       }
 
-      setContent(parts.join('\n') || '관련 정보를 준비하고 있어요.');
+      setContent(parts.join('\n') || t('recommendationDetail.contentPreparing'));
     } catch {
-      setErrorMsg('정보를 불러오는데 실패했어요. 다시 시도해주세요.');
+      setErrorMsg(t('recommendationDetail.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -160,7 +162,9 @@ export default function RecommendationDetailScreen() {
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={styles.loadingText}>
-            {selectedChild?.name ?? '아이'}에게 맞는 정보를 AI가 준비하고 있어요...
+            {t('recommendationDetail.loading', {
+              name: selectedChild?.name ?? t('recommendationDetail.defaultChildName'),
+            })}
           </Text>
         </View>
       ) : errorMsg ? (
@@ -168,7 +172,7 @@ export default function RecommendationDetailScreen() {
           <Text style={styles.errorEmoji}>{'😥'}</Text>
           <Text style={styles.errorText}>{errorMsg}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={fetchContent}>
-            <Text style={styles.retryText}>다시 시도</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -202,14 +206,14 @@ export default function RecommendationDetailScreen() {
             onPress={() => router.push('/(main)/chatbot' as never)}
             activeOpacity={0.7}
           >
-            <Text style={styles.askMoreText}>AI에게 더 물어보기</Text>
+            <Text style={styles.askMoreText}>{t('recommendationDetail.askMore')}</Text>
           </TouchableOpacity>
 
           <MedicalCitation
-            note="AI가 생성한 참고용 추천입니다. 건강·식이 관련 결정은 소아과 의사 등 전문가와 상담하세요."
+            note={t('recommendationDetail.citationNote')}
             sources={[
-              { label: '질병관리청 국가건강정보포털', url: 'https://health.kdca.go.kr' },
-              { label: '식품의약품안전처 식품안전나라', url: 'https://www.foodsafetykorea.go.kr' },
+              { label: t('chatbot.medicalSource.kdca'), url: 'https://health.kdca.go.kr' },
+              { label: t('recommendationDetail.citationSourceFoodSafety'), url: 'https://www.foodsafetykorea.go.kr' },
             ]}
           />
         </ScrollView>

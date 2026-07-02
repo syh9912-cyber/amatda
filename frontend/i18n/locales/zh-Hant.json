@@ -3621,5 +3621,250 @@
     "poopAnalysis": "大便分析",
     "cryAnalysis": "哭聲分析",
     "noPermissionPlaceholder": "您沒有使用諮詢功能的權限(僅供檢視)"
+  },
+  "momLocationSetup": {
+    "title": "位置登記",
+    "introTitle": "認識附近的媽媽們",
+    "introSub": "登記位置後，將與5km／10km／50km／100km範圍內的媽媽們配對。\n位置絕不會顯示給其他使用者，僅用於計算距離。",
+    "gpsBtn": "自動輸入目前位置",
+    "latLabel": "緯度（latitude）",
+    "lngLabel": "經度（longitude）",
+    "labelLabel": "顯示名稱（選填）",
+    "labelPlaceholder": "首爾特別市中區",
+    "sameAgeMatch": {
+      "title": "同齡配對",
+      "withYear": "我家孩子{{year}}年出生 → 與同為{{year}}年出生的媽媽們配對",
+      "noYear": "所選孩子沒有出生年份資訊。請先完成孩子的註冊與出生年月日設定。"
+    },
+    "removeSavedLocation": "刪除已儲存的位置",
+    "permissionAlert": {
+      "title": "需要位置權限",
+      "desc": "位置權限已被拒絕。請至設定開啟權限，或手動輸入位置。"
+    },
+    "gpsFailAlert": {
+      "title": "GPS失敗",
+      "desc": "無法取得位置。請手動輸入或檢查設定。"
+    },
+    "coordErrorAlert": {
+      "title": "座標錯誤",
+      "desc": "請正確輸入緯度（-90~90）與經度（-180~180）。"
+    },
+    "saveCompleteAlert": {
+      "title": "儲存完成",
+      "desc": "位置已儲存。將在媽媽社群啟用範圍搜尋。"
+    },
+    "saveFailAlert": {
+      "title": "儲存失敗",
+      "desc": "請稍後再試一次。"
+    },
+    "removeConfirmAlert": {
+      "title": "刪除位置",
+      "desc": "是否要刪除已儲存的位置？將停用範圍搜尋。"
+    },
+    "removeCompleteAlert": "刪除完成",
+    "removeFailAlert": "刪除失敗"
+  },
+  "profile": {
+    "title": "我的頁面",
+    "settingsLabel": "設定",
+    "deleteChildAlert": {
+      "title": "刪除孩子",
+      "desc": "{{name}}的所有資料將被永久刪除。\n確定要刪除嗎？",
+      "successDesc": "孩子的資訊已刪除。",
+      "failDesc": "刪除孩子失敗。"
+    },
+    "logoutAlert": {
+      "title": "登出",
+      "desc": "確定要登出嗎？"
+    },
+    "deleteAccountAlert": {
+      "title": "刪除帳號",
+      "desc": "確定要刪除帳號嗎？\n\n所有資料將被永久刪除且無法復原。",
+      "finalConfirmTitle": "最終確認",
+      "finalConfirmDesc": "此操作無法復原。",
+      "confirmDeleteBtn": "確認刪除",
+      "failDesc": "刪除帳號失敗。"
+    },
+    "changePasswordAlert": {
+      "title": "變更密碼",
+      "currentPwPrompt": "請輸入目前的密碼",
+      "newPwPrompt": "請輸入新密碼（至少8個字元）",
+      "tooShort": "新密碼須至少8個字元",
+      "successDesc": "密碼已變更",
+      "failDesc": "變更密碼失敗。"
+    }
+  },
+  "poopAnalyzer": {
+    "screenTitle": "大便分析器",
+    "guideTitle": "透過照片分析大便",
+    "guideDesc": "拍攝孩子的大便照片，或從相簿中選擇，\nAI 將為您分析顏色、形狀、狀態。",
+    "photoTipTitle": "📸 拍出好照片的秘訣",
+    "photoTipText": "・在明亮處清楚拍攝（避免陰影、晃動）\n・靠近拍攝讓大便佔滿畫面\n・尿布、馬桶背景盡量單純",
+    "takePhoto": "拍照",
+    "selectFromGallery": "從相簿選擇",
+    "analyzing": "AI 分析中...",
+    "analyzeButton": "分析照片",
+    "selectFileFirstButton": "請先選擇照片",
+    "mainDisclaimer": "此分析無法取代醫學診斷。若有令人擔憂的症狀，請務必諮詢小兒科專科醫師。",
+    "citation": {
+      "source1": "大韓小兒科學會兒童健康資訊（嬰幼兒排便）",
+      "source2": "疾病管理廳國家健康資訊入口網站"
+    },
+    "hospitalCheckTitle": "建議前往醫院就診",
+    "hospitalCheckDesc": "分析結果發現需要留意的徵兆，請前往小兒科就診。",
+    "analysisResultTitle": "分析結果",
+    "possibilitiesTitle": "可能性分析（僅供參考推測）",
+    "recommendationsTitle": "建議處理方式",
+    "usageSummary": "本月分析已使用 {{used}}/{{limit}} 次（剩餘次數：{{remaining}} 次）",
+    "disclaimer": "此分析僅供參考推測，並非以診斷或治療為目的之醫療行為。準確診斷請諮詢小兒科醫師。",
+    "analyzeAgain": "重新分析",
+    "historyDefaultSummary": "大便分析完成",
+    "alert": {
+      "postpartumOnly": "產後即可使用。",
+      "infantOnly": "大便分析僅適用於嬰幼兒（0～72個月）。",
+      "cameraPermissionTitle": "需要相機權限",
+      "cameraPermissionMessage": "拍攝照片需要相機權限，請在設定 > 阿麻噠中允許。",
+      "selectPhotoFirst": "請先選擇照片。",
+      "selectChildFirst": "請先註冊或選擇孩子。",
+      "viewOnlyTitle": "僅供檢視",
+      "viewOnlyMessage": "您沒有使用分析功能的權限。\n請向監護人申請「使用諮詢功能」的權限。",
+      "monthlyLimitReached": "本月分析次數已全部用完。",
+      "analysisFailed": "分析失敗，請再試一次。"
+    }
+  },
+  "editProfile": {
+    "screenTitle": "編輯我的資訊",
+    "accountInfo": "帳號資訊",
+    "email": "電子郵件",
+    "loginMethod": "登入方式",
+    "emailProvider": "電子郵件",
+    "nickname": "暱稱",
+    "nicknameSubtitle": "顯示在應用程式中的名稱（2～10個字元）",
+    "nicknamePlaceholder": "輸入暱稱",
+    "parentRole": "家長角色",
+    "parentRoleSubtitle": "諮詢顧問將以此稱呼您",
+    "setPasswordTitle": "設定密碼",
+    "changePasswordTitle": "變更密碼",
+    "setUp": "設定",
+    "socialUserPasswordHint": "這是社群登入帳號。設定密碼後，也可以使用電子郵件登入。",
+    "currentPassword": "目前的密碼",
+    "currentPasswordPlaceholder": "輸入目前的密碼",
+    "password": "密碼",
+    "newPassword": "新密碼",
+    "newPasswordPlaceholder": "請輸入至少6個字元",
+    "confirmPassword": "確認密碼",
+    "confirmPasswordPlaceholder": "請再次輸入密碼",
+    "passwordMismatchHint": "密碼不一致",
+    "passwordMatchHint": "密碼一致",
+    "processing": "處理中...",
+    "setComplete": "設定完成",
+    "changeComplete": "變更完成",
+    "alert": {
+      "loadProfileFailed": "無法載入個人資料。",
+      "enterNickname": "請輸入暱稱",
+      "nicknameLength": "暱稱請輸入2～10個字元",
+      "nicknameChanged": "暱稱已變更",
+      "nicknameChangeFailed": "暱稱變更失敗，請再試一次。",
+      "roleSaveFailed": "角色儲存失敗，請再試一次。",
+      "passwordTooShort": "新密碼須至少6個字元",
+      "passwordMismatch": "新密碼不一致",
+      "passwordSet": "密碼已設定",
+      "passwordSetFailed": "密碼設定失敗。",
+      "enterCurrentPassword": "請輸入目前的密碼",
+      "passwordChanged": "密碼已變更",
+      "passwordChangeFailed": "密碼變更失敗。\n請確認目前的密碼。"
+    }
+  },
+  "recommendations": {
+    "headerTitle": "個人化推薦",
+    "category": {
+      "food": {
+        "label": "飲食推薦",
+        "description": "符合氣質的營養餐點與食譜"
+      },
+      "lifestyle": {
+        "label": "生活習慣",
+        "description": "睡眠、衛生、作息等生活指南"
+      },
+      "academy": {
+        "label": "補習班推薦",
+        "description": "符合氣質與發展的教育活動"
+      },
+      "playLearning": {
+        "label": "遊戲學習",
+        "description": "在家就能進行的遊戲與活動"
+      }
+    },
+    "pregnancyCategory": {
+      "food": {
+        "label": "孕婦飲食",
+        "early": "緩解孕吐的餐點與葉酸食品",
+        "mid": "富含鐵質、鈣質的孕婦營養餐點",
+        "late": "體重管理與消水腫飲食"
+      },
+      "exercise": {
+        "label": "運動．瑜伽",
+        "early": "輕鬆散步與伸展運動",
+        "mid": "孕婦瑜伽與凱格爾運動",
+        "late": "分娩呼吸法與待產準備運動"
+      },
+      "prenatal": {
+        "label": "胎教．書籍",
+        "early": "開始胎教與初期音樂．書籍",
+        "mid": "集中胎教與推薦繪本",
+        "late": "與寶寶交流的胎教收尾"
+      },
+      "supply": {
+        "label": "生產用品",
+        "early": "孕早期必備用品",
+        "mid": "嬰兒房、尿布、衣物準備指南",
+        "late": "待產包與新生兒必需品"
+      }
+    },
+    "trimesterBadge": {
+      "early": "初期（1～13週）",
+      "mid": "中期（14～27週）",
+      "late": "後期（28週～）"
+    },
+    "introTitle": {
+      "pregnantWithName": "給{{name}}媽媽的個人化推薦",
+      "childWithName": "給{{name}}的個人化推薦",
+      "default": "給孩子的個人化推薦"
+    },
+    "introDesc": {
+      "pregnant": "目前第{{week}}週．{{badge}}\n查看符合週數的孕婦指南",
+      "default": "查看符合孩子氣質與發展階段的\n實用推薦內容"
+    }
+  },
+  "recommendationList": {
+    "defaultChildName": "孩子",
+    "empty": {
+      "registerChildTitle": "請先註冊孩子資料",
+      "registerChildSubtitle": "註冊孩子資料後即可獲得個人化推薦",
+      "goHome": "回到首頁",
+      "preparingTitle": "尚在準備中",
+      "preparingSubtitle": "即將新增{{category}}推薦內容"
+    },
+    "loading": "正在載入符合{{name}}的{{category}}推薦...",
+    "tapHint": "查看詳情",
+    "section": {
+      "reasons": "請注意",
+      "actions": "實踐方法"
+    },
+    "personalNoteLabel": "給孩子的專屬建議"
+  },
+  "recommendationDetail": {
+    "defaultChildName": "孩子",
+    "loading": "AI正在為{{name}}準備適合的資訊...",
+    "loadFailed": "資訊載入失敗，請重新嘗試。",
+    "contentPreparing": "正在準備相關資訊。",
+    "section": {
+      "reasons": "請注意",
+      "actions": "實踐方法",
+      "personalNote": "專屬建議"
+    },
+    "askMore": "詢問AI更多內容",
+    "citationNote": "此為AI生成之參考推薦。健康、飲食相關決定請諮詢小兒科醫師等專業人士。",
+    "citationSourceFoodSafety": "食品藥物安全處食品安全入口網"
   }
 }

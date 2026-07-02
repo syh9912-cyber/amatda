@@ -14,6 +14,7 @@ import {
   Alert, ScrollView, TextInput, Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { momLocationApi } from '../../services/api';
 import { useChildStore } from '../../stores/childStore';
@@ -55,6 +56,7 @@ function getBabyBirthYear(child: { birthDate?: string | null; isPregnant?: boole
 }
 
 export default function MomLocationSetupScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const child = useChildStore((s) => s.selectedChild);
   const babyBirthYear = getBabyBirthYear(child);
@@ -93,7 +95,7 @@ export default function MomLocationSetupScreen() {
       const Location = await import('expo-location');
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('위치 권한 필요', '위치 권한이 거부됐어요. 설정에서 권한을 켜거나 수동으로 입력해주세요.');
+        Alert.alert(t('momLocationSetup.permissionAlert.title'), t('momLocationSetup.permissionAlert.desc'));
         return;
       }
       const pos = await Location.getCurrentPositionAsync({});
@@ -112,7 +114,7 @@ export default function MomLocationSetupScreen() {
         }
       } catch { /* ignore */ }
     } catch {
-      Alert.alert('GPS 실패', '위치를 가져올 수 없습니다. 수동으로 입력하거나 설정을 확인해주세요.');
+      Alert.alert(t('momLocationSetup.gpsFailAlert.title'), t('momLocationSetup.gpsFailAlert.desc'));
     } finally {
       setGpsLoading(false);
     }
@@ -122,7 +124,7 @@ export default function MomLocationSetupScreen() {
     const latNum = parseFloat(lat);
     const lngNum = parseFloat(lng);
     if (!isFinite(latNum) || !isFinite(lngNum) || latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) {
-      Alert.alert('좌표 오류', '위도(-90~90)·경도(-180~180)를 올바르게 입력해주세요.');
+      Alert.alert(t('momLocationSetup.coordErrorAlert.title'), t('momLocationSetup.coordErrorAlert.desc'));
       return;
     }
     setSaving(true);
@@ -133,27 +135,27 @@ export default function MomLocationSetupScreen() {
         locationLabel: label.trim(),
         babyBirthYear: babyBirthYear ?? undefined,
       });
-      Alert.alert('저장 완료', '위치가 저장됐어요. 맘스톡에서 반경 검색이 활성화됩니다.', [
-        { text: '확인', onPress: () => router.back() },
+      Alert.alert(t('momLocationSetup.saveCompleteAlert.title'), t('momLocationSetup.saveCompleteAlert.desc'), [
+        { text: t('common.confirm'), onPress: () => router.back() },
       ]);
     } catch {
-      Alert.alert('저장 실패', '잠시 후 다시 시도해주세요.');
+      Alert.alert(t('momLocationSetup.saveFailAlert.title'), t('momLocationSetup.saveFailAlert.desc'));
     } finally {
       setSaving(false);
     }
   };
 
   const onRemove = async () => {
-    Alert.alert('위치 삭제', '저장된 위치를 삭제할까요? 반경 검색이 비활성화됩니다.', [
-      { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: async () => {
+    Alert.alert(t('momLocationSetup.removeConfirmAlert.title'), t('momLocationSetup.removeConfirmAlert.desc'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('common.delete'), style: 'destructive', onPress: async () => {
         try {
           await momLocationApi.remove();
           setSaved({ hasLocation: false });
           setLat(''); setLng(''); setLabel('');
-          Alert.alert('삭제 완료');
+          Alert.alert(t('momLocationSetup.removeCompleteAlert'));
         } catch {
-          Alert.alert('삭제 실패');
+          Alert.alert(t('momLocationSetup.removeFailAlert'));
         }
       } },
     ]);
@@ -162,17 +164,16 @@ export default function MomLocationSetupScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScreenHeader title="위치 등록" />
+      <ScreenHeader title={t('momLocationSetup.title')} />
 
       {loading ? (
         <View style={styles.loadingWrap}><ActivityIndicator /></View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.intro}>
-            <Text style={styles.introTitle}>내 동네 맘들 만나기</Text>
+            <Text style={styles.introTitle}>{t('momLocationSetup.introTitle')}</Text>
             <Text style={styles.introSub}>
-              위치를 등록하면 5km / 10km / 50km / 100km 반경의 맘들과 매칭됩니다.{'\n'}
-              위치는 절대 다른 사용자에게 노출되지 않고, 거리 계산에만 사용해요.
+              {t('momLocationSetup.introSub')}
             </Text>
           </View>
 
@@ -187,14 +188,14 @@ export default function MomLocationSetupScreen() {
               <ActivityIndicator color="#FFF" />
             ) : (
               <>
-                <Text style={styles.gpsBtnText}>현재 위치 자동 입력</Text>
+                <Text style={styles.gpsBtnText}>{t('momLocationSetup.gpsBtn')}</Text>
               </>
             )}
           </TouchableOpacity>
 
           {/* 수동 입력 */}
           <View style={styles.formCard}>
-            <Text style={styles.formLabel}>위도 (latitude)</Text>
+            <Text style={styles.formLabel}>{t('momLocationSetup.latLabel')}</Text>
             <TextInput
               style={styles.input}
               keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'numeric'}
@@ -203,7 +204,7 @@ export default function MomLocationSetupScreen() {
               placeholder="37.5665"
               placeholderTextColor={COLOR.textLight}
             />
-            <Text style={styles.formLabel}>경도 (longitude)</Text>
+            <Text style={styles.formLabel}>{t('momLocationSetup.lngLabel')}</Text>
             <TextInput
               style={styles.input}
               keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'numeric'}
@@ -212,12 +213,12 @@ export default function MomLocationSetupScreen() {
               placeholder="126.9780"
               placeholderTextColor={COLOR.textLight}
             />
-            <Text style={styles.formLabel}>표시 이름 (선택)</Text>
+            <Text style={styles.formLabel}>{t('momLocationSetup.labelLabel')}</Text>
             <TextInput
               style={styles.input}
               value={label}
               onChangeText={setLabel}
-              placeholder="서울특별시 중구"
+              placeholder={t('momLocationSetup.labelPlaceholder')}
               placeholderTextColor={COLOR.textLight}
               maxLength={60}
             />
@@ -225,11 +226,11 @@ export default function MomLocationSetupScreen() {
 
           {/* 동갑 매칭 정보 */}
           <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>동갑 매칭</Text>
+            <Text style={styles.infoTitle}>{t('momLocationSetup.sameAgeMatch.title')}</Text>
             <Text style={styles.infoText}>
               {babyBirthYear
-                ? `우리 아이 ${babyBirthYear}년생 → 같은 ${babyBirthYear}년생 맘들과 매칭`
-                : '선택된 자녀의 출생연도 정보가 없어요. 자녀 등록·생년월일을 먼저 설정해주세요.'}
+                ? t('momLocationSetup.sameAgeMatch.withYear', { year: babyBirthYear })
+                : t('momLocationSetup.sameAgeMatch.noYear')}
             </Text>
           </View>
 
@@ -240,12 +241,12 @@ export default function MomLocationSetupScreen() {
             disabled={saving}
             activeOpacity={0.85}
           >
-            {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveBtnText}>저장</Text>}
+            {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveBtnText}>{t('common.save')}</Text>}
           </TouchableOpacity>
 
           {saved.hasLocation && (
             <TouchableOpacity style={styles.removeLink} onPress={onRemove}>
-              <Text style={styles.removeLinkText}>저장된 위치 삭제</Text>
+              <Text style={styles.removeLinkText}>{t('momLocationSetup.removeSavedLocation')}</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
