@@ -17,16 +17,17 @@ interface CategoryItem {
   bgColor: string;
 }
 
-function getParentingCategories(t: TFunction): CategoryItem[] {
+function getParentingCategories(t: TFunction, locale: string): CategoryItem[] {
   return [
-    {
+    // 음식 추천은 한국 이유식/식재료 데이터 기반 — 한국어 로케일에서만 노출.
+    ...(locale === 'ko' ? [{
       icon: require('../../assets/cat-eating.png'),
       label: t('recommendations.category.food.label'),
       description: t('recommendations.category.food.description'),
       category: '음식',
       color: '#FF8C5A',
       bgColor: '#FFF0E6',
-    },
+    }] : []),
     {
       icon: require('../../assets/cat-growth.png'),
       label: t('recommendations.category.lifestyle.label'),
@@ -62,7 +63,7 @@ function getTrimester(week: number): Trimester {
   return 'late';
 }
 
-function getPregnancyCategories(t: TFunction, trimester: Trimester): CategoryItem[] {
+function getPregnancyCategories(t: TFunction, trimester: Trimester, locale: string): CategoryItem[] {
   const FOOD_DESC: Record<Trimester, string> = {
     early: t('recommendations.pregnancyCategory.food.early'),
     mid: t('recommendations.pregnancyCategory.food.mid'),
@@ -85,14 +86,15 @@ function getPregnancyCategories(t: TFunction, trimester: Trimester): CategoryIte
   };
 
   return [
-    {
+    // 음식 추천은 한국 식재료/이유식 데이터 기반 — 한국어 로케일에서만 노출.
+    ...(locale === 'ko' ? [{
       icon: require('../../assets/cat-eating.png'),
       label: t('recommendations.pregnancyCategory.food.label'),
       description: FOOD_DESC[trimester],
       category: '임산부음식',
       color: '#FF8C5A',
       bgColor: '#FFF0E6',
-    },
+    }] : []),
     {
       icon: require('../../assets/preg-foot.png'),
       label: t('recommendations.pregnancyCategory.exercise.label'),
@@ -129,15 +131,15 @@ function getTrimesterBadge(t: TFunction): Record<Trimester, string> {
 }
 
 export default function RecommendationsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const isPregnant = !!selectedChild?.isPregnant;
   const week = selectedChild?.pregnancyWeeks ?? 0;
   const trimester = getTrimester(week);
 
   const categories = isPregnant
-    ? getPregnancyCategories(t, trimester)
-    : getParentingCategories(t);
+    ? getPregnancyCategories(t, trimester, i18n.language)
+    : getParentingCategories(t, i18n.language);
 
   const trimesterBadge = getTrimesterBadge(t);
 

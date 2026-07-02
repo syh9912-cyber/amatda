@@ -128,11 +128,16 @@ const VACCINE_ACTION: QuickAction = {
   icon: require('../../assets/quick-syringe.png'), labelKey: 'vaccination', route: '/(main)/vaccination', bg: '#E3F2FD', ages: ['pregnant'],
 };
 
-function getActionsForAge(ageGroup: AgeGroupKey, child?: Child | null): QuickAction[] {
-  const filtered = ALL_ACTIONS.filter((a) => a.ages.includes(ageGroup));
+function getActionsForAge(ageGroup: AgeGroupKey, locale: string, child?: Child | null): QuickAction[] {
+  let filtered = ALL_ACTIONS.filter((a) => a.ages.includes(ageGroup));
 
-  // 임산부: 출산 1달전부터 접종달력 표시
-  if (ageGroup === 'pregnant' && child?.dueDate) {
+  // 예방접종은 한국 질병관리청 국가예방접종 일정 기반 — 한국어 로케일에서만 노출.
+  if (locale !== 'ko') {
+    filtered = filtered.filter((a) => a.labelKey !== 'vaccination');
+  }
+
+  // 임산부: 출산 1달전부터 접종달력 표시 (한국어 로케일만)
+  if (ageGroup === 'pregnant' && child?.dueDate && locale === 'ko') {
     const daysUntilDue = Math.ceil((new Date(child.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
     if (daysUntilDue <= 30) {
       filtered.push(VACCINE_ACTION);
@@ -175,7 +180,7 @@ const TRIAL_POPUP_KEY = 'amatda_trial_popup_dismissed';
 
 
 export default function HomeScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const overlayCount = useUiStore((s) => s.overlayCount);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -716,7 +721,8 @@ export default function HomeScreen() {
           )}
 
             {/* === Monthly Characteristic === */}
-            <MonthlyCharCard child={child} />
+            {/* 월령별 발달 특징은 한국 자료 기반 — 한국어 로케일에서만 노출. */}
+            {i18n.language === 'ko' && <MonthlyCharCard child={child} />}
 
             {/* === Recommendations === */}
             <RecommendationSection child={child} />
@@ -1447,8 +1453,8 @@ function FeverPulseCircle({ children }: { children: React.ReactNode; bg: string 
 }
 
 function AllActionsGrid({ ageGroup, child }: { ageGroup: AgeGroupKey; child?: Child | null }) {
-  const { t } = useTranslation();
-  const actions = getActionsForAge(ageGroup, child);
+  const { t, i18n } = useTranslation();
+  const actions = getActionsForAge(ageGroup, i18n.language, child);
   const feverAlert = useFeverAlert(child?.id);
   return (
     <View style={styles.quickSection}>

@@ -95,8 +95,15 @@ async function loadSpeechModule(): Promise<SpeechModule | null> {
  * Case 1 (Siri): text parameter provided → process immediately
  * Case 2 (Google/Bixby): no text → auto-start speech recognition → process
  */
+/** 앱 로케일 → 음성인식 엔진 BCP-47 언어 코드 */
+const STT_LOCALE: Record<string, string> = {
+  ko: 'ko-KR',
+  ja: 'ja-JP',
+  'zh-Hant': 'zh-TW',
+};
+
 export default function VoiceScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { text } = useLocalSearchParams<{ text?: string }>();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const children = useChildStore((s) => s.children);
@@ -175,7 +182,7 @@ export default function VoiceScreen() {
   const startListening = useCallback((mod: SpeechModule) => {
     try {
       mod.ExpoSpeechRecognitionModule.start({
-        lang: 'ko-KR',
+        lang: STT_LOCALE[i18n.language] ?? 'ko-KR',
         interimResults: true,
         continuous: true, // 무음 후에도 계속 듣기 (디바운스 + end 이벤트로 종료)
         // Android: 무음 종료 threshold 늘림 — 말 중간 숨고르기 도중 자동 종료 방지
@@ -192,7 +199,7 @@ export default function VoiceScreen() {
       setError(t('voice.errorCannotStart'));
       setPhase('error');
     }
-  }, [t]);
+  }, [t, i18n.language]);
 
   // ── Main flow ──
   useEffect(() => {
