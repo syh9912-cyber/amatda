@@ -33,6 +33,7 @@ import { readCache, writeCache } from '../../utils/simpleCache';
 import { uploadGrowthPhoto } from '../../services/imageUpload';
 import { useMomstagramStore } from '../../stores/momstagramStore';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
+import { displayMilestone } from '../../constants/albumMilestoneI18n';
 import { PhotoViewer } from '../../components/album/PhotoViewer';
 import { BackButton } from '../../components/common/BackButton';
 import { GuideButton } from '../../components/common/GuideButton';
@@ -752,7 +753,7 @@ function generateAlbumHTML(
                     `<div class="ms-fallback" style="background:${mColor};display:flex;">` +
                     `<span>${photo.milestoneEmoji ?? '&#127919;'}</span></div>` +
                     `</div>`) +
-                `<span class="ms-label" style="color:${mColor};">${escapeHtml(photo.milestone)}</span>` +
+                `<span class="ms-label" style="color:${mColor};">${escapeHtml(displayMilestone(photo.milestone))}</span>` +
                 `</div>`
               : '';
 
@@ -1817,7 +1818,7 @@ function BabyAlbum() {
     // 가족피드에도 공유
     if (shareToMomstagram && selectedChild) {
       const milestoneText = selectedMilestone
-        ? `${selectedMilestone.emoji} ${selectedMilestone.label}`
+        ? `${selectedMilestone.emoji} ${displayMilestone(selectedMilestone.label)}`
         : t('album.growthRecord');
       const content = memo.trim()
         ? `${milestoneText}\n${memo.trim()}`
@@ -2126,14 +2127,14 @@ function BabyAlbum() {
   /* -- Delete entry -- */
   const deleteEntry = useCallback((idx: number) => {
     const photo = photos[idx];
-    Alert.alert(t('album.manageRecord'), photo.milestone ?? photo.memo ?? t('album.defaultPhotoLabel'), [
+    Alert.alert(t('album.manageRecord'), displayMilestone(photo.milestone) || photo.memo || t('album.defaultPhotoLabel'), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('common.edit'),
         onPress: () => {
           if (photo.id) {
             setEditNewImage(null);
-            setEditState({ id: photo.id, label: photo.milestone ?? t('album.defaultPhotoLabel'), value: photo.memo ?? '', imageUri: photo.uri });
+            setEditState({ id: photo.id, label: displayMilestone(photo.milestone) || t('album.defaultPhotoLabel'), value: photo.memo ?? '', imageUri: photo.uri });
           }
         },
       },
@@ -2293,7 +2294,7 @@ function BabyAlbum() {
                       styles.composeChipText,
                       isActive && styles.composeChipTextActive,
                     ]}>
-                      {ms.label}
+                      {displayMilestone(ms.label)}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -2437,7 +2438,7 @@ function BabyAlbum() {
                           emoji={photo.milestoneEmoji ?? '🎯'}
                           color={feedColor}
                         />
-                        <Text style={[styles.feedBadgeText, { color: feedColor }]}>{photo.milestone}</Text>
+                        <Text style={[styles.feedBadgeText, { color: feedColor }]}>{displayMilestone(photo.milestone)}</Text>
                       </View>
                     )}
                     {photo.memo && <Text style={styles.feedMemo}>{photo.memo}</Text>}
