@@ -6377,3 +6377,21 @@ sleepKnowledgeCache, dailyTraits, milestonePhotos, kakaoOAuthState
 - 수정: 실패 시 `set({ isLoading:false, lastFetched:null })` — 직전 상태 유지(VIP 보호 + FREE 광고 유지) + 캐시 안 함(다음 호출 재조회). 최초 실패는 null 유지 후 재시도.
 - 검증 tsc 0. production OTA(85497612).
 - 확인 필요: 사용자 계정 실제 tier(마이→프리미엄 플랜이 '무료'인지 '체험 N일'인지). 무료인데도 재시작 후 광고 없으면 status 조회 자체 실패 추가 조사.
+
+
+---
+
+## 2026-07-02 — 해외 출시 후속: 로케일 게이팅 + 음성/사진분석 다국어 인식 + playActivities 번역
+- 배경: 화면 문자열 다국어화(4259개 키) 완료 후, "번역만으로는 해외 출시 불가" 판단 — 한국 특화 데이터/AI 인식 언어 문제 별도 조치.
+- **로케일 게이팅** (커밋 2eb5c05): 한국 자료 기반이라 번역 무의미한 3개 기능을 `i18n.language !== 'ko'`일 때 UI에서 숨김.
+  - `home.tsx`: 예방접종 퀵탭(질병관리청 국가예방접종 일정 기반), 월령별특징 카드.
+  - `recommendations.tsx`: 음식추천 카테고리(한국 이유식/식재료 데이터 기반), 임산부음식도 동일.
+- **음성/사진분석 다국어 인식** (커밋 2eb5c05, 8bdb514, 14f0092): 사용자 명시 승인(Rule of Two, "추가형·기존 로직 안 건드림") 하에 진행.
+  - `voice.tsx`: `expo-speech-recognition` STT lang 파라미터 로케일 매핑(ko-KR/ja-JP/zh-TW).
+  - `backend/src/routes/tracker.ts`: `LOCALE_VOCAB_HINT` 상수(ja/zh-Hant 어휘 힌트) 신설 — 기존 한국어 systemPrompt 뒤에 **append만** 하는 방식(voice-parse, photo-parse 둘 다 동일 패턴 적용). 출력 필드명/값은 한국어 유지 지시 포함. locale이 'ko'거나 미지정이면 한국어 사용자 동작은 byte-identical.
+  - `frontend/services/api.ts`의 `trackerApi.voiceParse`/`photoParse`에 `locale?: string` 파라미터 추가, 호출부(`voice.tsx`, `PhotoLogReview.tsx`)에서 `i18n.language` 전달.
+  - 알려진 미해결 갭: photo-parse 핸들러의 TS 후처리 정규식(예: `'왼'`/`'오른'`, `(일어|기상|깸|깼)`, 한국어 시간 포맷 정규식)은 한국어 전용 그대로 — Gemini 프롬프트 힌트만 추가했고 정규식 정규화는 확장 안 함.
+- **constants/playActivities.ts 번역** (커밋 ace67da, 백그라운드 에이전트): 정적 `PLAY_ACTIVITIES` export → `getPlayActivities(t: TFunction)` 팩토리로 전환. name/duration/reason/materials/steps 번역(emoji/ageGroups/기질 키는 비번역). `play-learning.tsx`는 `useMemo(() => getPlayActivities(t), [t])`로 호출부 수정. 263개 키를 ko/ja/zh-Hant 3개 로케일에 병합 — 병합 후 키 개수 4522개로 3개 파일 완전 일치 확인.
+- **확인된 죽은 코드(번역 불필요)**: `cryAnalysisData.ts`, `poopAnalysisData.ts`, `learningActivities.ts` — grep으로 전체 codebase import 0건 확인. `cry-analyzer.tsx`/`poop-analyzer.tsx`는 백엔드 Gemini(`coachingApi`)를 직접 호출하고 이 상수들을 쓰지 않음.
+- 검증: 매 배치마다 `backend && npx tsc --noEmit`, `frontend && npx tsc --noEmit`, `frontend && npx expo lint` 실행 — 전부 0 error(기존 경고만 존재).
+- 남은 작업(사용자 지시 "1234전부 + 안된곳 차례대로"): ③ 상담이모(coaching AI) 응답 언어가 실제 UI 언어를 따르는지 미확인 — 조사 중. ④ `services/payment.ts` KRW 고정 가격 — 다국가 통화 처리 방식 미정, 사용자 논의 필요.
