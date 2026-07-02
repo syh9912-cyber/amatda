@@ -988,7 +988,9 @@
       "referenceLabel": "参考情報",
       "untilNext": "次の服用まで{{relative}}",
       "headlineAvailable": "参考基準：{{brandLabel}} 約{{mlNumber}}ml（医師・薬剤師に相談の上で服用）",
-      "headlineWaiting": "{{relative}}後に{{brandLabel}} 約{{mlNumber}}ml（参考）"
+      "headlineWaiting": "{{relative}}後に{{brandLabel}} 約{{mlNumber}}ml（参考）",
+      "headlineAvailableGeneric": "参考目安：{{brandLabel}} 約{{dose}}（医師・薬剤師に相談の上で服用）",
+      "headlineWaitingGeneric": "{{relative}}後に{{brandLabel}} 約{{dose}}（参考）"
     },
     "champToggle": {
       "label": "チャンプの種類（濃度確認）",
@@ -1000,6 +1002,7 @@
       "ja": "アセトアミノフェンシロップ小児用2%（20mg/ml）を基準に計算しています。ドライシロップや坐剤など製剤形態が異なる場合は換算が変わるため、実際の製品ラベルの濃度を必ず確認の上、薬剤師・小児科医にご相談ください。市販のイブプロフェンは15歳未満への使用が推奨されないため、本アプリでは提供していません。",
       "zhHant": "台灣（安佳熱糖漿24mg/ml・依普芬20mg/ml）を基準に計算した参考値です。香港など地域によって製品濃度が異なる場合があるため、実際の製品ラベルの濃度を必ず確認の上、薬剤師にご相談ください。"
     },
+    "refMlNote": "≈ {{ml}}ml（{{conc}}mg/ml の製品の場合・実際の製品濃度で必ず再確認してください）",
     "notifyButton": {
       "in4h": "4時間後に通知",
       "in6h": "6時間後に通知"

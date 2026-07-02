@@ -988,7 +988,9 @@
       "referenceLabel": "參考資訊",
       "untilNext": "距離下次服用還有{{relative}}",
       "headlineAvailable": "參考標準：{{brandLabel}} 約{{mlNumber}}ml（請諮詢醫師或藥師後再服用）",
-      "headlineWaiting": "{{relative}}後可服用{{brandLabel}} 約{{mlNumber}}ml（僅供參考）"
+      "headlineWaiting": "{{relative}}後可服用{{brandLabel}} 約{{mlNumber}}ml（僅供參考）",
+      "headlineAvailableGeneric": "參考標準：{{brandLabel}} 約{{dose}}（請諮詢醫師或藥師後再服用）",
+      "headlineWaitingGeneric": "{{relative}}後可服用{{brandLabel}} 約{{dose}}（僅供參考）"
     },
     "champToggle": {
       "label": "Champ種類（確認濃度）",
@@ -1000,6 +1002,7 @@
       "ja": "此為以日本地區常見濃度（乙醯胺酚兒童糖漿2%＝20mg/ml）為基準的參考值。",
       "zhHant": "此為以台灣「安佳熱糖漿」（乙醯胺酚24mg/ml）及「依普芬」（布洛芬20mg/ml）為基準計算的參考值。香港等地區的市售產品濃度可能不同（例如部分撲熱息痛藥水為50mg/ml），使用前請務必確認實際產品標籤上的濃度，並諮詢藥師意見。"
     },
+    "refMlNote": "≈ {{ml}}ml（以{{conc}}mg/ml產品計算・請務必依實際產品濃度重新確認）",
     "notifyButton": {
       "in4h": "4小時後通知",
       "in6h": "6小時後通知"

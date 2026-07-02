@@ -1616,6 +1616,13 @@ function MedicineSection({
   }
   const mlMatch = selectedSyrupText.match(/(\d+(?:\.\d+)?)\s*ml/);
   const mlNumber = mlMatch ? mlMatch[1] : selectedSyrupText;
+  // mg 값(체중×mg/kg)은 제품 농도와 무관하게 항상 정확 → 비한국어 대표 표시로 사용(오투약 방지)
+  const mgMatch = selectedDoseMg.match(/(\d+(?:\.\d+)?)/);
+  const mgNumber = mgMatch ? mgMatch[1] : selectedDoseMg;
+  // 비한국어 참고 mL 계산에 쓰인 가정 농도(mg/ml) — mL은 "이 농도 기준 참고값"으로만 부차 표시
+  const refConc = locale && localeConc
+    ? (isAcet ? localeConc.acet : (localeConc.ibu ?? 20))
+    : null;
   const brandLabel = (() => {
     if (selectedBrand === 'tylenol') return t('fever.brand.tylenol');
     if (selectedBrand === 'brufen') return t('fever.brand.brufen');
@@ -1630,9 +1637,15 @@ function MedicineSection({
   const maxDaily = isAcet ? dose.acetaminophen.maxDaily : dose.ibuprofen.maxDaily;
 
   // 동적 감성 헤드라인 — 선택한 약·용량 실시간 연동 (단일 행동 강조)
-  const headline = recommendation.available
-    ? t('fever.medGuide.headlineAvailable', { brandLabel, mlNumber })
-    : t('fever.medGuide.headlineWaiting', { relative: formatRelative(recommendation.deltaMs, t), brandLabel, mlNumber });
+  // 비한국어는 농도 무관 정확값인 mg을 헤드라인에 사용(제품 농도가 국가마다 달라 mL은 부차 표시).
+  // 한국어 키는 "약 {{mlNumber}}ml"로 ml 단위가 고정되어 있어, 비한국어는 단위 포함 {{dose}} 별도 키 사용.
+  const headline = isNonKoLocale
+    ? (recommendation.available
+      ? t('fever.medGuide.headlineAvailableGeneric', { brandLabel, dose: `${mgNumber}mg` })
+      : t('fever.medGuide.headlineWaitingGeneric', { relative: formatRelative(recommendation.deltaMs, t), brandLabel, dose: `${mgNumber}mg` }))
+    : (recommendation.available
+      ? t('fever.medGuide.headlineAvailable', { brandLabel, mlNumber })
+      : t('fever.medGuide.headlineWaiting', { relative: formatRelative(recommendation.deltaMs, t), brandLabel, mlNumber }));
 
   // 브랜드 그리드 항목 — 일본은 아세트아미노펜 1종(이부프로펜 미제공), 대만/홍콩은 성분명 2종, 한국은 기존 4브랜드
   const grid: { key: BrandKey; label: string; icon: ImageSourcePropType; color: string }[] =
@@ -1682,14 +1695,34 @@ function MedicineSection({
         <Text style={styles.medGuideHeadline}>{headline}</Text>
       </View>
 
-      {/* === 거대 용량 디스플레이 (새벽 인지 가능 — 폰트 압도적 크게) === */}
+      {/* === 거대 용량 디스플레이 (새벽 인지 가능 — 폰트 압도적 크게) ===
+          한국어: mL을 대표 표시(국내 시판 농도 표준화됨).
+          비한국어: 농도 무관 정확값인 mg을 대표 표시하고, mL은 "가정 농도 기준 참고값 — 라벨 확인"
+          으로 부차 표시(대만 24 vs 홍콩 파나돌 50mg/ml 등 제품 농도 차이로 인한 오투약 방지). */}
       <Animated.View style={[styles.bigDoseCard, { opacity: fade }]}>
         <Text style={[styles.bigDoseDrug, { color: drugColor }]}>{brandLabel}</Text>
-        <View style={styles.bigDoseRow}>
-          <Text style={[styles.bigDoseNumber, { color: drugColor }]}>{mlNumber}</Text>
-          <Text style={styles.bigDoseUnit}>ml</Text>
-        </View>
-        <Text style={styles.bigDoseSub}>{selectedDoseMg} · {interval} · {maxDaily}</Text>
+        {isNonKoLocale ? (
+          <>
+            <View style={styles.bigDoseRow}>
+              <Text style={[styles.bigDoseNumber, { color: drugColor }]}>{mgNumber}</Text>
+              <Text style={styles.bigDoseUnit}>mg</Text>
+            </View>
+            {useInput && refConc ? (
+              <Text style={styles.bigDoseRefMl}>
+                {t('fever.refMlNote', { conc: refConc, ml: mlNumber })}
+              </Text>
+            ) : null}
+            <Text style={styles.bigDoseSub}>{interval} · {maxDaily}</Text>
+          </>
+        ) : (
+          <>
+            <View style={styles.bigDoseRow}>
+              <Text style={[styles.bigDoseNumber, { color: drugColor }]}>{mlNumber}</Text>
+              <Text style={styles.bigDoseUnit}>ml</Text>
+            </View>
+            <Text style={styles.bigDoseSub}>{selectedDoseMg} · {interval} · {maxDaily}</Text>
+          </>
+        )}
       </Animated.View>
 
       {/* === 추천 카드 슬롯 (Native Ad placeholder — 향후 확장용. 현재는 미노출) === */}
@@ -2490,6 +2523,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#9E9E9E',
     marginTop: 8,
+  },
+  bigDoseRefMl: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#8E8E93',
+    marginTop: 6,
+    textAlign: 'center',
+    paddingHorizontal: 12,
+    lineHeight: 17,
   },
 
   /* === Native Ad / 정보성 추천 카드 슬롯 (현재 미노출, 향후 확장용) === */

@@ -988,7 +988,9 @@
       "referenceLabel": "참고 안내",
       "untilNext": "다음 복용까지 {{relative}}",
       "headlineAvailable": "참고 기준: {{brandLabel}} 약 {{mlNumber}}ml (의사·약사 상담 후 투약)",
-      "headlineWaiting": "{{relative}} 후 {{brandLabel}} 약 {{mlNumber}}ml (참고)"
+      "headlineWaiting": "{{relative}} 후 {{brandLabel}} 약 {{mlNumber}}ml (참고)",
+      "headlineAvailableGeneric": "참고 기준: {{brandLabel}} 약 {{dose}} (의사·약사 상담 후 투약)",
+      "headlineWaitingGeneric": "{{relative}} 후 {{brandLabel}} 약 {{dose}} (참고)"
     },
     "champToggle": {
       "label": "챔프 종류 (농도 확인)",
@@ -1000,6 +1002,7 @@
       "ja": "일본용 참고 농도 예시(아세트아미노펜 소아용 시럽 2%=20mg/ml)입니다. 실제 제품 라벨의 농도를 반드시 확인 후 투약하세요.",
       "zhHant": "대만/홍콩 제품 농도가 서로 다를 수 있습니다. 실제 제품 라벨의 농도를 반드시 확인 후 투약하세요."
     },
+    "refMlNote": "≈ {{ml}}ml ({{conc}}mg/ml 제품 기준 · 실제 제품 농도로 다시 확인하세요)",
     "notifyButton": {
       "in4h": "4시간 후 알림",
       "in6h": "6시간 후 알림"
