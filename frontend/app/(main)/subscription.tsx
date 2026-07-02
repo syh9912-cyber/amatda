@@ -129,7 +129,7 @@ export default function SubscriptionScreen() {
   // PortOne WebView 상태
   const [portOneParams, setPortOneParams] = useState<PortOneCheckoutParams | null>(null);
   const [portOneVisible, setPortOneVisible] = useState(false);
-  const paymentMethodOptions = getPaymentMethodOptions(t);
+  const paymentMethodOptions = getPaymentMethodOptions(t, i18n.language);
   // 스토어 실제 지역화 가격(비한국어 로케일 표시용) — 한국어는 항상 기존 KRW 라벨 그대로 유지.
   const [localizedPrices, setLocalizedPrices] = useState<Partial<Record<ProductId, LocalizedProductPrice>>>({});
 

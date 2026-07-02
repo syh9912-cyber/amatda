@@ -12,7 +12,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, Platform, Linking, AppState,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, Redirect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 
@@ -24,7 +24,7 @@ const CHANNEL_URLS = [
 ];
 
 export default function KakaoChannelScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [submitting, setSubmitting] = useState(false);
   // 카카오톡으로 전환됐다가 앱에 복귀(AppState active)하면 다음 단계로 진행.
   // 즉시 라우팅하면 카카오 앱 전환과 화면 전환이 경쟁하므로 복귀 시점에 진행한다.
@@ -76,6 +76,11 @@ export default function KakaoChannelScreen() {
       }
     }
   };
+
+  // 카카오톡은 한국 전용 — 비한국어 로케일은 이 단계를 건너뛰고 홈으로
+  if (i18n.language !== 'ko') {
+    return <Redirect href="/(main)/home" />;
+  }
 
   return (
     <View style={styles.container}>

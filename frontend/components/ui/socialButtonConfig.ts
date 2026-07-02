@@ -11,6 +11,7 @@ export interface SocialButtonConfig {
   letterColor: string;
   border?: string;
   iosOnly?: boolean; // Apple 로그인은 iOS 에서만 노출 (App Store 정책 + 표준)
+  koreaOnly?: boolean; // 카카오·네이버는 한국 전용 — 비한국어 로케일에서는 숨김
 }
 
 export function getSocialButtonList(t: TFunction): SocialButtonConfig[] {
@@ -44,6 +45,7 @@ export function getSocialButtonList(t: TFunction): SocialButtonConfig[] {
       color: '#FFFFFF',
       letterBg: 'rgba(255,255,255,0.2)',
       letterColor: '#FFFFFF',
+      koreaOnly: true,
     },
     {
       provider: 'KAKAO',
@@ -53,6 +55,7 @@ export function getSocialButtonList(t: TFunction): SocialButtonConfig[] {
       color: '#191919',
       letterBg: 'rgba(0,0,0,0.08)',
       letterColor: '#191919',
+      koreaOnly: true,
     },
   ];
 }

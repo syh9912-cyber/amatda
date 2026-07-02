@@ -101,10 +101,11 @@ export interface PaymentMethodOption {
   description?: string;
 }
 
-export function getPaymentMethodOptions(t: TFunction): PaymentMethodOption[] {
+export function getPaymentMethodOptions(t: TFunction, locale?: string): PaymentMethodOption[] {
   const env = getPortOneEnv();
-  // iOS는 Apple 정책상 IAP 외 외부결제 금지 — PortOne 옵션 완전 차단
-  const portOneAvailable = Platform.OS !== 'ios' && !!env.storeId;
+  // iOS는 Apple 정책상 IAP 외 외부결제 금지 — PortOne 옵션 완전 차단.
+  // PortOne(카카오/네이버/토스페이 등)은 한국 전용 결제 수단 — 비한국어 로케일에서는 IAP만 노출.
+  const portOneAvailable = Platform.OS !== 'ios' && !!env.storeId && (locale === undefined || locale === 'ko');
   const iapLabel = Platform.OS === 'ios' ? 'Apple App Store' : 'Google Play';
   return [
     { id: 'iap', label: iapLabel, available: true, description: t('payment.method.autoPlatformDesc') },

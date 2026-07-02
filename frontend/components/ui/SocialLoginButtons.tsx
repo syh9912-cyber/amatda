@@ -27,11 +27,13 @@ export function SocialLoginButtons({
   onPress,
   loadingProvider,
 }: SocialLoginButtonsProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isKo = i18n.language === 'ko';
 
   // Apple 로그인은 iOS + 네이티브 모듈 존재 시에만 노출 (Android/web/구빌드 제외)
+  // 카카오·네이버(koreaOnly)는 한국어 로케일에서만 노출
   const visibleSocialButtons = getSocialButtonList(t).filter(
-    (b) => !b.iosOnly || isAppleAuthAvailable(),
+    (b) => (!b.iosOnly || isAppleAuthAvailable()) && (!b.koreaOnly || isKo),
   );
 
   return (

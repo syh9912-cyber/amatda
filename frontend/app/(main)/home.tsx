@@ -131,9 +131,10 @@ const VACCINE_ACTION: QuickAction = {
 function getActionsForAge(ageGroup: AgeGroupKey, locale: string, child?: Child | null): QuickAction[] {
   let filtered = ALL_ACTIONS.filter((a) => a.ages.includes(ageGroup));
 
-  // 예방접종은 한국 질병관리청 국가예방접종 일정 기반 — 한국어 로케일에서만 노출.
+  // 예방접종은 한국 질병관리청 국가예방접종 일정 기반, 맘스톡은 한국 지역 기반 커뮤니티 —
+  // 비한국어 로케일에서는 숨김(현지 데이터 미지원).
   if (locale !== 'ko') {
-    filtered = filtered.filter((a) => a.labelKey !== 'vaccination');
+    filtered = filtered.filter((a) => a.labelKey !== 'vaccination' && a.labelKey !== 'momGroup');
   }
 
   // 임산부: 출산 1달전부터 접종달력 표시 (한국어 로케일만)
@@ -1668,7 +1669,7 @@ const aiCardStyles = StyleSheet.create({
 });
 
 function EmptyState() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   return (
     <View style={styles.center}>
       <Image source={require('../../assets/mascot-waving.png')} style={styles.emptyMascot} resizeMode="contain" />
@@ -1683,14 +1684,16 @@ function EmptyState() {
         <Text style={styles.addButtonText}>{t('home.emptyState.registerBtn')}</Text>
       </TouchableOpacity>
 
-      {/* 자녀 미등록 사용자도 커뮤니티/프로필 접근 가능하게 */}
+      {/* 자녀 미등록 사용자도 커뮤니티/프로필 접근 가능하게 (맘스톡은 한국 지역 기반 — 한국어만) */}
       <View style={styles.emptySecondaryRow}>
-        <TouchableOpacity
-          style={styles.emptySecondaryBtn}
-          onPress={() => router.push('/(main)/mom-group')}
-        >
-          <Text style={styles.emptySecondaryText}>{t('home.emptyState.browseMomGroup')}</Text>
-        </TouchableOpacity>
+        {i18n.language === 'ko' && (
+          <TouchableOpacity
+            style={styles.emptySecondaryBtn}
+            onPress={() => router.push('/(main)/mom-group')}
+          >
+            <Text style={styles.emptySecondaryText}>{t('home.emptyState.browseMomGroup')}</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.emptySecondaryBtn}
           onPress={() => router.push('/(main)/profile')}
