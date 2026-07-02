@@ -5,6 +5,7 @@ import {
   Image,
   StyleSheet,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { COACHING_COLORS } from './types';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 
@@ -30,6 +31,7 @@ export function CoachingInput({
   disabled,
   placeholder,
 }: Props) {
+  const { t } = useTranslation();
   const handlePhoto = async () => {
     const picked = await pickImageFromLibrary({ quality: 0.8 });
     if (picked) onPhoto(picked.uri);
@@ -43,14 +45,14 @@ export function CoachingInput({
           onPress={handlePhoto}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="사진 첨부"
-          accessibilityHint="카메라 또는 갤러리에서 사진을 선택합니다"
+          accessibilityLabel={t('components.coachingInput.attachPhoto')}
+          accessibilityHint={t('components.coachingInput.attachPhotoHint')}
         >
           <Image source={IC_CAMERA} style={styles.actionIcon} resizeMode="contain" accessible={false} />
         </TouchableOpacity>
         <TextInput
           style={styles.input}
-          placeholder={placeholder ?? '고민을 말씀해주세요...'}
+          placeholder={placeholder ?? t('components.coachingInput.placeholder')}
           placeholderTextColor={COACHING_COLORS.textLight}
           value={value}
           onChangeText={onChangeText}
@@ -65,7 +67,7 @@ export function CoachingInput({
           disabled={disabled}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="메시지 보내기"
+          accessibilityLabel={t('components.coachingInput.sendMessage')}
           accessibilityState={{ disabled }}
         >
           <Image source={IC_SEND} style={styles.sendIcon} resizeMode="contain" accessible={false} />

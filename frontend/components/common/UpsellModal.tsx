@@ -1,5 +1,6 @@
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   visible: boolean;
@@ -15,10 +16,13 @@ interface Props {
 export function UpsellModal({
   visible,
   onClose,
-  title = '오늘의 분석이 완료되었습니다',
-  message = '커피 한잔값으로 월 300회 이용하기',
+  title,
+  message,
 }: Props) {
   const router = useRouter();
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t('components.upsellModal.defaultTitle');
+  const resolvedMessage = message ?? t('components.upsellModal.defaultMessage');
 
   const handleUpgrade = () => {
     onClose();
@@ -30,21 +34,21 @@ export function UpsellModal({
       <View style={s.backdrop}>
         <View style={s.card}>
           <Text style={s.emoji}>{'☕️'}</Text>
-          <Text style={s.title}>{title}</Text>
-          <Text style={s.message}>{message}</Text>
+          <Text style={s.title}>{resolvedTitle}</Text>
+          <Text style={s.message}>{resolvedMessage}</Text>
 
           <View style={s.benefits}>
-            <Text style={s.benefit}>• 음식 · 대변 · 울음 분석 각 월 300회</Text>
-            <Text style={s.benefit}>• 상담이모 무제한</Text>
-            <Text style={s.benefit}>• 광고 제거</Text>
+            <Text style={s.benefit}>{t('components.upsellModal.benefit1')}</Text>
+            <Text style={s.benefit}>{t('components.upsellModal.benefit2')}</Text>
+            <Text style={s.benefit}>{t('components.upsellModal.benefit3')}</Text>
           </View>
 
           <TouchableOpacity style={s.primaryBtn} onPress={handleUpgrade} activeOpacity={0.85}>
-            <Text style={s.primaryBtnText}>{'프리미엄 플랜 보기'}</Text>
+            <Text style={s.primaryBtnText}>{t('components.upsellModal.viewPlan')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={s.secondaryBtn} onPress={onClose} activeOpacity={0.7}>
-            <Text style={s.secondaryBtnText}>{'내일 다시 할게요'}</Text>
+            <Text style={s.secondaryBtnText}>{t('components.upsellModal.later')}</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -24,6 +24,7 @@ import {
   Easing,
   Modal,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -170,6 +171,7 @@ function MessageCard({
   active: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const scale = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -188,7 +190,7 @@ function MessageCard({
       <Text style={styles.celebrateEmoji}>{vip ? '🎉✨🎊' : '🎉'}</Text>
       <Text style={[styles.message, vip && styles.messageVip]}>{message}</Text>
       <TouchableOpacity style={[styles.btn, vip && styles.btnVip]} onPress={onClose} activeOpacity={0.85}>
-        <Text style={styles.btnText}>고마워요 💛</Text>
+        <Text style={styles.btnText}>{t('components.celebrationOverlay.thanks')}</Text>
       </TouchableOpacity>
     </Animated.View>
   );

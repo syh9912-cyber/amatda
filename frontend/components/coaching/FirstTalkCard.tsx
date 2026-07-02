@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, Image, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { COACHING_COLORS } from './types';
 import { coachingApi } from '../../services/api';
 
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function FirstTalkCard({ childId, onSelect }: Props) {
+  const { t } = useTranslation();
   const [data, setData] = useState<FirstTalkData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -69,7 +71,7 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
     setSubmitting(true);
     // 원래 질문 컨텍스트를 포함하여 AI가 맥락을 이해하도록
     const contextMsg = data?.suggestedQuestion
-      ? `[코치 질문: ${data.suggestedQuestion}] ${trimmed}`
+      ? t('components.firstTalkCard.contextMessage', { question: data.suggestedQuestion, answer: trimmed })
       : trimmed;
     onSelect(contextMsg);
   };
@@ -79,7 +81,7 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
       <View style={styles.card}>
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="small" color="#FFFFFF" />
-          <Text style={styles.loadingText}>상담이모가 준비 중이에요...</Text>
+          <Text style={styles.loadingText}>{t('components.firstTalkCard.preparing')}</Text>
         </View>
       </View>
     );
@@ -90,16 +92,16 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
       <View style={styles.card}>
         <View style={styles.avatarRow}>
           <Image source={IC_COACH} style={styles.avatarImg} resizeMode="cover" />
-          <Text style={styles.coachLabel}>상담이모</Text>
+          <Text style={styles.coachLabel}>{t('components.firstTalkCard.coachLabel')}</Text>
         </View>
         <Text style={styles.intro}>
-          안녕하세요! 아이에 대해 가장 궁금한 점을 알려주세요.
+          {t('components.firstTalkCard.errorIntro')}
         </Text>
         {/* Input even on error fallback */}
         <View style={styles.inputRow}>
           <TextInput
             style={styles.textInput}
-            placeholder="고민이나 궁금한 점을 적어주세요..."
+            placeholder={t('components.firstTalkCard.answerPlaceholder')}
             placeholderTextColor="rgba(255,255,255,0.5)"
             value={answer}
             onChangeText={setAnswer}
@@ -124,7 +126,7 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
       {/* Coach avatar */}
       <View style={styles.avatarRow}>
         <Image source={IC_COACH} style={styles.avatarImg} resizeMode="cover" />
-        <Text style={styles.coachLabel}>상담이모</Text>
+        <Text style={styles.coachLabel}>{t('components.firstTalkCard.coachLabel')}</Text>
       </View>
 
       {/* Intro greeting */}
@@ -154,7 +156,7 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
               onPress={() => {
                 setSubmitting(true);
                 // 원래 질문 컨텍스트를 포함하여 AI가 맥락을 이해하도록
-                onSelect(`[코치 질문: ${data.suggestedQuestion}] ${opt}`);
+                onSelect(t('components.firstTalkCard.contextMessage', { question: data.suggestedQuestion, answer: opt }));
               }}
               disabled={submitting}
               activeOpacity={0.7}
@@ -169,7 +171,7 @@ export function FirstTalkCard({ childId, onSelect }: Props) {
       <View style={styles.inputRow}>
         <TextInput
           style={styles.textInput}
-          placeholder="직접 입력해도 돼요..."
+          placeholder={t('components.firstTalkCard.freeInputPlaceholder')}
           placeholderTextColor="rgba(255,255,255,0.5)"
           value={answer}
           onChangeText={setAnswer}

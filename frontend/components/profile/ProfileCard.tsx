@@ -1,6 +1,8 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useState } from 'react';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
 import { Child, useChildStore } from '../../stores/childStore';
@@ -11,7 +13,7 @@ interface ProfileCardProps {
   onDeleteChild?: () => void;
 }
 
-function calcAge(birthDate: string): string {
+function calcAge(t: TFunction, birthDate: string): string {
   const birth = new Date(birthDate);
   const now = new Date();
   let totalMonths =
@@ -20,28 +22,31 @@ function calcAge(birthDate: string): string {
   // 생일이 이번 달 안에 아직 안 지났다면 한 달 빼기 (홈 탭의 ageInfo.months 와 동일 계산)
   if (now.getDate() < birth.getDate()) totalMonths -= 1;
   if (totalMonths < 0) totalMonths = 0;
-  if (totalMonths < 12) return `${totalMonths}개월`;
+  if (totalMonths < 12) return t('components.profileCard.ageMonths', { count: totalMonths });
   const y = Math.floor(totalMonths / 12);
   const m = totalMonths % 12;
-  return m > 0 ? `${y}세 ${m}개월` : `${y}세`;
+  return m > 0
+    ? t('components.profileCard.ageYearsMonths', { years: y, months: m })
+    : t('components.profileCard.ageYears', { years: y });
 }
 
-function getTemperamentLabel(dominantType: string): string {
+function getTemperamentLabel(t: TFunction, dominantType: string): string {
   const map: Record<string, string> = {
-    wood: '탐구형',
-    fire: '활동형',
-    earth: '안정형',
-    metal: '분석형',
-    water: '창의형',
+    wood: t('components.profileCard.temperament.wood'),
+    fire: t('components.profileCard.temperament.fire'),
+    earth: t('components.profileCard.temperament.earth'),
+    metal: t('components.profileCard.temperament.metal'),
+    water: t('components.profileCard.temperament.water'),
   };
   return map[dominantType] || dominantType;
 }
 
-function getGenderLabel(gender: string): string {
-  return gender === 'F' ? '여아' : '남아';
+function getGenderLabel(t: TFunction, gender: string): string {
+  return gender === 'F' ? t('childEdit.girl') : t('childEdit.boy');
 }
 
 export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
+  const { t } = useTranslation();
   const updateChild = useChildStore((s) => s.updateChild);
   const [uploading, setUploading] = useState(false);
 
@@ -52,14 +57,15 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
           <Image source={require('../../assets/mascot-waving.png')} style={styles.photoImage} resizeMode="cover" />
         </View>
         <Text style={styles.nameText}>
-          {'아이를 등록해주세요'}
+          {t('components.profileCard.registerChildPrompt')}
         </Text>
       </View>
     );
   }
 
-  const age = child.birthDate ? calcAge(child.birthDate) : (child.isPregnant ? `${child.pregnancyWeeks ?? 0}주차` : '');
+  const age = child.birthDate ? calcAge(t, child.birthDate) : (child.isPregnant ? t('components.profileCard.pregnancyWeek', { week: child.pregnancyWeeks ?? 0 }) : '');
   const temperament = getTemperamentLabel(
+    t,
     child.innateData?.dominantType ?? ''
   );
 
@@ -73,8 +79,8 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
       updateChild({ ...child, photoUri });
     } catch {
       Alert.alert(
-        '오류',
-        '사진 업데이트에 실패했습니다.'
+        t('common.error'),
+        t('components.profileCard.photoUpdateFailed')
       );
     } finally {
       setUploading(false);
@@ -114,7 +120,7 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
       <View style={styles.infoRow}>
         <View style={styles.infoPill}>
           <Text style={styles.infoPillText}>
-            {getGenderLabel(child.gender)}
+            {getGenderLabel(t, child.gender)}
           </Text>
         </View>
         <View style={styles.infoPill}>
@@ -131,14 +137,13 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
       {child.isPregnant ? (
         <View style={[styles.temperamentBadge, { backgroundColor: '#FCE4EC' }]}>
           <Text style={[styles.temperamentText, { color: '#E91E63' }]}>
-            {'임신 '}{child.pregnancyWeeks ?? 0}{'주차'}
+            {t('components.profileCard.pregnancyWeek', { week: child.pregnancyWeeks ?? 0 })}
           </Text>
         </View>
       ) : temperament ? (
         <View style={styles.temperamentBadge}>
           <Text style={styles.temperamentText}>
-            {'기질: '}
-            {temperament}
+            {t('components.profileCard.temperamentLabel', { temperament })}
           </Text>
         </View>
       ) : null}
@@ -147,9 +152,9 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
       {(child.bloodType || child.momBloodType) && (
         <View style={styles.infoRow}>
           {child.isPregnant && child.momBloodType ? (
-            <View style={styles.infoPill}><Text style={styles.infoPillText}>{child.momBloodType}형</Text></View>
+            <View style={styles.infoPill}><Text style={styles.infoPillText}>{t('childEdit.bloodTypeSuffix', { type: child.momBloodType })}</Text></View>
           ) : child.bloodType ? (
-            <View style={styles.infoPill}><Text style={styles.infoPillText}>{child.bloodType}형</Text></View>
+            <View style={styles.infoPill}><Text style={styles.infoPillText}>{t('childEdit.bloodTypeSuffix', { type: child.bloodType })}</Text></View>
           ) : null}
           {child.isPregnant && child.momHeight ? (
             <View style={styles.infoPill}><Text style={styles.infoPillText}>{child.momHeight}cm</Text></View>
@@ -170,7 +175,7 @@ export function ProfileCard({ child, onDeleteChild }: ProfileCardProps) {
         onPress={() => router.push('/(main)/child-edit')}
       >
         <Text style={styles.manageBtnText}>
-          {child.isPregnant ? '임신 정보 관리' : '아이 정보 관리'}
+          {child.isPregnant ? t('childEdit.pregnancyInfoManagement') : t('childEdit.childInfoManagement')}
         </Text>
       </TouchableOpacity>
     </View>

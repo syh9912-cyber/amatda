@@ -6,6 +6,8 @@ import {
   Modal,
   StyleSheet,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { COACHING_COLORS } from './types';
 
  
@@ -24,28 +26,40 @@ interface Props {
   onDismiss: () => void;
 }
 
-function getContent(reason: PopupReason, followupText?: string) {
+function getContent(t: TFunction, reason: PopupReason, followupText?: string) {
   switch (reason) {
     case 'inactive':
       return {
         icon: IC_WAVING,
-        title: '오랫만이에요!',
-        question: '요즘 아이 컨디션은 어떤가요?',
-        options: ['좋아요', '보통이에요', '고민이 있어요'],
+        title: t('components.proactivePopup.inactive.title'),
+        question: t('components.proactivePopup.inactive.question'),
+        options: [
+          t('components.proactivePopup.inactive.optionGood'),
+          t('components.proactivePopup.inactive.optionNormal'),
+          t('components.proactivePopup.inactive.optionWorried'),
+        ],
       };
     case 'weekend':
       return {
         icon: IC_SUNNY,
-        title: '즐거운 주말!',
-        question: '주말에 아이와 어떤 시간을 보냈나요?',
-        options: ['바깥 나들이', '집에서 놀이', '아직 계획 중'],
+        title: t('components.proactivePopup.weekend.title'),
+        question: t('components.proactivePopup.weekend.question'),
+        options: [
+          t('components.proactivePopup.weekend.optionOuting'),
+          t('components.proactivePopup.weekend.optionHomePlay'),
+          t('components.proactivePopup.weekend.optionStillPlanning'),
+        ],
       };
     case 'followup':
       return {
         icon: IC_BELL,
-        title: '그 후로 어떤가요?',
-        question: followupText ?? '이전에 물어봐 주신 고민, 그 후로 어떤가요?',
-        options: ['많이 좋아졌어요', '비슷해요', '상담하고 싶어요'],
+        title: t('components.proactivePopup.followup.title'),
+        question: followupText ?? t('components.proactivePopup.followup.questionFallback'),
+        options: [
+          t('components.proactivePopup.followup.optionMuchBetter'),
+          t('components.proactivePopup.followup.optionSimilar'),
+          t('components.proactivePopup.followup.optionWantConsult'),
+        ],
       };
   }
 }
@@ -57,7 +71,8 @@ export function ProactivePopup({
   onRespond,
   onDismiss,
 }: Props) {
-  const content = getContent(reason, followupText);
+  const { t } = useTranslation();
+  const content = getContent(t, reason, followupText);
 
   return (
     <Modal
@@ -91,7 +106,7 @@ export function ProactivePopup({
             activeOpacity={0.7}
           >
             <Text style={styles.dismissText}>
-              {'다음에 응답할게요'}
+              {t('components.proactivePopup.respondLater')}
             </Text>
           </TouchableOpacity>
         </View>

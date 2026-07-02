@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, Linking, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
 export interface CitationSource {
@@ -26,6 +27,7 @@ export function MedicalCitation({
   note?: string;
   compact?: boolean;
 }) {
+  const { t } = useTranslation();
   // compact 모드는 기본 접힘(제목은 항상 노출), 일반 모드는 항상 펼침.
   const [expanded, setExpanded] = useState(!compact);
 
@@ -41,13 +43,13 @@ export function MedicalCitation({
           onPress={() => setExpanded((v) => !v)}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel="의학 정보 출처 보기"
+          accessibilityLabel={t('components.medicalCitation.accessibilityLabel')}
         >
-          <Text style={styles.title}>📚 의학 정보 출처 · 근거</Text>
-          <Text style={styles.toggle}>{expanded ? '닫기 ▲' : '보기 ▼'}</Text>
+          <Text style={styles.title}>{t('components.medicalCitation.titleCompact')}</Text>
+          <Text style={styles.toggle}>{expanded ? t('components.medicalCitation.toggleClose') : t('components.medicalCitation.toggleOpen')}</Text>
         </TouchableOpacity>
       ) : (
-        <Text style={styles.title}>📚 정보 출처</Text>
+        <Text style={styles.title}>{t('components.medicalCitation.title')}</Text>
       )}
 
       {expanded ? (
@@ -63,7 +65,7 @@ export function MedicalCitation({
             ),
           )}
           <Text style={styles.disclaimer}>
-            본 정보는 일반적인 참고용이며 의학적 진단·치료를 대체하지 않습니다. 증상이 있으면 전문의와 상담하세요.
+            {t('components.medicalCitation.disclaimer')}
           </Text>
         </>
       ) : null}

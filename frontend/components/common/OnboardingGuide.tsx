@@ -2,9 +2,11 @@
  * OnboardingGuide — 앱 첫 실행 환영/사용법 투어.
  * GuideCarousel 기반(목업 + 마스코트). 홈에서 1회 자동 표시.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { GuideCarousel, GuideFrame, GUIDE_C, type GuidePage } from './GuideCarousel';
 
 const GUIDE_SHOWN_KEY = 'amatda_onboarding_guide_shown';
@@ -89,107 +91,117 @@ function ChatLine({ text, me }: { text: string; me?: boolean }) {
 }
 
 /* ── 페이지 ── */
-const PAGES: GuidePage[] = [
-  {
-    title: '아맞다에 오신 걸 환영해요',
-    desc: '우리 아이 기질에 딱 맞춘\n육아 기록 · AI 상담 · 가족 공유를 한 곳에서',
-    visual: (
-      <GuideFrame>
-        <Image source={MASCOT_WAVING} style={m.mascotTop} resizeMode="contain" />
-        <FeatureRow emoji="📋" label="아기시간" sub="수유·수면·배변을 간편 기록" color={GUIDE_C.gold} bg={GUIDE_C.goldLight} />
-        <FeatureRow emoji="💬" label="상담이모" sub="기질 맞춤 AI 육아 상담" color={GUIDE_C.accent} bg={GUIDE_C.accentSoft} />
-        <FeatureRow emoji="👨‍👩‍👧" label="공동육아" sub="가족과 함께 기록·공유" color={GUIDE_C.purple} bg={GUIDE_C.purpleLight} />
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '우리 아이만의 기질을 분석해요',
-    desc: '생년월일시로 아이의 타고난 에너지·성향을 분석해\n맞춤 상담과 추천의 기준이 돼요',
-    visual: (
-      <GuideFrame>
-        <Text style={m.frameCap}>🌱  우리 아이 에너지 분포</Text>
-        <EnergyBar label="탐구" pct={82} color={GUIDE_C.blue} />
-        <EnergyBar label="활동" pct={64} color={GUIDE_C.accent} />
-        <EnergyBar label="안정" pct={48} color={GUIDE_C.green} />
-        <EnergyBar label="분석" pct={70} color={GUIDE_C.purple} />
-        <EnergyBar label="감성" pct={55} color={GUIDE_C.gold} />
-        <View style={m.traitPill}><Text style={m.traitPillText}>활동·탐구형 — 호기심 많은 우리 아이</Text></View>
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '24시간 상담이모에게 물어보세요',
-    desc: '아이 기질을 알고 답해주는 AI 상담.\n울음·대변 사진 분석도 상담이모 안에서!',
-    visual: (
-      <GuideFrame>
-        <ChatLine text="밤에 자꾸 깨는데 어떻게 해야 할까요?" me />
-        <ChatLine text="활동형 아이는 낮 자극이 많으면 밤에 더 깨요. 자기 전 30분은 조용한 루틴을 만들어볼까요?" />
-        <View style={m.analyzerRow}>
-          <View style={[m.analyzerChip, { backgroundColor: GUIDE_C.blueLight }]}><Text style={[m.analyzerText, { color: GUIDE_C.blue }]}>🔊 울음 분석</Text></View>
-          <View style={[m.analyzerChip, { backgroundColor: GUIDE_C.goldLight }]}><Text style={[m.analyzerText, { color: GUIDE_C.gold }]}>💩 대변 분석</Text></View>
-        </View>
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '기록은 버튼·음성·사진으로 간편하게',
-    desc: '버튼 한 번이면 기록 끝.\n말하거나 어린이집 알림장을 찍으면 AI가 정리해줘요',
-    visual: (
-      <GuideFrame>
-        <View style={m.quickRow}>
-          <View style={[m.quickBtn, { backgroundColor: '#EBC97E' }]}><Text style={m.quickBtnText}>분유</Text></View>
-          <View style={[m.quickBtn, { backgroundColor: '#BCAEDE' }]}><Text style={m.quickBtnText}>수면</Text></View>
-          <View style={[m.quickBtn, { backgroundColor: '#96C7D0' }]}><Text style={m.quickBtnText}>소변</Text></View>
-        </View>
-        <View style={m.inputHintRow}>
-          <View style={m.inputHint}><Text style={m.inputHintText}>🎤  음성 입력</Text></View>
-          <View style={m.inputHint}><Text style={m.inputHintText}>📷  사진 인식</Text></View>
-        </View>
-        <Text style={m.hintLine}>한 번 = 지금 기록 · 길게 = 시간 수정</Text>
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '가족과 함께 키워요',
-    desc: '배우자·조부모를 초대해 같은 아이를 함께 기록.\n역할별로 권한(열람/기록)을 정할 수 있어요',
-    visual: (
-      <GuideFrame>
-        <View style={m.famCenter}><Text style={{ fontSize: 30 }}>👶</Text><Text style={m.famBaby}>우리 아이</Text></View>
-        <View style={m.famRow}>
-          <View style={m.famMember}><Text style={m.famEmoji}>👩</Text><Text style={m.famRole}>엄마</Text><Text style={m.famPerm}>기록·상담</Text></View>
-          <View style={m.famMember}><Text style={m.famEmoji}>👨</Text><Text style={m.famRole}>아빠</Text><Text style={m.famPerm}>기록·상담</Text></View>
-          <View style={m.famMember}><Text style={m.famEmoji}>👵</Text><Text style={m.famRole}>할머니</Text><Text style={m.famPerm}>열람만</Text></View>
-        </View>
-      </GuideFrame>
-    ),
-  },
-  {
-    title: '이제 시작해볼까요?',
-    desc: '아래 탭에서 모든 기능을 만날 수 있어요.\n각 화면의 ? 버튼을 누르면 사용법을 다시 볼 수 있어요',
-    visual: (
-      <GuideFrame>
-        <View style={m.tabMap}>
-          {[
-            { e: '🏠', l: '홈' },
-            { e: '📋', l: '아기시간' },
-            { e: '💬', l: '상담이모' },
-            { e: '📸', l: '가족피드' },
-            { e: '🙂', l: '마이' },
-          ].map((t) => (
-            <View key={t.l} style={m.tabItem}>
-              <Text style={{ fontSize: 22 }}>{t.e}</Text>
-              <Text style={m.tabLabel}>{t.l}</Text>
-            </View>
-          ))}
-        </View>
-        <Text style={m.tabHint}>하단 탭으로 언제든 이동해요</Text>
-      </GuideFrame>
-    ),
-  },
-];
+function buildPages(t: TFunction): GuidePage[] {
+  const tabHome = t('components.onboardingGuide.tabHome');
+  const tabBabyTime = t('components.onboardingGuide.tabBabyTime');
+  const tabChatbot = t('components.onboardingGuide.tabChatbot');
+  const tabFamilyFeed = t('components.onboardingGuide.tabFamilyFeed');
+  const tabMy = t('components.onboardingGuide.tabMy');
+
+  return [
+    {
+      title: t('components.onboardingGuide.page1.title'),
+      desc: t('components.onboardingGuide.page1.desc'),
+      visual: (
+        <GuideFrame>
+          <Image source={MASCOT_WAVING} style={m.mascotTop} resizeMode="contain" />
+          <FeatureRow emoji="📋" label={t('components.onboardingGuide.page1.feature1Label')} sub={t('components.onboardingGuide.page1.feature1Sub')} color={GUIDE_C.gold} bg={GUIDE_C.goldLight} />
+          <FeatureRow emoji="💬" label={t('components.onboardingGuide.page1.feature2Label')} sub={t('components.onboardingGuide.page1.feature2Sub')} color={GUIDE_C.accent} bg={GUIDE_C.accentSoft} />
+          <FeatureRow emoji="👨‍👩‍👧" label={t('components.onboardingGuide.page1.feature3Label')} sub={t('components.onboardingGuide.page1.feature3Sub')} color={GUIDE_C.purple} bg={GUIDE_C.purpleLight} />
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('components.onboardingGuide.page2.title'),
+      desc: t('components.onboardingGuide.page2.desc'),
+      visual: (
+        <GuideFrame>
+          <Text style={m.frameCap}>{t('components.onboardingGuide.page2.frameCap')}</Text>
+          <EnergyBar label={t('components.onboardingGuide.page2.energyExplore')} pct={82} color={GUIDE_C.blue} />
+          <EnergyBar label={t('components.onboardingGuide.page2.energyActive')} pct={64} color={GUIDE_C.accent} />
+          <EnergyBar label={t('components.onboardingGuide.page2.energyStable')} pct={48} color={GUIDE_C.green} />
+          <EnergyBar label={t('components.onboardingGuide.page2.energyAnalytic')} pct={70} color={GUIDE_C.purple} />
+          <EnergyBar label={t('components.onboardingGuide.page2.energyEmotional')} pct={55} color={GUIDE_C.gold} />
+          <View style={m.traitPill}><Text style={m.traitPillText}>{t('components.onboardingGuide.page2.traitPill')}</Text></View>
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('components.onboardingGuide.page3.title'),
+      desc: t('components.onboardingGuide.page3.desc'),
+      visual: (
+        <GuideFrame>
+          <ChatLine text={t('components.onboardingGuide.page3.chatMe')} me />
+          <ChatLine text={t('components.onboardingGuide.page3.chatAi')} />
+          <View style={m.analyzerRow}>
+            <View style={[m.analyzerChip, { backgroundColor: GUIDE_C.blueLight }]}><Text style={[m.analyzerText, { color: GUIDE_C.blue }]}>{t('components.onboardingGuide.page3.cryAnalysis')}</Text></View>
+            <View style={[m.analyzerChip, { backgroundColor: GUIDE_C.goldLight }]}><Text style={[m.analyzerText, { color: GUIDE_C.gold }]}>{t('components.onboardingGuide.page3.poopAnalysis')}</Text></View>
+          </View>
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('components.onboardingGuide.page4.title'),
+      desc: t('components.onboardingGuide.page4.desc'),
+      visual: (
+        <GuideFrame>
+          <View style={m.quickRow}>
+            <View style={[m.quickBtn, { backgroundColor: '#EBC97E' }]}><Text style={m.quickBtnText}>{t('components.onboardingGuide.page4.formula')}</Text></View>
+            <View style={[m.quickBtn, { backgroundColor: '#BCAEDE' }]}><Text style={m.quickBtnText}>{t('components.onboardingGuide.page4.sleep')}</Text></View>
+            <View style={[m.quickBtn, { backgroundColor: '#96C7D0' }]}><Text style={m.quickBtnText}>{t('components.onboardingGuide.page4.pee')}</Text></View>
+          </View>
+          <View style={m.inputHintRow}>
+            <View style={m.inputHint}><Text style={m.inputHintText}>{t('components.onboardingGuide.page4.voiceInput')}</Text></View>
+            <View style={m.inputHint}><Text style={m.inputHintText}>{t('components.onboardingGuide.page4.photoRecognition')}</Text></View>
+          </View>
+          <Text style={m.hintLine}>{t('components.onboardingGuide.page4.hintLine')}</Text>
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('components.onboardingGuide.page5.title'),
+      desc: t('components.onboardingGuide.page5.desc'),
+      visual: (
+        <GuideFrame>
+          <View style={m.famCenter}><Text style={{ fontSize: 30 }}>👶</Text><Text style={m.famBaby}>{t('components.onboardingGuide.page5.ourBaby')}</Text></View>
+          <View style={m.famRow}>
+            <View style={m.famMember}><Text style={m.famEmoji}>👩</Text><Text style={m.famRole}>{t('components.onboardingGuide.page5.mom')}</Text><Text style={m.famPerm}>{t('components.onboardingGuide.page5.permFull')}</Text></View>
+            <View style={m.famMember}><Text style={m.famEmoji}>👨</Text><Text style={m.famRole}>{t('components.onboardingGuide.page5.dad')}</Text><Text style={m.famPerm}>{t('components.onboardingGuide.page5.permFull')}</Text></View>
+            <View style={m.famMember}><Text style={m.famEmoji}>👵</Text><Text style={m.famRole}>{t('components.onboardingGuide.page5.grandma')}</Text><Text style={m.famPerm}>{t('components.onboardingGuide.page5.permViewOnly')}</Text></View>
+          </View>
+        </GuideFrame>
+      ),
+    },
+    {
+      title: t('components.onboardingGuide.page6.title'),
+      desc: t('components.onboardingGuide.page6.desc'),
+      visual: (
+        <GuideFrame>
+          <View style={m.tabMap}>
+            {[
+              { e: '🏠', l: tabHome },
+              { e: '📋', l: tabBabyTime },
+              { e: '💬', l: tabChatbot },
+              { e: '📸', l: tabFamilyFeed },
+              { e: '🙂', l: tabMy },
+            ].map((tab) => (
+              <View key={tab.l} style={m.tabItem}>
+                <Text style={{ fontSize: 22 }}>{tab.e}</Text>
+                <Text style={m.tabLabel}>{tab.l}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={m.tabHint}>{t('components.onboardingGuide.page6.tabHint')}</Text>
+        </GuideFrame>
+      ),
+    },
+  ];
+}
 
 export function OnboardingGuide() {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
+  const pages = useMemo(() => buildPages(t), [t]);
 
   useEffect(() => {
     AsyncStorage.getItem(GUIDE_SHOWN_KEY).then((v) => { if (!v) setVisible(true); }).catch(() => {});
@@ -200,5 +212,5 @@ export function OnboardingGuide() {
     try { await AsyncStorage.setItem(GUIDE_SHOWN_KEY, '1'); } catch { /* best-effort */ }
   };
 
-  return <GuideCarousel visible={visible} pages={PAGES} onClose={close} onComplete={close} />;
+  return <GuideCarousel visible={visible} pages={pages} onClose={close} onComplete={close} />;
 }

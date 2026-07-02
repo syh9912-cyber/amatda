@@ -5,6 +5,7 @@
  */
 import { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { CenterModal } from '../ui/CenterModal';
 
 export interface Announcement {
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export function AnnouncementPopup({ visible, announcement, onClose }: Props) {
+  const { t } = useTranslation();
   const [choice, setChoice] = useState<'today' | 'week' | null>(null);
   if (!announcement) return null;
 
@@ -53,12 +55,12 @@ export function AnnouncementPopup({ visible, announcement, onClose }: Props) {
 
         <View style={s.checks}>
           <CheckRow
-            label="오늘 하루 보지 않기"
+            label={t('components.announcementPopup.hideToday')}
             on={choice === 'today'}
             onPress={() => setChoice(choice === 'today' ? null : 'today')}
           />
           <CheckRow
-            label="일주일 동안 보지 않기"
+            label={t('components.announcementPopup.hideWeek')}
             on={choice === 'week'}
             onPress={() => setChoice(choice === 'week' ? null : 'week')}
           />
@@ -67,15 +69,15 @@ export function AnnouncementPopup({ visible, announcement, onClose }: Props) {
         {announcement.linkUrl ? (
           <>
             <TouchableOpacity style={s.linkBtn} onPress={openLink} activeOpacity={0.85}>
-              <Text style={s.linkText}>{announcement.linkLabel || '자세히 보기'}</Text>
+              <Text style={s.linkText}>{announcement.linkLabel || t('components.announcementPopup.viewDetails')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.closeTextBtn} onPress={close} activeOpacity={0.7}>
-              <Text style={s.closeTextOnly}>닫기</Text>
+              <Text style={s.closeTextOnly}>{t('common.close')}</Text>
             </TouchableOpacity>
           </>
         ) : (
           <TouchableOpacity style={s.closeBtn} onPress={close} activeOpacity={0.85}>
-            <Text style={s.closeText}>닫기</Text>
+            <Text style={s.closeText}>{t('common.close')}</Text>
           </TouchableOpacity>
         )}
       </View>

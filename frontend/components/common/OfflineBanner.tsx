@@ -1,13 +1,15 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useOffline } from '../../hooks/useOffline';
 
 export function OfflineBanner() {
+  const { t } = useTranslation();
   const isOffline = useOffline();
   if (!isOffline) return null;
 
   return (
     <View style={s.banner}>
-      <Text style={s.text}>오프라인 상태입니다. 일부 기능이 제한될 수 있어요.</Text>
+      <Text style={s.text}>{t('components.offlineBanner.message')}</Text>
     </View>
   );
 }

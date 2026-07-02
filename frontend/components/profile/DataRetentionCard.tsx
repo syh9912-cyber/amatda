@@ -9,24 +9,19 @@
  */
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Linking, Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { authApi } from '../../services/api';
 import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
 
 // PIPA 35조 / GDPR 20조 — 사용자 데이터 다운로드 요청 안내
 const DATA_REQUEST_EMAIL = 'privacy@sylabs.kr';
-function openDataRequestEmail() {
-  const subject = encodeURIComponent('[아맞다] 내 데이터 다운로드 요청');
-  const body = encodeURIComponent(
-    '안녕하세요, 아맞다 회원입니다.\n\n' +
-    '아래 정보 기준으로 제 개인정보 사본을 받고 싶어요.\n\n' +
-    '- 가입 이메일: \n' +
-    '- 가입 방법(카카오/네이버/구글/이메일): \n' +
-    '- 자녀 이름(보유한 경우): \n\n' +
-    '※ 본인 확인 후 영업일 기준 7일 이내에 회신해주세요.'
-  );
+function openDataRequestEmail(t: TFunction) {
+  const subject = encodeURIComponent(t('components.dataRetentionCard.emailSubject'));
+  const body = encodeURIComponent(t('components.dataRetentionCard.emailBody'));
   const url = `mailto:${DATA_REQUEST_EMAIL}?subject=${subject}&body=${body}`;
   Linking.openURL(url).catch(() => {
-    Alert.alert('이메일 앱이 없어요', `${DATA_REQUEST_EMAIL} 으로 직접 문의해주세요.`);
+    Alert.alert(t('components.dataRetentionCard.noEmailAppTitle'), t('components.dataRetentionCard.noEmailAppDesc', { email: DATA_REQUEST_EMAIL }));
   });
 }
 
@@ -52,12 +47,13 @@ function formatDateKorean(iso: string | null): string {
 /** 다음 자동 파기 안내 발송 예정일(=lastActiveAt + 365일). */
 function calcNextWarningDate(lastActiveAtIso: string | null): string | null {
   if (!lastActiveAtIso) return null;
-  const t = new Date(lastActiveAtIso).getTime();
-  if (Number.isNaN(t)) return null;
-  return new Date(t + DORMANT_THRESHOLD_DAYS * DAY_MS).toISOString();
+  const lastActiveMs = new Date(lastActiveAtIso).getTime();
+  if (Number.isNaN(lastActiveMs)) return null;
+  return new Date(lastActiveMs + DORMANT_THRESHOLD_DAYS * DAY_MS).toISOString();
 }
 
 export function DataRetentionCard() {
+  const { t } = useTranslation();
   const [retention, setRetention] = useState<MeRetention | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -98,13 +94,13 @@ export function DataRetentionCard() {
   if (retention?.dormantWarnedAt && retention?.scheduledDeleteAt) {
     return (
       <View style={[styles.card, styles.cardWarning]}>
-        <Text style={styles.titleWarning}>⚠️ 휴면 계정 처리 예정</Text>
+        <Text style={styles.titleWarning}>{t('components.dataRetentionCard.dormantTitle')}</Text>
         <Text style={styles.dateBig}>{formatDateKorean(retention.scheduledDeleteAt)}</Text>
         <Text style={styles.body}>
-          1년 이상 접속이 없어 위 날짜에 계정과 등록한 사진·기록이 모두 자동 파기될 예정입니다.
+          {t('components.dataRetentionCard.dormantBody')}
         </Text>
         <Text style={styles.bodyHighlight}>
-          앱을 계속 이용하시면 자동으로 연장돼요. 별도 조작 필요 없음.
+          {t('components.dataRetentionCard.dormantHighlight')}
         </Text>
       </View>
     );
@@ -114,22 +110,22 @@ export function DataRetentionCard() {
   const nextWarn = calcNextWarningDate(retention?.lastActiveAt ?? null);
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>내 데이터 보관 기한</Text>
+      <Text style={styles.title}>{t('components.dataRetentionCard.title')}</Text>
       <View style={styles.row}>
-        <Text style={styles.label}>마지막 접속</Text>
+        <Text style={styles.label}>{t('components.dataRetentionCard.lastActiveLabel')}</Text>
         <Text style={styles.value}>{formatDateKorean(retention?.lastActiveAt ?? null)}</Text>
       </View>
       <View style={styles.row}>
-        <Text style={styles.label}>다음 자동 안내</Text>
+        <Text style={styles.label}>{t('components.dataRetentionCard.nextWarningLabel')}</Text>
         <Text style={styles.value}>{formatDateKorean(nextWarn)}</Text>
       </View>
       <Text style={styles.note}>
-        1년 동안 접속이 없으면 푸시로 사전 안내드리고, 안내 후 30일 안에 다시 접속하지 않으면 계정과 사진이 자동 파기됩니다. (정보통신망법 시행령 16조)
+        {t('components.dataRetentionCard.note')}
       </Text>
-      <TouchableOpacity style={styles.downloadBtn} onPress={openDataRequestEmail} activeOpacity={0.7}>
-        <Text style={styles.downloadBtnText}>📥 내 데이터 사본 받기 (이메일 요청)</Text>
+      <TouchableOpacity style={styles.downloadBtn} onPress={() => openDataRequestEmail(t)} activeOpacity={0.7}>
+        <Text style={styles.downloadBtnText}>{t('components.dataRetentionCard.downloadBtnText')}</Text>
       </TouchableOpacity>
-      <Text style={styles.downloadHint}>개인정보보호법 35조에 따라 본인 데이터 사본을 요청할 수 있어요. 영업일 기준 7일 이내 회신.</Text>
+      <Text style={styles.downloadHint}>{t('components.dataRetentionCard.downloadHint')}</Text>
     </View>
   );
 }

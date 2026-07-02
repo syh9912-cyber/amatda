@@ -2,6 +2,8 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
 
 interface ProfileFooterProps {
@@ -10,10 +12,10 @@ interface ProfileFooterProps {
 }
 
 /** 현재 실행 중인 번들 정보를 사람이 읽기 좋은 문자열로 변환 */
-function getUpdateLabel(): string {
+function getUpdateLabel(t: TFunction): string {
   try {
-    if (Updates.isEmergencyLaunch) return '긴급복구';
-    if (Updates.isEmbeddedLaunch || !Updates.createdAt) return '기본빌드';
+    if (Updates.isEmergencyLaunch) return t('components.profileFooter.emergencyRecovery');
+    if (Updates.isEmbeddedLaunch || !Updates.createdAt) return t('components.profileFooter.defaultBuild');
     const d = new Date(Updates.createdAt);
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
@@ -21,13 +23,14 @@ function getUpdateLabel(): string {
     const min = String(d.getMinutes()).padStart(2, '0');
     return `OTA ${mm}/${dd} ${hh}:${min}`;
   } catch {
-    return '확인불가';
+    return t('components.profileFooter.unknownBuild');
   }
 }
 
 export function ProfileFooter({ onLogout, onDeleteAccount }: ProfileFooterProps) {
+  const { t } = useTranslation();
   const version = Constants.expoConfig?.version ?? '2.2.0';
-  const updateLabel = getUpdateLabel();
+  const updateLabel = getUpdateLabel(t);
 
   return (
     <View style={styles.container}>
@@ -35,17 +38,17 @@ export function ProfileFooter({ onLogout, onDeleteAccount }: ProfileFooterProps)
         <TouchableOpacity
           onPress={() => router.push('/(main)/privacy' as never)}
           accessibilityRole="link"
-          accessibilityLabel="개인정보 처리방침"
+          accessibilityLabel={t('privacy.pageTitle')}
         >
-          <Text style={styles.linkText}>개인정보 처리방침</Text>
+          <Text style={styles.linkText}>{t('privacy.pageTitle')}</Text>
         </TouchableOpacity>
         <Text style={styles.divider}>|</Text>
         <TouchableOpacity
           onPress={() => router.push('/(main)/terms' as never)}
           accessibilityRole="link"
-          accessibilityLabel="이용약관"
+          accessibilityLabel={t('terms.pageTitle')}
         >
-          <Text style={styles.linkText}>이용약관</Text>
+          <Text style={styles.linkText}>{t('terms.pageTitle')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -53,18 +56,18 @@ export function ProfileFooter({ onLogout, onDeleteAccount }: ProfileFooterProps)
         onPress={onLogout}
         style={styles.logoutBtn}
         accessibilityRole="button"
-        accessibilityLabel="로그아웃"
+        accessibilityLabel={t('profile.logoutAlert.title')}
       >
-        <Text style={styles.logoutText}>로그아웃</Text>
+        <Text style={styles.logoutText}>{t('profile.logoutAlert.title')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         onPress={onDeleteAccount}
         accessibilityRole="button"
-        accessibilityLabel="계정 삭제"
-        accessibilityHint="모든 계정 정보와 자녀 기록이 영구 삭제됩니다"
+        accessibilityLabel={t('profile.deleteAccountAlert.title')}
+        accessibilityHint={t('components.profileFooter.deleteAccountHint')}
       >
-        <Text style={styles.deleteText}>계정 삭제</Text>
+        <Text style={styles.deleteText}>{t('profile.deleteAccountAlert.title')}</Text>
       </TouchableOpacity>
 
       <Text style={styles.versionText}>v{version} · {updateLabel}</Text>

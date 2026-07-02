@@ -4131,5 +4131,324 @@
     "reasonText": "給{{trait}}氣質的{{name}} - {{reason}}",
     "stepsTitle": "請這樣試試看",
     "materialsLabel": "準備物品"
+  },
+  "components": {
+    "coachMessage": {
+      "possibleReasons": "可能的原因",
+      "reason": "原因",
+      "solutions": "解決方法",
+      "medicalNotice": "就診建議",
+      "am": "上午",
+      "pm": "下午"
+    },
+    "coachingInput": {
+      "attachPhoto": "附加照片",
+      "attachPhotoHint": "從相機或相簿選擇照片",
+      "placeholder": "請告訴我您的煩惱...",
+      "sendMessage": "傳送訊息"
+    },
+    "firstTalkCard": {
+      "preparing": "諮詢阿姨準備中...",
+      "coachLabel": "諮詢阿姨",
+      "errorIntro": "您好！請告訴我您最想了解孩子的哪一點。",
+      "answerPlaceholder": "請寫下您的煩惱或想了解的事...",
+      "freeInputPlaceholder": "也可以自行輸入...",
+      "contextMessage": "[教練提問：{{question}}] {{answer}}"
+    },
+    "followupCard": {
+      "optionMuchBetter": "好很多了",
+      "optionSimilar": "差不多",
+      "optionStillWorried": "還在煩惱",
+      "situationPlaceholder": "請告訴我目前的狀況...",
+      "send": "傳送",
+      "typeDirectly": "自行輸入",
+      "later": "稍後"
+    },
+    "parentMessage": {
+      "am": "上午",
+      "pm": "下午"
+    },
+    "proactivePopup": {
+      "inactive": {
+        "title": "好久不見！",
+        "question": "最近孩子的狀況如何？",
+        "optionGood": "很好",
+        "optionNormal": "普通",
+        "optionWorried": "有些煩惱"
+      },
+      "weekend": {
+        "title": "愉快的週末！",
+        "question": "週末和孩子度過了什麼樣的時光？",
+        "optionOuting": "外出走走",
+        "optionHomePlay": "在家玩耍",
+        "optionStillPlanning": "還在計劃中"
+      },
+      "followup": {
+        "title": "後來情況如何？",
+        "questionFallback": "您之前提到的煩惱，後來情況如何？",
+        "optionMuchBetter": "好很多了",
+        "optionSimilar": "差不多",
+        "optionWantConsult": "想諮詢"
+      },
+      "respondLater": "下次再回覆"
+    },
+    "yearAgoBanner": {
+      "label": "一年前的今天"
+    },
+    "checkinOptions": {
+      "good": "很好",
+      "normal": "普通",
+      "bad": "不太好"
+    },
+    "adSlot": {
+      "mediumPlaceholder": "廣告區域（測試 — 300×250）",
+      "bannerPlaceholder": "廣告區域（測試 — 50pt）",
+      "unitIdMissing": "廣告單元ID未設定",
+      "moduleNotLoaded": "廣告模組未載入（需要重新安裝APK）",
+      "loading": "廣告載入中..."
+    },
+    "announcementPopup": {
+      "hideToday": "今日不再顯示",
+      "hideWeek": "一週內不再顯示",
+      "viewDetails": "查看詳情"
+    },
+    "backButton": {
+      "accessibilityLabel": "返回"
+    },
+    "celebrationOverlay": {
+      "thanks": "謝謝 💛"
+    },
+    "guideButton": {
+      "accessibilityLabel": "查看使用指南"
+    },
+    "guideCarousel": {
+      "skip": "略過",
+      "start": "開始",
+      "next": "下一步 ›",
+      "prev": "← 上一步"
+    },
+    "medicalCitation": {
+      "accessibilityLabel": "查看醫學資訊來源",
+      "titleCompact": "📚 醫學資訊來源．依據",
+      "title": "📚 資訊來源",
+      "toggleClose": "收起 ▲",
+      "toggleOpen": "查看 ▼",
+      "disclaimer": "本資訊僅供一般參考，不能取代醫學診斷．治療。若有症狀請諮詢專科醫師。"
+    },
+    "offlineBanner": {
+      "message": "目前處於離線狀態。部分功能可能受限。"
+    },
+    "onboardingGuide": {
+      "tabHome": "首頁",
+      "tabBabyTime": "寶寶時間",
+      "tabChatbot": "諮詢阿姨",
+      "tabFamilyFeed": "家庭動態",
+      "tabMy": "我的",
+      "page1": {
+        "title": "歡迎來到Amatda",
+        "desc": "為孩子量身打造的\n育兒記錄．AI諮詢．家庭共享，一站搞定",
+        "feature1Label": "寶寶時間",
+        "feature1Sub": "輕鬆記錄餵奶．睡眠．排便",
+        "feature2Label": "諮詢阿姨",
+        "feature2Sub": "依孩子特質量身打造的AI育兒諮詢",
+        "feature3Label": "共同育兒",
+        "feature3Sub": "與家人一同記錄．分享"
+      },
+      "page2": {
+        "title": "分析專屬孩子的特質",
+        "desc": "依出生年月日時分析孩子與生俱來的能量．傾向\n作為客製化諮詢與推薦的依據",
+        "frameCap": "🌱  孩子的能量分布",
+        "energyExplore": "探究",
+        "energyActive": "活動",
+        "energyStable": "安定",
+        "energyAnalytic": "分析",
+        "energyEmotional": "感性",
+        "traitPill": "活動．探究型 — 好奇心旺盛的孩子"
+      },
+      "page3": {
+        "title": "24小時隨時詢問諮詢阿姨",
+        "desc": "了解孩子特質再回答的AI諮詢。\n哭聲．大便照片分析也都在諮詢阿姨裡完成！",
+        "chatMe": "晚上一直醒過來該怎麼辦？",
+        "chatAi": "活動型的孩子如果白天刺激較多，晚上會更容易醒來。要不要在睡前30分鐘安排安靜的例行活動呢？",
+        "cryAnalysis": "🔊 哭聲分析",
+        "poopAnalysis": "💩 大便分析"
+      },
+      "page4": {
+        "title": "記錄透過按鈕．語音．照片輕鬆完成",
+        "desc": "只要按一次按鈕就完成記錄。\n用說的或拍下幼兒園聯絡簿，AI就會幫你整理",
+        "formula": "配方奶",
+        "sleep": "睡眠",
+        "pee": "小便",
+        "voiceInput": "🎤  語音輸入",
+        "photoRecognition": "📷  照片辨識",
+        "hintLine": "點一下 = 立即記錄．長按 = 修改時間"
+      },
+      "page5": {
+        "title": "與家人一起養育",
+        "desc": "邀請配偶．祖父母一起記錄同一個孩子。\n可依角色設定權限（僅檢視/記錄）",
+        "ourBaby": "我們的孩子",
+        "mom": "媽媽",
+        "dad": "爸爸",
+        "grandma": "奶奶",
+        "permFull": "記錄．諮詢",
+        "permViewOnly": "僅限檢視"
+      },
+      "page6": {
+        "title": "現在就開始吧？",
+        "desc": "可在下方頁籤中找到所有功能。\n點各畫面的 ? 按鈕可再次查看使用說明",
+        "tabHint": "隨時可透過底部頁籤切換"
+      }
+    },
+    "upsellModal": {
+      "defaultTitle": "今日的分析已完成",
+      "defaultMessage": "只要一杯咖啡的價格，即可每月使用300次",
+      "benefit1": "．飲食．大便．哭聲分析 各每月300次",
+      "benefit2": "．諮詢阿姨無限次數",
+      "benefit3": "．移除廣告",
+      "viewPlan": "查看付費方案",
+      "later": "明天再說"
+    },
+    "dataRetentionCard": {
+      "title": "我的資料保存期限",
+      "lastActiveLabel": "最後登入",
+      "nextWarningLabel": "下次自動通知",
+      "note": "若1年內無登入紀錄，將透過推播事先通知；通知後30日內未再次登入，帳號與照片將自動刪除。（資通網路法施行令第16條）",
+      "dormantTitle": "⚠️ 休眠帳號即將處理",
+      "dormantBody": "由於已超過1年未登入，上述日期將自動刪除帳號及所有已登錄的照片與紀錄。",
+      "dormantHighlight": "只要繼續使用App即可自動延長，無需另外操作。",
+      "downloadBtnText": "📥 取得我的資料副本（電子郵件申請）",
+      "downloadHint": "依個人資料保護法第35條，可申請取得本人資料副本。將於7個工作天內回覆。",
+      "emailSubject": "【Amatda】我的資料下載申請",
+      "emailBody": "您好，我是Amatda的會員。\n\n希望依以下資訊取得我的個人資料副本。\n\n- 註冊電子郵件：\n- 註冊方式（Kakao／Naver／Google／電子郵件）：\n- 孩子姓名（如有）：\n\n※請於身分核實後7個工作天內回覆。",
+      "noEmailAppTitle": "找不到郵件應用程式",
+      "noEmailAppDesc": "請直接寄信至 {{email}} 洽詢。"
+    },
+    "passwordModal": {
+      "currentPwPrompt": "請輸入目前的密碼",
+      "mismatch": "新密碼不一致",
+      "changeFailDesc": "密碼變更失敗。\n請確認目前的密碼是否正確。",
+      "currentPwPlaceholder": "目前的密碼",
+      "newPwPlaceholder": "新密碼（6碼以上）",
+      "confirmPwPlaceholder": "確認新密碼"
+    },
+    "profileCard": {
+      "registerChildPrompt": "請先註冊孩子的資料",
+      "ageMonths": "{{count}}個月",
+      "ageYearsMonths": "{{years}}歲{{months}}個月",
+      "ageYears": "{{years}}歲",
+      "pregnancyWeek": "懷孕第{{week}}週",
+      "temperamentLabel": "氣質：{{temperament}}",
+      "photoUpdateFailed": "照片更新失敗。",
+      "temperament": {
+        "wood": "探究型",
+        "fire": "活動型",
+        "earth": "穩定型",
+        "metal": "分析型",
+        "water": "創意型"
+      }
+    },
+    "profileFooter": {
+      "emergencyRecovery": "緊急修復",
+      "defaultBuild": "預設版本",
+      "unknownBuild": "無法確認",
+      "deleteAccountHint": "所有帳號資訊與孩子的紀錄將永久刪除"
+    },
+    "profileMenuList": {
+      "editProfile": {
+        "label": "編輯我的資料",
+        "description": "變更暱稱、密碼"
+      },
+      "pregnancyAlbum": {
+        "description": "依週數記錄與檢查清單"
+      },
+      "weeklyDevelopment": {
+        "label": "依週數發展",
+        "description": "查看胎兒成長資訊"
+      },
+      "gdmManagement": {
+        "description": "妊娠糖尿病飲食・血糖紀錄"
+      },
+      "kickCheck": {
+        "label": "胎動記錄",
+        "description": "胎動次數紀錄"
+      },
+      "momWellness": {
+        "label": "心理健康檢測",
+        "description": "記錄今日狀態與心情"
+      },
+      "momGroup": {
+        "label": "媽媽社群",
+        "description": "與準媽媽們交流"
+      },
+      "lullaby": {
+        "label": "胎教音樂",
+        "description": "舒緩的胎教音樂"
+      },
+      "recommendations": {
+        "label": "個人化推薦",
+        "pregnancyDescription": "懷孕・生產準備指南",
+        "parentingDescription": "飲食、生活習慣、補習班、遊戲學習推薦"
+      },
+      "coparenting": {
+        "label": "家庭共同育兒",
+        "description": "與配偶一起準備"
+      },
+      "momstagram": {
+        "label": "家庭動態",
+        "description": "與家人分享珍貴的時刻"
+      },
+      "childCard": {
+        "label": "孩子的數位卡片",
+        "description": "分享孩子的資訊卡"
+      },
+      "traitDetail": {
+        "label": "氣質分析",
+        "description": "重新查看孩子的氣質結果／重新分析"
+      },
+      "growthTimeline": {
+        "label": "成長時間軸",
+        "description": "彙整里程碑照片與紀錄"
+      },
+      "growthStats": {
+        "label": "成長紀錄與統計",
+        "description": "查看成長趨勢"
+      },
+      "growthAlbumMaker": {
+        "label": "製作成長相簿",
+        "description": "用成長照片製作相簿"
+      },
+      "aiAnalysis": {
+        "description": "育兒模式・排便・哭聲分析結果"
+      },
+      "premiumPlan": {
+        "description": "無限次數使用諮詢阿姨（AI顧問）"
+      },
+      "voiceSettings": {
+        "label": "語音紀錄設定",
+        "description": "語音指令指南與預設值設定"
+      },
+      "notificationSettings": {
+        "description": "推播通知管理"
+      },
+      "support": {
+        "description": "傳送諮詢與建議"
+      },
+      "termsDescription": "查看服務條款",
+      "privacyDescription": "個人資料蒐集與使用說明"
+    },
+    "authDivider": {
+      "label": "或"
+    },
+    "uiScreenHeader": {
+      "backAccessibilityLabel": "返回"
+    },
+    "socialLoginButtons": {
+      "connecting": "連線中...",
+      "loginWithProvider": "使用{{provider}}登入",
+      "continueWithApple": "使用Apple繼續",
+      "continueWithGoogle": "使用Google繼續",
+      "continueWithNaver": "使用NAVER繼續",
+      "continueWithKakao": "使用Kakao繼續"
+    }
   }
 }

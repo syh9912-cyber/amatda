@@ -15,6 +15,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useShowAds } from '../../hooks/useShowAds';
 
 const ADS_MOCK = process.env.EXPO_PUBLIC_ADS_MOCK === 'true';
@@ -66,6 +67,7 @@ interface AdSlotProps {
 }
 
 export function AdSlot({ variant = 'banner' }: AdSlotProps) {
+  const { t } = useTranslation();
   const show = useShowAds();
   const [adReady, setAdReady] = useState(false);
   const initStartedRef = useRef(false);
@@ -84,8 +86,8 @@ export function AdSlot({ variant = 'banner' }: AdSlotProps) {
 
   const isMedium = variant === 'medium';
   const placeholderStyle = isMedium ? styles.mediumBox : styles.banner;
-  const mediumLabel = '광고 영역 (테스트 — 300×250)';
-  const bannerLabel = '광고 영역 (테스트 — 50pt)';
+  const mediumLabel = t('components.adSlot.mediumPlaceholder');
+  const bannerLabel = t('components.adSlot.bannerPlaceholder');
 
   if (ADS_MOCK) {
     return (
@@ -102,7 +104,7 @@ export function AdSlot({ variant = 'banner' }: AdSlotProps) {
   if (!unitId) {
     return (
       <View style={placeholderStyle}>
-        <Text style={styles.label}>광고 unit ID 미설정</Text>
+        <Text style={styles.label}>{t('components.adSlot.unitIdMissing')}</Text>
       </View>
     );
   }
@@ -111,7 +113,7 @@ export function AdSlot({ variant = 'banner' }: AdSlotProps) {
   if (!mod?.BannerAd) {
     return (
       <View style={placeholderStyle}>
-        <Text style={styles.label}>광고 모듈 미로딩 (APK 재설치 필요)</Text>
+        <Text style={styles.label}>{t('components.adSlot.moduleNotLoaded')}</Text>
       </View>
     );
   }
@@ -126,7 +128,7 @@ export function AdSlot({ variant = 'banner' }: AdSlotProps) {
   return (
     <View style={isMedium ? styles.mediumContainer : styles.bannerContainer}>
       {!adReady && (
-        <Text style={styles.loadingLabel}>광고 로딩 중...</Text>
+        <Text style={styles.loadingLabel}>{t('components.adSlot.loading')}</Text>
       )}
       <BannerAd
         unitId={unitId}

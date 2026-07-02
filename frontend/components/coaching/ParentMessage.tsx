@@ -1,4 +1,6 @@
 import { View, Text, Image, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { CoachingMessage, COACHING_COLORS } from './types';
 
 interface Props {
@@ -6,7 +8,8 @@ interface Props {
 }
 
 export function ParentMessage({ message }: Props) {
-  const timeStr = formatTime(message.createdAt);
+  const { t } = useTranslation();
+  const timeStr = formatTime(message.createdAt, t);
 
   return (
     <View style={styles.row}>
@@ -27,11 +30,11 @@ export function ParentMessage({ message }: Props) {
   );
 }
 
-function formatTime(iso: string): string {
+function formatTime(iso: string, t: TFunction): string {
   const d = new Date(iso);
   const h = d.getHours();
   const m = d.getMinutes().toString().padStart(2, '0');
-  const ampm = h < 12 ? '오전' : '오후';
+  const ampm = h < 12 ? t('components.parentMessage.am') : t('components.parentMessage.pm');
   const hour = h % 12 || 12;
   return `${ampm} ${hour}:${m}`;
 }

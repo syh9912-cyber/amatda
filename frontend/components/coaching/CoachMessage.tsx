@@ -1,4 +1,6 @@
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { CoachingMessage, COACHING_COLORS } from './types';
 
 const IC_WARN = require('../../assets/icon-redflag.png') as number;
@@ -30,7 +32,8 @@ function SectionIcon({ src, size = 14 }: { src: number; size?: number }) {
 }
 
 export function CoachMessage({ message, onPickFollowup, isLatest }: Props) {
-  const timeStr = formatTime(message.createdAt);
+  const { t } = useTranslation();
+  const timeStr = formatTime(message.createdAt, t);
   const sourceBadge = message.source === 'ai' ? 'AI' : 'DB';
   const sourceIcon = message.source === 'ai' ? IC_AI : IC_DB;
   const followupDisplay = safeFollowupText(message.followup);
@@ -61,7 +64,7 @@ export function CoachMessage({ message, onPickFollowup, isLatest }: Props) {
             <View style={styles.reasonsBox}>
               <View style={styles.sectionRow}>
                 <SectionIcon src={IC_BULB} />
-                <Text style={styles.reasonsTitle}>{'가능한 이유'}</Text>
+                <Text style={styles.reasonsTitle}>{t('components.coachMessage.possibleReasons')}</Text>
               </View>
               {message.reasons.map((r, idx) => (
                 <Text key={idx} style={styles.reasonItem}>{'  • '}{r}</Text>
@@ -74,7 +77,7 @@ export function CoachMessage({ message, onPickFollowup, isLatest }: Props) {
             <View style={styles.reasonsBox}>
               <View style={styles.sectionRow}>
                 <SectionIcon src={IC_BULB} />
-                <Text style={styles.reasonsTitle}>{'이유'}</Text>
+                <Text style={styles.reasonsTitle}>{t('components.coachMessage.reason')}</Text>
               </View>
               <Text style={styles.reasonItem}>{message.reason}</Text>
             </View>
@@ -85,7 +88,7 @@ export function CoachMessage({ message, onPickFollowup, isLatest }: Props) {
             <View style={styles.solutionBox}>
               <View style={styles.sectionRow}>
                 <SectionIcon src={IC_CHECK} />
-                <Text style={styles.solutionTitle}>{'해결 방법'}</Text>
+                <Text style={styles.solutionTitle}>{t('components.coachMessage.solutions')}</Text>
               </View>
               {message.solutions.map((sol, idx) => (
                 <Text key={idx} style={styles.solutionItem}>{idx + 1}. {sol}</Text>
@@ -98,7 +101,7 @@ export function CoachMessage({ message, onPickFollowup, isLatest }: Props) {
             <View style={styles.medicalBox}>
               <View style={styles.sectionRow}>
                 <SectionIcon src={IC_HOSPITAL} />
-                <Text style={styles.medicalTitle}>{'진료 안내'}</Text>
+                <Text style={styles.medicalTitle}>{t('components.coachMessage.medicalNotice')}</Text>
               </View>
               <Text style={styles.medicalText}>{message.medical}</Text>
             </View>
@@ -143,11 +146,11 @@ export function CoachMessage({ message, onPickFollowup, isLatest }: Props) {
   );
 }
 
-function formatTime(iso: string): string {
+function formatTime(iso: string, t: TFunction): string {
   const d = new Date(iso);
   const h = d.getHours();
   const m = d.getMinutes().toString().padStart(2, '0');
-  const ampm = h < 12 ? '오전' : '오후';
+  const ampm = h < 12 ? t('components.coachMessage.am') : t('components.coachMessage.pm');
   const hour = h % 12 || 12;
   return `${ampm} ${hour}:${m}`;
 }

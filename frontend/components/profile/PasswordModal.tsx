@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, TextInput, Alert, StyleSheet } from 'react-native';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 import { authApi } from '../../services/api';
 
@@ -8,6 +9,7 @@ interface PasswordModalProps {
 }
 
 export function PasswordModal({ onClose }: PasswordModalProps) {
+  const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -18,24 +20,24 @@ export function PasswordModal({ onClose }: PasswordModalProps) {
 
   const handleSubmit = async () => {
     if (!currentPassword) {
-      Alert.alert('오류', '현재 비밀번호를 입력하세요');
+      Alert.alert(t('common.error'), t('components.passwordModal.currentPwPrompt'));
       return;
     }
     if (!newPassword || newPassword.length < 6) {
-      Alert.alert('오류', '새 비밀번호는 6자 이상이어야 합니다');
+      Alert.alert(t('common.error'), t('register.passwordTooShort'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('오류', '새 비밀번호가 일치하지 않습니다');
+      Alert.alert(t('common.error'), t('components.passwordModal.mismatch'));
       return;
     }
     setSaving(true);
     try {
       await authApi.changePassword(currentPassword, newPassword);
-      Alert.alert('완료', '비밀번호가 변경되었습니다');
+      Alert.alert(t('common.complete'), t('profile.changePasswordAlert.successDesc'));
       onClose();
     } catch {
-      Alert.alert('오류', '비밀번호 변경에 실패했습니다.\n현재 비밀번호를 확인해주세요.');
+      Alert.alert(t('common.error'), t('components.passwordModal.changeFailDesc'));
     } finally {
       setSaving(false);
     }
@@ -44,10 +46,10 @@ export function PasswordModal({ onClose }: PasswordModalProps) {
   return (
     <View style={styles.overlay}>
       <View style={styles.card}>
-        <Text style={styles.title}>비밀번호 변경</Text>
+        <Text style={styles.title}>{t('profile.changePasswordAlert.title')}</Text>
         <TextInput
           style={styles.input}
-          placeholder="현재 비밀번호"
+          placeholder={t('components.passwordModal.currentPwPlaceholder')}
           placeholderTextColor={COLORS.textLight}
           secureTextEntry
           value={currentPassword}
@@ -55,7 +57,7 @@ export function PasswordModal({ onClose }: PasswordModalProps) {
         />
         <TextInput
           style={styles.input}
-          placeholder="새 비밀번호 (6자 이상)"
+          placeholder={t('components.passwordModal.newPwPlaceholder')}
           placeholderTextColor={COLORS.textLight}
           secureTextEntry
           value={newPassword}
@@ -67,28 +69,28 @@ export function PasswordModal({ onClose }: PasswordModalProps) {
             passwordsMismatch && styles.inputError,
             passwordsMatch && styles.inputMatch,
           ]}
-          placeholder="새 비밀번호 확인"
+          placeholder={t('components.passwordModal.confirmPwPlaceholder')}
           placeholderTextColor={COLORS.textLight}
           secureTextEntry
           value={confirmPassword}
           onChangeText={setConfirmPassword}
         />
         {passwordsMismatch && (
-          <Text style={styles.hintError}>비밀번호가 일치하지 않아요</Text>
+          <Text style={styles.hintError}>{t('editProfile.passwordMismatchHint')}</Text>
         )}
         {passwordsMatch && (
-          <Text style={styles.hintMatch}>비밀번호가 일치합니다</Text>
+          <Text style={styles.hintMatch}>{t('editProfile.passwordMatchHint')}</Text>
         )}
         <View style={styles.buttons}>
           <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-            <Text style={styles.cancelText}>취소</Text>
+            <Text style={styles.cancelText}>{t('common.cancel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.confirmBtn, (saving || !passwordsMatch) && styles.confirmBtnDisabled]}
             onPress={handleSubmit}
             disabled={saving || !passwordsMatch}
           >
-            <Text style={styles.confirmText}>{saving ? '처리 중...' : '변경'}</Text>
+            <Text style={styles.confirmText}>{saving ? t('editProfile.processing') : t('common.change')}</Text>
           </TouchableOpacity>
         </View>
       </View>

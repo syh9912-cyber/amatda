@@ -7,6 +7,7 @@
  */
 import { TouchableOpacity, Text, StyleSheet, type ViewStyle } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   /** 커스텀 동작 (미지정 시 router.back, 불가하면 홈) */
@@ -21,6 +22,7 @@ interface Props {
 
 export function BackButton({ onPress, style, color = '#1C1C1E', background = 'transparent' }: Props) {
   const router = useRouter();
+  const { t } = useTranslation();
   const handlePress = () => {
     if (onPress) { onPress(); return; }
     if (router.canGoBack()) router.back();
@@ -32,7 +34,7 @@ export function BackButton({ onPress, style, color = '#1C1C1E', background = 'tr
       style={[styles.btn, { backgroundColor: background }, style]}
       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       accessibilityRole="button"
-      accessibilityLabel="뒤로"
+      accessibilityLabel={t('components.backButton.accessibilityLabel')}
       activeOpacity={0.7}
     >
       <Text style={[styles.chevron, { color }]}>{'‹'}</Text>

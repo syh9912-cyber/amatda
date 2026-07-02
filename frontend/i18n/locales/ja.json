@@ -4131,5 +4131,324 @@
     "reasonText": "{{trait}}気質の{{name}}に - {{reason}}",
     "stepsTitle": "このようにやってみましょう",
     "materialsLabel": "準備物"
+  },
+  "components": {
+    "coachMessage": {
+      "possibleReasons": "考えられる理由",
+      "reason": "理由",
+      "solutions": "解決方法",
+      "medicalNotice": "受診案内",
+      "am": "午前",
+      "pm": "午後"
+    },
+    "coachingInput": {
+      "attachPhoto": "写真を添付",
+      "attachPhotoHint": "カメラまたはギャラリーから写真を選択します",
+      "placeholder": "お悩みをお聞かせください...",
+      "sendMessage": "メッセージを送信"
+    },
+    "firstTalkCard": {
+      "preparing": "相談おばさんが準備中です...",
+      "coachLabel": "相談おばさん",
+      "errorIntro": "こんにちは！お子さんについて一番気になることを教えてください。",
+      "answerPlaceholder": "お悩みや気になる点を書いてください...",
+      "freeInputPlaceholder": "自由に入力してもいいですよ...",
+      "contextMessage": "[コーチの質問: {{question}}] {{answer}}"
+    },
+    "followupCard": {
+      "optionMuchBetter": "だいぶ良くなりました",
+      "optionSimilar": "同じくらいです",
+      "optionStillWorried": "まだ悩んでいます",
+      "situationPlaceholder": "状況を教えてください...",
+      "send": "送信",
+      "typeDirectly": "直接入力",
+      "later": "後で"
+    },
+    "parentMessage": {
+      "am": "午前",
+      "pm": "午後"
+    },
+    "proactivePopup": {
+      "inactive": {
+        "title": "お久しぶりです！",
+        "question": "最近お子さんの様子はどうですか？",
+        "optionGood": "良いです",
+        "optionNormal": "普通です",
+        "optionWorried": "悩みがあります"
+      },
+      "weekend": {
+        "title": "楽しい週末を！",
+        "question": "週末はお子さんとどんな時間を過ごしましたか？",
+        "optionOuting": "外出",
+        "optionHomePlay": "家で遊ぶ",
+        "optionStillPlanning": "まだ計画中"
+      },
+      "followup": {
+        "title": "その後どうですか？",
+        "questionFallback": "以前ご相談いただいた件、その後どうですか？",
+        "optionMuchBetter": "だいぶ良くなりました",
+        "optionSimilar": "同じくらいです",
+        "optionWantConsult": "相談したいです"
+      },
+      "respondLater": "また今度お答えします"
+    },
+    "yearAgoBanner": {
+      "label": "1年前の今日"
+    },
+    "checkinOptions": {
+      "good": "良いです",
+      "normal": "普通です",
+      "bad": "良くないです"
+    },
+    "adSlot": {
+      "mediumPlaceholder": "広告エリア（テスト — 300×250）",
+      "bannerPlaceholder": "広告エリア（テスト — 50pt）",
+      "unitIdMissing": "広告ユニットID未設定",
+      "moduleNotLoaded": "広告モジュール未読み込み（APK再インストールが必要）",
+      "loading": "広告読み込み中..."
+    },
+    "announcementPopup": {
+      "hideToday": "今日は表示しない",
+      "hideWeek": "1週間表示しない",
+      "viewDetails": "詳しく見る"
+    },
+    "backButton": {
+      "accessibilityLabel": "戻る"
+    },
+    "celebrationOverlay": {
+      "thanks": "ありがとう 💛"
+    },
+    "guideButton": {
+      "accessibilityLabel": "使い方ガイドを見る"
+    },
+    "guideCarousel": {
+      "skip": "スキップ",
+      "start": "はじめる",
+      "next": "次へ ›",
+      "prev": "← 前へ"
+    },
+    "medicalCitation": {
+      "accessibilityLabel": "医学情報の出典を見る",
+      "titleCompact": "📚 医学情報の出典・根拠",
+      "title": "📚 情報の出典",
+      "toggleClose": "閉じる ▲",
+      "toggleOpen": "見る ▼",
+      "disclaimer": "本情報は一般的な参考用であり、医学的診断・治療の代わりにはなりません。症状がある場合は専門医にご相談ください。"
+    },
+    "offlineBanner": {
+      "message": "オフライン状態です。一部機能が制限される場合があります。"
+    },
+    "onboardingGuide": {
+      "tabHome": "ホーム",
+      "tabBabyTime": "あかちゃんタイム",
+      "tabChatbot": "相談おばさん",
+      "tabFamilyFeed": "家族フィード",
+      "tabMy": "マイ",
+      "page1": {
+        "title": "アマッダへようこそ",
+        "desc": "私たちの子どもの気質にぴったり合った\n育児記録・AI相談・家族共有をひとつの場所で",
+        "feature1Label": "あかちゃんタイム",
+        "feature1Sub": "授乳・睡眠・排泄を簡単記録",
+        "feature2Label": "相談おばさん",
+        "feature2Sub": "気質に合わせたAI育児相談",
+        "feature3Label": "共同育児",
+        "feature3Sub": "家族と一緒に記録・共有"
+      },
+      "page2": {
+        "title": "私たちの子どもだけの気質を分析します",
+        "desc": "生年月日時で子どもの生まれ持ったエネルギー・傾向を分析し\nカスタム相談とおすすめの基準になります",
+        "frameCap": "🌱  私たちの子どものエネルギー分布",
+        "energyExplore": "探究",
+        "energyActive": "活動",
+        "energyStable": "安定",
+        "energyAnalytic": "分析",
+        "energyEmotional": "感性",
+        "traitPill": "活動・探究型 — 好奇心旺盛な私たちの子ども"
+      },
+      "page3": {
+        "title": "24時間相談おばさんに聞いてみましょう",
+        "desc": "子どもの気質を理解して答えるAI相談。\n泣き声・うんちの写真分析も相談おばさんの中で！",
+        "chatMe": "夜によく起きるのですが、どうすればいいですか?",
+        "chatAi": "活動型の子どもは昼間の刺激が多いと夜によく起きます。寝る前30分は静かなルーティンを作ってみましょうか?",
+        "cryAnalysis": "🔊 泣き声分析",
+        "poopAnalysis": "💩 うんち分析"
+      },
+      "page4": {
+        "title": "記録はボタン・音声・写真で簡単に",
+        "desc": "ボタン一つで記録完了。\n話すか保育園の連絡帳を撮ればAIが整理してくれます",
+        "formula": "粉ミルク",
+        "sleep": "睡眠",
+        "pee": "おしっこ",
+        "voiceInput": "🎤  音声入力",
+        "photoRecognition": "📷  写真認識",
+        "hintLine": "一回タップ = 今すぐ記録 ・ 長押し = 時間修正"
+      },
+      "page5": {
+        "title": "家族と一緒に育てます",
+        "desc": "配偶者・祖父母を招待して同じ子どもを一緒に記録。\n役割別に権限（閲覧/記録）を設定できます",
+        "ourBaby": "私たちの子ども",
+        "mom": "ママ",
+        "dad": "パパ",
+        "grandma": "おばあちゃん",
+        "permFull": "記録・相談",
+        "permViewOnly": "閲覧のみ"
+      },
+      "page6": {
+        "title": "さあ、始めましょうか?",
+        "desc": "下のタブですべての機能に出会えます。\n各画面の ? ボタンを押すと使い方をもう一度見られます",
+        "tabHint": "下部タブでいつでも移動できます"
+      }
+    },
+    "upsellModal": {
+      "defaultTitle": "本日の分析が完了しました",
+      "defaultMessage": "コーヒー1杯分の値段で月300回利用する",
+      "benefit1": "• 食事・うんち・泣き声分析 各月300回",
+      "benefit2": "• 相談おばさん無制限",
+      "benefit3": "• 広告削除",
+      "viewPlan": "プレミアムプランを見る",
+      "later": "また明日にします"
+    },
+    "dataRetentionCard": {
+      "title": "データの保管期限",
+      "lastActiveLabel": "最終ログイン",
+      "nextWarningLabel": "次回自動通知",
+      "note": "1年間ログインがない場合はプッシュで事前にお知らせし、通知後30日以内に再度ログインがなければアカウントと写真は自動的に削除されます。（情報通信網法施行令第16条）",
+      "dormantTitle": "⚠️ 休眠アカウント処理予定",
+      "dormantBody": "1年以上ログインがないため、上記の日付にアカウントと登録した写真・記録がすべて自動的に削除される予定です。",
+      "dormantHighlight": "アプリを継続してご利用いただくと自動的に延長されます。特別な操作は不要です。",
+      "downloadBtnText": "📥 マイデータのコピーを受け取る（メールで依頼）",
+      "downloadHint": "個人情報保護法第35条に基づき、ご本人のデータのコピーを請求できます。営業日基準で7日以内に返信します。",
+      "emailSubject": "【アマッタ】マイデータのダウンロード依頼",
+      "emailBody": "こんにちは、アマッタの会員です。\n\n以下の情報をもとに、私の個人情報のコピーを受け取りたいです。\n\n- 登録メールアドレス: \n- 登録方法（カカオ／ネイバー／グーグル／メール）: \n- お子様のお名前（登録済みの場合）: \n\n※本人確認後、営業日基準で7日以内にご返信ください。",
+      "noEmailAppTitle": "メールアプリがありません",
+      "noEmailAppDesc": "{{email}} まで直接お問い合わせください。"
+    },
+    "passwordModal": {
+      "currentPwPrompt": "現在のパスワードを入力してください",
+      "mismatch": "新しいパスワードが一致しません",
+      "changeFailDesc": "パスワードの変更に失敗しました。\n現在のパスワードをご確認ください。",
+      "currentPwPlaceholder": "現在のパスワード",
+      "newPwPlaceholder": "新しいパスワード（6文字以上）",
+      "confirmPwPlaceholder": "新しいパスワード（確認）"
+    },
+    "profileCard": {
+      "registerChildPrompt": "お子様を登録してください",
+      "ageMonths": "生後{{count}}か月",
+      "ageYearsMonths": "{{years}}歳{{months}}か月",
+      "ageYears": "{{years}}歳",
+      "pregnancyWeek": "妊娠{{week}}週目",
+      "temperamentLabel": "気質：{{temperament}}",
+      "photoUpdateFailed": "写真の更新に失敗しました。",
+      "temperament": {
+        "wood": "探求型",
+        "fire": "活動型",
+        "earth": "安定型",
+        "metal": "分析型",
+        "water": "創造型"
+      }
+    },
+    "profileFooter": {
+      "emergencyRecovery": "緊急復旧",
+      "defaultBuild": "標準ビルド",
+      "unknownBuild": "確認不可",
+      "deleteAccountHint": "すべてのアカウント情報とお子様の記録が完全に削除されます"
+    },
+    "profileMenuList": {
+      "editProfile": {
+        "label": "マイ情報の編集",
+        "description": "ニックネーム、パスワードの変更"
+      },
+      "pregnancyAlbum": {
+        "description": "週数別記録とチェックリスト"
+      },
+      "weeklyDevelopment": {
+        "label": "週数別発達",
+        "description": "胎児の成長情報を確認"
+      },
+      "gdmManagement": {
+        "description": "妊娠糖尿病の食事・血糖記録"
+      },
+      "kickCheck": {
+        "label": "胎動チェック",
+        "description": "胎動カウント記録"
+      },
+      "momWellness": {
+        "label": "心の健康チェック",
+        "description": "今日の体調と気分の記録"
+      },
+      "momGroup": {
+        "label": "ママトーク",
+        "description": "プレママたちと話す"
+      },
+      "lullaby": {
+        "label": "胎教音楽",
+        "description": "心地よい胎教サウンド"
+      },
+      "recommendations": {
+        "label": "あなたへのおすすめ",
+        "pregnancyDescription": "妊娠・出産準備ガイド",
+        "parentingDescription": "食事、生活習慣、習い事、遊び学習のおすすめ"
+      },
+      "coparenting": {
+        "label": "家族で育児",
+        "description": "配偶者と一緒に準備する"
+      },
+      "momstagram": {
+        "label": "家族フィード",
+        "description": "家族と大切な瞬間を共有しましょう"
+      },
+      "childCard": {
+        "label": "お子様のデジタルカード",
+        "description": "お子様の情報カードを共有する"
+      },
+      "traitDetail": {
+        "label": "気質分析",
+        "description": "お子様の気質結果をもう一度見る／再分析"
+      },
+      "growthTimeline": {
+        "label": "成長タイムライン",
+        "description": "マイルストーンの写真と記録をまとめて見る"
+      },
+      "growthStats": {
+        "label": "成長記録＆統計",
+        "description": "成長の推移を確認"
+      },
+      "growthAlbumMaker": {
+        "label": "成長アルバムを作る",
+        "description": "成長写真でアルバムを作る"
+      },
+      "aiAnalysis": {
+        "description": "育児パターン・便・泣き声分析結果"
+      },
+      "premiumPlan": {
+        "description": "相談イモ（AI相談員）無制限利用"
+      },
+      "voiceSettings": {
+        "label": "音声記録設定",
+        "description": "音声コマンドガイドとデフォルト設定"
+      },
+      "notificationSettings": {
+        "description": "プッシュ通知管理"
+      },
+      "support": {
+        "description": "お問い合わせ・ご意見の送信"
+      },
+      "termsDescription": "サービス利用規約を見る",
+      "privacyDescription": "個人情報の収集・利用に関する案内"
+    },
+    "authDivider": {
+      "label": "または"
+    },
+    "uiScreenHeader": {
+      "backAccessibilityLabel": "戻る"
+    },
+    "socialLoginButtons": {
+      "connecting": "接続中...",
+      "loginWithProvider": "{{provider}}でログイン",
+      "continueWithApple": "Appleで続ける",
+      "continueWithGoogle": "Googleで続ける",
+      "continueWithNaver": "NAVERで続ける",
+      "continueWithKakao": "カカオで続ける"
+    }
   }
 }

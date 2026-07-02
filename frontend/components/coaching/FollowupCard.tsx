@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { FollowupItem, COACHING_COLORS } from './types';
 
  
@@ -20,13 +21,14 @@ interface Props {
 }
 
 export function FollowupCard({ followup, onRespond, onDismiss }: Props) {
+  const { t } = useTranslation();
   const [inputMode, setInputMode] = useState(false);
   const [text, setText] = useState('');
 
   const quickOptions = [
-    '많이 좋아졌어요',
-    '비슷해요',
-    '아직 고민이에요',
+    t('components.followupCard.optionMuchBetter'),
+    t('components.followupCard.optionSimilar'),
+    t('components.followupCard.optionStillWorried'),
   ];
 
   const handleQuickRespond = (response: string) => {
@@ -51,14 +53,14 @@ export function FollowupCard({ followup, onRespond, onDismiss }: Props) {
             style={styles.textInput}
             value={text}
             onChangeText={setText}
-            placeholder={'상황을 알려주세요...'}
+            placeholder={t('components.followupCard.situationPlaceholder')}
             placeholderTextColor={COACHING_COLORS.textLight}
           />
           <TouchableOpacity
             style={styles.sendBtn}
             onPress={handleTextRespond}
           >
-            <Text style={styles.sendBtnText}>{'전송'}</Text>
+            <Text style={styles.sendBtnText}>{t('components.followupCard.send')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -83,7 +85,7 @@ export function FollowupCard({ followup, onRespond, onDismiss }: Props) {
             activeOpacity={0.7}
           >
             <Text style={styles.directText}>
-              {'직접 입력'}
+              {t('components.followupCard.typeDirectly')}
             </Text>
           </TouchableOpacity>
         ) : null}
@@ -91,7 +93,7 @@ export function FollowupCard({ followup, onRespond, onDismiss }: Props) {
           onPress={() => onDismiss(followup.id)}
           activeOpacity={0.7}
         >
-          <Text style={styles.dismissText}>{'나중에'}</Text>
+          <Text style={styles.dismissText}>{t('components.followupCard.later')}</Text>
         </TouchableOpacity>
       </View>
     </View>

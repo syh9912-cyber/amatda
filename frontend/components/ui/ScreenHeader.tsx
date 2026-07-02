@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import { router } from 'expo-router';
 import { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { COLORS, FONT_SIZE, SPACING } from '../../constants/theme';
 
 /**
@@ -27,6 +28,7 @@ export function ScreenHeader({
   backArrow = '<',
   style,
 }: ScreenHeaderProps) {
+  const { t } = useTranslation();
   const handleBack = onBack ?? (() => router.back());
 
   return (
@@ -36,7 +38,7 @@ export function ScreenHeader({
         style={styles.backBtn}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessibilityRole="button"
-        accessibilityLabel="뒤로"
+        accessibilityLabel={t('components.uiScreenHeader.backAccessibilityLabel')}
       >
         <Text style={styles.backArrow}>{backArrow}</Text>
       </TouchableOpacity>

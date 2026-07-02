@@ -2,6 +2,7 @@
  * GuideButton — 화면 헤더 우상단 '?' 버튼. 누르면 해당 화면 가이드를 다시 연다.
  */
 import { TouchableOpacity, Text, StyleSheet, type ViewStyle } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   onPress: () => void;
@@ -10,13 +11,14 @@ interface Props {
 }
 
 export function GuideButton({ onPress, style, color = '#F0976C' }: Props) {
+  const { t } = useTranslation();
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       accessibilityRole="button"
-      accessibilityLabel="사용 가이드 보기"
+      accessibilityLabel={t('components.guideButton.accessibilityLabel')}
       style={[styles.btn, { borderColor: color }, style]}
     >
       <Text style={[styles.text, { color }]}>?</Text>

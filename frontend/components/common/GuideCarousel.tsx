@@ -19,6 +19,7 @@ import {
   View, Text, Modal, TouchableOpacity, StyleSheet,
   Animated, Platform, Image, type ImageSourcePropType,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 /* 공용 팔레트 (아맞다 톤) */
 export const GUIDE_C = {
@@ -101,6 +102,7 @@ export function GuideBubble({ text, me, color }: { text: string; me?: boolean; c
 }
 
 export function GuideCarousel({ visible, pages, onClose, onComplete, accent = GUIDE_C.accent }: Props) {
+  const { t } = useTranslation();
   const [step, setStep] = useState(0);
   const fade = useRef(new Animated.Value(1)).current;
   const slide = useRef(new Animated.Value(0)).current;
@@ -158,7 +160,7 @@ export function GuideCarousel({ visible, pages, onClose, onComplete, accent = GU
         {/* 상단 바: 닫기(좌) · 진행점(중) · 다음/시작하기(우) — 레퍼런스 톤 */}
         <View style={s.topBar}>
           <TouchableOpacity style={s.topSide} onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 8 }}>
-            <Text style={s.topBtnText}>{isLast ? '닫기' : '건너뛰기'}</Text>
+            <Text style={s.topBtnText}>{isLast ? t('common.close') : t('components.guideCarousel.skip')}</Text>
           </TouchableOpacity>
           <View style={s.dots}>
             {pages.map((_, i) => (
@@ -166,7 +168,7 @@ export function GuideCarousel({ visible, pages, onClose, onComplete, accent = GU
             ))}
           </View>
           <TouchableOpacity style={[s.topSide, s.topSideRight]} onPress={handleNext} hitSlop={{ top: 12, bottom: 12, left: 8, right: 12 }}>
-            <Text style={[s.topNextText, { color: accent }]}>{isLast ? '시작하기' : '다음 ›'}</Text>
+            <Text style={[s.topNextText, { color: accent }]}>{isLast ? t('components.guideCarousel.start') : t('components.guideCarousel.next')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -193,7 +195,7 @@ export function GuideCarousel({ visible, pages, onClose, onComplete, accent = GU
         <View style={s.bottomBar}>
           {step > 0 && (
             <TouchableOpacity style={s.prevBtn} onPress={handlePrev} hitSlop={{ top: 12, bottom: 12, left: 20, right: 20 }} activeOpacity={0.7}>
-              <Text style={s.prevText}>← 이전</Text>
+              <Text style={s.prevText}>{t('components.guideCarousel.prev')}</Text>
             </TouchableOpacity>
           )}
         </View>

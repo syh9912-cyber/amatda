@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { COACHING_COLORS } from './types';
 
 interface Props {
@@ -6,9 +7,10 @@ interface Props {
 }
 
 export function YearAgoBanner({ memory }: Props) {
+  const { t } = useTranslation();
   return (
     <View style={styles.card}>
-      <Text style={styles.label}>1년 전 오늘</Text>
+      <Text style={styles.label}>{t('components.yearAgoBanner.label')}</Text>
       <Text style={styles.memory}>{memory}</Text>
     </View>
   );

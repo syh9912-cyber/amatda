@@ -1,7 +1,8 @@
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SocialProvider } from '../../services/social-auth';
 import { FONT_SIZE, SPACING } from '../../constants/theme';
-import { SOCIAL_BUTTON_LIST } from './socialButtonConfig';
+import { getSocialButtonList } from './socialButtonConfig';
 
 // Apple 네이티브 모듈이 현재 빌드에 포함됐는지 확인 (동적 require + fallback).
 // OTA 안전장치: 모듈이 없는 기존 빌드에선 require 가 throw → Apple 버튼 숨김.
@@ -17,11 +18,6 @@ function isAppleAuthAvailable(): boolean {
   }
 }
 
-// Apple 로그인은 iOS + 네이티브 모듈 존재 시에만 노출 (Android/web/구빌드 제외)
-const VISIBLE_SOCIAL_BUTTONS = SOCIAL_BUTTON_LIST.filter(
-  (b) => !b.iosOnly || isAppleAuthAvailable(),
-);
-
 interface SocialLoginButtonsProps {
   onPress: (provider: SocialProvider) => void;
   loadingProvider: SocialProvider | null;
@@ -31,9 +27,16 @@ export function SocialLoginButtons({
   onPress,
   loadingProvider,
 }: SocialLoginButtonsProps) {
+  const { t } = useTranslation();
+
+  // Apple 로그인은 iOS + 네이티브 모듈 존재 시에만 노출 (Android/web/구빌드 제외)
+  const visibleSocialButtons = getSocialButtonList(t).filter(
+    (b) => !b.iosOnly || isAppleAuthAvailable(),
+  );
+
   return (
     <View style={styles.container}>
-      {VISIBLE_SOCIAL_BUTTONS.map((btn) => (
+      {visibleSocialButtons.map((btn) => (
         <TouchableOpacity
           key={btn.provider}
           style={[
@@ -48,7 +51,7 @@ export function SocialLoginButtons({
           disabled={loadingProvider !== null}
           activeOpacity={0.75}
           accessibilityRole="button"
-          accessibilityLabel={`${btn.label}으로 로그인`}
+          accessibilityLabel={t('components.socialLoginButtons.loginWithProvider', { provider: btn.label })}
           accessibilityState={{ disabled: loadingProvider !== null, busy: loadingProvider === btn.provider }}
         >
           <View
@@ -59,7 +62,7 @@ export function SocialLoginButtons({
             </Text>
           </View>
           <Text style={[styles.label, { color: btn.color }]}>
-            {loadingProvider === btn.provider ? '연결 중...' : btn.label}
+            {loadingProvider === btn.provider ? t('components.socialLoginButtons.connecting') : btn.label}
           </Text>
         </TouchableOpacity>
       ))}

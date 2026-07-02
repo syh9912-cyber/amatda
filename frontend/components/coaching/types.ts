@@ -1,5 +1,6 @@
 // 연령별 카테고리 필터 (key 기준)
 import type { AgeGroupKey } from '../../constants/ageGroups';
+import type { TFunction } from 'i18next';
 
 export interface CoachingMessage {
   id: string;
@@ -75,9 +76,11 @@ export function getCategoriesForAge(ageGroup: AgeGroupKey) {
   return CONCERN_CATEGORIES.filter((c) => keys.includes(c.key));
 }
 
-export const CHECKIN_OPTIONS = [
-  { icon: require('../../assets/mood-good.png') as number, label: '좋아요', mood: 'good' },
-  { icon: require('../../assets/mood-normal.png') as number, label: '보통이에요', mood: 'normal' },
-  { icon: require('../../assets/mood-bad.png') as number, label: '안 좋아요', mood: 'bad' },
-];
- 
+export function getCheckinOptions(t: TFunction) {
+  return [
+    { icon: require('../../assets/mood-good.png') as number, label: t('components.checkinOptions.good'), mood: 'good' },
+    { icon: require('../../assets/mood-normal.png') as number, label: t('components.checkinOptions.normal'), mood: 'normal' },
+    { icon: require('../../assets/mood-bad.png') as number, label: t('components.checkinOptions.bad'), mood: 'bad' },
+  ];
+}
+

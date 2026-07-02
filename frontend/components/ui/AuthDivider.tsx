@@ -1,14 +1,16 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 interface AuthDividerProps {
   label?: string;
 }
 
-export function AuthDivider({ label = '또는' }: AuthDividerProps) {
+export function AuthDivider({ label }: AuthDividerProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <View style={styles.line} />
-      <Text style={styles.text}>{label}</Text>
+      <Text style={styles.text}>{label ?? t('components.authDivider.label')}</Text>
       <View style={styles.line} />
     </View>
   );
