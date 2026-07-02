@@ -3391,7 +3391,7 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "孩子在分離情境下的反應有變好嗎？告別的方式有效嗎？",
     "sources": [
-      "兒童青少年精神醫學會分離焦慮指南",
+      "兒童青少年精神醫學領域中有關分離焦慮的一般見解",
       "發展心理學依附關係研究"
     ]
   },
@@ -3435,7 +3435,7 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 14,
     "followupQuestion": "孩子的自信心有變化嗎？有試著用過程稱讚法嗎？",
     "sources": [
-      "兒童青少年精神醫學會自尊心發展指南",
+      "兒童青少年精神醫學領域中有關自尊心發展的一般見解",
       "正向教養研究"
     ]
   },
@@ -3479,7 +3479,7 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "有試著練習表達情緒的方法嗎？孩子的反應如何？",
     "sources": [
-      "兒童青少年精神醫學會情緒發展指南",
+      "兒童青少年精神醫學領域中有關情緒發展的一般見解",
       "約翰高特曼情緒教練理論"
     ]
   },
@@ -3526,7 +3526,7 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "手足關係有變好一點嗎？有試著安排1對1的時間嗎？",
     "sources": [
-      "兒童青少年精神醫學會手足關係指南",
+      "兒童青少年精神醫學領域中有關手足關係的一般見解",
       "阿德勒心理學出生順位理論"
     ]
   },
@@ -3570,7 +3570,7 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "怕黑的情況有好轉一些嗎？安撫道具有效嗎？",
     "sources": [
-      "兒童青少年精神醫學會兒童恐懼指南",
+      "兒童青少年精神醫學領域中有關兒童恐懼的一般見解",
       "發展心理學研究"
     ]
   },
@@ -3612,7 +3612,7 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 14,
     "followupQuestion": "老大適應得如何？有確保1對1的時間嗎？",
     "sources": [
-      "兒童青少年精神醫學會手足適應指南",
+      "兒童青少年精神醫學領域中有關手足適應的一般見解",
       "父母角色研究"
     ]
   },
@@ -3655,8 +3655,8 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "孩子的情緒穩定下來了嗎？還有不安的症狀嗎？",
     "sources": [
-      "兒童青少年精神醫學會家庭環境與兒童發展研究",
-      "家族治療學會指引"
+      "兒童青少年精神醫學領域中有關家庭環境與兒童發展的一般研究",
+      "家族治療領域中的一般見解"
     ]
   },
   {
@@ -3698,7 +3698,7 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "提供選項的方法有效嗎？固執的情況有好轉一點嗎？",
     "sources": [
-      "兒童青少年精神醫學會第一反抗期指南",
+      "兒童青少年精神醫學領域中有關第一反抗期的一般見解",
       "艾瑞克森心理社會發展理論"
     ]
   },
@@ -3742,8 +3742,8 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 14,
     "followupQuestion": "孩子在社交情境中有變得自在一點嗎？有嘗試漸進式接觸嗎？",
     "sources": [
-      "兒童青少年精神醫學會內向兒童指南",
-      "行為抑制氣質研究"
+      "兒童青少年精神醫學領域中有關內向兒童的一般見解",
+      "行為抑制氣質的一般研究"
     ]
   },
   {
@@ -3787,8 +3787,8 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 14,
     "followupQuestion": "抽動症狀有變化嗎？壓力來源有減少嗎？",
     "sources": [
-      "兒童神經學會抽動症指引",
-      "兒童青少年精神醫學會抽動管理指南"
+      "兒童神經醫學領域中有關抽動症的一般見解",
+      "兒童青少年精神醫學領域中有關抽動管理的一般見解"
     ]
   },
   {
@@ -3830,7 +3830,7 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "憤怒爆發的頻率或強度有降低嗎？冷靜的方法有效嗎？",
     "sources": [
-      "兒童青少年精神醫學會行為問題指南",
+      "兒童青少年精神醫學領域中有關行為問題的一般見解",
       "美國兒科學會（AAP）情緒失控管理指引"
     ]
   },
@@ -3874,7 +3874,7 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupQuestion": "和孩子的依附互動有感受到變化嗎？",
     "sources": [
       "約翰鮑比依附理論",
-      "兒童青少年精神醫學會依附關係形成指南"
+      "兒童青少年精神醫學領域中有關依附關係形成的一般見解"
     ]
   },
   {
@@ -3960,7 +3960,7 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "新的管教方法有效嗎？有哪些地方覺得困難？",
     "sources": [
-      "兒童青少年精神醫學會正向管教指南",
+      "兒童青少年精神醫學領域中有關正向管教的一般見解",
       "美國兒科學會（AAP）管教指引"
     ]
   },
@@ -4003,7 +4003,7 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 14,
     "followupQuestion": "說謊的頻率有減少嗎？誠實說出來時有稱讚他嗎？",
     "sources": [
-      "兒童青少年精神醫學會兒童行為發展研究",
+      "兒童青少年精神醫學領域中有關兒童行為發展的一般研究",
       "維多利亞．塔爾瓦說謊發展研究"
     ]
   },
@@ -4045,8 +4045,8 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "有試著玩新的遊戲嗎？孩子的反應如何？",
     "sources": [
-      "兒科學會遊戲發展指南",
-      "遊戲治療學會研究資料"
+      "兒科臨床領域中有關遊戲發展的一般見解",
+      "遊戲治療領域的一般研究資料"
     ]
   },
   {
@@ -4088,8 +4088,8 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "有試著每天讀書給孩子聽嗎？孩子有找到喜歡的書了嗎？",
     "sources": [
-      "兒科學會語言發展指南",
-      "兒童文學教育學會閱讀指導研究"
+      "兒科臨床領域中有關語言發展的一般見解",
+      "兒童閱讀教育的一般研究"
     ]
   },
   {
@@ -4131,8 +4131,8 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 14,
     "followupQuestion": "孩子對識字遊戲的反應如何？覺得開心嗎？",
     "sources": [
-      "教育課程評鑑院幼兒讀寫發展研究",
-      "兒科學會學習準備度指南"
+      "幼兒讀寫發展的一般研究",
+      "兒科臨床領域中有關學習準備度的一般見解"
     ]
   },
   {
@@ -4174,8 +4174,8 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 14,
     "followupQuestion": "孩子對接觸英文的反應如何？覺得開心嗎？",
     "sources": [
-      "英語教育學會幼兒英語教育研究",
-      "兒科學會雙語發展指南"
+      "幼兒英語教育的一般研究",
+      "兒科臨床領域中有關雙語發展的一般見解"
     ]
   },
   {
@@ -4217,7 +4217,7 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "有試著在日常生活中玩數學遊戲嗎？孩子的反應如何？",
     "sources": [
-      "數學教育學會幼兒數學研究",
+      "幼兒數學發展的一般研究",
       "皮亞傑認知發展理論"
     ]
   },
@@ -4260,7 +4260,7 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "有試著玩開放式遊戲嗎？孩子的創意表達有增加嗎？",
     "sources": [
-      "資優教育學會創造力研究",
+      "創造力教育的一般研究",
       "米哈里．契克森米哈伊創造力理論"
     ]
   },
@@ -4303,8 +4303,8 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 14,
     "followupQuestion": "孩子有享受課程嗎？有壓力的跡象嗎？",
     "sources": [
-      "教育開發院早期教育效果研究",
-      "兒科學會學習發展指南"
+      "早期教育效果的一般研究",
+      "兒科臨床領域中有關學習發展的一般見解"
     ]
   },
   {
@@ -4390,8 +4390,8 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "整理環境後專注力有變化嗎？有找到興趣活動了嗎？",
     "sources": [
-      "兒童青少年精神醫學會過動症指引",
-      "學習障礙學會專注力研究"
+      "兒童青少年精神醫學領域中有關過動症的一般見解",
+      "學習專注力的一般研究"
     ]
   },
   {
@@ -4434,7 +4434,7 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupQuestion": "學習動機有變化嗎？有給孩子自己選擇的機會嗎？",
     "sources": [
       "愛德華．戴西自我決定理論",
-      "教育心理學會學習動機研究"
+      "教育心理學領域中有關學習動機的一般研究"
     ]
   },
   {
@@ -4476,8 +4476,8 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "作業習慣有慢慢養成嗎？有哪些地方覺得困難？",
     "sources": [
-      "教育開發院學習習慣研究",
-      "兒童青少年精神醫學會學習指南"
+      "學習習慣的一般研究",
+      "兒童青少年精神醫學領域中有關學習支援的一般見解"
     ]
   },
   {
@@ -4518,8 +4518,8 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 14,
     "followupQuestion": "閱讀習慣有慢慢養成嗎？有找到孩子喜歡的書種了嗎？",
     "sources": [
-      "兒童文學教育學會閱讀教育研究",
-      "兒科學會語言發展指南"
+      "兒童閱讀教育的一般研究",
+      "兒科臨床領域中有關語言發展的一般見解"
     ]
   },
   {
@@ -4562,7 +4562,7 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupQuestion": "有去體驗學習嗎？孩子的反應和印象深刻的地方是什麼？",
     "sources": [
       "埃德加．戴爾經驗金字塔理論",
-      "科學教育學會體驗學習研究"
+      "科學教育中體驗學習的一般研究"
     ]
   },
   {
@@ -4605,8 +4605,8 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 14,
     "followupQuestion": "孩子對才藝課的反應如何？覺得開心嗎？",
     "sources": [
-      "體育總會青少年運動指南",
-      "藝術教育學會早期藝術教育研究"
+      "青少年運動的一般見解",
+      "早期藝術教育的一般研究"
     ]
   },
   {
@@ -4649,8 +4649,8 @@ export const COACHING_KNOWLEDGE_ZH: CoachingEntry[] = [
     "followupDays": 14,
     "followupQuestion": "有找到孩子的強項領域嗎？對學習的態度有變化嗎？",
     "sources": [
-      "兒童青少年精神醫學會學習障礙指引",
-      "學習障礙學會早期發現研究"
+      "兒童青少年精神醫學領域中有關學習障礙的一般見解",
+      "學習障礙早期發現的一般研究"
     ]
   }
 ];

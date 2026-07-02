@@ -3383,7 +3383,7 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "離れる場面での反応は良くなってきていますか?お別れの挨拶の仕方は効果がありましたか?",
     "sources": [
-      "一般的な小児精神科医の分離不安ガイド",
+      "小児精神科領域における分離不安に関する一般的な知見",
       "発達心理学における愛着研究"
     ]
   },
@@ -3426,7 +3426,7 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupDays": 14,
     "followupQuestion": "お子さんの自信に変化はありますか?過程を褒めることを試してみましたか?",
     "sources": [
-      "児童心理学における自己肯定感発達ガイド",
+      "児童心理学における自己肯定感に関する一般的な知見",
       "ポジティブ・ペアレンティング研究"
     ]
   },
@@ -3470,7 +3470,7 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "感情表現の練習はしてみましたか?お子さんの反応はいかがですか?",
     "sources": [
-      "児童精神医学における感情発達ガイド",
+      "児童精神医学における感情発達に関する一般的な知見",
       "ジョン・ゴットマンの感情コーチング理論"
     ]
   },
@@ -3515,7 +3515,7 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "きょうだい関係は少し良くなりましたか?1対1の時間を作ってみましたか?",
     "sources": [
-      "児童精神医学におけるきょうだい関係ガイド",
+      "児童精神医学におけるきょうだい関係に関する一般的な知見",
       "アドラー心理学の出生順位理論"
     ]
   },
@@ -3559,7 +3559,7 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "暗闇への恐怖は少し和らぎましたか?安心グッズは効果がありましたか?",
     "sources": [
-      "児童精神医学における子どもの恐怖ガイド",
+      "児童精神医学における子どもの恐怖に関する一般的な知見",
       "発達心理学研究"
     ]
   },
@@ -3601,7 +3601,7 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupDays": 14,
     "followupQuestion": "上の子の適応はいかがですか?1対1の時間を確保できていますか?",
     "sources": [
-      "児童精神医学におけるきょうだい適応ガイド",
+      "児童精神医学におけるきょうだい適応に関する一般的な知見",
       "ジョン・ゴットマンの親役割研究"
     ]
   },
@@ -3645,7 +3645,7 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupQuestion": "お子さんの情緒は安定しましたか?不安な様子はありませんか?",
     "sources": [
       "家庭環境と子どもの発達に関する研究",
-      "家族療法学会のガイドライン"
+      "家族療法領域における一般的な知見"
     ]
   },
   {
@@ -3775,8 +3775,8 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupDays": 14,
     "followupQuestion": "チック症状に変化はありますか?ストレス要因は減りましたか?",
     "sources": [
-      "小児神経学会のチック症ガイドライン",
-      "児童精神医学におけるチック管理指針"
+      "小児神経領域におけるチック症に関する一般的な知見",
+      "児童精神医学におけるチック管理に関する一般的な知見"
     ]
   },
   {
@@ -3862,7 +3862,7 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupQuestion": "お子さんとの愛着のやり取りに変化を感じますか?",
     "sources": [
       "ジョン・ボウルビィの愛着理論",
-      "児童精神医学における愛着形成ガイド"
+      "児童精神医学における愛着形成に関する一般的な知見"
     ]
   },
   {
@@ -4033,8 +4033,8 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "新しい遊びを試してみましたか?お子さんの反応はどうでしたか?",
     "sources": [
-      "小児科領域における遊びの発達ガイド",
-      "遊戯療法学の研究資料"
+      "小児科領域における遊びの発達に関する一般的な知見",
+      "遊戯療法に関する一般的な研究"
     ]
   },
   {
@@ -4076,7 +4076,7 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "毎日の読み聞かせは試してみましたか?お気に入りの本は見つかりましたか?",
     "sources": [
-      "小児科領域における言語発達ガイド",
+      "小児科領域における言語発達に関する一般的な知見",
       "児童文学教育における読書指導研究"
     ]
   },
@@ -4120,7 +4120,7 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupQuestion": "文字遊びへのお子さんの反応はいかがですか?楽しんでいますか?",
     "sources": [
       "幼児の文字学習発達に関する研究",
-      "小児科領域における学習準備度ガイド"
+      "小児科領域における学習準備度に関する一般的な知見"
     ]
   },
   {
@@ -4162,7 +4162,7 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupQuestion": "英語に触れることへのお子さんの反応はいかがですか?楽しんでいますか?",
     "sources": [
       "早期外国語教育に関する研究",
-      "小児科領域におけるバイリンガル発達ガイド"
+      "小児科領域におけるバイリンガル発達に関する一般的な知見"
     ]
   },
   {
@@ -4291,7 +4291,7 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupQuestion": "お子さんは習い事を楽しんでいますか?ストレスの兆候はありませんか?",
     "sources": [
       "早期教育の効果に関する研究",
-      "小児科領域における学習発達ガイド"
+      "小児科領域における学習発達に関する一般的な知見"
     ]
   },
   {
@@ -4377,8 +4377,8 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "環境を整えた後、集中力に変化はありますか?関心のある活動は見つかりましたか?",
     "sources": [
-      "ADHDに関するガイドライン",
-      "学習障害領域における集中力研究"
+      "ADHDに関する一般的な知見",
+      "学習における集中力に関する一般的な研究"
     ]
   },
   {
@@ -4464,7 +4464,7 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupQuestion": "宿題のルーティンは定着してきていますか?どんな点が難しいですか?",
     "sources": [
       "学習習慣に関する研究",
-      "児童精神医学における学習ガイド"
+      "児童精神医学における学習支援に関する一般的な知見"
     ]
   },
   {
@@ -4506,7 +4506,7 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupQuestion": "読書のルーティンは定着してきていますか?お子さんが好きな本のジャンルは見つかりましたか?",
     "sources": [
       "児童文学教育における読書教育研究",
-      "小児科領域における言語発達ガイド"
+      "小児科領域における言語発達に関する一般的な知見"
     ]
   },
   {
@@ -4636,7 +4636,7 @@ export const COACHING_KNOWLEDGE_JA: CoachingEntry[] = [
     "followupDays": 14,
     "followupQuestion": "お子さんの強みの分野は見つかりましたか?学習への態度に変化はありますか?",
     "sources": [
-      "学習障害に関するガイドライン",
+      "学習障害に関する一般的な知見",
       "学習障害領域における早期発見研究"
     ]
   }
