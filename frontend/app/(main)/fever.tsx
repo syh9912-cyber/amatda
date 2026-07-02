@@ -1466,8 +1466,25 @@ export default function FeverScreen() {
  *
  * 참고: 본 계산은 일반 가이드용이며, 실제 처방 용량은 약사·소아과의 안내를 우선해주세요.
  */
-const ACET_MG_PER_KG = 10; // 보수값 (10~15 권장 중 최저)
+const ACET_MG_PER_KG = 10; // 보수값 (10~15 권장 중 최저) — mg/kg 기준 자체는 국가 무관 동일(WHO/각국 소아과 공통)
 const IBU_MG_PER_KG = 5;   // 보수값 (5~10 권장 중 최저)
+
+/**
+ * 비한국어 로케일 시럽 농도 (추가형) — 한국 시판약(32/20mg/ml) 로직은 무변경.
+ * 실제 시판 제품 농도는 국가별로 크게 다르므로(농도가 다르면 계산 ml도 달라짐), 반드시
+ * 실제 제품 라벨과 대조 후 투약하도록 안내 문구를 함께 노출한다.
+ *
+ * 일본: 아세트아미노펜 소아용 시럽 2%(w/v 표기 — 약학 표준 관례상 2% = 20mg/ml,
+ *   1mg/ml이 아님에 주의) — 이부프로펜은 시판약 기준 만 15세 미만 금기라 미제공
+ *   근거: 東和薬品「アセトアミノフェンシロップ小児用2%」체중별 早見表(5kg→2.5~3.75ml,
+ *   10kg→5.0~7.5ml — 10~15mg/kg 기준 역산 시 20mg/ml로 일치 확인), PMDA 환자용 가이드
+ * 대만: 安佳熱糖漿(Anti-Phen) 24mg/ml, 依普芬(Ibuprofen) 20mg/ml
+ *   근거: 奇美醫院/童綜合醫院/樂生婦幼醫院 약품 정보 (홍콩 파나돌 50mg/ml과는 다르므로 라벨 확인 필수)
+ */
+const LOCALE_CONCENTRATION: Record<'ja' | 'zh-Hant', { acet: number; ibu: number | null }> = {
+  ja: { acet: 20, ibu: null },
+  'zh-Hant': { acet: 24, ibu: 20 },
+};
 
 function recalcSyrup(weight: number, t: TFunction, acetConcMgPerMl = 32, ibuConcMgPerMl = 20) {
   const acetaminophenMg = +(weight * ACET_MG_PER_KG).toFixed(0);
@@ -1495,13 +1512,18 @@ function MedicineSection({
   medLog: MedLogEntry[];
   medNow: number;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ja' || i18n.language === 'zh-Hant' ? i18n.language : undefined;
   const parsedWeight = parseFloat(inputWeight);
   const useInput = !isNaN(parsedWeight) && parsedWeight > 0 && parsedWeight < 100;
-  // 농도 결정 — 챔프 ER 선택 시 48mg/ml, 그 외 32mg/ml. 이부는 고정 20mg/ml.
+  // 농도 결정 — 챔프 ER 선택 시 48mg/ml, 그 외 32mg/ml. 이부는 고정 20mg/ml. (한국 로직 무변경)
+  // 비한국어는 LOCALE_CONCENTRATION 값 사용(추가형) — 일본은 이부프로펜 미제공(acet만).
   // selectedBrand / champType 는 아래에서 정의되지만 hooks 순서상 이 시점엔 stale 가능 →
-  // 안전하게 useInput 시점에 일반(32/20)으로 일단 계산하고 hook 이후 override.
-  const recalc = useInput ? recalcSyrup(parsedWeight, t) : null;
+  // 안전하게 useInput 시점에 일반 농도로 일단 계산하고 hook 이후 override.
+  const localeConc = locale ? LOCALE_CONCENTRATION[locale] : undefined;
+  const recalc = useInput
+    ? recalcSyrup(parsedWeight, t, localeConc?.acet ?? 32, localeConc?.ibu ?? 20)
+    : null;
 
   // 부드러운 fade 애니메이션 (수치 변화 시 깜빡임 → 인지)
   const fade = useRef(new Animated.Value(1)).current;
@@ -1542,20 +1564,36 @@ function MedicineSection({
   // - 타이레놀, 챔프(빨강) → acetaminophen (32mg/ml)
   // - 챔프 ER (빨강 고농도) → acetaminophen (48mg/ml)
   // - 부루펜, 맥시부펜, 챔프(파랑) → ibuprofen (20mg/ml)
-  type BrandKey = 'tylenol' | 'champ' | 'brufen' | 'maxibupen';
+  // 비한국어(추가형): 일본은 성분명 아세트아미노펜만(시판 이부프로펜은 만 15세 미만 금기),
+  // 대만/홍콩(zh-Hant)은 성분명 아세트아미노펜·이부프로펜 2종 — 실제 제품 브랜드/농도가
+  // 국가마다 달라 브랜드명 대신 "성분명 + 농도 확인 필요" 형태로 노출.
+  type BrandKey = 'tylenol' | 'champ' | 'brufen' | 'maxibupen' | 'acet_generic' | 'ibu_generic';
   type ChampType = 'red' | 'blue' | 'red_er'; // 빨강=아세트 32, 빨강ER=아세트 48, 파랑=이부 20
 
+  const isNonKoLocale = locale === 'ja' || locale === 'zh-Hant';
+
   // 추천 약(아세트/이부)에 따라 디폴트 브랜드 결정
-  const defaultBrand: BrandKey = recommendation.type === 'ibuprofen' ? 'brufen' : 'tylenol';
+  // 일본은 이부프로펜을 아예 제공하지 않으므로(만 15세 미만 시판약 금기) 항상 아세트아미노펜으로 고정
+  const defaultBrand: BrandKey = locale === 'ja'
+    ? 'acet_generic'
+    : locale === 'zh-Hant'
+      ? (recommendation.type === 'ibuprofen' ? 'ibu_generic' : 'acet_generic')
+      : (recommendation.type === 'ibuprofen' ? 'brufen' : 'tylenol');
   const [selectedBrand, setSelectedBrand] = useState<BrandKey>(defaultBrand);
   const [champType, setChampType] = useState<ChampType>('red');
   const recommendationTypeRef = useRef(recommendation.type);
   useEffect(() => {
     if (recommendation.type !== recommendationTypeRef.current) {
       recommendationTypeRef.current = recommendation.type;
-      setSelectedBrand(recommendation.type === 'ibuprofen' ? 'brufen' : 'tylenol');
+      if (locale === 'ja') {
+        setSelectedBrand('acet_generic');
+      } else if (locale === 'zh-Hant') {
+        setSelectedBrand(recommendation.type === 'ibuprofen' ? 'ibu_generic' : 'acet_generic');
+      } else {
+        setSelectedBrand(recommendation.type === 'ibuprofen' ? 'brufen' : 'tylenol');
+      }
     }
-  }, [recommendation.type]);
+  }, [recommendation.type, locale]);
 
   // 선택된 브랜드 → 약 종류(acetaminophen/ibuprofen) 매핑
   // 챔프 빨강·빨강ER 모두 아세트아미노펜 / 파랑만 이부프로펜
@@ -1563,6 +1601,8 @@ function MedicineSection({
     selectedBrand === 'tylenol' ? 'acetaminophen'
     : selectedBrand === 'brufen' ? 'ibuprofen'
     : selectedBrand === 'maxibupen' ? 'ibuprofen'
+    : selectedBrand === 'acet_generic' ? 'acetaminophen'
+    : selectedBrand === 'ibu_generic' ? 'ibuprofen'
     : champType === 'blue' ? 'ibuprofen' : 'acetaminophen';
 
   const isAcet = selectedType === 'acetaminophen';
@@ -1580,6 +1620,8 @@ function MedicineSection({
     if (selectedBrand === 'tylenol') return t('fever.brand.tylenol');
     if (selectedBrand === 'brufen') return t('fever.brand.brufen');
     if (selectedBrand === 'maxibupen') return t('fever.brand.maxibupen');
+    if (selectedBrand === 'acet_generic') return t('fever.brand.acetGeneric');
+    if (selectedBrand === 'ibu_generic') return t('fever.brand.ibuGeneric');
     if (champType === 'red_er') return t('fever.brand.champER');
     return champType === 'red' ? t('fever.brand.champRed') : t('fever.brand.champBlue');
   })();
@@ -1592,13 +1634,21 @@ function MedicineSection({
     ? t('fever.medGuide.headlineAvailable', { brandLabel, mlNumber })
     : t('fever.medGuide.headlineWaiting', { relative: formatRelative(recommendation.deltaMs, t), brandLabel, mlNumber });
 
-  // 4-브랜드 그리드 항목
-  const grid: { key: BrandKey; label: string; icon: ImageSourcePropType; color: string }[] = [
-    { key: 'tylenol', label: t('fever.brand.tylenol'), icon: IC_PILL, color: TYLENOL_COLOR },
-    { key: 'champ', label: t('fever.brand.champ'), icon: IC_PILL, color: champType === 'red' ? TYLENOL_COLOR : BRUFEN_COLOR },
-    { key: 'brufen', label: t('fever.brand.brufen'), icon: IC_SYRINGE, color: BRUFEN_COLOR },
-    { key: 'maxibupen', label: t('fever.brand.maxibupen'), icon: IC_SYRINGE, color: BRUFEN_COLOR },
-  ];
+  // 브랜드 그리드 항목 — 일본은 아세트아미노펜 1종(이부프로펜 미제공), 대만/홍콩은 성분명 2종, 한국은 기존 4브랜드
+  const grid: { key: BrandKey; label: string; icon: ImageSourcePropType; color: string }[] =
+    locale === 'ja'
+      ? [{ key: 'acet_generic', label: t('fever.brand.acetGeneric'), icon: IC_PILL, color: TYLENOL_COLOR }]
+      : locale === 'zh-Hant'
+        ? [
+          { key: 'acet_generic', label: t('fever.brand.acetGeneric'), icon: IC_PILL, color: TYLENOL_COLOR },
+          { key: 'ibu_generic', label: t('fever.brand.ibuGeneric'), icon: IC_SYRINGE, color: BRUFEN_COLOR },
+        ]
+        : [
+          { key: 'tylenol', label: t('fever.brand.tylenol'), icon: IC_PILL, color: TYLENOL_COLOR },
+          { key: 'champ', label: t('fever.brand.champ'), icon: IC_PILL, color: champType === 'red' ? TYLENOL_COLOR : BRUFEN_COLOR },
+          { key: 'brufen', label: t('fever.brand.brufen'), icon: IC_SYRINGE, color: BRUFEN_COLOR },
+          { key: 'maxibupen', label: t('fever.brand.maxibupen'), icon: IC_SYRINGE, color: BRUFEN_COLOR },
+        ];
 
   return (
     <View style={styles.medicineContainer}>
@@ -1718,6 +1768,15 @@ function MedicineSection({
               </Text>
             </TouchableOpacity>
           </View>
+        </View>
+      )}
+
+      {/* === 비한국어 로케일 — 실제 제품 농도 확인 안내 (국가별 시판 농도가 달라 자동 판단 불가) === */}
+      {isNonKoLocale && (
+        <View style={styles.champRow}>
+          <Text style={styles.medConcentrationNote}>
+            {locale === 'ja' ? t('fever.concentrationNote.ja') : t('fever.concentrationNote.zhHant')}
+          </Text>
         </View>
       )}
 
@@ -2520,6 +2579,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#636366',
     marginBottom: 8,
+  },
+  medConcentrationNote: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#D32F2F',
+    lineHeight: 18,
   },
   champToggle: {
     flexDirection: 'row',

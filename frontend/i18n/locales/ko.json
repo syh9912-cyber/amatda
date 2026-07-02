@@ -975,7 +975,9 @@
       "other": "기타",
       "champER": "챔프 ER",
       "champRed": "챔프(빨강)",
-      "champBlue": "챔프(파랑)"
+      "champBlue": "챔프(파랑)",
+      "acetGeneric": "아세트아미노펜",
+      "ibuGeneric": "이부프로펜"
     },
     "weightInput": {
       "label": "현재 몸무게",
@@ -993,6 +995,10 @@
       "red": "빨강 (아세트 32mg/ml)",
       "redEr": "ER 고농도 (48mg/ml)",
       "blue": "파랑 (이부 20mg/ml)"
+    },
+    "concentrationNote": {
+      "ja": "일본용 참고 농도 예시(아세트아미노펜 소아용 시럽 2%=20mg/ml)입니다. 실제 제품 라벨의 농도를 반드시 확인 후 투약하세요.",
+      "zhHant": "대만/홍콩 제품 농도가 서로 다를 수 있습니다. 실제 제품 라벨의 농도를 반드시 확인 후 투약하세요."
     },
     "notifyButton": {
       "in4h": "4시간 후 알림",

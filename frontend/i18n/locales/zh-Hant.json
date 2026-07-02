@@ -655,8 +655,8 @@
     "weeklyDevTitle": "每週發育",
     "weeklyDevCitationNote": "每週發育資訊僅供一般參考，個別狀況請諮詢婦產科專科醫師。",
     "citationSourceChildcare": "韓國保健福祉部・孕育綜合入口網站「愛心」孕期週數資訊",
-    "citationSourceKsog": "大韓婦產科學會 孕產資訊",
-    "growthCitationNote": "成長百分位／統計僅根據標準生長曲線供參考，個別評估請諮詢小兒科專科醫師。",
+    "citationSourceKsog": "大韓婦產科學會（韓國）孕產資訊",
+    "growthCitationNote": "成長百分位／統計僅根據韓國標準生長曲線供參考，可能與台灣/香港的生長曲線略有差異，個別評估請諮詢小兒科專科醫師。",
     "citationSourceKdca": "韓國疾病管理廳・大韓小兒科學會「2017年 兒童青少年生長曲線」",
     "citationSourceWho": "WHO兒童生長標準（0～5歲）",
     "defaultChildName": "孩子",
@@ -924,7 +924,7 @@
     "medicine": {
       "sectionTitle": "退燒藥服用劑量（僅供參考）",
       "sectionDesc": "這是根據孩子體重、以保守數值（建議最小量）計算的參考資訊",
-      "disclaimer": "⚠️ 本畫面的劑量與服用間隔僅供一般參考，不屬於以診斷或治療為目的之醫療行為。\n各藥品濃度不同，請務必確認產品標籤上的濃度（例如：泰諾32mg/ml、Champ ER 48mg/ml）。\n實際用藥、服用及交叉服用請務必諮詢小兒科醫師或藥師後再決定。若懷疑有緊急症狀，請立即撥打119。",
+      "disclaimer": "⚠️ 本畫面的劑量與服用間隔僅供一般參考，不屬於以診斷或治療為目的之醫療行為。\n各地區、各廠牌藥品濃度不同，請務必確認產品標籤上的濃度（例如：安佳熱糖漿24mg/ml、依普芬20mg/ml；香港等地產品濃度可能不同）。\n實際用藥、服用及交叉服用請務必諮詢小兒科醫師或藥師後再決定。若懷疑有緊急症狀，請立即撥打當地緊急電話。",
       "loadError": "無法載入退燒藥資訊。"
     },
     "medLog": {
@@ -975,7 +975,9 @@
       "other": "其他",
       "champER": "Champ ER",
       "champRed": "Champ（紅色）",
-      "champBlue": "Champ（藍色）"
+      "champBlue": "Champ（藍色）",
+      "acetGeneric": "乙醯胺酚（Acetaminophen）",
+      "ibuGeneric": "布洛芬（Ibuprofen）"
     },
     "weightInput": {
       "label": "目前體重",
@@ -993,6 +995,10 @@
       "red": "紅色（乙醯胺酚32mg/ml）",
       "redEr": "ER高濃度（48mg/ml）",
       "blue": "藍色（布洛芬20mg/ml）"
+    },
+    "concentrationNote": {
+      "ja": "此為以日本地區常見濃度（乙醯胺酚兒童糖漿2%＝20mg/ml）為基準的參考值。",
+      "zhHant": "此為以台灣「安佳熱糖漿」（乙醯胺酚24mg/ml）及「依普芬」（布洛芬20mg/ml）為基準計算的參考值。香港等地區的市售產品濃度可能不同（例如部分撲熱息痛藥水為50mg/ml），使用前請務必確認實際產品標籤上的濃度，並諮詢藥師意見。"
     },
     "notifyButton": {
       "in4h": "4小時後通知",
@@ -2349,8 +2355,8 @@
     "tabGlucose": "血糖",
     "tabFood": "飲食",
     "citationNote": "血糖與飲食建議為一般標準，個人目標請與主治醫師討論。",
-    "citationSourceDiabetesSociety": "大韓糖尿病學會「糖尿病診療指南」（妊娠糖尿病）",
-    "citationSourceFoodSafety": "食品醫藥品安全處 食品營養成分資料庫",
+    "citationSourceDiabetesSociety": "大韓糖尿病學會（韓國）「糖尿病診療指南」（妊娠糖尿病）",
+    "citationSourceFoodSafety": "韓國食品醫藥品安全處 食品營養成分資料庫",
     "reportBtnText": "取得本週AI分析",
     "reportBtnSub": "近7天血糖＋飲食綜合指導",
     "addGlucoseRecord": "＋ 新增血糖紀錄",
@@ -3102,9 +3108,9 @@
     "emptyCompleted": "還沒有完成的接種",
     "emptyOverdue": "沒有錯過的接種！",
     "emptyUpcoming": "沒有預定的接種",
-    "citationNote": "接種日程係依據國家標準疫苗接種計畫，實際接種請諮詢小兒科醫師後進行。",
-    "citationSourceKdca": "疾病管理廳接種小幫手（標準接種日程）",
-    "citationSourcePediatrics": "大韓小兒科學會接種指南",
+    "citationNote": "接種日程係依據韓國標準疫苗接種計畫，僅供參考，與台灣/香港的公費接種時程可能不同，實際接種請諮詢小兒科醫師後進行。",
+    "citationSourceKdca": "韓國疾病管理廳接種小幫手（標準接種日程）",
+    "citationSourcePediatrics": "大韓小兒科學會（韓國）接種指南",
     "completeModalTitle": "記錄接種完成",
     "vaccinationDateLabel": "接種日期",
     "datePlaceholder": "{{date}}（留空則為今天）",
@@ -4571,7 +4577,7 @@
     },
     "askMore": "詢問AI更多內容",
     "citationNote": "此為AI生成之參考推薦。健康、飲食相關決定請諮詢小兒科醫師等專業人士。",
-    "citationSourceFoodSafety": "食品藥物安全處食品安全入口網"
+    "citationSourceFoodSafety": "韓國食品醫藥品安全處「食品安全那羅」資料庫"
   },
   "support": {
     "title": "客服中心",
@@ -4795,8 +4801,8 @@
     "recipeExpand": "查看簡易食譜",
     "youtubeSearch": "YouTube搜尋",
     "citationNote": "飲食建議僅供參考,基於一般營養資訊。如有過敏或疾病,請諮詢小兒科醫師。",
-    "citationSourceFoodSafety": "食品藥品安全處 食品營養成分資料庫",
-    "citationSourceMohw": "保健福祉部 韓國人營養素攝取基準"
+    "citationSourceFoodSafety": "韓國食品藥品安全處 食品營養成分資料庫",
+    "citationSourceMohw": "韓國保健福祉部 韓國人營養素攝取基準"
   },
   "clinic": {
     "screenTitle": "小兒科 / 兒童醫院",
@@ -4826,8 +4832,8 @@
     "parentingTips": "育兒小提示",
     "traitAdvice": "為{{name}}氣質量身打造的建議",
     "citationNote": "發展時期為平均標準,每個孩子皆有個別差異。若擔心發展狀況,請諮詢小兒科專科醫師。",
-    "citationSourceKdca": "疾病管理廳 國家健康資訊入口網(嬰幼兒發展)",
-    "citationSourcePediatrics": "大韓小兒科學會 兒童健康資訊"
+    "citationSourceKdca": "韓國疾病管理廳 國家健康資訊入口網(嬰幼兒發展)",
+    "citationSourcePediatrics": "大韓小兒科學會（韓國） 兒童健康資訊"
   },
   "playLearning": {
     "title": "{{name}}的遊戲學習",

@@ -654,10 +654,10 @@
     "percentileSmall": "小さめ・下位{{value}}%",
     "weeklyDevTitle": "週数別発達",
     "weeklyDevCitationNote": "週数別の発達情報は一般的な参考用です。個々の状態については産婦人科の専門医にご相談ください。",
-    "citationSourceChildcare": "保健福祉部・妊娠育児総合ポータル「アイサラン」妊娠週数別情報",
-    "citationSourceKsog": "大韓産婦人科学会 妊娠・出産情報",
-    "growthCitationNote": "成長パーセンタイル・統計は標準成長曲線に基づく参考用です。個々の評価は小児科の専門医にご相談ください。",
-    "citationSourceKdca": "疾病管理庁・大韓小児科学会「2017年 小児青少年成長曲線」",
+    "citationSourceChildcare": "韓国保健福祉部・妊娠育児総合ポータル「アイサラン」妊娠週数別情報",
+    "citationSourceKsog": "大韓産婦人科学会（韓国）妊娠・出産情報",
+    "growthCitationNote": "成長パーセンタイル・統計は韓国の標準成長曲線に基づく参考用です。日本の成長曲線とは異なる場合があります。個々の評価は小児科の専門医にご相談ください。",
+    "citationSourceKdca": "韓国疾病管理庁・大韓小児科学会「2017年 小児青少年成長曲線」",
     "citationSourceWho": "WHO Child Growth Standards（0〜5歳）",
     "defaultChildName": "お子さま",
     "growthHeaderTitle": "成長記録＆変化",
@@ -924,7 +924,7 @@
     "medicine": {
       "sectionTitle": "解熱剤の服用量（参考情報）",
       "sectionDesc": "お子さまの体重を基準に、保守的な数値（推奨最小量）で計算した参考情報です",
-      "disclaimer": "⚠️ この画面の用量・服用間隔は一般的な参考情報であり、診断や治療を目的とした医療行為には該当しません。\n薬によって濃度が異なるため、製品ラベルの濃度（例：タイレノール32mg/ml、チャンプER 48mg/ml）を必ずご確認ください。\n実際の投薬・服用・交互服用は必ず小児科医・薬剤師にご相談の上で決定してください。緊急症状が疑われる場合は直ちに119へご連絡ください。",
+      "disclaimer": "⚠️ この画面の用量・服用間隔は一般的な参考情報であり、診断や治療を目的とした医療行為には該当しません。\n製剤形態（シロップ・ドライシロップ・坐剤など）によって濃度が異なるため、製品ラベルの濃度を必ずご確認ください（例：アセトアミノフェンシロップ小児用2%＝20mg/ml）。\n実際の投薬・服用は必ず小児科医・薬剤師にご相談の上で決定してください。緊急症状が疑われる場合は直ちに119へご連絡ください。",
       "loadError": "解熱剤の情報を読み込めませんでした。"
     },
     "medLog": {
@@ -975,7 +975,9 @@
       "other": "その他",
       "champER": "チャンプER",
       "champRed": "チャンプ（赤）",
-      "champBlue": "チャンプ（青）"
+      "champBlue": "チャンプ（青）",
+      "acetGeneric": "アセトアミノフェン",
+      "ibuGeneric": "イブプロフェン"
     },
     "weightInput": {
       "label": "現在の体重",
@@ -993,6 +995,10 @@
       "red": "赤（アセトアミノフェン32mg/ml）",
       "redEr": "ER高濃度（48mg/ml）",
       "blue": "青（イブプロフェン20mg/ml）"
+    },
+    "concentrationNote": {
+      "ja": "アセトアミノフェンシロップ小児用2%（20mg/ml）を基準に計算しています。ドライシロップや坐剤など製剤形態が異なる場合は換算が変わるため、実際の製品ラベルの濃度を必ず確認の上、薬剤師・小児科医にご相談ください。市販のイブプロフェンは15歳未満への使用が推奨されないため、本アプリでは提供していません。",
+      "zhHant": "台灣（安佳熱糖漿24mg/ml・依普芬20mg/ml）を基準に計算した参考値です。香港など地域によって製品濃度が異なる場合があるため、実際の製品ラベルの濃度を必ず確認の上、薬剤師にご相談ください。"
     },
     "notifyButton": {
       "in4h": "4時間後に通知",
@@ -2349,8 +2355,8 @@
     "tabGlucose": "血糖",
     "tabFood": "食事",
     "citationNote": "血糖・食事に関する推奨は一般的な基準であり、個人ごとの目標は担当医にご相談ください。",
-    "citationSourceDiabetesSociety": "大韓糖尿病学会「糖尿病診療指針」（妊娠糖尿病）",
-    "citationSourceFoodSafety": "食品医薬品安全処 食品栄養成分データベース",
+    "citationSourceDiabetesSociety": "大韓糖尿病学会（韓国）「糖尿病診療指針」（妊娠糖尿病）",
+    "citationSourceFoodSafety": "韓国食品医薬品安全処 食品栄養成分データベース",
     "reportBtnText": "今週のAI分析を受ける",
     "reportBtnSub": "直近7日間の血糖＋食事の総合コーチング",
     "addGlucoseRecord": "＋ 血糖記録を追加",
@@ -3102,9 +3108,9 @@
     "emptyCompleted": "まだ完了した接種はありません",
     "emptyOverdue": "未接種はありません！",
     "emptyUpcoming": "予定されている接種はありません",
-    "citationNote": "接種スケジュールは国の標準予防接種スケジュールに基づいています。実際の接種は小児科医にご相談の上、行ってください。",
-    "citationSourceKdca": "疾病管理庁 予防接種案内（標準予防接種スケジュール）",
-    "citationSourcePediatrics": "大韓小児科学会 予防接種ガイドライン",
+    "citationNote": "接種スケジュールは韓国の標準予防接種スケジュールに基づく参考情報です。日本の定期接種スケジュールとは異なる場合があるため、実際の接種は小児科医にご相談の上、行ってください。",
+    "citationSourceKdca": "韓国疾病管理庁 予防接種案内（標準予防接種スケジュール）",
+    "citationSourcePediatrics": "大韓小児科学会（韓国） 予防接種ガイドライン",
     "completeModalTitle": "接種完了の記録",
     "vaccinationDateLabel": "接種日",
     "datePlaceholder": "{{date}}（空欄の場合は本日）",
@@ -4571,7 +4577,7 @@
     },
     "askMore": "AIにもっと質問する",
     "citationNote": "AIが生成した参考用のおすすめです。健康・食事に関する判断は小児科医など専門家にご相談ください。",
-    "citationSourceFoodSafety": "食品医薬品安全処 食品安全の国"
+    "citationSourceFoodSafety": "韓国食品医薬品安全処「食品安全ナラ」データベース"
   },
   "support": {
     "title": "サポートセンター",
@@ -4795,8 +4801,8 @@
     "recipeExpand": "簡単レシピを見る",
     "youtubeSearch": "YouTube検索",
     "citationNote": "食品のおすすめは一般的な栄養情報に基づく参考用です。アレルギーや疾患がある場合は小児科医にご相談ください。",
-    "citationSourceFoodSafety": "食品医薬品安全処 食品栄養成分データベース",
-    "citationSourceMohw": "保健福祉部 韓国人栄養素摂取基準"
+    "citationSourceFoodSafety": "韓国食品医薬品安全処 食品栄養成分データベース",
+    "citationSourceMohw": "韓国保健福祉部 韓国人栄養素摂取基準"
   },
   "clinic": {
     "screenTitle": "小児科 / 子ども病院",
@@ -4826,8 +4832,8 @@
     "parentingTips": "育児のヒント",
     "traitAdvice": "{{name}}の気質に合わせたアドバイス",
     "citationNote": "発達時期は平均的な基準であり、お子様によって差があります。発達が心配な場合は小児科専門医にご相談ください。",
-    "citationSourceKdca": "疾病管理庁 国家健康情報ポータル(乳幼児発達)",
-    "citationSourcePediatrics": "大韓小児科学会 子どもの健康情報"
+    "citationSourceKdca": "韓国疾病管理庁 国家健康情報ポータル(乳幼児発達)",
+    "citationSourcePediatrics": "大韓小児科学会（韓国） 子どもの健康情報"
   },
   "playLearning": {
     "title": "{{name}}の遊び学習",
