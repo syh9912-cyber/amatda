@@ -15,8 +15,16 @@ import {
   classifyRiskLevel,
   riskMessage,
   nextRecommendedDate,
+  getEpdsQuestions,
+  getEpdsExtraByStage,
   type EpdsRiskLevel,
 } from '../data/epdsQuestions';
+
+// 비한국어 로케일이면 Gemini 프롬프트 뒤에 응답 언어 힌트만 추가(추가형) — 한국어 프롬프트 본문은 무변경
+const LOCALE_RESPONSE_HINT: Partial<Record<'ja' | 'zh-Hant', string>> = {
+  ja: '\n\n[重要] JSON の全ての値は自然な日本語で作成しろ。JSON のキー名は英語のまま維持しろ。',
+  'zh-Hant': '\n\n[重要] JSON 中所有的值請以自然的繁體中文書寫。JSON 的鍵名請保持英文原樣。',
+};
 
 const router = Router();
 
@@ -1587,9 +1595,10 @@ router.delete('/gdm/food/:id', authMiddleware, async (req: Request, res: Respons
 /** POST /api/pregnancy/gdm/food/analyze — AI 사진 분석 (참고용, 의료 진단 아님) */
 router.post('/gdm/food/analyze', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { mediaBase64, mediaMimeType } = req.body as {
+    const { mediaBase64, mediaMimeType, locale } = req.body as {
       mediaBase64?: string;
       mediaMimeType?: string;
+      locale?: string;
     };
 
     if (!mediaBase64 || !mediaMimeType) {
@@ -1600,9 +1609,17 @@ router.post('/gdm/food/analyze', authMiddleware, async (req: Request, res: Respo
     const tier = await getUserTierForFood(req.userId!);
     const usage = await checkAndIncrementFoodAnalyze(req.userId!, tier);
     if (!usage.allowed) {
-      const msg = tier === 'free'
-        ? `오늘의 사진 분석 횟수를 모두 사용했어요 (무료 하루 ${usage.limit}장). 프리미엄 구독 시 하루 10장까지 이용 가능합니다.`
-        : `오늘의 사진 분석 횟수를 모두 사용했어요 (프리미엄 하루 ${usage.limit}장). 내일 다시 이용해주세요.`;
+      const msg = locale === 'ja'
+        ? (tier === 'free'
+          ? `本日の写真分析回数を使い切りました（無料プランは1日${usage.limit}枚まで）。プレミアム登録で1日10枚まで利用できます。`
+          : `本日の写真分析回数を使い切りました（プレミアムは1日${usage.limit}枚まで）。明日また利用してください。`)
+        : locale === 'zh-Hant'
+          ? (tier === 'free'
+            ? `今天的照片分析次數已用完（免費方案每日${usage.limit}張）。訂閱進階方案可享每日 10 張。`
+            : `今天的照片分析次數已用完（進階方案每日${usage.limit}張）。請明天再試。`)
+          : tier === 'free'
+            ? `오늘의 사진 분석 횟수를 모두 사용했어요 (무료 하루 ${usage.limit}장). 프리미엄 구독 시 하루 10장까지 이용 가능합니다.`
+            : `오늘의 사진 분석 횟수를 모두 사용했어요 (프리미엄 하루 ${usage.limit}장). 내일 다시 이용해주세요.`;
       res.status(429).json({
         success: false,
         error: msg,
@@ -1612,18 +1629,23 @@ router.post('/gdm/food/analyze', authMiddleware, async (req: Request, res: Respo
     }
 
     if (!isGeminiAvailable()) {
+      const unavailable = locale === 'ja'
+        ? { foodName: '分析不可', notes: 'AI分析を利用できません。手動で入力してください。', disclaimer: 'この結果は参考用であり、医療診断ではありません。' }
+        : locale === 'zh-Hant'
+          ? { foodName: '無法分析', notes: '目前無法使用 AI 分析，請手動輸入。', disclaimer: '此結果僅供參考，並非醫療診斷。' }
+          : { foodName: '분석 불가', notes: 'AI 분석을 사용할 수 없습니다. 수동으로 입력해주세요.', disclaimer: '이 결과는 참고용이며 의료 진단이 아닙니다.' };
       success(res, {
-        foodName: '분석 불가',
+        foodName: unavailable.foodName,
         carbs: null,
         calories: null,
-        notes: 'AI 분석을 사용할 수 없습니다. 수동으로 입력해주세요.',
-        disclaimer: '이 결과는 참고용이며 의료 진단이 아닙니다.',
+        notes: unavailable.notes,
+        disclaimer: unavailable.disclaimer,
         usage: { used: usage.used, limit: usage.limit, remaining: usage.remaining, tier },
       });
       return;
     }
 
-    const prompt = `당신은 임신성 당뇨 식단 관리를 돕는 영양 분석 보조입니다.
+    const basePrompt = `당신은 임신성 당뇨 식단 관리를 돕는 영양 분석 보조입니다.
 첨부된 음식 사진을 분석해 다음 정보를 추정해주세요. 정확한 의료/영양 수치가 아니라 참고용 추정치입니다.
 
 반드시 아래 JSON 형식만 출력하세요:
@@ -1639,6 +1661,19 @@ router.post('/gdm/food/analyze', authMiddleware, async (req: Request, res: Respo
 - 사람/배경만 있다면 인식 불가를 표시
 - 추정치는 일반적인 한국 식단 기준
 - 의료적 진단이나 처방은 절대 하지 말 것`;
+    const localeHint = locale === 'ja'
+      ? '\n\n[重要] JSON の foodName と notes は自然な日本語で作成しろ。「一般的な韓国食」ではなく、一般的な食事基準で推定しろ。JSON のキー名は英語のまま維持しろ。'
+      : locale === 'zh-Hant'
+        ? '\n\n[重要] JSON 中的 foodName 與 notes 請以自然的繁體中文書寫。請以一般飲食基準估算，而非「一般韓式飲食」。JSON 的鍵名請保持英文原樣。'
+        : undefined;
+    const prompt = localeHint ? basePrompt + localeHint : basePrompt;
+
+    const disclaimerFull = locale === 'ja'
+      ? 'AI分析結果は参考用の推定値であり、医療診断や栄養処方ではありません。正確な妊娠糖尿病管理は担当医と相談してください。'
+      : locale === 'zh-Hant'
+        ? 'AI 分析結果僅為參考估算值，並非醫療診斷或營養處方。準確的妊娠糖尿病管理請諮詢主治醫師。'
+        : 'AI 분석 결과는 참고용 추정치이며, 의료 진단이나 영양 처방이 아닙니다. 정확한 임당 관리는 담당 의료진과 상담해주세요.';
+    const unknownLabel = locale === 'ja' ? '不明' : locale === 'zh-Hant' ? '未知' : '알 수 없음';
 
     try {
       const parsed = await callGeminiJSON<{
@@ -1653,20 +1688,25 @@ router.post('/gdm/food/analyze', authMiddleware, async (req: Request, res: Respo
       });
 
       success(res, {
-        foodName: parsed.foodName || '알 수 없음',
+        foodName: parsed.foodName || unknownLabel,
         carbs: typeof parsed.carbs === 'number' ? parsed.carbs : null,
         calories: typeof parsed.calories === 'number' ? parsed.calories : null,
         notes: parsed.notes || '',
-        disclaimer: 'AI 분석 결과는 참고용 추정치이며, 의료 진단이나 영양 처방이 아닙니다. 정확한 임당 관리는 담당 의료진과 상담해주세요.',
+        disclaimer: disclaimerFull,
         usage: { used: usage.used, limit: usage.limit, remaining: usage.remaining, tier },
       });
     } catch {
+      const failMsg = locale === 'ja'
+        ? { foodName: '分析失敗', notes: '写真の分析に失敗しました。手動で入力してください。', disclaimer: 'AI分析結果は参考用であり、医療診断ではありません。' }
+        : locale === 'zh-Hant'
+          ? { foodName: '分析失敗', notes: '照片分析失敗，請手動輸入。', disclaimer: 'AI 分析結果僅供參考，並非醫療診斷。' }
+          : { foodName: '분석 실패', notes: '사진 분석에 실패했어요. 수동으로 입력해주세요.', disclaimer: 'AI 분석 결과는 참고용이며 의료 진단이 아닙니다.' };
       success(res, {
-        foodName: '분석 실패',
+        foodName: failMsg.foodName,
         carbs: null,
         calories: null,
-        notes: '사진 분석에 실패했어요. 수동으로 입력해주세요.',
-        disclaimer: 'AI 분석 결과는 참고용이며 의료 진단이 아닙니다.',
+        notes: failMsg.notes,
+        disclaimer: failMsg.disclaimer,
         usage: { used: usage.used, limit: usage.limit, remaining: usage.remaining, tier },
       });
     }
@@ -1706,7 +1746,7 @@ async function checkAndIncrementWeeklyReport(
 /** POST /api/pregnancy/gdm/weekly-report — 최근 7일 혈당+식단 AI 분석 */
 router.post('/gdm/weekly-report', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { childId } = req.body as { childId: string };
+    const { childId, locale } = req.body as { childId: string; locale?: string };
     if (!childId) { error(res, 'childId 필요'); return; }
 
     const childDoc = await collections.children.doc(childId).get();
@@ -1718,9 +1758,17 @@ router.post('/gdm/weekly-report', authMiddleware, async (req: Request, res: Resp
     const tier = await getUserTierForFood(req.userId!);
     const usage = await checkAndIncrementWeeklyReport(req.userId!, tier);
     if (!usage.allowed) {
-      const msg = tier === 'free'
-        ? `오늘 AI 분석 횟수를 사용했어요 (무료 하루 ${usage.limit}회). 내일 다시 이용해주세요.`
-        : `오늘 AI 분석 횟수를 모두 사용했어요 (프리미엄 하루 ${usage.limit}회).`;
+      const msg = locale === 'ja'
+        ? (tier === 'free'
+          ? `本日のAI分析回数を使い切りました（無料プランは1日${usage.limit}回）。明日また利用してください。`
+          : `本日のAI分析回数をすべて使い切りました（プレミアムは1日${usage.limit}回）。`)
+        : locale === 'zh-Hant'
+          ? (tier === 'free'
+            ? `今天的 AI 分析次數已用完（免費方案每日${usage.limit}次）。請明天再試。`
+            : `今天的 AI 分析次數已全部用完（進階方案每日${usage.limit}次）。`)
+          : tier === 'free'
+            ? `오늘 AI 분석 횟수를 사용했어요 (무료 하루 ${usage.limit}회). 내일 다시 이용해주세요.`
+            : `오늘 AI 분석 횟수를 모두 사용했어요 (프리미엄 하루 ${usage.limit}회).`;
       res.status(429).json({ success: false, error: msg });
       return;
     }
@@ -1749,14 +1797,31 @@ router.post('/gdm/weekly-report', authMiddleware, async (req: Request, res: Resp
       .sort((a, b) => (a.eatenAt ?? '').localeCompare(b.eatenAt ?? ''));
 
     if (glucose.length === 0 && foods.length === 0) {
+      const emptyData = locale === 'ja'
+        ? {
+          summary: '過去7日間の記録がありません。数日間続けて記録していただければ分析できます。',
+          suggestions: ['1日1回以上の血糖測定', '毎食の食事名+時間を記録', '食後1時間の血糖値が妊娠糖尿病管理の要です'],
+          disclaimer: 'この分析は参考用であり、医療診断ではありません。正確な管理は担当医と相談してください。',
+        }
+        : locale === 'zh-Hant'
+          ? {
+            summary: '最近 7 天沒有記錄。持續記錄幾天後即可為您分析。',
+            suggestions: ['每天至少測量一次血糖', '記錄每餐的食物名稱與時間', '飯後 1 小時血糖是妊娠糖尿病管理的關鍵'],
+            disclaimer: '此分析僅供參考，並非醫療診斷。準確的管理請諮詢主治醫師。',
+          }
+          : {
+            summary: '최근 7일간 기록이 없어요. 며칠간 꾸준히 기록해주시면 분석해드릴게요.',
+            suggestions: ['하루 1회 이상 혈당 측정', '매끼 음식 이름+시간 기록', '식후 1시간 혈당은 임당 관리 핵심'],
+            disclaimer: '이 분석은 참고용이며 의료 진단이 아닙니다. 정확한 관리는 담당 의료진과 상담해주세요.',
+          };
       res.status(200).json({
         success: true,
         data: {
-          summary: '최근 7일간 기록이 없어요. 며칠간 꾸준히 기록해주시면 분석해드릴게요.',
+          summary: emptyData.summary,
           highlights: [],
           cautions: [],
-          suggestions: ['하루 1회 이상 혈당 측정', '매끼 음식 이름+시간 기록', '식후 1시간 혈당은 임당 관리 핵심'],
-          disclaimer: '이 분석은 참고용이며 의료 진단이 아닙니다. 정확한 관리는 담당 의료진과 상담해주세요.',
+          suggestions: emptyData.suggestions,
+          disclaimer: emptyData.disclaimer,
         },
       });
       return;
@@ -1782,7 +1847,7 @@ router.post('/gdm/weekly-report', authMiddleware, async (req: Request, res: Resp
       `[${f.date} ${f.eatenAt.slice(11, 16)}] ${MEAL_KR[f.mealType] ?? f.mealType}: ${f.foodName}${typeof f.carbs === 'number' ? ` (탄수 ${f.carbs}g)` : ''}${typeof f.calories === 'number' ? ` (${f.calories}kcal)` : ''}`,
     ).join('\n');
 
-    const prompt = `당신은 임신성 당뇨(GDM)를 관리하는 산모를 돕는 따뜻한 영양/건강 코치입니다.
+    const basePrompt = `당신은 임신성 당뇨(GDM)를 관리하는 산모를 돕는 따뜻한 영양/건강 코치입니다.
 아래 최근 7일 기록을 보고 산모가 쉽게 이해할 수 있는 분석을 제공하세요.
 
 [기준 수치]
@@ -1814,17 +1879,54 @@ ${foodLines || '(기록 없음)'}
 - 특정 음식 금지하지 말고 "대체 추천" 형식으로
 - highlights/cautions는 없으면 빈 배열
 - 각 항목 1~2문장, 구체적이고 실행 가능하게`;
+    const weeklyLocaleHint = locale === 'ja'
+      ? '\n\n[重要] JSON の全ての値(summary, highlights, cautions, suggestions)は自然な日本語で作成しろ。JSON のキー名は英語のまま維持しろ。'
+      : locale === 'zh-Hant'
+        ? '\n\n[重要] JSON 中所有的值(summary, highlights, cautions, suggestions)請以自然的繁體中文書寫。JSON 的鍵名請保持英文原樣。'
+        : undefined;
+    const prompt = weeklyLocaleHint ? basePrompt + weeklyLocaleHint : basePrompt;
+
+    const weeklyDisclaimer = locale === 'ja'
+      ? 'この分析は参考用であり、医療診断ではありません。'
+      : locale === 'zh-Hant'
+        ? '此分析僅供參考，並非醫療診斷。'
+        : '이 분석은 참고용이며 의료 진단이 아닙니다.';
+    const weeklyDisclaimerFull = locale === 'ja'
+      ? 'この分析は参考用であり、医療診断ではありません。正確な妊娠糖尿病管理は担当医と相談してください。'
+      : locale === 'zh-Hant'
+        ? '此分析僅供參考，並非醫療診斷。準確的妊娠糖尿病管理請諮詢主治醫師。'
+        : '이 분석은 참고용이며 의료 진단이 아닙니다. 정확한 임당 관리는 담당 의료진과 상담해주세요.';
 
     try {
       if (!isGeminiAvailable()) {
+        const fallback = locale === 'ja'
+          ? {
+            summary: `過去7日間、血糖${glucose.length}回、食事${foods.length}回記録されました。平均血糖値は${avg}mg/dLです。`,
+            highlights: glucose.length >= 7 ? ['継続的な血糖記録、素晴らしいです'] : [],
+            cautions: warningCount > 0 ? [`危険範囲が${warningCount}回ありました。担当医と相談してください`] : [],
+            suggestions: ['AI分析サーバーメンテナンス中です。しばらくしてから再度お試しください'],
+          }
+          : locale === 'zh-Hant'
+            ? {
+              summary: `過去 7 天記錄了血糖 ${glucose.length} 次、飲食 ${foods.length} 次，平均血糖為 ${avg}mg/dL。`,
+              highlights: glucose.length >= 7 ? ['持續記錄血糖，做得很好'] : [],
+              cautions: warningCount > 0 ? [`出現危險範圍 ${warningCount} 次，建議與主治醫師討論`] : [],
+              suggestions: ['AI 分析伺服器維護中，請稍後再試'],
+            }
+            : {
+              summary: `최근 7일간 혈당 ${glucose.length}회, 식단 ${foods.length}회 기록하셨어요. 평균 혈당 ${avg}mg/dL예요.`,
+              highlights: glucose.length >= 7 ? ['꾸준한 혈당 기록 멋져요'] : [],
+              cautions: warningCount > 0 ? [`위험 범위가 ${warningCount}회 있었어요. 담당 의료진과 상의하세요`] : [],
+              suggestions: ['AI 분석 서버 점검 중입니다. 잠시 후 다시 시도해주세요'],
+            };
         res.status(200).json({
           success: true,
           data: {
-            summary: `최근 7일간 혈당 ${glucose.length}회, 식단 ${foods.length}회 기록하셨어요. 평균 혈당 ${avg}mg/dL예요.`,
-            highlights: glucose.length >= 7 ? ['꾸준한 혈당 기록 멋져요'] : [],
-            cautions: warningCount > 0 ? [`위험 범위가 ${warningCount}회 있었어요. 담당 의료진과 상의하세요`] : [],
-            suggestions: ['AI 분석 서버 점검 중입니다. 잠시 후 다시 시도해주세요'],
-            disclaimer: '이 분석은 참고용이며 의료 진단이 아닙니다.',
+            summary: fallback.summary,
+            highlights: fallback.highlights,
+            cautions: fallback.cautions,
+            suggestions: fallback.suggestions,
+            disclaimer: weeklyDisclaimer,
           },
         });
         return;
@@ -1843,15 +1945,32 @@ ${foodLines || '(기록 없음)'}
         cautions: Array.isArray(parsed.cautions) ? parsed.cautions : [],
         suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
         stats: { days: 7, measurements: glucose.length, meals: foods.length, avg, max, min, cautionCount, warningCount },
-        disclaimer: '이 분석은 참고용이며 의료 진단이 아닙니다. 정확한 임당 관리는 담당 의료진과 상담해주세요.',
+        disclaimer: weeklyDisclaimerFull,
       });
     } catch {
+      const catchFallback = locale === 'ja'
+        ? {
+          summary: `過去7日間、血糖平均${avg}mg/dL（${glucose.length}回）、食事${foods.length}回記録されました。`,
+          cautions: warningCount > 0 ? [`危険範囲が${warningCount}回発生 — 担当医への相談を推奨`] : [],
+          suggestions: ['AI分析が一時的に利用できません。しばらくしてから再度お試しください'],
+        }
+        : locale === 'zh-Hant'
+          ? {
+            summary: `過去 7 天血糖平均 ${avg}mg/dL（共 ${glucose.length} 次），飲食記錄 ${foods.length} 次。`,
+            cautions: warningCount > 0 ? [`出現危險範圍 ${warningCount} 次 — 建議諮詢主治醫師`] : [],
+            suggestions: ['AI 分析暫時無法使用，請稍後再試'],
+          }
+          : {
+            summary: `최근 7일 혈당 ${glucose.length}회 평균 ${avg}mg/dL, 식단 ${foods.length}회 기록됐어요.`,
+            cautions: warningCount > 0 ? [`위험 범위 ${warningCount}회 발생 — 담당 의료진 상담 권장`] : [],
+            suggestions: ['AI 분석이 일시적으로 불가해요. 잠시 후 다시 시도해주세요'],
+          };
       success(res, {
-        summary: `최근 7일 혈당 ${glucose.length}회 평균 ${avg}mg/dL, 식단 ${foods.length}회 기록됐어요.`,
+        summary: catchFallback.summary,
         highlights: [],
-        cautions: warningCount > 0 ? [`위험 범위 ${warningCount}회 발생 — 담당 의료진 상담 권장`] : [],
-        suggestions: ['AI 분석이 일시적으로 불가해요. 잠시 후 다시 시도해주세요'],
-        disclaimer: '이 분석은 참고용이며 의료 진단이 아닙니다.',
+        cautions: catchFallback.cautions,
+        suggestions: catchFallback.suggestions,
+        disclaimer: weeklyDisclaimer,
       });
     }
   } catch {
@@ -1880,7 +1999,31 @@ function normalizeStage(raw: unknown): string {
   return VALID_STAGES.has(s) ? s : 'general';
 }
 
-function partnerPushBody(level: EpdsRiskLevel): string {
+const PARTNER_PUSH_BODY_JA: Record<EpdsRiskLevel, string> = {
+  low: '今日、心の健康チェックインをしました。時々様子を聞いてあげてください。',
+  mild: '今日、心の健康チェックインをしました。時々様子を聞いてあげてください。',
+  moderate: '心の健康チェックで少しつらいサインが見られました。今日、そばで寄り添ってあげてください。',
+  high: '心の健康チェックで助けが必要なサインが見られました。今日はぜひそばにいてあげてください。',
+  urgent: '今、とてもつらい状態です。すぐに連絡を取り、専門的な助けも一緒に探してください。',
+};
+
+const PARTNER_PUSH_BODY_ZH: Record<EpdsRiskLevel, string> = {
+  low: '今天做了心理健康檢測。請偶爾關心一下狀況。',
+  mild: '今天做了心理健康檢測。請偶爾關心一下狀況。',
+  moderate: '心理健康檢測顯示有些微的困難跡象。今天請給予多一點擁抱與陪伴。',
+  high: '心理健康檢測顯示出現需要協助的訊號。今天請務必陪伴在身邊。',
+  urgent: '現在狀態非常辛苦，請立即聯繫並一起尋求專業協助。',
+};
+
+function partnerPushTitle(locale?: string): string {
+  if (locale === 'ja') return 'ママの心の健康チェックイン';
+  if (locale === 'zh-Hant') return '媽媽的心理健康檢測';
+  return '엄마 마음 건강 체크인';
+}
+
+function partnerPushBody(level: EpdsRiskLevel, locale?: string): string {
+  if (locale === 'ja') return PARTNER_PUSH_BODY_JA[level];
+  if (locale === 'zh-Hant') return PARTNER_PUSH_BODY_ZH[level];
   switch (level) {
     case 'low':
     case 'mild':
@@ -1897,10 +2040,11 @@ function partnerPushBody(level: EpdsRiskLevel): string {
 router.get('/mental-check/questions', authMiddleware, (req: Request, res: Response) => {
   try {
     const stage = normalizeStage(req.query.stage);
+    const locale = req.query.locale as string | undefined;
     success(res, {
       stage,
-      questions: EPDS_QUESTIONS,
-      extraQuestions: EPDS_EXTRA_BY_STAGE[stage] ?? [],
+      questions: getEpdsQuestions(locale),
+      extraQuestions: getEpdsExtraByStage(stage, locale),
     });
   } catch {
     error(res, '문항 조회 중 오류가 발생했습니다', 500);
@@ -1909,12 +2053,13 @@ router.get('/mental-check/questions', authMiddleware, (req: Request, res: Respon
 
 router.post('/mental-check', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { childId, answers, extraAnswers, shareWithPartner, stage } = req.body as {
+    const { childId, answers, extraAnswers, shareWithPartner, stage, locale } = req.body as {
       childId?: string;
       answers?: number[];
       extraAnswers?: number[];
       shareWithPartner?: boolean;
       stage?: string;
+      locale?: string;
     };
 
     if (!childId) { error(res, 'childId 는 필수입니다'); return; }
@@ -1932,7 +2077,7 @@ router.post('/mental-check', authMiddleware, async (req: Request, res: Response)
 
     const totalScore = calcEpdsScore(answers);
     const riskLevel: EpdsRiskLevel = classifyRiskLevel(totalScore, answers);
-    const message = riskMessage(riskLevel);
+    const message = riskMessage(riskLevel, locale);
     const nextRecommendedAt = nextRecommendedDate(riskLevel);
     const normalizedStage = normalizeStage(stage);
 
@@ -1978,8 +2123,8 @@ router.post('/mental-check', authMiddleware, async (req: Request, res: Response)
             batch.set(collections.pushSchedules.doc(genId()), {
               userId: memberId,
               type: 'mental_check_share',
-              title: '엄마 마음 건강 체크인',
-              body: partnerPushBody(riskLevel),
+              title: partnerPushTitle(locale),
+              body: partnerPushBody(riskLevel, locale),
               data: { childId, riskLevel },
               scheduledAt: FieldValue.serverTimestamp(),
               status: 'sent',
@@ -1989,8 +2134,8 @@ router.post('/mental-check', authMiddleware, async (req: Request, res: Response)
 
           // 2) 즉시 Expo Push 발송 (fire-and-forget)
           const result = await sendExpoPushToUsers(memberIds, childId, {
-            title: '엄마 마음 건강 체크인',
-            body: partnerPushBody(riskLevel),
+            title: partnerPushTitle(locale),
+            body: partnerPushBody(riskLevel, locale),
             data: { childId, riskLevel, type: 'mental_check_share' },
           });
           notifiedFamily = result.sentCount;
@@ -2055,6 +2200,7 @@ router.get('/mental-check', authMiddleware, async (req: Request, res: Response) 
 router.get('/mental-check/analysis', authMiddleware, async (req: Request, res: Response) => {
   try {
     const childId = req.query.childId as string | undefined;
+    const locale = req.query.locale as string | undefined;
     if (!childId) { error(res, 'childId 는 필수입니다'); return; }
 
     const childDoc = await collections.children.doc(childId).get();
@@ -2080,7 +2226,12 @@ router.get('/mental-check/analysis', authMiddleware, async (req: Request, res: R
     });
 
     if (items.length === 0) {
-      success(res, { count: 0, recommendation: '첫 검사를 시작해보세요. 5분이면 충분해요.' });
+      const firstCheckMsg = locale === 'ja'
+        ? '最初のチェックを始めてみましょう。5分もあれば十分です。'
+        : locale === 'zh-Hant'
+          ? '開始您的第一次檢測吧，只需要 5 分鐘。'
+          : '첫 검사를 시작해보세요. 5분이면 충분해요.';
+      success(res, { count: 0, recommendation: firstCheckMsg });
       return;
     }
 
@@ -2108,14 +2259,14 @@ router.get('/mental-check/analysis', authMiddleware, async (req: Request, res: R
     const nextRecommendedAt = nextRecommendedDate(latestRisk);
 
     // AI 맞춤 권고 — Gemini 가용 시 사용, 아니면 정적 메시지 폴백
-    let recommendation = riskMessage(latestRisk);
+    let recommendation = riskMessage(latestRisk, locale);
     if (isGeminiAvailable() && items.length >= 1) {
       try {
         const trendLabel = direction === 'improving' ? '호전 중' : direction === 'worsening' ? '악화 중' : direction === 'stable' ? '안정적' : '측정 부족';
         const stageLabel: Record<string, string> = {
           prenatal: '임신 중', postpartum_early: '산후 초기(0~3개월)', postpartum_mid: '산후 중기(4~6개월)', postpartum_late: '산후 후기(7개월+)', general: '일반',
         };
-        const prompt = `EPDS 산전·산후 우울 자가검사 결과를 바탕으로 맞춤 권고 메시지를 2~3문장으로 작성해주세요.
+        const basePrompt = `EPDS 산전·산후 우울 자가검사 결과를 바탕으로 맞춤 권고 메시지를 2~3문장으로 작성해주세요.
 
 검사 정보:
 - 시기: ${stageLabel[items[0].stage] ?? '일반'}
@@ -2125,7 +2276,13 @@ router.get('/mental-check/analysis', authMiddleware, async (req: Request, res: R
 - 추세: ${trendLabel}
 - 위험도: ${latestRisk}
 
-규칙: 따뜻한 한국어 구어체, 80자 이내. urgent/high 는 전문 도움 연락처(1577-0199) 포함. 코드블록·이모지 없이 텍스트만.`;
+규칙: 따뜻한 구어체, 80자 이내. urgent/high 는 전문 상담이 필요하다는 점을 언급하되, 특정 전화번호는 절대 지어내지 말 것(이미 별도로 안내됨). 코드블록·이모지 없이 텍스트만.`;
+        const localeHint = locale === 'ja'
+          ? '\n\n[重要] 上記の指示に従い、必ず自然な日本語だけで作成しろ。'
+          : locale === 'zh-Hant'
+            ? '\n\n[重要] 請依上述規則，務必只用自然的繁體中文書寫。'
+            : undefined;
+        const prompt = localeHint ? basePrompt + localeHint : basePrompt;
 
         const aiRaw = await callGeminiText(prompt, {
           systemPrompt: '당신은 산전·산후 정신건강 전문 상담사입니다. 검사 데이터를 바탕으로 따뜻하고 실질적인 권고를 제공하세요.',

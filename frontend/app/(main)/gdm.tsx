@@ -138,7 +138,7 @@ const MEAL_CARB_LIMIT: Record<FoodMealType, number> = {
 };
 
 export default function GdmScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const MEAL_LABELS = getMealLabels(t);
   const FOOD_MEAL_LABELS = getFoodMealLabels(t);
   const statusColors = getStatusColors(t);
@@ -325,7 +325,7 @@ export default function GdmScreen() {
       const base64 = await FileSystem.readAsStringAsync(photoUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      const res = await pregnancyApi.analyzeFoodPhoto(base64, photoMime);
+      const res = await pregnancyApi.analyzeFoodPhoto(base64, photoMime, i18n.language);
       const data = (res.data?.data ?? res.data) as AnalyzeResult;
       setAnalyzeResult(data);
       if (!foodName && data.foodName) setFoodName(data.foodName);
@@ -397,7 +397,7 @@ export default function GdmScreen() {
     setReportLoading(true);
     setReport(null);
     try {
-      const res = await pregnancyApi.gdmWeeklyReport(childId);
+      const res = await pregnancyApi.gdmWeeklyReport(childId, i18n.language);
       const data = (res.data?.data ?? res.data) as WeeklyReport;
       setReport(data);
     } catch (err: unknown) {

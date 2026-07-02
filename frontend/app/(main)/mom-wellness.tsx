@@ -131,7 +131,7 @@ function getRiskStyle(t: TFunction): Record<string, { bg: string; color: string;
 }
 
 export default function MomWellnessScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { selectedChild } = useChildStore();
   const childId = selectedChild?.id ?? '';
@@ -210,7 +210,7 @@ export default function MomWellnessScreen() {
     setLoadingQuestions(true);
     setLoadError(null);
     try {
-      const res = await pregnancyApi.mentalCheckQuestions(stage);
+      const res = await pregnancyApi.mentalCheckQuestions(stage, i18n.language);
       const payload = res.data.data as {
         questions?: EpdsQuestion[];
         extraQuestions?: EpdsQuestion[];
@@ -228,7 +228,7 @@ export default function MomWellnessScreen() {
     } finally {
       setLoadingQuestions(false);
     }
-  }, [stage, t]);
+  }, [stage, t, i18n.language]);
 
   const loadHistoryAndAnalysis = useCallback(async () => {
     if (!childId) return;
@@ -236,13 +236,13 @@ export default function MomWellnessScreen() {
     try {
       const [hRes, aRes] = await Promise.all([
         pregnancyApi.getMentalChecks(childId),
-        pregnancyApi.mentalCheckAnalysis(childId),
+        pregnancyApi.mentalCheckAnalysis(childId, i18n.language),
       ]);
       setHistory((hRes.data.data as EpdsRecord[]) ?? []);
       setAnalysis((aRes.data.data as EpdsAnalysis) ?? null);
     } catch { /* silent */ }
     setLoadingHistory(false);
-  }, [childId]);
+  }, [childId, i18n.language]);
 
   useEffect(() => { loadHistoryAndAnalysis(); }, [loadHistoryAndAnalysis]);
   useEffect(() => { loadMoodDiary(); }, [loadMoodDiary]);
@@ -280,6 +280,7 @@ export default function MomWellnessScreen() {
         childId, answers: orderedAnswers, shareWithPartner,
         extraAnswers: orderedExtras.length > 0 ? orderedExtras : undefined,
         stage,
+        locale: i18n.language,
       });
       setResult(res.data.data as EpdsResult);
       setAnswers({});

@@ -53,6 +53,89 @@ export const EPDS_EXTRA_BY_STAGE: Record<string, EpdsQuestion[]> = {
   general: [],
 };
 
+/* ─── 비한국어 로케일 EPDS 문항 (추가형) — 위 한국어 원본/채점 로직은 무변경 ───
+ * id는 한국어판과 동일하게 유지 (채점은 id 순서 기반이 아니라 배열 index 기반이므로
+ * EPDS_QUESTIONS 와 EPDS_QUESTIONS_JA/ZH 는 반드시 같은 길이·같은 순서를 유지해야 함). */
+export const EPDS_QUESTIONS_JA: EpdsQuestion[] = [
+  { id: 1, text: '面白いことを見て笑うことができ、物事を楽しむことができた' },
+  { id: 2, text: '物事を楽しみに待つことができた' },
+  { id: 3, text: '物事がうまくいかないとき、必要以上に自分を責めた' },
+  { id: 4, text: 'これといった理由もないのに不安になったり、心配になったりした' },
+  { id: 5, text: 'これといった理由もないのに恐怖に襲われたり、パニックになったりした' },
+  { id: 6, text: 'いろいろなことが重荷に感じられた' },
+  { id: 7, text: 'とても不幸せなので、眠れないことがあった' },
+  { id: 8, text: '悲しくなったり、惨めになったりした' },
+  { id: 9, text: 'とても不幸せなので、泣けてきた' },
+  { id: 10, text: '自分自身を傷つけたいと思ったことがあった' },
+];
+
+export const EPDS_QUESTIONS_ZH: EpdsQuestion[] = [
+  { id: 1, text: '我能看到事情有趣的一面，並笑得出來' },
+  { id: 2, text: '我會很期待地想著一些事情' },
+  { id: 3, text: '事情出錯時，我會不必要地責怪自己' },
+  { id: 4, text: '我會無緣無故地感到焦慮或擔心' },
+  { id: 5, text: '我會無緣無故地感到害怕或驚慌' },
+  { id: 6, text: '很多事情讓我感到喘不過氣來' },
+  { id: 7, text: '我因為太不快樂，以至於難以入睡' },
+  { id: 8, text: '我感到難過或悲慘' },
+  { id: 9, text: '我因為太不快樂而哭泣' },
+  { id: 10, text: '我曾有過傷害自己的念頭' },
+];
+
+export const EPDS_EXTRA_BY_STAGE_JA: Record<string, EpdsQuestion[]> = {
+  prenatal: [
+    { id: 101, text: '胎動や胎児の健康について心配が絶えない' },
+    { id: 102, text: '出産が近づくにつれて不安が大きくなる' },
+  ],
+  postpartum_early: [
+    { id: 201, text: '睡眠不足で日常生活が崩れているように感じる' },
+    { id: 202, text: '母乳やミルクの選択についてプレッシャーを強く感じる' },
+  ],
+  postpartum_mid: [
+    { id: 301, text: '自分自身が消えて、母親役割だけが残った感じがする' },
+    { id: 302, text: '周囲から孤立しているような孤独感をよく感じる' },
+  ],
+  postpartum_late: [
+    { id: 401, text: '職場復帰や家事分担について不安が大きい' },
+    { id: 402, text: '子どもの発達が周りより遅れているようで、つい比較してしまう' },
+  ],
+  general: [],
+};
+
+export const EPDS_EXTRA_BY_STAGE_ZH: Record<string, EpdsQuestion[]> = {
+  prenatal: [
+    { id: 101, text: '一直很擔心胎動或胎兒的健康' },
+    { id: 102, text: '隨著預產期接近，恐懼感越來越強烈' },
+  ],
+  postpartum_early: [
+    { id: 201, text: '因為睡眠不足，感覺日常生活快要撐不住了' },
+    { id: 202, text: '對於哺餵母乳或配方奶的選擇感到很大壓力' },
+  ],
+  postpartum_mid: [
+    { id: 301, text: '感覺自己消失了，只剩下媽媽這個角色' },
+    { id: 302, text: '常常感到與周遭隔絕般的孤獨' },
+  ],
+  postpartum_late: [
+    { id: 401, text: '對於復職或家務分擔感到很不安' },
+    { id: 402, text: '常拿孩子的發展跟其他孩子比較，覺得比較慢' },
+  ],
+  general: [],
+};
+
+/** 로케일에 맞는 EPDS 표준 10문항 반환 (기본: 한국어) */
+export function getEpdsQuestions(locale?: string): EpdsQuestion[] {
+  if (locale === 'ja') return EPDS_QUESTIONS_JA;
+  if (locale === 'zh-Hant') return EPDS_QUESTIONS_ZH;
+  return EPDS_QUESTIONS;
+}
+
+/** 로케일에 맞는 stage별 보조 문항 반환 (기본: 한국어) */
+export function getEpdsExtraByStage(stage: string, locale?: string): EpdsQuestion[] {
+  if (locale === 'ja') return EPDS_EXTRA_BY_STAGE_JA[stage] ?? [];
+  if (locale === 'zh-Hant') return EPDS_EXTRA_BY_STAGE_ZH[stage] ?? [];
+  return EPDS_EXTRA_BY_STAGE[stage] ?? [];
+}
+
 /** 문항 ID 가 긍정 채점(역채점) 대상인지 — 1, 2 번만 해당 */
 export function isReverseScored(questionId: number): boolean {
   return questionId === 1 || questionId === 2;
@@ -96,8 +179,27 @@ export function classifyRiskLevel(totalScore: number, answers: number[]): EpdsRi
   return 'low';
 }
 
-/** 위험도별 사용자 안내 메시지 */
-export function riskMessage(level: EpdsRiskLevel): string {
+// 비한국어 로케일 위기상담 연락처 (추가형) — 실존 확인된 공공 연락처만 사용
+const RISK_MESSAGE_JA: Record<EpdsRiskLevel, string> = {
+  low: '今は安定した状態のようです。これからも自分を大切にしてくださいね。',
+  mild: '少しストレスが溜まっているようです。十分に休んで、ご家族と話す時間を持ってください。',
+  moderate: '軽い落ち込みが見られます。お住まいの地域の保健センターや産婦人科への相談をおすすめします。',
+  high: 'はっきりとした落ち込みが見られます。産後うつの専門機関への相談をおすすめします（よりそいホットライン ☎ 0120-279-338・24時間対応）。',
+  urgent: '今、とてもつらい状態のようです。一人で抱え込まず、すぐに助けを求めてください。— よりそいホットライン ☎ 0120-279-338（24時間）／ 緊急時は119',
+};
+
+const RISK_MESSAGE_ZH: Record<EpdsRiskLevel, string> = {
+  low: '目前狀態看起來很穩定，請持續好好照顧自己。',
+  mild: '有一些壓力累積，請充分休息並多和家人聊聊。',
+  moderate: '有輕微的憂鬱情緒，建議諮詢當地的衛生所或婦產科。',
+  high: '有明顯的憂鬱情緒，建議尋求產後憂鬱專業機構協助（安心專線 ☎ 1925・24小時）。',
+  urgent: '現在似乎很辛苦，請不要獨自承受，立即尋求協助。— 安心專線 ☎ 1925（24小時）／ 如遇緊急狀況請撥打當地緊急電話',
+};
+
+/** 위험도별 사용자 안내 메시지 (기본: 한국어) */
+export function riskMessage(level: EpdsRiskLevel, locale?: string): string {
+  if (locale === 'ja') return RISK_MESSAGE_JA[level];
+  if (locale === 'zh-Hant') return RISK_MESSAGE_ZH[level];
   switch (level) {
     case 'low':
       return '지금은 안정적인 상태로 보여요. 꾸준히 자신을 돌봐주세요.';

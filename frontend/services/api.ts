@@ -596,10 +596,10 @@ export const pregnancyApi = {
     api.get('/pregnancy/gdm/food', { params: { childId, days: String(days) } }),
   deleteFoodLog: (id: string) =>
     api.delete(`/pregnancy/gdm/food/${id}`),
-  analyzeFoodPhoto: (mediaBase64: string, mediaMimeType: string) =>
-    api.post('/pregnancy/gdm/food/analyze', { mediaBase64, mediaMimeType }),
-  gdmWeeklyReport: (childId: string) =>
-    api.post('/pregnancy/gdm/weekly-report', { childId }),
+  analyzeFoodPhoto: (mediaBase64: string, mediaMimeType: string, locale?: string) =>
+    api.post('/pregnancy/gdm/food/analyze', { mediaBase64, mediaMimeType, locale }),
+  gdmWeeklyReport: (childId: string, locale?: string) =>
+    api.post('/pregnancy/gdm/weekly-report', { childId, locale }),
   saveKickSession: (data: { childId: string; count: number; durationSec: number; week?: number }) =>
     api.post('/pregnancy/kick-session', data),
   getKickSessions: (childId: string) =>
@@ -620,20 +620,21 @@ export const pregnancyApi = {
     api.post('/pregnancy/weekly-summary', { childId }),
   safetyCheck: (query: string, week?: number) =>
     api.post('/pregnancy/safety-check', { query, week }),
-  mentalCheckQuestions: (stage?: string) =>
-    api.get('/pregnancy/mental-check/questions', { params: stage ? { stage } : {} }),
+  mentalCheckQuestions: (stage?: string, locale?: string) =>
+    api.get('/pregnancy/mental-check/questions', { params: { ...(stage ? { stage } : {}), ...(locale ? { locale } : {}) } }),
   saveMentalCheck: (data: {
     childId: string;
     answers: number[];
     shareWithPartner: boolean;
     extraAnswers?: number[];
     stage?: string;
+    locale?: string;
   }) =>
     api.post('/pregnancy/mental-check', data),
   getMentalChecks: (childId: string) =>
     api.get('/pregnancy/mental-check', { params: { childId } }),
-  mentalCheckAnalysis: (childId: string) =>
-    api.get('/pregnancy/mental-check/analysis', { params: { childId } }),
+  mentalCheckAnalysis: (childId: string, locale?: string) =>
+    api.get('/pregnancy/mental-check/analysis', { params: { childId, ...(locale ? { locale } : {}) } }),
 };
 
 // Mom Group (예정월별 출산맘방)
