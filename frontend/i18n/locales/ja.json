@@ -3103,7 +3103,22 @@
     "imageGenerated": "画像が作成されました。\n{{uri}}",
     "imageGenerationFailed": "画像の作成に失敗しました",
     "share": "共有",
-    "reAnalyze": "再分析する"
+    "reAnalyze": "再分析する",
+    "detailSection": {
+      "emptyData": "詳細な分析データを準備中です。",
+      "personality": "性格の特徴",
+      "studyStyle": "学習スタイル",
+      "bestSubjects": "得意な分野",
+      "weakAreas": "補いたい分野",
+      "futureFields": "将来の進路",
+      "sportsMatch": "向いている運動",
+      "academyStyle": "塾・習い事スタイル",
+      "goodFoods": "おすすめの食べ物",
+      "badFoods": "避けたい食べ物",
+      "educationDirection": "教育の方向性",
+      "specialTalent": "際立った才能",
+      "parentingTip": "子育てのヒント"
+    }
   },
   "vaccination": {
     "ageBirth": "出生",
@@ -6926,5 +6941,9 @@
         }
       }
     }
+  },
+  "location": {
+    "permissionDenied": "位置情報の権限が拒否されました",
+    "unavailable": "位置情報を取得できません"
   }
 }

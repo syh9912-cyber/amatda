@@ -3103,7 +3103,22 @@
     "imageGenerated": "圖片已生成。\n{{uri}}",
     "imageGenerationFailed": "圖片生成失敗",
     "share": "分享",
-    "reAnalyze": "重新分析"
+    "reAnalyze": "重新分析",
+    "detailSection": {
+      "emptyData": "詳細分析資料準備中。",
+      "personality": "性格特質",
+      "studyStyle": "學習風格",
+      "bestSubjects": "擅長領域",
+      "weakAreas": "待加強領域",
+      "futureFields": "未來發展方向",
+      "sportsMatch": "適合的運動",
+      "academyStyle": "補習班風格",
+      "goodFoods": "推薦食物",
+      "badFoods": "應避免的食物",
+      "educationDirection": "教育方向",
+      "specialTalent": "突出的才能",
+      "parentingTip": "育兒建議"
+    }
   },
   "vaccination": {
     "ageBirth": "出生",
@@ -6926,5 +6941,9 @@
         }
       }
     }
+  },
+  "location": {
+    "permissionDenied": "位置權限已被拒絕",
+    "unavailable": "無法取得位置資訊"
   }
 }

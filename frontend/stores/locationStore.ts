@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as Location from 'expo-location';
+import i18n from '../i18n';
 
 interface LocationCoords {
   latitude: number;
@@ -38,7 +39,7 @@ export const useLocationStore = create<LocationState>((set, get) => ({
           userLocation: DEFAULT_COORDS,
           regionName: DEFAULT_REGION,
           loading: false,
-          error: '위치 권한이 거부되었습니다',
+          error: i18n.t('location.permissionDenied'),
         });
         return;
       }
@@ -75,7 +76,7 @@ export const useLocationStore = create<LocationState>((set, get) => ({
         userLocation: DEFAULT_COORDS,
         regionName: DEFAULT_REGION,
         loading: false,
-        error: '위치를 가져올 수 없습니다',
+        error: i18n.t('location.unavailable'),
       });
     }
   },

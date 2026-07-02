@@ -234,10 +234,11 @@ function DetailContent({
 }: {
   analysisReport: AnalysisReport | null;
 }) {
+  const { t } = useTranslation();
   if (!analysisReport) {
     return (
       <View style={styles.emptyCard}>
-        <Text style={styles.emptyText}>상세 분석 데이터가 준비 중이에요.</Text>
+        <Text style={styles.emptyText}>{t('traitDetail.detailSection.emptyData')}</Text>
       </View>
     );
   }
@@ -246,62 +247,62 @@ function DetailContent({
     <View>
       {/* 성격 특성 (list) */}
       {analysisReport.personality && analysisReport.personality.length > 0 ? (
-        <InfoListBlock title="성격 특성" emoji="🎭" items={analysisReport.personality} />
+        <InfoListBlock title={t('traitDetail.detailSection.personality')} emoji="🎭" items={analysisReport.personality} />
       ) : null}
 
       {/* 학습 스타일 (text) */}
       {analysisReport.studyStyle ? (
-        <InfoBlock title="학습 스타일" emoji="📚" text={analysisReport.studyStyle} />
+        <InfoBlock title={t('traitDetail.detailSection.studyStyle')} emoji="📚" text={analysisReport.studyStyle} />
       ) : null}
 
       {/* 잘하는 분야 (list) */}
       {analysisReport.bestSubjects && analysisReport.bestSubjects.length > 0 ? (
-        <InfoListBlock title="잘하는 분야" emoji="⭐" items={analysisReport.bestSubjects} />
+        <InfoListBlock title={t('traitDetail.detailSection.bestSubjects')} emoji="⭐" items={analysisReport.bestSubjects} />
       ) : null}
 
       {/* 보완할 분야 (list) */}
       {analysisReport.weakAreas && analysisReport.weakAreas.length > 0 ? (
-        <InfoListBlock title="보완할 분야" emoji="💡" items={analysisReport.weakAreas} />
+        <InfoListBlock title={t('traitDetail.detailSection.weakAreas')} emoji="💡" items={analysisReport.weakAreas} />
       ) : null}
 
       {/* 미래 진로 — 어울리는 직장 (list) */}
       {analysisReport.futureFields && analysisReport.futureFields.length > 0 ? (
-        <InfoListBlock title="미래 진로" emoji="🚀" items={analysisReport.futureFields} />
+        <InfoListBlock title={t('traitDetail.detailSection.futureFields')} emoji="🚀" items={analysisReport.futureFields} />
       ) : null}
 
       {/* 잘 맞는 운동 (list) */}
       {analysisReport.sportsMatch && analysisReport.sportsMatch.length > 0 ? (
-        <InfoListBlock title="잘 맞는 운동" emoji="⚽" items={analysisReport.sportsMatch} />
+        <InfoListBlock title={t('traitDetail.detailSection.sportsMatch')} emoji="⚽" items={analysisReport.sportsMatch} />
       ) : null}
 
       {/* 학원 스타일 (text) */}
       {analysisReport.academyStyle ? (
-        <InfoBlock title="학원 스타일" emoji="🏫" text={analysisReport.academyStyle} />
+        <InfoBlock title={t('traitDetail.detailSection.academyStyle')} emoji="🏫" text={analysisReport.academyStyle} />
       ) : null}
 
       {/* 좋은 음식 (list) */}
       {analysisReport.goodFoods && analysisReport.goodFoods.length > 0 ? (
-        <InfoListBlock title="좋은 음식" emoji="🍎" items={analysisReport.goodFoods} />
+        <InfoListBlock title={t('traitDetail.detailSection.goodFoods')} emoji="🍎" items={analysisReport.goodFoods} />
       ) : null}
 
       {/* 피할 음식 (list) */}
       {analysisReport.badFoods && analysisReport.badFoods.length > 0 ? (
-        <InfoListBlock title="피할 음식" emoji="⚠️" items={analysisReport.badFoods} />
+        <InfoListBlock title={t('traitDetail.detailSection.badFoods')} emoji="⚠️" items={analysisReport.badFoods} />
       ) : null}
 
       {/* 교육 방향 (text) */}
       {analysisReport.educationDirection ? (
-        <InfoBlock title="교육 방향" emoji="🎯" text={analysisReport.educationDirection} />
+        <InfoBlock title={t('traitDetail.detailSection.educationDirection')} emoji="🎯" text={analysisReport.educationDirection} />
       ) : null}
 
       {/* 특별 재능 (text) */}
       {analysisReport.specialTalent ? (
-        <InfoBlock title="특출난 재능" emoji="🏆" text={analysisReport.specialTalent} />
+        <InfoBlock title={t('traitDetail.detailSection.specialTalent')} emoji="🏆" text={analysisReport.specialTalent} />
       ) : null}
 
       {/* 양육 팁 (text) */}
       {analysisReport.parentingTip ? (
-        <InfoBlock title="양육 팁" emoji="💜" text={analysisReport.parentingTip} />
+        <InfoBlock title={t('traitDetail.detailSection.parentingTip')} emoji="💜" text={analysisReport.parentingTip} />
       ) : null}
     </View>
   );

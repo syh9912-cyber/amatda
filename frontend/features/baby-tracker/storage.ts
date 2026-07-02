@@ -14,6 +14,14 @@ import type { BreastSession, DayStat, SleepSession, TrackerRecord } from './type
 import { computeSummary } from './utils/summary';
 import { formatDate } from './utils/time';
 import { babyTrackerApi } from '../../services/api';
+import i18n from '../../i18n';
+
+// 주간 차트 요일 라벨 — 로케일별 (한국어 데이터 계층이라 t() 대신 i18n 싱글톤 사용)
+const WEEKDAY_LABELS: Record<string, string[]> = {
+  ko: ['일', '월', '화', '수', '목', '금', '토'],
+  ja: ['日', '月', '火', '水', '木', '金', '土'],
+  'zh-Hant': ['日', '一', '二', '三', '四', '五', '六'],
+};
 
 /* ---- key helpers ---- */
 
@@ -285,7 +293,7 @@ export async function loadRangeStats(
   endDate: Date,
   ageMonths: number = 6,
 ): Promise<DayStat[]> {
-  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  const dayNames = WEEKDAY_LABELS[i18n.language] ?? WEEKDAY_LABELS.ko;
   const stats: DayStat[] = [];
   const start = new Date(startDate);
   start.setHours(0, 0, 0, 0);

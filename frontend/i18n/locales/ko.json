@@ -3103,7 +3103,22 @@
     "imageGenerated": "이미지가 생성됐어요.\n{{uri}}",
     "imageGenerationFailed": "이미지 생성에 실패했습니다",
     "share": "공유",
-    "reAnalyze": "다시 분석하기"
+    "reAnalyze": "다시 분석하기",
+    "detailSection": {
+      "emptyData": "상세 분석 데이터가 준비 중이에요.",
+      "personality": "성격 특성",
+      "studyStyle": "학습 스타일",
+      "bestSubjects": "잘하는 분야",
+      "weakAreas": "보완할 분야",
+      "futureFields": "미래 진로",
+      "sportsMatch": "잘 맞는 운동",
+      "academyStyle": "학원 스타일",
+      "goodFoods": "좋은 음식",
+      "badFoods": "피할 음식",
+      "educationDirection": "교육 방향",
+      "specialTalent": "특출난 재능",
+      "parentingTip": "양육 팁"
+    }
   },
   "vaccination": {
     "ageBirth": "출생",
@@ -6926,5 +6941,9 @@
         }
       }
     }
+  },
+  "location": {
+    "permissionDenied": "위치 권한이 거부되었습니다",
+    "unavailable": "위치를 가져올 수 없습니다"
   }
 }
