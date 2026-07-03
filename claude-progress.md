@@ -6489,3 +6489,45 @@ sleepKnowledgeCache, dailyTraits, milestonePhotos, kakaoOAuthState
 - red.flag.detector.ts 정규식 패턴 자체의 다국어 확장(task_7aca3316) — 안전 관련이라
   신중한 검토 필요.
 - premiumApi.plans() 응답 형태 불일치 버그(task_49ea8aa0, 사용자가 별도 세션에서 진행 중).
+
+---
+## [2026-07-04] 기질 유형명(감성형 등) 표시 번역 버그 수정
+
+**증상:** 일본어/중국어 앱에서 분석결과·프로필·성장통계·맘스타그램 작성화면의
+기질 유형명이 "감성형" 등 한글로 노출.
+
+**원인:** innateData.dominantType 은 설계상 항상 한글 고정키(탐구형/활동형/조화형/
+분석형/감성형)로 저장(saju.interpreter). 표시부 일부가 오행키(wood/water) 맵으로
+조회하거나 원본을 그대로 렌더 → 한글명이 매칭 안 돼 그대로 노출.
+
+**수정(추가형 — 한국어 표시 불변):**
+- 신규 `frontend/utils/traitTypeName.ts` — getTraitTypeName(t, dominantType) 헬퍼
+- i18n 3로케일 최상위 `traitTypeName` 사전 추가(ko=원본, ja/zh=〜型). 파리티 74/74/74
+- 적용 4곳: onboarding/result.tsx, components/profile/ProfileCard.tsx,
+  (main)/growth-stats.tsx, (main)/momstagram-post.tsx
+
+**검증:** frontend tsc 0 / expo lint 0 error / JSON 파리티 유지.
+
+**미해결(코드 아님, 배포·데이터):**
+- 리포트 본문/기질 label = analysisReport·innateData 저장값 → 재분석 필요
+- 인사말·상담답변 = 실시간 AI지만 백엔드(07-02 locale 커밋) 미배포 시 한국어 → 배포 필요
+
+---
+## [2026-07-04] 백엔드 푸시 알림 다국어화 (예측알람/휴면/체험/또래맘)
+
+**증상:** 일본어/중국어 사용자도 모든 백엔드 발송 푸시를 한국어로 받음.
+**원인:** ①사용자 locale이 어디에도 저장 안 됨 ②모든 푸시 문구 한국어 하드코딩.
+**감사:** 실제 백엔드 발송 푸시는 4개 sweep뿐(predictive/dormant/trial/neighbor).
+  예방접종·산모증상·SOS는 pushSchedules에 pending 저장되지만 디스패처 없음(앱 로컬알림/미사용).
+
+**수정(추가형 — ko byte-identical):**
+- 신규 `backend/src/utils/pushI18n.ts` — 4종 푸시 ko/ja/zh-Hant 빌더 + formatAgeByLocale + normalizePushLocale
+- `pushSchedules` 문서에 `locale` 필드 저장(스키마 추가, 사용자 승인받음):
+  - frontend `app/_layout.tsx` — pushSchedule 등록 시 `locale: i18n.language` 전송
+  - `routes/retention.ts` — locale 수신·검증·저장(지원 언어만)
+- 4개 sweep이 문서의 locale 읽어 로케일 문구 발송:
+  - `services/predictiveAlarm.ts`(alarmPushText+locale) / `utils/predictiveAlarmSweep.ts`
+  - `utils/dormantUserSweep.ts` / `utils/trialEndingSweep.ts` / `utils/neighborGroupSweep.ts`
+
+**검증:** backend tsc 0 / frontend tsc 0 / expo lint 0 error.
+**남은 것:** 기존 사용자 문서엔 locale 없음 → 앱 재진입 시 자동 저장. 그 전까지는 ko 폴백.

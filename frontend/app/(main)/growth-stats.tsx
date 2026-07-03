@@ -16,6 +16,7 @@ import { useChildStore } from '../../stores/childStore';
 import { canDo } from '../../features/coparenting/permissions';
 import { childApi, coachingApi, growthApi, pregnancyApi } from '../../services/api';
 import { getQuestionByProgress, getQuestionCount } from '../../constants/dailyQuestions';
+import { getTraitTypeName } from '../../utils/traitTypeName';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
 import type { ImageSourcePropType } from 'react-native';
@@ -2384,7 +2385,7 @@ function TraitTab() {
         <View style={styles.traitInfo}>
           <Image source={require('../../assets/trait-analyst-small.png')} style={styles.traitIconImg} resizeMode="contain" />
           <Text style={styles.traitCurrentLabel}>{t('growthStats.currentTraitTypeLabel')}</Text>
-          <Text style={styles.traitCurrentValue}>{dominantType}</Text>
+          <Text style={styles.traitCurrentValue}>{dominantType === '--' ? dominantType : getTraitTypeName(t, dominantType)}</Text>
         </View>
         <View style={styles.traitNotice}>
           <Text style={styles.traitNoticeText}>

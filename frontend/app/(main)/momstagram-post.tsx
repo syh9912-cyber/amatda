@@ -17,6 +17,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { BackButton } from '../../components/common/BackButton';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
+import { getTraitTypeName } from '../../utils/traitTypeName';
 import { useChildStore } from '../../stores/childStore';
 import { useMomstagramStore, PostCategory, MomstagramPost, CATEGORY_I18N_KEY } from '../../stores/momstagramStore';
 import { momstagramApi, uploadApi } from '../../services/api';
@@ -169,7 +170,7 @@ export default function MomstagramPostScreen() {
             <View style={styles.childBadge}>
               <Text style={styles.childBadgeText}>
                 {selectedChild.gender === 'F' ? '👧' : '👦'}{' '}
-                {childAge} · {dominantType}
+                {childAge} · {getTraitTypeName(t, dominantType)}
               </Text>
             </View>
           </View>

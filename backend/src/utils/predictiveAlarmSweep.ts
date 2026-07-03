@@ -30,6 +30,7 @@ export async function runPredictiveAlarmSweep(now: Date = new Date()): Promise<v
       const d = doc.data() as {
         childId?: string;
         pushToken?: string;
+        locale?: string;
         predictiveSent?: { date?: string; keys?: string[] };
       };
       const token = d.pushToken;
@@ -60,7 +61,7 @@ export async function runPredictiveAlarmSweep(now: Date = new Date()): Promise<v
         const fireMin = slot.timeMin - offset;
         if (fireMin < 0) continue; // 자정 직후 슬롯(offset 빼면 전날)은 스킵
         if (fireMin >= nowMin && fireMin < nowMin + WINDOW_MIN) {
-          const { title, body } = alarmPushText(slot, offset, childName);
+          const { title, body } = alarmPushText(slot, offset, childName, d.locale);
           await sendExpoPush({
             to: token,
             title,

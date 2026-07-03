@@ -125,6 +125,7 @@ function useNotificationSetup() {
           afternoon: prefs.afternoon,
           evening: prefs.evening,
           weekly: prefs.weekly,
+          locale: i18n.language, // 백엔드 푸시(예측알람/휴면/체험/또래맘) 문구 언어
         }).catch(() => {
           // push schedule save failed silently
         });

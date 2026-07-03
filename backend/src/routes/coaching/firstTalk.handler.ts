@@ -127,7 +127,24 @@ export function registerFirstTalkHandler(router: Router): void {
 
       if (isGeminiAvailable()) {
         try {
-          const basePrompt = `너는 영유아 육아 코치야. 아이가 방금 등록되었어. 부모에게 처음 인사하면서 아이 기질을 짧게 설명하고, 부모가 자유롭게 무엇이든 물어볼 수 있도록 따뜻하게 초대해줘.
+          // 프롬프트 안 "예시 문구"를 로케일별로 — AI가 예시를 그대로 복사하는 경향이 있어
+          // 한국어 예시를 남겨두면 비한국어에서도 한국어로 출력되는 회귀가 있었다.
+          // (ko 는 기존 리터럴과 byte-identical 유지)
+          const inviteEx = loc === 'ko'
+            ? '지금 육아에서 어려운 점이나 궁금한 게 있으면 무엇이든 편하게 물어봐 주세요!'
+            : OPEN_INVITATION[loc];
+          const topicEx = loc === 'ko'
+            ? ['밤에 자주 깨요', '편식이 심해요', '떼를 많이 써요']
+            : topics;
+
+          // 출력 언어 지시는 프롬프트 "맨 앞"에 강하게 명시 — 짧게 뒤에 붙이면 AI가 무시함.
+          const langDirective = loc === 'ja'
+            ? '【最優先ルール】intro・traitSummary・suggestedQuestion・quickOptions のすべての値を必ず自然な日本語で書くこと。韓国語で書いてはならない。\n\n'
+            : loc === 'zh-Hant'
+              ? '【最優先規則】intro、traitSummary、suggestedQuestion、quickOptions 的所有值都必須以自然的繁體中文（台灣／香港用語）書寫，絕對不可使用韓文。\n\n'
+              : '';
+
+          const basePrompt = langDirective + `너는 영유아 육아 코치야. 아이가 방금 등록되었어. 부모에게 처음 인사하면서 아이 기질을 짧게 설명하고, 부모가 자유롭게 무엇이든 물어볼 수 있도록 따뜻하게 초대해줘.
 
 아이 정보:
 - 나이: ${child.ageInfo}
@@ -136,8 +153,8 @@ export function registerFirstTalkHandler(router: Router): void {
 - 기질 특성: ${child.temperamentDetail}
 
 규칙:
-1. suggestedQuestion은 부모가 무엇이든 자유롭게 질문할 수 있도록 초대하는 열린 문구 (예: "지금 육아에서 어려운 점이나 궁금한 게 있으면 무엇이든 편하게 물어봐 주세요!")
-2. quickOptions는 3개, 부모가 바로 터치하면 그 자체가 자연스러운 질문/고민이 되는 짧은 표현 (예: "밤에 자주 깨요", "편식이 심해요", "떼를 많이 써요"). 예/아니오 답변 형태 금지.
+1. suggestedQuestion은 부모가 무엇이든 자유롭게 질문할 수 있도록 초대하는 열린 문구 (예: "${inviteEx}")
+2. quickOptions는 3개, 부모가 바로 터치하면 그 자체가 자연스러운 질문/고민이 되는 짧은 표현 (예: "${topicEx[0]}", "${topicEx[1]}", "${topicEx[2]}"). 예/아니오 답변 형태 금지.
 3. traitSummary는 2문장 이내, 쉬운 말로
 4. '사주/오행/천간/지지' 용어 절대 금지
 
@@ -149,11 +166,11 @@ export function registerFirstTalkHandler(router: Router): void {
   "quickOptions": ["고민예시1", "고민예시2", "고민예시3"]
 }`;
 
-          // 비한국어 로케일이면 응답 언어 힌트만 추가(추가형) — 위 한국어 프롬프트 본문은 그대로 유지
+          // 끝에도 한 번 더 언어 지시(앞뒤 강조). ko 는 빈 문자열 → 프롬프트 byte-identical.
           const localeHint = loc === 'ja'
-            ? '\n\n[重要] JSON の全ての値は自然な日本語で作成しろ。JSON のキー名は英語のまま維持しろ。'
+            ? '\n\n[重要] 上記のすべての値は必ず日本語で。JSON のキー名は英語のまま維持しろ。'
             : loc === 'zh-Hant'
-              ? '\n\n[重要] JSON 中所有的值請以自然的繁體中文書寫。JSON 的鍵名請保持英文原樣。'
+              ? '\n\n[重要] 以上所有的值務必以繁體中文書寫。JSON 的鍵名請保持英文原樣。'
               : '';
           const prompt = basePrompt + localeHint;
 

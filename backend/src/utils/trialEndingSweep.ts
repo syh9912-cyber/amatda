@@ -14,6 +14,7 @@
 
 import * as admin from 'firebase-admin';
 import { sendExpoPush } from './expoPush';
+import { trialEndingPush, normalizePushLocale } from './pushI18n';
 import { logger } from './logger';
 
 export async function runTrialEndingSweep(): Promise<void> {
@@ -48,12 +49,13 @@ export async function runTrialEndingSweep(): Promise<void> {
     if (tokenSnap.empty) { skipped++; continue; }
     const pushToken = tokenSnap.docs[0].data().pushToken as string | undefined;
     if (!pushToken || !pushToken.startsWith('ExponentPushToken[')) { skipped++; continue; }
+    const { title, body } = trialEndingPush(normalizePushLocale(tokenSnap.docs[0].data().locale));
 
     try {
       await sendExpoPush({
         to: pushToken,
-        title: '✨ 7일 무료 체험이 곧 끝나요',
-        body: '내일 자정 무렵 체험이 종료돼요. 계속 프리미엄을 이용하려면 구독을 시작해 주세요.',
+        title,
+        body,
         data: { type: 'trial_ending', deeplink: 'amatda://subscription' },
       });
       await doc.ref.update({

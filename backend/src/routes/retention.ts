@@ -14,6 +14,7 @@ interface PushScheduleBody {
   afternoon?: boolean;
   evening?: boolean;
   weekly?: boolean;
+  locale?: string; // 'ko' | 'ja' | 'zh-Hant' — 백엔드 푸시 문구 언어 결정용
 }
 
 // ───────────────────────────────────────────────
@@ -33,7 +34,7 @@ interface PushScheduleBody {
 router.post('/push-schedule', authMiddleware, async (req: Request, res: Response) => {
   try {
     const body = req.body as PushScheduleBody;
-    const { childId, pushToken, morning, afternoon, evening, weekly } = body;
+    const { childId, pushToken, morning, afternoon, evening, weekly, locale } = body;
 
     if (!childId || !pushToken) {
       error(res, 'childId와 pushToken은 필수입니다');
@@ -52,8 +53,12 @@ router.post('/push-schedule', authMiddleware, async (req: Request, res: Response
     const childData = await getChildIfAccessible(childId, req.userId, 'viewRecords', res).then(r => r?.data ?? null);
     if (!childData) return;
 
+    // locale 은 지원 언어만 저장(그 외/미전송은 필드 생략 → 발송 시 ko 폴백)
+    const normalizedLocale =
+      locale === 'ja' || locale === 'zh-Hant' || locale === 'ko' ? locale : undefined;
+
     const scheduleId = `${req.userId}_${childId}`;
-    const scheduleData = {
+    const scheduleData: Record<string, unknown> = {
       userId: req.userId,
       childId,
       pushToken,
@@ -63,6 +68,7 @@ router.post('/push-schedule', authMiddleware, async (req: Request, res: Response
       weekly: weekly ?? true,
       updatedAt: new Date().toISOString(),
     };
+    if (normalizedLocale) scheduleData.locale = normalizedLocale;
 
     await collections.pushSchedules.doc(scheduleId).set(scheduleData, { merge: true });
 

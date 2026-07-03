@@ -19,7 +19,8 @@
 import { Timestamp } from 'firebase-admin/firestore';
 import { collections } from '../services/firestore';
 import { sendExpoPush } from './expoPush';
-import { calculateAge, formatAgeKo } from '../services/age.calculator';
+import { calculateAge } from '../services/age.calculator';
+import { neighborGroupPush, normalizePushLocale } from './pushI18n';
 import { logger } from './logger';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -81,16 +82,19 @@ async function pickChildMonths(userId: string, babyBirthYear: unknown): Promise<
 /**
  * 사용자의 모든 유효 Expo push token 수집 (중복 제거).
  */
-async function collectUserTokens(userId: string): Promise<string[]> {
+async function collectUserTokens(userId: string): Promise<{ tokens: string[]; locale: unknown }> {
   const snap = await collections.pushSchedules.where('userId', '==', userId).limit(20).get();
   const tokens = new Set<string>();
+  let locale: unknown;
   snap.docs.forEach((d) => {
-    const t = (d.data() as { pushToken?: unknown }).pushToken;
+    const data = d.data() as { pushToken?: unknown; locale?: unknown };
+    const t = data.pushToken;
     if (typeof t === 'string' && /^ExponentPushToken\[/.test(t)) {
       tokens.add(t);
+      if (locale === undefined && data.locale !== undefined) locale = data.locale;
     }
   });
-  return Array.from(tokens);
+  return { tokens: Array.from(tokens), locale };
 }
 
 /**
@@ -140,18 +144,19 @@ export async function runNeighborGroupSweep(): Promise<NeighborSweepStats> {
         continue;
       }
 
-      const tokens = await collectUserTokens(userId);
+      const { tokens, locale } = await collectUserTokens(userId);
       if (tokens.length === 0) {
         stats.skipped += 1;
         continue;
       }
 
       const district = extractDistrict(label);
+      const { title, body } = neighborGroupPush(district, months, normalizePushLocale(locale));
       await sendExpoPush(
         tokens.map((to) => ({
           to,
-          title: `${district} ${formatAgeKo(months)} 또래맘 모임 💬`,
-          body: '우리 동네에서 비슷한 시기 아이 키우는 엄마들이 고민 나누고 있어요. 같이 이야기해요!',
+          title,
+          body,
           data: { type: 'neighbor-group', screen: 'mom-group' },
         })),
       );

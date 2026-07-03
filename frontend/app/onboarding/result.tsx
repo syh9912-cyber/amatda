@@ -3,6 +3,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useChildStore } from '../../stores/childStore';
+import { getTraitTypeName } from '../../utils/traitTypeName';
 import { COLORS, FONT_SIZE, SPACING, RADIUS } from '../../constants/theme';
 
 const ELEMENT_COLORS: Record<string, string> = {
@@ -19,16 +20,6 @@ const getElementLabels = (t: TFunction): Record<string, string> => ({
   earth: t('onboardingResult.element.earth'),
   metal: t('onboardingResult.element.metal'),
   water: t('onboardingResult.element.water'),
-});
-
-// dominantType이 만약 내부 키(wood 등)로 저장돼 있어도 화면엔 성향명만 노출.
-// (오행/영문 키 노출 방지 — 이미 한글 성향형이면 그대로 통과)
-const getDominantLabels = (t: TFunction): Record<string, string> => ({
-  wood: t('onboardingResult.dominant.wood'),
-  fire: t('onboardingResult.dominant.fire'),
-  earth: t('onboardingResult.dominant.earth'),
-  metal: t('onboardingResult.dominant.metal'),
-  water: t('onboardingResult.dominant.water'),
 });
 
 export default function ResultScreen() {
@@ -56,7 +47,6 @@ export default function ResultScreen() {
   const { fiveElements, dominantType, label } = innateData;
   const maxVal = Math.max(...Object.values(fiveElements));
   const elementLabels = getElementLabels(t);
-  const dominantLabels = getDominantLabels(t);
 
   return (
     <View style={styles.container}>
@@ -64,7 +54,7 @@ export default function ResultScreen() {
 
       <View style={styles.card}>
         <Text style={styles.childName}>{child.name}</Text>
-        <Text style={styles.dominant}>{dominantLabels[dominantType] ?? dominantType}</Text>
+        <Text style={styles.dominant}>{getTraitTypeName(t, dominantType)}</Text>
         <Text style={styles.label}>{label}</Text>
       </View>
 

@@ -7,6 +7,7 @@ import { pickImageFromLibrary } from '../../utils/imagePicker';
 import { COLORS, FONT_SIZE, SPACING, SHADOWS } from '../../constants/theme';
 import { Child, useChildStore } from '../../stores/childStore';
 import { childApi } from '../../services/api';
+import { getTraitTypeName } from '../../utils/traitTypeName';
 
 interface ProfileCardProps {
   child: Child | null;
@@ -30,15 +31,11 @@ function calcAge(t: TFunction, birthDate: string): string {
     : t('components.profileCard.ageYears', { years: y });
 }
 
+// dominantType 은 항상 한글 고정키(탐구형/활동형/조화형/분석형/감성형)로 저장됨 →
+// 오행키(wood/water) 맵으로는 매칭되지 않아 원본 한글이 노출되던 버그.
+// 공용 헬퍼로 현재 앱 언어 표시명으로 번역.
 function getTemperamentLabel(t: TFunction, dominantType: string): string {
-  const map: Record<string, string> = {
-    wood: t('components.profileCard.temperament.wood'),
-    fire: t('components.profileCard.temperament.fire'),
-    earth: t('components.profileCard.temperament.earth'),
-    metal: t('components.profileCard.temperament.metal'),
-    water: t('components.profileCard.temperament.water'),
-  };
-  return map[dominantType] || dominantType;
+  return getTraitTypeName(t, dominantType);
 }
 
 function getGenderLabel(t: TFunction, gender: string): string {

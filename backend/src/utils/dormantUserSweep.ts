@@ -20,6 +20,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { collections } from '../services/firestore';
 import { cascadeDeleteUserData } from './cascadeDelete';
 import { sendExpoPush } from './expoPush';
+import { dormantPush, normalizePushLocale } from './pushI18n';
 import { logger } from './logger';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -146,10 +147,13 @@ async function notifyDormantUser(userId: string, scheduledDeleteMs: number): Pro
     .get();
 
   const tokens = new Set<string>();
+  let locale: unknown;
   tokensSnap.docs.forEach((d) => {
-    const t = (d.data() as { pushToken?: unknown }).pushToken;
+    const data = d.data() as { pushToken?: unknown; locale?: unknown };
+    const t = data.pushToken;
     if (typeof t === 'string' && /^ExponentPushToken\[/.test(t)) {
       tokens.add(t);
+      if (locale === undefined && data.locale !== undefined) locale = data.locale;
     }
   });
 
@@ -160,12 +164,13 @@ async function notifyDormantUser(userId: string, scheduledDeleteMs: number): Pro
 
   const deleteDate = new Date(scheduledDeleteMs);
   const dateStr = `${deleteDate.getFullYear()}.${String(deleteDate.getMonth() + 1).padStart(2, '0')}.${String(deleteDate.getDate()).padStart(2, '0')}`;
+  const { title, body } = dormantPush(dateStr, normalizePushLocale(locale));
 
   await sendExpoPush(
     Array.from(tokens).map((to) => ({
       to,
-      title: '아맞다 — 휴면 계정 안내',
-      body: `1년 동안 미접속하셔서 ${dateStr}에 계정과 사진이 자동 삭제됩니다. 앱을 열어주시면 보관이 연장돼요.`,
+      title,
+      body,
       data: { type: 'dormant-warning', scheduledDeleteAt: scheduledDeleteMs },
     })),
   );

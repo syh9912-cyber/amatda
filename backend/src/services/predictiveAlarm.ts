@@ -9,6 +9,7 @@
  * - 슬롯 key는 `{type}_{HH}` (시간대 버킷) — 패턴이 바뀌어도 사용자가 끈(disabled) 슬롯 유지용.
  */
 import { collections } from './firestore';
+import { predictiveAlarmPush, normalizePushLocale } from '../utils/pushI18n';
 
 export type AlarmType = 'feeding' | 'sleep' | 'wake';
 
@@ -122,18 +123,24 @@ export async function computeAlarmSlotsForChild(childId: string, now: Date): Pro
   return dedupByKey(slots);
 }
 
-/** 슬롯 → 푸시 문구 (childName 주면 제목에 아이 이름 표기 — 2명 이상 가정 구분용) */
+/**
+ * 슬롯 → 푸시 문구 (childName 주면 제목에 아이 이름 표기 — 2명 이상 가정 구분용).
+ * locale 로 앱 언어에 맞춰 문구 생성 — 미지정/ko 는 기존과 byte-identical.
+ */
 export function alarmPushText(
   slot: AlarmSlot,
   offsetMin: number,
   childName?: string,
+  locale?: unknown,
 ): { title: string; body: string } {
   const hh = String(Math.floor(slot.timeMin / 60)).padStart(2, '0');
   const mm = String(slot.timeMin % 60).padStart(2, '0');
-  const emoji = slot.type === 'feeding' ? '🍼' : slot.type === 'sleep' ? '😴' : '☀️';
-  const who = childName && childName.trim() ? `${childName.trim()} ` : '';
-  return {
-    title: `${emoji} ${who}곧 ${slot.label} 시간이에요`,
-    body: `${offsetMin}분 후(${hh}:${mm}쯤) 평소 ${slot.label}하던 시간이에요. 미리 준비해볼까요?`,
-  };
+  return predictiveAlarmPush(
+    slot.type,
+    hh,
+    mm,
+    offsetMin,
+    childName,
+    normalizePushLocale(locale),
+  );
 }
