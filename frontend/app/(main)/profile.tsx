@@ -17,6 +17,7 @@ import { ProfileMenuList } from '../../components/profile/ProfileMenuList';
 import { ProfileFooter } from '../../components/profile/ProfileFooter';
 import { PasswordModal } from '../../components/profile/PasswordModal';
 import { DataRetentionCard } from '../../components/profile/DataRetentionCard';
+import { DevLanguageSwitcher } from '../../components/ui/DevLanguageSwitcher';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 import { AdSlot } from '../../components/ads/AdSlot';
 
@@ -159,6 +160,8 @@ export default function ProfileScreen() {
       <ProfileCard child={selectedChild} onDeleteChild={handleDeleteChild} />
 
       <ProfileMenuList />
+
+      <DevLanguageSwitcher />
 
       <DataRetentionCard />
 
