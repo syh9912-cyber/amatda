@@ -32,7 +32,8 @@ class ShortcutPinModule : Module() {
       sm.isRequestPinShortcutSupported
     }
 
-    AsyncFunction("requestPinVoiceShortcut") {
+    // shortLabel/longLabel 은 JS(앱 로케일)에서 전달 — 다국어 대응. 미전달 시 한국어 기본값.
+    AsyncFunction("requestPinVoiceShortcut") { shortLabel: String?, longLabel: String? ->
       val context = appContext.reactContext
         ?: throw RuntimeException("NO_CONTEXT")
 
@@ -58,8 +59,8 @@ class ShortcutPinModule : Module() {
       }
 
       val info = ShortcutInfo.Builder(context, "voice_record_pinned")
-        .setShortLabel("음성 기록")
-        .setLongLabel("음성으로 기록하기")
+        .setShortLabel(shortLabel ?: "음성 기록")
+        .setLongLabel(longLabel ?: "음성으로 기록하기")
         .apply { if (iconResId != 0) setIcon(Icon.createWithResource(context, iconResId)) }
         .setIntent(intent)
         .build()

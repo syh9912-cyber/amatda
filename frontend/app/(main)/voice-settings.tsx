@@ -267,7 +267,10 @@ export default function VoiceSettingsScreen() {
     if (pinning) return;
     setPinning(true);
     try {
-      const result = await requestPinVoiceShortcut();
+      const result = await requestPinVoiceShortcut(
+        t('voiceSettings.pinShortcut.shortLabel'),
+        t('voiceSettings.pinShortcut.longLabel'),
+      );
       // 진단 정보를 항상 표시 (사용자가 정확한 원인 알 수 있도록)
       const supportInfo = pinSupported ? 'pinSupported=true' : 'pinSupported=false';
       if (result.ok) {

@@ -2382,7 +2382,11 @@
     "siriStep3Title": "Siri可辨識的用語",
     "siriStep3Desc": "前面加上「Siri，」再說出以下任一句即可：\n．「Amatda育兒」\n．「Amatda記錄」\n．「Amatda語音」\n\n＊依Apple規範，Siri用語中必須包含App名稱（「Amatda」）。只說「Amatda」的話，不會錄音、只會開啟App。",
     "siriStep4Title": "（選填）像「育兒」一樣更簡短 — 在捷徑中連結URL",
-    "siriStep4Desc": "若想不加App名稱、直接說「Siri，育兒」，可以在iPhone的「捷徑」App中自行建立（設定一次即可）：\n\n1）點下方「開啟捷徑App」→右上角＋\n2）新增「聽寫文字」動作\n3）新增「開啟URL」動作→複製下方URL並貼上，在URL結尾連結「聽寫文字」變數\n4）將捷徑名稱儲存為「育兒」\n\n這樣就能用「Siri，育兒」來執行了。"
+    "siriStep4Desc": "若想不加App名稱、直接說「Siri，育兒」，可以在iPhone的「捷徑」App中自行建立（設定一次即可）：\n\n1）點下方「開啟捷徑App」→右上角＋\n2）新增「聽寫文字」動作\n3）新增「開啟URL」動作→複製下方URL並貼上，在URL結尾連結「聽寫文字」變數\n4）將捷徑名稱儲存為「育兒」\n\n這樣就能用「Siri，育兒」來執行了。",
+    "pinShortcut": {
+      "shortLabel": "語音記錄",
+      "longLabel": "用語音記錄"
+    }
   },
   "gdm": {
     "mealFasting": "空腹",

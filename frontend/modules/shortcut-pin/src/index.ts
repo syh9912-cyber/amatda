@@ -11,7 +11,7 @@ import { Platform } from 'react-native';
 
 interface ShortcutPinNative {
   isSupported: () => Promise<boolean>;
-  requestPinVoiceShortcut: () => Promise<void>;
+  requestPinVoiceShortcut: (shortLabel?: string, longLabel?: string) => Promise<void>;
 }
 
 let _module: ShortcutPinNative | null = null;
@@ -41,11 +41,14 @@ export async function isPinShortcutSupported(): Promise<boolean> {
   }
 }
 
-export async function requestPinVoiceShortcut(): Promise<{ ok: boolean; reason?: string }> {
+export async function requestPinVoiceShortcut(
+  shortLabel?: string,
+  longLabel?: string,
+): Promise<{ ok: boolean; reason?: string }> {
   const mod = loadModule();
   if (!mod) return { ok: false, reason: 'NATIVE_MODULE_UNAVAILABLE' };
   try {
-    await mod.requestPinVoiceShortcut();
+    await mod.requestPinVoiceShortcut(shortLabel, longLabel);
     return { ok: true };
   } catch (e) {
     const reason = e instanceof Error ? e.message : 'UNKNOWN';

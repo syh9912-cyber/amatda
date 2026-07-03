@@ -75,9 +75,10 @@ function withAndroidShortcuts(config) {
   config = withStringsXml(config, (modConfig) => {
     const strings = modConfig.modResults.resources.string ?? [];
 
+    // translatable 미지정(=번역 가능) — values-ja/zh-rTW/zh-rHK 로케일 오버라이드와 충돌 방지
     const addStringIfMissing = (name, value) => {
       if (!strings.find((s) => s.$?.name === name)) {
-        strings.push({ $: { name, translatable: 'false' }, _: value });
+        strings.push({ $: { name }, _: value });
       }
     };
 
@@ -87,6 +88,36 @@ function withAndroidShortcuts(config) {
     modConfig.modResults.resources.string = strings;
     return modConfig;
   });
+
+  // Step 2.5: 정적 단축키 레이블의 로케일별 번역 리소스 생성 (기기 언어 기준으로 Android가 자동 선택)
+  //   - 일본어(values-ja), 번체중국어 대만(values-zh-rTW)·홍콩(values-zh-rHK)
+  //   - MissingTranslation 빌드오류 방지 위해 tools:ignore 사용(해당 파일엔 단축 레이블만 둠)
+  config = withDangerousMod(config, [
+    'android',
+    async (modConfig) => {
+      const resRoot = path.join(
+        modConfig.modRequest.platformProjectRoot,
+        'app', 'src', 'main', 'res',
+      );
+      const LOCALES = {
+        'values-ja': { short: '音声記録', long: '音声で記録する' },
+        'values-zh-rTW': { short: '語音記錄', long: '用語音記錄' },
+        'values-zh-rHK': { short: '語音記錄', long: '用語音記錄' },
+      };
+      for (const [dir, v] of Object.entries(LOCALES)) {
+        const localeDir = path.join(resRoot, dir);
+        fs.mkdirSync(localeDir, { recursive: true });
+        const xml = `<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="shortcut_voice_short_label">${v.short}</string>
+    <string name="shortcut_voice_long_label">${v.long}</string>
+</resources>
+`;
+        fs.writeFileSync(path.join(localeDir, 'strings.xml'), xml, 'utf8');
+      }
+      return modConfig;
+    },
+  ]);
 
   // Step 3: AndroidManifest.xml - MainActivity 에 meta-data 추가
   config = withAndroidManifest(config, (modConfig) => {
