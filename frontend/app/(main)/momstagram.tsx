@@ -23,6 +23,7 @@ import {
   useMomstagramStore,
   MomstagramPost,
   PostCategory,
+  CATEGORY_I18N_KEY,
 } from '../../stores/momstagramStore';
 import { useAuthStore } from '../../stores/authStore';
 import { AdSlot } from '../../components/ads/AdSlot';
@@ -437,7 +438,7 @@ export default function MomstagramScreen() {
                       disabled={editSaving}
                     >
                       <Text style={[styles.editCatChipText, active && styles.editCatChipTextActive]}>
-                        {cat}
+                        {t(CATEGORY_I18N_KEY[cat] ?? 'momstagram.category.other')}
                       </Text>
                     </TouchableOpacity>
                   );

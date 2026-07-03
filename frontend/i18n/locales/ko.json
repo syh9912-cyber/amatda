@@ -4288,6 +4288,13 @@
       "cancelA11y": "수정 취소",
       "saveA11y": "수정 저장",
       "saving": "저장 중..."
+    },
+    "category": {
+      "daily": "일상",
+      "learning": "학습",
+      "travel": "여행",
+      "anniversary": "기념일",
+      "other": "기타"
     }
   },
   "momstagramPost": {

@@ -4288,6 +4288,13 @@
       "cancelA11y": "編集をキャンセル",
       "saveA11y": "編集を保存",
       "saving": "保存中..."
+    },
+    "category": {
+      "daily": "日常",
+      "learning": "学習",
+      "travel": "旅行",
+      "anniversary": "記念日",
+      "other": "その他"
     }
   },
   "momstagramPost": {

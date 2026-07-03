@@ -4,6 +4,15 @@ import { momstagramApi } from '../services/api';
 
 export type PostCategory = '일상' | '학습' | '여행' | '기념일' | '기타';
 
+// 카테고리 value(한국어)는 저장·필터 키로 유지, 표시만 로케일 번역용 i18n 키 매핑.
+export const CATEGORY_I18N_KEY: Record<string, string> = {
+  '일상': 'momstagram.category.daily',
+  '학습': 'momstagram.category.learning',
+  '여행': 'momstagram.category.travel',
+  '기념일': 'momstagram.category.anniversary',
+  '기타': 'momstagram.category.other',
+};
+
 export interface MomstagramComment {
   id: string;
   userName: string;

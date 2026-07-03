@@ -11,7 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { FONT_SIZE, SPACING } from '../../constants/theme';
-import { MomstagramPost } from '../../stores/momstagramStore';
+import { MomstagramPost, CATEGORY_I18N_KEY } from '../../stores/momstagramStore';
 import { EmojiIcon } from '../common/EmojiIcon';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -163,7 +163,7 @@ export function PostCard({ post, onLike, onComment, onShare, onMore, isMine }: P
         <View style={styles.placeholderImage}>
           {post.category && (
             <View style={styles.categoryChip}>
-              <Text style={styles.categoryChipText}>{post.category}</Text>
+              <Text style={styles.categoryChipText}>{t(CATEGORY_I18N_KEY[post.category] ?? 'momstagram.category.other')}</Text>
             </View>
           )}
         </View>

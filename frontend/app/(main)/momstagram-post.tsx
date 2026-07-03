@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { BackButton } from '../../components/common/BackButton';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 import { useChildStore } from '../../stores/childStore';
-import { useMomstagramStore, PostCategory, MomstagramPost } from '../../stores/momstagramStore';
+import { useMomstagramStore, PostCategory, MomstagramPost, CATEGORY_I18N_KEY } from '../../stores/momstagramStore';
 import { momstagramApi, uploadApi } from '../../services/api';
 import { FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 
@@ -241,7 +241,7 @@ export default function MomstagramPostScreen() {
                       isActive && styles.categoryPillTextActive,
                     ]}
                   >
-                    {cat}
+                    {t(CATEGORY_I18N_KEY[cat] ?? 'momstagram.category.other')}
                   </Text>
                 </TouchableOpacity>
               );
