@@ -3,7 +3,11 @@ import {
   View, Text, Animated, Easing, StyleSheet, Dimensions, StatusBar,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../stores/authStore';
+
+// 비한국어 브랜드 워드마크 — 한국어 글자 애니메이션 대신 단일 표기
+const SPLASH_BRAND: Record<string, string> = { ja: 'アマッタ', 'zh-Hant': 'Amatda' };
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -25,6 +29,8 @@ const C = {
 
 export default function SplashScreen() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { i18n } = useTranslation();
+  const splashBrand = SPLASH_BRAND[i18n.language];
 
   const animStarted = useRef(false);
 
@@ -128,41 +134,48 @@ export default function SplashScreen() {
             { opacity: titleOp, transform: [{ scale: titleScale }] },
           ]}
         >
-          {/* 아 */}
-          <Text style={s.bigChar}>{'아'}</Text>
+          {splashBrand ? (
+            /* 비한국어: 브랜드명 단일 표기(Amatda / アマッタ) */
+            <Text style={s.bigChar}>{splashBrand}</Text>
+          ) : (
+            <>
+              {/* 아 */}
+              <Text style={s.bigChar}>{'아'}</Text>
 
-          {/* (이) */}
-          <Animated.View style={{ width: gapW1, overflow: 'hidden', alignItems: 'center' }}>
-            <Animated.Text
-              style={[s.subChar, { opacity: sub1Op, transform: [{ scale: sub1Sc }] }]}
-            >
-              {'이'}
-            </Animated.Text>
-          </Animated.View>
+              {/* (이) */}
+              <Animated.View style={{ width: gapW1, overflow: 'hidden', alignItems: 'center' }}>
+                <Animated.Text
+                  style={[s.subChar, { opacity: sub1Op, transform: [{ scale: sub1Sc }] }]}
+                >
+                  {'이'}
+                </Animated.Text>
+              </Animated.View>
 
-          {/* 맞 */}
-          <Text style={s.bigChar}>{'맞'}</Text>
+              {/* 맞 */}
+              <Text style={s.bigChar}>{'맞'}</Text>
 
-          {/* (춤) */}
-          <Animated.View style={{ width: gapW2, overflow: 'hidden', alignItems: 'center' }}>
-            <Animated.Text
-              style={[s.subChar, { opacity: sub2Op, transform: [{ scale: sub2Sc }] }]}
-            >
-              {'춤'}
-            </Animated.Text>
-          </Animated.View>
+              {/* (춤) */}
+              <Animated.View style={{ width: gapW2, overflow: 'hidden', alignItems: 'center' }}>
+                <Animated.Text
+                  style={[s.subChar, { opacity: sub2Op, transform: [{ scale: sub2Sc }] }]}
+                >
+                  {'춤'}
+                </Animated.Text>
+              </Animated.View>
 
-          {/* 다 */}
-          <Text style={s.bigChar}>{'다'}</Text>
+              {/* 다 */}
+              <Text style={s.bigChar}>{'다'}</Text>
 
-          {/* (이어리) */}
-          <Animated.View style={{ width: gapW3, overflow: 'hidden' }}>
-            <Animated.Text
-              style={[s.subChar, { opacity: sub3Op, transform: [{ scale: sub3Sc }] }]}
-            >
-              {'이어리'}
-            </Animated.Text>
-          </Animated.View>
+              {/* (이어리) */}
+              <Animated.View style={{ width: gapW3, overflow: 'hidden' }}>
+                <Animated.Text
+                  style={[s.subChar, { opacity: sub3Op, transform: [{ scale: sub3Sc }] }]}
+                >
+                  {'이어리'}
+                </Animated.Text>
+              </Animated.View>
+            </>
+          )}
         </Animated.View>
 
         {/* English subtitle */}
