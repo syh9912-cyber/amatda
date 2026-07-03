@@ -346,13 +346,16 @@ router.post('/voice-parse', authMiddleware, async (req: Request, res: Response) 
 
     // ★ Fallback: 사용자 발화에 "자고/잤고/잤다가 ... 일어났/깼" 패턴 있는데 sleep record 누락 OR endTime 누락 시 보강
     // 회귀 방지 — LLM 이 sleep 흡수 룰을 잘못 적용해 sleep 자체나 endTime 을 빠뜨리는 케이스
-    const hasSleepKeyword = /(자고|잤고|잤어|잤다|잠들|취침|자러)/.test(text);
-    const hasWakeKeyword = /(일어났|깼|기상)/.test(text);
+    // 한국어 + 일본어(寝/睡眠) + 번체중국어(睡/就寢) 수면 키워드
+    const hasSleepKeyword = /(자고|잤고|잤어|잤다|잠들|취침|자러|寝|睡|就寝|就寢)/.test(text);
+    // 한국어 + 일본어(起き) + 번체중국어(醒/起床) 기상 키워드
+    const hasWakeKeyword = /(일어났|깼|기상|起き|起こ|醒|起床)/.test(text);
     const sleepRecord = normalized.find((r) => r.type === 'sleep');
 
     // 2-A: sleep record 있는데 endTime 빠진 경우 → wake 시각 추출해 채움
     if (hasSleepKeyword && hasWakeKeyword && sleepRecord && !sleepRecord.endTime) {
-      const timeMatches = Array.from(text.matchAll(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/g));
+      // 시각 표기: 한국어(시/분) + 일본어(時/分) + 번체중국어(點/分)
+      const timeMatches = Array.from(text.matchAll(/(\d{1,2})\s*(?:시|時|點)(?:\s*(\d{1,2})\s*(?:분|分))?/g));
       if (timeMatches.length >= 2) {
         // 마지막 시각 = 기상 시각 (보통 "어제 9시 자고 오늘 7시 깼어" 패턴)
         const last = timeMatches[timeMatches.length - 1];
@@ -379,7 +382,8 @@ router.post('/voice-parse', authMiddleware, async (req: Request, res: Response) 
     const sleepRecordExists = normalized.some((r) => r.type === 'sleep');
     if (hasSleepKeyword && hasWakeKeyword && !sleepRecordExists) {
       // 시작/종료 시각 패턴 추출: "어제 9시" / "오늘 7시" / "21시" 등
-      const timeMatches = Array.from(text.matchAll(/(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분)?/g));
+      // 시각 표기: 한국어(시/분) + 일본어(時/分) + 번체중국어(點/分)
+      const timeMatches = Array.from(text.matchAll(/(\d{1,2})\s*(?:시|時|點)(?:\s*(\d{1,2})\s*(?:분|分))?/g));
       const yesterdayDate = /어제/.test(text) ? yesterday : currentDate;
       if (timeMatches.length >= 2) {
         // 시각 2개 명시: 정확 시간 추출
