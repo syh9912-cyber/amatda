@@ -1024,8 +1024,8 @@
       "champER": "Champ ER",
       "champRed": "Champ（紅色）",
       "champBlue": "Champ（藍色）",
-      "acetGeneric": "乙醯胺酚（Acetaminophen）",
-      "ibuGeneric": "布洛芬（Ibuprofen）"
+      "acetGeneric": "乙醯胺酚",
+      "ibuGeneric": "布洛芬"
     },
     "weightInput": {
       "label": "目前體重",
