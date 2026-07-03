@@ -10,6 +10,7 @@ import { GuideButton } from '../../components/common/GuideButton';
 import { MedicalCitation } from '../../components/common/MedicalCitation';
 import { getGrowthGuide } from '../../features/guide/growthGuide';
 import { getWeeklyDevGuide } from '../../features/guide/weeklyDevGuide';
+import { WEEKLY_DEV_I18N } from '../../constants/weeklyDevI18n';
 import { shouldAutoShowGuide, markGuideSeen } from '../../features/guide/seen';
 import { useChildStore } from '../../stores/childStore';
 import { canDo } from '../../features/coparenting/permissions';
@@ -609,10 +610,29 @@ function getTrimesterInfo(week: number, t: TFunction) {
   return { label: t('growthStats.trimester3'), color: '#FCE4EC', textColor: '#C62828' };
 }
 
+// 로케일별 주차 발달 데이터 — size는 SIZE_EMOJI 조회용으로 한국어 키(sizeKey) 유지, 표시 필드만 번역.
+// 번역 JSON의 옵션 필드는 null 가능 → 렌더에서 falsy 체크로 처리.
+type LocalizedWeekDev = Omit<WeekDev, 'momChange' | 'dailyFact' | 'foodTip' | 'caution'> & {
+  sizeKey: string;
+  momChange?: string | null;
+  dailyFact?: string | null;
+  foodTip?: string | null;
+  caution?: string | null;
+};
+function getLocalizedWeeks(lang: string): LocalizedWeekDev[] {
+  return WEEKLY_DEVELOPMENT.map((w) => {
+    if (lang === 'ja' || lang === 'zh-Hant') {
+      const tr = WEEKLY_DEV_I18N[w.week]?.[lang];
+      if (tr) return { ...w, ...tr, sizeKey: w.size };
+    }
+    return { ...w, sizeKey: w.size };
+  });
+}
+
 function PregnancyWeeklyDevelopment() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
-  const weeks = WEEKLY_DEVELOPMENT;
+  const weeks = useMemo(() => getLocalizedWeeks(i18n.language), [i18n.language]);
   const [imagesByWeek, setImagesByWeek] = useState<Record<number, TimelineItem[]>>({});
   const [, setLoading] = useState(false);
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
@@ -727,7 +747,7 @@ function PregnancyWeeklyDevelopment() {
           <Text style={pwStyles.currentLabel}>{t('growthStats.currentlyPregnant')}</Text>
           <Text style={pwStyles.currentWeekText}>{t('growthStats.weekNumber', { week: currentWeek })}</Text>
           <Text style={pwStyles.currentSize}>
-            {SIZE_EMOJI[currentDev.size] ?? '🤰'} {t('growthStats.sizeOf', { size: currentDev.size })}
+            {SIZE_EMOJI[currentDev.sizeKey] ?? '🤰'} {t('growthStats.sizeOf', { size: currentDev.size })}
           </Text>
           <Text style={pwStyles.currentMeasure}>
             {currentDev.length} / {currentDev.weight}
@@ -792,7 +812,7 @@ function PregnancyWeeklyDevelopment() {
         const isCurrent = dev.week === currentDev?.week;
         const isFuture = dev.week > currentWeek;
         const isExpanded = expandedWeek === dev.week;
-        const emoji = SIZE_EMOJI[dev.size] ?? '🤰';
+        const emoji = SIZE_EMOJI[dev.sizeKey] ?? '🤰';
         const imgs = imagesByWeek[dev.week] ?? [];
 
         return (
