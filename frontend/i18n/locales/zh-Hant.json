@@ -451,7 +451,15 @@
     },
     "noRecordsYet": "還沒有記錄",
     "noRecordsHint": "點下方按鈕記錄餵食·睡眠·尿布",
-    "emptyTimelineHint": "點擊下方的＋按鈕\n新增今天的{{label}}記錄吧"
+    "emptyTimelineHint": "點擊下方的＋按鈕\n新增今天的{{label}}記錄吧",
+    "sleepCard": {
+      "idleTitle": "開始睡眠",
+      "idleSub": "輕觸一下即可開始記錄睡眠時間",
+      "startBtn": "開始",
+      "activeTitle": "睡眠中",
+      "startedAtPrefix": "開始",
+      "wakeBtn": "起床"
+    }
   },
   "album": {
     "viewOnly": "僅限查看",

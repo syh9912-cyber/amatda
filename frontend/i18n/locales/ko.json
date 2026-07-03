@@ -451,7 +451,15 @@
     },
     "noRecordsYet": "아직 기록이 없어요",
     "noRecordsHint": "아래 버튼으로 수유·수면·기저귀를 기록해보세요",
-    "emptyTimelineHint": "아래 + 버튼을 눌러\n오늘의 {{label}} 기록을 추가해보세요"
+    "emptyTimelineHint": "아래 + 버튼을 눌러\n오늘의 {{label}} 기록을 추가해보세요",
+    "sleepCard": {
+      "idleTitle": "수면 시작",
+      "idleSub": "탭 한 번으로 수면 시간 측정을 시작해요",
+      "startBtn": "시작",
+      "activeTitle": "수면 중",
+      "startedAtPrefix": "시작",
+      "wakeBtn": "기상"
+    }
   },
   "album": {
     "viewOnly": "열람 전용",

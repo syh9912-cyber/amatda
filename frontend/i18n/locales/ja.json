@@ -451,7 +451,15 @@
     },
     "noRecordsYet": "まだ記録がありません",
     "noRecordsHint": "下のボタンで授乳・睡眠・おむつを記録してみましょう",
-    "emptyTimelineHint": "下の＋ボタンを押して\n今日の{{label}}記録を追加してみましょう"
+    "emptyTimelineHint": "下の＋ボタンを押して\n今日の{{label}}記録を追加してみましょう",
+    "sleepCard": {
+      "idleTitle": "睡眠を開始",
+      "idleSub": "タップ一つで睡眠時間の計測を始めます",
+      "startBtn": "開始",
+      "activeTitle": "睡眠中",
+      "startedAtPrefix": "開始",
+      "wakeBtn": "起床"
+    }
   },
   "album": {
     "viewOnly": "閲覧専用",

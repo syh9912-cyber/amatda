@@ -3727,11 +3727,11 @@ function SleepSessionCard({ session, now, onStart, onWake }: SleepSessionCardPro
       <TouchableOpacity style={sleepSessionStyles.cardIdle} onPress={onStart} activeOpacity={0.85}>
         <Image source={IC_SLEEP} style={sleepSessionStyles.icon} resizeMode="contain" />
         <View style={{ flex: 1 }}>
-          <Text style={sleepSessionStyles.idleTitle}>수면 시작</Text>
-          <Text style={sleepSessionStyles.idleSub}>탭 한 번으로 수면 시간 측정을 시작해요</Text>
+          <Text style={sleepSessionStyles.idleTitle}>{t('babyTracker.sleepCard.idleTitle')}</Text>
+          <Text style={sleepSessionStyles.idleSub}>{t('babyTracker.sleepCard.idleSub')}</Text>
         </View>
         <View style={sleepSessionStyles.actionPill}>
-          <Text style={sleepSessionStyles.actionPillText}>시작</Text>
+          <Text style={sleepSessionStyles.actionPillText}>{t('babyTracker.sleepCard.startBtn')}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -3743,12 +3743,12 @@ function SleepSessionCard({ session, now, onStart, onWake }: SleepSessionCardPro
     <View style={sleepSessionStyles.cardActive}>
       <View style={sleepSessionStyles.activeHeader}>
         <Image source={IC_SLEEP} style={sleepSessionStyles.icon} resizeMode="contain" />
-        <Text style={sleepSessionStyles.activeTitle}>수면 중</Text>
+        <Text style={sleepSessionStyles.activeTitle}>{t('babyTracker.sleepCard.activeTitle')}</Text>
       </View>
       <Text style={sleepSessionStyles.activeDuration}>{formatMinutes(diffMin, t)}</Text>
-      <Text style={sleepSessionStyles.activeStartedAt}>시작 {startLabel}</Text>
+      <Text style={sleepSessionStyles.activeStartedAt}>{t('babyTracker.sleepCard.startedAtPrefix')} {startLabel}</Text>
       <TouchableOpacity style={sleepSessionStyles.wakeBtn} onPress={onWake} activeOpacity={0.85}>
-        <Text style={sleepSessionStyles.wakeBtnText}>기상</Text>
+        <Text style={sleepSessionStyles.wakeBtnText}>{t('babyTracker.sleepCard.wakeBtn')}</Text>
       </TouchableOpacity>
     </View>
   );
