@@ -354,7 +354,7 @@ export const COACHING_KNOWLEDGE_PREGNANT2_JA: CoachingEntry[] = [
     "followupDays": 7,
     "followupQuestion": "Rh関連の注射の予定は確認されましたか?",
     "title": "Rh陰性と血液型不適合",
-    "subcategory": "検진",
+    "subcategory": "検診",
     "ageRange": "妊娠期"
   },
   {
