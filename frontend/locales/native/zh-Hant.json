@@ -1,6 +1,11 @@
 {
   "ios": {
-    "CFBundleDisplayName": "育兒答"
+    "CFBundleDisplayName": "育兒答",
+    "NSCameraUsageDescription": "拍攝孩子的照片，用於個人檔案與成長相簿。",
+    "NSPhotoLibraryUsageDescription": "從相簿選擇孩子的照片，用於個人檔案與成長相簿。",
+    "NSLocationWhenInUseUsageDescription": "用於搜尋附近的小兒科診所與配對在地社群。",
+    "NSMicrophoneUsageDescription": "使用麥克風，以語音方式記錄育兒內容。",
+    "NSSpeechRecognitionUsageDescription": "將語音轉換為文字，自動建立育兒記錄。"
   },
   "android": {
     "app_name": "育兒答"

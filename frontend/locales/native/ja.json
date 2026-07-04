@@ -1,6 +1,11 @@
 {
   "ios": {
-    "CFBundleDisplayName": "なるほど育児"
+    "CFBundleDisplayName": "なるほど育児",
+    "NSCameraUsageDescription": "お子さまの写真を撮影し、プロフィールや成長アルバムに使用します。",
+    "NSPhotoLibraryUsageDescription": "ギャラリーからお子さまの写真を選び、プロフィールや成長アルバムに使用します。",
+    "NSLocationWhenInUseUsageDescription": "近くの小児科の検索や地域コミュニティのマッチングのために位置情報を使用します。",
+    "NSMicrophoneUsageDescription": "音声で育児記録を残すためにマイクを使用します。",
+    "NSSpeechRecognitionUsageDescription": "音声をテキストに変換し、育児記録を自動的に作成します。"
   },
   "android": {
     "app_name": "なるほど育児"

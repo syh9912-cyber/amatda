@@ -1,6 +1,11 @@
 {
   "ios": {
-    "CFBundleDisplayName": "아맞다"
+    "CFBundleDisplayName": "아맞다",
+    "NSCameraUsageDescription": "아이 사진을 촬영하여 프로필과 성장앨범에 사용합니다.",
+    "NSPhotoLibraryUsageDescription": "갤러리에서 아이 사진을 선택하여 프로필과 성장앨범에 사용합니다.",
+    "NSLocationWhenInUseUsageDescription": "주변 소아과 찾기 및 맘스톡 지역 그룹 매칭을 위해 위치 정보를 사용합니다.",
+    "NSMicrophoneUsageDescription": "음성으로 육아 기록을 남기기 위해 마이크를 사용합니다.",
+    "NSSpeechRecognitionUsageDescription": "음성을 텍스트로 변환하여 육아 기록을 자동으로 남깁니다."
   },
   "android": {
     "app_name": "아맞다"
