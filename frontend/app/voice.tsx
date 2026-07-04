@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { getLocales } from 'expo-localization';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useAuthStore } from '../stores/authStore';
@@ -65,6 +66,10 @@ interface SpeechModule {
     start: (opts: { lang: string; interimResults: boolean }) => void;
     stop: () => void;
     isRecognitionAvailable: () => boolean;
+    // 기기가 지원하는 음성인식 로케일 조회 (플랫폼별 지원 목록 상이) — 없는 버전 대비 optional
+    getSupportedLocales?: (
+      opts?: unknown,
+    ) => Promise<{ locales?: string[]; installedLocales?: string[] }>;
     // EventEmitter API (React hook이 아닌 일반 이벤트 리스너 — callback 내부에서 사용 가능)
     addListener: (event: string, callback: (ev: unknown) => void) => SpeechSubscription;
   };
@@ -99,8 +104,51 @@ async function loadSpeechModule(): Promise<SpeechModule | null> {
 const STT_LOCALE: Record<string, string> = {
   ko: 'ko-KR',
   ja: 'ja-JP',
-  'zh-Hant': 'zh-TW',
+  'zh-Hant': 'zh-TW', // 번체 기본은 대만 표준중국어(만다린)
 };
+
+// 광둥어(홍콩·마카오) 음성인식 코드 우선순위.
+// 앱 로케일은 대만·홍콩이 모두 zh-Hant 라 구분 불가 → 기기 지역으로 판별.
+// 플랫폼/기기마다 지원 코드가 달라, 실제 지원 목록에 있는 첫 코드만 사용하고 없으면 zh-TW 폴백.
+const CANTONESE_STT_CANDIDATES = ['yue-Hant-HK', 'yue-HK', 'zh-HK', 'yue-CN', 'yue'];
+const CANTONESE_REGIONS = new Set(['HK', 'MO']); // 홍콩·마카오
+
+/**
+ * 실제 사용할 음성인식 로케일 결정.
+ * - 홍콩/마카오 기기(zh-Hant) 는 광둥어를 시도하되, 기기가 실제 지원할 때만 사용.
+ * - 그 외(대만 포함)는 기존 매핑(zh-TW/ja-JP/ko-KR) 그대로.
+ */
+async function resolveSttLocale(mod: SpeechModule, appLang: string): Promise<string> {
+  const base = STT_LOCALE[appLang] ?? 'ko-KR';
+  if (appLang !== 'zh-Hant') return base;
+
+  let region: string | undefined;
+  try {
+    region = getLocales()[0]?.regionCode ?? undefined;
+  } catch {
+    region = undefined;
+  }
+  if (!region || !CANTONESE_REGIONS.has(region)) return base; // 대만/기타 → 표준중국어
+
+  // 광둥어 후보 중 기기가 실제 지원하는 코드만 채택 (미지원 코드로 start 시 인식 실패 방지)
+  try {
+    const getSupported = mod.ExpoSpeechRecognitionModule.getSupportedLocales;
+    if (typeof getSupported === 'function') {
+      const res = await getSupported();
+      const supported = [...(res?.locales ?? []), ...(res?.installedLocales ?? [])].map((l) =>
+        l.toLowerCase(),
+      );
+      const match = CANTONESE_STT_CANDIDATES.find((c) => {
+        const lc = c.toLowerCase();
+        return supported.some((s) => s === lc || s.startsWith(lc));
+      });
+      if (match) return match;
+    }
+  } catch {
+    /* 지원 목록 조회 실패 → 표준중국어 폴백 */
+  }
+  return base; // 광둥어 미지원 기기 → zh-TW(만다린) 폴백
+}
 
 export default function VoiceScreen() {
   const { t, i18n } = useTranslation();
@@ -180,25 +228,35 @@ export default function VoiceScreen() {
   }, [recognizedText]);
 
   const startListening = useCallback((mod: SpeechModule) => {
-    try {
-      mod.ExpoSpeechRecognitionModule.start({
-        lang: STT_LOCALE[i18n.language] ?? 'ko-KR',
-        interimResults: true,
-        continuous: true, // 무음 후에도 계속 듣기 (디바운스 + end 이벤트로 종료)
-        // Android: 무음 종료 threshold 늘림 — 말 중간 숨고르기 도중 자동 종료 방지
-        androidIntentOptions: {
-          EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 3000, // 완전 무음 3초까지 기다림
-          EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 2500, // 약한 무음 2.5초
-          EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 5000, // 최소 5초 발화 허용
-        },
-      } as Parameters<typeof mod.ExpoSpeechRecognitionModule.start>[0]);
-      setPhase('listening');
-      setStatus(t('voice.statusSpeak'));
-      setRecognizedText('');
-    } catch {
-      setError(t('voice.errorCannotStart'));
-      setPhase('error');
-    }
+    // 로케일 결정에 비동기 조회(광둥어 지원 확인)가 필요 → fire-and-forget 로 감싸되
+    // 콜백 시그니처는 동기(void) 유지 (기존 호출부 변경 불필요).
+    void (async () => {
+      let lang = STT_LOCALE[i18n.language] ?? 'ko-KR';
+      try {
+        lang = await resolveSttLocale(mod, i18n.language);
+      } catch {
+        /* 결정 실패 → 위 기본값 사용 */
+      }
+      try {
+        mod.ExpoSpeechRecognitionModule.start({
+          lang,
+          interimResults: true,
+          continuous: true, // 무음 후에도 계속 듣기 (디바운스 + end 이벤트로 종료)
+          // Android: 무음 종료 threshold 늘림 — 말 중간 숨고르기 도중 자동 종료 방지
+          androidIntentOptions: {
+            EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 3000, // 완전 무음 3초까지 기다림
+            EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 2500, // 약한 무음 2.5초
+            EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 5000, // 최소 5초 발화 허용
+          },
+        } as Parameters<typeof mod.ExpoSpeechRecognitionModule.start>[0]);
+        setPhase('listening');
+        setStatus(t('voice.statusSpeak'));
+        setRecognizedText('');
+      } catch {
+        setError(t('voice.errorCannotStart'));
+        setPhase('error');
+      }
+    })();
   }, [t, i18n.language]);
 
   // ── Main flow ──

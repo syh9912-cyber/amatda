@@ -1,0 +1,8 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "아맞다"
+  },
+  "android": {
+    "app_name": "아맞다"
+  }
+}

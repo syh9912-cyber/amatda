@@ -1,0 +1,8 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "育兒答"
+  },
+  "android": {
+    "app_name": "育兒答"
+  }
+}

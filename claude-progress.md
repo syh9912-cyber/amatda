@@ -6531,3 +6531,68 @@ sleepKnowledgeCache, dailyTraits, milestonePhotos, kakaoOAuthState
 
 **검증:** backend tsc 0 / frontend tsc 0 / expo lint 0 error.
 **남은 것:** 기존 사용자 문서엔 locale 없음 → 앱 재진입 시 자동 저장. 그 전까지는 ko 폴백.
+
+---
+## [2026-07-04] 남은 작업 / 빠진 것 체크리스트 (i18n 출시 준비)
+
+> 이번 세션에서 코드/배포는 완료됐지만 **실기기 검증 대기** 및 **미착수** 항목 정리.
+> 새 프리뷰 빌드: 2.9.2 (commit 6ced479)
+> https://expo.dev/accounts/song9912/projects/amatda/builds/1d675ac3-2d11-485f-adb4-a9f4c51c6a72
+
+### A. 실기기 검증 대기 (코드 완료, 미확인)
+- [ ] 기질 유형명 표시 — 분석결과/프로필/성장/맘스타그램에서 感性型·探究型 등(감성형 아님)
+- [ ] 푸시 다국어 — 앱 1회 실행 → pushSchedules에 locale 저장 → 이후 체험/휴면/아기시간/또래맘 푸시가 ja/zh로
+- [ ] 리포트 본문·기질 label — 새 아이 재분석 시 일본어/중국어 (백엔드 라이브)
+- [ ] 인사말(first-talk)·상담답변 — 새 상담에서 ja/zh (백엔드 라이브, 프롬프트 강화 반영)
+- [ ] 대만/홍콩(zh-Hant) 버전 동일 항목 재확인
+
+### B. 미착수 / 조사 필요
+- [ ] 예방접종·SOS·산모증상 pending 푸시 — 디스패처 없음. 앱 로컬알림인지 / i18n 됐는지 / 죽은 코드인지 확인
+- [x] iOS Siri 단축어 문구 아직 한국어 — 완전 현지화 완료(앱이름 なるほど育児/育兒答 포함). 네이티브 검증 EAS/실기기
+- [x] 홍콩 광둥어 STT 공백 — HK/MO 지역 판별 + 지원 시 광둥어 채택, 미지원 시 zh-TW 폴백. 완료·검증
+- [ ] 기존 사용자 문서엔 locale 없음 → 앱 재진입 전까지 ko 폴백 (마이그레이션 아님, 자연 해소)
+
+### C. 프로덕션 승격 (사용자 승인 + 사용자 스토어 계정 필요)
+- [ ] 실기기 테스트 통과 후 2.9.2 production 빌드 (AAB, --profile production)
+- [ ] Play Store + App Store 제출 (사용자 본인 계정)
+- [ ] JP/TW/HK 국가 출시 지역 추가 + 각 스토어 리스팅 현지화
+- [ ] 2.9.1→2.9.2 네이티브 변경 포함 → OTA 불가, 스토어 빌드 필수
+
+---
+## [2026-07-04] 홍콩 광둥어 STT + iOS Siri 단축어 완전 현지화
+
+### 1) 홍콩 광둥어 음성인식(STT) — 완료·검증
+**문제:** STT 로케일이 zh-Hant→zh-TW(만다린) 고정. 홍콩/마카오(광둥어) 사용자 인식 불가.
+앱 로케일은 대만·홍콩 공통 zh-Hant라 구분 불가.
+**수정(frontend/app/voice.tsx):**
+- getLocales().regionCode 로 HK/MO 판별
+- 광둥어 후보(yue-Hant-HK→yue-HK→zh-HK→yue-CN→yue) 중 기기가 실제 지원하는 코드만 채택
+  (getSupportedLocales 조회), 없으면 zh-TW 안전 폴백 → 미지원 코드로 인식 깨짐 방지
+- startListening 을 async 로 감싸 로케일 결정 후 start (콜백 시그니처 유지)
+**검증:** frontend tsc 0 / expo lint 0 error (신규 경고 없음).
+
+### 2) iOS Siri 단축어 완전 현지화 — 구현 완료, 네이티브 검증은 EAS/실기기 필요
+**문제:** Siri 단축어 문구·제목이 한국어 하드코딩. Apple 규칙상 음성 문구에 앱 표시이름 필수 →
+외국어 Siri로 호출하려면 앱 표시이름도 현지화해야 함.
+**앱 표시이름 확정:** ko=아맞다 / ja=なるほど育児 / zh-Hant=育兒答
+  (ja: '아, 맞다!'=なるほど 의미살림 / zh: 育兒(육아)+答(답), 원명 끝음 반영)
+**수정:**
+- frontend/locales/native/{ko,ja,zh-Hant}.json — iOS(CFBundleDisplayName) + Android(app_name) 앱이름 현지화
+  ※ .gitignore 의 `ios/`·`android/` 패턴이 어느 위치든 해당 폴더를 무시 → 폴더명 native 사용
+  ※ JSON 구조를 {ios:{...}, android:{...}} 로 분리 → 플랫폼별 올바른 키(CFBundleDisplayName / app_name)
+- frontend/app.json — expo.locales 필드 추가(iOS·Android 앱이름 현지화 공식 경로)
+- 안드로이드 현지화(실제 프리빌드로 검증 완료):
+  - values-b+ja/strings.xml → app_name=なるほど育児 / values-b+zh+Hant/strings.xml → app_name=育兒答(대만·홍콩 공통)
+  - values/strings.xml(기본)=아맞다, AndroidManifest android:label="@string/app_name" 참조 확인
+- frontend/plugins/withIosSiriShortcut.js — 확장:
+  - Supporting/<lang>.lproj/AppShortcuts.strings (음성 문구, key=한국어 base, ${applicationName} 토큰 유지)
+  - Supporting/<lang>.lproj/Localizable.strings (title/description/shortTitle)
+  - IOSConfig.XcodeUtils.addResourceFileToGroup + ensureGroupRecursively 로 Xcode 리소스 등록(멱등)
+  - addKnownRegion(ja/zh-Hant/ko) + Info.plist CFBundleAllowMixedLocalizations=true
+**검증(Windows 가능 범위):** config 정상 로드, locales 반영, 플러그인/라이브러리 API 존재 확인, .strings 포맷 확인.
+  ※ iOS 프리빌드는 Windows 불가(Expo 제한) → pbxproj 생성·등록은 EAS 빌드(클라우드 Linux)에서 실행됨.
+  ※ 실제 Siri 음성 호출은 일본어/중국어 Siri 설정 실기기에서만 최종 검증 가능.
+**주의(사용자 확인 필요):**
+- 홈화면 앱 라벨이 일/중 기기에서 なるほど育児 / 育兒答 로 바뀜(승인됨: '완전 현지화 앱이름 포함')
+- 네이티브 변경 → OTA 불가, 새 스토어 빌드 필요. iOS 심사 중이면 현재 심사 통과 후 반영 권장.
+- 중국어 앱이름 育兒答 은 제안 작명 — 스토어 제출 전 언제든 교체 가능(locales JSON + strings만 수정)

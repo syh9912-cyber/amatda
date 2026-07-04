@@ -3,6 +3,11 @@
     "name": "아맞다",
     "slug": "amatda",
     "scheme": "amatda",
+    "locales": {
+      "ko": "./locales/native/ko.json",
+      "ja": "./locales/native/ja.json",
+      "zh-Hant": "./locales/native/zh-Hant.json"
+    },
     "version": "2.9.2",
     "platforms": ["ios", "android"],
     "orientation": "portrait",
