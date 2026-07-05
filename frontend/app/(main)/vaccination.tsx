@@ -14,7 +14,7 @@ import {
   RefreshControl,
   Image,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, Redirect } from 'expo-router';
 import { BackButton } from '../../components/common/BackButton';
 import { GuideCarousel } from '../../components/common/GuideCarousel';
 import { GuideButton } from '../../components/common/GuideButton';
@@ -121,7 +121,7 @@ async function saveRegistrationAge(childId: string, months: number): Promise<voi
 }
 
 export default function VaccinationScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const child = useChildStore((s) => s.selectedChild);
   const childId = child?.id ?? '';
@@ -274,6 +274,12 @@ export default function VaccinationScreen() {
         </View>
       </View>
     );
+  }
+
+  // 한국 질병관리청 국가예방접종 일정 기반 — 한국어 버전 전용 (SOS·진통체크와 동일 정책).
+  // 홈 퀵액션은 이미 게이팅됨 — 딥링크/푸시 직접 진입 방어.
+  if (i18n.language !== 'ko') {
+    return <Redirect href="/(main)/home" />;
   }
 
   return (
