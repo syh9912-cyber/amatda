@@ -18,6 +18,7 @@ import type { TFunction } from 'i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackButton } from '../../components/common/BackButton';
 import { useChildStore } from '../../stores/childStore';
+import { formatAgeLabel } from '../../utils/ageLabel';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { isPinShortcutSupported, requestPinVoiceShortcut } from '../../modules/shortcut-pin/src';
 
@@ -386,7 +387,14 @@ export default function VoiceSettingsScreen() {
             <View key={child.id} style={s.childRow}>
               <View style={[s.childDot, child.id === selectedChild?.id && s.childDotActive]} />
               <Text style={s.childName}>{child.name}</Text>
-              <Text style={s.childAge}>{child.ageInfo?.label ?? ''}</Text>
+              {/* 백엔드 label 은 한국어 고정 → months/주수 기반으로 표시 언어 조립 */}
+              <Text style={s.childAge}>
+                {child.ageInfo?.group === 'pregnant'
+                  ? child.pregnancyWeeks
+                    ? t('components.profileCard.pregnancyWeek', { week: child.pregnancyWeeks })
+                    : ''
+                  : formatAgeLabel(t, child.ageInfo?.months ?? -1) || (child.ageInfo?.label ?? '')}
+              </Text>
               {child.id === selectedChild?.id && (
                 <View style={s.defaultBadge}>
                   <Text style={s.defaultBadgeText}>{t('voiceSettings.defaultBadge')}</Text>

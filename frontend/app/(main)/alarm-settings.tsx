@@ -132,7 +132,8 @@ export default function AlarmSettingsScreen() {
               <View key={slot.key} style={[s.slotCard, !settings.enabled && s.dim]}>
                 <Text style={s.slotEmoji}>{TYPE_EMOJI[slot.type] ?? '⏰'}</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.slotLabel}>{slot.label}</Text>
+                  {/* 백엔드 label 은 한국어 고정 → type 기준으로 표시 언어 번역 */}
+                  <Text style={s.slotLabel}>{t(`alarmSettings.slotType.${slot.type}`, { defaultValue: slot.label })}</Text>
                   <Text style={s.slotTime}>{t('alarmSettings.slotTime', { time: hhmm(slot.timeMin), offset: settings.offsetMin })}</Text>
                 </View>
                 <Switch value={slot.on} disabled={!settings.enabled}

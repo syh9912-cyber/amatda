@@ -14,6 +14,8 @@ import { Stack, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useChildStore } from '../../stores/childStore';
 import { memoriesApi } from '../../services/api';
+import { formatAgeLabel } from '../../utils/ageLabel';
+import { getTraitTypeName } from '../../utils/traitTypeName';
 import { captureRef } from 'react-native-view-shot';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { BackButton } from '../../components/common/BackButton';
@@ -62,10 +64,19 @@ export default function ChildCardScreen() {
         if (!r) return;
         const g = r.growth as Record<string, unknown> | undefined;
         const td = r.temperamentDetail as Record<string, unknown> | undefined;
+        // 백엔드 ageInfo('2세 6개월')·temperament('분석중' 등)는 한국어 고정 → 클라이언트에서 표시 언어로 조립
+        const months = (g?.months as number | undefined) ?? null;
+        const rawTemp = String((td?.dominantType as string | undefined) || r.temperament || '');
         setCard({
           name: String(r.childName ?? r.name ?? ''),
-          ageLabel: String(r.ageInfo ?? r.ageLabel ?? ''),
-          temperament: String(r.temperament ?? ''),
+          ageLabel:
+            months != null && months >= 0
+              ? formatAgeLabel(t, months)
+              : String(r.ageInfo ?? r.ageLabel ?? ''),
+          temperament:
+            rawTemp === '분석중'
+              ? t('childCard.temperamentAnalyzing')
+              : getTraitTypeName(t, rawTemp) || rawTemp,
           temperamentEmoji: String(r.temperamentEmoji ?? ''),
           photoUrl: (r.photo as string | null) ?? (r.photoUrl as string | null) ?? null,
           traits: Array.isArray(r.personality) ? r.personality as string[] : Array.isArray(r.traits) ? r.traits as string[] : [],

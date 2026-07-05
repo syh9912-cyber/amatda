@@ -221,7 +221,8 @@ export default function SubscriptionScreen() {
         if (res.ok) {
           const priceKRW = productId === 'premium_yearly' ? 39900 : 3900;
           analytics.logPurchase(productId === 'premium_yearly' ? 'yearly' : 'monthly', priceKRW);
-          Alert.alert(t('subscription.alert.subscribeCompleteTitle'), res.message ?? t('subscription.alert.subscribeCompleteMessage'));
+          // 성공 res.message 는 백엔드 한국어 고정 → 항상 i18n 문구 사용
+          Alert.alert(t('subscription.alert.subscribeCompleteTitle'), t('subscription.alert.subscribeCompleteMessage'));
           loadData();
         } else {
           Alert.alert(t('subscription.alert.paymentFailedTitle'), res.message ?? t('common.retry'));

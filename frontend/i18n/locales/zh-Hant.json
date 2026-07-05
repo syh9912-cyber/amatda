@@ -4192,7 +4192,8 @@
     "fieldMonths": "月齡/Months",
     "footerTagline": "諮詢阿姨",
     "sharePassportButton": "分享護照到社群",
-    "shareHint": "可直接分享到LINE、Instagram等應用程式"
+    "shareHint": "可直接分享到LINE、Instagram等應用程式",
+    "temperamentAnalyzing": "分析中"
   },
   "cryAnalyzer": {
     "screenTitle": "哭聲分析",
@@ -4887,7 +4888,12 @@
     "slotSection": "鬧鐘列表（依據模式）",
     "emptySlots": "尚無模式。\n記錄餵奶、睡眠、起床後，隔天起會自動產生鬧鐘。",
     "slotTime": "{{time}} · {{offset}}分鐘前通知",
-    "footNote": "鬧鐘列表會隨記錄累積自動更新。"
+    "footNote": "鬧鐘列表會隨記錄累積自動更新。",
+    "slotType": {
+      "feeding": "餵奶",
+      "sleep": "睡覺",
+      "wake": "起床"
+    }
   },
   "nutrition": {
     "title": "為{{name}}準備的飲食指南",
@@ -5008,7 +5014,9 @@
       "respondLater": "下次再回覆"
     },
     "yearAgoBanner": {
-      "label": "一年前的今天"
+      "label": "一年前的今天",
+      "memoryTextMonths": "一年前，{{name}}當時{{months}}個月大",
+      "memoryTextYears": "一年前，{{name}}當時{{years}}歲{{months}}個月"
     },
     "checkinOptions": {
       "good": "很好",

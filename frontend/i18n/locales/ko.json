@@ -4192,7 +4192,8 @@
     "fieldMonths": "개월/Months",
     "footerTagline": "상담이모",
     "sharePassportButton": "SNS에 여권 공유하기",
-    "shareHint": "카카오톡, 인스타그램 등에 바로 공유할 수 있어요"
+    "shareHint": "카카오톡, 인스타그램 등에 바로 공유할 수 있어요",
+    "temperamentAnalyzing": "분석중"
   },
   "cryAnalyzer": {
     "screenTitle": "울음소리 분석기",
@@ -4887,7 +4888,12 @@
     "slotSection": "알람 목록 (패턴 기반)",
     "emptySlots": "아직 패턴이 없어요.\n수유·수면·기상을 기록하면 다음 날부터 알람이 자동으로 생겨요.",
     "slotTime": "{{time}} · {{offset}}분 전 알림",
-    "footNote": "알람 목록은 기록이 쌓이면 자동으로 업데이트돼요."
+    "footNote": "알람 목록은 기록이 쌓이면 자동으로 업데이트돼요.",
+    "slotType": {
+      "feeding": "수유",
+      "sleep": "수면",
+      "wake": "기상"
+    }
   },
   "nutrition": {
     "title": "{{name}}{{particle}} 위한 식단 가이드",
@@ -5008,7 +5014,9 @@
       "respondLater": "다음에 응답할게요"
     },
     "yearAgoBanner": {
-      "label": "1년 전 오늘"
+      "label": "1년 전 오늘",
+      "memoryTextMonths": "1년 전 {{name}}은(는) {{months}}개월이었어요",
+      "memoryTextYears": "1년 전 {{name}}은(는) {{years}}세 {{months}}개월이었어요"
     },
     "checkinOptions": {
       "good": "좋아요",

@@ -4192,7 +4192,8 @@
     "fieldMonths": "月齢/Months",
     "footerTagline": "相談コーチ",
     "sharePassportButton": "SNSでパスポートを共有",
-    "shareHint": "LINEやInstagramなどにすぐ共有できます"
+    "shareHint": "LINEやInstagramなどにすぐ共有できます",
+    "temperamentAnalyzing": "分析中"
   },
   "cryAnalyzer": {
     "screenTitle": "泣き声分析",
@@ -4887,7 +4888,12 @@
     "slotSection": "アラーム一覧（パターン基準）",
     "emptySlots": "まだパターンがありません。\n授乳・睡眠・起床を記録すると、翌日からアラームが自動的に作成されます。",
     "slotTime": "{{time}} ・ {{offset}}分前に通知",
-    "footNote": "アラーム一覧は記録が蓄積されると自動的に更新されます。"
+    "footNote": "アラーム一覧は記録が蓄積されると自動的に更新されます。",
+    "slotType": {
+      "feeding": "授乳",
+      "sleep": "ねんね",
+      "wake": "起床"
+    }
   },
   "nutrition": {
     "title": "{{name}}のための食事ガイド",
@@ -5008,7 +5014,9 @@
       "respondLater": "また今度お答えします"
     },
     "yearAgoBanner": {
-      "label": "1年前の今日"
+      "label": "1年前の今日",
+      "memoryTextMonths": "1年前、{{name}}は生後{{months}}か月でした",
+      "memoryTextYears": "1年前、{{name}}は{{years}}歳{{months}}か月でした"
     },
     "checkinOptions": {
       "good": "良いです",

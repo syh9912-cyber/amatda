@@ -190,8 +190,19 @@ export default function CoachingScreen() {
     try {
       const res = await memoriesApi.yearAgo(child.id);
       const data = res.data?.data;
-      if (data?.hasMemory && data?.memory) {
-        setYearAgoMemory(data.memory as string);
+      if (data?.hasMemory) {
+        // 백엔드 memory 문장은 한국어 고정 → ageAtThat.months 로 표시 언어로 조립
+        const months = (data.ageAtThat as { months?: number } | undefined)?.months;
+        if (typeof months === 'number' && months >= 0) {
+          const years = Math.floor(months / 12);
+          setYearAgoMemory(
+            years > 0
+              ? t('components.yearAgoBanner.memoryTextYears', { name: child.name, years, months: months % 12 })
+              : t('components.yearAgoBanner.memoryTextMonths', { name: child.name, months }),
+          );
+        } else if (data.memory) {
+          setYearAgoMemory(data.memory as string);
+        }
       }
     } catch {
       // no memory or endpoint not available
@@ -281,7 +292,9 @@ export default function CoachingScreen() {
           const axErr = err as { response?: { status?: number; data?: { error?: string } } };
           const status = axErr.response?.status;
           const serverMsg = axErr.response?.data?.error;
-          errDetail = serverMsg ? ` (${serverMsg})` : status ? ` (HTTP ${status})` : '';
+          // 서버 에러 문구는 한국어 고정 → 한국어 UI에서만 원문 노출, 그 외엔 상태코드만
+          errDetail =
+            serverMsg && i18n.language === 'ko' ? ` (${serverMsg})` : status ? ` (HTTP ${status})` : '';
         } else if (err instanceof Error) {
           errDetail = ` (${err.message})`;
         }
