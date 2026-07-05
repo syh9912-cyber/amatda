@@ -1,5 +1,42 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-05 — 공유 웹 서피스(출산가방 공유/가족초대 랜딩) ja/zh-Hant 다국어화
+> 최종 업데이트: 2026-07-05 — 비한국어(ja/zh) 응급번호 숨김 + i18n 불변식 감사
+
+---
+
+## 2026-07-05 — 비한국어 응급번호 숨김 + i18n 정밀 감사(불변식 검증)
+
+### 목적/원인
+2.9.2 출시 전 언어 회귀 재점검 중, 기존 검증(tsc/lint/키 개수)이 못 잡는 런타임
+파손 지점을 잡기 위해 **불변식 기반 감사**(플레이스홀더 parity·한글잔존·U+FFFD·간체혼입·
+빈값) 신규 도입. 감사 결과 fever(발열) 화면이 유일하게 게이팅 없이 ja/zh에 노출되며
+고열 시 지역 응급번호(일본/대만 119, 홍콩 999)를 그대로 표시함을 발견.
+제품 원칙(긴급 안내는 한국 의료체계 의존 → SOS·예방접종·진통탭은 ko 전용 Redirect)과
+불일치. 사용자 결정: 비한국어에서 응급번호 숫자는 숨기고 "즉시 응급전화" 일반 문구만 노출.
+
+### 해결 방식
+- 수정 파일: `frontend/i18n/locales/ja.json`, `frontend/i18n/locales/zh-Hant.json`
+  (코드/로직 무변경 — JSON 값 문자열만 치환. ko.json은 119 유지, 무변경)
+- 비한국어에 **실제 노출되는** 키만 선별 수정:
+  - fever 8키(emergencyCallShort/Full·level.danger/emergency.advice·emergency.label·
+    actionGuide.emergency.headline·alert.callFailedMessage/DeviceMessage) + fever.medicine.disclaimer(ja)
+  - guides.chatbot.page4.note, guides.laborMonitor.page3.desc/warn
+  - ja는 "119"를 "救急"으로, zh는 "{{tel}}"/"119"를 "緊急電話"로 치환
+- 게이팅으로 비한국어 미노출인 곳은 그대로 둠: sos.*(Redirect), laborMonitor 진통탭
+  본문(kick 탭 강제라 미노출), onboardingKakaoChannel.*(Redirect)
+- 원탭 전화 버튼(`getEmergencyTel` 다이얼)은 유지 — 숫자는 화면에서 숨기되, 탭 시 OS
+  다이얼러에 정확한 지역번호가 뜨도록. 코드가 넘기는 `{ tel }`은 문자열에 `{{tel}}`이
+  없어 무해하게 무시됨.
+
+### 검증 결과
+- i18n 불변식 감사: PLACEHOLDER fever {{tel}} 10건 → 0건(남은 2건 nutrition.title
+  {{particle}}은 한국어 조사용·의도적), HANGUL/BROKEN/ESCAPE 0, 키 parity 0,
+  SIMPLIFIED 4건은 감사 스크립트 오탐(번체 `繁`을 간체목록에 오등록·실제 간체 0),
+  EMPTY 1건 kickHintSuffix는 중국어 어순상 의도.
+- 비한국어 노출 키 전부 숫자/tel 제거 확인, ko 119 유지 확인.
+- `frontend npx tsc --noEmit` 0 / `backend npx tsc --noEmit` 0 / `expo lint` 0 errors.
+
+### 남은 이슈
+- 감사 스크립트 SIMPLIFIED 휴리스틱 오탐(`繁` 오등록) — 스크래치패드 스크립트라 영향 없음.
 
 ---
 
