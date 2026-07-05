@@ -752,6 +752,7 @@ export const birthBagShareApi = {
     ownerLabel?: string;
     birthType?: 'natural' | 'csection';
     postpartumPlan?: 'sanhujowon' | 'home';
+    lang?: string; // 'ko' | 'ja' | 'zh-Hant' — 공유 웹페이지 렌더 언어
     items: Array<{
       id: string;
       label: string;

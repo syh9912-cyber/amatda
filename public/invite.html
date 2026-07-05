@@ -34,19 +34,19 @@
 <body>
   <div class="card">
     <div class="emoji">👨‍👩‍👧</div>
-    <h1>아맞다 가족 초대</h1>
-    <p>가족 육아 초대를 받았어요!<br/>아래 버튼으로 앱에서 바로 참여하세요.</p>
+    <h1 id="inviteTitle">아맞다 가족 초대</h1>
+    <p id="inviteDesc">가족 육아 초대를 받았어요!<br/>아래 버튼으로 앱에서 바로 참여하세요.</p>
 
     <a id="openApp" class="btn btn-primary" href="#">앱에서 바로 참여하기</a>
 
-    <div class="hint">
+    <div class="hint" id="inviteHint">
       앱이 아직 없다면 먼저 설치한 뒤,<br/><b>이 초대 링크를 다시 한 번 눌러주세요.</b><br/>그러면 자동으로 가족에 연결돼요.
     </div>
 
     <a id="iosStore" class="btn btn-store" href="https://apps.apple.com/app/id6775913119">📱 App Store에서 설치 (아이폰)</a>
     <a id="aosStore" class="btn btn-store" href="https://play.google.com/store/apps/details?id=com.sylabs.amatda">🤖 Google Play에서 설치 (안드로이드)</a>
 
-    <p class="code">초대 코드: <b id="codeText">-</b><br/><span style="font-size:11px">(앱에서 직접 입력도 가능)</span></p>
+    <p class="code"><span id="codeLabel">초대 코드:</span> <b id="codeText">-</b><br/><span style="font-size:11px" id="codeNote">(앱에서 직접 입력도 가능)</span></p>
   </div>
 
   <script>
@@ -54,6 +54,44 @@
       var params = new URLSearchParams(location.search);
       var code = (params.get('code') || '').trim().toUpperCase();
       document.getElementById('codeText').textContent = code || '-';
+
+      // ---- 다국어 (ko 기본 — ja / zh-Hant일 때만 텍스트 교체) ----
+      var STRINGS = {
+        'ja': {
+          title: 'なるほど育児 家族招待',
+          desc: '家族育児への招待が届きました！<br/>下のボタンからアプリですぐに参加できます。',
+          open: 'アプリで今すぐ参加',
+          hint: 'アプリがまだない場合は、先にインストールしてから<br/><b>この招待リンクをもう一度タップしてください。</b><br/>自動的に家族につながります。',
+          ios: '📱 App Storeでインストール（iPhone）',
+          aos: '🤖 Google Playでインストール（Android）',
+          codeLabel: '招待コード:',
+          codeNote: '（アプリで直接入力もできます）'
+        },
+        'zh-Hant': {
+          title: '育兒答 家庭邀請',
+          desc: '您收到了家庭育兒邀請！<br/>點擊下方按鈕即可在App中加入。',
+          open: '在App中立即加入',
+          hint: '如果還沒有安裝App，請先安裝後<br/><b>再點一次這個邀請連結。</b><br/>就會自動連結到家庭。',
+          ios: '📱 到App Store安裝（iPhone）',
+          aos: '🤖 到Google Play安裝（Android）',
+          codeLabel: '邀請碼:',
+          codeNote: '（也可以在App中直接輸入）'
+        }
+      };
+      var lang = params.get('lang') || 'ko';
+      var S = STRINGS[lang];
+      if (S) {
+        document.documentElement.lang = lang;
+        document.title = S.title;
+        document.getElementById('inviteTitle').textContent = S.title;
+        document.getElementById('inviteDesc').innerHTML = S.desc; // 정적 문자열만 삽입 (사용자 입력 X)
+        document.getElementById('openApp').textContent = S.open;
+        document.getElementById('inviteHint').innerHTML = S.hint;
+        document.getElementById('iosStore').textContent = S.ios;
+        document.getElementById('aosStore').textContent = S.aos;
+        document.getElementById('codeLabel').textContent = S.codeLabel;
+        document.getElementById('codeNote').textContent = S.codeNote;
+      }
 
       var deepLink = 'amatda://coparenting?inviteCode=' + encodeURIComponent(code);
       var openBtn = document.getElementById('openApp');

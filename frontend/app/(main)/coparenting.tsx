@@ -99,7 +99,7 @@ const INVITE_LINK_BASE = 'https://amatda-parenting.web.app/invite';
 /* ------------------------------------------------------------------ */
 
 export default function CoparentingScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const authUserId = useAuthStore((s) => s.userId);
@@ -223,7 +223,7 @@ export default function CoparentingScreen() {
 
       // SMS or share invite code
       const childName = selectedChild.name;
-      const inviteUrl = `${INVITE_LINK_BASE}?code=${code}`;
+      const inviteUrl = `${INVITE_LINK_BASE}?code=${code}&lang=${i18n.language}`;
       const message = t('coparenting.inviteMessage', { childName, inviteUrl, code });
 
       Alert.alert(

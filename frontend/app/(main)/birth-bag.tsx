@@ -209,7 +209,7 @@ const getStatusMeta = (t: TFunction): Record<Exclude<Status, null>, { label: str
 /* ============================================================== */
 
 export default function BirthBagScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const child = useChildStore((s) => s.selectedChild);
 
@@ -465,6 +465,7 @@ export default function BirthBagScreen() {
         ownerLabel: t('birthBag.ownerLabelMom'),
         birthType,
         postpartumPlan,
+        lang: i18n.language, // 공유 웹페이지 렌더 언어
         items: itemsPayload,
       });
       const data = res.data?.data as { url?: string } | undefined;
@@ -472,7 +473,7 @@ export default function BirthBagScreen() {
     } catch {
       return null;
     }
-  }, [allItems, customItems, hiddenIds, birthType, postpartumPlan, owner, status, checked, t]);
+  }, [allItems, customItems, hiddenIds, birthType, postpartumPlan, owner, status, checked, t, i18n.language]);
 
   const handleShareNative = useCallback(async () => {
     if (sharing) return;

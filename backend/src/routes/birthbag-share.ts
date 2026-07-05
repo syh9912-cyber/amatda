@@ -46,6 +46,13 @@ const itemUpdateLimiter = rateLimit({
 const COLLECTION = 'share_birthbag';
 const SHARE_TTL_DAYS = 30;
 
+/** 공유 페이지 지원 언어 — 앱 로케일과 동일 */
+type ShareLang = 'ko' | 'ja' | 'zh-Hant';
+
+function resolveShareLang(value: unknown): ShareLang {
+  return value === 'ja' || value === 'zh-Hant' ? value : 'ko';
+}
+
 interface ShareItem {
   id: string;
   label: string;
@@ -60,6 +67,7 @@ interface SharePayload {
   ownerLabel?: string; // "엄마" or 익명 표시. 실명 X
   birthType?: 'natural' | 'csection';
   postpartumPlan?: 'sanhujowon' | 'home';
+  lang?: string; // 'ko' | 'ja' | 'zh-Hant' — 공유 페이지 렌더 언어
   items: ShareItem[];
 }
 
@@ -111,6 +119,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
       ownerLabel: body.ownerLabel ? String(body.ownerLabel).slice(0, 20) : null,
       birthType: body.birthType === 'natural' || body.birthType === 'csection' ? body.birthType : null,
       postpartumPlan: body.postpartumPlan === 'sanhujowon' || body.postpartumPlan === 'home' ? body.postpartumPlan : null,
+      lang: resolveShareLang(body.lang),
       items: sanitizedItems,
       createdAt: FieldValue.serverTimestamp(),
       createdAtMs: now,
@@ -231,9 +240,10 @@ router.get('/:token', async (req: Request, res: Response): Promise<void> => {
       res.status(404).type('html').send(notFoundHtml());
       return;
     }
-    const data = snap.data() as { expiresAtMs?: number; items?: ShareItem[]; birthType?: string; postpartumPlan?: string; ownerLabel?: string };
+    const data = snap.data() as { expiresAtMs?: number; items?: ShareItem[]; birthType?: string; postpartumPlan?: string; ownerLabel?: string; lang?: string };
+    const lang = resolveShareLang(data.lang);
     if (data.expiresAtMs && data.expiresAtMs < Date.now()) {
-      res.status(404).type('html').send(notFoundHtml());
+      res.status(404).type('html').send(notFoundHtml(lang));
       return;
     }
     const html = renderShareHtml({
@@ -241,6 +251,7 @@ router.get('/:token', async (req: Request, res: Response): Promise<void> => {
       birthType: data.birthType ?? null,
       postpartumPlan: data.postpartumPlan ?? null,
       items: data.items ?? [],
+      lang,
     });
     // 공유 페이지는 인라인 script(데이터 임베드 + 필터 로직) 필요 → CSP 완화
     // 출력은 jsonForScriptTag + escapeHtml로 XSS 방어 완료된 상태
@@ -280,8 +291,162 @@ function jsonForScriptTag(value: unknown): string {
   return json.split('</').join('<' + BACKSLASH + '/');
 }
 
-function notFoundHtml(): string {
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>출산가방 — 만료된 링크</title><style>body{font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:#FFF7F2;color:#1C1C1E;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:24px}.card{background:#fff;border-radius:18px;padding:32px;text-align:center;max-width:360px;box-shadow:0 8px 24px rgba(0,0,0,0.06)}h1{font-size:18px;margin:0 0 8px}p{color:#636366;font-size:14px;margin:0}</style></head><body><div class="card"><h1>링크가 만료되었어요</h1><p>출산가방 공유 링크는 30일 동안만 유효해요.<br/>가족에게 새 링크를 받아주세요.</p></div></body></html>`;
+/**
+ * 공유 페이지 UI 문자열 — ko/ja/zh-Hant.
+ * 사용자가 직접 입력한 항목 라벨/힌트는 번역하지 않음 (사용자 데이터).
+ * {name} 플레이스홀더는 ownerName으로 치환.
+ */
+interface ShareStrings {
+  notFoundTitle: string;
+  notFoundHeading: string;
+  notFoundBody: string; // <br/> 포함 허용
+  defaultOwner: string;
+  birthNatural: string;
+  birthCsection: string;
+  planSanhujowon: string;
+  planHome: string;
+  pageTitle: string; // {name}
+  heroTitle: string; // {name}
+  badgeShare: string;
+  progressLabel: string;
+  chipTotal: string;
+  chipDone: string;
+  chipNeed: string;
+  chipDad: string;
+  filterAll: string;
+  filterTodo: string;
+  filterDad: string;
+  filterNeed: string;
+  filterDocs: string;
+  footer: string;
+  catMom: string;
+  catBaby: string;
+  catDocs: string;
+  statusNeed: string;
+  statusReady: string;
+  statusPacked: string;
+  ownerMom: string;
+  ownerDad: string;
+  ownerBoth: string;
+  empty: string;
+  countSuffix: string; // "12개"의 "개"
+  updateFail: string;
+}
+
+const STRINGS: Record<ShareLang, ShareStrings> = {
+  ko: {
+    notFoundTitle: '출산가방 — 만료된 링크',
+    notFoundHeading: '링크가 만료되었어요',
+    notFoundBody: '출산가방 공유 링크는 30일 동안만 유효해요.<br/>가족에게 새 링크를 받아주세요.',
+    defaultOwner: '엄마',
+    birthNatural: '자연분만',
+    birthCsection: '제왕절개',
+    planSanhujowon: '조리원',
+    planHome: '집 산후',
+    pageTitle: '출산가방 — {name} 공유',
+    heroTitle: '{name}의 출산가방',
+    badgeShare: '공유',
+    progressLabel: '진행률',
+    chipTotal: '총',
+    chipDone: '완료',
+    chipNeed: '구매필요',
+    chipDad: '아빠',
+    filterAll: '전체',
+    filterTodo: '아직 안 챙긴 것',
+    filterDad: '아빠 담당',
+    filterNeed: '구매 필요',
+    filterDocs: '서류만',
+    footer: '아맞다 — 출산가방 공유 (보기 전용) · 30일 후 만료',
+    catMom: '엄마(산모) 가방',
+    catBaby: '아기 가방',
+    catDocs: '서류 가방',
+    statusNeed: '구매 필요',
+    statusReady: '준비 완료',
+    statusPacked: '가방에 넣음',
+    ownerMom: '엄마',
+    ownerDad: '아빠',
+    ownerBoth: '같이',
+    empty: '해당하는 항목이 없어요',
+    countSuffix: '개',
+    updateFail: '업데이트 실패. 잠시 후 다시 시도해주세요.',
+  },
+  ja: {
+    notFoundTitle: '出産バッグ — 期限切れのリンク',
+    notFoundHeading: 'リンクの有効期限が切れました',
+    notFoundBody: '出産バッグの共有リンクは30日間のみ有効です。<br/>ご家族に新しいリンクをもらってくださいね。',
+    defaultOwner: 'ママ',
+    birthNatural: '自然分娩',
+    birthCsection: '帝王切開',
+    planSanhujowon: '産後ケア施設',
+    planHome: '自宅ケア',
+    pageTitle: '出産バッグ — {name}の共有',
+    heroTitle: '{name}の出産バッグ',
+    badgeShare: '共有',
+    progressLabel: '進捗',
+    chipTotal: '合計',
+    chipDone: '完了',
+    chipNeed: '要購入',
+    chipDad: 'パパ',
+    filterAll: 'すべて',
+    filterTodo: 'まだ入れていないもの',
+    filterDad: 'パパ担当',
+    filterNeed: '購入が必要',
+    filterDocs: '書類のみ',
+    footer: 'なるほど育児 — 出産バッグの共有（閲覧用）· 30日後に期限切れ',
+    catMom: 'ママ（産婦）バッグ',
+    catBaby: '赤ちゃんバッグ',
+    catDocs: '書類バッグ',
+    statusNeed: '購入が必要',
+    statusReady: '準備完了',
+    statusPacked: 'バッグに入れた',
+    ownerMom: 'ママ',
+    ownerDad: 'パパ',
+    ownerBoth: '一緒に',
+    empty: '該当するアイテムはありません',
+    countSuffix: '個',
+    updateFail: '更新に失敗しました。しばらくしてからもう一度お試しください。',
+  },
+  'zh-Hant': {
+    notFoundTitle: '待產包 — 連結已失效',
+    notFoundHeading: '連結已過期',
+    notFoundBody: '待產包分享連結僅在30天內有效。<br/>請向家人索取新的連結。',
+    defaultOwner: '媽媽',
+    birthNatural: '自然產',
+    birthCsection: '剖腹產',
+    planSanhujowon: '月子中心',
+    planHome: '在家坐月子',
+    pageTitle: '待產包 — {name}的分享',
+    heroTitle: '{name}的待產包',
+    badgeShare: '分享',
+    progressLabel: '進度',
+    chipTotal: '總計',
+    chipDone: '完成',
+    chipNeed: '待購買',
+    chipDad: '爸爸',
+    filterAll: '全部',
+    filterTodo: '還沒放進去的',
+    filterDad: '爸爸負責',
+    filterNeed: '需要購買',
+    filterDocs: '僅文件',
+    footer: '育兒答 — 待產包分享（僅供檢視）· 30天後失效',
+    catMom: '媽媽（產婦）包',
+    catBaby: '寶寶包',
+    catDocs: '文件包',
+    statusNeed: '需要購買',
+    statusReady: '準備完成',
+    statusPacked: '已放入包中',
+    ownerMom: '媽媽',
+    ownerDad: '爸爸',
+    ownerBoth: '一起',
+    empty: '沒有符合的項目',
+    countSuffix: '項',
+    updateFail: '更新失敗，請稍後再試。',
+  },
+};
+
+function notFoundHtml(lang: ShareLang = 'ko'): string {
+  const s = STRINGS[lang];
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>${s.notFoundTitle}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:#FFF7F2;color:#1C1C1E;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:24px}.card{background:#fff;border-radius:18px;padding:32px;text-align:center;max-width:360px;box-shadow:0 8px 24px rgba(0,0,0,0.06)}h1{font-size:18px;margin:0 0 8px}p{color:#636366;font-size:14px;margin:0}</style></head><body><div class="card"><h1>${s.notFoundHeading}</h1><p>${s.notFoundBody}</p></div></body></html>`;
 }
 
 function renderShareHtml(data: {
@@ -289,7 +454,9 @@ function renderShareHtml(data: {
   birthType: string | null;
   postpartumPlan: string | null;
   items: ShareItem[];
+  lang: ShareLang;
 }): string {
+  const s = STRINGS[data.lang];
   // 'na' 제외, hidden 클라이언트 단에서 이미 제거됨
   const visible = data.items.filter((it) => it.status !== 'na');
   const total = visible.length;
@@ -298,19 +465,19 @@ function renderShareHtml(data: {
   const dadCount = visible.filter((it) => it.owner === 'dad' && !it.checked).length;
   const needCount = visible.filter((it) => it.status === 'need').length;
 
-  const ownerName = data.ownerLabel ? escapeHtml(data.ownerLabel) : '엄마';
-  const birthTypeLabel = data.birthType === 'natural' ? '자연분만' : data.birthType === 'csection' ? '제왕절개' : '';
-  const planLabel = data.postpartumPlan === 'sanhujowon' ? '조리원' : data.postpartumPlan === 'home' ? '집 산후' : '';
+  const ownerName = data.ownerLabel ? escapeHtml(data.ownerLabel) : s.defaultOwner;
+  const birthTypeLabel = data.birthType === 'natural' ? s.birthNatural : data.birthType === 'csection' ? s.birthCsection : '';
+  const planLabel = data.postpartumPlan === 'sanhujowon' ? s.planSanhujowon : data.postpartumPlan === 'home' ? s.planHome : '';
   const sub = [birthTypeLabel, planLabel].filter(Boolean).join(' · ');
 
   const dataJson = jsonForScriptTag(visible);
 
   return `<!doctype html>
-<html lang="ko">
+<html lang="${data.lang}">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
-<title>출산가방 — ${ownerName} 공유</title>
+<title>${s.pageTitle.replace('{name}', ownerName)}</title>
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0;background:#F8F5F2;color:#1C1C1E;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif}
@@ -368,44 +535,44 @@ function renderShareHtml(data: {
 <body>
 <div class="wrap">
   <div class="hero">
-    <h1>${ownerName}의 출산가방<span class="badge">공유</span></h1>
+    <h1>${s.heroTitle.replace('{name}', ownerName)}<span class="badge">${s.badgeShare}</span></h1>
     ${sub ? `<div class="sub">${escapeHtml(sub)}</div>` : ''}
   </div>
 
   <div class="progressCard">
     <div class="progressTop">
-      <span class="progressLabel">진행률</span>
+      <span class="progressLabel">${s.progressLabel}</span>
       <span class="progressValue">${done}/${total}<span class="progressPct">(${pct}%)</span></span>
     </div>
     <div class="progressTrack"><div class="progressFill" style="width:${pct}%"></div></div>
     <div class="chips">
-      <div class="chip">총 ${total}</div>
-      <div class="chip chipDone">완료 ${done}</div>
-      <div class="chip chipNeed">구매필요 ${needCount}</div>
-      <div class="chip chipDad">아빠 ${dadCount}</div>
+      <div class="chip">${s.chipTotal} ${total}</div>
+      <div class="chip chipDone">${s.chipDone} ${done}</div>
+      <div class="chip chipNeed">${s.chipNeed} ${needCount}</div>
+      <div class="chip chipDad">${s.chipDad} ${dadCount}</div>
     </div>
   </div>
 
   <div class="filterRow">
-    <div class="filterChip active" data-filter="all">전체</div>
-    <div class="filterChip" data-filter="todo">아직 안 챙긴 것</div>
-    <div class="filterChip" data-filter="dad">아빠 담당</div>
-    <div class="filterChip" data-filter="need">구매 필요</div>
-    <div class="filterChip" data-filter="docs">서류만</div>
+    <div class="filterChip active" data-filter="all">${s.filterAll}</div>
+    <div class="filterChip" data-filter="todo">${s.filterTodo}</div>
+    <div class="filterChip" data-filter="dad">${s.filterDad}</div>
+    <div class="filterChip" data-filter="need">${s.filterNeed}</div>
+    <div class="filterChip" data-filter="docs">${s.filterDocs}</div>
   </div>
 
   <div id="list"></div>
 
   <div class="footer">
-    아맞다 — 출산가방 공유 (보기 전용) · 30일 후 만료
+    ${s.footer}
   </div>
 </div>
 
 <script>
 const ITEMS = ${dataJson};
-const CAT_LABEL = { mom: '엄마(산모) 가방', baby: '아기 가방', docs: '서류 가방' };
-const STATUS_LABEL = { need: '구매 필요', ready: '준비 완료', packed: '가방에 넣음' };
-const OWNER_LABEL = { mom: '엄마', dad: '아빠', both: '같이' };
+const CAT_LABEL = { mom: '${s.catMom}', baby: '${s.catBaby}', docs: '${s.catDocs}' };
+const STATUS_LABEL = { need: '${s.statusNeed}', ready: '${s.statusReady}', packed: '${s.statusPacked}' };
+const OWNER_LABEL = { mom: '${s.ownerMom}', dad: '${s.ownerDad}', both: '${s.ownerBoth}' };
 
 function applyFilter(f) {
   return ITEMS.filter(it => {
@@ -425,7 +592,7 @@ function render(filter) {
   const items = applyFilter(filter);
   const list = document.getElementById('list');
   if (items.length === 0) {
-    list.innerHTML = '<div class="section empty">해당하는 항목이 없어요</div>';
+    list.innerHTML = '<div class="section empty">${s.empty}</div>';
     return;
   }
   const byCat = { mom: [], baby: [], docs: [] };
@@ -451,7 +618,7 @@ function render(filter) {
           + '</div></div>';
       }).join('');
       return '<div class="section">'
-        + '<div class="sectionTitle">' + CAT_LABEL[c] + ' <span class="sectionCount">' + byCat[c].length + '개</span></div>'
+        + '<div class="sectionTitle">' + CAT_LABEL[c] + ' <span class="sectionCount">' + byCat[c].length + '${s.countSuffix}</span></div>'
         + inner
         + '</div>';
     }).join('');
@@ -479,10 +646,10 @@ function updateProgress() {
   if (pp) pp.textContent = '(' + pct + '%)';
   if (pf) pf.style.width = pct + '%';
   if (chips.length >= 4) {
-    chips[0].textContent = '총 ' + total;
-    chips[1].textContent = '완료 ' + done;
-    chips[2].textContent = '구매필요 ' + needCount;
-    chips[3].textContent = '아빠 ' + dadCount;
+    chips[0].textContent = '${s.chipTotal} ' + total;
+    chips[1].textContent = '${s.chipDone} ' + done;
+    chips[2].textContent = '${s.chipNeed} ' + needCount;
+    chips[3].textContent = '${s.chipDad} ' + dadCount;
   }
 }
 
@@ -496,7 +663,7 @@ async function updateItem(itemId, payload) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     return true;
   } catch (e) {
-    alert('업데이트 실패. 잠시 후 다시 시도해주세요.');
+    alert('${s.updateFail}');
     return false;
   }
 }

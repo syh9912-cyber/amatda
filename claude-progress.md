@@ -1,7 +1,36 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-05 — 성장통계 발달 체크리스트(마일스톤) 다국어화
+> 최종 업데이트: 2026-07-05 — 공유 웹 서피스(출산가방 공유/가족초대 랜딩) ja/zh-Hant 다국어화
 
 ---
+
+## 2026-07-05 — 출산가방 공유 웹페이지 + 가족초대 랜딩 ja/zh-Hant 다국어화
+
+### 목적/원인
+앱 밖에서 열리는 두 웹 서피스가 한국어 고정: (1) 백엔드 렌더 출산가방 공유 HTML
+(`GET /api/birthbag-share/:token`), (2) Firebase Hosting 정적 `public/invite.html`.
+일본/대만·홍콩 사용자가 공유한 링크를 받은 가족도 한국어 페이지를 보게 됨.
+
+### 해결 방식
+- 수정 파일: `backend/src/routes/birthbag-share.ts`, `frontend/app/(main)/birth-bag.tsx`,
+  `frontend/app/(main)/coparenting.tsx`, `frontend/services/api.ts`, `public/invite.html`
+- 출산가방: POST 바디에 `lang`('ko'|'ja'|'zh-Hant', 그 외 ko 폴백) 수용 →
+  `share_birthbag/{token}` 문서에 `lang` 필드 저장 → GET HTML 렌더러가 저장된 lang으로
+  `STRINGS`(34키 × 3언어) 조회 렌더. `<html lang>` 속성도 반영. 만료/404 HTML도 다국어.
+  앱명 표기: ko 아맞다 / ja なるほど育児 / zh-Hant 育兒答. 사용자 입력 항목 라벨은 번역 X.
+- 프론트: `generateShareLink` payload에 `lang: i18n.language` 추가(+ api.ts 타입 확장),
+  coparenting 초대 URL에 `&lang=${i18n.language}` 부가.
+- invite.html: 인라인 STRINGS(ja/zh-Hant × 8키)로 `lang` 쿼리 파라미터에 따라 텍스트 교체,
+  `document.documentElement.lang` 설정. ko는 마크업 기본값 그대로(무변경). 딥링크/스토어
+  감지 로직 무변경, 외부 요청 없음.
+- JSON-only 에러 메시지(rate-limit, `/data`, item POST)는 한국어 유지 — 앱이 소비하는
+  API 응답이라 사용자 노출 HTML 아님.
+
+### 검증 결과
+- `backend npx tsc --noEmit` 0 / `frontend npx tsc --noEmit` 0 / `npx expo lint` 0 errors
+  (터치한 파일 신규 경고 0 — birth-bag `router`, coparenting `BackButton` 미사용 경고는 기존)
+- 스크립트 검증: ko HTML 출력 기존 렌더러와 byte-identical(3개 샘플 + notFound),
+  ja/zh-Hant 렌더 시 크롬 문자열 한글 잔존 0(인라인 JS 주석 제외), invite.html 태그 균형 OK,
+  lang 파라미터 없음/미지원 언어 시 한국어 기본 유지, 딥링크 href 정상.
 
 ## 2026-07-05 — 발달 체크리스트(growth-stats 마일스톤) ja/zh-Hant 다국어화
 
@@ -6720,3 +6749,29 @@ sleepKnowledgeCache, dailyTraits, milestonePhotos, kakaoOAuthState
 - 참고: 실사용자는 기기 언어 기준이라 일본/대만 기기는 원래 워드마크 경로.
 
 **OTA:** preview 채널 2회 배포(runtime 2.9.2, SHOW_LANG_TOGGLE·SENTRY_DSN env 명시 주입). 검증: tsc 0/lint 0 error/파리티 75.
+
+---
+## [2026-07-05] i18n 전면 감사(신규 방법 4각도) 완료 — 15건 발견·수정, OTA 배포
+
+**방법:** ①leaf 단위 깊은 파리티 ②ja/zh 값 속 한글 ③코드 t()키 3,915개 대조 ④에이전트 2개(프론트 데이터경유/백엔드 응답) — 기존 하드코딩 grep으로 안 잡히던 "데이터 경유 한글" 전수.
+
+**결과(커밋 순):**
+- fc1fc95 백엔드발 6곳: 알람 슬롯라벨·1년전배너·결제완료문구·아이카드 나이/기질·음성설정 나이·챗봇 에러원문 (신규 utils/ageLabel.ts)
+- 74f667f 모유 좌/우 3언어(신규 breastSide.ts — 표시+집계버그 동반 해결) + 진행중수면 감지 ja/zh
+- 89e091f 진통체크 한국어 전용 게이팅(사용자 지시. 태동은 유지, 홈 pill·푸시라우팅 포함)
+- 77d8475 발달 체크리스트 80항목+도메인7종(milestonesChecklist, leaf 5060) + U+FFFD 복구('써요') + 진통타이머 언급 문구 정리(D-3푸시·task14)
+- 6f33b4f 성장분석(growthAnalysisI18n 107키, metric/level/percentile 코드 기반)·기질인사이트(13키 역매핑)·익명닉네임(displayNickname)·앨범 '추억' 폴백
+
+**검증:** tsc 0 / lint 0 error / 파리티 5182/5182/5182 / ko 표시 byte-identical. OTA preview 2회 배포(최종 019f3156).
+
+**수정 불필요로 판정(검증됨):** cry-analyzer/gdm 429·처리된 에러는 백엔드 로케일 분기 확인(일반 500만 드묾), 해열제·앨범 마일스톤·주수표 등 기존 게이팅 정상.
+
+**남은 것:**
+- [ ] 예방접종(한국 NIP 일정) — 사용자 방향 결정 대기(①비한국어 숨김 권장 ②국가별 구축 ③한국기준 명시)
+- [ ] 출산가방 공유 웹페이지(백엔드 HTML) 한국어 — P3
+- [ ] (별도 세션) pending 푸시 디스패처 부재 — spawn task 진행 중
+- 잠재(현재 미노출): nutrition.tsx 미연결 화면 전체 한국어, monthly-characteristic 푸시 화이트리스트 잔존
+
+**[2026-07-05 추가] 예방접종 한국어 전용 게이팅 완료(커밋 4c0901e, 사용자 결정 ①):**
+- vaccination.tsx 에 비한국어 Redirect 추가(홈 퀵액션은 기존 게이팅 확인). OTA preview 배포(019f31ac).
+- 전면 감사 남은 항목: 출산가방 공유 웹페이지(P3), nutrition.tsx(미연결) — 잠재만.
