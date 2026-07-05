@@ -596,7 +596,8 @@ export default function HomeScreen() {
               />
             ) : null}
           </View>
-          {child?.isPregnant && (
+          {/* 진통 체크는 한국어 전용 (SOS 와 동일 정책) */}
+          {child?.isPregnant && i18n.language === 'ko' && (
             <ContractionHeaderPill
               weeks={child.pregnancyWeeks ?? 0}
               onPress={() => router.push('/(main)/labor-monitor?tab=contraction' as never)}

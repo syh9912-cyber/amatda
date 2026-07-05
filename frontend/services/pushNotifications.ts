@@ -673,7 +673,8 @@ export async function schedulePregnancyReminders(
         title: `${i18n.t('pushNotifications.appName')} · ${i18n.t(`pushNotifications.pregnancyCountdown.${c.key}.title`)}`,
         body: i18n.t(`pushNotifications.pregnancyCountdown.${c.key}.body`),
         // #17 D-3/D-Day 는 진통 가능성 → labor-monitor 로 라우팅 (PII 없는 generic)
-        data: c.offset >= -3
+        // 진통 체크는 한국어 전용 → 비한국어는 임신앨범으로 라우팅
+        data: c.offset >= -3 && i18n.language === 'ko'
           ? { screen: 'labor-monitor', tab: 'contraction', childId }
           : { screen: 'pregnancy', childId },
         sound: 'amatda_chime.wav',

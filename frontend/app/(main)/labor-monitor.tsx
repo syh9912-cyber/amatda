@@ -54,7 +54,7 @@ function getCurrentWeek(dueDate?: string | null): number {
 }
 
 export default function LaborMonitorScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { selectedChild } = useChildStore();
   const childId = selectedChild?.id ?? '';
@@ -66,7 +66,9 @@ export default function LaborMonitorScreen() {
   const closeGuide = () => { setGuideVisible(false); markGuideSeen('labor-monitor'); };
 
   const params = useLocalSearchParams<{ tab?: string }>();
-  const tab: Tab = params.tab === 'contraction' ? 'contraction' : 'kick';
+  // 진통 체크는 한국어 버전 전용 (응급번호·병원 연락 안내가 국가별로 달라 해외 미지원 — SOS 와 동일 정책).
+  // 비한국어에서 딥링크/푸시로 진입해도 태동 탭으로 폴백.
+  const tab: Tab = params.tab === 'contraction' && i18n.language === 'ko' ? 'contraction' : 'kick';
   const headerTitle = tab === 'contraction' ? t('laborMonitor.headerTitleContraction') : t('laborMonitor.headerTitleKick');
 
   // 태동
