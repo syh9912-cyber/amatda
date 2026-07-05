@@ -1243,7 +1243,7 @@
     "ownerLabelMom": "媽媽",
     "shareFailTitle": "分享失敗",
     "shareFailDesc": "請稍後再試一次。",
-    "shareSummary": "Amatda 生產包清單已完成 {{progressPct}}%，剩餘 {{remaining}} 項。和家人一起準備吧！\n{{url}}",
+    "shareSummary": "育兒答 生產包清單已完成 {{progressPct}}%，剩餘 {{remaining}} 項。和家人一起準備吧！\n{{url}}",
     "copyDoneTitle": "連結已複製",
     "copyDoneDesc": "貼到 LINE 或簡訊中分享吧。",
     "owner": {
@@ -2341,7 +2341,7 @@
     "androidInvokeTitle": "在 Android 上呼叫語音記錄",
     "androidInvokeDesc": "只有下面這2種方法能穩定運作。兩種都只要輕點一下就能立即開始語音辨識。",
     "method1Title": "①長按App圖示",
-    "method1Desc": "在主畫面長按「Amatda」圖示0.5秒以上，就會出現「語音記錄」選單。點一下即可立即開始錄音。",
+    "method1Desc": "在主畫面長按「育兒答」圖示0.5秒以上，就會出現「語音記錄」選單。點一下即可立即開始錄音。",
     "method2Title": "②在主畫面新增語音捷徑圖示",
     "method2Desc": "點下方按鈕→系統會顯示「新增捷徑」對話框→點「新增」即可在主畫面建立專屬圖示。之後只要輕點一下就好。",
     "addHomeShortcutA11y": "在主畫面新增語音捷徑圖示",
@@ -2350,13 +2350,13 @@
     "pinSupportedHint": "＊按下按鈕後若沒有出現系統對話框，代表部分launcher（如MIUI/Nova）擋住了。方法①（長按圖示）永遠都能用。",
     "pinUnsupportedHint": "＊此版本可能會有功能限制。若無法使用，請改用方法①（長按圖示）。",
     "siriSectionTitle": "iOS Siri指令（iPhone使用者）",
-    "siriSectionDescIos": "iPhone不需要設定，只要說一句「Siri，Amatda育兒」就能啟動語音記錄（iOS 16以上）。",
-    "siriSectionDescAndroid": "iPhone只要說「Siri，Amatda育兒」就能啟動（iOS 16以上）。Android請使用上方的方法①/②。",
+    "siriSectionDescIos": "iPhone不需要設定，只要說一句「Siri，育兒答記錄」就能啟動語音記錄（iOS 16以上）。",
+    "siriSectionDescAndroid": "iPhone只要說「Siri，育兒答記錄」就能啟動（iOS 16以上）。Android請使用上方的方法①/②。",
     "viewSiriGuideA11y": "查看Siri指令使用方法",
     "assistantNotSupportedTitle": "用Android語音助理不行嗎？",
-    "assistantNotSupportedDesc": "無法透過「Hi Bixby，打開Amatda」／「OK Google，開啟Amatda」這類語音助理直接呼叫。",
+    "assistantNotSupportedDesc": "無法透過「Hi Bixby，打開育兒答」／「OK Google，開啟育兒答」這類語音助理直接呼叫。",
     "reasonLabel": "原因",
-    "assistantNotSupportedReason": "．Bixby：2024年12月「快速指令」功能已被移除，Galaxy S25+/One UI 7開始換成新版Bixby（基於Perplexity）—無法註冊使用者自訂捷徑。\n．Google助理：2026年轉換為Gemini後，「例行程序→自訂動作」選單在中文版中消失。\n．App名稱的語音辨識較弱，直接下指令（「啟動Amatda」）失敗率也很高。\n\n→ 實際上在Android上只有上述兩種方法（長按圖示／主畫面捷徑）能穩定運作。",
+    "assistantNotSupportedReason": "．Bixby：2024年12月「快速指令」功能已被移除，Galaxy S25+/One UI 7開始換成新版Bixby（基於Perplexity）—無法註冊使用者自訂捷徑。\n．Google助理：2026年轉換為Gemini後，「例行程序→自訂動作」選單在中文版中消失。\n．App名稱的語音辨識較弱，直接下指令（「啟動育兒答」）失敗率也很高。\n\n→ 實際上在Android上只有上述兩種方法（長按圖示／主畫面捷徑）能穩定運作。",
     "footerText": "用聲音更快速地記錄看看吧！",
     "modalTitle": "{{name}}設定方法",
     "triggerBannerLabel": "這樣說就能立即記錄",
@@ -2377,17 +2377,17 @@
     "copyFailDesc": "請直接長按URL進行複製。",
     "siriSubtitle": "iPhone / iPad（iOS 16以上）",
     "siriPlatformLabel": "iPhone使用者",
-    "siriTrigger": "「Siri，Amatda育兒」→App開啟並立即錄音",
+    "siriTrigger": "「Siri，育兒答記錄」→App開啟並立即錄音",
     "dictatedTextVar": "聽寫文字",
     "siriOpenLabel": "開啟捷徑App（選填）",
     "shortcutsAppTitle": "捷徑App",
     "shortcutsAppDesc": "請在App Store搜尋「捷徑」並安裝。",
     "siriStep1Title": "免設定即可直接使用（iOS 16以上）",
-    "siriStep1Desc": "只要安裝並執行一次App，不需額外設定，Siri就能辨識「Amatda育兒」指令。\n\n說出「Siri，Amatda育兒」→就會開啟Amatda語音記錄畫面並自動開始錄音。\n\n＊首次執行時若出現麥克風/語音辨識權限彈窗，請全部點選「允許」。",
+    "siriStep1Desc": "只要安裝並執行一次App，不需額外設定，Siri就能辨識「育兒答記錄」指令。\n\n說出「Siri，育兒答記錄」→就會開啟育兒答語音記錄畫面並自動開始錄音。\n\n＊首次執行時若出現麥克風/語音辨識權限彈窗，請全部點選「允許」。",
     "siriStep2Title": "一次說多件事也OK",
     "siriStep2Desc": "開始錄音後自然地說就可以。\n例如：「允道吃飯、大便又睡覺了」\n→ AI會自動分成吃飯＋大便＋睡眠3項記錄。\n\n份量、時間也可以一起說：「喝了配方奶120又睡了30分鐘」",
     "siriStep3Title": "Siri可辨識的用語",
-    "siriStep3Desc": "前面加上「Siri，」再說出以下任一句即可：\n．「Amatda育兒」\n．「Amatda記錄」\n．「Amatda語音」\n\n＊依Apple規範，Siri用語中必須包含App名稱（「Amatda」）。只說「Amatda」的話，不會錄音、只會開啟App。",
+    "siriStep3Desc": "前面加上「Siri，」再說出以下任一句即可：\n．「育兒答記錄」\n．「育兒答語音記錄」\n．「育兒答語音」\n\n＊依Apple規範，Siri用語中必須包含App名稱（「育兒答」）。只說「育兒答」的話，不會錄音、只會開啟App。",
     "siriStep4Title": "（選填）像「育兒」一樣更簡短 — 在捷徑中連結URL",
     "siriStep4Desc": "若想不加App名稱、直接說「Siri，育兒」，可以在iPhone的「捷徑」App中自行建立（設定一次即可）：\n\n1）點下方「開啟捷徑App」→右上角＋\n2）新增「聽寫文字」動作\n3）新增「開啟URL」動作→複製下方URL並貼上，在URL結尾連結「聽寫文字」變數\n4）將捷徑名稱儲存為「育兒」\n\n這樣就能用「Siri，育兒」來執行了。",
     "pinShortcut": {
@@ -2745,8 +2745,8 @@
       "autoRenew": "．訂閱將依您選擇的週期（月繳／年繳）自動續訂。",
       "trialAutoCharge": "．7 天免費體驗結束後，將自動收取您所選方案的費用。",
       "cancelBefore24h": "．若未於續訂前 24 小時取消，將自動扣款。",
-      "cancelIOS": "．取消訂閱：設定 App → 您的 Apple 帳號 → 訂閱 → Amatda → 取消訂閱",
-      "cancelAndroid": "．取消訂閱：Play 商店 → 個人資料 → 付款與訂閱 → 訂閱 → Amatda",
+      "cancelIOS": "．取消訂閱：設定 App → 您的 Apple 帳號 → 訂閱 → 育兒答 → 取消訂閱",
+      "cancelAndroid": "．取消訂閱：Play 商店 → 個人資料 → 付款與訂閱 → 訂閱 → 育兒答",
       "cancelStillUsableUntilExpiry": "．即使在訂閱期間內取消，仍可使用至到期日為止。"
     },
     "refundNotice": {
@@ -4043,7 +4043,7 @@
     }
   },
   "onboardingKakaoChannel": {
-    "title": "新增Amatda KakaoTalk頻道",
+    "title": "新增育兒答 KakaoTalk頻道",
     "subtitleLine1": "成為頻道好友後",
     "subtitleLine2": "深夜也能獲得幫助",
     "benefit": {
@@ -5056,7 +5056,7 @@
       "tabFamilyFeed": "家庭動態",
       "tabMy": "我的",
       "page1": {
-        "title": "歡迎來到Amatda",
+        "title": "歡迎來到育兒答",
         "desc": "為孩子量身打造的\n育兒記錄．AI諮詢．家庭共享，一站搞定",
         "feature1Label": "寶寶時間",
         "feature1Sub": "輕鬆記錄餵奶．睡眠．排便",
@@ -6343,10 +6343,10 @@
     }
   },
   "pushNotifications": {
-    "appName": "Amatda",
+    "appName": "育兒答",
     "channels": {
-      "default": "Amatda通知",
-      "engagement": "Amatda提醒"
+      "default": "育兒答通知",
+      "engagement": "育兒答提醒"
     },
     "permissionAlert": {
       "message": "我們會傳送孩子發育階段小提示、疫苗/看診行程、每日記錄提醒。\n\n隨時可以在設定中關閉。",
@@ -6462,7 +6462,7 @@
     "dateFormat": "{{yyyy}}-{{mm}}-{{dd}} ({{dow}})"
   },
   "socialAuth": {
-    "appName": "Amatda",
+    "appName": "育兒答",
     "errors": {
       "kakaoSdk": "Kakao SDK錯誤：{{message}}",
       "naverEnvMissing": "Naver登入環境變數（EXPO_PUBLIC_NAVER_CLIENT_ID/SECRET）未設定。",
@@ -6512,8 +6512,8 @@
   },
   "payment": {
     "product": {
-      "monthlyName": "Amatda VIP 月繳方案",
-      "yearlyName": "Amatda VIP 年繳方案"
+      "monthlyName": "育兒答 VIP 月繳方案",
+      "yearlyName": "育兒答 VIP 年繳方案"
     },
     "method": {
       "autoPlatformDesc": "平台自動付款（推薦）",
@@ -6544,7 +6544,7 @@
     }
   },
   "traitReportHtml": {
-    "footer": "— Amatda App 分析 · {{date}}",
+    "footer": "— 育兒答 App 分析 · {{date}}",
     "section": {
       "personality": "🎭 性格特質",
       "strengths": "💪 優點",

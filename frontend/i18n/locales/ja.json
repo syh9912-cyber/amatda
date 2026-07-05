@@ -1202,7 +1202,7 @@
     "editedSuffix": "（編集済み）",
     "officialBadge": "公式",
     "nationwidePopularBadge": "全国人気",
-    "officialBannerText": "運営チームからのお知らせ・アマッタ公式投稿です",
+    "officialBannerText": "運営チームからのお知らせ・なるほど育児公式投稿です",
     "anonymous": "匿名",
     "saved": "保存済み",
     "bookmark": "ブックマーク",
@@ -2341,7 +2341,7 @@
     "androidInvokeTitle": "Androidで音声記録を呼び出す",
     "androidInvokeDesc": "下記の2つの方法だけが安定して動作します。どちらもワンタップで音声認識がすぐに始まります。",
     "method1Title": "①アプリアイコンを長押し",
-    "method1Desc": "ホーム画面でアマッタのアイコンを0.5秒以上長押しすると「音声記録」メニューが表示されます。タップするとすぐに録音が始まります。",
+    "method1Desc": "ホーム画面でなるほど育児のアイコンを0.5秒以上長押しすると「音声記録」メニューが表示されます。タップするとすぐに録音が始まります。",
     "method2Title": "②ホーム画面に音声ショートカットアイコンを追加",
     "method2Desc": "下のボタン→システムの「ショートカットを追加」ダイアログ→「追加」を押すとホームに専用アイコンが作成されます。その後はワンタップで完了。",
     "addHomeShortcutA11y": "ホーム画面に音声ショートカットアイコンを追加",
@@ -2350,13 +2350,13 @@
     "pinSupportedHint": "※ ボタンを押してもシステムダイアログが表示されない場合、一部のランチャー（MIUI/Novaなど）がブロックしています。方法①（アイコン長押し）は常に動作します。",
     "pinUnsupportedHint": "※ このビルドでは動作が制限される場合があります。うまくいかない場合は方法①（アイコン長押し）をお使いください。",
     "siriSectionTitle": "iOS Siriコマンド（iPhoneユーザー）",
-    "siriSectionDescIos": "iPhoneは設定不要で「Siri、アマッタ育児」のひと言で音声記録を実行できます（iOS 16以上）。",
-    "siriSectionDescAndroid": "iPhoneは「Siri、アマッタ育児」のひと言で実行（iOS 16以上）。Androidは上記の方法①/②をご利用ください。",
+    "siriSectionDescIos": "iPhoneは設定不要で「Siri、なるほど育児で記録」のひと言で音声記録を実行できます（iOS 16以上）。",
+    "siriSectionDescAndroid": "iPhoneは「Siri、なるほど育児で記録」のひと言で実行（iOS 16以上）。Androidは上記の方法①/②をご利用ください。",
     "viewSiriGuideA11y": "Siriコマンドの使い方を見る",
     "assistantNotSupportedTitle": "Androidの音声アシスタントではできませんか？",
-    "assistantNotSupportedDesc": "「Hi Bixby、アマッタつけて」／「OK Google、アマッタ開いて」のような音声アシスタントの直接呼び出しはできません。",
+    "assistantNotSupportedDesc": "「Hi Bixby、なるほど育児つけて」／「OK Google、なるほど育児開いて」のような音声アシスタントの直接呼び出しはできません。",
     "reasonLabel": "理由",
-    "assistantNotSupportedReason": "・Bixby：2024年12月に「クイックコマンド」機能が削除され、Galaxy S25+/One UI 7以降は新Bixby（Perplexity基盤）に置き換え — ユーザーによるショートカット登録は不可。\n・Googleアシスタント：2026年にGeminiへ移行し、「ルーティン→カスタムアクション」メニューが日本語ビルドで消滅。\n・アプリ名の音声認識精度が低く、直接コマンド（「アマッタ起動」）も失敗率が高いです。\n\n→ 現実的にAndroidでは上記の2つの方法（アイコン長押し／ホームショートカット）のみが安定して動作します。",
+    "assistantNotSupportedReason": "・Bixby：2024年12月に「クイックコマンド」機能が削除され、Galaxy S25+/One UI 7以降は新Bixby（Perplexity基盤）に置き換え — ユーザーによるショートカット登録は不可。\n・Googleアシスタント：2026年にGeminiへ移行し、「ルーティン→カスタムアクション」メニューが日本語ビルドで消滅。\n・アプリ名の音声認識精度が低く、直接コマンド（「なるほど育児起動」）も失敗率が高いです。\n\n→ 現実的にAndroidでは上記の2つの方法（アイコン長押し／ホームショートカット）のみが安定して動作します。",
     "footerText": "音声でもっと素早く記録してみましょう！",
     "modalTitle": "{{name}}の設定方法",
     "triggerBannerLabel": "こう話しかけるとすぐ記録されます",
@@ -2377,17 +2377,17 @@
     "copyFailDesc": "URLを直接長押ししてコピーしてください。",
     "siriSubtitle": "iPhone / iPad（iOS 16以上）",
     "siriPlatformLabel": "iPhoneユーザー",
-    "siriTrigger": "「Siri、アマッタ育児」→アプリが開いてすぐに録音",
+    "siriTrigger": "「Siri、なるほど育児で記録」→アプリが開いてすぐに録音",
     "dictatedTextVar": "書き取りテキスト",
     "siriOpenLabel": "ショートカットアプリを開く（任意）",
     "shortcutsAppTitle": "ショートカットアプリ",
     "shortcutsAppDesc": "App Storeで「ショートカット」を検索してインストールしてください。",
     "siriStep1Title": "設定不要ですぐ使える（iOS 16以上）",
-    "siriStep1Desc": "アプリを一度インストール・実行すれば、別途設定なしでSiriが「アマッタ育児」コマンドを認識します。\n\n「Siri、アマッタ育児」と言うと→アマッタの音声記録画面が開き、自動的に録音が始まります。\n\n※ 初回実行時にマイク／音声認識の許可ポップアップが表示されたら、すべて「許可」をタップしてください。",
+    "siriStep1Desc": "アプリを一度インストール・実行すれば、別途設定なしでSiriが「なるほど育児で記録」コマンドを認識します。\n\n「Siri、なるほど育児で記録」と言うと→なるほど育児の音声記録画面が開き、自動的に録音が始まります。\n\n※ 初回実行時にマイク／音声認識の許可ポップアップが表示されたら、すべて「許可」をタップしてください。",
     "siriStep2Title": "複数のことを一度に話してもOK",
     "siriStep2Desc": "録音が始まったら自然に話してください。\n例：「ユンドがご飯を食べてうんちして寝てるよ」\n→ AIがご飯＋うんち＋睡眠の3つに自動で分けて記録します。\n\n量・時間も一緒に：「ミルク120飲んで30分寝たよ」",
     "siriStep3Title": "認識されるSiriフレーズ",
-    "siriStep3Desc": "前に「Siri、」を付けて、以下のいずれかを言えばOKです：\n・「アマッタ育児」\n・「アマッタ記録」\n・「アマッタ音声」\n\n※ Appleのルール上、Siriフレーズにはアプリ名（「アマッタ」）が必ず含まれます。「アマッタ」だけ言うと、録音ではなくアプリが開くだけになります。",
+    "siriStep3Desc": "前に「Siri、」を付けて、以下のいずれかを言えばOKです：\n・「なるほど育児で記録」\n・「なるほど育児で音声記録」\n・「なるほど育児で音声メモ」\n\n※ Appleのルール上、Siriフレーズにはアプリ名（「なるほど育児」）が必ず含まれます。「なるほど育児」だけ言うと、録音ではなくアプリが開くだけになります。",
     "siriStep4Title": "（任意）「育児」のようにもっと短く — ショートカットでURL連携",
     "siriStep4Desc": "アプリ名なしで「Siri、育児」と言いたい場合は、iPhoneの「ショートカット」アプリで直接作成できます（1回の設定）：\n\n1）下の「ショートカットアプリを開く」→右上の＋\n2）「テキストを書き取る」アクションを追加\n3）「URLを開く」アクションを追加→下のURLをコピーして貼り付け、URLの末尾に「書き取ったテキスト」変数を連携\n4）ショートカット名を「育児」として保存\n\nそうすると「Siri、育児」でも実行できるようになります。",
     "pinShortcut": {
@@ -2745,8 +2745,8 @@
       "autoRenew": "・ご登録は選択した期間（月額／年額）で自動更新されます。",
       "trialAutoCharge": "・7日間の無料体験終了後、選択したプランの料金が自動的に請求されます。",
       "cancelBefore24h": "・更新の24時間前までに解約されない場合、自動的に決済されます。",
-      "cancelIOS": "・登録解除：設定アプリ → ご自身のAppleアカウント → 定期購読 → アマッタ → 登録を解除",
-      "cancelAndroid": "・登録解除：Playストア → プロフィール → お支払いと定期購入 → 定期購入 → アマッタ",
+      "cancelIOS": "・登録解除：設定アプリ → ご自身のAppleアカウント → 定期購読 → なるほど育児 → 登録を解除",
+      "cancelAndroid": "・登録解除：Playストア → プロフィール → お支払いと定期購入 → 定期購入 → なるほど育児",
       "cancelStillUsableUntilExpiry": "・登録期間中に解約しても、有効期限まではご利用いただけます。"
     },
     "refundNotice": {
@@ -6343,10 +6343,10 @@
     }
   },
   "pushNotifications": {
-    "appName": "アマッタ",
+    "appName": "なるほど育児",
     "channels": {
-      "default": "アマッタ通知",
-      "engagement": "アマッタ リマインダー"
+      "default": "なるほど育児通知",
+      "engagement": "なるほど育児 リマインダー"
     },
     "permissionAlert": {
       "message": "お子さまの発達段階に合わせたヒント、予防接種・通院スケジュール、毎日の記録リマインダーをお届けします。\n\nいつでも設定でオフにできます。",
@@ -6462,7 +6462,7 @@
     "dateFormat": "{{yyyy}}-{{mm}}-{{dd}} ({{dow}})"
   },
   "socialAuth": {
-    "appName": "アマッタ",
+    "appName": "なるほど育児",
     "errors": {
       "kakaoSdk": "Kakaoログイン SDK エラー: {{message}}",
       "naverEnvMissing": "Naverログインの環境変数(EXPO_PUBLIC_NAVER_CLIENT_ID/SECRET)が設定されていません。",
@@ -6512,8 +6512,8 @@
   },
   "payment": {
     "product": {
-      "monthlyName": "アマッタ VIP 月額プラン",
-      "yearlyName": "アマッタ VIP 年額プラン"
+      "monthlyName": "なるほど育児 VIP 月額プラン",
+      "yearlyName": "なるほど育児 VIP 年額プラン"
     },
     "method": {
       "autoPlatformDesc": "プラットフォーム自動決済（推奨）",
@@ -6544,7 +6544,7 @@
     }
   },
   "traitReportHtml": {
-    "footer": "— アマッタアプリで分析 · {{date}}",
+    "footer": "— なるほど育児アプリで分析 · {{date}}",
     "section": {
       "personality": "🎭 性格特性",
       "strengths": "💪 強み",
