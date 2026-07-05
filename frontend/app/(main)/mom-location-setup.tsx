@@ -17,6 +17,7 @@ import { Stack, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { momLocationApi } from '../../services/api';
+import { showPermissionDisclosure } from '../../utils/permissionDisclosure';
 import { useChildStore } from '../../stores/childStore';
 import { ScreenHeader } from '../../components/common/ScreenHeader';
 
@@ -93,6 +94,12 @@ export default function MomLocationSetupScreen() {
     setGpsLoading(true);
     try {
       const Location = await import('expo-location');
+      // Google Play prominent disclosure — 최초(미결정) 1회, OS 권한창 전에 인앱 사전고지
+      const cur = await Location.getForegroundPermissionsAsync();
+      if (cur.status === 'undetermined') {
+        const agreed = await showPermissionDisclosure('location');
+        if (!agreed) return;
+      }
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(t('momLocationSetup.permissionAlert.title'), t('momLocationSetup.permissionAlert.desc'));

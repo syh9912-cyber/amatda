@@ -20,6 +20,7 @@ import { loadRecords, saveRecords, loadSleepSession, saveSleepSession } from '..
 import { resolveAuthorMeta, stampAuthor } from '../features/baby-tracker/author';
 import type { TrackerRecord } from '../features/baby-tracker/types';
 import { AdSlot } from '../components/ads/AdSlot';
+import { showPermissionDisclosure } from '../utils/permissionDisclosure';
 
 const IC_MASCOT = require('../assets/mascot-happy.png') as number;
 const IC_MIC = require('../assets/icon-mic.png') as number;
@@ -63,6 +64,8 @@ interface SpeechSubscription {
 interface SpeechModule {
   ExpoSpeechRecognitionModule: {
     requestPermissionsAsync: () => Promise<{ granted: boolean }>;
+    // 권한 상태 조회 (prominent disclosure 게이팅용) — 없는 버전 대비 optional
+    getPermissionsAsync?: () => Promise<{ granted: boolean; status?: string }>;
     start: (opts: { lang: string; interimResults: boolean }) => void;
     stop: () => void;
     isRecognitionAvailable: () => boolean;
@@ -321,6 +324,22 @@ export default function VoiceScreen() {
       }
     } catch {
       // 일부 버전에서 없을 수 있음 — 계속 진행
+    }
+
+    // Google Play prominent disclosure — 최초(미결정) 1회, OS 마이크 권한창 전에 인앱 사전고지
+    try {
+      const curPerm = await mod.ExpoSpeechRecognitionModule.getPermissionsAsync?.();
+      if (curPerm && curPerm.status === 'undetermined') {
+        const agreed = await showPermissionDisclosure('microphone');
+        if (!agreed) {
+          setError(t('voice.errorMicPermission'));
+          setPhase('error');
+          setTimeout(() => router.replace('/(main)/baby-tracker'), 2000);
+          return;
+        }
+      }
+    } catch {
+      /* 상태 조회 실패 → 아래 권한 요청으로 진행 */
     }
 
     // 권한 요청 (5초 타임아웃 — requestPermissionsAsync 무한 대기 방지)
