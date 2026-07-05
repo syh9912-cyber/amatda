@@ -2484,107 +2484,68 @@ function getAgeLabel(months: number, t: TFunction): string {
   return t('growthStats.ageElementaryUpper');
 }
 
-function getDefaultMilestones(months: number): MilestoneItem[] {
-  const m = (id: string, label: string, domain: string, description: string): MilestoneItem =>
-    ({ id, label, domain, description, completed: false });
+// 도메인 한국어 원문(백엔드/카탈로그 canonical) → 로케일 키 매핑
+const MILESTONE_DOMAIN_KEY: Record<string, string> = {
+  '대근육': 'grossMotor',
+  '소근육': 'fineMotor',
+  '언어': 'language',
+  '인지': 'cognitive',
+  '사회성': 'social',
+  '정서': 'emotional',
+  '자조': 'selfCare',
+};
 
-  if (months <= 6) return [
-    m('d0-1', '목을 가눌 수 있어요', '대근육', '엎드린 자세에서 머리를 들고 유지할 수 있는지 확인해보세요'),
-    m('d0-2', '뒤집기를 해요', '대근육', '등에서 배로 또는 배에서 등으로 뒤집는 동작을 해요'),
-    m('d0-3', '물건을 손으로 잡아요', '소근육', '장난감이나 손가락을 움켜쥘 수 있어요'),
-    m('d0-4', '옹알이를 해요', '언어', '"아~", "우~" 같은 모음 소리를 내요'),
-    m('d0-5', '소리 나는 쪽을 바라봐요', '인지', '소리가 나면 고개를 돌려 찾아봐요'),
-    m('d0-6', '눈을 맞추고 미소 지어요', '사회성', '얼굴을 보고 사회적 미소를 보여요'),
-    m('d0-7', '손을 입으로 가져가요', '소근육', '자신의 손을 탐색하며 입에 넣어요'),
-    m('d0-8', '익숙한 사람을 알아봐요', '사회성', '엄마 아빠를 보면 반가워해요'),
-    m('d0-9', '딸랑이를 흔들어요', '소근육', '손에 쥔 물건을 흔드는 동작을 해요'),
-    m('d0-10', '배밀이를 시도해요', '대근육', '엎드린 자세에서 팔다리를 움직여 이동하려 해요'),
-  ];
-  if (months <= 12) return [
-    m('d1-1', '혼자 앉을 수 있어요', '대근육', '도움 없이 앉은 자세를 유지해요'),
-    m('d1-2', '기어다녀요', '대근육', '네발로 기어서 이동할 수 있어요'),
-    m('d1-3', '잡고 서기를 해요', '대근육', '가구를 잡고 일어설 수 있어요'),
-    m('d1-4', '집게 손가락으로 잡아요', '소근육', '엄지와 검지로 작은 물건을 집어요'),
-    m('d1-5', '"맘마", "다다" 말해요', '언어', '의미 있는 첫 단어를 말하기 시작해요'),
-    m('d1-6', '까꿍 놀이를 이해해요', '인지', '숨었다 나타나면 웃으며 반응해요'),
-    m('d1-7', '낯가림을 해요', '사회성', '낯선 사람을 보면 불안해하거나 울어요'),
-    m('d1-8', '"안돼"를 이해해요', '언어', '"안돼"라고 하면 동작을 멈추거나 반응해요'),
-    m('d1-9', '컵으로 마실 수 있어요', '자조', '도움을 받아 컵으로 물을 마셔요'),
-    m('d1-10', '손가락으로 가리켜요', '인지', '원하는 것을 손가락으로 가리켜 표현해요'),
-  ];
-  if (months <= 18) return [
-    m('d2-1', '혼자 걸어요', '대근육', '도움 없이 여러 걸음을 걸을 수 있어요'),
-    m('d2-2', '블록 2~3개를 쌓아요', '소근육', '작은 블록을 위로 쌓을 수 있어요'),
-    m('d2-3', '숟가락을 사용해요', '자조', '숟가락으로 음식을 떠서 입에 넣으려 시도해요'),
-    m('d2-4', '단어를 3개 이상 말해요', '언어', '"엄마", "아빠", "맘마" 등 의미 있는 단어를 사용해요'),
-    m('d2-5', '간단한 지시를 따라요', '인지', '"공 가져와", "여기 앉아" 등을 이해하고 따라요'),
-    m('d2-6', '모방 놀이를 해요', '사회성', '전화 받는 흉내, 청소하는 흉내를 내요'),
-    m('d2-7', '계단을 기어 올라가요', '대근육', '네발로 기어서 계단을 올라갈 수 있어요'),
-    m('d2-8', '끼적이기를 해요', '소근육', '크레용이나 연필로 종이에 자유롭게 그어요'),
-    m('d2-9', '신발을 벗으려 시도해요', '자조', '신발이나 양말을 벗으려는 시도를 해요'),
-    m('d2-10', '거울 속 자기를 알아봐요', '인지', '거울을 보고 자기 모습을 인식해요'),
-  ];
-  if (months <= 24) return [
-    m('d3-1', '뛰기를 시작해요', '대근육', '두 발로 뛰거나 빠르게 걸어요'),
-    m('d3-2', '공을 발로 차요', '대근육', '서 있는 자세에서 공을 발로 찰 수 있어요'),
-    m('d3-3', '두 단어를 조합해요', '언어', '"엄마 줘", "물 줘" 같은 두 단어 문장을 만들어요'),
-    m('d3-4', '뚜껑을 열고 닫아요', '소근육', '병뚜껑이나 상자 뚜껑을 돌려 열어요'),
-    m('d3-5', '색깔 1~2개를 구분해요', '인지', '"빨간색 줘"라고 하면 맞는 색을 고를 수 있어요'),
-    m('d3-6', '또래에 관심을 보여요', '사회성', '다른 아이를 관찰하거나 옆에서 놀아요'),
-    m('d3-7', '세로선을 따라 그어요', '소근육', '위에서 아래로 선을 그을 수 있어요'),
-    m('d3-8', '혼자 손을 씻으려 해요', '자조', '수도꼭지를 틀고 손을 비비는 시도를 해요'),
-    m('d3-9', '자기 이름에 반응해요', '언어', '이름을 부르면 "네" 하고 반응해요'),
-    m('d3-10', '감정 표현이 다양해요', '정서', '기쁨, 슬픔, 화남 등을 표정과 몸짓으로 표현해요'),
-  ];
-  if (months <= 36) return [
-    m('d4-1', '한 발로 잠깐 서요', '대근육', '한 발로 1~2초 균형을 잡을 수 있어요'),
-    m('d4-2', '세발자전거를 타요', '대근육', '페달을 밟아 세발자전거를 움직일 수 있어요'),
-    m('d4-3', '가위질을 시도해요', '소근육', '안전 가위로 종이를 자르려 시도해요'),
-    m('d4-4', '원을 그릴 수 있어요', '소근육', '동그라미 모양을 그릴 수 있어요'),
-    m('d4-5', '3~4단어 문장을 말해요', '언어', '"나 과자 먹고 싶어"처럼 긴 문장을 사용해요'),
-    m('d4-6', '1~5까지 세어요', '인지', '물건을 하나씩 가리키며 숫자를 세요'),
-    m('d4-7', '차례를 지킬 수 있어요', '사회성', '놀이에서 순서를 기다릴 수 있어요'),
-    m('d4-8', '혼자 옷을 입으려 해요', '자조', '간단한 옷을 혼자 입거나 벗으려 시도해요'),
-    m('d4-9', '친구 이름을 기억해요', '사회성', '함께 노는 친구의 이름을 말할 수 있어요'),
-    m('d4-10', '왜? 질문을 자주 해요', '인지', '"왜?" "뭐야?"라는 질문을 반복해요'),
-  ];
-  if (months <= 48) return [
-    m('d5-1', '한 발로 뛸 수 있어요', '대근육', '한 발로 여러 번 점프할 수 있어요'),
-    m('d5-2', '공을 던지고 받아요', '대근육', '두 손으로 공을 받을 수 있어요'),
-    m('d5-3', '사각형을 그려요', '소근육', '네모 모양을 그릴 수 있어요'),
-    m('d5-4', '단추를 끼울 수 있어요', '자조', '큰 단추를 스스로 끼울 수 있어요'),
-    m('d5-5', '이야기를 만들어요', '언어', '간단한 이야기를 순서대로 말할 수 있어요'),
-    m('d5-6', '기본 도형을 구분해요', '인지', '동그라미, 세모, 네모를 구분해요'),
-    m('d5-7', '규칙 있는 놀이를 해요', '사회성', '숨바꼭질, 보드게임 등 규칙을 따라요'),
-    m('d5-8', '혼자 화장실을 가요', '자조', '도움 없이 화장실을 사용할 수 있어요'),
-    m('d5-9', '과거 경험을 이야기해요', '인지', '"어제 공원 갔었어"처럼 과거를 말해요'),
-    m('d5-10', '친구와 협력 놀이를 해요', '사회성', '역할을 나눠서 함께 놀 수 있어요'),
-  ];
-  if (months <= 72) return [
-    m('d6-1', '줄넘기를 할 수 있어요', '대근육', '줄넘기를 연속으로 여러 번 넘을 수 있어요'),
-    m('d6-2', '자기 이름을 ��요', '소근육', '한글로 자기 이름을 쓸 수 있어요'),
-    m('d6-3', '긴 문장으로 설명해요', '언어', '경험이나 느낌을 여러 문장으로 설명해요'),
-    m('d6-4', '10까지 세고 더해요', '인지', '간단한 덧셈과 뺄셈을 할 수 있어요'),
-    m('d6-5', '친구와 갈등을 해결해요', '사회성', '말로 문제를 해결하려 시도해요'),
-    m('d6-6', '자기감정을 말로 표현해요', '정서', '"화가 나", "슬퍼"라고 말할 수 있어요'),
-    m('d6-7', '가위로 모양을 오려요', '소근육', '선을 따라 정확하게 오릴 수 있어요'),
-    m('d6-8', '혼자 세수하고 양치해요', '자조', '아침저녁 위생 습관을 스스로 해요'),
-    m('d6-9', '시계 개념을 이해해요', '인지', '"3시", "점심시간" 같은 시간 개념을 알아요'),
-    m('d6-10', '상대 감정을 이해해요', '정서', '친구가 울면 위로하려는 행동을 해요'),
-  ];
+// 기본 체크리스트 카탈로그: id + 도메인(한국어 canonical)만 코드에 두고,
+// 라벨/설명 표시 텍스트는 로케일 JSON(milestonesChecklist.items.<id>)에서 t()로 조회한다.
+const MILESTONE_CATALOG: { maxMonths: number; items: [string, string][] }[] = [
+  { maxMonths: 6, items: [
+    ['d0-1', '대근육'], ['d0-2', '대근육'], ['d0-3', '소근육'], ['d0-4', '언어'], ['d0-5', '인지'],
+    ['d0-6', '사회성'], ['d0-7', '소근육'], ['d0-8', '사회성'], ['d0-9', '소근육'], ['d0-10', '대근육'],
+  ] },
+  { maxMonths: 12, items: [
+    ['d1-1', '대근육'], ['d1-2', '대근육'], ['d1-3', '대근육'], ['d1-4', '소근육'], ['d1-5', '언어'],
+    ['d1-6', '인지'], ['d1-7', '사회성'], ['d1-8', '언어'], ['d1-9', '자조'], ['d1-10', '인지'],
+  ] },
+  { maxMonths: 18, items: [
+    ['d2-1', '대근육'], ['d2-2', '소근육'], ['d2-3', '자조'], ['d2-4', '언어'], ['d2-5', '인지'],
+    ['d2-6', '사회성'], ['d2-7', '대근육'], ['d2-8', '소근육'], ['d2-9', '자조'], ['d2-10', '인지'],
+  ] },
+  { maxMonths: 24, items: [
+    ['d3-1', '대근육'], ['d3-2', '대근육'], ['d3-3', '언어'], ['d3-4', '소근육'], ['d3-5', '인지'],
+    ['d3-6', '사회성'], ['d3-7', '소근육'], ['d3-8', '자조'], ['d3-9', '언어'], ['d3-10', '정서'],
+  ] },
+  { maxMonths: 36, items: [
+    ['d4-1', '대근육'], ['d4-2', '대근육'], ['d4-3', '소근육'], ['d4-4', '소근육'], ['d4-5', '언어'],
+    ['d4-6', '인지'], ['d4-7', '사회성'], ['d4-8', '자조'], ['d4-9', '사회성'], ['d4-10', '인지'],
+  ] },
+  { maxMonths: 48, items: [
+    ['d5-1', '대근육'], ['d5-2', '대근육'], ['d5-3', '소근육'], ['d5-4', '자조'], ['d5-5', '언어'],
+    ['d5-6', '인지'], ['d5-7', '사회성'], ['d5-8', '자조'], ['d5-9', '인지'], ['d5-10', '사회성'],
+  ] },
+  { maxMonths: 72, items: [
+    ['d6-1', '대근육'], ['d6-2', '소근육'], ['d6-3', '언어'], ['d6-4', '인지'], ['d6-5', '사회성'],
+    ['d6-6', '정서'], ['d6-7', '소근육'], ['d6-8', '자조'], ['d6-9', '인지'], ['d6-10', '정서'],
+  ] },
   // 초등 이상
-  return [
-    m('d7-1', '복잡한 운동을 해요', '대근육', '수영, 자전거, 구기 운동 등을 할 수 있어요'),
-    m('d7-2', '글씨를 정교하게 써요', '소근육', '알아보기 쉽게 또박또박 글을 써요'),
-    m('d7-3', '독서를 즐겨요', '언어', '혼자서 책을 읽고 내용을 이해해요'),
-    m('d7-4', '문제 해결 능력이 있어요', '인지', '스스로 방법을 찾아 문제를 해결해요'),
-    m('d7-5', '또래 관계를 잘 맺어요', '사회성', '친구를 사귀고 우정을 유지해요'),
-    m('d7-6', '감정 조절을 해요', '정서', '화가 나도 참고 적절히 표현해요'),
-    m('d7-7', '일기나 편지를 써요', '언어', '자기 생각을 글로 표현할 수 있어요'),
-    m('d7-8', '스스로 준비물을 챙겨요', '자조', '학교 가방을 스스로 정리해요'),
-    m('d7-9', '시간 관리를 시도해요', '인지', '숙제 시간, 놀이 시간을 스스로 계획해요'),
-    m('d7-10', '단체 활동에 참여해요', '사회성', '학교 활동이나 동아리에 적극 참여해요'),
-  ];
+  { maxMonths: Infinity, items: [
+    ['d7-1', '대근육'], ['d7-2', '소근육'], ['d7-3', '언어'], ['d7-4', '인지'], ['d7-5', '사회성'],
+    ['d7-6', '정서'], ['d7-7', '언어'], ['d7-8', '자조'], ['d7-9', '인지'], ['d7-10', '사회성'],
+  ] },
+];
+
+const MILESTONE_ITEM_IDS: string[] = MILESTONE_CATALOG.flatMap((g) => g.items.map(([id]) => id));
+const MILESTONE_ITEM_ID_SET = new Set(MILESTONE_ITEM_IDS);
+
+function getDefaultMilestones(months: number, t: TFunction): MilestoneItem[] {
+  const group =
+    MILESTONE_CATALOG.find((g) => months <= g.maxMonths) ?? MILESTONE_CATALOG[MILESTONE_CATALOG.length - 1];
+  return group.items.map(([id, domain]) => ({
+    id,
+    label: t(`milestonesChecklist.items.${id}.label`),
+    domain,
+    description: t(`milestonesChecklist.items.${id}.description`),
+    completed: false,
+  }));
 }
 
 /* ------------------------------------------------------------------ */
@@ -2593,7 +2554,7 @@ function getDefaultMilestones(months: number): MilestoneItem[] {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function MilestonesTab() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const [loading, setLoading] = useState(false);
   const [milestones, setMilestones] = useState<MilestoneData | null>(null);
@@ -2601,6 +2562,17 @@ function MilestonesTab() {
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 백엔드는 label/domain을 한국어 원문으로 내려주므로 표시 시점에만 번역한다 (albumMilestoneI18n 패턴).
+  // 한국어 label → 카탈로그 id 역참조 맵
+  const koLabelToId = useMemo(() => {
+    const tKo = i18n.getFixedT('ko');
+    const map: Record<string, string> = {};
+    MILESTONE_ITEM_IDS.forEach((id) => {
+      map[tKo(`milestonesChecklist.items.${id}.label`)] = id;
+    });
+    return map;
+  }, [i18n]);
 
   useEffect(() => {
     if (!selectedChild) return;
@@ -2621,7 +2593,7 @@ function MilestonesTab() {
           : [];
         const parsed: MilestoneData = {
           ageLabel: typeof rawObj.ageLabel === 'string' ? rawObj.ageLabel : '',
-          items: items.length > 0 ? items : getDefaultMilestones(months),
+          items: items.length > 0 ? items : getDefaultMilestones(months, t),
           nextMilestone: typeof rawObj.nextMilestone === 'string' ? rawObj.nextMilestone : '',
           daysUntilNext: typeof rawObj.daysUntilNext === 'number' ? rawObj.daysUntilNext : 0,
         };
@@ -2633,7 +2605,7 @@ function MilestonesTab() {
       })
       .catch(() => {
         // API 실패 시 기본 체크리스트 표시
-        const fallback = getDefaultMilestones(months);
+        const fallback = getDefaultMilestones(months, t);
         setMilestones({
           ageLabel: getAgeLabel(months, t),
           items: fallback,
@@ -2699,7 +2671,7 @@ function MilestonesTab() {
   const totalCount = items.length;
   const progress = totalCount > 0 ? completedCount / totalCount : 0;
 
-  // 서버에서 domain이 내려오므로 직접 매핑
+  // 서버에서 domain이 한국어 원문으로 내려오므로 한국어 키로 직접 매핑
   const DOMAIN_STYLE: Record<string, { emoji: string; color: string }> = {
     '대근육': { emoji: '🏃', color: '#FF8C5A' },
     '소근육': { emoji: '✋', color: '#E91E63' },
@@ -2711,26 +2683,46 @@ function MilestonesTab() {
   };
 
   function getDomainTag(item: MilestoneItem) {
+    const domainKey = MILESTONE_DOMAIN_KEY[item.domain];
+    const label = domainKey
+      ? t(`milestonesChecklist.domains.${domainKey}`)
+      : item.domain || t('growthStats.domainFallbackLabel');
     const style = DOMAIN_STYLE[item.domain];
-    if (style) return { ...style, label: item.domain };
-    return { emoji: '📋', label: item.domain || t('growthStats.domainFallbackLabel'), color: '#636366' };
+    if (style) return { ...style, label };
+    return { emoji: '📋', label, color: '#636366' };
   }
 
-  // 발달 진행 요약 통계
-  const domainCounts: Record<string, { total: number; done: number }> = {};
+  // 체크 항목 표시 텍스트: 카탈로그 항목이면 번역, 모르는 항목은 원문 유지
+  function getItemText(item: MilestoneItem): { label: string; description: string } {
+    const catalogId = koLabelToId[item.label] ?? (MILESTONE_ITEM_ID_SET.has(item.id) ? item.id : undefined);
+    if (!catalogId) return { label: item.label, description: item.description };
+    return {
+      label: t(`milestonesChecklist.items.${catalogId}.label`),
+      description: t(`milestonesChecklist.items.${catalogId}.description`),
+    };
+  }
+
+  // 발달 진행 요약 통계 (집계 키는 도메인 원문, 표시 라벨은 번역값)
+  const domainCounts: Record<string, { label: string; emoji: string; color: string; total: number; done: number }> = {};
   items.forEach((item) => {
     const tag = getDomainTag(item);
-    if (!domainCounts[tag.label]) domainCounts[tag.label] = { total: 0, done: 0 };
-    domainCounts[tag.label].total += 1;
-    if (toggled[item.id]) domainCounts[tag.label].done += 1;
+    const key = item.domain || tag.label;
+    if (!domainCounts[key]) {
+      domainCounts[key] = { label: tag.label, emoji: tag.emoji, color: tag.color, total: 0, done: 0 };
+    }
+    domainCounts[key].total += 1;
+    if (toggled[item.id]) domainCounts[key].done += 1;
   });
 
-  const domainSummary = Object.entries(domainCounts).map(([label, counts]) => ({
-    label,
-    ...counts,
-    emoji: DOMAIN_STYLE[label]?.emoji ?? '📋',
-    color: DOMAIN_STYLE[label]?.color ?? '#636366',
-  }));
+  const domainSummary = Object.values(domainCounts);
+
+  // 다음 목표: 백엔드가 한국어 문장으로 내려줌 — 카탈로그 항목이면 번역, 아니면 한국어에서만 원문 표시
+  const nextMilestoneId = milestones.nextMilestone ? koLabelToId[milestones.nextMilestone] : undefined;
+  const nextMilestoneText = nextMilestoneId
+    ? t(`milestonesChecklist.items.${nextMilestoneId}.label`)
+    : i18n.language === 'ko'
+      ? milestones.nextMilestone
+      : '';
 
   return (
     <View>
@@ -2793,6 +2785,7 @@ function MilestonesTab() {
         <Text style={msStyles.checkHint}>{t('growthStats.checklistHint')}</Text>
         {items.map((item) => {
           const tag = getDomainTag(item);
+          const text = getItemText(item);
           const done = toggled[item.id] ?? false;
           const isExpanded = expandedId === item.id;
           return (
@@ -2814,7 +2807,7 @@ function MilestonesTab() {
                       done && msStyles.checkLabelDone,
                     ]}
                   >
-                    {item.label}
+                    {text.label}
                   </Text>
                   <View style={[msStyles.domainBadge, { backgroundColor: tag.color + '18' }]}>
                     <Text style={[msStyles.domainBadgeText, { color: tag.color }]}>
@@ -2827,7 +2820,7 @@ function MilestonesTab() {
               {isExpanded && (
                 <View style={msStyles.descBox}>
                   <Image source={IC_THINKING} style={msStyles.descIconImg} resizeMode="contain" />
-                  <Text style={msStyles.descText}>{item.description}</Text>
+                  <Text style={msStyles.descText}>{text.description}</Text>
                 </View>
               )}
             </View>
@@ -2859,7 +2852,7 @@ function MilestonesTab() {
       {/* Next Milestone */}
       <View style={[msStyles.nextCard, { backgroundColor: '#7DD3B8' }]}>
         <Text style={msStyles.nextLabel}>{t('growthStats.nextGoalLabel')}</Text>
-        <Text style={msStyles.nextTitle}>{milestones.nextMilestone}</Text>
+        <Text style={msStyles.nextTitle}>{nextMilestoneText}</Text>
         <View style={msStyles.ddayBadge}>
           <Text style={msStyles.ddayText}>
             D-{milestones.daysUntilNext}

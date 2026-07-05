@@ -1,7 +1,34 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-02 — 일본/대만·홍콩 출시 대비 앱 전체 다국어화(i18n) 완료
+> 최종 업데이트: 2026-07-05 — 성장통계 발달 체크리스트(마일스톤) 다국어화
 
 ---
+
+## 2026-07-05 — 발달 체크리스트(growth-stats 마일스톤) ja/zh-Hant 다국어화
+
+### 목적/원인
+`app/(main)/growth-stats.tsx`의 발달 체크리스트가 일본어/중국어 사용자에게 한국어로 노출.
+`getDefaultMilestones()` 80개 항목(label/domain/description) 하드코딩 + API의 한국어
+label/domain/nextMilestone 원문 렌더 + DOMAIN_STYLE 한국어 키 매핑이 원인.
+추가로 d6-2 라벨에 U+FFFD 깨진 문자('자기 이름을 ��요') 존재.
+
+### 해결 방식
+- 수정 파일: `frontend/app/(main)/growth-stats.tsx`,
+  `frontend/i18n/locales/{ko,ja,zh-Hant}.json`
+- 로케일 JSON에 최상위 `milestonesChecklist` 블록 신설 — `domains` 7키(grossMotor/
+  fineMotor/language/cognitive/social/emotional/selfCare) + `items` 80키(d0-1~d7-10,
+  각 label/description). ko 값은 기존 한국어 문자열과 동일(깨진 d6-2는 '자기 이름을 써요'로 복원).
+- `getDefaultMilestones(months, t)`로 재작성 — 코드에는 id+도메인(한국어 canonical)
+  카탈로그(`MILESTONE_CATALOG`)만 두고 표시 텍스트는 `t()`로 조회.
+- 백엔드 한국어 데이터는 표시 시점 번역(albumMilestoneI18n 패턴):
+  `i18n.getFixedT('ko')` 기반 한국어 label→id 역참조 맵(`koLabelToId`)으로
+  API 항목/`nextMilestone` 번역, 모르는 라벨은 원문 유지(nextMilestone은 ko에서만 원문 표시).
+- `getDomainTag()`가 `MILESTONE_DOMAIN_KEY`로 도메인 표시명 번역, DOMAIN_STYLE은
+  한국어 키 유지(백엔드 원문 기준). 영역별 요약 집계 키는 도메인 원문으로 유지.
+
+### 검증 결과
+- `frontend npx tsc --noEmit` 0 errors, `npx expo lint` growth-stats 신규 경고 0
+- 3개 로케일 leaf 수 동일(5060) + deep key parity 정확히 일치, items 80/80/80
+- growth-stats.tsx 내 U+FFFD 잔존 없음
 
 ## 2026-07-02 — 일본/대만·홍콩 출시 대비 전체 화면 다국어화(i18n)
 
@@ -6596,3 +6623,100 @@ sleepKnowledgeCache, dailyTraits, milestonePhotos, kakaoOAuthState
 - 홈화면 앱 라벨이 일/중 기기에서 なるほど育児 / 育兒答 로 바뀜(승인됨: '완전 현지화 앱이름 포함')
 - 네이티브 변경 → OTA 불가, 새 스토어 빌드 필요. iOS 심사 중이면 현재 심사 통과 후 반영 권장.
 - 중국어 앱이름 育兒答 은 제안 작명 — 스토어 제출 전 언제든 교체 가능(locales JSON + strings만 수정)
+
+---
+## [2026-07-05] 스토어 심사 리스크 점검 (공식문서 대조) + iOS 권한문자열 수정
+
+**방법:** Apple App Store Review Guidelines / Google Play 정책을 리서치 에이전트로 공식문서 대조 + 실제 프리빌드로 네이티브 산출물 검증.
+
+**코드 수정(커밋 10e59d1):**
+- iOS 권한 사용목적 문자열(NS*UsageDescription 5종) ja/zh-Hant 현지화 → App Store 5.1.1(ii) 대응.
+  기존: 일/중 기기에서 카메라·사진·위치·마이크·음성인식 권한 팝업이 한국어. locales/native/*.json 의 ios 오브젝트에 추가.
+  (iOS 전용 — 안드로이드는 시스템 다이얼로그라 불필요. Android APK 재빌드 불필요.)
+
+**검증 결과 — 문제없음:**
+- 안드로이드 ACCESS_BACKGROUND_LOCATION 없음 → 위치 선언서 불필요(when-in-use만 사용)
+- READ_MEDIA_IMAGES/VIDEO = tools:node="remove"로 정상 차단
+- SYSTEM_ALERT_WINDOW = react-native 디버그 매니페스트 전용 → 릴리즈 미포함
+- target/compileSdk 36(Expo SDK 54.0.34) ≥ Google 요구 API 35 → 제출 게이트 통과
+- 알림 채널 default/engagement 분리 + i18n 채널명 → 마케팅 푸시 정책 대응
+- Siri 문구 \(.applicationName) 토큰 + 언어별 현지화 완료
+- 앱 표시이름 3종 모두 30자 이하
+
+**🔴 최우선 리스크(사장님 결정 필요, 이번 세션 변경 아님):**
+- 해열제 복용량 계산기 — Apple 1.4.2: 복용량 계산기는 "제조사/병원/대학/약국 등 승인기관 출처 또는 규제 승인" 요구(disclaimer만으론 불충분).
+  Google: 헬스앱 선언 양식 + "의료기기 아님/전문가 상담" 고지 필수. 국가별 시럽 농도 정확성(홍콩 50mg/ml 2배) 재확인.
+  → 심사노트 출처 명시 / 인앱 "의사·약사 상담" 강화 / 최악의 경우 초기 제출 시 게이팅 고려.
+
+**🟡 제출 시 콘솔 작업(코드 아님):**
+- 스토어 리스팅 이름=홈화면 이름(なるほど育児/育兒答), 각 30자↓
+- Google 데이터안전 양식(오디오·위치 수집/공유 정확히), 헬스앱 선언 양식, 스토어 설명 의료 고지
+- Apple App Privacy 라벨 = AdMob 비개인화/SKAdNetwork 설정과 일치(ATT 회피 조건)
+- 무료체험 고지(기간·종료후요금·자동갱신) 각 언어 페이월
+
+**🟡 확인 권장:** 마이크·위치 OS 권한요청 전 인앱 사전고지 화면(Google prominent disclosure 필수) 존재 여부.
+
+---
+## [2026-07-05] 권한 사전고지 + 해열제 고지 보강 (커밋 72ba07e)
+
+**1) Google prominent disclosure — 마이크·위치 사전고지**
+- 신규 utils/permissionDisclosure.ts: OS 권한창 전 인앱 고지(왜/무엇/어떻게) Alert, 최초(미결정) 1회만.
+- 적용: voice.tsx(마이크), locationStore.ts·mom-location-setup.tsx(위치). getPermissions status로 게이팅.
+- permissionDisclosure i18n 3로케일 추가(파리티 75/75/75).
+
+**2) 해열제 disclaimer 보강** — '의료기기 아님·질병 진단/치료/예방 안 함' 문구 추가(Apple 1.4.1/1.4.2·Google 헬스). ko/ja/zh 3로케일.
+
+**검증:** tsc 0 / lint 0 error / JSON 파리티 75.
+
+**⚠️ 작업 중 발견 — 브랜드명 불일치(미결정, 사장님 판단 필요):**
+- 앱 표시이름은 なるほど育児/育兒答로 바꿨으나, 인앱 i18n 곳곳(약 30+곳)은 옛 이름 アマッタ/Amatda 유지:
+  - 안전 교체 가능: 알림 채널명(default/engagement), 구독 상품명, 리포트 푸터, 공식배너
+  - **기능상 틀림(반드시 수정)**: voice-settings의 Siri 안내문구가 "アマッタ育児" 예시 → 실제 등록 문구(なるほど育児…)와 불일치 → 사용자가 안내대로 말하면 호출 실패
+  - **법적/공식명 결정 필요**: 약관·개인정보 서비스명("サービス名: アマッタ/Amatda"), 이메일 템플릿 → 등록 서비스명을 바꿀지 여부
+- pushNotifications.appName·socialAuth.appName 2곳 임시 수정했다가, 전면 정리는 별건이라 원복함.
+
+**브랜드명 전면 통일 완료(커밋 a16fef9):**
+- 사용자 결정: 인앱 표시명 전면 통일 / 법적문서·이메일 서비스명은 기존(Amatda·아맞다) 유지.
+- ja: アマッタ→なるほど育児, zh: Amatda→育兒答 (앱 표시 스팟 ~16곳/언어).
+  - Siri 안내문구를 실제 등록 문구와 일치(ja: なるほど育児で記録/で音声記録/で音声メモ, zh: 育兒答記錄/語音記錄/語音).
+    → 이전 アマッタ育児/Amatda育兒 안내는 실제 호출문구와 달라 사용자가 따라하면 호출 실패했음(기능 버그 수정).
+  - 알림채널·구독상품명·리포트푸터·공식배너·구독취소경로·환영/카카오·pushNotifications/socialAuth appName 통일.
+- 유지: 약관·개인정보 '서비스명'(2764/2815/2818), 이메일 머리말/본문(4713/5132/5133) = Amatda·아맞다.
+- 검증: JSON 파리티 75/75/75, tsc 0. 한글/구브랜드 잔재 0(법적·이메일 제외).
+
+---
+## [2026-07-05] 빌드 전 최종 정밀 감사 (Apple/Google 공식문서 대조) — 수정사항 없음, 전부 통과
+
+**방법:** Apple 공식문서 검증 에이전트(App Intents/현지화 규격) + 안드로이드 실제 프리빌드 산출물 + 코드 감사.
+
+**iOS 규격 검증(공식문서 인용 확보):**
+- AppShortcuts.strings: ${applicationName} 토큰·키=Swift 문구 원문·파일명·메인번들 .lproj 배치 — 전부 규격 일치 (Xcode 검증기/WWDC22·23/Apple 엔지니어 포럼 답변 근거)
+- 문구 값에 ${applicationName} 필수 → 우리 ja/zh 값 전부 포함 ✓. iOS16 .strings는 1:1 매핑만 허용 → 4키:4값 ✓
+- CFBundleDisplayName·NS*UsageDescription의 InfoPlist.strings 현지화 = 공식 메커니즘 ✓. LSHasLocalizedDisplayName 불필요(iOS)
+- 런타임 언어 선택은 번들 내 .lproj 존재로 결정(선언 불필요). ASC '언어' 목록은 바이너리 .lproj에서 자동 도출
+  → expo.locales에 ko 포함 → ko.lproj 생성 → 한국어도 목록에 표시됨 ✓
+- 저위험 실기기 확인 항목: 한국어 기기 Siri 호출(코드 리터럴 사용, dev region=en 조합은 문서화 안 됨) — 기존 2.9.1과 동일 구조라 회귀 아님
+
+**코드/산출물 감사(전부 통과):**
+- Android 프리빌드: app_name 3로케일(values-b+*) + 단축라벨(values-ja/zh-rTW/zh-rHK) 정상 생성, 매니페스트 라벨 참조 확인
+- 권한 상태 'undetermined' = expo-modules-core 공통 enum 값과 일치(사전고지 게이팅 동작 보장)
+- voice.tsx Siri 딥링크 Case1 흐름에서 사전고지 충돌 없음
+- 무료체험 법적고지(자동갱신·자동청구·24h취소·해지경로) ja/zh 완비 — Apple 3.1.2/Google 구독 정책
+- 해열제 응급번호: ja=119(일본 일치), zh=當地緊急電話(대만119/홍콩999 일반화)
+- Swift 문구 ↔ .strings 키 공백 포함 정확 일치
+- tsc 0 / lint 0 error / JSON 파리티 75/75/75
+
+**결론: 코드 수정 불요. 스토어 빌드 진행 가능.**
+
+---
+## [2026-07-05] 실기기 검증 이슈 2건 수정 + OTA (preview)
+
+**1) 홈 기질배지·마타니티앨범 기분칩 한글 노출 (커밋 6b26a7a):**
+- 홈 배지: dominantType+getTraitTypeName 적용. 앨범 칩: 백엔드 프리셋을 id기준 t() 재매핑 + 누락 4키(nausea/itching/mood/bleeding) 3로케일 추가 + PostCard 이모지맵 ja/zh 라벨 확장.
+
+**2) 스플래시 브랜드 + 토글 유지 (커밋 9675429):**
+- 스플래시는 동영상 아님(코드 애니). 비한국어 워드마크 アマッタ/Amatda → なるほど育児/育兒答.
+- 개발 언어토글 선택 AsyncStorage 저장 + _layout 모듈 로드 시 복원(스플래시 표시 전) — 한국어 기기에서 스플래시까지 테스트 언어로 검증 가능. 프로덕션 no-op.
+- 참고: 실사용자는 기기 언어 기준이라 일본/대만 기기는 원래 워드마크 경로.
+
+**OTA:** preview 채널 2회 배포(runtime 2.9.2, SHOW_LANG_TOGGLE·SENTRY_DSN env 명시 주입). 검증: tsc 0/lint 0 error/파리티 75.
