@@ -688,7 +688,11 @@
       "cramp": "足のつり",
       "mood_swing": "気分の浮き沈み",
       "frequent_urination": "頻尿",
-      "good": "体調良好"
+      "good": "体調良好",
+      "nausea": "つわり・吐き気",
+      "itching": "かゆみ",
+      "mood": "気分の浮き沈み",
+      "bleeding": "出血・おりもの"
     },
     "recordTitle": {
       "ultrasound": "エコー・映像",

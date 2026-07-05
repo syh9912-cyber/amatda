@@ -871,10 +871,18 @@ export default function PregnancyScreen() {
         pregnancyApi.getMomHealth(childId),
       ]);
       const presets = presetsRes.data.data;
-      if (Array.isArray(presets) && presets.length > 0) setSymptomPresets(presets);
+      if (Array.isArray(presets) && presets.length > 0) {
+        // 백엔드 프리셋 label 은 한국어 고정 → id 기준으로 표시 언어 번역 (미지원 id 는 원본 유지)
+        setSymptomPresets(
+          presets.map((p: SymptomPreset) => ({
+            ...p,
+            label: t(`pregnancy.symptom.${p.id}`, { defaultValue: p.label }),
+          })),
+        );
+      }
       setHealthHistory(historyRes.data.data ?? []);
     } catch { /* silent — fallback presets already set */ }
-  }, [childId]);
+  }, [childId, t]);
 
   // 인라인 compose: 한 번 저장 = 한 카드 (성장앨범과 동일)
   const handleSaveUnified = useCallback(async () => {

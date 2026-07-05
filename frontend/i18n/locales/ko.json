@@ -688,7 +688,11 @@
       "cramp": "다리 쥐남",
       "mood_swing": "감정 기복",
       "frequent_urination": "빈뇨",
-      "good": "컨디션 좋음"
+      "good": "컨디션 좋음",
+      "nausea": "입덧/메스꺼움",
+      "itching": "가려움",
+      "mood": "감정기복",
+      "bleeding": "출혈/분비물"
     },
     "recordTitle": {
       "ultrasound": "초음파/영상",

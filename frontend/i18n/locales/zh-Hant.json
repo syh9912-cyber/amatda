@@ -688,7 +688,11 @@
       "cramp": "腳抽筋",
       "mood_swing": "情緒起伏",
       "frequent_urination": "頻尿",
-      "good": "狀況良好"
+      "good": "狀況良好",
+      "nausea": "孕吐／噁心",
+      "itching": "搔癢",
+      "mood": "情緒起伏",
+      "bleeding": "出血／分泌物"
     },
     "recordTitle": {
       "ultrasound": "超音波／影像",

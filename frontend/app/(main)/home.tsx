@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
+import { getTraitTypeName } from '../../utils/traitTypeName';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { childApi, coachingApi, premiumApi, uploadApi, announcementApi } from '../../services/api';
 import { AnnouncementPopup, type Announcement, type DismissChoice } from '../../components/common/AnnouncementPopup';
@@ -1055,8 +1056,10 @@ function TraitAnalysisCard({ child }: { child: Child }) {
   if (!temperament) return null;
 
   // 짧은 기질명만 추출 (예: '활동형 (외향적, 호기심 많은)' → '활동형')
+  // dominantType(항상 한글 고정키) 우선 → 표시 언어로 번역. label 은 로케일별 저장이라 fallback 용.
   const typeMatch = temperament.match(/(탐구형|활동형|조화형|분석형|감성형)/);
-  const typeName = typeMatch ? typeMatch[1] : temperament;
+  const rawType = child.innateData?.dominantType ?? (typeMatch ? typeMatch[1] : temperament);
+  const typeName = getTraitTypeName(t, rawType) || temperament;
 
   return (
     <TouchableOpacity
