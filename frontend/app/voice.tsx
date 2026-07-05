@@ -18,6 +18,7 @@ import { useChildStore } from '../stores/childStore';
 import { trackerApi, childApi } from '../services/api';
 import { loadRecords, saveRecords, loadSleepSession, saveSleepSession } from '../features/baby-tracker/storage';
 import { resolveAuthorMeta, stampAuthor } from '../features/baby-tracker/author';
+import { sideFromNote, sideLabel } from '../features/baby-tracker/utils/breastSide';
 import type { TrackerRecord } from '../features/baby-tracker/types';
 import { AdSlot } from '../components/ads/AdSlot';
 import { showPermissionDisclosure } from '../utils/permissionDisclosure';
@@ -527,15 +528,15 @@ export default function VoiceScreen() {
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const recordsByDate: Record<string, TrackerRecord[]> = {};
-      let lastBreastNote: '왼쪽' | '오른쪽' | null = null;
+      let lastBreastSide: 'left' | 'right' | null = null;
       // 공동육아: 초대받은 가족이 음성으로 기록하면 작성자 라벨 주입 (소유자는 no-op)
       const authorMeta = await resolveAuthorMeta(targetChildId);
 
       // 진행 중(종료 미정) 수면 발화 감지 — "자고있어/자는중/취침 중/지금 자/아직 자" 이면서
       // 기상('일어났/깼/기상')·범위 종료('까지')가 없을 때. 마지막 sleep record 를 라이브 대상으로.
       const isOngoingSleepUtter =
-        /자고\s*있|자는\s*중|취침\s*중|지금\s*자|아직\s*자/.test(voiceText) &&
-        !/일어났|깼|기상|까지/.test(voiceText);
+        /자고\s*있|자는\s*중|취침\s*중|지금\s*자|아직\s*자|寝てい|寝てる|まだ寝|在睡|還在睡|睡覺中|睡著/.test(voiceText) &&
+        !/일어났|깼|기상|까지|起き|起床|まで|醒|睡到/.test(voiceText);
       const sleepIdxs = records.map((rec, idx) => (rec.type === 'sleep' ? idx : -1)).filter((idx) => idx >= 0);
       const ongoingSleepIdx = isOngoingSleepUtter && sleepIdxs.length > 0 ? sleepIdxs[sleepIdxs.length - 1] : -1;
 
@@ -590,24 +591,27 @@ export default function VoiceScreen() {
           }
         }
 
-        // 모유 좌/우 자동 추천 — note 없으면 직전 모유의 반대쪽
+        // 모유 좌/우 자동 추천 — note 없으면 직전 모유의 반대쪽.
+        // 저장은 수동 경로와 동일하게 "현재 UI 언어 라벨"(t('babyTracker.side.*'))로, 판별은 3언어 공통(sideFromNote).
         let autoNote = r.note;
         if (r.type === 'feeding' && r.subType === 'breast' && !autoNote) {
-          if (lastBreastNote === null) {
+          if (lastBreastSide === null) {
             try {
               const existingForSide = await loadRecords(targetChildId, dateStr);
               const lastBreast = [...existingForSide]
                 .reverse()
-                .find((rec) => rec.type === 'feeding' && rec.subType === 'breast' && (rec.note === '왼쪽' || rec.note === '오른쪽'));
-              if (lastBreast?.note === '왼쪽' || lastBreast?.note === '오른쪽') lastBreastNote = lastBreast.note;
+                .find((rec) => rec.type === 'feeding' && rec.subType === 'breast' && sideFromNote(rec.note) !== null);
+              lastBreastSide = sideFromNote(lastBreast?.note);
             } catch { /* ignore */ }
           }
-          if (lastBreastNote === '왼쪽') autoNote = '오른쪽';
-          else if (lastBreastNote === '오른쪽') autoNote = '왼쪽';
-          if (autoNote === '왼쪽') lastBreastNote = '왼쪽';
-          else if (autoNote === '오른쪽') lastBreastNote = '오른쪽';
-        } else if (r.type === 'feeding' && r.subType === 'breast' && (r.note === '왼쪽' || r.note === '오른쪽')) {
-          lastBreastNote = r.note;
+          // 직전 이력이 있을 때만 반대쪽 자동 지정 (이력 없으면 note 미지정 — 기존 동작 유지)
+          if (lastBreastSide !== null) {
+            const nextSide: 'left' | 'right' = lastBreastSide === 'left' ? 'right' : 'left';
+            autoNote = sideLabel(t, nextSide);
+            lastBreastSide = nextSide;
+          }
+        } else if (r.type === 'feeding' && r.subType === 'breast' && sideFromNote(r.note) !== null) {
+          lastBreastSide = sideFromNote(r.note);
         }
 
         const record: TrackerRecord = stampAuthor({

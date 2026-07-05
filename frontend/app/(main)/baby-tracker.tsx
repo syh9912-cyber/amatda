@@ -51,6 +51,7 @@ import {
   formatMinutes,
 } from '../../features/baby-tracker/utils/time';
 import { computeSummary, getBreastMlPerMin, estimateBreastMl } from '../../features/baby-tracker/utils/summary';
+import { displaySideNote } from '../../features/baby-tracker/utils/breastSide';
 import { PhotoLogReview } from '../../components/baby-tracker/PhotoLogReview';
 import { BabyTrackerGuide } from '../../components/baby-tracker/BabyTrackerGuide';
 import { DayClock } from '../../components/baby-tracker/DayClock';
@@ -4122,9 +4123,9 @@ function TimelineEntry({ record, dateStr, showRelative, onDelete, onLongAction, 
             : TRACKER_COLORS.sleepDark;
   const icon = SUBTYPE_ICONS[record.subType] ?? IC_POOP;
   const baseLabel = getSubtypeLabel(record.subType, t);
-  // 모유: 왼쪽/오른쪽을 라벨에 병합 → "모유 (왼쪽)"
+  // 모유: 왼쪽/오른쪽을 라벨에 병합 → "모유 (왼쪽)" (다른 언어로 저장된 side 라벨도 현재 언어로 표시)
   const label = record.subType === 'breast' && record.note
-    ? `${baseLabel} (${record.note})`
+    ? `${baseLabel} (${displaySideNote(t, record.note)})`
     : baseLabel;
   const relative = showRelative ? getRelativeTime(record.time, dateStr, t) : '';
   // note를 라벨에 합쳤으면 하단 note는 숨김

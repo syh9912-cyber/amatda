@@ -1,4 +1,5 @@
 import type { DaySummary, TrackerRecord } from '../types';
+import { sideFromNote } from './breastSide';
 
 /**
  * 모유 수유 ml 추정 — 연령(개월) 기반 분당 ml × duration(분).
@@ -88,8 +89,10 @@ export function computeSummary(
           // 모유는 amount 안 받으니 duration 기반 ml 추정 → totalMl 에 합산.
           //   연령별 분당 ml 차등 (신생아 약함, 6-12개월 peak, 이유식 후 감소).
           totalMl += estimateBreastMl(r.duration, ageMonths);
-          if (r.note === '왼쪽') breastLeftMin += r.duration;
-          else if (r.note === '오른쪽') breastRightMin += r.duration;
+          // note 는 작성 당시 UI 언어 라벨(왼쪽/左/左邊 등) — 3언어 공통 판별
+          const side = sideFromNote(r.note);
+          if (side === 'left') breastLeftMin += r.duration;
+          else if (side === 'right') breastRightMin += r.duration;
         }
       }
       if (r.subType === 'baby_food' || r.subType === 'snack') solidCount += 1;
