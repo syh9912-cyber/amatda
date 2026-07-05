@@ -13,6 +13,7 @@ import type { TFunction } from 'i18next';
 import { FONT_SIZE, SPACING } from '../../constants/theme';
 import { MomstagramPost, CATEGORY_I18N_KEY } from '../../stores/momstagramStore';
 import { EmojiIcon } from '../common/EmojiIcon';
+import { displayNickname } from '../../utils/displayNickname';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CONTENT_COLLAPSE = 100;
@@ -142,7 +143,7 @@ export function PostCard({ post, onLike, onComment, onShare, onMore, isMine }: P
   }, [post.id, onLike, scaleAnim]);
 
   const avatarBg = getAvatarColor(post.userName);
-  const avatarInitial = post.userName.charAt(0);
+  const avatarInitial = displayNickname(t, post.userName).charAt(0);
 
   return (
     <View style={styles.card}>
@@ -154,7 +155,7 @@ export function PostCard({ post, onLike, onComment, onShare, onMore, isMine }: P
           </View>
           <View>
             <View style={styles.nameRow}>
-              <Text style={styles.userName}>{post.userName}</Text>
+              <Text style={styles.userName}>{displayNickname(t, post.userName)}</Text>
               {post.isPrivate && (
                 <View style={styles.privateBadge}>
                   <Text style={styles.privateBadgeText}>{t('momstagramPost.privateOnly')}</Text>
@@ -258,7 +259,7 @@ export function PostCard({ post, onLike, onComment, onShare, onMore, isMine }: P
       {/* Caption: username + content */}
       <View style={styles.captionWrap}>
         <Text style={styles.captionText}>
-          <Text style={styles.captionUser}>{post.userName}</Text>
+          <Text style={styles.captionUser}>{displayNickname(t, post.userName)}</Text>
           {'  '}
           {displayContent}
         </Text>
@@ -288,7 +289,7 @@ export function PostCard({ post, onLike, onComment, onShare, onMore, isMine }: P
         <View style={styles.commentPreviewWrap}>
           <Text style={styles.commentPreview} numberOfLines={1}>
             <Text style={styles.commentUser}>
-              {post.comments[post.comments.length - 1].userName}
+              {displayNickname(t, post.comments[post.comments.length - 1].userName)}
             </Text>
             {'  '}
             {post.comments[post.comments.length - 1].text}

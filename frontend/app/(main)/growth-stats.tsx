@@ -17,6 +17,7 @@ import { canDo } from '../../features/coparenting/permissions';
 import { childApi, coachingApi, growthApi, pregnancyApi } from '../../services/api';
 import { getQuestionByProgress, getQuestionCount } from '../../constants/dailyQuestions';
 import { getTraitTypeName } from '../../utils/traitTypeName';
+import { createGrowthAnalysisTranslator } from '../../utils/growthAnalysisI18n';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { AdSlot } from '../../components/ads/AdSlot';
 import type { ImageSourcePropType } from 'react-native';
@@ -64,10 +65,12 @@ interface GrowthMetricItem {
   comment: string;
   advice: string;
   percentileLabel?: string;
+  percentile?: number;
 }
 
 interface GrowthAnalysisResult {
   ageLabel: string;
+  childMonths?: number;
   overallSummary: string;
   growthMetrics: GrowthMetricItem[];
   trackerMetrics: GrowthMetricItem[];
@@ -101,6 +104,7 @@ function parseGrowthAnalysis(raw: unknown): GrowthAnalysisResult | null {
 
   return {
     ageLabel: typeof obj.ageLabel === 'string' ? obj.ageLabel : '',
+    childMonths: typeof obj.childMonths === 'number' ? obj.childMonths : undefined,
     overallSummary: obj.overallSummary,
     growthMetrics,
     trackerMetrics,
@@ -1439,7 +1443,9 @@ function FilterTabs({
 /* ---- Growth Analysis Section ---- */
 
 function GrowthAnalysisSection({ childId }: { childId: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // 백엔드가 한국어 고정 문자열로 내려주는 분석 텍스트를 표시 시점에 번역
+  const gaT = useMemo(() => createGrowthAnalysisTranslator(t, i18n), [t, i18n]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<GrowthAnalysisResult | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -1579,10 +1585,10 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
                 {/* Overall Summary */}
                 <View style={[gaStyles.summaryCard, { backgroundColor: '#F4A98C' }]}>
                   {result.ageLabel ? (
-                    <Text style={gaStyles.summaryAge}>{result.ageLabel}</Text>
+                    <Text style={gaStyles.summaryAge}>{gaT.ageLabel(result.ageLabel, result.childMonths)}</Text>
                   ) : null}
                   <Text style={gaStyles.summaryTitle}>{t('growthStats.overallAnalysisTitle')}</Text>
-                  <Text style={gaStyles.summaryText}>{result.overallSummary}</Text>
+                  <Text style={gaStyles.summaryText}>{gaT.overallSummary(result.overallSummary)}</Text>
                 </View>
 
                 {/* Metrics */}
@@ -1597,10 +1603,12 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
                           <View style={gaStyles.metricHeader}>
                             <Text style={gaStyles.metricEmoji}>{item.emoji}</Text>
                             <View style={gaStyles.metricTitleWrap}>
-                              <Text style={gaStyles.metricTitle}>{item.title}</Text>
+                              <Text style={gaStyles.metricTitle}>
+                                {gaT.field(item.metric, item.level, 'title', item.title)}
+                              </Text>
                               {item.percentileLabel ? (
                                 <Text style={gaStyles.metricPercentile}>
-                                  {item.percentileLabel}
+                                  {gaT.percentileLabel(item.metric, item.level, item.percentile, item.percentileLabel)}
                                 </Text>
                               ) : null}
                             </View>
@@ -1611,11 +1619,15 @@ function GrowthAnalysisSection({ childId }: { childId: string }) {
                             </View>
                           </View>
                           {/* Comment */}
-                          <Text style={gaStyles.metricComment}>{item.comment}</Text>
+                          <Text style={gaStyles.metricComment}>
+                            {gaT.field(item.metric, item.level, 'comment', item.comment)}
+                          </Text>
                           {/* Advice */}
                           <View style={gaStyles.adviceBox}>
                             <Image source={IC_THINKING} style={gaStyles.adviceIconImg} resizeMode="contain" />
-                            <Text style={gaStyles.adviceText}>{item.advice}</Text>
+                            <Text style={gaStyles.adviceText}>
+                              {gaT.field(item.metric, item.level, 'advice', item.advice)}
+                            </Text>
                           </View>
                         </View>
                       );
@@ -2321,8 +2333,11 @@ interface TraitInsight {
   createdAt: string;
 }
 
+// 백엔드 generateTraitInsight 고정 문장 6쌍의 로케일 키 (traitInsightI18n.pairs.*)
+const TRAIT_INSIGHT_PAIR_KEYS = ['steady', 'social', 'focus', 'active', 'emotional', 'challenge'] as const;
+
 function TraitTab() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
   const dominantType = selectedChild?.innateData?.dominantType ?? '--';
   const [insights, setInsights] = useState<TraitInsight[]>([]);
@@ -2341,6 +2356,30 @@ function TraitTab() {
     ? getQuestionCount(selectedChild.ageInfo.group)
     : 7;
   const progressToInsight = Math.min(responseCount, 7);
+
+  // 백엔드가 한국어 고정 문장으로 저장한 인사이트를 표시 시점에 번역
+  // (milestonesChecklist의 koLabelToId 역참조 패턴, 미등록 문장은 원문 유지)
+  const traitKoToKey = useMemo(() => {
+    const tKo = i18n.getFixedT('ko');
+    const map: Record<string, string> = {};
+    TRAIT_INSIGHT_PAIR_KEYS.forEach((key) => {
+      map[tKo(`traitInsightI18n.pairs.${key}.insight`)] = `traitInsightI18n.pairs.${key}.insight`;
+      map[tKo(`traitInsightI18n.pairs.${key}.reason`)] = `traitInsightI18n.pairs.${key}.reason`;
+    });
+    return map;
+  }, [i18n]);
+
+  function translateInsightText(raw: string): string {
+    const key = traitKoToKey[raw];
+    return key ? t(key) : raw;
+  }
+
+  function translateWeekLabel(raw: string): string {
+    const match = raw.match(/^(\d+)월 (\d+)주차$/);
+    return match
+      ? t('traitInsightI18n.weekLabel', { month: match[1], week: match[2] })
+      : raw;
+  }
 
   useEffect(() => {
     if (!selectedChild) return;
@@ -2454,9 +2493,9 @@ function TraitTab() {
                 <View style={traitInsightStyles.dot} />
                 {idx < insights.length - 1 && <View style={traitInsightStyles.line} />}
                 <View style={traitInsightStyles.content}>
-                  <Text style={traitInsightStyles.week}>{item.weekLabel}</Text>
-                  <Text style={traitInsightStyles.insight}>{item.insight}</Text>
-                  <Text style={traitInsightStyles.reason}>{item.reason}</Text>
+                  <Text style={traitInsightStyles.week}>{translateWeekLabel(item.weekLabel)}</Text>
+                  <Text style={traitInsightStyles.insight}>{translateInsightText(item.insight)}</Text>
+                  <Text style={traitInsightStyles.reason}>{translateInsightText(item.reason)}</Text>
                 </View>
               </View>
             ))}

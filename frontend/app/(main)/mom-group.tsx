@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useChildStore } from '../../stores/childStore';
 import { momGroupApi, momLocationApi, uploadApi, authApi, type MomGroupCategory, type MomGroupSort } from '../../services/api';
+import { displayNickname } from '../../utils/displayNickname';
 import { AdSlot } from '../../components/ads/AdSlot';
 import { pickImageFromLibrary } from '../../utils/imagePicker';
 import { COLORS, FONT_SIZE, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
@@ -869,7 +870,7 @@ export default function MomGroupScreen() {
 
           {/* 2줄: 작성자 · 카테고리 */}
           <Text style={styles.boardAuthor} numberOfLines={1}>
-            {p.anonymous ? t('momGroup.anonymous') : p.nickname}
+            {p.anonymous ? t('momGroup.anonymous') : displayNickname(t, p.nickname)}
             <Text style={styles.boardCategory}> · {cat.label}</Text>
           </Text>
 
@@ -1449,7 +1450,7 @@ export default function MomGroupScreen() {
                   </View>
                 ) : null}
                 <Text style={styles.postNickname}>
-                  {activePost.nickname}
+                  {displayNickname(t, activePost.nickname)}
                   {activePost.isOfficial ? <Text style={styles.officialCheck}> ✓ {t('momGroup.officialBadge')}</Text> : null}
                   {activePost.anonymous ? ` · ${t('momGroup.anonymous')}` : ''}
                 </Text>
@@ -1519,7 +1520,7 @@ export default function MomGroupScreen() {
                   <View key={c.id} style={styles.commentRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.commentNickname}>
-                        {c.nickname}
+                        {displayNickname(t, c.nickname)}
                         {c.isOfficial ? <Text style={styles.officialCheck}> ✓ {t('momGroup.officialBadge')}</Text> : null}
                         {c.anonymous ? ` · ${t('momGroup.anonymous')}` : ''} · {timeAgo(t, c.createdAt)}
                       </Text>

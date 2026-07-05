@@ -1019,6 +1019,10 @@ export const MILESTONE_LABEL_I18N: Record<string, { ja: string; 'zh-Hant': strin
   "혼자 준비하기": {
     "ja": "ひとりで準備する",
     "zh-Hant": "自己做準備"
+  },
+  "추억": {
+    "ja": "思い出",
+    "zh-Hant": "回憶"
   }
 };
 

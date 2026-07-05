@@ -1360,7 +1360,7 @@ function PregnancyTimeline() {
                     : <Text style={pStyles.cardEmoji}>{item.emoji || '📌'}</Text>
                   }
                   <View style={pStyles.cardBody}>
-                    <Text style={pStyles.cardTitle}>{item.title}</Text>
+                    <Text style={pStyles.cardTitle}>{displayMilestone(item.title)}</Text>
                     {item.content ? <Text style={pStyles.cardContent} numberOfLines={3}>{item.content}</Text> : null}
                     {item.mediaUri ? (
                       <Image source={{ uri: item.mediaUri }} style={pStyles.cardImage} contentFit="cover" />
@@ -1537,7 +1537,7 @@ function PregnancyMemoriesSection({ childId }: { childId: string }) {
                 >
                   <Text style={pStyles.cardEmoji}>{item.emoji || '📌'}</Text>
                   <View style={pStyles.cardBody}>
-                    <Text style={pStyles.cardTitle}>{item.title}</Text>
+                    <Text style={pStyles.cardTitle}>{displayMilestone(item.title)}</Text>
                     {item.content ? <Text style={pStyles.cardContent} numberOfLines={3}>{item.content}</Text> : null}
                     {item.mediaUri ? (
                       <Image source={{ uri: item.mediaUri }} style={pStyles.cardImage} contentFit="cover" />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import {
 } from '../../utils/analysisHistory';
 import { useChildStore } from '../../stores/childStore';
 import { growthApi } from '../../services/api';
+import { createGrowthAnalysisTranslator } from '../../utils/growthAnalysisI18n';
 import type { ImageSourcePropType } from 'react-native';
 // 로컬 AsyncStorage 헬퍼 — baby-tracker가 자체 저장한 일일 기록을 같은 형식으로
 // 읽어 AI 분석 페이로드에 포함. 서버 통신이 아닌 디바이스-로컬 데이터이므로
@@ -95,7 +96,9 @@ function formatShortDate(ts: number): string {
 }
 
 export default function AIAnalysisScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // 패턴 분석 결과(백엔드 한국어 고정 문자열)를 표시 시점에 번역
+  const gaT = useMemo(() => createGrowthAnalysisTranslator(t, i18n), [t, i18n]);
   const [activeTab, setActiveTab] = useState<TabKey>('pattern');
   const [history, setHistory] = useState<AnalysisHistoryItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<AnalysisHistoryItem | null>(null);
@@ -245,6 +248,26 @@ export default function AIAnalysisScreen() {
     }
   }
 
+  // 패턴 분석 종합 본문은 저장 시점 언어로 조합돼 있으므로,
+  // 저장된 구조화 데이터(metrics/summary)로 현재 언어에 맞게 다시 조합한다.
+  // (한국어 표시 결과는 기존 저장 본문과 동일. metrics가 없는 항목은 원문 유지)
+  function buildPatternFullText(item: AnalysisHistoryItem): string {
+    if (item.type !== 'pattern' || !item.metrics || item.metrics.length === 0) {
+      return item.fullText ?? '';
+    }
+    const parts: string[] = [];
+    if (item.summary) parts.push(gaT.overallSummary(item.summary));
+    item.metrics.forEach((m) => {
+      const chunk: string[] = [];
+      chunk.push(`${m.emoji ?? ''} ${gaT.text(m.title)} (${m.value})`);
+      if (m.standardRange) chunk.push(t('aiAnalysis.fullText.standardRange', { range: gaT.standardRange(m.standardRange) }));
+      if (m.comment) chunk.push(t('aiAnalysis.fullText.currentStatus', { comment: gaT.text(m.comment) }));
+      if (m.advice) chunk.push(t('aiAnalysis.fullText.advice', { advice: gaT.text(m.advice) }));
+      parts.push(chunk.join('\n'));
+    });
+    return parts.join('\n\n');
+  }
+
   return (
     <View style={styles.root}>
       <Stack.Screen options={{ title: t('aiAnalysis.screenTitle'), headerShown: true, headerLeft: () => <BackButton />, headerRight: () => <View style={{ marginRight: 14 }}><GuideButton onPress={() => setGuideVisible(true)} color="#9D8CC6" /></View> }} />
@@ -350,7 +373,7 @@ export default function AIAnalysisScreen() {
                     {item.childName ?? '-'}
                   </Text>
                   <Text style={styles.historySummaryShort} numberOfLines={2}>
-                    {item.summary}
+                    {item.type === 'pattern' ? gaT.overallSummary(item.summary) : item.summary}
                   </Text>
                 </View>
                 <Text style={styles.historyChevron}>›</Text>
@@ -416,12 +439,20 @@ export default function AIAnalysisScreen() {
                     />
                   ) : null}
                   <Text style={styles.modalSectionTitle}>{t('aiAnalysis.section.summary')}</Text>
-                  <Text style={styles.modalSummary}>{selectedItem.summary}</Text>
+                  <Text style={styles.modalSummary}>
+                    {selectedItem.type === 'pattern'
+                      ? gaT.overallSummary(selectedItem.summary)
+                      : selectedItem.summary}
+                  </Text>
 
                   {selectedItem.fullText ? (
                     <>
                       <Text style={styles.modalSectionTitle}>{t('aiAnalysis.section.fullAnalysis')}</Text>
-                      <Text style={styles.modalBody}>{selectedItem.fullText}</Text>
+                      <Text style={styles.modalBody}>
+                        {selectedItem.type === 'pattern'
+                          ? buildPatternFullText(selectedItem)
+                          : selectedItem.fullText}
+                      </Text>
                     </>
                   ) : null}
 
@@ -432,21 +463,21 @@ export default function AIAnalysisScreen() {
                         <View key={`${m.title}_${idx}`} style={styles.metricRow}>
                           <Text style={styles.metricTitle}>
                             {m.emoji ? `${m.emoji} ` : ''}
-                            {m.title}
+                            {gaT.text(m.title)}
                           </Text>
                           <Text style={styles.metricValue}>
                             {m.value}
-                            {m.standardRange ? t('aiAnalysis.metric.standardRangeSuffix', { range: m.standardRange }) : ''}
+                            {m.standardRange ? t('aiAnalysis.metric.standardRangeSuffix', { range: gaT.standardRange(m.standardRange) }) : ''}
                           </Text>
                           {m.comment ? (
                             <Text style={styles.metricComment}>
-                              📝 {m.comment}
+                              📝 {gaT.text(m.comment)}
                             </Text>
                           ) : null}
                           {m.advice ? (
                             <View style={styles.adviceBox}>
                               <Text style={styles.adviceLabel}>{t('aiAnalysis.metric.tryThis')}</Text>
-                              <Text style={styles.adviceText}>{m.advice}</Text>
+                              <Text style={styles.adviceText}>{gaT.text(m.advice)}</Text>
                             </View>
                           ) : null}
                         </View>
@@ -461,7 +492,7 @@ export default function AIAnalysisScreen() {
                       {selectedItem.recommendations.map((r, idx) => (
                         <View key={idx} style={styles.recRow}>
                           <Text style={styles.recBullet}>✓</Text>
-                          <Text style={styles.recText}>{r}</Text>
+                          <Text style={styles.recText}>{gaT.recommendation(r)}</Text>
                         </View>
                       ))}
                     </>
