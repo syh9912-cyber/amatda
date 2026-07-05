@@ -6,8 +6,8 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../stores/authStore';
 
-// 비한국어 브랜드 워드마크 — 한국어 글자 애니메이션 대신 단일 표기
-const SPLASH_BRAND: Record<string, string> = { ja: 'アマッタ', 'zh-Hant': 'Amatda' };
+// 비한국어 브랜드 워드마크 — 한국어 글자 애니메이션 대신 단일 표기 (앱 표시이름과 동일)
+const SPLASH_BRAND: Record<string, string> = { ja: 'なるほど育児', 'zh-Hant': '育兒答' };
 
 const { width: SW, height: SH } = Dimensions.get('window');
 

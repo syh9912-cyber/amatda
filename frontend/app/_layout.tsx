@@ -27,7 +27,12 @@ import {
   trackLastAccess,
   runOneTimeOrphanCleanup,
 } from '../services/pushNotifications';
+import { applyPersistedDevLanguage } from '../components/ui/DevLanguageSwitcher';
 import { COLORS } from '../constants/theme';
+
+// 개발/프리뷰 전용: 저장된 인앱 언어 토글 선택을 스플래시 표시 전에 복원 (프로덕션은 no-op).
+// 모듈 로드 시점에 실행해 스플래시 텍스트(~250ms 후 표시)보다 먼저 적용되게 한다.
+void applyPersistedDevLanguage();
 
 /**
  * Pretendard 폰트 전역 적용 — Text/TextInput.render를 가로채서
