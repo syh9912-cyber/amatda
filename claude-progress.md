@@ -6775,3 +6775,28 @@ sleepKnowledgeCache, dailyTraits, milestonePhotos, kakaoOAuthState
 **[2026-07-05 추가] 예방접종 한국어 전용 게이팅 완료(커밋 4c0901e, 사용자 결정 ①):**
 - vaccination.tsx 에 비한국어 Redirect 추가(홈 퀵액션은 기존 게이팅 확인). OTA preview 배포(019f31ac).
 - 전면 감사 남은 항목: 출산가방 공유 웹페이지(P3), nutrition.tsx(미연결) — 잠재만.
+
+**[2026-07-05 추가] 공유 웹페이지 2종 다국어화 배포 완료(커밋 919293d):**
+- 출산가방 공유 HTML: 공유자 locale을 share_birthbag 문서에 저장 → 렌더 34키×3언어 (ko byte-identical)
+- 가족초대 랜딩(public/invite.html): &lang= 쿼리로 8요소 전환 (なるほど育児/育兒答)
+- 배포: functions:api + hosting + OTA preview(019f31be) 전부 성공. 라이브 검증: invite?lang=ja → なるほど育児 家族招待 확인, 기본 한국어 불변.
+- 기존 생성 링크는 lang 없음 → ko 표시(자연 해소, 30일 TTL).
+
+---
+## [2026-07-05] 세션 마감 정리 — i18n 전면 감사 사이클 완료
+
+**이번 세션 커밋(시간순):**
+6b26a7a 홈 기질배지+앨범 기분칩 / 9675429 스플래시 브랜드+토글유지 / fc1fc95 백엔드발 6곳 /
+74f667f 모유 좌우+수면감지 / 89e091f 진통체크 ko전용 / 77d8475 발달체크리스트 80항목+U+FFFD /
+6f33b4f 성장분석·기질인사이트·익명닉네임·추억폴백 / 4c0901e 예방접종 ko전용 / 919293d 공유페이지 2종
+
+**배포 상태:** OTA preview 최종 019f31be / functions:api·hosting 배포·라이브검증 완료.
+**검증 상태:** tsc 0(양쪽) / lint 0 error / i18n 파리티 leaf 5182×3 / ko 표시 byte-identical.
+
+**한국어 전용(비한국어 게이팅) 기능 3종 확정:** SOS · 진통체크 · 예방접종 (국가별 응급체계/의료일정 상이).
+**공유 표면 locale 흐름:** 출산가방=문서에 lang 저장(공유자 언어), 가족초대=&lang= 쿼리, 앱이름 なるほど育児/育兒答.
+
+**미결(다음 세션):**
+- [ ] pending 푸시 디스패처 부재(예방접종D-2/D-1·산모증상 팔로업·SOS 가족알림 — pushSchedules status:'pending' 문서를 읽는 스케줄러 없음, 기능 자체 미동작) — 별도 세션 spawn 했으나 사용자가 세션 삭제, 미착수 상태로 남음
+- [ ] 실기기 최종 확인 후 2.9.2 프로덕션 빌드(AAB+iOS) → 스토어 제출(사용자 계정) → JP/TW/HK 지역·리스팅
+- 잠재(현재 미노출): nutrition.tsx 미연결 화면 한국어, monthly-characteristic 푸시 화이트리스트 잔존
