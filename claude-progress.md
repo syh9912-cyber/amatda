@@ -1,5 +1,81 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-06 — 스플래시 fail-safe 재시도화(이전 fail-safe 버그 수정)
+> 최종 업데이트: 2026-07-07 — 관리자 대시보드(가입자/구독상태 조회) 신설
+
+---
+
+## 2026-07-07 — 관리자 대시보드(가입자 목록 + 구독상태) 신설
+
+### 목적
+가입자별 무료/체험/유료 상태를 웹에서 바로 확인하고 싶다는 요청. 기존엔 조회용
+스크립트(`recent-signups.cjs`)만 있었음. 기존 `requireAdmin`(Firebase custom claim)은
+claim 부여 코드가 전무해 사실상 미사용 상태라 재사용 불가 — 사용자 승인 하에
+**단일 관리자 키** 방식의 완전히 별도 게이트를 신설(기존 JWT 인증 흐름 무변경).
+
+### 구현
+- `backend/src/config/env.ts` — `ADMIN_DASHBOARD_KEY` 추가(E() 헬퍼, 미설정 시
+  기동은 안 막고 라우트 호출 시 503 fail-closed).
+- `backend/src/middleware/adminDashboardAuth.ts`(신규) — `x-admin-key` 헤더를
+  `crypto.timingSafeEqual`로 비교하는 단일 게이트. 기존 authMiddleware/requireAdmin과
+  무관.
+- `backend/src/routes/admin.ts`(신규) — `GET /api/admin/users?days=&limit=`.
+  `subscription.ts`의 프리미엄 판정 로직(trialStartedAt+7일/premiumExpiresAt)을
+  읽기 전용으로 재사용해 FREE/TRIAL/PAID 산출, 요약 카운트 포함. Firestore
+  `orderBy(createdAt desc)` + 선택적 `where(createdAt >= cutoff)`.
+- `backend/src/index.ts` — `/api/admin` 마운트, `REGISTERED_SECRETS`에
+  `ADMIN_DASHBOARD_KEY` 추가(Cloud Functions Secret Manager 주입).
+- `public/admin-users.html`(신규) — 정적 단일 페이지(빌드 불필요). 비밀번호
+  게이트(세션스토리지) → 기간(7/30/90/전체) + 이메일·닉네임 검색 → 테이블(가입일시·
+  방식·이메일·닉네임·상태뱃지·최근접속·uid) + 요약 카드. Firebase Hosting으로 배포,
+  `firebase.json` rewrite는 추가 안 함(직접 파일명 접근만, 기존 checkout.html 패턴).
+- 관리자 키: `node crypto`로 생성 → `backend/.env.local`(로컬, gitignore) +
+  `firebase functions:secrets:set`(프로덕션 Secret Manager) 양쪽에 반영, 평문은
+  코드/문서 어디에도 기록하지 않음(사용자에게 1회 채팅으로만 전달).
+- 부가: `backend/scripts/recent-signups.cjs`(신규) — CLI 조회용 스크립트(같은
+  목적, 웹 대시보드와 별개로 유지).
+
+### 검증 결과
+- `backend npx tsc --noEmit` 0 errors.
+- 배포 후 실제 호출 확인: 관리자 키 정상 응답(실데이터), 키 없이 호출 시 401,
+  `admin-users.html` 200 정상 서빙.
+- Firestore 스키마 변경 없음(기존 필드만 읽음), firestore.rules 무변경(백엔드가
+  Admin SDK로 접근하는 기존 아키텍처 그대로).
+
+### 남은 이슈
+- 검색은 클라이언트 사이드(가져온 배치 내에서만) — 유저 수가 많아지면 서버사이드
+  검색/페이지네이션 필요.
+- URL은 비공개 유지(관리자 키만으로 보호) — 필요 시 IP 제한 등 추가 가능.
+
+---
+
+## 2026-07-07 — [P0] OTA 후 흰화면/크래시 진짜 원인: expo-localization static import
+
+### 목적/원인
+"OTA 후 흰화면/강제종료" 장애를 여러 세션에 걸쳐 reloadAsync 문제로 오진하고
+스플래시·부팅게이트를 반복 수정했으나 재발. **실기기 adb logcat로 진짜 원인 확정**:
+`Cannot find native module 'ExpoLocalization'` → ExpoRoot의 ErrorBoundary undefined
+→ 부팅 크래시(흰화면). expo-localization(네이티브 모듈)을 static import 했는데
+설치된 스토어 빌드(vc13, rt2.9.1) 네이티브엔 없음. OTA는 네이티브를 못 넣으므로
+로드 시점 크래시. expo-router가 시작 시 모든 라우트를 require → route 파일 import도 크래시.
+
+### 해결 방식
+- 수정 파일: `i18n/index.ts`, `app/(main)/fever.tsx`, `app/voice.tsx` (커밋 df1eb3e)
+- static import 제거, 런타임 `require('expo-localization')`를 try/catch로 감싸 없으면
+  ko/undefined 폴백 (CLAUDE.md 규칙 6). i18n에 getDeviceRegionCode 안전 헬퍼 신설.
+- 장애 대응 순서: 크래시 루프 중 `eas update:roll-back-to-embedded`(양 runtime)로 중단
+  → fix 발행(rt2.9.2 9c70ce42 / rt2.9.1 1b5799c4)이 롤백을 덮어씀.
+
+### 검증 결과 (실기기 Galaxy S24, rt2.9.1)
+- adb logcat: fix 전후 `ExpoLocalization`/`FATAL` 0건.
+- OTA 전환 관찰: CheckCompleteAvailable→Download→DownloadComplete→isRestarting→
+  재실행 시 `CheckCompleteUnavailable`(이미 최신 fix 번들, 롤백 벗어남) = 정상 적용 확정.
+- frontend tsc 0 / expo lint 0 errors.
+
+### 남은 이슈 / 후속
+- 스토어 라이브가 vc13(2.9.1) 옛 빌드라 대부분 사용자 rt2.9.1. fix OTA 받으면 구빌드가
+  forced-reload 1회(홈으로 나갔다 옴) 후 fix 번들 안착.
+- expo-localization 네이티브 없는 빌드에선 언어 자동감지 비활성(ko 폴백). 진짜 감지는
+  새 네이티브 빌드 필요 — production 빌드 vc14(0d471dbb) 시작해둠(모든 fix+네이티브 포함).
+- 교훈은 memory `ota-native-module-crash`에 기록.
 
 ---
 

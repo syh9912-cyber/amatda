@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>아맞다 · 가입자 관리</title>
+<style>
+  :root {
+    --accent: #FF8C5A;
+    --accent-dark: #E67A4A;
+    --bg: #F7F7F9;
+    --card: #FFFFFF;
+    --border: #E5E5EA;
+    --text: #1C1C1E;
+    --text-light: #8E8E93;
+    --paid: #34C759;
+    --trial: #FF9500;
+    --free: #C7C7CC;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Pretendard, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .gate {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px;
+  }
+  .gate h1 { font-size: 20px; margin: 0 0 4px; }
+  .gate p { color: var(--text-light); font-size: 13px; margin: 0; }
+  .gate input {
+    width: 280px;
+    max-width: 80vw;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+  }
+  .gate button, .btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .gate button:hover, .btn:hover { background: var(--accent-dark); }
+  .gate .err { color: #FF3B30; font-size: 13px; min-height: 18px; }
+
+  .app { display: none; max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
+  .app.show { display: block; }
+  header.top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  header.top h1 { font-size: 20px; margin: 0; }
+  header.top button.logout {
+    background: none; border: 1px solid var(--border); color: var(--text-light);
+    padding: 8px 14px; border-radius: 8px; font-size: 13px; cursor: pointer;
+  }
+
+  .summary { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    min-width: 100px;
+  }
+  .card .n { font-size: 24px; font-weight: 700; }
+  .card .l { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .toolbar select, .toolbar input[type="text"] {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fff;
+  }
+  .toolbar input[type="text"] { flex: 1; min-width: 160px; }
+  .toolbar .btn.small { padding: 9px 16px; font-size: 14px; }
+
+  table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+  thead th {
+    text-align: left; font-size: 12px; color: var(--text-light);
+    padding: 10px 12px; border-bottom: 1px solid var(--border); background: #FAFAFA;
+    white-space: nowrap;
+  }
+  tbody td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #FAFAFA; }
+
+  .badge {
+    display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; color: #fff;
+  }
+  .badge.PAID { background: var(--paid); }
+  .badge.TRIAL { background: var(--trial); }
+  .badge.FREE { background: var(--free); color: #555; }
+
+  .muted { color: var(--text-light); }
+  .empty { text-align: center; padding: 40px; color: var(--text-light); }
+  .table-wrap { overflow-x: auto; }
+</style>
+</head>
+<body>
+
+  <!-- 비밀번호 게이트 -->
+  <div class="gate" id="gate">
+    <h1>🔒 아맞다 관리자</h1>
+    <p>관리자 키를 입력하세요</p>
+    <input type="password" id="keyInput" placeholder="관리자 키" autocomplete="off" />
+    <button id="enterBtn">입장</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+
+  <!-- 본문 -->
+  <div class="app" id="app">
+    <header class="top">
+      <h1>가입자 관리</h1>
+      <button class="logout" id="logoutBtn">키 재입력</button>
+    </header>
+
+    <div class="summary" id="summary"></div>
+
+    <div class="toolbar">
+      <select id="daysSelect">
+        <option value="7">최근 7일</option>
+        <option value="30" selected>최근 30일</option>
+        <option value="90">최근 90일</option>
+        <option value="">전체</option>
+      </select>
+      <input type="text" id="searchInput" placeholder="이메일 또는 닉네임 검색" />
+      <button class="btn small" id="refreshBtn">새로고침</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>가입일시</th>
+            <th>방식</th>
+            <th>이메일</th>
+            <th>닉네임</th>
+            <th>상태</th>
+            <th>최근 접속</th>
+            <th>uid</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="emptyMsg" style="display:none;">데이터가 없습니다</div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var API_BASE = 'https://api-usglfifguq-uc.a.run.app';
+  var STORAGE_KEY = 'amatda_admin_key';
+  var allUsers = [];
+
+  var gateEl = document.getElementById('gate');
+  var appEl = document.getElementById('app');
+  var keyInput = document.getElementById('keyInput');
+  var gateErr = document.getElementById('gateErr');
+
+  function getKey() { return sessionStorage.getItem(STORAGE_KEY) || ''; }
+  function setKey(k) { sessionStorage.setItem(STORAGE_KEY, k); }
+  function clearKey() { sessionStorage.removeItem(STORAGE_KEY); }
+
+  function fmtDate(iso) {
+    if (!iso) return '-';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '-';
+    var pad = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function statusLabel(u) {
+    if (u.status === 'PAID') {
+      var exp = u.premiumExpiresAt ? fmtDate(u.premiumExpiresAt).slice(0, 10) : '';
+      return '<span class="badge PAID">PAID</span> <span class="muted">' + exp + '</span>';
+    }
+    if (u.status === 'TRIAL') {
+      return '<span class="badge TRIAL">TRIAL</span> <span class="muted">D-' + u.trialDaysLeft + '</span>';
+    }
+    return '<span class="badge FREE">FREE</span>';
+  }
+
+  function render(users) {
+    var tbody = document.getElementById('rows');
+    var emptyMsg = document.getElementById('emptyMsg');
+    tbody.innerHTML = '';
+    if (!users.length) {
+      emptyMsg.style.display = 'block';
+      return;
+    }
+    emptyMsg.style.display = 'none';
+    users.forEach(function (u) {
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + fmtDate(u.createdAt) + '</td>' +
+        '<td>' + (u.authProvider || '-') + '</td>' +
+        '<td>' + (u.email || '-') + '</td>' +
+        '<td>' + (u.nickname || '-') + '</td>' +
+        '<td>' + statusLabel(u) + '</td>' +
+        '<td>' + fmtDate(u.lastActiveAt) + '</td>' +
+        '<td class="muted" style="font-size:11px;">' + u.id + '</td>';
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderSummary(summary) {
+    var el = document.getElementById('summary');
+    el.innerHTML =
+      '<div class="card"><div class="n">' + summary.total + '</div><div class="l">전체</div></div>' +
+      '<div class="card"><div class="n">' + summary.paid + '</div><div class="l">유료(PAID)</div></div>' +
+      '<div class="card"><div class="n">' + summary.trial + '</div><div class="l">체험중</div></div>' +
+      '<div class="card"><div class="n">' + summary.free + '</div><div class="l">무료</div></div>';
+  }
+
+  function applySearch() {
+    var q = document.getElementById('searchInput').value.trim().toLowerCase();
+    if (!q) { render(allUsers); return; }
+    var filtered = allUsers.filter(function (u) {
+      return (u.email || '').toLowerCase().indexOf(q) !== -1 ||
+             (u.nickname || '').toLowerCase().indexOf(q) !== -1;
+    });
+    render(filtered);
+  }
+
+  function load() {
+    var days = document.getElementById('daysSelect').value;
+    var url = API_BASE + '/api/admin/users?limit=1000' + (days ? '&days=' + encodeURIComponent(days) : '');
+    fetch(url, { headers: { 'x-admin-key': getKey() } })
+      .then(function (res) {
+        if (res.status === 401 || res.status === 503) {
+          clearKey();
+          showGate('키가 올바르지 않거나 서버 설정이 안 되어 있습니다');
+          return null;
+        }
+        return res.json();
+      })
+      .then(function (json) {
+        if (!json) return;
+        if (!json.success) {
+          alert(json.error || '조회 실패');
+          return;
+        }
+        allUsers = json.data.users;
+        renderSummary(json.data.summary);
+        applySearch();
+      })
+      .catch(function () { alert('네트워크 오류'); });
+  }
+
+  function showApp() {
+    gateEl.style.display = 'none';
+    appEl.classList.add('show');
+    load();
+  }
+
+  function showGate(err) {
+    appEl.classList.remove('show');
+    gateEl.style.display = 'flex';
+    gateErr.textContent = err || '';
+    keyInput.value = '';
+    keyInput.focus();
+  }
+
+  document.getElementById('enterBtn').addEventListener('click', function () {
+    var v = keyInput.value.trim();
+    if (!v) return;
+    setKey(v);
+    showApp();
+  });
+  keyInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('enterBtn').click();
+  });
+  document.getElementById('logoutBtn').addEventListener('click', function () {
+    clearKey();
+    showGate('');
+  });
+  document.getElementById('refreshBtn').addEventListener('click', load);
+  document.getElementById('daysSelect').addEventListener('change', load);
+  document.getElementById('searchInput').addEventListener('input', applySearch);
+
+  if (getKey()) { showApp(); } else { showGate(''); }
+})();
+</script>
+</body>
+</html>

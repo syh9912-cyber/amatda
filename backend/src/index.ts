@@ -40,6 +40,7 @@ import momLocationRoutes from './routes/mom-location';
 import birthbagShareRoutes from './routes/birthbag-share';
 import kakaoRoutes from './routes/kakao';
 import announcementRoutes from './routes/announcement';
+import adminRoutes from './routes/admin';
 
 /* ------------------------------------------------------------------ */
 /* 🚀 함수 분리 아키텍처 (claude-progress.md 2026-04-16 의도)          */
@@ -99,6 +100,7 @@ app.use('/api/birthbag-share', birthbagShareRoutes);
 // 카카오 i 오픈빌더 챗봇 skill 서버 — 외부 webhook, 인증 불필요 (URL 비밀로 유지)
 app.use('/api/kakao', kakaoRoutes);
 app.use('/api/announcement', announcementRoutes);
+app.use('/api/admin', adminRoutes);
 
 /* ─── /api/coaching 안전망 마운트 ───
  *
@@ -195,6 +197,7 @@ const REGISTERED_SECRETS: string[] = [
   'APPLE_KEY_ID',
   'APPLE_PRIVATE_KEY',
   'APPLE_BUNDLE_ID',
+  'ADMIN_DASHBOARD_KEY',
 ];
 
 // memory: 512MiB — 비코칭 라우트는 가벼운 CRUD가 다수

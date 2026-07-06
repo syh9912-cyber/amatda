@@ -109,6 +109,10 @@ export const env = {
   GOOGLE_PUBSUB_AUDIENCE: process.env.GOOGLE_PUBSUB_AUDIENCE || '',
   // 선택: Pub/Sub push 가 사용하는 service account email — 설정 시 sub claim 도 검증.
   GOOGLE_PUBSUB_SA_EMAIL: process.env.GOOGLE_PUBSUB_SA_EMAIL || '',
+
+  // 관리자 대시보드(가입자 목록/구독 상태 조회) 접근키. 기존 JWT 인증과 무관한 별도 게이트.
+  // 미설정 시 adminDashboardAuth 미들웨어가 503으로 막음(fail-closed, 서버 기동은 막지 않음).
+  ADMIN_DASHBOARD_KEY: E('ADMIN_DASHBOARD_KEY'),
 };
 
 /** 결제 시스템 사용 가능 여부 (실제 키가 등록되어 있는지) */
