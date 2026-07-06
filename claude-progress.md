@@ -1,5 +1,38 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-06 — [P0] OTA 후 스플래시 흰 화면 갇힘 fix
+> 최종 업데이트: 2026-07-06 — OTA 강제 reload 제거(다음 실행 적용) — 네이티브 크래시 근절
+
+---
+
+## 2026-07-06 — OTA 강제 reload 제거 → 다음 실행 시 자동 적용
+
+### 목적/원인
+OTA 적용 직후 안드로이드 네이티브 크래시(OS 다이얼로그, 일회성·자가복구) 보고.
+Sentry에 JS 에러 없음 → 네이티브 크래시로 확인. `_layout.tsx`의 `useOTAUpdate`가
+세션 도중 `Updates.reloadAsync()`를 강제 호출하는 커스텀 레이어가 원인 —
+안드로이드/Hermes/newArch 조합에서 reloadAsync 자체가 간헐 네이티브 크래시를 냄.
+이 강제 reload가 앞선 스플래시 흰 화면 갇힘의 진원지이기도 함. 사용자 결정: 강제
+reload 제거하고 expo-updates 기본 동작(다음 실행 시 적용)에 맡김.
+
+### 해결 방식
+- 수정 파일: `frontend/app/_layout.tsx`
+- `useOTAUpdate` 재작성: `checkForUpdateAsync` + `fetchUpdateAsync`(백그라운드
+  다운로드)만 수행, `reloadAsync()` 호출 제거. 받아둔 업데이트는 app.json
+  (checkAutomatically ON_LOAD + fallbackToCacheTimeout 0) 설정대로 다음 콜드
+  스타트 때 자동 적용.
+- 강제 reload UX 잔재 제거: `UpdateScreen` 컴포넌트·`upS` 스타일·`UpdateStatus`
+  타입·`getStatusText`·진행률/스킵 상태 전부 삭제. `AuthGate`에서 UpdateScreen
+  분기 제거(이제 폰트/hydrate 로딩만 게이트). 미사용 import(Animated/Easing/
+  Dimensions/Image/TouchableOpacity/useTranslation/TFunction/MASCOT_HAPPY) 정리.
+- 트레이드오프: OTA가 "즉시"가 아니라 "다음 앱 실행"에 반영. 대신 세션 도중 네이티브
+  reload가 사라져 크래시·흰화면 위험 원천 제거.
+- 전환 주의: 이 새 번들로 넘어가는 마지막 1회는 구버전의 강제 reload를 거침(불가피).
+  그 1회는 배포된 splash fail-safe가 흰화면을 막고, 이후부터 강제 reload 없음.
+
+### 검증 결과
+- `frontend tsc` 0 / `expo lint` 0 errors (신규 경고 없음).
+
+### 남은 이슈
+- 미사용 i18n 키 `rootLayout.update.*` 3로케일에 잔존(무해) — 다음 정리 때 제거 가능.
 
 ---
 
