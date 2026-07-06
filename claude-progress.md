@@ -1,5 +1,32 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-06 — OTA 강제 reload 제거(다음 실행 적용) — 네이티브 크래시 근절
+> 최종 업데이트: 2026-07-06 — 스플래시 fail-safe 재시도화(이전 fail-safe 버그 수정)
+
+---
+
+## 2026-07-06 — 스플래시 fail-safe 버그 수정 (성공 시에만 완료 + 재시도)
+
+### 목적/원인
+강제 reload 제거 배포 후에도 "그 번들로 갈아타는 마지막 1회 reload" 전환에서 흰 화면
+재발. 원인: 앞서 넣은 splash fail-safe의 버그 — `navigate()`가 이동 **시도 전에**
+`hasNavigated=true`로 박아, OTA reload 직후 navigation tree 미마운트 상태에서
+`router.replace`가 throw하면 재시도 없이 **영구 정지**. 또 단발 `setTimeout(4000)`
+이라 그 1회 실패 시 복구 불가.
+
+### 해결 방식
+- 수정 파일: `frontend/app/splash.tsx`
+- `navigate()`: `router.replace` **성공했을 때만** `hasNavigated=true`. 실패(라우터
+  미준비)면 false 유지 → 재시도 대상.
+- fail-safe를 단발 타이머 → **재시도 인터벌**로 교체: 정상 애니메이션(~2.5s)이 끝났어야
+  할 3.5s 이후부터 0.6s 간격으로 `navigate()` 재시도 → 라우터 준비되는 즉시 성공·정지.
+  최대 15s 상한(무한 방지). 정상 부팅 땐 애니메이션 콜백이 3.5s 이전에 성공 → 인터벌 no-op
+  (스플래시 애니메이션 정상 노출, 조기 이탈 없음).
+
+### 검증 결과
+- `frontend tsc` 0 / `expo lint` 0 errors (splash 신규 경고 없음).
+
+### 사용자 즉시 조치
+- 현재 흰 화면에 갇혀 있으면 앱 **완전 종료(force-close) 후 재실행** → 콜드 스타트로
+  강제 reload 없는 번들 진입 → 이후 재발 없음.
 
 ---
 

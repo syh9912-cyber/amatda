@@ -59,15 +59,19 @@ export default function SplashScreen() {
   // Whole screen fade out
   const fadeOut = useRef(new Animated.Value(1)).current;
 
-  /* ── Navigate (한 번만 실행 — 애니메이션 콜백과 fail-safe 타이머 중복 방지) ── */
+  /* ── Navigate ──
+     성공했을 때만 hasNavigated=true. 라우터가 아직 준비 안 됐으면(예: OTA reload
+     직후 navigation tree 미마운트) router.replace 가 throw → false 유지 →
+     fail-safe 인터벌이 준비될 때까지 재시도. (이전 버그: 시도 전에 true 로 박아
+     실패 시 영구 정지) */
   const navigate = useCallback(() => {
     if (hasNavigated.current) return;
-    hasNavigated.current = true;
     try {
       const target = isAuthenticated ? '/(main)/home' : '/(auth)/login';
       router.replace(target as never);
+      hasNavigated.current = true;
     } catch {
-      router.replace('/(auth)/login' as never);
+      // 라우터 미준비 — 재시도 인터벌이 다시 시도 (hasNavigated 유지)
     }
   }, [isAuthenticated]);
 
@@ -115,11 +119,24 @@ export default function SplashScreen() {
       animStarted.current = true;
       startTextAnim();
     }
-    // fail-safe: OTA reloadAsync 직후 등으로 애니메이션 완료 콜백이 유실돼도
-    // 최대 시간 후 반드시 이동 — 스플래시 흰 화면에 갇히는 것 방지.
-    // (전체 애니메이션 ~2.5s → 4s 여유. navigate 는 idempotent 라 정상 완료 시 no-op)
-    const failSafe = setTimeout(() => navigate(), 4000);
-    return () => clearTimeout(failSafe);
+    // fail-safe: 정상 애니메이션(~2.5s)이 끝났어야 할 시점(3.5s) 이후에도 이동이
+    // 안 됐으면(애니메이션 콜백 유실/OTA reload 직후 라우터 지연) 0.6초 간격으로
+    // 이동을 재시도 — 라우터가 준비되는 즉시 성공하고 멈춤. navigate 는 성공 시에만
+    // hasNavigated=true. 최대 15초 상한(무한 방지).
+    // 정상 부팅 땐 애니메이션 콜백이 3.5s 이전에 성공 → 인터벌 첫 tick 이 바로 정리.
+    let retry: ReturnType<typeof setInterval> | undefined;
+    const startFailSafe = setTimeout(() => {
+      retry = setInterval(() => {
+        if (hasNavigated.current) { if (retry) clearInterval(retry); return; }
+        navigate();
+      }, 600);
+    }, 3500);
+    const stop = setTimeout(() => { if (retry) clearInterval(retry); }, 15000);
+    return () => {
+      clearTimeout(startFailSafe);
+      clearTimeout(stop);
+      if (retry) clearInterval(retry);
+    };
   }, [startTextAnim, navigate]);
 
   /* ── Interpolations ── */
