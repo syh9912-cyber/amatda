@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { getLocales } from 'expo-localization';
+import { getDeviceRegionCode } from '../i18n';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useAuthStore } from '../stores/authStore';
@@ -128,7 +128,7 @@ async function resolveSttLocale(mod: SpeechModule, appLang: string): Promise<str
 
   let region: string | undefined;
   try {
-    region = getLocales()[0]?.regionCode ?? undefined;
+    region = getDeviceRegionCode();
   } catch {
     region = undefined;
   }

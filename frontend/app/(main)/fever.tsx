@@ -19,7 +19,7 @@ import type { ImageSourcePropType } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getLocales } from 'expo-localization';
+import { getDeviceRegionCode } from '../../i18n';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 // DateTimePicker는 FastTimeInput 도입(숫자 키패드)으로 미사용 — import 제거
@@ -1514,7 +1514,7 @@ const CONCENTRATION_BY_REGION: Record<'ja' | 'zh-Hant-TW' | 'zh-Hant-HK', { acet
 /** 기기 지역코드로 zh-Hant 사용자의 대만/홍콩 자동 추정 (기본 TW). 사용자가 토글로 재정의 가능. */
 function detectZhRegion(): ZhRegion {
   try {
-    const region = (getLocales()[0]?.regionCode ?? '').toUpperCase();
+    const region = (getDeviceRegionCode() ?? '').toUpperCase();
     return region === 'HK' || region === 'MO' ? 'HK' : 'TW';
   } catch {
     return 'TW';
