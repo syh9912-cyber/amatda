@@ -119,19 +119,22 @@ export default function SplashScreen() {
       animStarted.current = true;
       startTextAnim();
     }
-    // fail-safe: 정상 애니메이션(~2.5s)이 끝났어야 할 시점(3.5s) 이후에도 이동이
-    // 안 됐으면(애니메이션 콜백 유실/OTA reload 직후 라우터 지연) 0.6초 간격으로
-    // 이동을 재시도 — 라우터가 준비되는 즉시 성공하고 멈춤. navigate 는 성공 시에만
-    // hasNavigated=true. 최대 15초 상한(무한 방지).
-    // 정상 부팅 땐 애니메이션 콜백이 3.5s 이전에 성공 → 인터벌 첫 tick 이 바로 정리.
+    // fail-safe: 애니메이션 완료 콜백에 의존하지 않고 타이머로 직접 이동 구동.
+    // OTA reload 직후 애니메이션 콜백이 유실되거나 라우터 마운트가 지연돼도,
+    // 2.8s 부터 0.4s 간격으로 이동을 재시도 → 라우터 준비되는 즉시 성공하고 멈춤.
+    // navigate 는 성공 시에만 hasNavigated=true → 성공할 때까지 계속 재시도.
+    // 최대 30초 상한(무한 방지). 정상 부팅 땐 애니메이션이 ~2.5s 에 이동 → 인터벌 no-op.
     let retry: ReturnType<typeof setInterval> | undefined;
     const startFailSafe = setTimeout(() => {
-      retry = setInterval(() => {
-        if (hasNavigated.current) { if (retry) clearInterval(retry); return; }
-        navigate();
-      }, 600);
-    }, 3500);
-    const stop = setTimeout(() => { if (retry) clearInterval(retry); }, 15000);
+      navigate(); // 즉시 1회 시도
+      if (!hasNavigated.current) {
+        retry = setInterval(() => {
+          if (hasNavigated.current) { if (retry) clearInterval(retry); return; }
+          navigate();
+        }, 400);
+      }
+    }, 2800);
+    const stop = setTimeout(() => { if (retry) clearInterval(retry); }, 30000);
     return () => {
       clearTimeout(startFailSafe);
       clearTimeout(stop);
