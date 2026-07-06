@@ -3,6 +3,7 @@ import * as admin from 'firebase-admin';
 import { adminDashboardAuth } from '../middleware/adminDashboardAuth';
 import { success, error } from '../utils/response';
 import { collections } from '../services/firestore';
+import { getUsageSummaryMap } from '../utils/apiUsage';
 
 const router = Router();
 
@@ -17,6 +18,9 @@ interface UserRow {
   trialDaysLeft: number;
   premiumExpiresAt: string | null;
   subscriptionPlatform: string | null;
+  apiCallCount: number;
+  apiTotalTokens: number;
+  apiCostUsd: number;
 }
 
 function toISO(v: unknown): string | null {
@@ -73,10 +77,13 @@ router.get('/users', adminDashboardAuth, async (req: Request, res: Response) => 
     query = query.orderBy('createdAt', 'desc').limit(limit);
 
     const snap = await query.get();
+    // API 사용량은 가입일 필터(days)와 별개 시간축(전체 누적)이라 항상 전체 기간으로 집계.
+    const usageMap = await getUsageSummaryMap();
     const now = new Date();
     const users: UserRow[] = snap.docs.map((doc) => {
       const u = doc.data() as Record<string, unknown>;
       const { status, trialDaysLeft } = computeStatus(u, now);
+      const usage = usageMap.get(doc.id);
       return {
         id: doc.id,
         email: (u.email as string) || '',
@@ -88,6 +95,9 @@ router.get('/users', adminDashboardAuth, async (req: Request, res: Response) => 
         trialDaysLeft,
         premiumExpiresAt: (u.premiumExpiresAt as string) || null,
         subscriptionPlatform: (u.subscriptionPlatform as string) || null,
+        apiCallCount: usage?.callCount ?? 0,
+        apiTotalTokens: usage?.totalTokens ?? 0,
+        apiCostUsd: usage?.costUsd ?? 0,
       };
     });
 
@@ -96,6 +106,8 @@ router.get('/users', adminDashboardAuth, async (req: Request, res: Response) => 
       paid: users.filter((u) => u.status === 'PAID').length,
       trial: users.filter((u) => u.status === 'TRIAL').length,
       free: users.filter((u) => u.status === 'FREE').length,
+      totalApiCostUsd: users.reduce((sum, u) => sum + u.apiCostUsd, 0),
+      totalApiCallCount: users.reduce((sum, u) => sum + u.apiCallCount, 0),
     };
 
     success(res, { users, summary });

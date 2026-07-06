@@ -1,5 +1,6 @@
 import { env } from '../../config/env';
 import { logger } from '../../utils/logger';
+import { recordApiUsage } from '../../utils/apiUsage';
 
 // 타사(OpenAI) 크로스 폴백 — Gemini 전체 실패(과부하) 시에만 사용.
 // gpt-5-nano: 최저가($0.05/$0.40), 구조화출력(strict json_schema) 지원, reasoning minimal.
@@ -21,6 +22,7 @@ interface OpenAIJSONOptions {
 interface OpenAIResponseShape {
   error?: { message?: string };
   choices?: { message?: { content?: string } }[];
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
 }
 
 /** OpenAI Chat Completions(structured outputs)로 JSON 응답을 받아 파싱 */
@@ -82,6 +84,14 @@ export async function callOpenAIJSON<T = Record<string, unknown>>(
   if (typeof content !== 'string' || content.length === 0) {
     throw new Error('OpenAI empty response');
   }
+
+  // 유저별 호출횟수/비용 기록 — API 호출 자체는 완료되어 과금 대상이므로 여기서 기록
+  recordApiUsage({
+    provider: 'openai',
+    model: OPENAI_MODEL,
+    inputTokens: data.usage?.prompt_tokens ?? 0,
+    outputTokens: data.usage?.completion_tokens ?? 0,
+  });
 
   try {
     return JSON.parse(content) as T;

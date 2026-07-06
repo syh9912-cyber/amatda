@@ -147,6 +147,16 @@ export const collections = {
   //   문서 ID: `${userId}_${CODE}`
   //   { userId, code, months, grantedAt: ISO }
   promoRedemptions: db.collection('promoRedemptions'),
+
+  // apiUsageLogs — AI(Gemini/OpenAI) 호출 1건당 문서 1개(원본 로그, 감사용)
+  //   { userId, provider:'gemini'|'openai', model, inputTokens, outputTokens,
+  //     totalTokens, costUsd, createdAt }
+  apiUsageLogs: db.collection('apiUsageLogs'),
+
+  // apiUsageDaily — 유저별 일별 AI 사용량 집계 (관리자 대시보드 빠른 조회용)
+  //   문서 ID: `${userId}_${YYYY-MM-DD}` (KST)
+  //   { userId, date, callCount, inputTokens, outputTokens, totalTokens, costUsd, updatedAt }
+  apiUsageDaily: db.collection('apiUsageDaily'),
 };
 
 /** 문서 ID 생성 */

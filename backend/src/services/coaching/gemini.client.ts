@@ -1,5 +1,6 @@
 import { env } from '../../config/env';
 import { logger } from '../../utils/logger';
+import { recordApiUsage } from '../../utils/apiUsage';
 
 // 1차 모델(저가) + 과부하 시 폴백 모델(독립 용량, 비슷한 비용, 동일 유료 키).
 // "high demand"(503)는 특정 모델 서버 용량 문제 → 다른 모델로 넘기면 회피됨.
@@ -169,6 +170,14 @@ export async function callGeminiText(
       const ratio = total > 0 ? Math.round((cached / total) * 100) : 0;
       logger.info('gemini/usage', `prompt=${total} cached=${cached} (${ratio}%) output=${usage.candidatesTokenCount ?? 0}`);
     }
+    // 유저별 호출횟수/비용 기록 — 응답 성공 여부와 무관하게 텍스트 추출 직전에 기록
+    // (모델 API 호출 자체는 이미 완료되어 과금 대상이므로, 빈 응답이어도 사용량은 실제 발생함)
+    recordApiUsage({
+      provider: 'gemini',
+      model,
+      inputTokens: usage?.promptTokenCount ?? 0,
+      outputTokens: usage?.candidatesTokenCount ?? 0,
+    });
 
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
     if (!text) {

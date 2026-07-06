@@ -1,5 +1,55 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-07 — 관리자 대시보드(가입자/구독상태 조회) 신설
+> 최종 업데이트: 2026-07-07 — 유저별 AI API 호출횟수/비용 추적 → 관리자 대시보드 반영
+
+---
+
+## 2026-07-07 — 유저별 AI(Gemini/OpenAI) 호출횟수·비용 추적
+
+### 목적
+가입자별 API 호출횟수·요금을 웹에서 확인하고 싶다는 요청. 기존엔 호출 "횟수"만
+일부(rateLimits/analysisUsage, 기능별) 세고 있었고 토큰·비용은 전혀 기록 안 됨.
+Gemini/OpenAI 호출부가 앱 전체 17곳에 흩어져 있고 userId를 모르는 순수 유틸이라,
+사용자 승인 하에 AsyncLocalStorage로 컨텍스트를 전파해 **호출부 2곳(gemini/openai
+client)만** 수정하는 방식으로 진행(나머지 17곳 무변경).
+
+### 구현
+- `backend/src/utils/requestContext.ts`(신규) — Node 공식 AsyncLocalStorage로
+  요청의 userId를 비동기 체인 전체에 전파(Sentry 등도 쓰는 표준 패턴).
+- `backend/src/middleware/auth.ts` — `req.userId` 설정 직후 `setContextUserId()`
+  **1줄 추가**. JWT 검증 로직 자체는 무변경.
+- `backend/src/utils/apiUsage.ts`(신규) — `recordApiUsage()`(fire-and-forget,
+  Firestore 쓰기 실패해도 AI 응답 경로 안 막음) + `getUsageSummaryMap()`(전체
+  유저 집계를 쿼리 1회로, N+1 방지). 요금표: Gemini 2.5 Flash-Lite $0.10/$0.40
+  (input/output, per 1M), GPT-5-nano $0.05/$0.40 — WebSearch로 2026-07 공식
+  요금 확인. gemini-3.1-flash-lite(과부하 폴백)는 공식요금 미확인이라 코드 주석
+  "비슷한 비용" 기준 2.5-flash-lite와 동일 추정, 미등록 모델은 0으로 기록(무단
+  추정 금지).
+- `backend/src/services/firestore.ts` — 신규 컬렉션 `apiUsageLogs`(호출 1건=
+  문서1개, 원본기록), `apiUsageDaily`(문서ID `{userId}_{YYYY-MM-DD}`, 유저별
+  일별 집계 — 대시보드 빠른 조회용).
+- `backend/src/services/coaching/gemini.client.ts` / `openai.client.ts` —
+  응답의 `usageMetadata`/`usage`를 받은 직후(성공 경로) `recordApiUsage()` 호출.
+  프롬프트 빌드·재시도·모델 폴백 순서는 전혀 안 건드림. OpenAI는 기존에 `usage`
+  필드 자체를 안 읽고 있어서 `OpenAIResponseShape`에 추가.
+- `backend/src/routes/admin.ts` — `getUsageSummaryMap()`으로 유저 목록에
+  `apiCallCount`/`apiTotalTokens`/`apiCostUsd` 병합, summary에 전체 합계 추가.
+  API 사용량은 가입일 필터(days)와 별개 시간축이라 항상 전체 누적으로 집계.
+- `public/admin-users.html` — 테이블에 "API 호출"/"API 비용"(USD + 참고용 원화
+  환산) 컬럼, 요약 카드에 전체 호출수/누적비용 추가.
+
+### 검증 결과
+- `backend npx tsc --noEmit` 0 errors.
+- 배포 후 **실제 엔드투엔드 검증**: 테스트 계정으로 실제 코칭 질문 1건 전송(POST
+  /api/coaching/ask) → 관리자 API에서 해당 계정 `apiCallCount:2`(ask.handler가
+  내부적으로 Gemini 2회 호출하는 구조와 일치), `apiTotalTokens:4536`,
+  `apiCostUsd:0.0006687`로 정확히 반영 확인. AsyncLocalStorage가 중첩 비동기
+  호출(route→handler→client) 전체에 걸쳐 정상 전파됨을 실증.
+- Firestore 스키마 신규 추가(사용자 승인 완료), firestore.rules 무변경(Admin SDK
+  경로 그대로).
+
+### 남은 이슈
+- 폴백 모델(gemini-3.1-flash-lite) 요금은 추정치 — 공식 요금표 공개되면 갱신 필요.
+- KRW 환산은 고정 환율(1400원/$, 하드코딩) 참고치일 뿐 실제 청구와 다를 수 있음.
 
 ---
 

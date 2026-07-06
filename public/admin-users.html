@@ -162,6 +162,8 @@
             <th>닉네임</th>
             <th>상태</th>
             <th>최근 접속</th>
+            <th>API 호출</th>
+            <th>API 비용</th>
             <th>uid</th>
           </tr>
         </thead>
@@ -175,7 +177,15 @@
 (function () {
   var API_BASE = 'https://api-usglfifguq-uc.a.run.app';
   var STORAGE_KEY = 'amatda_admin_key';
+  // 참고용 대략 환율 — 실제 청구서와 다를 수 있음(원화는 괄호 안 참고치로만 표시)
+  var USD_KRW_APPROX = 1400;
   var allUsers = [];
+
+  function fmtCost(usd) {
+    if (!usd) return '$0';
+    var krw = Math.round(usd * USD_KRW_APPROX);
+    return '$' + usd.toFixed(4) + ' <span class="muted">(약 ₩' + krw.toLocaleString('ko-KR') + ')</span>';
+  }
 
   var gateEl = document.getElementById('gate');
   var appEl = document.getElementById('app');
@@ -223,6 +233,8 @@
         '<td>' + (u.nickname || '-') + '</td>' +
         '<td>' + statusLabel(u) + '</td>' +
         '<td>' + fmtDate(u.lastActiveAt) + '</td>' +
+        '<td>' + (u.apiCallCount || 0) + '회</td>' +
+        '<td>' + fmtCost(u.apiCostUsd) + '</td>' +
         '<td class="muted" style="font-size:11px;">' + u.id + '</td>';
       tbody.appendChild(tr);
     });
@@ -234,7 +246,9 @@
       '<div class="card"><div class="n">' + summary.total + '</div><div class="l">전체</div></div>' +
       '<div class="card"><div class="n">' + summary.paid + '</div><div class="l">유료(PAID)</div></div>' +
       '<div class="card"><div class="n">' + summary.trial + '</div><div class="l">체험중</div></div>' +
-      '<div class="card"><div class="n">' + summary.free + '</div><div class="l">무료</div></div>';
+      '<div class="card"><div class="n">' + summary.free + '</div><div class="l">무료</div></div>' +
+      '<div class="card"><div class="n">' + (summary.totalApiCallCount || 0) + '</div><div class="l">전체 API 호출</div></div>' +
+      '<div class="card"><div class="n" style="font-size:16px;">' + fmtCost(summary.totalApiCostUsd) + '</div><div class="l">전체 누적 API 비용</div></div>';
   }
 
   function applySearch() {
