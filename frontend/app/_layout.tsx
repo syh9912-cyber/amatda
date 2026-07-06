@@ -249,14 +249,18 @@ function useLocationSetup() {
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
+  // ⚠️ 부팅 게이트 fail-safe: hydrate/폰트가 (특히 OTA reloadAsync 직후) 응답하지
+  // 않아 게이트에 영구히 갇히는 것을 막는다. 3초 후엔 무조건 진행.
+  // 폰트는 Pretendard 패치가 시스템 폰트로 폴백하므로 미로드여도 렌더 가능.
+  const [bootTimedOut, setBootTimedOut] = useState(false);
   const hydrate = useAuthStore((s) => s.hydrate);
 
   // OTA 는 백그라운드 다운로드만 (강제 reload 없음 → 다음 실행 시 자동 적용)
   useOTAUpdate();
 
-  // Pretendard 폰트 로드 — 로드 완료 전엔 ActivityIndicator 표시
+  // Pretendard 폰트 로드 — 완료 전엔 로딩 표시(단, bootTimedOut 시 무시)
   // (앱 번들에 임베드되어 있어도 RN은 명시적 로드 권장)
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     'Pretendard-Regular': require('../assets/fonts/Pretendard-Regular.otf'),
     'Pretendard-Medium': require('../assets/fonts/Pretendard-Medium.otf'),
     'Pretendard-SemiBold': require('../assets/fonts/Pretendard-SemiBold.otf'),
@@ -268,13 +272,16 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     hydrate()
       .catch(() => {})
       .finally(() => setReady(true));
+    const bootFailSafe = setTimeout(() => setBootTimedOut(true), 3000);
+    return () => clearTimeout(bootFailSafe);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useNotificationSetup();
   useLocationSetup();
 
-  if (!ready || !fontsLoaded) {
+  const gateBlocking = !ready || (!fontsLoaded && !fontError);
+  if (gateBlocking && !bootTimedOut) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background }}>
         <ActivityIndicator size="large" color={COLORS.primary} />
