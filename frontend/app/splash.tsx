@@ -33,6 +33,7 @@ export default function SplashScreen() {
   const splashBrand = SPLASH_BRAND[i18n.language];
 
   const animStarted = useRef(false);
+  const hasNavigated = useRef(false);
 
   /* ── Animated values ── */
   // Video overlay
@@ -58,8 +59,10 @@ export default function SplashScreen() {
   // Whole screen fade out
   const fadeOut = useRef(new Animated.Value(1)).current;
 
-  /* ── Navigate ── */
+  /* ── Navigate (한 번만 실행 — 애니메이션 콜백과 fail-safe 타이머 중복 방지) ── */
   const navigate = useCallback(() => {
+    if (hasNavigated.current) return;
+    hasNavigated.current = true;
     try {
       const target = isAuthenticated ? '/(main)/home' : '/(auth)/login';
       router.replace(target as never);
@@ -112,7 +115,12 @@ export default function SplashScreen() {
       animStarted.current = true;
       startTextAnim();
     }
-  }, [startTextAnim]);
+    // fail-safe: OTA reloadAsync 직후 등으로 애니메이션 완료 콜백이 유실돼도
+    // 최대 시간 후 반드시 이동 — 스플래시 흰 화면에 갇히는 것 방지.
+    // (전체 애니메이션 ~2.5s → 4s 여유. navigate 는 idempotent 라 정상 완료 시 no-op)
+    const failSafe = setTimeout(() => navigate(), 4000);
+    return () => clearTimeout(failSafe);
+  }, [startTextAnim, navigate]);
 
   /* ── Interpolations ── */
   const gapW1 = gap1W.interpolate({ inputRange: [0, 1], outputRange: [0, 22] });

@@ -1,5 +1,33 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-06 — 프로모 코드 redeem 기능 신설 (인플루언서 마케팅용)
+> 최종 업데이트: 2026-07-06 — [P0] OTA 후 스플래시 흰 화면 갇힘 fix
+
+---
+
+## 2026-07-06 — [P0] OTA reload 후 스플래시 흰 화면에 갇히는 문제
+
+### 목적/원인
+OTA 업데이트 적용(reloadAsync) 직후 앱이 순백 화면에서 멈추고, 수동 재시작해야
+정상 실행되는 회귀. `app/splash.tsx`가 화면 전환을 **오직 애니메이션 완료 콜백**
+(`Animated.sequence(...).start(() => navigate())`)에만 의존한 것이 근본 원인.
+reloadAsync 직후엔 네이티브 애니메이션 모듈 재초기화 타이밍상 이 완료 콜백이
+유실될 수 있어 `navigate()`가 호출되지 않음 → 스플래시 배경(#F2F2F7, 거의 흰색)만
+남고 텍스트는 opacity 0 → 흰 화면. 콜드 재시작은 teardown이 없어 정상(=재시작하면 됨).
+
+### 해결 방식
+- 수정 파일: `frontend/app/splash.tsx`
+- `hasNavigated` ref로 `navigate()`를 idempotent 처리 (애니메이션 콜백 + fail-safe
+  타이머 중복 이동 방지).
+- 마운트 effect에 fail-safe `setTimeout(navigate, 4000)` 추가 — 애니메이션 콜백이
+  유실돼도 최대 4초 후 반드시 이동(전체 애니메이션 ~2.5s라 정상 시엔 콜백이 먼저 →
+  타이머는 no-op). unmount 시 clearTimeout.
+- 이 fix가 담긴 OTA를 적용하는 reload의 착지 지점(새 splash)이 이미 보호되므로,
+  업데이트 전달 그 자체도 안전.
+
+### 검증 결과
+- `frontend tsc` 0 / `expo lint` 0 errors (splash 신규 경고 없음).
+
+### 남은 이슈
+- 없음. (필요 시 useOTAUpdate의 foreground 재체크 중복도 추후 점검 가능하나 이번 증상과 무관)
 
 ---
 
