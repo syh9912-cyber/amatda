@@ -1,5 +1,43 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-05 — 비한국어(ja/zh) 응급번호 숨김 + i18n 불변식 감사
+> 최종 업데이트: 2026-07-06 — 프로모 코드 redeem 기능 신설 (인플루언서 마케팅용)
+
+---
+
+## 2026-07-06 — 프로모 코드 기능 (팔로워 N개월 무료 이용권)
+
+### 목적/원인
+인플루언서 마케팅: 인플루언서에게 1년 무료(기존 grant-premium.cjs 수동 지급),
+그 팔로워에게는 "코드 입력 시 3개월 무료"를 자동 지급하기 위한 redeem 기능.
+기존 앱엔 7일 체험만 있고 프로모/쿠폰 redeem 기능이 없어 신규 구현.
+Firestore 신규 컬렉션 2개 = Rule of Two 대상 → **사용자 명시 승인 후** 진행.
+
+### 해결 방식 (수정 파일)
+- `backend/src/services/firestore.ts` — 컬렉션 2개 추가: `promoCodes`(코드 정의),
+  `promoRedemptions`(유저당 코드 1회 중복방지 기록)
+- `backend/src/routes/subscription.ts` — `POST /premium/redeem-code` 신설.
+  `db.runTransaction`으로 원자적 처리: 코드 존재·active·만료·한도(maxRedemptions)·
+  유저당 중복(promoRedemptions/{userId}_{CODE}) 검증 → 통과 시 redeemedCount++ +
+  사용기록 set + 유저 프리미엄 연장. 기존 만료일 남아있으면 그 뒤로 이어붙임
+  (subscription.ts가 읽는 기존 필드 subscriptionTier/premiumStartedAt/premiumExpiresAt
+  재사용 — 부여 로직 grant-premium.cjs와 동일 규칙).
+- `backend/scripts/create-promo-code.cjs` — 코드 발급/비활성/조회 스크립트(신규).
+- `frontend/services/api.ts` — `premiumApi.redeemCode(code)`.
+- `frontend/app/(main)/subscription.tsx` — 체험 버튼 아래 "프로모 코드 입력" UI
+  (TextInput+버튼) + handleRedeemCode. 서버 에러는 한국어 고정이라 ko UI에서만
+  원문 노출, 그 외 로케일은 일반 실패 메시지(chatbot.tsx 기존 패턴 준용).
+- `frontend/i18n/locales/{ko,ja,zh-Hant}.json` — `subscription.promo` 6키 추가.
+
+### 검증 결과
+- `backend tsc` 0 / `frontend tsc` 0 / `expo lint` 0 errors(기존 96 warnings 유지,
+  수정 파일 신규 경고 0) / 스크립트 `node --check` OK.
+- i18n 3로케일 leaf 5188 동일, KEY parity 0, 신규 한글잔존/깨짐 0.
+
+### 남은 이슈 / 배포 필요
+- **백엔드 배포 필요**: 엔드포인트는 `firebase deploy --only functions` 후 활성.
+  프론트 UI는 OTA 가능.
+- Firestore 신규 컬렉션은 첫 쓰기 시 자동 생성(마이그레이션 불필요). 앱은 백엔드
+  admin SDK로만 접근 → firestore.rules 변경 불필요.
+- 코드 발급: `node scripts/create-promo-code.cjs <CODE> <months> <maxRedemptions> [label]`.
 
 ---
 

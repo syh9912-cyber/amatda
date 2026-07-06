@@ -12,6 +12,7 @@ import {
   Image,
   Linking,
   Platform,
+  TextInput,
 } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 import { Stack } from 'expo-router';
@@ -124,6 +125,8 @@ export default function SubscriptionScreen() {
   const [status, setStatus] = useState<PremiumStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [redeeming, setRedeeming] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>('yearly');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('iap');
   // PortOne WebView 상태
@@ -299,6 +302,33 @@ export default function SubscriptionScreen() {
       Alert.alert(t('common.error'), t('subscription.alert.trialStartFailed'));
     } finally {
       setSubscribing(false);
+    }
+  };
+
+  const handleRedeemCode = async () => {
+    const code = promoCode.trim();
+    if (!code || redeeming) return;
+    setRedeeming(true);
+    try {
+      const res = await premiumApi.redeemCode(code);
+      const months = res.data?.data?.months as number | undefined;
+      Alert.alert(
+        t('subscription.promo.successTitle'),
+        t('subscription.promo.successMessage', { months: months ?? 0 }),
+      );
+      setPromoCode('');
+      loadData();
+    } catch (err: unknown) {
+      // 서버 에러 문구는 한국어 고정 → 한국어 UI에서만 원문 노출, 그 외엔 일반 안내
+      let msg = t('subscription.promo.failedMessage');
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axErr = err as { response?: { data?: { error?: string } } };
+        const serverMsg = axErr.response?.data?.error;
+        if (serverMsg && i18n.language === 'ko') msg = serverMsg;
+      }
+      Alert.alert(t('common.error'), msg);
+    } finally {
+      setRedeeming(false);
     }
   };
 
@@ -487,6 +517,38 @@ export default function SubscriptionScreen() {
               </TouchableOpacity>
             );
           })()}
+
+          {/* 프로모 코드 입력 — 인플루언서 무료 이용권 코드 등 */}
+          <View style={styles.promoBox}>
+            <Text style={styles.promoLabel}>{t('subscription.promo.label')}</Text>
+            <View style={styles.promoRow}>
+              <TextInput
+                style={styles.promoInput}
+                value={promoCode}
+                onChangeText={setPromoCode}
+                placeholder={t('subscription.promo.placeholder')}
+                placeholderTextColor={COLORS.textLight}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                editable={!redeeming}
+                maxLength={32}
+                accessibilityLabel={t('subscription.promo.label')}
+              />
+              <TouchableOpacity
+                style={[styles.promoBtn, (!promoCode.trim() || redeeming) && styles.promoBtnDisabled]}
+                onPress={handleRedeemCode}
+                disabled={!promoCode.trim() || redeeming}
+                accessibilityRole="button"
+                accessibilityLabel={t('subscription.promo.applyButton')}
+              >
+                {redeeming ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.promoBtnText}>{t('subscription.promo.applyButton')}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {/* 자동갱신 / 체험 고지 — Apple/Google 정책 필수 표기 */}
           <Text style={styles.legalNotice}>
@@ -825,6 +887,48 @@ const styles = StyleSheet.create({
   trialBtnTextDisabled: {
     color: COLORS.textLight,
     fontWeight: '600',
+  },
+
+  // Promo code (프로모 코드 입력)
+  promoBox: {
+    marginBottom: SPACING.lg,
+  },
+  promoLabel: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textLight,
+    fontWeight: '600',
+    marginBottom: SPACING.xs,
+  },
+  promoRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  promoInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text,
+    backgroundColor: COLORS.background,
+  },
+  promoBtn: {
+    backgroundColor: COLORS.secondary,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    minWidth: 72,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  promoBtnDisabled: {
+    opacity: 0.5,
+  },
+  promoBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: FONT_SIZE.md,
   },
 
   // Legal notice (자동갱신 고지 — Apple/Google 정책)

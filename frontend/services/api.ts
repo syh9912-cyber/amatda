@@ -327,6 +327,8 @@ export const premiumApi = {
     api.get('/subscriptions/premium/status'),
   startTrial: () =>
     api.post('/subscriptions/premium/start-trial', {}),
+  redeemCode: (code: string) =>
+    api.post('/subscriptions/premium/redeem-code', { code }),
 };
 
 // ─── 결제 (Phase 1 백엔드) ───

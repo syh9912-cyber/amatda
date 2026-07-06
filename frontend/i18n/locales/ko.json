@@ -2635,6 +2635,14 @@
     }
   },
   "subscription": {
+    "promo": {
+      "label": "프로모 코드",
+      "placeholder": "코드를 입력하세요",
+      "applyButton": "적용",
+      "successTitle": "적용 완료 🎉",
+      "successMessage": "프리미엄 {{months}}개월이 적용되었어요!",
+      "failedMessage": "코드 적용에 실패했어요. 코드를 다시 확인해주세요."
+    },
     "screenTitle": "프리미엄 플랜",
     "headerSub": "아이 맞춤 육아, 더 깊이있게",
     "currentPlan": "현재 플랜",

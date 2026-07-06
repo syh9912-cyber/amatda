@@ -2635,6 +2635,14 @@
     }
   },
   "subscription": {
+    "promo": {
+      "label": "プロモコード",
+      "placeholder": "コードを入力してください",
+      "applyButton": "適用",
+      "successTitle": "適用完了 🎉",
+      "successMessage": "プレミアム{{months}}か月が適用されました！",
+      "failedMessage": "コードの適用に失敗しました。コードをご確認ください。"
+    },
     "screenTitle": "プレミアムプラン",
     "headerSub": "お子様に合わせた育児を、もっと深く",
     "currentPlan": "現在のプラン",

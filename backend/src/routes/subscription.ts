@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { success, error } from '../utils/response';
-import { collections } from '../services/firestore';
+import { collections, db } from '../services/firestore';
 
 const router = Router();
 
@@ -118,6 +118,90 @@ router.post('/premium/start-trial', authMiddleware, async (req: Request, res: Re
     });
   } catch {
     error(res, '체험판 시작 중 오류', 500);
+  }
+});
+
+// POST /api/subscription/premium/redeem-code — 프로모 코드 사용 (프리미엄 N개월 부여)
+router.post('/premium/redeem-code', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const rawCode = (req.body as { code?: unknown } | undefined)?.code;
+    if (typeof rawCode !== 'string' || !rawCode.trim()) {
+      error(res, '코드를 입력해주세요');
+      return;
+    }
+    const code = rawCode.trim().toUpperCase();
+
+    // 트랜잭션: 코드 조회·검증 → 한도 증가 + 사용기록 + 유저 프리미엄 연장 (원자적)
+    const result = await db.runTransaction<
+      { ok: false; msg: string } | { ok: true; months: number; premiumExpiresAt: string }
+    >(async (tx) => {
+      const codeRef = collections.promoCodes.doc(code);
+      const redemptionRef = collections.promoRedemptions.doc(`${req.userId}_${code}`);
+      const userRef = collections.users.doc(req.userId!);
+
+      // Firestore 트랜잭션: 모든 read 를 write 보다 먼저 수행
+      const [codeSnap, redemptionSnap, userSnap] = await Promise.all([
+        tx.get(codeRef),
+        tx.get(redemptionRef),
+        tx.get(userRef),
+      ]);
+
+      if (!codeSnap.exists) return { ok: false, msg: '유효하지 않은 코드입니다' };
+      const c = codeSnap.data() as Record<string, unknown>;
+      if (c.active === false) return { ok: false, msg: '사용할 수 없는 코드입니다' };
+
+      const expiresAt = c.expiresAt as string | undefined;
+      if (expiresAt && new Date(expiresAt).getTime() < Date.now()) {
+        return { ok: false, msg: '만료된 코드입니다' };
+      }
+
+      const months = Number(c.months) || 0;
+      if (months <= 0) return { ok: false, msg: '잘못된 코드입니다' };
+
+      const maxRedemptions = Number(c.maxRedemptions) || 0;
+      const redeemedCount = Number(c.redeemedCount) || 0;
+      if (maxRedemptions > 0 && redeemedCount >= maxRedemptions) {
+        return { ok: false, msg: '코드 사용 한도가 모두 소진되었습니다' };
+      }
+
+      if (redemptionSnap.exists) return { ok: false, msg: '이미 사용한 코드입니다' };
+      if (!userSnap.exists) return { ok: false, msg: '계정이 존재하지 않습니다' };
+      const u = userSnap.data() as Record<string, unknown>;
+
+      // 기존 프리미엄 남아있으면 그 만료일 뒤로 연장, 아니면 지금부터
+      const now = new Date();
+      const currentExpiry = u.premiumExpiresAt as string | undefined;
+      const base =
+        currentExpiry && new Date(currentExpiry).getTime() > now.getTime()
+          ? new Date(currentExpiry)
+          : now;
+      const newExpiry = new Date(base);
+      newExpiry.setMonth(newExpiry.getMonth() + months);
+      const newExpiryISO = newExpiry.toISOString();
+
+      tx.update(userRef, {
+        subscriptionTier: 'PAID',
+        premiumStartedAt: (u.premiumStartedAt as string | undefined) ?? now.toISOString(),
+        premiumExpiresAt: newExpiryISO,
+      });
+      tx.update(codeRef, { redeemedCount: redeemedCount + 1 });
+      tx.set(redemptionRef, {
+        userId: req.userId,
+        code,
+        months,
+        grantedAt: now.toISOString(),
+      });
+
+      return { ok: true, months, premiumExpiresAt: newExpiryISO };
+    });
+
+    if (!result.ok) {
+      error(res, result.msg);
+      return;
+    }
+    success(res, { months: result.months, premiumExpiresAt: result.premiumExpiresAt });
+  } catch {
+    error(res, '코드 사용 중 오류가 발생했습니다', 500);
   }
 });
 

@@ -136,6 +136,17 @@ export const collections = {
   // announcements — 앱 시작 공지 팝업 (콘솔/관리자에서 작성)
   //   { title, body, imageUrl?, active, startAt?, endAt?, priority?, createdAt }
   announcements: db.collection('announcements'),
+
+  // promoCodes — 프로모 코드 (인플루언서 팔로워 대상 무료 이용권 등)
+  //   문서 ID: 코드 문자열(대문자 정규화)
+  //   { months: number, maxRedemptions: number(0=무제한), redeemedCount: number,
+  //     active: boolean, label?: string, expiresAt?: ISO, createdAt }
+  promoCodes: db.collection('promoCodes'),
+
+  // promoRedemptions — 프로모 코드 사용 기록 (유저당 코드 1회 중복 방지)
+  //   문서 ID: `${userId}_${CODE}`
+  //   { userId, code, months, grantedAt: ISO }
+  promoRedemptions: db.collection('promoRedemptions'),
 };
 
 /** 문서 ID 생성 */
