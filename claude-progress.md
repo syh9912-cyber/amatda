@@ -1,5 +1,52 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-07 — 유저별 AI API 호출횟수/비용 추적 → 관리자 대시보드 반영
+> 최종 업데이트: 2026-07-09 — [P0] expo-localization 완전 비활성화 — 부팅/화면 크래시 근절
+
+---
+
+## 2026-07-09 — [P0] expo-localization 완전 비활성화 (근본 해결)
+
+### 목적/원인
+"열나열나 탭하면 화면이 하얗게 꺼진다" 제보. 실기기(안드로이드) adb logcat로 2단계에
+걸쳐 확정:
+1. `getDeviceRegionCode()`(fever.tsx 렌더 경로에서 호출)가 New Architecture
+   Bridgeless 런타임에서 "Cannot find native module 'ExpoLocalization'"을
+   JS try/catch가 못 잡는 "소프트 익셉션"으로 흘려보내 React 인스턴스가 리로드됨
+   (FATAL 아니라 화면만 하얗게 꺼짐, 다른 화면은 정상).
+2. 1차 수정(getDeviceRegionCode만 비활성화) 검증 중, 기존에 "부팅 시점이라 안전"
+   으로 판단해 유지했던 `resolveDeviceLocale()`도 OTA 갱신 직후 재시작 순간 실제
+   **FATAL EXCEPTION**(`expo-updates-error-recovery`)으로 프로세스가 죽는 것을
+   스택트레이스로 확인(`resolveDeviceLocale→requireNativeModule→Cannot find
+   native module`). expo-updates 자체 크래시 복구로 즉시 재시작되어 겉보기엔
+   정상처럼 보였으나, 매 콜드스타트마다 크래시→복구 사이클을 타던 상태였음.
+
+결론: try/catch로 감싸도 이 런타임(New Architecture, 네이티브 모듈 자체가 설치
+바이너리에 없는 상태)에서는 JS 레벨 가드로 100% 안전을 보장 못한다 — 근본 해결은
+새 네이티브 빌드(모듈 포함) 배포 전까지 `expo-localization` 자체를 아예 호출하지
+않는 것.
+
+### 해결 방식
+- 수정 파일: `frontend/i18n/index.ts` (커밋 9257c93 → 8a8a42b)
+- `getDeviceRegionCode()`: require 제거, 무조건 `undefined` 반환.
+- `resolveDeviceLocale()`: require 제거, 무조건 `'ko'` 반환.
+- 언어 자동감지만 비활성(항상 ko로 부팅), zh-Hant TW/HK 지역 자동추정만 비활성
+  (fever 화면 내 토글로 수동 선택 가능, 기능 손실 없음). 사용자가 앱 내 언어
+  설정에서 수동으로 언어 변경하는 기능은 무관하게 정상 동작.
+
+### 검증 결과 — 실기기(Galaxy S24) adb logcat, 다운로드→적용→재시작 전 구간
+- 1차 수정(fever 전용) 배포 후: fever 화면 재진입 시 ExpoLocalization/FATAL 0건.
+- 2차 수정(resolveDeviceLocale 포함 전체 비활성화) 배포 후: 프로세스 3회 재시작
+  (다운로드 완료 프로세스 → 적용된 최종 프로세스) 전 구간에서 ExpoLocalization/
+  FATAL EXCEPTION **0건** 확인. 최종 프로세스가 `CheckCompleteUnavailable`(이미
+  최신)로 정상 안착 확인.
+- `frontend tsc` 0 / `expo lint` 0 errors (양쪽 수정 모두).
+
+### 남은 이슈
+- 언어/지역 자동감지가 새 네이티브 빌드 배포 전까지 비활성 — 다국어(ja/zh-Hant)
+  사용자는 기기 언어 자동감지 대신 앱 내 수동 설정 필요. 새 네이티브 빌드(vc14,
+  expo-localization 포함, 이미 빌드 시작해둠)가 스토어에 배포되면 원상 복구 가능.
+- 이전 세션에서 `getDeviceRegionCode()`만 고치고 "resolveDeviceLocale은 부팅
+  시점이라 안전"이라 판단했던 것이 실기기 검증 없이 내린 잘못된 결론이었음 —
+  향후 유사 판단 시 반드시 실기기 로그로 재검증할 것.
 
 ---
 
