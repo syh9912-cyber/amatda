@@ -1,5 +1,41 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-09 — [P0] iOS 홈 터치먹통 4번째 재발 — 자동 팝업 4종 슬롯 조율로 구조적 해결
+> 최종 업데이트: 2026-07-09 — 적대적 코드리뷰(최근 변경분) + HIGH 2건 수정·배포
+
+---
+
+## 2026-07-09 — 최근 변경분 적대적 코드리뷰 + 후속 수정
+
+### 방법(다양한 방식)
+정적분석(backend/frontend tsc + expo lint) + git 변경범위(최근 3일 25파일) +
+병렬 적대적 리뷰 에이전트 2개(백엔드/프론트) + 직접 정밀분석(ALS 동시성·언어설정·
+expo-localization 잔존참조·네이티브모듈) + 배포 후 실API 동작검증.
+
+### 수정·배포 완료
+- [HIGH] home.tsx — OnboardingGuide(Modal)가 팝업 슬롯 조율에서 누락 → 신규 유저
+  첫 실행 + (주말/30주+임신부) 조합에서 iOS 터치먹통 재발 가능. 자동 팝업 체인
+  전체를 guideShown 게이트로 감쌈. (마케팅으로 신규 설치 유입 중이라 노출 위험 컸음)
+- [HIGH] AsyncLocalStorage enterWith → run() (requestContext.ts/auth.ts) — enterWith
+  store leak 위험(keep-alive pre-auth 구간 잔존)으로 AI 비용 오귀속 fragile. run(store,
+  next)로 요청 격리. 배포 후 실코칭호출로 비용귀속 정상 재검증.
+- [MEDIUM] _layout.tsx AuthGate — bootTimedOut(3s)이 hydrate 미완료도 우회 →
+  로그인 유저 로그인화면 튕김 여지. 폰트만 우회, hydrate(ready)는 항상 대기로 변경.
+- [LOW] admin.ts — 요약 총 API비용/호출을 페이지(limit) 아닌 usageMap 전체 기준 집계.
+- [정직성] i18n 주석 정정(프로덕션 인앱 언어선택 UI 없음=다국어 자동감지 중단이 정확)
+  + fever HK판별/voice 광둥어 회귀 TODO 명시.
+- 커밋 939cd2c. backend functions 배포 + 프론트 OTA(rt2.9.2 c91b40ce/rt2.9.1 ff3b5fb1).
+
+### 버그 아님으로 확인(오탐 배제)
+프로모 redeem 트랜잭션(동시성 안전), adminDashboardAuth(timingSafeEqual 정상),
+recordApiUsage fire-and-forget(unhandled rejection 없음), splash fail-safe,
+auth JWT typ 체크, 비용계산(0토큰/폴백모델 처리).
+
+### 미수정(플래그 — 판단/후속 필요)
+- [MEDIUM 스케일] getUsageSummaryMap 전체 스캔 — 유저·기간 쌓이면 대시보드 느려짐/
+  Firestore read 과금. 현재 29명이라 무문제. 대량 시 유저별 롤업문서(apiUsageTotals) 필요.
+- [제품] 프로덕션 인앱 언어선택 UI 부재 → ja/zh 프로덕션 도달 불가(알려진 트레이드오프).
+  복구: 새 네이티브빌드(vc14) 또는 순수 JS 언어선택 화면.
+- [LOW] 프로모 setMonth 월말 오버플로, grant-premium.cjs 덮어쓰기(vs 연장), home
+  리마운트 시 followup 재노출 가능(홈 언마운트 경로 확인 필요).
 
 ---
 
