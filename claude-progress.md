@@ -1,5 +1,39 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-09 — [P0] expo-localization 완전 비활성화 — 부팅/화면 크래시 근절
+> 최종 업데이트: 2026-07-09 — [P0] iOS 홈 터치먹통 4번째 재발 — 자동 팝업 4종 슬롯 조율로 구조적 해결
+
+---
+
+## 2026-07-09 — [P0] iOS 홈 터치먹통 4번째 재발 — 자동 팝업 동시노출 구조적 방지
+
+### 목적/원인
+"아이폰에서 또 아무것도 클릭이 안 됨" 제보 — 기존 memory(ios-modal-touch-bug)에
+기록된 iOS 전용 RN Modal 버그의 4번째 재발(2026-06-03, 06-23×2 이력).
+코드 확인 결과 home.tsx의 자동 팝업 4종(체험만료 CenterModal·공지 AnnouncementPopup·
+능동팝업 ProactivePopup·병원등록프롬프트 HospitalRegisterPrompt)이 전부 실제 RN
+`<Modal>`인데, mount 시 `Promise.allSettled`로 병렬 실행되며 서로 겹침을 막는
+장치가 전혀 없었음(OnboardingGuide↔공지만 기존 `amatda_onboarding_guide_shown`
+키로 우연히 방지). 오늘 활성화한 테스터모집 공지 캠페인 + 체험만료 조건이 겹친
+유저에서 두 Modal이 동시에 뜨며 재현된 것으로 추정.
+
+### 해결 방식
+- 수정 파일: `frontend/app/(main)/home.tsx` (커밋 e3da9cc)
+- `popupSlotClaimedRef`(useRef) 공유 슬롯 도입 — 4개 팝업이 각자
+  `setXVisible(true)` 직전에 claim 체크(선점되면 스킵).
+- mount 실행을 병렬(`Promise.allSettled`) → 우선순위 순차(체험만료→공지→
+  능동팝업→병원프롬프트)로 변경해 결정론적으로 만듦. loadChildren은 콘텐츠
+  렌더링에 필요해 그대로 병렬 유지.
+- HospitalRegisterPrompt는 기존에 있던 `enabled` prop(외부 제어용, 지금까지
+  미사용)을 연결 — 순차 체인 완료 후에만 활성화되도록.
+- ScrollView 밖 렌더 배치(기존 규칙)는 이미 지켜지고 있어 무변경.
+
+### 검증 결과
+- `frontend tsc` 0 / `expo lint` 0 errors.
+- OTA로 양쪽 runtime 배포(rt2.9.2 3cb72402, rt2.9.1 5dedeb30) — 순수 JS 로직
+  변경이라 네이티브 재빌드 불필요.
+
+### 남은 이슈
+- memory `ios-modal-touch-bug`에 "새 자동 Modal 추가 시 반드시 popupSlotClaimedRef
+  체크 추가" 규칙 기록 — 앞으로 자동 팝업 추가 시 이 규칙 누락하면 5번째 재발 확정적.
 
 ---
 
