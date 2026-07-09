@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
-import { setContextUserId } from '../utils/requestContext';
+import { runWithUserId } from '../utils/requestContext';
 
 export interface AuthPayload {
   userId: string;
@@ -47,8 +47,9 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
       return;
     }
     req.userId = payload.userId;
-    setContextUserId(payload.userId); // AI 사용량 기록용 — 인증 로직 자체는 무변경
-    next();
+    // downstream(next) 전체를 userId 컨텍스트로 감싼다 — AI 사용량 기록용(요청 간 격리 보장).
+    // 인증 판정 로직 자체는 무변경.
+    runWithUserId(payload.userId, next);
   } catch {
     res.status(401).json({ success: false, error: '유효하지 않은 토큰입니다' });
   }

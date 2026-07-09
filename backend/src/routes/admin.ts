@@ -101,13 +101,19 @@ router.get('/users', adminDashboardAuth, async (req: Request, res: Response) => 
       };
     });
 
+    // API 총계는 페이지(limit)로 잘린 users 가 아니라 usageMap 전체(모든 유저)에서 집계 —
+    // 표는 페이지 분량이어도 "전체 누적 비용/호출"은 실제 총합을 보여준다.
+    let allApiCostUsd = 0;
+    let allApiCallCount = 0;
+    usageMap.forEach((v) => { allApiCostUsd += v.costUsd; allApiCallCount += v.callCount; });
+
     const summary = {
       total: users.length,
       paid: users.filter((u) => u.status === 'PAID').length,
       trial: users.filter((u) => u.status === 'TRIAL').length,
       free: users.filter((u) => u.status === 'FREE').length,
-      totalApiCostUsd: users.reduce((sum, u) => sum + u.apiCostUsd, 0),
-      totalApiCallCount: users.reduce((sum, u) => sum + u.apiCallCount, 0),
+      totalApiCostUsd: allApiCostUsd,
+      totalApiCallCount: allApiCallCount,
     };
 
     success(res, { users, summary });

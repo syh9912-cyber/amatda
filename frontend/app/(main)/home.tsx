@@ -299,10 +299,17 @@ export default function HomeScreen() {
     // loadChildren은 화면 콘텐츠 렌더링에 필요해 병렬로 즉시 시작.
     void loadChildren();
 
-    // 자동 팝업 4종(체험만료/공지/능동팝업/병원등록프롬프트)은 iOS Modal 동시노출
-    // 버그 방지를 위해 우선순위 순서로 순차 실행 — 먼저 슬롯을 선점한 하나만 노출.
+    // iOS 터치먹통(Modal 2개 동시노출) 방지 — 2단계 방어:
+    //  (1) 첫 실행 온보딩 가이드(OnboardingGuide=GuideCarousel=<Modal>)가 뜰 차례면,
+    //      아래 자동 팝업(전부 <Modal>)을 이번 세션엔 전부 스킵한다. 가이드는
+    //      amatda_onboarding_guide_shown!=='1' 일 때 뜨고, 닫으면 '1' 저장 → 다음
+    //      실행부터 팝업 노출. (가이드는 슬롯 시스템 밖이라 반드시 여기서 게이트)
+    //  (2) 남은 4종(체험만료/공지/능동팝업/병원등록프롬프트)은 popupSlotClaimedRef 로
+    //      상호배제 — 순차 실행 중 먼저 슬롯 선점한 하나만 노출.
     // (각자 내부에서 에러 처리, void + .catch 로 unhandled promise rejection 방지)
     void (async () => {
+      const guideShown = await AsyncStorage.getItem('amatda_onboarding_guide_shown');
+      if (guideShown !== '1') return; // 온보딩 가이드가 이번에 뜸 → 나머지 자동 팝업 전부 스킵
       await checkTrialStatus();
       await checkAnnouncement();
       await checkProactivePopup();

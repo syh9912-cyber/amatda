@@ -280,8 +280,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useNotificationSetup();
   useLocationSetup();
 
-  const gateBlocking = !ready || (!fontsLoaded && !fontError);
-  if (gateBlocking && !bootTimedOut) {
+  // bootTimedOut(3s) 은 "폰트 로딩"만 우회한다(폰트는 Pretendard 패치로 폴백 가능).
+  // hydrate(ready)는 우회하지 않고 항상 대기 — ready 는 hydrate().finally 로 성공/실패
+  // 무관하게 반드시 true 가 되므로 무한 대기 위험이 없고, 여기서 우회하면 인증 복원 전
+  // isAuthenticated=false 인 채 splash 가 마운트되어 로그인한 유저가 로그인 화면으로 튕긴다.
+  const fontsBlocking = !fontsLoaded && !fontError && !bootTimedOut;
+  if (!ready || fontsBlocking) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background }}>
         <ActivityIndicator size="large" color={COLORS.primary} />
