@@ -35,18 +35,19 @@ export function resolveDeviceLocale(): AppLocale {
 
 /**
  * 기기 지역코드(예: 'KR','TW','HK','JP'). 네이티브(expo-localization) 없으면 undefined.
- * resolveDeviceLocale 과 동일한 이유로 static import 금지 — 안전 require + try/catch.
+ *
+ * ⚠️ 2026-07-09 임시 비활성화: try/catch로 감쌌음에도 실기기(안드로이드, New Architecture
+ * Bridgeless)에서 fever 화면 렌더링 중 호출 시 "Cannot find native module 'ExpoLocalization'"
+ * 가 JS try/catch를 우회하는 "소프트 익셉션"으로 ReactHost까지 전파되어 화면이 하얗게
+ * 꺼지는 문제 실기기 로그로 확인(FATAL은 아니라 프로세스는 안 죽지만 React 인스턴스가 리로드됨).
+ * requireNativeModule 이 없는 모듈을 렌더 경로에서 건드리는 자체가 이 런타임(New Arch)에서는
+ * JS 레벨 가드로 100% 안전하지 않다고 판단 — 새 네이티브 빌드(모듈 포함) 배포 전까지는
+ * 아예 호출하지 않고 무조건 undefined 반환(zh-Hant TW/HK 자동감지만 비활성, 사용자가
+ * 화면 내 토글로 직접 선택 가능해 기능 손실 없음). resolveDeviceLocale()은 부팅 시점(New
+ * Arch 초기화 이전) 호출이라 실기기 검증 결과 안전 — 그대로 유지.
  */
 export function getDeviceRegionCode(): string | undefined {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const Localization = require('expo-localization') as {
-      getLocales?: () => Array<{ regionCode?: string | null }>;
-    };
-    return Localization.getLocales?.()[0]?.regionCode ?? undefined;
-  } catch {
-    return undefined;
-  }
+  return undefined;
 }
 
 if (!i18n.isInitialized) {
