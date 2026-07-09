@@ -204,6 +204,12 @@ export default function HomeScreen() {
   const { updateChild } = useChildStore();
   const [trialPopupVisible, setTrialPopupVisible] = useState(false);
 
+  // 홈 화면 자동 팝업(Modal) 동시 노출 방지 — iOS 는 Modal 2개 이상 동시 visible 시
+  // 하위 콘텐츠 터치 응답이 죽는 버그(3회 재발: 2026-06-03, 06-23 x2, 07-09).
+  // 체험만료/공지/능동팝업/병원등록프롬프트 중 딱 하나만 뜨도록 공유 슬롯으로 조율.
+  const popupSlotClaimedRef = useRef(false);
+  const [hospitalPromptEnabled, setHospitalPromptEnabled] = useState(false);
+
   // ── 출산 전환 모달 상태 ──
   const [birthModalVisible, setBirthModalVisible] = useState(false);
   const [birthName, setBirthName] = useState('');
@@ -223,6 +229,7 @@ export default function HomeScreen() {
       // 터치 응답이 죽음. 가이드를 닫은(=key '1') 다음 실행부터 공지 노출.
       const guideShown = await AsyncStorage.getItem('amatda_onboarding_guide_shown');
       if (guideShown !== '1') return;
+      if (popupSlotClaimedRef.current) return; // 다른 팝업이 이미 슬롯 선점
 
       const res = await announcementApi.active();
       const ann = res.data?.data as Announcement | null;
@@ -233,6 +240,8 @@ export default function HomeScreen() {
         const ts = Date.parse(until);
         if (!Number.isNaN(ts) && ts > Date.now()) return;
       }
+      if (popupSlotClaimedRef.current) return; // 네트워크 대기 중 선점됐을 수 있어 재확인
+      popupSlotClaimedRef.current = true;
       setAnnouncement(ann);
       setAnnouncementVisible(true);
     } catch (err) {
@@ -275,7 +284,8 @@ export default function HomeScreen() {
         }
         if (alreadyStarted && status.trialDaysLeft !== undefined && status.trialDaysLeft <= 0) {
           const dismissed = await AsyncStorage.getItem(TRIAL_POPUP_KEY);
-          if (!dismissed) {
+          if (!dismissed && !popupSlotClaimedRef.current) {
+            popupSlotClaimedRef.current = true;
             setTrialPopupVisible(true);
           }
         }
@@ -286,14 +296,18 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    // mount 시 3개를 명시적으로 병렬 시작 (각자 내부에서 에러 처리).
-    // void + .catch 로 unhandled promise rejection 방지.
-    void Promise.allSettled([
-      loadChildren(),
-      checkProactivePopup(),
-      checkTrialStatus(),
-      checkAnnouncement(),
-    ]);
+    // loadChildren은 화면 콘텐츠 렌더링에 필요해 병렬로 즉시 시작.
+    void loadChildren();
+
+    // 자동 팝업 4종(체험만료/공지/능동팝업/병원등록프롬프트)은 iOS Modal 동시노출
+    // 버그 방지를 위해 우선순위 순서로 순차 실행 — 먼저 슬롯을 선점한 하나만 노출.
+    // (각자 내부에서 에러 처리, void + .catch 로 unhandled promise rejection 방지)
+    void (async () => {
+      await checkTrialStatus();
+      await checkAnnouncement();
+      await checkProactivePopup();
+      setHospitalPromptEnabled(!popupSlotClaimedRef.current);
+    })().catch(() => { /* 각 체크 함수 내부에서 이미 에러 처리됨 */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -421,7 +435,8 @@ export default function HomeScreen() {
         try {
           const res = await coachingApi.followups(child.id);
           const data = res.data?.data;
-          if (Array.isArray(data) && data.length > 0) {
+          if (Array.isArray(data) && data.length > 0 && !popupSlotClaimedRef.current) {
+            popupSlotClaimedRef.current = true;
             setPopupReason('followup');
             setPopupFollowupText(data[0].followupText);
             setPopupVisible(true);
@@ -433,9 +448,10 @@ export default function HomeScreen() {
       }
 
       // Check if inactive > 3 days
-      if (lastOpenStr) {
+      if (lastOpenStr && !popupSlotClaimedRef.current) {
         const lastOpen = parseInt(lastOpenStr, 10);
         if (now - lastOpen > THREE_DAYS_MS) {
+          popupSlotClaimedRef.current = true;
           setPopupReason('inactive');
           setPopupVisible(true);
           return;
@@ -444,11 +460,12 @@ export default function HomeScreen() {
 
       // Check weekend
       const day = new Date().getDay();
-      if (day === 0 || day === 6) {
+      if ((day === 0 || day === 6) && !popupSlotClaimedRef.current) {
         const weekendKey = `amatda_weekend_popup_${new Date().toDateString()}`;
         const shown = await AsyncStorage.getItem(weekendKey);
         if (!shown) {
           await AsyncStorage.setItem(weekendKey, '1');
+          popupSlotClaimedRef.current = true;
           setPopupReason('weekend');
           setPopupVisible(true);
         }
@@ -770,6 +787,7 @@ export default function HomeScreen() {
           childId={child.id}
           weeks={child.pregnancyWeeks ?? 0}
           isHighRisk={child.isHighRiskPregnancy === true}
+          enabled={hospitalPromptEnabled}
         />
       )}
 
