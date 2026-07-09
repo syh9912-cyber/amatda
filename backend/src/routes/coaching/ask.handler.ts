@@ -242,9 +242,23 @@ export function registerAskHandler(router: Router): void {
       // ─── Step 1: 카테고리 확인 ───
       const categoryKo = category ? (CATEGORY_KO[category] ?? category) : '기타';
 
-      // ─── Step 2: 쓸모없는 질문 차단 ───
+      // ─── Step 2: 아이 프로필 로드 (위험 검사보다 먼저 — isPregnant 분기에 필요) ───
+      const child = await buildChildContext(childId, req.userId!);
+      if (!child) {
+        error(res, '자녀 정보를 찾을 수 없습니다', 404);
+        return;
+      }
+
+      // ─── Step 3: 레드 플래그 검사 (CLAUDE.md: 위험 필터 최우선) ───
+      // child.isPregnant 로 임산부/아동 규칙 분기. 임산부는 산과 응급(양수파수·대량출혈·
+      // 태동소실·조기진통·전자간증 등) 규칙 적용 — 이전엔 undefined 하드코딩으로 임산부
+      // 응급이 아동 규칙에만 걸려 미감지되던 CRITICAL 안전 버그 수정(2026-07-09).
+      const redFlag = detectRedFlags(message, child.isPregnant, locale);
+
+      // ─── Step 4: 쓸모없는 질문 차단 (단, 위험 신호가 있으면 차단하지 않음) ───
+      // "경련"·"발작"·"탈수" 같은 짧은 응급 단어가 vague 로 걸러져 위험안내를 못 받던 것 방지.
       const filter = filterUselessQuestion(message);
-      if (filter.isUseless) {
+      if (!redFlag.detected && filter.isUseless) {
         const sessionId = genId();
         await collections.coachingSessions.doc(sessionId).set({
           userId: req.userId,
@@ -271,16 +285,6 @@ export function registerAskHandler(router: Router): void {
         });
         return;
       }
-
-      // ─── Step 3: 아이 프로필 로드 ───
-      const child = await buildChildContext(childId, req.userId!);
-      if (!child) {
-        error(res, '자녀 정보를 찾을 수 없습니다', 404);
-        return;
-      }
-
-      // ─── Step 4: 레드 플래그 검사 ───
-      const redFlag = detectRedFlags(message, undefined, locale);
 
       // ─── Step 5: 사용자 티어 확인 ───
       const tier = await getUserTier(req.userId!);
@@ -363,7 +367,13 @@ export function registerAskHandler(router: Router): void {
         observedTraits: child.observedTraits,
         timeEmpathyHint: timeCtx.empathyHint,
         milestoneContext: milestones.combined,
-      }, undefined, locale);
+      }, child.isPregnant ? {
+        isPregnant: true,
+        pregnancyWeeks: child.pregnancyWeeks,
+        dueDate: child.dueDate,
+        babyNickname: child.babyNickname,
+        pregnancyNotes: child.pregnancyNotes,
+      } : undefined, locale);
 
       // ─── Step 9: AI 호출 ───
       // CLAUDE.md: EMERGENCY 는 AI 응답 없이 즉시 119 안내. Gemini 호출 비용 + 응답 지연 회피.
@@ -469,10 +479,12 @@ export function registerAskHandler(router: Router): void {
       });
 
       // 대화 요약 업데이트 (비동기, 응답 차단 안 함)
+      // ⚠️ 마스킹된 메시지 저장 필수 — 원문(message) 저장 시 실명이 히스토리/요약을 통해
+      // 다음 턴부터 Gemini 로 계속 전송됨(마스킹 규칙 위반). maskedMessage 로 저장.
       updateConversationSummary(
         req.userId!,
         childId,
-        message,
+        maskedMessage,
         answerText
       ).catch(() => {});
 

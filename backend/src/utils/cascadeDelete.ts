@@ -149,6 +149,12 @@ export async function cascadeDeleteUserData(
     collections.billingKeys.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
     // 모든 refresh token revoke — stale token 으로 재진입 불가
     collections.refreshTokens.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
+    // AI 사용량/비용 기록(userId 포함 PII) + 프로모 사용기록 + rate limit 카운터.
+    // (2026-07-09 추가 — 신규 컬렉션이 파기 대상에서 누락돼 있던 것 보완, PIPA 파기의무)
+    collections.apiUsageLogs.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
+    collections.apiUsageDaily.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
+    collections.promoRedemptions.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
+    collections.rateLimits.where('userId', '==', userId).limit(COLLECTION_FETCH_LIMIT).get(),
   ]);
   for (const snap of userSnaps) {
     snap.docs.forEach((d) => refs.push(d.ref));

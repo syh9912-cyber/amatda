@@ -463,8 +463,10 @@ router.post('/mom-health', authMiddleware, async (req: Request, res: Response) =
 
       for (const memberDoc of membersSnap.docs) {
         const member = memberDoc.data();
-        const memberId = member.userId as string;
-        if (memberId === req.userId) continue;
+        // 수락한 가족의 userId 는 inviteeUserId (familyMembers 엔 userId 필드 없음).
+        // 기존 member.userId 는 항상 undefined → 산모 건강알림 미도달 버그(2026-07-09 수정).
+        const memberId = member.inviteeUserId as string | null;
+        if (!memberId || memberId === req.userId) continue;
 
         const scheduleId = genId();
         batch.set(collections.pushSchedules.doc(scheduleId), {

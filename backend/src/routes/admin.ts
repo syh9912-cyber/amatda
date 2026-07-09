@@ -1,11 +1,27 @@
 import { Router, Request, Response } from 'express';
 import * as admin from 'firebase-admin';
+import rateLimit from 'express-rate-limit';
 import { adminDashboardAuth } from '../middleware/adminDashboardAuth';
 import { success, error } from '../utils/response';
 import { collections } from '../services/firestore';
 import { getUsageSummaryMap } from '../utils/apiUsage';
+import { logger } from '../utils/logger';
 
 const router = Router();
+
+// 관리자 대시보드 전용 rate limit — 전체 유저 PII 반환 엔드포인트라 무차별 대입/남용 방지.
+// 정상 사용은 새로고침 수준이라 15분 30회면 충분(키는 24바이트 엔트로피라 사실상 대입 불가하나 방어심층).
+const adminRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Cloud Run 은 'trust proxy'=true 라 express-rate-limit 이 IP 스푸핑 우회 경고(ValidationError)를
+  // 매 요청 던짐. 관리자 키는 24바이트 엔트로피라 IP 기반 우회는 실질 위협이 아니므로(키 브루트포스
+  // 자체가 불가) 이 검증만 비활성화 — 리미터는 req.ip 기준으로 정상 동작(방어심층 유지).
+  validate: { trustProxy: false },
+  message: { success: false, error: '요청이 너무 많습니다. 잠시 후 다시 시도하세요.' },
+});
 
 interface UserRow {
   id: string;
@@ -61,8 +77,10 @@ function computeStatus(
 }
 
 // GET /api/admin/users?days=30&limit=500 — 가입자 목록 + 구독 상태(읽기 전용)
-router.get('/users', adminDashboardAuth, async (req: Request, res: Response) => {
+router.get('/users', adminRateLimit, adminDashboardAuth, async (req: Request, res: Response) => {
   try {
+    // 접근 감사 로그 — 전체 유저 PII 조회 기록(키 유출 시 추적용)
+    logger.info('admin/users', `accessed from ip=${req.ip}`);
     const daysRaw = req.query.days ? parseInt(String(req.query.days), 10) : undefined;
     const days = daysRaw && daysRaw > 0 ? daysRaw : undefined;
     const limit = Math.min(parseInt(String(req.query.limit ?? '500'), 10) || 500, 1000);

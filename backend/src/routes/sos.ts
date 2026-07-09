@@ -603,10 +603,12 @@ router.post('/notify-family', authMiddleware, async (req: Request, res: Response
 
     for (const doc of membersSnap.docs) {
       const member = doc.data();
-      const memberId = member.userId as string;
+      // 수락한 가족의 userId 는 inviteeUserId 필드다(familyMembers 엔 userId 필드 없음).
+      // 기존 member.userId 는 항상 undefined → 긴급 알림이 공동양육자에게 미도달하던 버그(2026-07-09 수정).
+      const memberId = member.inviteeUserId as string | null;
 
-      // 본인에게는 보내지 않음
-      if (memberId === req.userId) continue;
+      // 본인/미확정 수신자에게는 보내지 않음
+      if (!memberId || memberId === req.userId) continue;
 
       const scheduleId = genId();
       const scheduleRef = collections.pushSchedules.doc(scheduleId);

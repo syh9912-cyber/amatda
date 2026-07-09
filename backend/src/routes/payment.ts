@@ -864,11 +864,24 @@ router.post('/webhook/apple', async (req: Request, res: Response) => {
         updatedAt: new Date().toISOString(),
       });
       const userId = doc.data().userId as string | undefined;
-      if (userId && appleStatus.expiresAt) {
-        await collections.users.doc(userId).update({
-          premiumExpiresAt: appleStatus.expiresAt.toISOString(),
+      if (userId) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const userUpdate: Record<string, any> = {
           subscriptionAutoRenew: appleStatus.autoRenew ?? false,
-        });
+        };
+        if (!appleStatus.active) {
+          // EXPIRED(2)/RETRY(3)/REVOKED(5) → 즉시 권한 회수 (Google 웹훅과 동일 정책).
+          // 기존엔 만료일만 갱신해서 환불(REVOKED)해도 원래 만료일까지 프리미엄이 유지되던
+          // 버그(2026-07-09 수정). active 는 GRACE(4)까지 포함하므로 유예기간 유저는 안 끊김.
+          userUpdate.subscriptionTier = 'FREE';
+          userUpdate.premiumExpiresAt = appleStatus.status === 5
+            ? new Date().toISOString() // 환불은 즉시 만료
+            : (appleStatus.expiresAt ? appleStatus.expiresAt.toISOString() : new Date().toISOString());
+        } else if (appleStatus.expiresAt) {
+          // ACTIVE/GRACE: 만료일 갱신만
+          userUpdate.premiumExpiresAt = appleStatus.expiresAt.toISOString();
+        }
+        await collections.users.doc(userId).update(userUpdate);
       }
     }
 

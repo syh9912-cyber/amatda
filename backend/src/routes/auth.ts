@@ -330,8 +330,9 @@ router.post('/social', async (req: Request, res: Response) => {
       return;
     }
     logger.error('auth/social', e);
-    const msg = e instanceof Error ? e.message : '소셜 로그인 처리 중 오류가 발생했습니다';
-    error(res, msg, 500);
+    // 500 은 내부 에러 원문(예: GCP 프로젝트번호, provider 에러바디)을 클라이언트에 노출하지
+    // 않고 일반 메시지 고정 — 상세는 위 logger.error 로만 남긴다.
+    error(res, '소셜 로그인 처리 중 오류가 발생했습니다', 500);
   }
 });
 
@@ -374,9 +375,15 @@ router.post('/social-code', async (req: Request, res: Response) => {
       needsOnboarding: childSnap.empty,
     });
   } catch (e) {
+    // 4xx 마커(사용자 오류)는 메시지 유지, 5xx 는 내부 에러 원문 미노출(일반 메시지).
+    const status = (e as { statusCode?: number } | null)?.statusCode;
+    if (status && status >= 400 && status < 500) {
+      logger.warn('auth/social-code', e instanceof Error ? e.message : String(e));
+      error(res, e instanceof Error ? e.message : '소셜 로그인 처리 중 오류가 발생했습니다', status);
+      return;
+    }
     logger.error('auth/social-code', e);
-    const msg = e instanceof Error ? e.message : '소셜 로그인 처리 중 오류가 발생했습니다';
-    error(res, msg, 500);
+    error(res, '소셜 로그인 처리 중 오류가 발생했습니다', 500);
   }
 });
 

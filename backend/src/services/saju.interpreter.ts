@@ -155,7 +155,7 @@ function buildPrompt(input: InterpreterInput, strict = false): string {
   const basePrompt = `너는 한국 정통 명리학에 정통한 육아 코치다. 아래 아이의 사주 8글자를 명리학적으로 깊이 있게 분석한 뒤, 부모에게 전달할 때는 사주 용어 없이 일상 언어로만 풀어 설명해라.
 
 [아이 정보]
-- 이름: ${input.childName}
+- 이름: 아이
 - 성별: ${input.gender}
 - 나이: ${ageInfo}
 
