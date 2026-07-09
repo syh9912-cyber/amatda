@@ -1,5 +1,37 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-09 — 적대적 코드리뷰(최근 변경분) + HIGH 2건 수정·배포
+> 최종 업데이트: 2026-07-10 — 적대적 리뷰 지적사항 전건 수정·배포·실검증(포트원 제외)
+
+---
+
+## 2026-07-10 — 리뷰 지적 전건 수정 + 실 endpoint 검증
+
+### 수정·배포 완료 (커밋 8e25cc4, backend functions api+coachingApi 배포)
+- [CRITICAL] coaching/ask.handler — detectRedFlags 에 child.isPregnant 전달.
+  기존 undefined 하드코딩으로 임산부 산과응급(양수파수·태동소실 등)이 아동규칙에만
+  걸려 전부 미감지되던 안전버그. Step2(아이로드)→Step3(레드플래그)→Step4(useless,
+  단 redFlag 있으면 통과) 순서로 재배치.
+- [CRITICAL 보강] red.flag.detector — 임산부 '하혈' 키워드 누락 발견·추가.
+  기존 (출혈|피) 패턴이 '하혈'(임신 출혈 대표어)을 못 잡음. 심한/멈추지않→emergency,
+  일반→urgent. 기존 라벨 재사용해 ja/zh 번역 추가 불필요.
+- [HIGH] ask.handler — updateConversationSummary 에 maskedMessage 사용(아이 실명 유출 차단).
+- [HIGH] payment — Apple REVOKED/EXPIRED 시 subscriptionTier=FREE 회수(환불 후 프리미엄 잔존 차단).
+- [HIGH] cascadeDelete — apiUsageLogs/apiUsageDaily/promoRedemptions/rateLimits 정리 누락 추가.
+- [MEDIUM] sos/pregnancy — familyMembers 실제 필드(inviteeUserId)로 수정 + 자기자신 제외.
+- [MEDIUM] admin — rate limit + PII 접근 감사로그. Cloud Run trust proxy ValidationError 해소
+  (validate:{trustProxy:false}, 관리자키 24바이트라 IP우회 실질위협 아님).
+- [MEDIUM] auth — 5xx 응답 내부 에러메시지 노출 제거.
+- [LOW] saju.interpreter — 프롬프트에 아이 실명 대신 '아이' 라벨.
+
+### 실 endpoint 검증(coachingApi, Node UTF-8 요청)
+- 아동: 경련·39도 → emergency 발화 🚨
+- 임산부(테스트아이 생성→검증→삭제): 양수파수·태동소실·심한하혈 → emergency,
+  일반하혈 → urgent(오늘중 산부인과) 정상.
+- backend tsc 0.
+- ※ 포트원(PortOne) 관련은 사용자 미사용으로 손대지 않음.
+
+### 교훈
+Windows Git Bash curl 이 한글을 깨서 전송 → red-flag 미감지로 "배포 스테일" 오진하며
+api 강제 재배포 삽질. 한글 API 테스트는 Node https(utf8 Buffer)로만. (메모리 기록)
 
 ---
 
