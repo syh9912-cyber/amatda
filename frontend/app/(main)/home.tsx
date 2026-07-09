@@ -311,6 +311,26 @@ export default function HomeScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ⚠️ 개발용 감시 장치 — iOS 터치먹통 버그가 4번 재발(2026-06-03, 06-23×2, 07-09)한 뒤 추가.
+  // 새 자동 팝업을 추가하면서 popupSlotClaimedRef 체크를 빠뜨리면, 프로덕션에서 iOS 사용자가
+  // 터치가 안 되는 걸 발견하기 전까지 아무도 모른다 — 그래서 개발 중(__DEV__)에 콘솔로 크게
+  // 경고한다. 이 경고가 뜨면 새로 추가한 자동 팝업이 popupSlotClaimedRef 를 안 쓰고 있다는 뜻.
+  useEffect(() => {
+    if (!__DEV__) return;
+    const active = [
+      trialPopupVisible && 'trialPopupVisible(체험만료)',
+      announcementVisible && 'announcementVisible(공지)',
+      popupVisible && 'popupVisible(능동팝업)',
+    ].filter(Boolean);
+    if (active.length > 1) {
+      console.error(
+        '🚨 [home] iOS 터치먹통 위험 — 자동 팝업 Modal 이 동시에 2개 이상 visible:',
+        active.join(', '),
+        '\n→ popupSlotClaimedRef 체크가 빠진 새 팝업이 있는지 확인하세요.',
+      );
+    }
+  }, [trialPopupVisible, announcementVisible, popupVisible]);
+
   // 다음 검진 ISO 로드 (자녀 변경 + checkupVer 트리거)
   useEffect(() => {
     let cancelled = false;
