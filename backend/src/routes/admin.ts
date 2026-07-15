@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import * as admin from 'firebase-admin';
 import rateLimit from 'express-rate-limit';
 import { adminDashboardAuth } from '../middleware/adminDashboardAuth';
 import { success, error } from '../utils/response';
@@ -85,29 +84,30 @@ router.get('/users', adminRateLimit, adminDashboardAuth, async (req: Request, re
     const days = daysRaw && daysRaw > 0 ? daysRaw : undefined;
     const limit = Math.min(parseInt(String(req.query.limit ?? '500'), 10) || 500, 1000);
 
-    let query: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = collections.users;
-    if (days) {
-      const cutoff = admin.firestore.Timestamp.fromDate(
-        new Date(Date.now() - days * 24 * 60 * 60 * 1000),
-      );
-      query = query.where('createdAt', '>=', cutoff);
-    }
-    query = query.orderBy('createdAt', 'desc').limit(limit);
-
-    const snap = await query.get();
+    // createdAt 타입이 Timestamp/String 으로 혼재(레거시 가입자 9건이 String).
+    // Firestore 는 타입별로 정렬·매칭하므로 orderBy('createdAt','desc') 하면 String 문서가
+    // 앞으로 오고 실제 최신 가입자(Timestamp)가 뒤로 밀렸고, where('createdAt','>=',Timestamp)
+    // 는 String 문서를 아예 매칭하지 못해 days 필터에서 통째로 누락됐다.
+    // 유저 수가 적어(수십 명) 전체를 읽어 메모리에서 정규화·필터·정렬하는 편이 정확하다.
+    // (대량 확장 시 createdAt 타입 통일 마이그레이션 후 쿼리 방식으로 되돌릴 것 — 스키마 변경이라 승인 필요)
+    const snap = await collections.users.get();
     // API 사용량은 가입일 필터(days)와 별개 시간축(전체 누적)이라 항상 전체 기간으로 집계.
     const usageMap = await getUsageSummaryMap();
     const now = new Date();
-    const users: UserRow[] = snap.docs.map((doc) => {
+    const cutoffMs = days ? Date.now() - days * 24 * 60 * 60 * 1000 : null;
+
+    const rows = snap.docs.map((doc) => {
       const u = doc.data() as Record<string, unknown>;
       const { status, trialDaysLeft } = computeStatus(u, now);
       const usage = usageMap.get(doc.id);
-      return {
+      const createdAt = toISO(u.createdAt);
+      const createdMs = createdAt ? new Date(createdAt).getTime() : 0;
+      const row: UserRow = {
         id: doc.id,
         email: (u.email as string) || '',
         nickname: (u.nickname as string) || '',
         authProvider: (u.authProvider as string) || '',
-        createdAt: toISO(u.createdAt),
+        createdAt,
         lastActiveAt: toISO(u.lastActiveAt),
         status,
         trialDaysLeft,
@@ -117,7 +117,14 @@ router.get('/users', adminRateLimit, adminDashboardAuth, async (req: Request, re
         apiTotalTokens: usage?.totalTokens ?? 0,
         apiCostUsd: usage?.costUsd ?? 0,
       };
+      return { row, createdMs: Number.isNaN(createdMs) ? 0 : createdMs };
     });
+
+    const filtered = rows.filter((r) => cutoffMs === null || r.createdMs >= cutoffMs);
+    const users: UserRow[] = filtered
+      .sort((a, b) => b.createdMs - a.createdMs)
+      .slice(0, limit)
+      .map((r) => r.row);
 
     // API 총계는 페이지(limit)로 잘린 users 가 아니라 usageMap 전체(모든 유저)에서 집계 —
     // 표는 페이지 분량이어도 "전체 누적 비용/호출"은 실제 총합을 보여준다.
@@ -125,11 +132,13 @@ router.get('/users', adminRateLimit, adminDashboardAuth, async (req: Request, re
     let allApiCallCount = 0;
     usageMap.forEach((v) => { allApiCostUsd += v.costUsd; allApiCallCount += v.callCount; });
 
+    // 상태 집계는 페이지(limit)로 잘린 users 가 아니라 days 필터를 통과한 전체(filtered) 기준 —
+    // 표가 한 페이지 분량이어도 "총 가입자/유료/무료"는 실제 총합을 보여준다.
     const summary = {
-      total: users.length,
-      paid: users.filter((u) => u.status === 'PAID').length,
-      trial: users.filter((u) => u.status === 'TRIAL').length,
-      free: users.filter((u) => u.status === 'FREE').length,
+      total: filtered.length,
+      paid: filtered.filter((r) => r.row.status === 'PAID').length,
+      trial: filtered.filter((r) => r.row.status === 'TRIAL').length,
+      free: filtered.filter((r) => r.row.status === 'FREE').length,
       totalApiCostUsd: allApiCostUsd,
       totalApiCallCount: allApiCallCount,
     };
