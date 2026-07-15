@@ -48,13 +48,38 @@ firebase deploy --only functions
 ```
 
 ### OTA 업데이트 (코드 변경, 환경변수 변경 없을 때)
+
+> 🚨 **반드시 `eas env:exec production` 으로 감싸서 배포할 것.**
+> `eas update` 는 **로컬에서 번들링**하므로 `EXPO_PUBLIC_*` 값을 로컬 `.env` 에서 읽어
+> 번들에 그대로 구워버린다. `eas.json` 의 build env 는 OTA 에 적용되지 않는다.
+> 그냥 `eas update` 만 쓰면 **개발용 값이 실 사용자에게 배포된다.**
+>
+> **실제 사고 (2026-07-16)**: 로컬 `.env` 의 구글 **테스트 광고 ID** 가 production OTA 번들에
+> 구워져, 스토어 빌드(실제 광고 ID)의 JS 를 덮어씀 → 전 사용자에게 테스트 광고 노출 →
+> **AdMob 노출·수익 0**. `eas env:exec production` 으로 재배포해 복구.
+
 ```bash
-# 정식 배포 (Play Store 사용자 대상)
-cd frontend && npx eas update --branch production --message '변경 내용'
+# 정식 배포 (Play Store 사용자 대상) — production 환경변수 주입 필수
+cd frontend && npx eas env:exec production \
+  "npx eas update --branch production --message 변경내용 --non-interactive"
 
 # 내부 테스트 배포 (선택)
-cd frontend && npx eas update --branch preview --message '변경 내용'
+cd frontend && npx eas env:exec preview \
+  "npx eas update --branch preview --message 변경내용 --non-interactive"
 ```
+
+> ⚠️ `env:exec` 의 bash 명령은 중첩 따옴표가 깨지므로 `--message` 는 **공백 없이**
+> (예: `fix-ads-restore`) 쓰거나 하이픈으로 잇는다.
+
+**배포 후 검증 (광고·API 주소 등 환경변수가 걸린 변경일 때 필수)**
+```bash
+# production env 를 주입해 로컬 export 후, 번들에 실제 값이 박혔는지 확인
+cd frontend && npx eas env:exec production \
+  "npx expo export --platform android --output-dir /tmp/verify-bundle"
+# 번들(.hbc) 안에서 실제 광고 유닛 ID(ca-app-pub-1736147235986434/...) 존재 확인
+```
+> EAS CDN 의 배포 번들은 직접 다운로드가 403 이라, 위처럼 **같은 env 로 로컬 export 해서
+> 검증**하는 것이 실질적인 확인 방법이다.
 
 ### APK 빌드 (환경변수 추가/변경, 네이티브 모듈 변경 시)
 ```bash
