@@ -1,5 +1,58 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-10 — 적대적 리뷰 지적사항 전건 수정·배포·실검증(포트원 제외)
+> 최종 업데이트: 2026-07-16 — 가입자 대시보드 정렬 버그·createdAt 마이그레이션 + AdMob 수익 차단 원인 규명
+
+---
+
+## 2026-07-16 — 관리자 대시보드 정확성 + AdMob/AdSense 계정 문제 규명
+
+### A. 가입자 관리 정확성 (커밋 5edf662, 7902fbd)
+- **증상**: 대시보드 최근 가입이 5/02 가 최신으로 보여 6~7월 신규 10명이 통째로 안 보임(실제 최신 7/11).
+- **원인**: `users.createdAt` 타입이 Timestamp(21)/String(9) 혼재(레거시 4~5월 가입자가 String).
+  Firestore 는 값 타입별로 정렬·매칭 → ①`orderBy desc` 가 String 을 앞세워 최신 Timestamp 를 뒤로 밀고
+  ②`where('createdAt','>=',Timestamp)` 가 String 문서를 아예 매칭 못해 days 필터에서 누락.
+  ※ 현재 가입 경로(auth.ts / socialUser.service.ts)는 둘 다 `serverTimestamp()` 정상 — 레거시 데이터 문제.
+- **수정**: 1차로 메모리 정렬 우회 → 이후 마이그레이션(`scripts/migrate-createdat-timestamp.cjs`,
+  dry-run/--apply/--rollback, 원본은 `createdAtLegacyRaw` 백업)으로 9건 Timestamp 통일 →
+  `admin.ts` 를 효율적인 orderBy/where 쿼리로 복귀.
+- **검증**: Firestore 원본 대조 — 총 30명·유료 2명, 최근 7일 1 / 30일 10 / 90일 25, 최신 7/11 전부 일치.
+  타입 분포 Timestamp 30 / String 0, orderBy 누락 0.
+- 부수 수정: admin rate limit 의 Cloud Run `trust proxy` ValidationError 해소(`validate:{trustProxy:false}`).
+
+### B. AdMob 광고 수익 조사 — 진짜 원인은 계정 문제였음
+- **광고 자체는 정상**: 프로덕션 앱에서 실제 광고 게재 중, AdMob 수익 발생(6월 $0.03 / 7월 1~15일 $0.03).
+  사용자가 본 "테스트 광고"는 **preview 프로필 빌드**(구글 테스트 ID)의 정상 동작이었음.
+- **app-ads.txt 누락 → 추가·배포**(커밋 c976f5d): `public/app-ads.txt` =
+  `google.com, pub-1736147235986434, DIRECT, f08c47fec0942fa0`. AdMob 콘솔의 개인화 스니펫과 바이트 단위 동일 확인.
+  `sylabs.kr` 이 같은 Firebase 호스팅의 커스텀 도메인이라 양쪽 도메인 모두에 서빙됨(md5 동일).
+- **Play 스토어 등록정보에 개발자 웹사이트가 비어 있던 것**을 발견 → `https://sylabs.kr` 등록·게시 완료.
+  AdMob 은 이 값으로 크롤링 도메인을 찾으므로, 비어 있으면 app-ads.txt 가 아무리 정확해도 인증 불가.
+  (iOS 는 마케팅 URL 이 이미 `amatda-parenting.web.app/amatda` 로 설정돼 있고 해당 도메인에도 파일 존재 → 변경 불필요)
+- **진짜 병목 = AdSense 계정 유형 불일치**:
+  - Google 결제팀 케이스 `5-4895000041591` — "결제 프로필 계정 유형이 **조직**인데 실제는 개인사업자
+    (일반과세자=1인기업(개인)) → 개인 유형 새 계정 생성 + 앱 이전" 지시.
+  - Play 는 새 개인 계정(`sydo991234` / 개발자 6390265969501522851 / 판매자 4103-0744-9425)으로
+    이전 완료(6/19 Play 지원팀 확인, 6/26 결제팀 확인).
+  - **그러나 AdSense/AdMob(`pub-1736147235986434`)은 여전히 옛 조직 결제 프로필(`8788-7225-8676`,
+    에스와이랩스)에 묶여 있음** → AdMob 에 "지급 보류" + "신원 확인 필요" + 앱 3개 "광고 게재 제한".
+  - 공식 문서 확인: **AdSense 계정 유형은 활성화 후 변경 불가, 계정을 다른 구글 계정으로 이전도 불가.**
+    바꾸려면 기존 해지 후 신규 개설 → **퍼블리셔 ID 변경 → 앱 ID·광고 유닛 전부 교체 + 네이티브 재빌드 필수
+    (OTA 불가)**. 1인 1계정 원칙이라 해지 순서 중요.
+  - 조치: 케이스에 회신 발송(2026-07-16) — AdSense 정리 방법/해지 순서/퍼블리셔 ID 유지 가능 여부 문의. **답변 대기 중.**
+- **AdMob 잔여 이슈**: 고아 Android 앱 `~7980390341`(스토어 미연결·광고단위 0) 정리 필요(미착수).
+
+### C. 문서/설정
+- `DEPLOY.md`: OTA 는 `eas env:exec production` 으로 감싸는 것을 표준 절차로 고정 + 배포 후 번들 검증 절차 추가.
+  (환경 미지정 시 로컬 `.env` 가 구워지는 **위험**은 번들로 실증했으나, 실제 사고가 난 적은 없음 — 서술 정정 완료)
+- `frontend/.env`: 개발용을 `EXPO_PUBLIC_ADS_MOCK=true` + 테스트 광고 유닛 주석 처리로 안전화
+  (개발 중 실수로 실제 광고 클릭 → AdMob 계정 정지 위험 제거). 백업 `.env.bak-20260716`.
+- OTA 재배포(rt2.9.2 / rt2.9.1, production env 주입) — 코드 변경은 없고 환경 명시 목적.
+
+### 남은 작업
+- [ ] Google 결제팀 답변 대기 → AdSense 정리 방향 확정
+- [ ] (필요 시) 새 퍼블리셔 ID 반영: app.json 앱ID / eas.json·EAS env 광고유닛 / app-ads.txt + 네이티브 재빌드
+- [ ] AdMob 고아 앱(`~7980390341`) 정리
+- [ ] production 빌드 vc14(7/7) 실패 원인 — 네이티브 변경 필요 시 선행 해결 필요
+- [ ] 레거시 `createdAtLegacyRaw` 필드는 안정화 후 제거 검토
 
 ---
 
