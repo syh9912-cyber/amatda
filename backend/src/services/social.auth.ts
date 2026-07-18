@@ -1,8 +1,30 @@
 import { env } from '../config/env';
 import { createPublicKey } from 'crypto';
 import jwt from 'jsonwebtoken';
+import { logger } from '../utils/logger';
 
 export type SocialProvider = 'GOOGLE' | 'KAKAO' | 'NAVER' | 'APPLE';
+
+/**
+ * 토큰 거부(만료·위조·다른 앱 토큰 등) — 사용자가 재로그인하면 풀리는 상황.
+ *
+ * 배경(2026-07-18): 토큰 검증 실패를 statusCode 마커 없는 plain Error 로 던지고 있어서
+ * auth.ts 의 4xx 분기(`status >= 400 && status < 500`)가 절대 참이 되지 않았고, 정상적인
+ * 토큰 거부까지 전부 500 + logger.error 로 떨어졌다. 그 결과 (a) 토큰이 만료된 실사용자가
+ * "다시 로그인해주세요" 대신 "오류가 발생했습니다"를 보고 이탈하고, (b) 평범한 토큰 만료가
+ * error 로그로 쌓여 진짜 장애를 가렸다.
+ *
+ * 상세 사유는 여기서 warn 으로 남기고, 클라이언트에는 안전한 문구만 전달한다
+ * (app_id·project_id·provider 에러바디 등 내부 정보 노출 방지).
+ */
+function tokenRejected(provider: string, detail: string): Error & { statusCode: number } {
+  logger.warn(`social.auth/${provider}`, detail);
+  const err = new Error(
+    '소셜 로그인 인증이 만료되었거나 유효하지 않아요. 다시 로그인해주세요.',
+  ) as Error & { statusCode: number };
+  err.statusCode = 401;
+  return err;
+}
 
 export interface SocialUserInfo {
   provider: SocialProvider;
@@ -39,7 +61,7 @@ async function verifyGoogleToken(accessToken: string): Promise<SocialUserInfo> {
   //   추가 강화: 명시 GOOGLE_ALLOWED_AUDIENCES 가 설정되면 strict 매칭 우선 사용.
   if (env.GOOGLE_CLIENT_ID) {
     const infoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`);
-    if (!infoRes.ok) throw new Error('Google 토큰 audience 검증 실패');
+    if (!infoRes.ok) throw tokenRejected('google', 'Google 토큰 audience 검증 실패');
     const info = await infoRes.json() as { aud?: string; azp?: string };
 
     // GCP project_id 추출 — Google client_id 형식: `{PROJECT_NUMBER}-{UNIQUE}.apps.googleusercontent.com`
@@ -65,8 +87,9 @@ async function verifyGoogleToken(accessToken: string): Promise<SocialUserInfo> {
     const projectMatch = audProject === ourProjectId || azpProject === ourProjectId;
 
     if (!strictMatch && !projectMatch) {
-      // PII 안전 진단 — project_id 만 노출 (전체 client_id 노출 X)
-      throw new Error(
+      // PII 안전 진단 — project_id 만 서버 로그에 남김 (클라이언트에는 안전 문구만)
+      throw tokenRejected(
+        'google',
         `Google 토큰 audience 불일치 — expected project=${ourProjectId}, got audProject=${audProject} azpProject=${azpProject}`,
       );
     }
@@ -75,7 +98,7 @@ async function verifyGoogleToken(accessToken: string): Promise<SocialUserInfo> {
   const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) throw new Error('Google 토큰 검증 실패');
+  if (!res.ok) throw tokenRejected('google', 'Google userinfo 조회 실패 — 토큰 만료·무효 추정');
   const data = await res.json() as { sub: string; email?: string; email_verified?: boolean; name?: string };
   return {
     provider: 'GOOGLE',
@@ -97,10 +120,10 @@ async function verifyKakaoToken(accessToken: string): Promise<SocialUserInfo> {
     const infoRes = await fetch('https://kapi.kakao.com/v1/user/access_token_info', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!infoRes.ok) throw new Error('카카오 토큰 app_id 검증 실패');
+    if (!infoRes.ok) throw tokenRejected('kakao', '카카오 access_token_info 조회 실패 — 토큰 만료·무효 추정');
     const info = await infoRes.json() as { app_id?: number };
     if (!info.app_id) {
-      throw new Error('카카오 토큰 app_id 불명 — 의심스러운 토큰');
+      throw tokenRejected('kakao', '카카오 토큰 app_id 불명 — 의심스러운 토큰');
     }
     // KAKAO_APP_ID 환경변수가 설정돼 있으면 strict 비교 — 다른 카카오 앱 토큰 거부.
     // 미설정 시 (개발환경 등) 0/null 만 차단.
@@ -110,7 +133,8 @@ async function verifyKakaoToken(accessToken: string): Promise<SocialUserInfo> {
         throw new Error('서버 설정 오류: KAKAO_APP_ID 가 정수가 아닙니다');
       }
       if (info.app_id !== expectedAppId) {
-        throw new Error(`카카오 토큰 app_id 불일치 — 다른 앱 토큰 거부 (받음: ${info.app_id})`);
+        // 받은 app_id 는 서버 로그에만 (클라이언트 노출 금지)
+        throw tokenRejected('kakao', `카카오 토큰 app_id 불일치 — 다른 앱 토큰 거부 (받음: ${info.app_id})`);
       }
     }
   }
@@ -118,7 +142,7 @@ async function verifyKakaoToken(accessToken: string): Promise<SocialUserInfo> {
   const res = await fetch('https://kapi.kakao.com/v2/user/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) throw new Error('카카오 토큰 검증 실패');
+  if (!res.ok) throw tokenRejected('kakao', '카카오 user/me 조회 실패 — 토큰 만료·무효 추정');
   const data = await res.json() as {
     id: number;
     kakao_account?: {
@@ -147,7 +171,7 @@ async function verifyNaverToken(accessToken: string): Promise<SocialUserInfo> {
   const res = await fetch('https://openapi.naver.com/v1/nid/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) throw new Error('네이버 토큰 검증 실패');
+  if (!res.ok) throw tokenRejected('naver', '네이버 nid/me 조회 실패 — 토큰 만료·무효 추정');
   // resultcode/message 같이 받아 정상 응답인지 추가 검증
   const data = await res.json() as {
     resultcode?: string;
@@ -155,7 +179,8 @@ async function verifyNaverToken(accessToken: string): Promise<SocialUserInfo> {
     response?: { id?: string; email?: string; name?: string };
   };
   if (data.resultcode !== '00' || !data.response?.id) {
-    throw new Error(`네이버 토큰 검증 실패: ${data.message ?? 'unknown'}`);
+    // provider 에러 메시지는 서버 로그에만 (클라이언트 노출 금지)
+    throw tokenRejected('naver', `네이버 토큰 검증 실패: ${data.message ?? 'unknown'}`);
   }
   /**
    * 네이버는 verifyIdToken 같은 명시 audience 검증 endpoint 가 없지만,
@@ -208,7 +233,7 @@ async function getAppleSigningKey(kid: string): Promise<AppleJwk> {
     keys = await fetchAppleKeys();
     key = keys.find((k) => k.kid === kid);
   }
-  if (!key) throw new Error('Apple 토큰 서명 키(kid) 불일치');
+  if (!key) throw tokenRejected('apple', 'Apple 토큰 서명 키(kid) 불일치');
   return key;
 }
 
@@ -216,7 +241,7 @@ async function verifyAppleToken(identityToken: string): Promise<SocialUserInfo> 
   // 1) 헤더에서 kid 추출
   const decoded = jwt.decode(identityToken, { complete: true });
   if (!decoded || typeof decoded === 'string' || !decoded.header?.kid) {
-    throw new Error('Apple identityToken 형식 오류');
+    throw tokenRejected('apple', 'Apple identityToken 형식 오류');
   }
   // 2) Apple 공개키로 서명 + iss/aud/exp 검증
   const jwk = await getAppleSigningKey(decoded.header.kid);
@@ -232,9 +257,9 @@ async function verifyAppleToken(identityToken: string): Promise<SocialUserInfo> 
       audience: APPLE_AUD,
     }) as jwt.JwtPayload;
   } catch (e) {
-    throw new Error(`Apple 토큰 검증 실패: ${e instanceof Error ? e.message : 'unknown'}`);
+    throw tokenRejected('apple', `Apple 토큰 검증 실패: ${e instanceof Error ? e.message : 'unknown'}`);
   }
-  if (!payload.sub) throw new Error('Apple 토큰에 sub(사용자 식별자) 없음');
+  if (!payload.sub) throw tokenRejected('apple', 'Apple 토큰에 sub(사용자 식별자) 없음');
   // email 은 email_verified=true 인 경우만 신뢰 (가짜 이메일 자동 연결 takeover 방지)
   const emailVerified = payload.email_verified === true || payload.email_verified === 'true';
   const email = (emailVerified && typeof payload.email === 'string') ? payload.email : null;
@@ -308,8 +333,9 @@ async function exchangeKakaoCode(
   });
 
   if (!res.ok) {
+    // 인가 코드 만료·재사용·redirect_uri 불일치 = 사용자 재시도로 풀림. provider 에러바디는 로그에만.
     const errBody = await res.text();
-    throw new Error(`카카오 토큰 교환 실패: ${errBody}`);
+    throw tokenRejected('kakao', `카카오 토큰 교환 실패: ${errBody}`);
   }
 
   const data = (await res.json()) as KakaoTokenResponse;
@@ -336,8 +362,9 @@ async function exchangeNaverCode(
   });
 
   if (!res.ok) {
+    // 인가 코드 만료·재사용·redirect_uri 불일치 = 사용자 재시도로 풀림. provider 에러바디는 로그에만.
     const errBody = await res.text();
-    throw new Error(`네이버 토큰 교환 실패: ${errBody}`);
+    throw tokenRejected('naver', `네이버 토큰 교환 실패: ${errBody}`);
   }
 
   const data = (await res.json()) as NaverTokenResponse;
