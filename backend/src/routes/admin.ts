@@ -144,4 +144,126 @@ router.get('/users', adminRateLimit, adminDashboardAuth, async (req: Request, re
   }
 });
 
+/**
+ * GET /api/admin/users/:userId/activity — 특정 유저의 활동 내역(읽기 전용)
+ *
+ * 설계 메모(2026-07-18):
+ * - apiUsageLogs 에는 **기능/엔드포인트 식별 필드가 없다**(userId·provider·model·토큰·비용뿐).
+ *   따라서 "AI 호출 1건이 어떤 기능이었나"는 이 데이터만으로 귀속 불가 → AI 호출은 건수·비용
+ *   추이로만 보여주고, "무엇을 했는지"는 coachingSessions.category 등 도메인 컬렉션으로 보완한다.
+ * - 모든 쿼리를 where('userId','==') **단일 필드**로만 걸고 정렬은 메모리에서 한다.
+ *   orderBy 를 섞으면 복합 인덱스가 필요해 배포 없이는 동작하지 않기 때문(현재 데이터량은 소규모).
+ * - createdAt 타입이 컬렉션마다 다르다(coachingSessions/posts=ISO string, 나머지=Timestamp).
+ *   toISO() 로 정규화 후 병합한다.
+ */
+router.get('/users/:userId/activity', adminRateLimit, adminDashboardAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = String(req.params.userId || '').slice(0, 128);
+    if (!userId) { error(res, 'userId 가 필요합니다', 400); return; }
+    // PII 조회 감사 로그 — 키 유출 시 추적용
+    logger.info('admin/user-activity', `uid=${userId} accessed from ip=${req.ip}`);
+
+    const byUser = (c: FirebaseFirestore.CollectionReference) => c.where('userId', '==', userId);
+    const [
+      dailySnap, logsSnap, coachingSnap, postsSnap,
+      albumSnap, groupSnap, trackerSnap, vaccSnap, childSnap,
+    ] = await Promise.all([
+      byUser(collections.apiUsageDaily).limit(90).get(),
+      byUser(collections.apiUsageLogs).limit(200).get(),
+      byUser(collections.coachingSessions).limit(200).get(),
+      byUser(collections.posts).limit(100).get(),
+      byUser(collections.albumPhotos).limit(200).get(),
+      byUser(collections.momGroupPosts).limit(100).get(),
+      byUser(collections.babyTrackerDays).limit(200).get(),
+      byUser(collections.vaccinations).limit(100).get(),
+      byUser(collections.children).limit(20).get(),
+    ]);
+
+    const desc = (a: { at: string | null }, b: { at: string | null }) =>
+      (b.at ?? '').localeCompare(a.at ?? '');
+
+    // 일별 AI 사용 추이 (최근 30일)
+    const daily = dailySnap.docs
+      .map((d) => {
+        const v = d.data() as Record<string, unknown>;
+        return {
+          date: (v.date as string) || '',
+          callCount: (v.callCount as number) ?? 0,
+          totalTokens: (v.totalTokens as number) ?? 0,
+          costUsd: (v.costUsd as number) ?? 0,
+        };
+      })
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 30);
+
+    // AI 호출 원본 로그 (기능 구분 불가 — 모델·토큰·비용만)
+    const aiCalls = logsSnap.docs
+      .map((d) => {
+        const v = d.data() as Record<string, unknown>;
+        return {
+          at: toISO(v.createdAt),
+          provider: (v.provider as string) || '',
+          model: (v.model as string) || '',
+          totalTokens: (v.totalTokens as number) ?? 0,
+          costUsd: (v.costUsd as number) ?? 0,
+        };
+      })
+      .sort(desc)
+      .slice(0, 50);
+
+    // AI 상담 — 카테고리로 "무엇을 했는지" 파악 가능한 유일한 소스
+    const coaching = coachingSnap.docs
+      .map((d) => {
+        const v = d.data() as Record<string, unknown>;
+        const msg = (v.message as string) || '';
+        return {
+          at: toISO(v.createdAt),
+          category: (v.category as string) || '',
+          source: (v.source as string) || '',
+          redFlag: v.redFlag ? String(v.redFlag).slice(0, 40) : null,
+          // 프라이버시: 상담 원문은 앞부분만 (관리자도 전문 열람 불필요)
+          preview: msg.slice(0, 30) + (msg.length > 30 ? '…' : ''),
+        };
+      })
+      .sort(desc)
+      .slice(0, 50);
+
+    const categoryCounts: Record<string, number> = {};
+    coachingSnap.docs.forEach((d) => {
+      const c = ((d.data() as Record<string, unknown>).category as string) || '기타';
+      categoryCounts[c] = (categoryCounts[c] ?? 0) + 1;
+    });
+
+    // 기능별 사용량 — 어떤 기능을 실제로 썼는지
+    const featureUsage = {
+      aiCoaching: coachingSnap.size,
+      album: albumSnap.size,
+      trackerDays: trackerSnap.size,
+      familyFeed: postsSnap.size,
+      momGroup: groupSnap.size,
+      vaccination: vaccSnap.size,
+      children: childSnap.size,
+    };
+
+    const totalCost = logsSnap.docs.reduce(
+      (s, d) => s + (((d.data() as Record<string, unknown>).costUsd as number) ?? 0), 0,
+    );
+
+    success(res, {
+      userId,
+      featureUsage,
+      categoryCounts,
+      totals: { aiCallCount: logsSnap.size, aiCostUsd: totalCost },
+      daily,
+      aiCalls,
+      coaching,
+      // 관리자 화면에 한계를 명시 — 없는 데이터를 있는 것처럼 오해하지 않도록
+      note: 'AI 호출 로그에는 기능 식별 필드가 없어 호출별 기능 귀속은 불가합니다. 기능별 사용량은 도메인 데이터 기준입니다.',
+    });
+  } catch (err) {
+    logger.error('admin/user-activity', err);
+    error(res, '조회 중 오류가 발생했습니다', 500);
+  }
+});
+
 export default router;

@@ -100,6 +100,23 @@
   .toolbar .btn.small { padding: 9px 16px; font-size: 14px; }
 
   table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+  th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+  th.sortable:hover { color: #111; }
+  th.sortable .arrow { font-size: 10px; color: #888; }
+  tbody tr.clickable { cursor: pointer; }
+  tbody tr.clickable:hover { background: #f5f7fa; }
+  .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+  .modal-box { background: #fff; border-radius: 12px; width: 100%; max-width: 720px; max-height: 86vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,.2); }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #eee; }
+  .modal-body { padding: 16px 20px 22px; overflow-y: auto; }
+  .modal-body h4 { margin: 18px 0 8px; font-size: 13px; color: #555; }
+  .modal-body h4:first-child { margin-top: 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: #f1f3f6; border-radius: 999px; padding: 5px 11px; font-size: 12px; }
+  .chip b { color: #1a73e8; }
+  table.mini { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.mini th, table.mini td { border-bottom: 1px solid #f0f0f0; padding: 6px 8px; text-align: left; }
+  table.mini th { color: #888; font-weight: 600; }
   thead th {
     text-align: left; font-size: 12px; color: var(--text-light);
     padding: 10px 12px; border-bottom: 1px solid var(--border); background: #FAFAFA;
@@ -156,20 +173,30 @@
       <table>
         <thead>
           <tr>
-            <th>가입일시</th>
+            <th class="sortable" data-key="createdAt">가입일시 <span class="arrow">▼</span></th>
             <th>방식</th>
             <th>이메일</th>
             <th>닉네임</th>
             <th>상태</th>
-            <th>최근 접속</th>
-            <th>API 호출</th>
-            <th>API 비용</th>
+            <th class="sortable" data-key="lastActiveAt">최근 접속 <span class="arrow"></span></th>
+            <th class="sortable" data-key="apiCallCount">API 호출 <span class="arrow"></span></th>
+            <th class="sortable" data-key="apiCostUsd">API 비용 <span class="arrow"></span></th>
             <th>uid</th>
           </tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
       <div class="empty" id="emptyMsg" style="display:none;">데이터가 없습니다</div>
+    </div>
+  </div>
+
+  <div id="actModal" class="modal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <strong id="actTitle"></strong>
+        <button class="btn small" id="actClose">닫기</button>
+      </div>
+      <div id="actBody" class="modal-body"></div>
     </div>
   </div>
 
@@ -215,6 +242,34 @@
     return '<span class="badge FREE">FREE</span>';
   }
 
+  // 정렬 상태 — 기본은 가입일 최신순(백엔드도 동일 순서로 내려줌)
+  var sortKey = 'createdAt';
+  var sortDir = 'desc';
+
+  function sortUsers(list) {
+    var arr = list.slice();
+    arr.sort(function (a, b) {
+      var x = a[sortKey], y = b[sortKey];
+      // 날짜 문자열(ISO)은 사전순 비교가 곧 시간순. 숫자는 숫자 비교.
+      if (typeof x === 'number' || typeof y === 'number') {
+        x = x || 0; y = y || 0;
+        return sortDir === 'desc' ? y - x : x - y;
+      }
+      x = x || ''; y = y || '';
+      return sortDir === 'desc' ? String(y).localeCompare(String(x)) : String(x).localeCompare(String(y));
+    });
+    return arr;
+  }
+
+  function updateArrows() {
+    var ths = document.querySelectorAll('th.sortable');
+    for (var i = 0; i < ths.length; i++) {
+      var el = ths[i].querySelector('.arrow');
+      if (!el) continue;
+      el.textContent = ths[i].getAttribute('data-key') === sortKey ? (sortDir === 'desc' ? '▼' : '▲') : '';
+    }
+  }
+
   function render(users) {
     var tbody = document.getElementById('rows');
     var emptyMsg = document.getElementById('emptyMsg');
@@ -224,8 +279,11 @@
       return;
     }
     emptyMsg.style.display = 'none';
-    users.forEach(function (u) {
+    sortUsers(users).forEach(function (u) {
       var tr = document.createElement('tr');
+      tr.className = 'clickable';
+      tr.title = '클릭하면 활동 내역을 봅니다';
+      tr.addEventListener('click', function () { openActivity(u); });
       tr.innerHTML =
         '<td>' + fmtDate(u.createdAt) + '</td>' +
         '<td>' + (u.authProvider || '-') + '</td>' +
@@ -238,6 +296,79 @@
         '<td class="muted" style="font-size:11px;">' + u.id + '</td>';
       tbody.appendChild(tr);
     });
+    updateArrows();
+  }
+
+  var FEATURE_LABEL = {
+    aiCoaching: 'AI 상담', album: '성장앨범(장)', trackerDays: '트래커(일)',
+    familyFeed: '가족피드(글)', momGroup: '맘그룹(글)', vaccination: '예방접종',
+    children: '등록 아이'
+  };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  function openActivity(u) {
+    var modal = document.getElementById('actModal');
+    var body = document.getElementById('actBody');
+    document.getElementById('actTitle').textContent = (u.email || u.nickname || u.id) + ' 활동 내역';
+    body.innerHTML = '<div class="empty">불러오는 중…</div>';
+    modal.style.display = 'flex';
+
+    fetch(API_BASE + '/api/admin/users/' + encodeURIComponent(u.id) + '/activity', {
+      headers: { 'x-admin-key': getKey() }
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (json) {
+        if (!json || !json.success) { body.innerHTML = '<div class="empty">조회 실패</div>'; return; }
+        var d = json.data;
+        var html = '';
+
+        html += '<h4>기능별 사용량</h4><div class="chips">';
+        Object.keys(d.featureUsage).forEach(function (k) {
+          html += '<span class="chip">' + esc(FEATURE_LABEL[k] || k) + ' <b>' + d.featureUsage[k] + '</b></span>';
+        });
+        html += '</div>';
+
+        var cats = Object.keys(d.categoryCounts || {});
+        if (cats.length) {
+          cats.sort(function (a, b) { return d.categoryCounts[b] - d.categoryCounts[a]; });
+          html += '<h4>상담 카테고리</h4><div class="chips">';
+          cats.forEach(function (c) {
+            html += '<span class="chip">' + esc(c) + ' <b>' + d.categoryCounts[c] + '</b></span>';
+          });
+          html += '</div>';
+        }
+
+        html += '<h4>AI 사용 합계</h4><div class="chips">' +
+          '<span class="chip">호출 <b>' + d.totals.aiCallCount + '</b>회</span>' +
+          '<span class="chip">비용 <b>' + fmtCost(d.totals.aiCostUsd) + '</b></span></div>';
+
+        if (d.daily && d.daily.length) {
+          html += '<h4>일별 AI 사용</h4><table class="mini"><tr><th>날짜</th><th>호출</th><th>토큰</th><th>비용</th></tr>';
+          d.daily.forEach(function (x) {
+            html += '<tr><td>' + esc(x.date) + '</td><td>' + x.callCount + '회</td><td>' +
+              (x.totalTokens || 0).toLocaleString() + '</td><td>' + fmtCost(x.costUsd) + '</td></tr>';
+          });
+          html += '</table>';
+        }
+
+        if (d.coaching && d.coaching.length) {
+          html += '<h4>최근 상담</h4><table class="mini"><tr><th>시각</th><th>분류</th><th>내용</th><th>위험</th></tr>';
+          d.coaching.slice(0, 20).forEach(function (x) {
+            html += '<tr><td>' + fmtDate(x.at) + '</td><td>' + esc(x.category) + '</td><td>' +
+              esc(x.preview) + '</td><td>' + (x.redFlag ? '⚠️' : '') + '</td></tr>';
+          });
+          html += '</table>';
+        }
+
+        if (d.note) html += '<p class="muted" style="margin-top:14px;font-size:12px;">ⓘ ' + esc(d.note) + '</p>';
+        body.innerHTML = html;
+      })
+      .catch(function () { body.innerHTML = '<div class="empty">네트워크 오류</div>'; });
   }
 
   function renderSummary(summary) {
@@ -299,6 +430,27 @@
     keyInput.value = '';
     keyInput.focus();
   }
+
+  // 컬럼 헤더 클릭 → 정렬 전환 (같은 컬럼 재클릭 시 오름/내림 토글)
+  var sortableThs = document.querySelectorAll('th.sortable');
+  for (var si = 0; si < sortableThs.length; si++) {
+    sortableThs[si].addEventListener('click', function () {
+      var key = this.getAttribute('data-key');
+      if (sortKey === key) { sortDir = (sortDir === 'desc' ? 'asc' : 'desc'); }
+      else { sortKey = key; sortDir = 'desc'; }
+      applySearch();
+    });
+  }
+
+  document.getElementById('actClose').addEventListener('click', function () {
+    document.getElementById('actModal').style.display = 'none';
+  });
+  document.getElementById('actModal').addEventListener('click', function (e) {
+    if (e.target === this) this.style.display = 'none';
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') document.getElementById('actModal').style.display = 'none';
+  });
 
   document.getElementById('enterBtn').addEventListener('click', function () {
     var v = keyInput.value.trim();
