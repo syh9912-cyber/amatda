@@ -299,10 +299,11 @@
     updateArrows();
   }
 
+  // 라벨은 앱에서 사용자가 보는 기능명과 일치시킨다(babyTrackerDays = '아기시간')
   var FEATURE_LABEL = {
-    aiCoaching: 'AI 상담', album: '성장앨범(장)', trackerDays: '트래커(일)',
-    familyFeed: '가족피드(글)', momGroup: '맘그룹(글)', vaccination: '예방접종',
-    children: '등록 아이'
+    children: '등록 아이', trackerDays: '아기시간(기록일)', aiCoaching: 'AI 상담',
+    album: '성장앨범(장)', vaccination: '예방접종', familyFeed: '가족피드(글)',
+    momGroup: '맘그룹(글)'
   };
 
   function esc(s) {
@@ -326,6 +327,16 @@
         if (!json || !json.success) { body.innerHTML = '<div class="empty">조회 실패</div>'; return; }
         var d = json.data;
         var html = '';
+
+        if (d.babyTime) {
+          var bt = d.babyTime;
+          html += '<h4>아기시간 사용 여부</h4><div class="chips">' +
+            '<span class="chip" style="background:' + (bt.isUsing ? '#e6f4ea' : '#fdecea') + ';">' +
+            (bt.isUsing ? '✅ 사용 중' : '❌ 미사용') + '</span>' +
+            '<span class="chip">기록한 날 <b>' + bt.daysRecorded + '</b>일</span>' +
+            '<span class="chip">총 기록 <b>' + bt.totalRecords + '</b>건</span>' +
+            '<span class="chip">마지막 <b>' + esc(bt.lastDate || '-') + '</b></span></div>';
+        }
 
         html += '<h4>기능별 사용량</h4><div class="chips">';
         Object.keys(d.featureUsage).forEach(function (k) {

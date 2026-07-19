@@ -236,13 +236,32 @@ router.get('/users/:userId/activity', adminRateLimit, adminDashboardAuth, async 
 
     // 기능별 사용량 — 어떤 기능을 실제로 썼는지
     const featureUsage = {
+      children: childSnap.size,
+      trackerDays: trackerSnap.size,
       aiCoaching: coachingSnap.size,
       album: albumSnap.size,
-      trackerDays: trackerSnap.size,
+      vaccination: vaccSnap.size,
       familyFeed: postsSnap.size,
       momGroup: groupSnap.size,
-      vaccination: vaccSnap.size,
-      children: childSnap.size,
+    };
+
+    // 아기시간(베이비 트래커) 상세 — "등록만 하고 안 쓰는지 / 실제로 쓰는지" 판별용.
+    // babyTrackerDays 는 하루 1문서에 records 배열을 담으므로, 날짜 수와 총 기록 건수를 나눠 본다.
+    let trackerRecordCount = 0;
+    let trackerLastDate: string | null = null;
+    trackerSnap.docs.forEach((d) => {
+      const v = d.data() as Record<string, unknown>;
+      const recs = Array.isArray(v.records) ? v.records : [];
+      trackerRecordCount += recs.length;
+      const date = (v.date as string) || '';
+      if (date && (!trackerLastDate || date > trackerLastDate)) trackerLastDate = date;
+    });
+    const babyTime = {
+      daysRecorded: trackerSnap.size,
+      totalRecords: trackerRecordCount,
+      lastDate: trackerLastDate,
+      // 하루라도 실제 기록이 있으면 사용한 것으로 본다(문서만 있고 records 가 빈 경우 제외)
+      isUsing: trackerRecordCount > 0,
     };
 
     const totalCost = logsSnap.docs.reduce(
@@ -252,6 +271,7 @@ router.get('/users/:userId/activity', adminRateLimit, adminDashboardAuth, async 
     success(res, {
       userId,
       featureUsage,
+      babyTime,
       categoryCounts,
       totals: { aiCallCount: logsSnap.size, aiCostUsd: totalCost },
       daily,
