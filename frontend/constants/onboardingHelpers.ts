@@ -17,7 +17,7 @@ export interface OnboardingQuestion {
   options: string[];
 }
 
-export type AgeGroup = 'infant' | 'toddler' | 'elementary';
+export type AgeGroup = 'm0' | 'm6' | 'm12' | 'm24' | 'm48' | 'm84';
 
 /** Map months to the 3-tier age group used by the survey */
 export function getAgeGroup(months: number): AgeGroup {

@@ -51,7 +51,7 @@ export default function QuestionsScreen() {
   const updateChild = useChildStore((s) => s.updateChild);
   const child = children.find((c) => c.id === childId);
 
-  const ageGroup = child ? getAgeGroup(child.ageInfo.months) : 'toddler';
+  const ageGroup = child ? getAgeGroup(child.ageInfo.months) : 'm24';
   const questions: SurveyQuestion[] = getSurveyQuestions(t, ageGroup);
 
   const [currentIdx, setCurrentIdx] = useState(0);
