@@ -21,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { childApi, coachingApi, premiumApi, uploadApi, announcementApi } from '../../services/api';
 import { AnnouncementPopup, type Announcement, type DismissChoice } from '../../components/common/AnnouncementPopup';
 import { useChildStore, Child } from '../../stores/childStore';
+import { usePremiumStore } from '../../stores/premiumStore';
 import { useFeverStore } from '../../stores/feverStore';
 import { DenseStatsRow } from '../../components/home/DenseStatsRow';
 import { PregnancyJourneyCard } from '../../components/home/PregnancyJourneyCard';
@@ -267,17 +268,16 @@ export default function HomeScreen() {
 
   const checkTrialStatus = useCallback(async () => {
     try {
-      const res = await premiumApi.status();
-      const status = res.data?.data as {
-        tier: string;
-        trialDaysLeft?: number;
-      } | undefined;
+      // premiumStore(5분 캐시)를 통해 조회 → (main)/_layout 의 fetchStatus 와 중복 네트워크 호출 제거.
+      await usePremiumStore.getState().fetchStatus();
+      const status = usePremiumStore.getState().status;
       if (!status) return;
 
       if (status.tier === 'FREE') {
         const alreadyStarted = await AsyncStorage.getItem(TRIAL_AUTO_KEY);
         if (!alreadyStarted && (status.trialDaysLeft === undefined || status.trialDaysLeft === null)) {
           await premiumApi.startTrial();
+          await usePremiumStore.getState().invalidate(); // 체험 시작 즉시 캐시 갱신
           await AsyncStorage.setItem(TRIAL_AUTO_KEY, '1');
           Alert.alert(t('home.trialStartAlert.title'), t('home.trialStartAlert.desc'));
           return;
@@ -296,8 +296,13 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    // loadChildren은 화면 콘텐츠 렌더링에 필요해 병렬로 즉시 시작.
-    void loadChildren();
+    // 콜드스타트 즉시 렌더(stale-while-revalidate): 로컬 캐시가 있으면 먼저 표시해
+    // 전체화면 스피너 대기를 없애고, 이어서 서버 최신 데이터로 백그라운드 갱신한다.
+    void (async () => {
+      const hadCache = await useChildStore.getState().hydrateFromCache();
+      if (hadCache) setLoading(false);
+      await loadChildren();
+    })();
 
     // iOS 터치먹통(Modal 2개 동시노출) 방지 — 2단계 방어:
     //  (1) 첫 실행 온보딩 가이드(OnboardingGuide=GuideCarousel=<Modal>)가 뜰 차례면,

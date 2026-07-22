@@ -70,16 +70,18 @@ export default function MainLayout() {
   const selectedChild = useChildStore((s) => s.selectedChild);
   const fetchPremiumStatus = usePremiumStore((s) => s.fetchStatus);
   const resetPremium = usePremiumStore((s) => s.reset);
+  const resetChildren = useChildStore((s) => s.reset);
 
   // 로그인 직후 프리미엄 상태 선제 로드 (광고 결정을 위한 캐시 워밍)
   useEffect(() => {
     if (isAuthenticated) {
       fetchPremiumStatus();
     } else {
-      // 로그아웃 시 캐시 초기화
+      // 로그아웃 시 캐시 초기화 (프리미엄 + 자녀 인메모리/영속 — 계정 전환 교차노출 방지)
       resetPremium();
+      resetChildren();
     }
-  }, [isAuthenticated, fetchPremiumStatus, resetPremium]);
+  }, [isAuthenticated, fetchPremiumStatus, resetPremium, resetChildren]);
 
   // 약관 버전 게이트 + 알림 priming 게이트 — 인증 통과 후 1회 실행.
   //   ① 약관: 신규 필수 항목(커뮤니티 등) 누락 시 /onboarding/consent?reauth=1 강제
