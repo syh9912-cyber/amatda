@@ -647,6 +647,8 @@ export default function VoiceScreen() {
         !/일어났|깼|기상|까지|起き|起床|まで|醒|睡到/.test(voiceText);
       const sleepIdxs = records.map((rec, idx) => (rec.type === 'sleep' ? idx : -1)).filter((idx) => idx >= 0);
       const ongoingSleepIdx = isOngoingSleepUtter && sleepIdxs.length > 0 ? sleepIdxs[sleepIdxs.length - 1] : -1;
+      // 진행 중(라이브) 수면은 정적 record 로 저장하지 않고 세션으로만 등록한다(아래 캡처). → 이중 생성·서버 race 방지.
+      let ongoingSleepInfo: { time: string; date: string; note?: string } | null = null;
 
       for (let i = 0; i < records.length; i++) {
         const r = records[i];
@@ -670,14 +672,17 @@ export default function VoiceScreen() {
           }
         }
 
-        // 진행 중(종료 미정) 수면이면 종료시각·지속시간을 비워, 아래 활성 수면 세션 등록 로직이 라이브로 잡도록 한다.
-        if (i === ongoingSleepIdx) {
-          r.endTime = undefined;
-          r.duration = undefined;
-        }
-
         const dateStr = r.date && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : todayStr;
         const timeStr = r.time || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        // 진행 중(라이브) 수면이면 정적 record 로 저장하지 않고 세션 정보만 캡처 후 건너뛴다.
+        // (이전엔 open record 를 저장했다가 아래에서 제거했는데, 그 사이 putDay 2회가 서버에서
+        //  순서 뒤바뀌면 open record 가 서버에 남아 다음 sync 때 "수면 + 라이브" 2개로 부활했다.)
+        if (i === ongoingSleepIdx) {
+          ongoingSleepInfo = { time: timeStr, date: dateStr, ...(r.note ? { note: r.note } : {}) };
+          continue;
+        }
+
         const recordId = `${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}`;
 
         // cross-day sleep endTime 정규화 — "M/D HH:MM" 형식 필요
@@ -751,23 +756,18 @@ export default function VoiceScreen() {
         return;
       }
 
-      // 진행 중(종료 미정) 수면 → 활성 수면 세션으로 등록 (오늘 + 기존 진행중 세션 없을 때)
-      // → 진행중(LIVE) 표시 + 나중에 '기상' 탭으로 마감. 정적 record 에서는 제거(중복 방지).
+      // 진행 중(라이브) 수면 → 활성 수면 세션으로 등록. 위에서 정적 record 로 저장하지 않았으므로
+      // 이중 생성/서버 race 없이 세션 1개만 만든다. (기존 세션이 있으면 새 시작으로 덮어씀 = 재선언)
       try {
-        const existingSession = await loadSleepSession(targetChildId);
-        const todayRecs = recordsByDate[todayStr];
-        if (todayRecs) {
-          const opens = todayRecs.filter((rec) => rec.type === 'sleep' && !rec.endTime);
-          // 등록 조건: open 수면이 있고, (기존 활성 세션 없음) 또는 (사용자가 '자고있어' 명시 → 기존 세션 덮어쓰기)
-          if (opens.length > 0 && (!existingSession || ongoingSleepIdx >= 0)) {
-            const latest = opens.reduce((a, b) => (b.time > a.time ? b : a));
-            const remaining = (await loadRecords(targetChildId, todayStr)).filter((rec) => rec.id !== latest.id);
-            await saveRecords(targetChildId, todayStr, remaining);
-            const [hh, mi] = latest.time.split(':').map((v) => parseInt(v, 10));
-            const [yy, mo, dd] = todayStr.split('-').map((v) => parseInt(v, 10));
-            const startTime = new Date(yy, mo - 1, dd, hh || 0, mi || 0).toISOString();
-            await saveSleepSession(targetChildId, { startTime, startDate: todayStr, note: latest.note });
-          }
+        if (ongoingSleepInfo) {
+          const [hh, mi] = ongoingSleepInfo.time.split(':').map((v) => parseInt(v, 10));
+          const [yy, mo, dd] = ongoingSleepInfo.date.split('-').map((v) => parseInt(v, 10));
+          const startTime = new Date(yy, mo - 1, dd, hh || 0, mi || 0).toISOString();
+          await saveSleepSession(targetChildId, {
+            startTime,
+            startDate: ongoingSleepInfo.date,
+            ...(ongoingSleepInfo.note ? { note: ongoingSleepInfo.note } : {}),
+          });
         }
       } catch { /* best-effort */ }
 
