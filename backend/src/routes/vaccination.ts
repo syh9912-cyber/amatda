@@ -166,10 +166,11 @@ router.get('/schedule', authMiddleware, async (req: Request, res: Response) => {
       .where('childId', '==', childId)
       .get();
 
-    const doneMap: Record<string, { completedAt: string; hospitalName?: string }> = {};
+    const doneMap: Record<string, { recordId: string; completedAt: string; hospitalName?: string }> = {};
     for (const d of doneSnap.docs) {
       const data = d.data();
       doneMap[data.vaccineId as string] = {
+        recordId: d.id,
         completedAt: data.completedAt?.toDate?.()?.toISOString?.() ?? (data.completedAt as string),
         hospitalName: (data.hospitalName as string) || undefined,
       };
@@ -179,6 +180,7 @@ router.get('/schedule', authMiddleware, async (req: Request, res: Response) => {
     const result = schedule.map((v) => ({
       ...v,
       completed: !!doneMap[v.id],
+      recordId: doneMap[v.id]?.recordId ?? null,
       completedAt: doneMap[v.id]?.completedAt ?? null,
       hospitalName: doneMap[v.id]?.hospitalName ?? null,
     }));
@@ -266,6 +268,44 @@ router.delete('/complete/:id', authMiddleware, async (req: Request<{ id: string 
     success(res, { deleted: true });
   } catch {
     error(res, '접종 기록 삭제 중 오류가 발생했습니다', 500);
+  }
+});
+
+/**
+ * PATCH /api/vaccination/complete/:id — 접종 완료 기록 수정 (접종일 / 병원명)
+ * body: { completedAt?: string(ISO), hospitalName?: string|null }
+ * - 전달된 필드만 갱신 (부분 수정)
+ */
+router.patch('/complete/:id', authMiddleware, async (req: Request<{ id: string }>, res: Response) => {
+  try {
+    const recordId = req.params.id;
+    const { completedAt, hospitalName } = req.body as {
+      completedAt?: string;
+      hospitalName?: string | null;
+    };
+
+    const ref = vaccinationsCol.doc(recordId);
+    const doc = await ref.get();
+    if (!doc.exists || doc.data()!.userId !== req.userId) {
+      error(res, '기록을 찾을 수 없습니다', 404);
+      return;
+    }
+
+    const update: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
+
+    if (completedAt !== undefined) {
+      const d = new Date(completedAt);
+      if (isNaN(d.getTime())) { error(res, '유효하지 않은 접종일입니다'); return; }
+      update.completedAt = d;
+    }
+    if (hospitalName !== undefined) {
+      update.hospitalName = hospitalName || null;
+    }
+
+    await ref.update(update);
+    success(res, { updated: true });
+  } catch {
+    error(res, '접종 기록 수정 중 오류가 발생했습니다', 500);
   }
 });
 

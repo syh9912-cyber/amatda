@@ -775,6 +775,8 @@ export const vaccinationApi = {
     api.post('/vaccination/complete', { childId, vaccineId, completedAt, hospitalName }),
   undoComplete: (id: string) =>
     api.delete(`/vaccination/complete/${id}`),
+  updateComplete: (id: string, completedAt?: string, hospitalName?: string) =>
+    api.patch(`/vaccination/complete/${id}`, { completedAt, hospitalName }),
   scheduleAlerts: (childId: string) =>
     api.post('/vaccination/schedule-alerts', { childId }),
 };

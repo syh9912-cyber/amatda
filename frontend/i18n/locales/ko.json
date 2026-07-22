@@ -3232,7 +3232,12 @@
     "notesTitle": "참고사항",
     "preparationTitle": "준비물 & 주의사항",
     "completedOnCheck": "✓ {{date}} 접종 완료",
-    "recordCompletionButton": "접종 완료 기록하기"
+    "recordCompletionButton": "접종 완료 기록하기",
+    "editModalTitle": "접종 기록 수정",
+    "editErrorMessage": "접종 기록 수정 중 오류가 발생했어요",
+    "deleteConfirmTitle": "접종 기록 삭제",
+    "deleteConfirmMessage": "이 접종 완료 기록을 삭제할까요?\n다시 미완료 상태로 돌아갑니다.",
+    "deleteErrorMessage": "접종 기록 삭제 중 오류가 발생했어요"
   },
   "onboardingChildInfo": {
     "fillAllFields": "모든 항목을 입력해주세요",

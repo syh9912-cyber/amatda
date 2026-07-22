@@ -46,6 +46,7 @@ interface VaccineItem {
   scheduledDate: string;
   dDay: number;
   completed: boolean;
+  recordId: string | null;
   completedAt: string | null;
   hospitalName: string | null;
 }
@@ -195,9 +196,26 @@ export default function VaccinationScreen() {
     setRefreshing(false);
   };
 
-  /* ── Complete ── */
+  /* ── 완료일(ISO) → 입력용 YYYY-MM-DD (로컬 타임존 기준) ── */
+  const isoToDateInput = (iso: string | null): string => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  /* ── 완료 기록 수정 모달 열기 (기존 값 미리 채움) ── */
+  const openEditModal = (v: VaccineItem) => {
+    setShowDetail(null);
+    setCompletedDate(isoToDateInput(v.completedAt));
+    setHospitalName(v.hospitalName ?? '');
+    setShowComplete(v);
+  };
+
+  /* ── Complete / Edit ── */
   const handleComplete = async () => {
     if (!showComplete || !childId) return;
+    const isEdit = showComplete.completed && !!showComplete.recordId;
     setCompleting(true);
     try {
       // completedDate 검증: YYYY-MM-DD → ISO
@@ -217,17 +235,53 @@ export default function VaccinationScreen() {
         }
         completedAt = d.toISOString();
       }
-      await vaccinationApi.complete(childId, showComplete.id, completedAt, hospitalName || undefined);
+
+      if (isEdit) {
+        // 수정: 전달된 필드만 갱신 (병원명은 빈 값이면 서버에서 제거)
+        await vaccinationApi.updateComplete(showComplete.recordId!, completedAt, hospitalName);
+      } else {
+        await vaccinationApi.complete(childId, showComplete.id, completedAt, hospitalName || undefined);
+      }
+
       setShowComplete(null);
       setHospitalName('');
       setCompletedDate('');
       loadSchedule();
-      // 알림 재스케줄링
-      vaccinationApi.scheduleAlerts(childId).catch(() => {});
+      // 신규 완료 시에만 알림 재스케줄링 (미완료 목록 변동)
+      if (!isEdit) vaccinationApi.scheduleAlerts(childId).catch(() => {});
     } catch {
-      Alert.alert(t('common.error'), t('vaccination.completeRecordErrorMessage'));
+      Alert.alert(
+        t('common.error'),
+        isEdit ? t('vaccination.editErrorMessage') : t('vaccination.completeRecordErrorMessage'),
+      );
     }
     setCompleting(false);
+  };
+
+  /* ── Delete (완료 취소) ── */
+  const handleDelete = (v: VaccineItem) => {
+    if (!v.recordId) return;
+    Alert.alert(
+      t('vaccination.deleteConfirmTitle'),
+      t('vaccination.deleteConfirmMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await vaccinationApi.undoComplete(v.recordId!);
+              setShowDetail(null);
+              loadSchedule();
+              vaccinationApi.scheduleAlerts(childId).catch(() => {});
+            } catch {
+              Alert.alert(t('common.error'), t('vaccination.deleteErrorMessage'));
+            }
+          },
+        },
+      ],
+    );
   };
 
   /* ── 등록 기준 3개월 이전 오래된 접종은 제외 ── */
@@ -442,7 +496,9 @@ export default function VaccinationScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{t('vaccination.completeModalTitle')}</Text>
+            <Text style={styles.modalTitle}>
+              {showComplete?.completed ? t('vaccination.editModalTitle') : t('vaccination.completeModalTitle')}
+            </Text>
             {showComplete && (
               <>
                 <View style={styles.modalInfoBox}>
@@ -485,7 +541,11 @@ export default function VaccinationScreen() {
                     disabled={completing}
                   >
                     <Text style={styles.modalSaveText}>
-                      {completing ? t('vaccination.recordingInProgress') : t('vaccination.completeExclaim')}
+                      {completing
+                        ? t('vaccination.recordingInProgress')
+                        : showComplete.completed
+                          ? t('common.save')
+                          : t('vaccination.completeExclaim')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -533,12 +593,22 @@ export default function VaccinationScreen() {
                 </View>
 
                 {showDetail.completed ? (
-                  <View style={styles.detailDoneBox}>
-                    <Text style={styles.detailDoneText}>
-                      {t('vaccination.completedOnCheck', { date: showDetail.completedAt ? new Date(showDetail.completedAt).toLocaleDateString('ko-KR') : '' })}
-                      {showDetail.hospitalName ? ` (${showDetail.hospitalName})` : ''}
-                    </Text>
-                  </View>
+                  <>
+                    <View style={styles.detailDoneBox}>
+                      <Text style={styles.detailDoneText}>
+                        {t('vaccination.completedOnCheck', { date: showDetail.completedAt ? new Date(showDetail.completedAt).toLocaleDateString('ko-KR') : '' })}
+                        {showDetail.hospitalName ? ` (${showDetail.hospitalName})` : ''}
+                      </Text>
+                    </View>
+                    <View style={styles.detailEditRow}>
+                      <TouchableOpacity style={styles.detailEditBtn} onPress={() => openEditModal(showDetail)}>
+                        <Text style={styles.detailEditBtnText}>{t('common.edit')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.detailDeleteBtn} onPress={() => handleDelete(showDetail)}>
+                        <Text style={styles.detailDeleteBtnText}>{t('common.delete')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
                 ) : (
                   <TouchableOpacity
                     style={styles.detailCompleteBtn}
@@ -738,6 +808,27 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
   },
   detailDoneText: { fontSize: FONT_SIZE.md, color: COLORS.success, fontWeight: '600', textAlign: 'center' },
+  detailEditRow: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
+  detailEditBtn: {
+    flex: 1,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceLight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+  },
+  detailEditBtnText: { fontSize: FONT_SIZE.md, color: COLORS.text, fontWeight: '700' },
+  detailDeleteBtn: {
+    flex: 1,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    backgroundColor: '#FFF0F0',
+    borderWidth: 1,
+    borderColor: COLORS.error,
+    alignItems: 'center',
+  },
+  detailDeleteBtnText: { fontSize: FONT_SIZE.md, color: COLORS.error, fontWeight: '700' },
   detailCompleteBtn: {
     backgroundColor: COLORS.success,
     borderRadius: RADIUS.md,
