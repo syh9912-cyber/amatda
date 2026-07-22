@@ -1,5 +1,29 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-23 — refresh 토큰 레이스로 인한 강제 로그아웃 회귀 수정 + 접종 수정/삭제
+> 최종 업데이트: 2026-07-23 — 콜드스타트 속도개선 + 홈 로딩/열람추적 + 음성단축 버그 수정
+
+---
+
+## 2026-07-23 — 앱 시작 속도개선(배치1·2) + 화면열람 추적 + 음성단축 버그 (전부 배포)
+
+### 배치1 — 부팅 경로 속도개선 (커밋 9698097, OTA 완료)
+- 스플래시 애니 ~2.05s→~1.15s(브랜드 조립효과 유지), 폰트 게이트 제거(최대 3s 대기 제거, Pretendard 시스템폰트 폴백), 위치요청 InteractionManager로 defer, hydrate hang 8s 방어선.
+- Sentry init은 defer 안 함(부팅 크래시 캡처 유지). 검증: tsc/lint/번들빌드/적대적 부팅리뷰(회귀 없음).
+
+### 배치2a — 홈 로딩 개선 + [P0]계정전환 교차노출 방지 (커밋 362cc7c, OTA)
+- childStore 로컬 캐시(stale-while-revalidate)로 홈이 GET /children 왕복에 안 묶이게, premium 중복호출 제거.
+- **P0(적대적 리뷰가 배포 전 포착)**: 웜 로그인 전환 시 이전 계정 자녀가 잠깐 노출되던 회귀. childStore에 ownerUserId 태그 → hydrate 소유자불일치 동기 클리어(await 이전, loading 게이트) + saveChildrenCache owner 가드 + 로그아웃 reset(). 재검증 통과.
+
+### 배치2b — 화면 열람(조회) 추적 (커밋 b1e5367, 백엔드+OTA+호스팅)
+- 기존 대시보드는 "쓰기"만 관측(analytics.logScreen 미호출로 GA4에도 화면데이터 없었음).
+- <ScreenTracker/>(리렌더 격리)가 usePathname→GA4 logScreen + throttle 버퍼(15개/백그라운드 flush) → POST /retention/screens → screenActivity/{userId} recentScreens 30개 롤링(경로만, PII 없음). admin 활동에 recentScreens 포함, 대시보드 표시.
+- 검증: tsc/lint/번들/적대적리뷰/로직시뮬 + 프로덕션 라이브 E2E(저장·30상한·병합·멱등·401).
+
+### 음성 단축 아이콘 버그 (커밋 7d52714, OTA)
+- "Received 2 arguments, but 0 was expected" — 소스 네이티브가 2-인자로 바뀌었으나 새 APK 미배포 → 설치본 0-인자와 JS(OTA) 2-인자 불일치. JS를 0-인자 호출로 되돌려 OTA 즉시 수정, 네이티브 소스도 0-인자로 정합(다음 빌드 재발 방지).
+
+### 미완료 (사용자와 논의됨)
+- 배치3 후보(APK 불필요): 큰 데이터 지연로드(monthlyCharacteristics 121KB, i18n 죽은 언어), 스플래시 중 홈 prefetch, 백엔드 minInstances(비용·승인). 네이티브 스플래시·MMKV는 APK 필요.
+- screenActivity Firestore TTL 정책은 콘솔에서 수동 활성화 필요(현재 expireAt 필드만 세팅, 30개 상한으로 저장량은 이미 유한).
 
 ---
 
