@@ -458,20 +458,31 @@ export default function VoiceScreen() {
       const res = await trackerApi.voiceParse(voiceText, i18n.language);
       const parsedData = res.data?.data as ParsedMulti | ParsedRecord | undefined;
       // 백워드 호환 — 옛 응답(단일 객체) / 새 응답({records:[]}) 모두 처리
-      const records: ParsedRecord[] = Array.isArray((parsedData as ParsedMulti)?.records)
+      let records: ParsedRecord[] = Array.isArray((parsedData as ParsedMulti)?.records)
         ? (parsedData as ParsedMulti).records
         : (parsedData && (parsedData as ParsedRecord).type
           ? [parsedData as ParsedRecord]
           : []);
 
-      if (records.length === 0) {
+      // 기상(wake) 단독 발화 감지 — 파서는 stateless 라 진행 중 수면 세션을 모른다.
+      // 이런 발화는 파서가 record 를 못(또는 잘못) 만들어도 아래에서 세션을 직접 종료하므로,
+      // records 가 비어도 에러로 튕기지 않게 한다. (sleep-start 단어가 함께 있으면 파서가
+      // "X시 자고 Y시 일어났어" 를 한 record 로 처리하므로 여기서 가로채지 않는다.)
+      const isWakeOnly =
+        /일어났|일어나|일어남|깼|깨어|깨서|기상|起き|起床|醒|睡到/.test(voiceText) &&
+        // sleep-start(수면 시작·완결수면) 단어가 함께 있으면 파서에 위임 — "3시에 자고 4시에
+        // 일어났어" 같은 완결 수면을 기상으로 오판해 정상 record 를 삭제하는 회귀 방지.
+        // 맨 연결형(자고/자서/자다가/잤)·과거형까지 포함해야 함(자고\s*있 만으론 "자고 4시" 미탐).
+        !/재웠|재우|잠들|잠재|취침|자러|자고|자서|자다가|잤|자는\s*중|寝る|寝た|寝て|寝てる|就寝|睡覺|午睡|睡了|就寢/.test(voiceText);
+
+      if (records.length === 0 && !isWakeOnly) {
         setError(t('voice.errorNoRecordParsed'));
         setPhase('error');
         setTimeout(() => router.replace('/(main)/baby-tracker'), 1500);
         return;
       }
       // 단일 사건 처리는 기존 로직, 다중 사건은 첫 record 기준으로 child 매칭 후 일괄 저장
-      const parsed = records[0];
+      const parsed = records[0] as ParsedRecord | undefined;
 
       // ── 아이 이름 매칭 ──
       // 클로저 stale 방지: useChildStore.getState()로 항상 최신 store 직접 조회
@@ -487,7 +498,7 @@ export default function VoiceScreen() {
       if (nameMatchByText) {
         targetChildId = nameMatchByText.id;
         storeSelectChild(nameMatchByText.id);
-      } else if (parsed.childName) {
+      } else if (parsed?.childName) {
         const normalizedParsed = parsed.childName.trim();
         const nameMatchByAI = storeChildren.find((c) => c.name.trim() === normalizedParsed);
         if (nameMatchByAI) {
@@ -531,6 +542,64 @@ export default function VoiceScreen() {
       let lastBreastSide: 'left' | 'right' | null = null;
       // 공동육아: 초대받은 가족이 음성으로 기록하면 작성자 라벨 주입 (소유자는 no-op)
       const authorMeta = await resolveAuthorMeta(targetChildId);
+
+      // ── 기상(wake) 발화 → 진행 중 수면 세션 종료 ──
+      // 파서는 stateless 라 활성 세션을 모른다. 여기서 세션을 sleep record(time=시작, endTime=기상)
+      // 로 마감하고, 파서가 잘못 만든 sleep record 는 제거해 "수면중" 중복 생성을 막는다.
+      // (아기시간 화면의 '기상' 버튼 로직 baby-tracker.tsx handleTimedActionConfirm 미러)
+      let wakeClosed = false;
+      if (isWakeOnly) {
+        try {
+          const activeSession = await loadSleepSession(targetChildId);
+          if (activeSession) {
+            const psleep = records.find((r) => r.type === 'sleep');
+            const nowHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            // "방금/지금/금방 일어났어" 등 즉시성 표현이면 파서 시각을 무시하고 현재 시각으로 마감.
+            const isJustNow = /방금|지금|금방|이제|今|剛|刚/.test(voiceText);
+            const wakeHHMM =
+              isJustNow ? nowHHMM
+              : psleep?.endTime && /^\d{1,2}:\d{2}$/.test(psleep.endTime) ? psleep.endTime
+              : psleep?.time && /^\d{1,2}:\d{2}$/.test(psleep.time) ? psleep.time
+              : nowHHMM;
+            const [wh, wm] = wakeHHMM.split(':').map((v) => parseInt(v, 10));
+            const start = new Date(activeSession.startTime);
+            const endDt = new Date(activeSession.startDate + 'T00:00:00');
+            endDt.setHours(wh || 0, wm || 0, 0, 0);
+            if (endDt.getTime() <= start.getTime()) endDt.setDate(endDt.getDate() + 1); // 자정 넘김 보정
+            let duration = Math.round((endDt.getTime() - start.getTime()) / 60000);
+            if (duration < 1) duration = 1;
+            if (duration > 14 * 60) duration = 14 * 60; // 최대 14시간 (오입력 방어)
+            const startHHMM = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
+            const endDateStr = `${endDt.getFullYear()}-${String(endDt.getMonth() + 1).padStart(2, '0')}-${String(endDt.getDate()).padStart(2, '0')}`;
+            const crossed = activeSession.startDate !== endDateStr;
+            const endLabel = crossed ? `${endDt.getMonth() + 1}/${endDt.getDate()} ${wakeHHMM}` : wakeHHMM;
+            const wakeRecord: TrackerRecord = stampAuthor({
+              id: `${Date.now()}_wake_${Math.random().toString(36).slice(2, 7)}`,
+              type: 'sleep',
+              subType: 'sleep_start',
+              time: startHHMM,
+              endTime: endLabel,
+              duration,
+              createdAt: activeSession.startTime,
+              ...(activeSession.note ? { note: activeSession.note } : {}),
+            }, authorMeta);
+            const existingWake = await loadRecords(targetChildId, activeSession.startDate);
+            await saveRecords(targetChildId, activeSession.startDate, [...existingWake, wakeRecord]);
+            await saveSleepSession(targetChildId, null);
+            wakeClosed = true;
+          }
+        } catch { /* best-effort — 세션 종료 실패해도 아래 흐름 유지 */ }
+        // 기상은 세션 종료로 처리했으므로 파서가 만든 sleep record 는 버린다(중복 방지).
+        records = records.filter((r) => r.type !== 'sleep');
+      }
+
+      // 기상 발화인데 종료할 활성 세션이 없고 추가로 기록할 것도 없으면 안내.
+      if (records.length === 0 && !wakeClosed) {
+        setError(t('voice.errorNoActiveSleep', { defaultValue: '종료할 진행 중인 수면이 없어요. 먼저 수면 시작을 기록해 주세요.' }));
+        setPhase('error');
+        setTimeout(() => router.replace('/(main)/baby-tracker'), 1800);
+        return;
+      }
 
       // 진행 중(종료 미정) 수면 발화 감지 — "자고있어/자는중/취침 중/지금 자/아직 자" 이면서
       // 기상('일어났/깼/기상')·범위 종료('까지')가 없을 때. 마지막 sleep record 를 라이브 대상으로.
@@ -664,12 +733,18 @@ export default function VoiceScreen() {
       } catch { /* best-effort */ }
 
       const totalCount = records.length;
-      const firstLabel = getSubtypeLabel(t, records[0].subType);
-      const doneLabel = totalCount === 1
-        ? t('voice.doneSingleLabel', { label: firstLabel, time: records[0].time ?? '' })
-        : t('voice.doneMultiLabel', { count: totalCount, label: firstLabel });
-      setStatus(totalCount === 1 ? t('voice.statusDoneSingle', { label: firstLabel }) : t('voice.statusDoneMulti', { count: totalCount }));
-      setLastRecord(doneLabel);
+      if (totalCount === 0) {
+        // 순수 기상 발화 — 세션 종료만 기록됨 (추가 record 없음)
+        setStatus(t('voice.statusDoneWake', { defaultValue: '기상 기록됨' }));
+        setLastRecord(t('voice.doneWakeLabel', { defaultValue: '기상 기록 완료' }));
+      } else {
+        const firstLabel = getSubtypeLabel(t, records[0].subType);
+        const doneLabel = totalCount === 1
+          ? t('voice.doneSingleLabel', { label: firstLabel, time: records[0].time ?? '' })
+          : t('voice.doneMultiLabel', { count: totalCount, label: firstLabel });
+        setStatus(totalCount === 1 ? t('voice.statusDoneSingle', { label: firstLabel }) : t('voice.statusDoneMulti', { count: totalCount }));
+        setLastRecord(doneLabel);
+      }
       setPhase('done');
 
       // 연속 기록 모드: 1.5초 후 자동으로 다시 듣기 시작
