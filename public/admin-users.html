@@ -161,9 +161,9 @@
     <div class="toolbar">
       <select id="daysSelect">
         <option value="7">최근 7일</option>
-        <option value="30" selected>최근 30일</option>
+        <option value="30">최근 30일</option>
         <option value="90">최근 90일</option>
-        <option value="">전체</option>
+        <option value="" selected>전체</option>
       </select>
       <input type="text" id="searchInput" placeholder="이메일 또는 닉네임 검색" />
       <button class="btn small" id="refreshBtn">새로고침</button>
@@ -320,7 +320,7 @@
     modal.style.display = 'flex';
 
     fetch(API_BASE + '/api/admin/users/' + encodeURIComponent(u.id) + '/activity', {
-      headers: { 'x-admin-key': getKey() }
+      headers: { 'x-admin-key': getKey() }, cache: 'no-store'
     })
       .then(function (r) { return r.json(); })
       .then(function (json) {
@@ -406,7 +406,7 @@
   function load() {
     var days = document.getElementById('daysSelect').value;
     var url = API_BASE + '/api/admin/users?limit=1000' + (days ? '&days=' + encodeURIComponent(days) : '');
-    fetch(url, { headers: { 'x-admin-key': getKey() } })
+    fetch(url, { headers: { 'x-admin-key': getKey() }, cache: 'no-store' })
       .then(function (res) {
         if (res.status === 401 || res.status === 503) {
           clearKey();

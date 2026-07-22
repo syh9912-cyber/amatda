@@ -81,6 +81,8 @@ router.get('/users', adminRateLimit, adminDashboardAuth, async (req: Request, re
   try {
     // 접근 감사 로그 — 전체 유저 PII 조회 기록(키 유출 시 추적용)
     logger.info('admin/users', `accessed from ip=${req.ip}`);
+    // 관리자 대시보드는 항상 최신을 봐야 함 — 브라우저 캐시/304 로 옛 데이터가 남지 않게 no-store.
+    res.set('Cache-Control', 'no-store');
     const daysRaw = req.query.days ? parseInt(String(req.query.days), 10) : undefined;
     const days = daysRaw && daysRaw > 0 ? daysRaw : undefined;
     const limit = Math.min(parseInt(String(req.query.limit ?? '500'), 10) || 500, 1000);
@@ -162,6 +164,8 @@ router.get('/users/:userId/activity', adminRateLimit, adminDashboardAuth, async 
     if (!userId) { error(res, 'userId 가 필요합니다', 400); return; }
     // PII 조회 감사 로그 — 키 유출 시 추적용
     logger.info('admin/user-activity', `uid=${userId} accessed from ip=${req.ip}`);
+    // 활동 내역도 항상 최신 — etag/304 로 옛 스냅샷이 남지 않게 no-store.
+    res.set('Cache-Control', 'no-store');
 
     const byUser = (c: FirebaseFirestore.CollectionReference) => c.where('userId', '==', userId);
     const [
