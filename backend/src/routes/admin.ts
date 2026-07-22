@@ -272,6 +272,12 @@ router.get('/users/:userId/activity', adminRateLimit, adminDashboardAuth, async 
       (s, d) => s + (((d.data() as Record<string, unknown>).costUsd as number) ?? 0), 0,
     );
 
+    // 최근 열람(화면 조회) — "쓰기"가 아닌 "읽기" 활동까지 파악 (screenActivity/{userId})
+    const screenDoc = await collections.screenActivity.doc(userId).get();
+    const recentScreens = screenDoc.exists && Array.isArray(screenDoc.data()!.recentScreens)
+      ? (screenDoc.data()!.recentScreens as Array<{ s: string; t: string }>).slice(-30).reverse()
+      : [];
+
     success(res, {
       userId,
       featureUsage,
@@ -281,6 +287,7 @@ router.get('/users/:userId/activity', adminRateLimit, adminDashboardAuth, async 
       daily,
       aiCalls,
       coaching,
+      recentScreens,
       // 관리자 화면에 한계를 명시 — 없는 데이터를 있는 것처럼 오해하지 않도록
       note: 'AI 호출 로그에는 기능 식별 필드가 없어 호출별 기능 귀속은 불가합니다. 기능별 사용량은 도메인 데이터 기준입니다.',
     });

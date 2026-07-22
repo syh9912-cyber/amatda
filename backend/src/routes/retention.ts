@@ -82,4 +82,51 @@ router.post('/push-schedule', authMiddleware, async (req: Request, res: Response
   }
 });
 
+// ───────────────────────────────────────────────
+// POST /api/retention/screens — 화면 열람(조회) 기록 (관리자 대시보드 표시용)
+// body: { screens: [{ s: 화면명, t: epoch ms }] }
+//   - 유저당 1문서(screenActivity/{userId})에 최근 30개만 롤링 저장(저장량 상한).
+//   - 화면명(경로)만 저장 — 상담 내용 등 PII 없음. 클라는 throttle(백그라운드/15개)로 호출.
+//   - fire-and-forget 이라 실패해도 200 성향(유실 허용) — 단 서버 오류는 500.
+// ───────────────────────────────────────────────
+const MAX_RECENT_SCREENS = 30;
+router.post('/screens', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { screens } = req.body as { screens?: Array<{ s?: string; t?: number }> };
+    if (!Array.isArray(screens) || screens.length === 0) {
+      success(res, { saved: false }); // 멱등 — 빈 배열이면 no-op
+      return;
+    }
+    // 정규화 + 상한 (요청당 최대 50개, 화면명 64자)
+    const incoming = screens
+      .slice(0, 50)
+      .filter((x) => x && typeof x.s === 'string' && x.s.length > 0)
+      .map((x) => ({
+        s: String(x.s).slice(0, 64),
+        t: typeof x.t === 'number' && isFinite(x.t) ? new Date(x.t).toISOString() : new Date().toISOString(),
+      }));
+    if (incoming.length === 0) { success(res, { saved: false }); return; }
+
+    const ref = collections.screenActivity.doc(req.userId!);
+    const snap = await ref.get();
+    const prev = snap.exists && Array.isArray(snap.data()!.recentScreens)
+      ? (snap.data()!.recentScreens as Array<{ s: string; t: string }>)
+      : [];
+    const merged = [...prev, ...incoming].slice(-MAX_RECENT_SCREENS); // 최근 N개만 유지
+    const expireAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30일 TTL 후보
+
+    await ref.set({
+      userId: req.userId!,
+      recentScreens: merged,
+      updatedAt: new Date().toISOString(),
+      expireAt,
+    }, { merge: true });
+
+    success(res, { saved: true, count: merged.length });
+  } catch (err: unknown) {
+    logger.warn('retention/screens', err instanceof Error ? err.message : String(err));
+    error(res, '화면 활동 저장 중 오류가 발생했습니다', 500);
+  }
+});
+
 export default router;

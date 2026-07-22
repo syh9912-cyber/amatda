@@ -157,6 +157,11 @@ export const collections = {
   //   문서 ID: `${userId}_${YYYY-MM-DD}` (KST)
   //   { userId, date, callCount, inputTokens, outputTokens, totalTokens, costUsd, updatedAt }
   apiUsageDaily: db.collection('apiUsageDaily'),
+
+  // screenActivity — 유저별 최근 화면 열람(조회) 추적 (관리자 대시보드 "무엇을 봤나" 표시용)
+  //   문서 ID: userId (유저당 1문서). { userId, recentScreens: [{s,t}] (최근 30개 상한),
+  //   updatedAt, expireAt(30일 후 — TTL 정책 후보) }. 화면명(경로)만 저장 — 콘텐츠/PII 없음.
+  screenActivity: db.collection('screenActivity'),
 };
 
 /** 문서 ID 생성 */

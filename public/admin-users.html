@@ -306,6 +306,20 @@
     momGroup: '맘그룹(글)'
   };
 
+  // 화면 경로 → 사람이 읽는 이름 (모르는 화면은 경로를 정리해서 표시)
+  var SCREEN_LABEL = {
+    '/(main)/home': '홈', '/(main)/vaccination': '예방접종', '/(main)/chatbot': 'AI 상담',
+    '/(main)/album': '성장앨범', '/(main)/baby-tracker': '아기시간', '/(main)/mom-group': '맘그룹',
+    '/(main)/settings': '설정', '/(main)/profile': '내 정보', '/(main)/voice': '음성입력',
+    '/splash': '스플래시', '/(auth)/login': '로그인'
+  };
+  function screenLabel(s) {
+    if (!s) return '';
+    if (SCREEN_LABEL[s]) return SCREEN_LABEL[s];
+    var m = String(s).replace(/^\/\((?:main|auth)\)\//, '').replace(/^\//, '');
+    return m || String(s);
+  }
+
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
@@ -372,6 +386,14 @@
           d.coaching.slice(0, 20).forEach(function (x) {
             html += '<tr><td>' + fmtDate(x.at) + '</td><td>' + esc(x.category) + '</td><td>' +
               esc(x.preview) + '</td><td>' + (x.redFlag ? '⚠️' : '') + '</td></tr>';
+          });
+          html += '</table>';
+        }
+
+        if (d.recentScreens && d.recentScreens.length) {
+          html += '<h4>최근 열람 화면 (조회)</h4><table class="mini"><tr><th>시각</th><th>화면</th></tr>';
+          d.recentScreens.slice(0, 30).forEach(function (x) {
+            html += '<tr><td>' + fmtDate(x.t) + '</td><td>' + esc(screenLabel(x.s)) + '</td></tr>';
           });
           html += '</table>';
         }

@@ -310,6 +310,9 @@ export const coachingApi = {
 export const retentionApi = {
   pushSchedule: (data: Record<string, unknown>) =>
     api.post('/retention/push-schedule', data),
+  // 화면 열람(조회) 기록 — throttle된 버퍼를 한 번에 전송(fire-and-forget)
+  reportScreens: (screens: { s: string; t: number }[]) =>
+    api.post('/retention/screens', { screens }),
 };
 
 // Growth Analysis (성장 분석)

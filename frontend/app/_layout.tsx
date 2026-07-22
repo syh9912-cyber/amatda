@@ -4,7 +4,7 @@ import { useSiriVoiceLaunch } from '../hooks/useSiriVoiceLaunch';
 
 import { View, ActivityIndicator, Text, TextInput, StyleSheet, AppState, AppStateStatus, InteractionManager } from 'react-native';
 import { useFonts } from 'expo-font';
-import { Stack, router, useNavigationContainerRef } from 'expo-router';
+import { Stack, router, useNavigationContainerRef, usePathname } from 'expo-router';
 import * as Sentry from '@sentry/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
@@ -15,6 +15,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useChildStore } from '../stores/childStore';
 import { useLocationStore } from '../stores/locationStore';
 import { retentionApi } from '../services/api';
+import { analytics } from '../services/analytics';
 import { initSentry, captureError, navigationIntegration } from '../services/sentry';
 import { OfflineBanner } from '../components/common/OfflineBanner';
 import {
@@ -251,6 +252,51 @@ function useLocationSetup() {
   }, [isAuthenticated]);
 }
 
+// 화면 열람(조회) 추적 — GA4 screen_view + 대시보드용 열람 기록(throttle).
+// ⚠️ perf: usePathname 이 변경마다 리렌더를 유발하므로, 이 훅은 RootLayout 이 아니라
+// 아래 <ScreenTracker/>(null 반환)에서만 호출해 리렌더 범위를 격리한다(부팅/네비 비용 최소화).
+function useScreenTracking() {
+  const pathname = usePathname();
+  const lastPathRef = useRef<string | null>(null);
+  const bufferRef = useRef<{ s: string; t: number }[]>([]);
+
+  const flush = useCallback(async () => {
+    const buf = bufferRef.current;
+    if (buf.length === 0) return;
+    bufferRef.current = [];
+    if (!useAuthStore.getState().isAuthenticated) return; // 미로그인분은 버림
+    try {
+      await retentionApi.reportScreens(buf);
+    } catch {
+      /* best-effort — 열람 기록 유실 허용(사용자 흐름 무영향) */
+    }
+  }, []);
+
+  // 화면 변경 감지 → GA4 screen_view + 버퍼 적재(로그인 상태만). 15개 쌓이면 즉시 flush.
+  useEffect(() => {
+    if (!pathname || pathname === lastPathRef.current) return;
+    lastPathRef.current = pathname;
+    analytics.logScreen(pathname);
+    if (useAuthStore.getState().isAuthenticated) {
+      bufferRef.current.push({ s: pathname, t: Date.now() });
+      if (bufferRef.current.length >= 15) void flush();
+    }
+  }, [pathname, flush]);
+
+  // 백그라운드 전환 시 flush (세션 종료 자연 지점 → 화면 이동마다 쓰지 않아 비용 최소)
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
+      if (next === 'background' || next === 'inactive') void flush();
+    });
+    return () => sub.remove();
+  }, [flush]);
+}
+
+function ScreenTracker() {
+  useScreenTracking();
+  return null;
+}
+
 function AuthGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   // ⚠️ 부팅 게이트 fail-safe: hydrate 가 (특히 SecureStore 키체인 stall / OTA reloadAsync
@@ -355,6 +401,7 @@ function RootLayout() {
           <StatusBar style="dark" />
           <OfflineBanner />
           <AuthGate>
+            <ScreenTracker />
             <Stack screenOptions={{ headerShown: false, headerTitleAlign: 'center' }} />
           </AuthGate>
         </QueryClientProvider>
