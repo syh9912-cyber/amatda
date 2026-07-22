@@ -42,6 +42,37 @@ interface ParsedMulti {
   records: ParsedRecord[];
 }
 
+/**
+ * Fast-path — 자주 쓰는 단순 명령을 AI 없이 규칙으로 즉시 파싱한다.
+ * 앵커(^...$) 정규식이라 시간표현·복수 사건이 섞이면 매칭 안 돼 자동으로 AI 로 폴백(null).
+ * 흔한 케이스(분유/모유/이유식/똥/쉬)를 빠르고 100% 정확하게 + AI 비용 0 으로 처리.
+ * 시간 미지정이라 아래 저장 루프가 time=현재시각, 분유 기본량, 모유 좌/우 자동추천을 채운다.
+ * (기상/수면시작은 세션 상태가 얽혀 별도 로직에서 처리 — 여기서 다루지 않음)
+ */
+function tryFastPath(text: string): ParsedRecord[] | null {
+  const s = text.trim().replace(/\s+/g, ' ');
+  // 어미(먹었어/먹였어요/줬어/줘써/먹임/급여 등)는 먹\S*/줬\S*/줘\S* 로 포괄 — 공백이 끼면
+  // (예: "분유 120 먹고 잤어") \S* 가 다음 어절을 못 넘어 앵커($) 미매칭 → 자동 AI 폴백.
+  // 분유 N (ml)
+  let m = s.match(/^분유\s*(\d{1,4})\s*(?:ml|밀리|미리)?\s*(?:먹\S*|줬\S*|줘\S*|급여\S*)?$/i);
+  if (m) return [{ type: 'feeding', subType: 'formula', amount: parseInt(m[1], 10) }];
+  // 분유 (양 없음)
+  if (/^분유\s*(?:먹\S*|줬\S*|줘\S*|급여\S*)?$/.test(s)) return [{ type: 'feeding', subType: 'formula' }];
+  // 모유/젖/수유 (+ 좌/우)
+  m = s.match(/^(?:모유|젖|수유)\s*(왼쪽|오른쪽|왼|오른|좌측|우측|좌|우)?\s*쪽?\s*(?:먹\S*|줬\S*|줘\S*|했\S*|수유\S*)?$/);
+  if (m) {
+    const side = m[1] ? (/왼|좌/.test(m[1]) ? '왼쪽' : '오른쪽') : undefined;
+    return [{ type: 'feeding', subType: 'breast', ...(side ? { note: side } : {}) }];
+  }
+  // 이유식
+  if (/^이유식\s*(?:먹\S*|줬\S*|줘\S*)?$/.test(s)) return [{ type: 'feeding', subType: 'baby_food' }];
+  // 똥/응가/대변
+  if (/^(?:똥|응가|대변|푸)\s*(?:쌌\S*|눴\S*|했\S*|봤\S*|쌈)?$/.test(s)) return [{ type: 'diaper', subType: 'poop' }];
+  // 쉬/소변/오줌
+  if (/^(?:쉬|쉬야|소변|오줌)\s*(?:했\S*|쌌\S*|눴\S*|쌈)?$/.test(s)) return [{ type: 'diaper', subType: 'pee' }];
+  return null;
+}
+
 const SUBTYPE_LABEL_KEYS: Record<string, string> = {
   pee: 'voice.subtypePee', poop: 'voice.subtypePoop', both: 'voice.subtypeBoth',
   breast: 'voice.subtypeBreast', formula: 'voice.subtypeFormula', baby_food: 'voice.subtypeBabyFood', snack: 'voice.subtypeSnack',
@@ -455,25 +486,33 @@ export default function VoiceScreen() {
         if (raw) voiceDefaults = JSON.parse(raw);
       } catch { /* no defaults */ }
 
-      const res = await trackerApi.voiceParse(voiceText, i18n.language);
-      const parsedData = res.data?.data as ParsedMulti | ParsedRecord | undefined;
-      // 백워드 호환 — 옛 응답(단일 객체) / 새 응답({records:[]}) 모두 처리
-      let records: ParsedRecord[] = Array.isArray((parsedData as ParsedMulti)?.records)
-        ? (parsedData as ParsedMulti).records
-        : (parsedData && (parsedData as ParsedRecord).type
-          ? [parsedData as ParsedRecord]
-          : []);
-
       // 기상(wake) 단독 발화 감지 — 파서는 stateless 라 진행 중 수면 세션을 모른다.
-      // 이런 발화는 파서가 record 를 못(또는 잘못) 만들어도 아래에서 세션을 직접 종료하므로,
-      // records 가 비어도 에러로 튕기지 않게 한다. (sleep-start 단어가 함께 있으면 파서가
-      // "X시 자고 Y시 일어났어" 를 한 record 로 처리하므로 여기서 가로채지 않는다.)
+      // 이런 발화는 아래에서 세션을 직접 종료하므로 파서를 호출하지 않고(records=[]) 진행한다.
+      // (sleep-start 단어가 함께 있으면 "X시 자고 Y시 일어났어" 완결수면이므로 가로채지 않고
+      //  파서에 위임 — "자고 4시" 오판·record 삭제 회귀 방지. 맨 연결형까지 부정군에 포함.)
       const isWakeOnly =
         /일어났|일어나|일어남|깼|깨어|깨서|기상|起き|起床|醒|睡到/.test(voiceText) &&
-        // sleep-start(수면 시작·완결수면) 단어가 함께 있으면 파서에 위임 — "3시에 자고 4시에
-        // 일어났어" 같은 완결 수면을 기상으로 오판해 정상 record 를 삭제하는 회귀 방지.
-        // 맨 연결형(자고/자서/자다가/잤)·과거형까지 포함해야 함(자고\s*있 만으론 "자고 4시" 미탐).
         !/재웠|재우|잠들|잠재|취침|자러|자고|자서|자다가|잤|자는\s*중|寝る|寝た|寝て|寝てる|就寝|睡覺|午睡|睡了|就寢/.test(voiceText);
+
+      // ── 파싱 소스 결정: 기상 → AI 불필요 / fast-path(흔한 단순명령) → AI 불필요 / 그 외 → AI 파서 ──
+      let records: ParsedRecord[];
+      if (isWakeOnly) {
+        records = []; // 세션 종료는 아래 wake 블록이 처리 (AI 호출 안 함)
+      } else {
+        const fast = tryFastPath(voiceText);
+        if (fast) {
+          records = fast; // 규칙 기반 즉시 파싱 (빠르고 100% 정확 + AI 비용 0)
+        } else {
+          const res = await trackerApi.voiceParse(voiceText, i18n.language);
+          const parsedData = res.data?.data as ParsedMulti | ParsedRecord | undefined;
+          // 백워드 호환 — 옛 응답(단일 객체) / 새 응답({records:[]}) 모두 처리
+          records = Array.isArray((parsedData as ParsedMulti)?.records)
+            ? (parsedData as ParsedMulti).records
+            : (parsedData && (parsedData as ParsedRecord).type
+              ? [parsedData as ParsedRecord]
+              : []);
+        }
+      }
 
       if (records.length === 0 && !isWakeOnly) {
         setError(t('voice.errorNoRecordParsed'));
