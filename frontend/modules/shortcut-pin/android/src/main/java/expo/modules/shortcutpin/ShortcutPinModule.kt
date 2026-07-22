@@ -32,8 +32,11 @@ class ShortcutPinModule : Module() {
       sm.isRequestPinShortcutSupported
     }
 
-    // shortLabel/longLabel 은 JS(앱 로케일)에서 전달 — 다국어 대응. 미전달 시 한국어 기본값.
-    AsyncFunction("requestPinVoiceShortcut") { shortLabel: String?, longLabel: String? ->
+    // ⚠️ 0-인자 시그니처로 유지 — 라벨은 한국어 기본값(현재 프로덕션 ko 고정).
+    //   JS(modules/shortcut-pin/src/index.ts)도 0-인자로 호출한다. 둘 중 하나만 인자를
+    //   바꾸면 OTA-네이티브 불일치("Received N arguments...")로 단축 생성이 깨진다 —
+    //   다국어 라벨이 필요하면 반드시 index.ts + 이 파일 + 새 APK 빌드를 함께 진행할 것.
+    AsyncFunction("requestPinVoiceShortcut") {
       val context = appContext.reactContext
         ?: throw RuntimeException("NO_CONTEXT")
 
@@ -59,8 +62,8 @@ class ShortcutPinModule : Module() {
       }
 
       val info = ShortcutInfo.Builder(context, "voice_record_pinned")
-        .setShortLabel(shortLabel ?: "음성 기록")
-        .setLongLabel(longLabel ?: "음성으로 기록하기")
+        .setShortLabel("음성 기록")
+        .setLongLabel("음성으로 기록하기")
         .apply { if (iconResId != 0) setIcon(Icon.createWithResource(context, iconResId)) }
         .setIntent(intent)
         .build()
