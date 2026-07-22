@@ -51,6 +51,20 @@ interface RefreshTokenPayload {
 const REFRESH_EXPIRES_DAYS = 7;
 
 /**
+ * Refresh 재사용(reuse) 유예 창 (2026-07-23).
+ * 토큰이 회전된 직후 이 시간 내에 "같은(이미 used) 토큰"이 다시 제출되면, 탈취가 아니라
+ * 클라이언트 refresh 레이스(동시 401 → 방금 회전된 토큰의 뒤늦은 중복 제출)로 간주하여
+ * 패밀리를 무효화하지 않고 정상 재발급한다. 창 밖의 재사용은 기존대로 탈취로 보고 무효화.
+ *
+ * ⚠️ 보안 경계:
+ *   - 유예는 토큰당 정확히 1회만 (트랜잭션에서 graced 를 원자적 마킹) — 창 내 무제한 재발급/증식 차단.
+ *   - 2회째 재사용·창 밖 재사용은 즉시 reuse 로 보고 패밀리 무효화 (RFC 6819 유지).
+ *   - 창은 짧게(클라 레이스는 통상 sub-second) — 탈취-창내-사용의 분기(fork) 노출 최소화.
+ *   - 정공법은 클라 single-flight(services/api.ts). 이 서버 유예는 구버전 앱 backstop(과도기).
+ */
+const REFRESH_REUSE_GRACE_MS = 5_000;
+
+/**
  * Refresh token 가족 단위로 발급 (#2 RFC 6819 rotation).
  * 새 로그인이면 familyId 새로 만들고, refresh 시엔 기존 familyId 유지 + 회전.
  */
@@ -222,17 +236,26 @@ router.post('/refresh', async (req: Request, res: Response) => {
         // DB 에 없는 jti — 이전 시스템 또는 이미 정리된 토큰 → 거부 + 패밀리 무효화 시도
         return { ok: false as const, reason: 'jti not found' };
       }
-      const data = doc.data() as { used: boolean; revoked: boolean; familyId: string; userId: string };
+      const data = doc.data() as { used: boolean; revoked: boolean; familyId: string; userId: string; usedAt?: string; graced?: boolean };
       if (data.revoked) {
         return { ok: false as const, reason: 'revoked', familyId: data.familyId };
       }
       if (data.used) {
-        // ⚠️ Reuse detected — 토큰 탈취 가능성 → 패밀리 전체 무효화
+        // 회전 직후 짧은 유예 창 내의 "최초 1회" 중복 제출만 클라이언트 refresh 레이스로 간주 →
+        // 무효화하지 않고 정상 재발급. graced 를 트랜잭션에서 원자적으로 마킹해 2회째부터는
+        // 재사용으로 처리(창 내 무제한 증식 차단). 동시 2건은 트랜잭션 직렬화로 1건만 graced.
+        const usedAtMs = data.usedAt ? Date.parse(data.usedAt) : 0;
+        const withinGrace = usedAtMs > 0 && Date.now() - usedAtMs <= REFRESH_REUSE_GRACE_MS;
+        if (withinGrace && !data.graced) {
+          tx.update(ref, { graced: true, gracedAt: new Date().toISOString() });
+          return { ok: true as const, userId: data.userId, familyId: data.familyId, graced: true as const };
+        }
+        // ⚠️ 유예 창 밖 또는 이미 유예 소진(2회째+) — 토큰 탈취 가능성 → 패밀리 전체 무효화
         return { ok: false as const, reason: 'reuse-detected', familyId: data.familyId };
       }
       // 정상 사용 — used 마킹
       tx.update(ref, { used: true, usedAt: new Date().toISOString() });
-      return { ok: true as const, userId: data.userId, familyId: data.familyId };
+      return { ok: true as const, userId: data.userId, familyId: data.familyId, graced: false as const };
     });
 
     if (!result.ok) {
@@ -245,8 +268,15 @@ router.post('/refresh', async (req: Request, res: Response) => {
 
     // 새 토큰 발급 — 같은 familyId 유지 (회전)
     const tokens = await generateTokens(result.userId, result.familyId);
-    // 새 토큰 발급되면 이전 jti의 replacedBy 필드에 새 jti 기록 (감사 추적)
-    await collections.refreshTokens.doc(jti).update({ replacedBy: tokens.refreshJti });
+    if (result.graced) {
+      // 유예 재발급: 원본 jti의 replacedBy(최초 회전 링크)는 보존하고, 새 토큰에 gracedFrom 링크로
+      // 분기 출처를 남겨 사후 포렌식(어느 used 토큰에서 파생됐는지) 추적이 가능하게 한다.
+      await collections.refreshTokens.doc(tokens.refreshJti).update({ gracedFrom: jti });
+      logger.warn('auth/refresh-grace', `jti=${jti} fam=${result.familyId} reuse-within-grace re-issued=${tokens.refreshJti}`);
+    } else {
+      // 정상 회전: 이전 jti의 replacedBy 필드에 새 jti 기록 (감사 추적)
+      await collections.refreshTokens.doc(jti).update({ replacedBy: tokens.refreshJti });
+    }
     success(res, tokens);
   } catch (e) {
     // 만료/위변조 등 정상 흐름에서도 발생 — info 레벨로 기록하되 운영 에러는 추적 가능하게

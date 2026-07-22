@@ -23,6 +23,33 @@ export const COACHING_API_URL = process.env.EXPO_PUBLIC_COACHING_API_URL || API_
 // 첫 번째 요청만 refresh 실행, 나머지는 같은 Promise를 대기(같은 새 토큰 사용).
 let _refreshPromise: Promise<string> | null = null;
 
+/**
+ * 단일 refresh 실행기. 동시 401 이 몰려도 refresh 는 한 번만 수행하고 나머지는 같은 Promise 를 공유한다.
+ *
+ * ⚠️ 핵심(2026-07-23 레이스 수정): refresh 토큰을 "인터셉터가 401 시점에 캡처한 값"이 아니라
+ *    "refresh 를 실제로 시작하는 순간의 스토어 최신 값"으로 읽는다.
+ *    이전 구현은 401 시점 캡처 토큰을 사용 → 앞선 refresh 가 토큰을 회전시킨 직후 뮤텍스가 풀리면,
+ *    뒤늦은 요청이 이미 회전되어 used 처리된 옛 토큰으로 refresh 를 시도 → 서버가 재사용(reuse)으로
+ *    오탐 → 패밀리 전체 무효화 → 강제 로그아웃 되는 레이스가 있었다.
+ */
+function refreshAccessToken(): Promise<string> {
+  if (_refreshPromise) return _refreshPromise;
+  _refreshPromise = (async () => {
+    try {
+      // 캡처된 옛 값이 아니라 "지금" 스토어의 최신 refresh 토큰을 읽는다.
+      const refreshToken = useAuthStore.getState().refreshToken;
+      if (!refreshToken) throw new Error('no-refresh-token');
+      const res = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
+      const { accessToken, refreshToken: newRefresh } = res.data.data;
+      await useAuthStore.getState().setTokens(accessToken, newRefresh);
+      return accessToken as string;
+    } finally {
+      _refreshPromise = null;
+    }
+  })();
+  return _refreshPromise;
+}
+
 // ─── 공통 인터셉터 세터 ─────────────────────────────────────
 function applyInterceptors(instance: AxiosInstance): void {
   // 토큰 자동 주입
@@ -42,31 +69,29 @@ function applyInterceptors(instance: AxiosInstance): void {
       const original = err.config;
       if (err.response?.status === 401 && !original._retry) {
         original._retry = true;
-        const refreshToken = useAuthStore.getState().refreshToken;
-        if (refreshToken) {
-          try {
-            // 뮤텍스: 이미 refresh 중이면 같은 Promise 대기 → 토큰 재사용 방지
-            if (!_refreshPromise) {
-              _refreshPromise = (async () => {
-                try {
-                  const res = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
-                  const { accessToken, refreshToken: newRefresh } = res.data.data;
-                  await useAuthStore.getState().setTokens(accessToken, newRefresh);
-                  return accessToken as string;
-                } finally {
-                  _refreshPromise = null;
-                }
-              })();
-            }
-            const newAccessToken = await _refreshPromise;
-            original.headers.Authorization = `Bearer ${newAccessToken}`;
-            return instance(original);
-          } catch {
-            _refreshPromise = null;
-            useAuthStore.getState().logout(); // 레이아웃이 로그인 화면으로 보냄
-          }
-        } else {
-          useAuthStore.getState().logout();
+        const store = useAuthStore.getState();
+        if (!store.refreshToken) {
+          store.logout();
+          return Promise.reject(err);
+        }
+        // 이미 다른 요청이 토큰을 갱신했다면(이 요청이 보낸 access != 스토어 최신 access)
+        // refresh 를 다시 하지 말고 최신 토큰으로 바로 재시도한다. (불필요한 refresh 절감)
+        // ※ 레이스의 최종 안전장치는 refreshAccessToken 이 "지금" 스토어 refresh 토큰을 읽는 것(위);
+        //   이 비교는 그 위에 얹은 최적화라, 여기서 회전을 놓쳐 refresh 경로로 가도 최신값을 읽어 안전.
+        const rawAuth = original.headers?.get?.('Authorization') ?? original.headers?.Authorization;
+        const sentToken = typeof rawAuth === 'string' && rawAuth.startsWith('Bearer ') ? rawAuth.slice(7) : '';
+        const currentToken = store.accessToken;
+        if (sentToken && currentToken && sentToken !== currentToken) {
+          original.headers.Authorization = `Bearer ${currentToken}`;
+          return instance(original);
+        }
+        try {
+          // 뮤텍스: 동시 401 은 하나의 refresh 를 공유. 토큰은 refreshAccessToken 내부에서 최신값으로 읽음.
+          const newAccessToken = await refreshAccessToken();
+          original.headers.Authorization = `Bearer ${newAccessToken}`;
+          return instance(original);
+        } catch {
+          useAuthStore.getState().logout(); // 레이아웃이 로그인 화면으로 보냄
         }
       }
 

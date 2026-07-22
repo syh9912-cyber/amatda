@@ -1,5 +1,53 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-16 — 가입자 대시보드 정렬 버그·createdAt 마이그레이션 + AdMob 수익 차단 원인 규명
+> 최종 업데이트: 2026-07-23 — refresh 토큰 레이스로 인한 강제 로그아웃 회귀 수정 + 접종 수정/삭제
+
+---
+
+## 2026-07-23 — [P0] 업데이트 후 강제 로그아웃 회귀 (refresh reuse 레이스) 수정·배포
+
+- **증상**: OTA/백엔드 배포 직후 로그인된 사용자가 강제 로그아웃되고 재로그인 요구됨("원래 안그랬는데"). 데이터 손실은 없음(세션만 풀림).
+- **오진 방지 조사(병렬 워크플로 + 함수로그/Firestore 대조)**:
+  - 커밋 183acaf(소셜 토큰 거부 500→401)는 **무죄** — `verifySocialToken`은 `/auth/social`에서만 호출, 로그인된 사용자는 세션 중 안 닿음.
+  - 시크릿 드리프트도 **아님** — 사용자가 업데이트 후 접종 수정 성공(=`JWT_SECRET`으로 access 토큰 정상검증). `/auth/logout`에서 refresh 서명검증도 성공(user-logout 기록됨).
+  - **함수 로그가 진실**: `15:34:31 [auth/refresh-revoke-family] reason=refresh-token-reuse count=10` → 1초 뒤 `user-logout`이 같은 문서의 `revokedReason`을 덮어써 Firestore엔 reuse가 안 보였음(그래서 로그 필수).
+- **근본 원인**: `frontend/services/api.ts` refresh 뮤텍스 레이스. 인터셉터가 **401 시점에 캡처한 옛 refresh 토큰**을 사용 → 앞선 refresh가 토큰을 회전(옛 토큰 used)시킨 직후 뮤텍스가 풀리면, 뒤늦은 요청이 옛(used) 토큰으로 refresh → 서버 reuse 오탐 → `revokeRefreshTokenFamily` → 강제 로그아웃. OTA 리로드 시 동시 요청 다발 + access 만료가 겹치면 발현(타이밍 레이스라 매번은 아님).
+- **수정(클라이언트만, 백엔드 무관)**: `frontend/services/api.ts`
+  - `refreshAccessToken()` 도입 — refresh 토큰을 캡처값이 아니라 **실행 순간 스토어 최신값**으로 읽음(최종 안전장치).
+  - 인터셉터: "이 요청이 보낸 access != 스토어 최신 access"면 refresh 없이 최신 토큰으로 즉시 재시도(불필요 refresh/오탐 차단). 헤더 파싱 방어(`get()`+`startsWith`).
+- **검증**: 독립 에이전트 적대적 리뷰 통과 — 단일 런타임 모든 인터리빙에서 used 토큰 재-POST 불가, 무한루프 없음, 해피패스/정상 로그아웃 유지. **다른 기기 로그아웃 증폭은 실재하지 않음**(패밀리=로그인 세션당 새 UUID → revoke 범위=현재 기기 세션뿐). tsc/lint 통과.
+- **배포**: OTA 듀얼런타임 완료 (rt2.9.2 `fix-refresh-race-spurious-logout`, rt2.9.1 동일+`-rt291`).
+- **[추가·승인됨] 서버쪽 reuse 유예 (구버전 앱까지 즉시 보호)**: 클라 OTA는 "수정본이 도는 다음 실행부터"만 보호 → 아직 업데이트 못 받은 구번들 사용자 보호 위해 백엔드 `/auth/refresh`에 유예 추가.
+  - `backend/src/routes/auth.ts`: 회전 직후 `REFRESH_REUSE_GRACE_MS`(5초) 내 같은 used 토큰 재제출은 탈취가 아니라 클라 레이스로 간주 → 패밀리 무효화 없이 정상 재발급.
+  - **보안 하드닝(적대적 리뷰 반영)**: 유예는 토큰당 **원자적 1회만**(트랜잭션에서 `graced` 마킹 → 창 내 무제한 증식 차단), 2회째+·창 밖은 기존대로 reuse 무효화, 창 15→5초 축소, 새 토큰에 `gracedFrom` 감사링크.
+  - **검증**: Firestore 왕복 5케이스 통과(정상회전/유예1회/2회째차단/창밖차단/감사링크), tsc 통과, 배포 후 refresh 스모크(토큰없음 400·가짜 401) 정상.
+  - **잔여(저위험, 과도기)**: 실시간 탈취를 정확히 5초 창 안에 성공시키면 단일 fork 1개가 생길 수 있음(어떤 "중복에 200 반환" 설계든 불가피). 근본 idempotent 반환은 스키마 변경(서명 토큰 저장) 필요 → 별도. **구버전 앱 소진 후 유예 창 축소/제거 권장.**
+
+---
+
+## 2026-07-23 — 접종달력: 완료 기록 수정/삭제 기능 (배포 완료)
+
+- **증상/요청**: 접종달력에서 접종 완료를 한 번 기록하면 **수정·삭제가 불가**. 사용자가 오입력해도 되돌릴 방법 없음.
+- **원인**:
+  - 백엔드 `DELETE /vaccination/complete/:id` 는 이미 존재했으나 **프론트 UI에 삭제 버튼이 없었음**.
+  - 더 근본적으로 `GET /vaccination/schedule` 응답이 **접종 기록 문서 id(recordId)를 안 내려줌** →
+    프론트가 어떤 기록을 지울/고칠지 특정할 수 없어 기능을 못 붙였음.
+  - 수정(PATCH) 엔드포인트는 백엔드에도 아예 없었음.
+- **수정 파일**:
+  - `backend/src/routes/vaccination.ts`: ①`/schedule` 응답에 `recordId`(doc id) 포함
+    ②`PATCH /complete/:id` 신규 — `completedAt`/`hospitalName` 부분 수정(빈 병원명은 null 처리, 잘못된 날짜 400).
+    소유권 검사는 기존 DELETE 와 동일(`doc.userId === req.userId`).
+  - `frontend/services/api.ts`: `vaccinationApi.updateComplete(id, completedAt?, hospitalName?)` 추가(`api.patch`).
+  - `frontend/app/(main)/vaccination.tsx`: `VaccineItem.recordId` 추가, 완료 항목 상세 모달에 **수정/삭제 버튼**,
+    기존 완료 모달을 **수정 모달로 재사용**(제목·저장버튼 분기, 기존 값 미리채움), `handleDelete`(확인 다이얼로그) 추가.
+    수정 시 로컬 타임존 기준 YYYY-MM-DD 프리필(`isoToDateInput`).
+  - `frontend/i18n/locales/ko.json`: `vaccination.editModalTitle/editErrorMessage/deleteConfirmTitle/deleteConfirmMessage/deleteErrorMessage`.
+- **스키마 영향 없음**: 기존 필드(completedAt/hospitalName) 수정 + 응답에 doc id 노출뿐. Rule-of-Two 해당 없음.
+- **검증**: backend `tsc` OK / frontend `tsc` OK / `expo lint` 무관 경고만. 프로덕션 라우트 등록 확인
+  (`PATCH /complete/:id` 인증없이 401 = 등록됨, 미존재 경로는 400). Firestore 왕복 테스트로 접종일 변경·
+  병원명 비우기(null)·updatedAt 기록·삭제 정상 확인(임시 문서, 정리 완료).
+- **배포**: 백엔드 functions 배포 완료. OTA 듀얼런타임 발행 완료
+  (rt2.9.2 `vaccination-record-edit-delete`, rt2.9.1 `vaccination-record-edit-delete-rt291`, app.json 2.9.2 복구).
+- **남은 이슈**: 없음. (공동육아 공유멤버의 수정/삭제는 기존 DELETE 정책과 동일하게 기록 생성자 본인만 가능 — 필요 시 별도 논의)
 
 ---
 
