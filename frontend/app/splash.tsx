@@ -80,37 +80,37 @@ export default function SplashScreen() {
     const ease = Easing.out(Easing.cubic);
     const spring = Easing.out(Easing.back(1.6));
 
-    // 시작 체감속도 개선: 군더더기 대기 제거로 ~3700ms → ~2050ms 단축
-    // (브랜드 애니메이션은 유지, 각 구간만 타이트하게)
+    // 시작 체감속도 개선(2026-07-23): 브랜드 애니는 유지하되 각 구간을 타이트하게 →
+    // 총 ~2050ms → ~1150ms. (단어 조립 효과 이→춤→이어리 순차는 유지)
     Animated.sequence([
-      Animated.timing(overlayOp, { toValue: 1, duration: 250, useNativeDriver: true }),
+      Animated.timing(overlayOp, { toValue: 1, duration: 120, useNativeDriver: true }),
       Animated.parallel([
-        Animated.timing(titleOp, { toValue: 1, duration: 450, easing: ease, useNativeDriver: true }),
-        Animated.timing(titleScale, { toValue: 1, duration: 500, easing: spring, useNativeDriver: true }),
+        Animated.timing(titleOp, { toValue: 1, duration: 260, easing: ease, useNativeDriver: true }),
+        Animated.timing(titleScale, { toValue: 1, duration: 300, easing: spring, useNativeDriver: true }),
       ]),
       // 서브 글자들을 순차적으로 늘어나게 (2(이) → 맞춤(춤) → 다이어리(이어리))
       Animated.sequence([
         Animated.parallel([
-          Animated.timing(gap1W, { toValue: 1, duration: 280, easing: ease, useNativeDriver: false }),
-          Animated.timing(sub1Op, { toValue: 1, duration: 250, useNativeDriver: true }),
-          Animated.timing(sub1Sc, { toValue: 1, duration: 280, easing: spring, useNativeDriver: true }),
+          Animated.timing(gap1W, { toValue: 1, duration: 160, easing: ease, useNativeDriver: false }),
+          Animated.timing(sub1Op, { toValue: 1, duration: 150, useNativeDriver: true }),
+          Animated.timing(sub1Sc, { toValue: 1, duration: 160, easing: spring, useNativeDriver: true }),
         ]),
         Animated.parallel([
-          Animated.timing(gap2W, { toValue: 1, duration: 280, easing: ease, useNativeDriver: false }),
-          Animated.timing(sub2Op, { toValue: 1, duration: 250, useNativeDriver: true }),
-          Animated.timing(sub2Sc, { toValue: 1, duration: 280, easing: spring, useNativeDriver: true }),
+          Animated.timing(gap2W, { toValue: 1, duration: 160, easing: ease, useNativeDriver: false }),
+          Animated.timing(sub2Op, { toValue: 1, duration: 150, useNativeDriver: true }),
+          Animated.timing(sub2Sc, { toValue: 1, duration: 160, easing: spring, useNativeDriver: true }),
         ]),
         Animated.parallel([
-          Animated.timing(gap3W, { toValue: 1, duration: 320, easing: ease, useNativeDriver: false }),
-          Animated.timing(sub3Op, { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.timing(sub3Sc, { toValue: 1, duration: 320, easing: spring, useNativeDriver: true }),
-          Animated.timing(engOp, { toValue: 1, duration: 320, easing: ease, useNativeDriver: true }),
-          Animated.timing(footOp, { toValue: 1, duration: 320, easing: ease, useNativeDriver: true }),
-          Animated.timing(footY, { toValue: 0, duration: 320, easing: ease, useNativeDriver: true }),
+          Animated.timing(gap3W, { toValue: 1, duration: 180, easing: ease, useNativeDriver: false }),
+          Animated.timing(sub3Op, { toValue: 1, duration: 170, useNativeDriver: true }),
+          Animated.timing(sub3Sc, { toValue: 1, duration: 180, easing: spring, useNativeDriver: true }),
+          Animated.timing(engOp, { toValue: 1, duration: 180, easing: ease, useNativeDriver: true }),
+          Animated.timing(footOp, { toValue: 1, duration: 180, easing: ease, useNativeDriver: true }),
+          Animated.timing(footY, { toValue: 0, duration: 180, easing: ease, useNativeDriver: true }),
         ]),
       ]),
-      Animated.delay(300),
-      Animated.timing(fadeOut, { toValue: 0, duration: 200, easing: ease, useNativeDriver: true }),
+      Animated.delay(80),
+      Animated.timing(fadeOut, { toValue: 0, duration: 150, easing: ease, useNativeDriver: true }),
     ]).start(() => navigate());
   }, [overlayOp, titleOp, titleScale, gap1W, sub1Op, sub1Sc, gap2W, sub2Op, sub2Sc, gap3W, sub3Op, sub3Sc, engOp, footOp, footY, fadeOut, navigate]);
 
@@ -121,9 +121,9 @@ export default function SplashScreen() {
     }
     // fail-safe: 애니메이션 완료 콜백에 의존하지 않고 타이머로 직접 이동 구동.
     // OTA reload 직후 애니메이션 콜백이 유실되거나 라우터 마운트가 지연돼도,
-    // 2.8s 부터 0.4s 간격으로 이동을 재시도 → 라우터 준비되는 즉시 성공하고 멈춤.
+    // 1.5s 부터 0.4s 간격으로 이동을 재시도 → 라우터 준비되는 즉시 성공하고 멈춤.
     // navigate 는 성공 시에만 hasNavigated=true → 성공할 때까지 계속 재시도.
-    // 최대 30초 상한(무한 방지). 정상 부팅 땐 애니메이션이 ~2.5s 에 이동 → 인터벌 no-op.
+    // 최대 30초 상한(무한 방지). 정상 부팅 땐 애니메이션이 ~1.15s 에 이동 → 인터벌 no-op.
     let retry: ReturnType<typeof setInterval> | undefined;
     const startFailSafe = setTimeout(() => {
       navigate(); // 즉시 1회 시도
@@ -133,7 +133,7 @@ export default function SplashScreen() {
           navigate();
         }, 400);
       }
-    }, 2800);
+    }, 1500);
     const stop = setTimeout(() => { if (retry) clearInterval(retry); }, 30000);
     return () => {
       clearTimeout(startFailSafe);

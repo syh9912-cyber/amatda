@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback, Component, ErrorInfo, 
 import i18n from '../i18n'; // i18n 초기화 (기기 언어 감지 → ko/ja/zh-Hant, 미지원은 ko fallback)
 import { useSiriVoiceLaunch } from '../hooks/useSiriVoiceLaunch';
 
-import { View, ActivityIndicator, Text, TextInput, StyleSheet, AppState, AppStateStatus } from 'react-native';
+import { View, ActivityIndicator, Text, TextInput, StyleSheet, AppState, AppStateStatus, InteractionManager } from 'react-native';
 import { useFonts } from 'expo-font';
 import { Stack, router, useNavigationContainerRef } from 'expo-router';
 import * as Sentry from '@sentry/react-native';
@@ -242,25 +242,29 @@ function useLocationSetup() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    requestLocation().catch(() => {});
+    // 위치(GPS+역지오코딩)는 첫 페인트에 불필요 → 인터랙션 정착 후로 미뤄 부팅 자원 경합 완화
+    const task = InteractionManager.runAfterInteractions(() => {
+      requestLocation().catch(() => {});
+    });
+    return () => task.cancel();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 }
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
-  // ⚠️ 부팅 게이트 fail-safe: hydrate/폰트가 (특히 OTA reloadAsync 직후) 응답하지
-  // 않아 게이트에 영구히 갇히는 것을 막는다. 3초 후엔 무조건 진행.
-  // 폰트는 Pretendard 패치가 시스템 폰트로 폴백하므로 미로드여도 렌더 가능.
+  // ⚠️ 부팅 게이트 fail-safe: hydrate 가 (특히 SecureStore 키체인 stall / OTA reloadAsync
+  // 직후) 응답하지 않아 게이트에 영구히 갇히는 것을 막는다. 8초 후엔 무조건 진행.
   const [bootTimedOut, setBootTimedOut] = useState(false);
   const hydrate = useAuthStore((s) => s.hydrate);
 
   // OTA 는 백그라운드 다운로드만 (강제 reload 없음 → 다음 실행 시 자동 적용)
   useOTAUpdate();
 
-  // Pretendard 폰트 로드 — 완료 전엔 로딩 표시(단, bootTimedOut 시 무시)
-  // (앱 번들에 임베드되어 있어도 RN은 명시적 로드 권장)
-  const [fontsLoaded, fontError] = useFonts({
+  // Pretendard 폰트 로드(등록)만 트리거하고 완료를 "기다리지 않는다"(2026-07-23 부팅 개선).
+  // Pretendard 패치가 시스템폰트로 폴백하므로 미로드 상태에서도 즉시 렌더 가능하고,
+  // 로드 완료 시 자연 스왑된다(짧은 FOUT 감수). → 폰트 I/O 가 첫 페인트를 막지 않음.
+  useFonts({
     'Pretendard-Regular': require('../assets/fonts/Pretendard-Regular.otf'),
     'Pretendard-Medium': require('../assets/fonts/Pretendard-Medium.otf'),
     'Pretendard-SemiBold': require('../assets/fonts/Pretendard-SemiBold.otf'),
@@ -272,7 +276,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     hydrate()
       .catch(() => {})
       .finally(() => setReady(true));
-    const bootFailSafe = setTimeout(() => setBootTimedOut(true), 3000);
+    // hydrate 가 hang 해도(키체인 stall 등) 최대 8초 후 진행 — 무한 스피너 방지.
+    // 8초는 정상 hydrate(<100ms)엔 절대 안 걸리고 진짜 hang 에만 발동한다. 그 경우
+    // 인증 복원 실패로 로그인 화면으로 갈 수 있으나, 흰 화면 무한대기보다 낫다.
+    const bootFailSafe = setTimeout(() => setBootTimedOut(true), 8000);
     return () => clearTimeout(bootFailSafe);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -280,12 +287,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useNotificationSetup();
   useLocationSetup();
 
-  // bootTimedOut(3s) 은 "폰트 로딩"만 우회한다(폰트는 Pretendard 패치로 폴백 가능).
-  // hydrate(ready)는 우회하지 않고 항상 대기 — ready 는 hydrate().finally 로 성공/실패
-  // 무관하게 반드시 true 가 되므로 무한 대기 위험이 없고, 여기서 우회하면 인증 복원 전
-  // isAuthenticated=false 인 채 splash 가 마운트되어 로그인한 유저가 로그인 화면으로 튕긴다.
-  const fontsBlocking = !fontsLoaded && !fontError && !bootTimedOut;
-  if (!ready || fontsBlocking) {
+  // 게이트: hydrate(ready) 완료만 대기. 폰트는 더 이상 게이트하지 않는다(위 useFonts 주석).
+  // bootTimedOut(8s)는 hydrate hang 시 무한 스피너를 막는 최후 방어선. 정상 부팅에선
+  // 항상 ready 로 통과하며, ready 이후에만 splash 가 마운트되어 인증 상태가 이미 복원돼 있다.
+  if (!ready && !bootTimedOut) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background }}>
         <ActivityIndicator size="large" color={COLORS.primary} />
