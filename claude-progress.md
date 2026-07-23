@@ -1,5 +1,17 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-23 — 관리자 대시보드 프리미엄 수동부여(+개월 버튼) + wonmin9239 1년 부여
+> 최종 업데이트: 2026-07-23 — 예방접종 알림 발송 디스패처 신설(예약만 되고 안 나가던 접종 푸시 실동작)
+
+---
+
+## 2026-07-23 — 예방접종 D-2/D-1 알림 "발송 디스패처" 신설 (배포)
+
+- **문제**: `POST /vaccination/schedule-alerts` 가 `pushSchedules` 에 접종 D-2/D-1 알림(KST 9시)을 `status:'pending'` 으로 **예약만** 하고, 그걸 읽어 **발송하는 디스패처(cron)가 없어서 접종 푸시가 실제로 하나도 안 나가고 있었음**. (기존 크론은 predictiveAlarmSweep=수유/수면 패턴용이라 vaccination_reminder 무시. `scheduledAt` 은 저장만 되고 읽는 곳 0.) → [[pending-push-dispatcher-missing]] 확인.
+- **수정 파일 (2개, 백엔드만 — OTA/앱빌드 불필요. 수신 인프라는 이미 앱에 있음)**:
+  - `backend/src/utils/vaccinationReminderSweep.ts` (신규): `where('type','==','vaccination_reminder')` 단일필드 쿼리(자동 인덱스)+메모리필터(status/scheduledAt). 미래 예약은 유지, 처리분은 삭제(멱등). 토큰은 `getUserPushToken({userId}_{childId})` 재사용 → `sendExpoPush`(무료). 미리 렌더된 한국어 title/body 그대로(접종=한국 전용).
+  - **신선도 창 12h**: scheduledAt 이 12h보다 오래 지난 "묵은" 예약은 발송 없이 폐기 → 디스패처 부재기간에 누적된 과거 예약이 첫 배포 때 "지난 접종 알림"으로 폭발하는 것 방지.
+  - `backend/src/index.ts`: `vaccinationReminderSweep` cron 등록 (every 30 minutes, Asia/Seoul, REGISTERED_SECRETS).
+- **검증**: backend tsc 통과. **스코프드 라이브검증**(프로덕션 Firestore, 서비스계정, TESTUID로만 시드해 실사용자 미접촉): due+fresh+token→발송(Expo 200)·삭제 / future→유지 / stale(2일전)→미발송·삭제 / no-token→미발송·삭제 **전부 PASS**. Functions 배포 완료(`vaccinationReminderSweep` create 성공).
+- **남은 것**: 알림 탭→접종화면 딥링크(선택, 프론트 OTA). mom-health·SOS 가족알림 디스패처는 여전히 미동작([[pending-push-dispatcher-missing]]).
 
 ---
 

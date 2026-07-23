@@ -10,6 +10,7 @@ import { runDormantUserSweep } from './utils/dormantUserSweep';
 import { runTrialEndingSweep } from './utils/trialEndingSweep';
 import { runNeighborGroupSweep } from './utils/neighborGroupSweep';
 import { runPredictiveAlarmSweep } from './utils/predictiveAlarmSweep';
+import { runVaccinationReminderSweep } from './utils/vaccinationReminderSweep';
 import { logger } from './utils/logger';
 import { setupSecurity } from './middleware/security';
 import authRoutes from './routes/auth';
@@ -313,6 +314,25 @@ export const predictiveAlarmSweep = onSchedule(
   },
   async () => {
     await runPredictiveAlarmSweep();
+  },
+);
+
+/**
+ * 예방접종 알림 발송 sweep — 30분마다.
+ * schedule-alerts 가 pushSchedules 에 예약한 vaccination_reminder(D-2/D-1, KST 9시)
+ * 중 발송 시각이 지난 것을 Expo Push 로 발송. 묵은 예약(12h 초과)은 발송 없이 폐기.
+ * (기존엔 예약만 되고 발송 디스패처가 없어 접종 알림이 안 갔음.)
+ */
+export const vaccinationReminderSweep = onSchedule(
+  {
+    schedule: 'every 30 minutes',
+    timeZone: 'Asia/Seoul',
+    memory: '256MiB',
+    timeoutSeconds: 300,
+    secrets: REGISTERED_SECRETS,
+  },
+  async () => {
+    await runVaccinationReminderSweep();
   },
 );
 
