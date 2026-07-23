@@ -1,5 +1,5 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Modal, Animated, LayoutChangeEvent, Dimensions } from 'react-native';
-import { LineChart } from 'react-native-chart-kit';
+import Svg, { Path, Circle, Text as SvgText } from 'react-native-svg';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Stack, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -1865,15 +1865,110 @@ function growthRegDate(child: { createdAt?: string | null } | null): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(c) ? c : '';
 }
 
-/** 특정 기록 날짜 시점의 개월수(표준 성장곡선 오버레이용) */
-function ageMonthsAt(birthDate: string | null, dateStr: string): number {
+/** 개월수(소수) — 표준 성장곡선 x축용 */
+function ageMonthsFractional(birthDate: string | null, dateStr: string): number {
   if (!birthDate) return 0;
   const b = new Date(birthDate);
   const d = new Date(dateStr);
   if (isNaN(b.getTime()) || isNaN(d.getTime())) return 0;
-  let m = (d.getFullYear() - b.getFullYear()) * 12 + (d.getMonth() - b.getMonth());
-  if (d.getDate() < b.getDate()) m -= 1;
-  return Math.max(0, m);
+  const days = (d.getTime() - b.getTime()) / (1000 * 60 * 60 * 24);
+  return Math.max(0, days / 30.4375);
+}
+
+/** 개월수에서 표준 p3/p50/p97 을 인접 버킷 사이 선형보간 (매끈한 곡선용) */
+function interpStandard(months: number, gender: 'M' | 'F', metric: 'height' | 'weight'): PercentileData {
+  const table = gender === 'M' ? GROWTH_STANDARDS_BOYS : GROWTH_STANDARDS_GIRLS;
+  const keys = Object.keys(table).map(Number).sort((a, b) => a - b);
+  if (months <= keys[0]) return table[keys[0]][metric];
+  if (months >= keys[keys.length - 1]) return table[keys[keys.length - 1]][metric];
+  let lo = keys[0]; let hi = keys[keys.length - 1];
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (months >= keys[i] && months <= keys[i + 1]) { lo = keys[i]; hi = keys[i + 1]; break; }
+  }
+  const tt = (months - lo) / (hi - lo);
+  const L = table[lo][metric]; const H = table[hi][metric];
+  const lerp = (a: number, b: number) => a + (b - a) * tt;
+  return { p3: lerp(L.p3, H.p3), p50: lerp(L.p50, H.p50), p97: lerp(L.p97, H.p97) };
+}
+
+/**
+ * 성장곡선 차트 (커스텀 SVG) — 카툰 스타일.
+ * 초록 "정상범위 띠"(p3~p97 사이 채움) + 경계선 + 또래평균(p50, 점선) + 우리 아이(선+점).
+ * x축 = 개월수(0~최근기록+여유), y축 = 값. react-native-svg 로 그려 OTA 로 배포 가능.
+ */
+function GrowthCurveChart({ metric, unit, monthUnit, gender, birthDate, records, childColor, width }: {
+  metric: 'height' | 'weight';
+  unit: string;
+  monthUnit: string;
+  gender: 'M' | 'F';
+  birthDate: string | null;
+  records: { date: string; value: number }[];
+  childColor: string;
+  width: number;
+}) {
+  const height = 200;
+  const padL = 44; const padR = 14; const padT = 14; const padB = 26;
+  const plotW = Math.max(10, width - padL - padR);
+  const plotH = height - padT - padB;
+  if (records.length === 0) return null;
+
+  const recPts = records.map((r) => ({ age: ageMonthsFractional(birthDate, r.date), value: r.value }));
+  const maxRecAge = Math.max(...recPts.map((p) => p.age), 1);
+  const xMax = Math.max(maxRecAge * 1.15, 3);
+  const xMin = 0;
+
+  const N = 48;
+  const samples: { age: number; p3: number; p50: number; p97: number }[] = [];
+  for (let i = 0; i <= N; i++) {
+    const age = xMin + (xMax - xMin) * (i / N);
+    const s = interpStandard(age, gender, metric);
+    samples.push({ age, p3: s.p3, p50: s.p50, p97: s.p97 });
+  }
+
+  let yMin = Math.min(...samples.map((s) => s.p3), ...recPts.map((p) => p.value));
+  let yMax = Math.max(...samples.map((s) => s.p97), ...recPts.map((p) => p.value));
+  const yPad = (yMax - yMin) * 0.12 || 1;
+  yMin -= yPad; yMax += yPad;
+  if (yMax - yMin < 0.5) { yMax += 0.5; yMin -= 0.5; }
+
+  const sx = (age: number) => padL + ((age - xMin) / (xMax - xMin)) * plotW;
+  const sy = (v: number) => padT + ((yMax - v) / (yMax - yMin)) * plotH;
+  const toPath = (pts: { x: number; y: number }[]) =>
+    pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+
+  const p97pts = samples.map((s) => ({ x: sx(s.age), y: sy(s.p97) }));
+  const p3pts = samples.map((s) => ({ x: sx(s.age), y: sy(s.p3) }));
+  const p50pts = samples.map((s) => ({ x: sx(s.age), y: sy(s.p50) }));
+  const childPts = recPts.map((p) => ({ x: sx(p.age), y: sy(p.value) }));
+  const bandPath = `${toPath(p97pts)} ${p3pts.slice().reverse().map((p) => `L${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')} Z`;
+
+  const yTicks = [yMax, (yMax + yMin) / 2, yMin];
+  const xTicks = [0, xMax / 2, xMax];
+
+  return (
+    <Svg width={width} height={height}>
+      <Path d={bandPath} fill="rgba(124,164,110,0.20)" />
+      <Path d={toPath(p97pts)} stroke="rgba(124,164,110,0.9)" strokeWidth={1.5} fill="none" />
+      <Path d={toPath(p3pts)} stroke="rgba(124,164,110,0.9)" strokeWidth={1.5} fill="none" />
+      <Path d={toPath(p50pts)} stroke="rgba(150,150,150,0.7)" strokeWidth={1} strokeDasharray="4 4" fill="none" />
+      {childPts.length > 1 ? (
+        <Path d={toPath(childPts)} stroke={childColor} strokeWidth={2.5} fill="none" />
+      ) : null}
+      {childPts.map((p, i) => (
+        <Circle key={i} cx={p.x} cy={p.y} r={4.5} fill={childColor} stroke="#FFFFFF" strokeWidth={1.5} />
+      ))}
+      {yTicks.map((v, i) => (
+        <SvgText key={`y${i}`} x={padL - 6} y={sy(v) + 3} fontSize={9} fill="#999" textAnchor="end">
+          {`${v.toFixed(metric === 'weight' ? 1 : 0)}${unit}`}
+        </SvgText>
+      ))}
+      {xTicks.map((a, i) => (
+        <SvgText key={`x${i}`} x={sx(a)} y={height - 8} fontSize={9} fill="#999" textAnchor="middle">
+          {`${Math.round(a)}${monthUnit}`}
+        </SvgText>
+      ))}
+    </Svg>
+  );
 }
 
 function PhysicalTab({ childName }: { childName: string }) {
@@ -2143,31 +2238,16 @@ function PhysicalTab({ childName }: { childName: string }) {
           : null;
 
         const chartW = Dimensions.get('window').width - SPACING.md * 2 - SPACING.lg * 2;
-        const chartLabels = (recs: typeof merged) => recs.map((r) => {
-          const d = new Date(r.date);
-          return `${d.getMonth() + 1}/${d.getDate()}`;
-        });
         const birthDateStr = selectedChild?.birthDate ?? null;
-        const heightRecs = merged.filter((r) => typeof r.height === 'number');
-        const weightRecs = merged.filter((r) => typeof r.weight === 'number');
-        const heightPoints = heightRecs.map((r) => r.height as number);
-        const weightPoints = weightRecs.map((r) => r.weight as number);
-        const hasChart = heightPoints.length > 0 || weightPoints.length > 0;
-        // 단일 기록이면 평평한 선이 되도록 점 하나를 복제
-        const dup = (a: number[]) => (a.length === 1 ? [a[0], a[0]] : a);
-        // 각 기록 날짜의 개월수 → 표준 성장 p3/p50/p97 (정상범위 곡선 오버레이)
-        const stdSeries = (recs: typeof merged, metric: 'height' | 'weight') => {
-          const p3: number[] = []; const p50: number[] = []; const p97: number[] = [];
-          for (const r of recs) {
-            const s = getClosestStandard(ageMonthsAt(birthDateStr, r.date), gender);
-            if (!s) return null;
-            p3.push(s[metric].p3); p50.push(s[metric].p50); p97.push(s[metric].p97);
-          }
-          return { p3, p50, p97 };
-        };
-        const C_RANGE = (o = 1) => `rgba(124, 164, 110, ${o * 0.85})`; // 정상범위 경계선(초록)
-        const hStd = stdSeries(heightRecs, 'height');
-        const wStd = stdSeries(weightRecs, 'weight');
+        const heightRecs = merged
+          .filter((r) => typeof r.height === 'number')
+          .map((r) => ({ date: r.date, value: r.height as number }));
+        const weightRecs = merged
+          .filter((r) => typeof r.weight === 'number')
+          .map((r) => ({ date: r.date, value: r.weight as number }));
+        const hasChart = heightRecs.length > 0 || weightRecs.length > 0;
+        const hasStd = !!birthDateStr; // 생일 있으면 표준 정상범위 곡선 표시
+        const monthUnit = t('growthStats.axisMonth');
 
         return (
           <>
@@ -2175,11 +2255,15 @@ function PhysicalTab({ childName }: { childName: string }) {
               <Text style={styles.cardTitle}>{t('growthStats.heightWeightChangeTitle')}</Text>
               {hasChart ? (
                 <View style={{ marginTop: SPACING.xs }}>
-                  {(hStd || wStd) ? (
+                  {hasStd ? (
                     <View style={styles.chartLegendRow}>
                       <View style={styles.chartLegendItem}>
-                        <View style={[styles.chartLegendDot, { backgroundColor: '#7CA46E' }]} />
+                        <View style={[styles.chartLegendDot, { backgroundColor: 'rgba(124,164,110,0.35)', borderWidth: 1, borderColor: '#7CA46E' }]} />
                         <Text style={styles.chartLegendText}>{t('growthStats.chartLegendRange')}</Text>
+                      </View>
+                      <View style={styles.chartLegendItem}>
+                        <View style={[styles.chartLegendDot, { backgroundColor: '#B0B0B0' }]} />
+                        <Text style={styles.chartLegendText}>{t('growthStats.chartLegendAvg')}</Text>
                       </View>
                       <View style={styles.chartLegendItem}>
                         <View style={[styles.chartLegendDot, { backgroundColor: String(COLORS.secondary) }]} />
@@ -2187,67 +2271,33 @@ function PhysicalTab({ childName }: { childName: string }) {
                       </View>
                     </View>
                   ) : null}
-                  {heightPoints.length > 0 && (
-                    <LineChart
-                      data={{
-                        labels: chartLabels(heightRecs),
-                        datasets: hStd
-                          ? [
-                              { data: dup(hStd.p3), color: C_RANGE, withDots: false, strokeWidth: 2 },
-                              { data: dup(hStd.p97), color: C_RANGE, withDots: false, strokeWidth: 2 },
-                              { data: dup(heightPoints), color: (o = 1) => `rgba(76, 175, 174, ${o})`, strokeWidth: 3 },
-                            ]
-                          : [{ data: dup(heightPoints) }],
-                      }}
+                  {heightRecs.length > 0 && (
+                    <GrowthCurveChart
+                      metric="height"
+                      unit="cm"
+                      monthUnit={monthUnit}
+                      gender={gender}
+                      birthDate={birthDateStr}
+                      records={heightRecs}
+                      childColor="#4CAFAE"
                       width={chartW}
-                      height={180}
-                      yAxisSuffix="cm"
-                      chartConfig={{
-                        backgroundColor: '#FFFFFF',
-                        backgroundGradientFrom: '#FFFFFF',
-                        backgroundGradientTo: '#FFFFFF',
-                        decimalPlaces: 1,
-                        color: (opacity = 1) => `rgba(76, 175, 174, ${opacity})`,
-                        labelColor: (opacity = 1) => `rgba(60, 60, 60, ${opacity})`,
-                        propsForDots: { r: '4', strokeWidth: '2', stroke: String(COLORS.secondary) },
-                      }}
-                      withShadow={false}
-                      bezier
-                      withInnerLines={false}
-                      style={{ borderRadius: RADIUS.md, marginLeft: -SPACING.xs }}
                     />
                   )}
-                  {weightPoints.length > 0 && (
-                    <LineChart
-                      data={{
-                        labels: chartLabels(weightRecs),
-                        datasets: wStd
-                          ? [
-                              { data: dup(wStd.p3), color: C_RANGE, withDots: false, strokeWidth: 2 },
-                              { data: dup(wStd.p97), color: C_RANGE, withDots: false, strokeWidth: 2 },
-                              { data: dup(weightPoints), color: (o = 1) => `rgba(255, 140, 90, ${o})`, strokeWidth: 3 },
-                            ]
-                          : [{ data: dup(weightPoints) }],
-                      }}
-                      width={chartW}
-                      height={180}
-                      yAxisSuffix="kg"
-                      chartConfig={{
-                        backgroundColor: '#FFFFFF',
-                        backgroundGradientFrom: '#FFFFFF',
-                        backgroundGradientTo: '#FFFFFF',
-                        decimalPlaces: 1,
-                        color: (opacity = 1) => `rgba(255, 140, 90, ${opacity})`,
-                        labelColor: (opacity = 1) => `rgba(60, 60, 60, ${opacity})`,
-                        propsForDots: { r: '4', strokeWidth: '2', stroke: String(COLORS.primary) },
-                      }}
-                      withShadow={false}
-                      bezier
-                      withInnerLines={false}
-                      style={{ marginTop: SPACING.sm, borderRadius: RADIUS.md, marginLeft: -SPACING.xs }}
-                    />
+                  {weightRecs.length > 0 && (
+                    <View style={{ marginTop: SPACING.sm }}>
+                      <GrowthCurveChart
+                        metric="weight"
+                        unit="kg"
+                        monthUnit={monthUnit}
+                        gender={gender}
+                        birthDate={birthDateStr}
+                        records={weightRecs}
+                        childColor="#FF8C5A"
+                        width={chartW}
+                      />
+                    </View>
                   )}
-                  {(hStd || wStd) ? (
+                  {hasStd ? (
                     <Text style={styles.chartRangeNote}>{t('growthStats.chartRangeNote')}</Text>
                   ) : null}
                 </View>
