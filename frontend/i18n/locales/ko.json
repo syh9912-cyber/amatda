@@ -796,6 +796,8 @@
     "saving": "저장 중...",
     "saveRecord": "기록 저장",
     "recordHistoryTitle": "성장 기록 내역",
+    "deleteConfirmTitle": "기록 삭제",
+    "deleteConfirmMessage": "{{date}} 기록을 삭제할까요?",
     "traitSaveCompleteMessage": "오늘의 기질 관찰이 기록되었습니다",
     "traitChangeRecordTitle": "기질 변화 기록",
     "currentTraitTypeLabel": "현재 기질 유형",

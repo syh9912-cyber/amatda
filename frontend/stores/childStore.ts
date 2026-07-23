@@ -119,6 +119,8 @@ export interface Child {
   ageInfo: AgeInfo;
   height?: number | null;
   weight?: number | null;
+  /** 등록일(ISO) — 성장기록 첫 기록 날짜 기준(생일 아님) */
+  createdAt?: string | null;
   bloodType?: string | null;
   specialNotes?: string | null;
   // 임산부 전용

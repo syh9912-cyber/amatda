@@ -1858,6 +1858,13 @@ const gaStyles = StyleSheet.create({
   },
 });
 
+/** 성장기록 첫 기록 날짜 = 아이 등록일(createdAt) YYYY-MM-DD. 생일 아님.
+ *  createdAt 이 아직 없으면(리페치 전/구 데이터) '' 반환 → 편입 보류(잘못된 날짜 편입 방지). */
+function growthRegDate(child: { createdAt?: string | null } | null): string {
+  const c = child?.createdAt ? String(child.createdAt).slice(0, 10) : '';
+  return /^\d{4}-\d{2}-\d{2}$/.test(c) ? c : '';
+}
+
 function PhysicalTab({ childName }: { childName: string }) {
   const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
@@ -1870,6 +1877,8 @@ function PhysicalTab({ childName }: { childName: string }) {
   });
   const [saving, setSaving] = useState(false);
   const [records, setRecords] = useState<{ date: string; height?: number; weight?: number }[]>([]);
+  // 수정 중인 기록의 원래 날짜(날짜를 바꿔 저장해도 원본이 중복 안 되게)
+  const [editingDate, setEditingDate] = useState<string | null>(null);
 
   const initialHeight = selectedChild?.height ?? null;
   const initialWeight = selectedChild?.weight ?? null;
@@ -1878,15 +1887,34 @@ function PhysicalTab({ childName }: { childName: string }) {
   const gender = rawGender === 'U' ? 'M' : rawGender;
   const ageLabel = selectedChild?.ageInfo.label ?? '';
 
-  // 로컬 기록 로드
+  // 로컬 기록 로드 + 온보딩(등록 시) 키/몸무게를 "등록일" 기록으로 1회 편입
+  // (기존엔 차트에서 온보딩 값이 '생일'로 잘못 찍히던 버그 → 등록일로 교정. 편입 후엔 일반 기록이라 수정/삭제 가능.)
   useEffect(() => {
     if (!selectedChild) return;
+    const child = selectedChild;
     const loadRecords = async () => {
       try {
         const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-        const key = `growth_records_${selectedChild.id}`;
+        const key = `growth_records_${child.id}`;
         const stored = await AsyncStorage.getItem(key);
-        if (stored) setRecords(JSON.parse(stored) as typeof records);
+        let recs = stored ? (JSON.parse(stored) as typeof records) : [];
+
+        const iH = child.height ?? null;
+        const iW = child.weight ?? null;
+        const seededKey = `growth_seeded_${child.id}`;
+        const alreadySeeded = await AsyncStorage.getItem(seededKey);
+        const regDate = growthRegDate(child);
+        // regDate(등록일)가 확보됐을 때만 편입 + 완료 플래그. 없으면 보류하고 다음 진입 때 재시도
+        // (그동안 온보딩 값은 '첫 기록' 카드로 계속 보임 → 정보 손실 없음)
+        if (!alreadySeeded && regDate && (iH != null || iW != null)) {
+          if (!recs.some((r) => r.date === regDate)) {
+            recs = [...recs, { date: regDate, height: iH ?? undefined, weight: iW ?? undefined }]
+              .sort((a, b) => a.date.localeCompare(b.date));
+            await AsyncStorage.setItem(key, JSON.stringify(recs));
+          }
+          await AsyncStorage.setItem(seededKey, '1'); // 1회만 — 이후 사용자가 지워도 재편입 안 함
+        }
+        setRecords(recs);
       } catch { /* ignore */ }
     };
     loadRecords();
@@ -1930,7 +1958,7 @@ function PhysicalTab({ childName }: { childName: string }) {
         height: parsedHeight,
         weight: parsedWeight,
       };
-      const updated = [...records.filter((r) => r.date !== recordDate), newRecord].sort(
+      const updated = [...records.filter((r) => r.date !== recordDate && r.date !== editingDate), newRecord].sort(
         (a, b) => a.date.localeCompare(b.date),
       );
       setRecords(updated);
@@ -1954,11 +1982,64 @@ function PhysicalTab({ childName }: { childName: string }) {
       Alert.alert(t('growthStats.saveCompleteTitle'), t('growthStats.saveCompleteMessage', { date: recordDate }));
       setHeight('');
       setWeight('');
+      setEditingDate(null);
     } catch {
       Alert.alert(t('common.error'), t('growthStats.saveFailMessage'));
     } finally {
       setSaving(false);
     }
+  };
+
+  // 기록 수정 — 값/날짜를 입력 폼으로 불러오고, 저장 시 원본을 대체(editingDate 로 중복 방지)
+  const startEdit = (rec: { date: string; height?: number; weight?: number }) => {
+    setEditingDate(rec.date);
+    setRecordDate(rec.date);
+    setHeight(rec.height != null ? String(rec.height) : '');
+    setWeight(rec.weight != null ? String(rec.weight) : '');
+  };
+
+  // 기록 삭제 — 로컬 records 에서 제거 후 최신값 재계산, 서버/스토어 동기화
+  const handleDelete = (date: string) => {
+    if (!selectedChild) return;
+    Alert.alert(
+      t('growthStats.deleteConfirmTitle'),
+      t('growthStats.deleteConfirmMessage', { date }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            if (!(await canDo(selectedChild.id, 'editProfile'))) {
+              Alert.alert(t('growthStats.viewOnlyTitle'), t('growthStats.viewOnlyMessage'));
+              return;
+            }
+            const updated = records.filter((r) => r.date !== date);
+            setRecords(updated);
+            try {
+              const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+              await AsyncStorage.setItem(`growth_records_${selectedChild.id}`, JSON.stringify(updated));
+            } catch { /* 로컬 저장 실패해도 화면 상태는 반영됨 */ }
+            // 최신 기록으로 selectedChild 키/몸무게 갱신(서버는 best-effort)
+            const latest = updated[updated.length - 1];
+            updateChildInStore({
+              ...selectedChild,
+              height: latest?.height ?? selectedChild.height ?? null,
+              weight: latest?.weight ?? selectedChild.weight ?? null,
+            });
+            if (latest && (latest.height != null || latest.weight != null)) {
+              growthApi.update(selectedChild.id, {
+                date: latest.date,
+                height: latest.height,
+                weight: latest.weight,
+              }).catch(() => { /* ignore */ });
+            }
+            // 수정 중이던 기록을 지웠으면 폼 초기화
+            if (editingDate === date) { setEditingDate(null); setHeight(''); setWeight(''); }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -2033,15 +2114,10 @@ function PhysicalTab({ childName }: { childName: string }) {
       ) : null}
 
       {(() => {
-        // 첫 기록(onboarding)을 records 앞에 합쳐 차트/최신값 기준으로 사용
-        const merged: { date: string; height?: number; weight?: number }[] = [...records];
-        if ((initialHeight || initialWeight) && !records.some((r) => r.height === initialHeight && r.weight === initialWeight)) {
-          const birth = selectedChild?.birthDate ? String(selectedChild.birthDate).slice(0, 10) : '';
-          if (birth && !merged.some((r) => r.date === birth)) {
-            merged.unshift({ date: birth, height: initialHeight ?? undefined, weight: initialWeight ?? undefined });
-          }
-        }
-        merged.sort((a, b) => a.date.localeCompare(b.date));
+        // 성장 기록은 records(로컬)만 사용 — 온보딩(등록 시) 값은 로드 시 "등록일" 기록으로 편입됨.
+        // (기존엔 여기서 생일 날짜로 강제 삽입해 차트가 태어난날로 찍히던 버그를 제거)
+        const merged: { date: string; height?: number; weight?: number }[] =
+          [...records].sort((a, b) => a.date.localeCompare(b.date));
         const latest = merged[merged.length - 1];
         const latestHeight = latest?.height ?? initialHeight;
         const latestWeight = latest?.weight ?? initialWeight;
@@ -2247,10 +2323,20 @@ function PhysicalTab({ childName }: { childName: string }) {
           <Text style={styles.cardTitle}>{t('growthStats.recordHistoryTitle')}</Text>
           {records.slice().reverse().map((rec) => (
             <View key={rec.date} style={styles.recordRow}>
-              <Text style={styles.recordDate}>{rec.date}</Text>
-              <Text style={styles.recordValue}>
-                {rec.height ? `${rec.height}cm` : '--'} / {rec.weight ? `${rec.weight}kg` : '--'}
-              </Text>
+              <View style={styles.recordInfo}>
+                <Text style={styles.recordDate}>{rec.date}</Text>
+                <Text style={styles.recordValue}>
+                  {rec.height ? `${rec.height}cm` : '--'} / {rec.weight ? `${rec.weight}kg` : '--'}
+                </Text>
+              </View>
+              <View style={styles.recordActions}>
+                <TouchableOpacity onPress={() => startEdit(rec)} style={styles.recordActionBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.recordEditText}>{t('common.edit')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDelete(rec.date)} style={styles.recordActionBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.recordDeleteText}>{t('common.delete')}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
         </View>
@@ -3301,6 +3387,31 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.md,
     fontWeight: '700',
     color: COLORS.text,
+  },
+  recordInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  recordActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  recordActionBtn: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+  },
+  recordEditText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    color: COLORS.secondary,
+  },
+  recordDeleteText: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    color: COLORS.error,
   },
   traitInfo: {
     alignItems: 'center',

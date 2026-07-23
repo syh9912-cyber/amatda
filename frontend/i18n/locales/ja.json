@@ -796,6 +796,8 @@
     "saving": "保存中...",
     "saveRecord": "記録を保存",
     "recordHistoryTitle": "成長記録の履歴",
+    "deleteConfirmTitle": "記録を削除",
+    "deleteConfirmMessage": "{{date}} の記録を削除しますか？",
     "traitSaveCompleteMessage": "今日の気質観察を記録しました",
     "traitChangeRecordTitle": "気質の変化記録",
     "currentTraitTypeLabel": "現在の気質タイプ",

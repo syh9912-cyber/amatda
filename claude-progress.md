@@ -1,5 +1,20 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-23 — 예방접종 알림 발송 디스패처 신설(예약만 되고 안 나가던 접종 푸시 실동작)
+> 최종 업데이트: 2026-07-23 — 성장통계: 온보딩 기록 날짜 버그(생일→등록일) 수정 + 기록 수정/삭제
+
+---
+
+## 2026-07-23 — 성장통계 온보딩 기록 날짜 교정(생일→등록일) + 기록 수정/삭제 (배포)
+
+- **버그**: 아이 등록 시 입력한 키/몸무게가 성장 차트에서 **생일(birthDate)** 날짜로 찍힘 → **등록일**로 찍혀야 함. (원인: growth-stats.tsx 렌더에서 온보딩 값을 `birthDate` 로 강제 삽입.)
+- **추가 요청**: 기록한 데이터 **수정/삭제** 가능하게.
+- **핵심 발견**: 성장 히스토리는 **프론트 AsyncStorage(`growth_records_{childId}`)에만** 존재(백엔드 `/growth/update` 는 child 문서의 최신 키/몸무게만 저장, 시계열 없음). 그리고 **일반 아이 등록 경로가 `createdAt` 을 아예 저장 안 함**(임신 등록 경로만 저장) → 등록일 기준이 없었음.
+- **수정 파일**:
+  - `backend/src/routes/child.ts`: `formatChild` 에 `createdAt` 노출 + **POST `/children` 생성 시 `createdAt` 저장**(누락돼 있던 것). 스키마 변경 아님(기존 필드).
+  - `frontend/stores/childStore.ts`: `Child` 타입에 `createdAt` 추가.
+  - `frontend/app/(main)/growth-stats.tsx`: 온보딩 키/몸무게를 로드 시 **등록일 기록으로 1회 편입**(guard: `growth_seeded_{childId}`, `createdAt` 확보됐을 때만 — 없으면 보류해 잘못된 날짜 편입 방지). **생일 강제삽입 병합 제거**. 히스토리에 **수정/삭제 버튼**(수정=폼으로 불러와 원본 대체, 삭제=제거+최신값 재계산+서버동기화, 공동육아 editProfile 권한 체크).
+  - i18n(ko/ja/zh): 삭제 확인 문구.
+- **기존 아이 백필**: 서비스계정 스크립트로 `createdAt` 없던 children 28건을 **Firestore 실제 `createTime`(진짜 등록시각)** 으로 채움(멱등, 덮어쓰기 안 함). 총 32 중 4는 이미 있음.
+- **검증**: backend/frontend tsc·lint 통과(0 err). 로직 시뮬(편입 dedup/보류, 수정 날짜이동 무중복, 삭제 최신재계산) PASS. 배포 E2E: 신규 아이 생성 시 `createdAt` 노출+등록시각 확인 PASS. **배포**: 백엔드 Functions + OTA 듀얼런타임(2.9.2+2.9.1).
 
 ---
 

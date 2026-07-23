@@ -66,6 +66,13 @@ function formatChild(id: string, data: Record<string, unknown>) {
     momSpecialNotes: (data.momSpecialNotes as string) || null,
     // 고위험 임신 — child-edit 에서 직접 체크 (다태/임고/GDM/조산기/35세+ 등)
     isHighRiskPregnancy: data.isHighRiskPregnancy === true,
+    // 등록일 — 성장기록의 "첫 기록" 날짜 기준(생일 아님). 저장은 ISO string, Timestamp 대비 방어.
+    createdAt:
+      typeof data.createdAt === 'string'
+        ? data.createdAt
+        : typeof (data.createdAt as { toDate?: () => Date } | undefined)?.toDate === 'function'
+          ? (data.createdAt as { toDate: () => Date }).toDate().toISOString()
+          : null,
   };
 }
 
@@ -104,6 +111,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
       innateData: JSON.stringify(innateData), baseline: null, observedTraits: null,
       height: heightVal, weight: weightVal, bloodType, specialNotes, photoUri,
       isPregnant: false,
+      // 등록일 — 성장기록 첫 기록 날짜 기준(생일 아님). 임신 등록 경로와 동일하게 저장.
+      createdAt: new Date().toISOString(),
     };
     await collections.children.doc(id).set(data);
     success(res, formatChild(id, data), 201);

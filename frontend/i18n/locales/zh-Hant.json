@@ -796,6 +796,8 @@
     "saving": "儲存中...",
     "saveRecord": "儲存紀錄",
     "recordHistoryTitle": "成長紀錄歷史",
+    "deleteConfirmTitle": "刪除紀錄",
+    "deleteConfirmMessage": "要刪除 {{date}} 的紀錄嗎？",
     "traitSaveCompleteMessage": "今日的氣質觀察已記錄",
     "traitChangeRecordTitle": "氣質變化紀錄",
     "currentTraitTypeLabel": "目前氣質類型",
