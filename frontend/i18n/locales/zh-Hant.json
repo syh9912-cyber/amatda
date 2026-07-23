@@ -801,6 +801,7 @@
     "chartLegendLow": "正常下限(3%)",
     "chartLegendAvg": "同齡平均",
     "chartLegendHigh": "正常上限(97%)",
+    "chartLegendRange": "同齡正常範圍(3~97%)",
     "chartLegendMine": "寶寶",
     "chartRangeNote": "綠線(3〜97%)之間為同齡正常範圍。寶寶的線在其中即為正常。",
     "traitSaveCompleteMessage": "今日的氣質觀察已記錄",

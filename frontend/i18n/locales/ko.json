@@ -801,6 +801,7 @@
     "chartLegendLow": "정상 하한(3%)",
     "chartLegendAvg": "또래 평균",
     "chartLegendHigh": "정상 상한(97%)",
+    "chartLegendRange": "또래 정상범위(3~97%)",
     "chartLegendMine": "우리 아이",
     "chartRangeNote": "초록 선(3~97%) 사이가 또래 정상 범위예요. 우리 아이 선이 그 안에 있으면 정상이에요.",
     "traitSaveCompleteMessage": "오늘의 기질 관찰이 기록되었습니다",

@@ -801,6 +801,7 @@
     "chartLegendLow": "正常下限(3%)",
     "chartLegendAvg": "同月齢平均",
     "chartLegendHigh": "正常上限(97%)",
+    "chartLegendRange": "同月齢の正常範囲(3〜97%)",
     "chartLegendMine": "うちの子",
     "chartRangeNote": "緑の線(3〜97%)の間が同月齢の正常範囲です。お子さまの線がその中にあれば正常です。",
     "traitSaveCompleteMessage": "今日の気質観察を記録しました",

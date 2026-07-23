@@ -2165,16 +2165,9 @@ function PhysicalTab({ childName }: { childName: string }) {
           }
           return { p3, p50, p97 };
         };
-        const C_RANGE = (o = 1) => `rgba(124, 164, 110, ${o * 0.55})`; // 정상범위(초록)
-        const C_AVG = (o = 1) => `rgba(150, 150, 150, ${o * 0.5})`;    // 또래 평균(회색)
+        const C_RANGE = (o = 1) => `rgba(124, 164, 110, ${o * 0.85})`; // 정상범위 경계선(초록)
         const hStd = stdSeries(heightRecs, 'height');
         const wStd = stdSeries(weightRecs, 'weight');
-        const chartLegend = [
-          t('growthStats.chartLegendLow'),
-          t('growthStats.chartLegendAvg'),
-          t('growthStats.chartLegendHigh'),
-          t('growthStats.chartLegendMine'),
-        ];
 
         return (
           <>
@@ -2182,19 +2175,29 @@ function PhysicalTab({ childName }: { childName: string }) {
               <Text style={styles.cardTitle}>{t('growthStats.heightWeightChangeTitle')}</Text>
               {hasChart ? (
                 <View style={{ marginTop: SPACING.xs }}>
+                  {(hStd || wStd) ? (
+                    <View style={styles.chartLegendRow}>
+                      <View style={styles.chartLegendItem}>
+                        <View style={[styles.chartLegendDot, { backgroundColor: '#7CA46E' }]} />
+                        <Text style={styles.chartLegendText}>{t('growthStats.chartLegendRange')}</Text>
+                      </View>
+                      <View style={styles.chartLegendItem}>
+                        <View style={[styles.chartLegendDot, { backgroundColor: String(COLORS.secondary) }]} />
+                        <Text style={styles.chartLegendText}>{t('growthStats.chartLegendMine')}</Text>
+                      </View>
+                    </View>
+                  ) : null}
                   {heightPoints.length > 0 && (
                     <LineChart
                       data={{
                         labels: chartLabels(heightRecs),
                         datasets: hStd
                           ? [
-                              { data: dup(hStd.p3), color: C_RANGE, withDots: false, strokeWidth: 1 },
-                              { data: dup(hStd.p50), color: C_AVG, withDots: false, strokeWidth: 1 },
-                              { data: dup(hStd.p97), color: C_RANGE, withDots: false, strokeWidth: 1 },
-                              { data: dup(heightPoints), color: (o = 1) => `rgba(76, 175, 174, ${o})`, strokeWidth: 2 },
+                              { data: dup(hStd.p3), color: C_RANGE, withDots: false, strokeWidth: 2 },
+                              { data: dup(hStd.p97), color: C_RANGE, withDots: false, strokeWidth: 2 },
+                              { data: dup(heightPoints), color: (o = 1) => `rgba(76, 175, 174, ${o})`, strokeWidth: 3 },
                             ]
                           : [{ data: dup(heightPoints) }],
-                        legend: hStd ? chartLegend : undefined,
                       }}
                       width={chartW}
                       height={180}
@@ -2208,6 +2211,7 @@ function PhysicalTab({ childName }: { childName: string }) {
                         labelColor: (opacity = 1) => `rgba(60, 60, 60, ${opacity})`,
                         propsForDots: { r: '4', strokeWidth: '2', stroke: String(COLORS.secondary) },
                       }}
+                      withShadow={false}
                       bezier
                       withInnerLines={false}
                       style={{ borderRadius: RADIUS.md, marginLeft: -SPACING.xs }}
@@ -2219,10 +2223,9 @@ function PhysicalTab({ childName }: { childName: string }) {
                         labels: chartLabels(weightRecs),
                         datasets: wStd
                           ? [
-                              { data: dup(wStd.p3), color: C_RANGE, withDots: false, strokeWidth: 1 },
-                              { data: dup(wStd.p50), color: C_AVG, withDots: false, strokeWidth: 1 },
-                              { data: dup(wStd.p97), color: C_RANGE, withDots: false, strokeWidth: 1 },
-                              { data: dup(weightPoints), color: (o = 1) => `rgba(255, 140, 90, ${o})`, strokeWidth: 2 },
+                              { data: dup(wStd.p3), color: C_RANGE, withDots: false, strokeWidth: 2 },
+                              { data: dup(wStd.p97), color: C_RANGE, withDots: false, strokeWidth: 2 },
+                              { data: dup(weightPoints), color: (o = 1) => `rgba(255, 140, 90, ${o})`, strokeWidth: 3 },
                             ]
                           : [{ data: dup(weightPoints) }],
                       }}
@@ -2238,6 +2241,7 @@ function PhysicalTab({ childName }: { childName: string }) {
                         labelColor: (opacity = 1) => `rgba(60, 60, 60, ${opacity})`,
                         propsForDots: { r: '4', strokeWidth: '2', stroke: String(COLORS.primary) },
                       }}
+                      withShadow={false}
                       bezier
                       withInnerLines={false}
                       style={{ marginTop: SPACING.sm, borderRadius: RADIUS.md, marginLeft: -SPACING.xs }}
@@ -3471,6 +3475,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: SPACING.xs,
     lineHeight: 16,
+  },
+  chartLegendRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  chartLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  chartLegendDot: {
+    width: 11,
+    height: 11,
+    borderRadius: 3,
+  },
+  chartLegendText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    fontWeight: '700',
   },
   traitInfo: {
     alignItems: 'center',
