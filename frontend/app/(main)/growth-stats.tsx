@@ -1865,6 +1865,17 @@ function growthRegDate(child: { createdAt?: string | null } | null): string {
   return /^\d{4}-\d{2}-\d{2}$/.test(c) ? c : '';
 }
 
+/** 특정 기록 날짜 시점의 개월수(표준 성장곡선 오버레이용) */
+function ageMonthsAt(birthDate: string | null, dateStr: string): number {
+  if (!birthDate) return 0;
+  const b = new Date(birthDate);
+  const d = new Date(dateStr);
+  if (isNaN(b.getTime()) || isNaN(d.getTime())) return 0;
+  let m = (d.getFullYear() - b.getFullYear()) * 12 + (d.getMonth() - b.getMonth());
+  if (d.getDate() < b.getDate()) m -= 1;
+  return Math.max(0, m);
+}
+
 function PhysicalTab({ childName }: { childName: string }) {
   const { t } = useTranslation();
   const selectedChild = useChildStore((s) => s.selectedChild);
@@ -2132,9 +2143,38 @@ function PhysicalTab({ childName }: { childName: string }) {
           : null;
 
         const chartW = Dimensions.get('window').width - SPACING.md * 2 - SPACING.lg * 2;
-        const heightPoints = merged.filter((r) => typeof r.height === 'number').map((r) => r.height as number);
-        const weightPoints = merged.filter((r) => typeof r.weight === 'number').map((r) => r.weight as number);
+        const chartLabels = (recs: typeof merged) => recs.map((r) => {
+          const d = new Date(r.date);
+          return `${d.getMonth() + 1}/${d.getDate()}`;
+        });
+        const birthDateStr = selectedChild?.birthDate ?? null;
+        const heightRecs = merged.filter((r) => typeof r.height === 'number');
+        const weightRecs = merged.filter((r) => typeof r.weight === 'number');
+        const heightPoints = heightRecs.map((r) => r.height as number);
+        const weightPoints = weightRecs.map((r) => r.weight as number);
         const hasChart = heightPoints.length > 0 || weightPoints.length > 0;
+        // 단일 기록이면 평평한 선이 되도록 점 하나를 복제
+        const dup = (a: number[]) => (a.length === 1 ? [a[0], a[0]] : a);
+        // 각 기록 날짜의 개월수 → 표준 성장 p3/p50/p97 (정상범위 곡선 오버레이)
+        const stdSeries = (recs: typeof merged, metric: 'height' | 'weight') => {
+          const p3: number[] = []; const p50: number[] = []; const p97: number[] = [];
+          for (const r of recs) {
+            const s = getClosestStandard(ageMonthsAt(birthDateStr, r.date), gender);
+            if (!s) return null;
+            p3.push(s[metric].p3); p50.push(s[metric].p50); p97.push(s[metric].p97);
+          }
+          return { p3, p50, p97 };
+        };
+        const C_RANGE = (o = 1) => `rgba(124, 164, 110, ${o * 0.55})`; // 정상범위(초록)
+        const C_AVG = (o = 1) => `rgba(150, 150, 150, ${o * 0.5})`;    // 또래 평균(회색)
+        const hStd = stdSeries(heightRecs, 'height');
+        const wStd = stdSeries(weightRecs, 'weight');
+        const chartLegend = [
+          t('growthStats.chartLegendLow'),
+          t('growthStats.chartLegendAvg'),
+          t('growthStats.chartLegendHigh'),
+          t('growthStats.chartLegendMine'),
+        ];
 
         return (
           <>
@@ -2145,11 +2185,16 @@ function PhysicalTab({ childName }: { childName: string }) {
                   {heightPoints.length > 0 && (
                     <LineChart
                       data={{
-                        labels: merged.filter((r) => typeof r.height === 'number').map((r) => {
-                          const d = new Date(r.date);
-                          return `${d.getMonth() + 1}/${d.getDate()}`;
-                        }),
-                        datasets: [{ data: heightPoints.length === 1 ? [heightPoints[0], heightPoints[0]] : heightPoints }],
+                        labels: chartLabels(heightRecs),
+                        datasets: hStd
+                          ? [
+                              { data: dup(hStd.p3), color: C_RANGE, withDots: false, strokeWidth: 1 },
+                              { data: dup(hStd.p50), color: C_AVG, withDots: false, strokeWidth: 1 },
+                              { data: dup(hStd.p97), color: C_RANGE, withDots: false, strokeWidth: 1 },
+                              { data: dup(heightPoints), color: (o = 1) => `rgba(76, 175, 174, ${o})`, strokeWidth: 2 },
+                            ]
+                          : [{ data: dup(heightPoints) }],
+                        legend: hStd ? chartLegend : undefined,
                       }}
                       width={chartW}
                       height={180}
@@ -2171,11 +2216,15 @@ function PhysicalTab({ childName }: { childName: string }) {
                   {weightPoints.length > 0 && (
                     <LineChart
                       data={{
-                        labels: merged.filter((r) => typeof r.weight === 'number').map((r) => {
-                          const d = new Date(r.date);
-                          return `${d.getMonth() + 1}/${d.getDate()}`;
-                        }),
-                        datasets: [{ data: weightPoints.length === 1 ? [weightPoints[0], weightPoints[0]] : weightPoints }],
+                        labels: chartLabels(weightRecs),
+                        datasets: wStd
+                          ? [
+                              { data: dup(wStd.p3), color: C_RANGE, withDots: false, strokeWidth: 1 },
+                              { data: dup(wStd.p50), color: C_AVG, withDots: false, strokeWidth: 1 },
+                              { data: dup(wStd.p97), color: C_RANGE, withDots: false, strokeWidth: 1 },
+                              { data: dup(weightPoints), color: (o = 1) => `rgba(255, 140, 90, ${o})`, strokeWidth: 2 },
+                            ]
+                          : [{ data: dup(weightPoints) }],
                       }}
                       width={chartW}
                       height={180}
@@ -2194,6 +2243,9 @@ function PhysicalTab({ childName }: { childName: string }) {
                       style={{ marginTop: SPACING.sm, borderRadius: RADIUS.md, marginLeft: -SPACING.xs }}
                     />
                   )}
+                  {(hStd || wStd) ? (
+                    <Text style={styles.chartRangeNote}>{t('growthStats.chartRangeNote')}</Text>
+                  ) : null}
                 </View>
               ) : (
                 <View style={styles.chartPlaceholder}>
@@ -3412,6 +3464,13 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.sm,
     fontWeight: '700',
     color: COLORS.error,
+  },
+  chartRangeNote: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textLight,
+    textAlign: 'center',
+    marginTop: SPACING.xs,
+    lineHeight: 16,
   },
   traitInfo: {
     alignItems: 'center',
