@@ -1,5 +1,16 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-23 — 음성 파서 #1 활성수면 상태주입(flash-lite 유지, 라이브검증 후 배포)
+> 최종 업데이트: 2026-07-23 — 관리자 대시보드 프리미엄 수동부여(+개월 버튼) + wonmin9239 1년 부여
+
+---
+
+## 2026-07-23 — 관리자 대시보드에서 프리미엄 수동 부여 (배포)
+
+- **요청**: 특정 계정에 프리미엄 부여 + 가입자 관리에서 "1달/2달/3달 추가"를 바로 할 수 있게.
+- **구독 모델(기존 필드 그대로 — 스키마 변경 없음)**: `subscriptionTier`('FREE'|'PAID'), `premiumExpiresAt`(ISO), `premiumStartedAt`, `subscriptionPlatform`. 프리미엄 활성 = tier==='PAID' && premiumExpiresAt>now.
+- **백엔드**(`backend/src/routes/admin.ts`): `POST /api/admin/users/:userId/grant-premium {months}` 추가. `adminRateLimit`+`adminDashboardAuth`(x-admin-key). subscription.ts `redeem-code` 의 **연장 트랜잭션을 그대로 미러** — 남은 프리미엄 있으면 그 만료일 뒤로, 없으면 지금부터 N개월. `subscriptionPlatform='admin_grant'` 로 출처 표시. months 1~24 검증, 부여 감사 로그.
+- **프론트**(`public/admin-users.html`): 유저 클릭 모달 최상단에 "프리미엄 관리" 섹션 — 현재 상태/만료 표시 + [+1개월][+2개월][+3개월][+1년] + 직접입력. 부여는 활동조회와 독립(조회 실패해도 가능), confirm 후 POST → 성공 시 로컬 u 갱신으로 표 뱃지·모달 즉시 반영.
+- **검증**: backend tsc 통과, HTML 콘솔 에러 없음. 배포된 admin 엔드포인트 E2E(관리자키 사용): **wonmin9239@daum.net (uid LmqpU1Y86i6kW3AJCVBD) FREE→PAID, 만료 2027-07-23(정확히 1년), platform=admin_grant** 확인. 배포 HTML 라이브 마커 확인.
+- **배포**: 백엔드 Functions + Hosting(admin-users.html). 관리자 대시보드 https://amatda-parenting.web.app/admin-users.html 에서 즉시 사용 가능.
 
 ---
 

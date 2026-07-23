@@ -3,7 +3,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import rateLimit from 'express-rate-limit';
 import { adminDashboardAuth } from '../middleware/adminDashboardAuth';
 import { success, error } from '../utils/response';
-import { collections } from '../services/firestore';
+import { collections, db } from '../services/firestore';
 import { getUsageSummaryMap } from '../utils/apiUsage';
 import { logger } from '../utils/logger';
 
@@ -294,6 +294,65 @@ router.get('/users/:userId/activity', adminRateLimit, adminDashboardAuth, async 
   } catch (err) {
     logger.error('admin/user-activity', err);
     error(res, '조회 중 오류가 발생했습니다', 500);
+  }
+});
+
+/**
+ * POST /api/admin/users/:userId/grant-premium — 프리미엄 N개월 수동 부여(관리자 대시보드)
+ *
+ * subscription.ts 의 redeem-code 와 동일한 "연장" 시맨틱을 그대로 미러:
+ *   - 남은 프리미엄이 있으면 그 만료일 뒤로, 없으면 지금부터 N개월 연장
+ *   - subscriptionTier='PAID', premiumStartedAt(최초 1회만), premiumExpiresAt 갱신
+ * 기존 필드만 사용 → 스키마 변경 없음. subscriptionPlatform='admin_grant' 로 출처 표시.
+ * 트랜잭션으로 동시 부여(더블클릭 등) 시에도 만료일 계산이 꼬이지 않게 한다.
+ */
+router.post('/users/:userId/grant-premium', adminRateLimit, adminDashboardAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = String(req.params.userId || '').slice(0, 128);
+    if (!userId) { error(res, 'userId 가 필요합니다', 400); return; }
+
+    const rawMonths = (req.body as { months?: unknown } | undefined)?.months;
+    const months = typeof rawMonths === 'number' ? rawMonths : Number(rawMonths);
+    if (!Number.isInteger(months) || months < 1 || months > 24) {
+      error(res, 'months 는 1~24 사이 정수여야 합니다', 400);
+      return;
+    }
+    // 부여 감사 로그 — 누가(관리자 키) 누구에게 얼마를 줬는지 추적
+    logger.info('admin/grant-premium', `uid=${userId} months=${months} from ip=${req.ip}`);
+
+    const result = await db.runTransaction<
+      { ok: false } | { ok: true; premiumExpiresAt: string; email: string }
+    >(async (tx) => {
+      const userRef = collections.users.doc(userId);
+      const userSnap = await tx.get(userRef);
+      if (!userSnap.exists) return { ok: false };
+      const u = userSnap.data() as Record<string, unknown>;
+
+      // 남은 프리미엄이 있으면 그 만료일 뒤로 연장, 아니면 지금부터 (redeem-code 와 동일)
+      const now = new Date();
+      const currentExpiry = u.premiumExpiresAt as string | undefined;
+      const base =
+        currentExpiry && new Date(currentExpiry).getTime() > now.getTime()
+          ? new Date(currentExpiry)
+          : now;
+      const newExpiry = new Date(base);
+      newExpiry.setMonth(newExpiry.getMonth() + months);
+      const newExpiryISO = newExpiry.toISOString();
+
+      tx.update(userRef, {
+        subscriptionTier: 'PAID',
+        premiumStartedAt: (u.premiumStartedAt as string | undefined) ?? now.toISOString(),
+        premiumExpiresAt: newExpiryISO,
+        subscriptionPlatform: 'admin_grant',
+      });
+      return { ok: true, premiumExpiresAt: newExpiryISO, email: (u.email as string) || '' };
+    });
+
+    if (!result.ok) { error(res, '해당 유저를 찾을 수 없습니다', 404); return; }
+    success(res, { premiumExpiresAt: result.premiumExpiresAt, months, email: result.email });
+  } catch (err) {
+    logger.error('admin/grant-premium', err);
+    error(res, '프리미엄 부여 중 오류가 발생했습니다', 500);
   }
 });
 

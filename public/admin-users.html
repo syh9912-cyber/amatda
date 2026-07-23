@@ -326,11 +326,91 @@
     });
   }
 
+  // ── 프리미엄 수동 부여 (관리자) ──
+  function premiumStatusChip(u) {
+    if (u.status === 'PAID') {
+      var exp = u.premiumExpiresAt ? fmtDate(u.premiumExpiresAt).slice(0, 10) : '-';
+      return '<span class="chip" style="background:#e6f4ea;">현재 <b>PAID</b> · 만료 <b>' + esc(exp) + '</b></span>';
+    }
+    if (u.status === 'TRIAL') {
+      return '<span class="chip" style="background:#fff3e0;">현재 <b>체험</b> · D-' + u.trialDaysLeft + '</span>';
+    }
+    return '<span class="chip">현재 <b>FREE</b></span>';
+  }
+
+  function premiumSectionHtml(u) {
+    return '<h4>프리미엄 관리</h4>' +
+      '<div class="chips" id="premStatus">' + premiumStatusChip(u) + '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;">' +
+        '<button class="btn small" data-grant="1">+1개월</button>' +
+        '<button class="btn small" data-grant="2">+2개월</button>' +
+        '<button class="btn small" data-grant="3">+3개월</button>' +
+        '<button class="btn small" data-grant="12">+1년</button>' +
+        '<input type="number" id="grantCustom" min="1" max="24" placeholder="개월" ' +
+          'style="width:74px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;" />' +
+        '<button class="btn small" data-grant="custom" style="background:#555;">직접 부여</button>' +
+      '</div>' +
+      '<div id="grantMsg" class="muted" style="margin-top:8px;font-size:12px;min-height:16px;"></div>' +
+      '<hr style="border:none;border-top:1px solid #eee;margin:18px 0 4px;" />';
+  }
+
+  function wirePremiumButtons(u) {
+    var btns = document.querySelectorAll('#actBody [data-grant]');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener('click', function () {
+        var val = this.getAttribute('data-grant');
+        var months = val === 'custom'
+          ? parseInt((document.getElementById('grantCustom') || {}).value, 10)
+          : parseInt(val, 10);
+        grantPremium(u, months);
+      });
+    }
+  }
+
+  function grantPremium(u, months) {
+    var msg = document.getElementById('grantMsg');
+    if (!months || months < 1 || months > 24) {
+      if (msg) { msg.style.color = '#FF3B30'; msg.textContent = '1~24 사이 개월수를 입력하세요.'; }
+      return;
+    }
+    if (!confirm((u.email || u.id) + ' 님에게 프리미엄 ' + months + '개월을 부여할까요?')) return;
+    if (msg) { msg.style.color = ''; msg.textContent = '부여 중…'; }
+
+    fetch(API_BASE + '/api/admin/users/' + encodeURIComponent(u.id) + '/grant-premium', {
+      method: 'POST',
+      headers: { 'x-admin-key': getKey(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ months: months })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (json) {
+        if (!json || !json.success) {
+          if (msg) { msg.style.color = '#FF3B30'; msg.textContent = (json && json.error) || '부여 실패'; }
+          return;
+        }
+        // u 는 allUsers 의 동일 객체 참조 → 표 뱃지도 함께 갱신됨
+        u.premiumExpiresAt = json.data.premiumExpiresAt;
+        u.status = 'PAID';
+        u.subscriptionPlatform = 'admin_grant';
+        var ps = document.getElementById('premStatus');
+        if (ps) ps.innerHTML = premiumStatusChip(u);
+        if (msg) {
+          msg.style.color = '#34C759';
+          msg.textContent = '✅ ' + months + '개월 부여 완료 · 만료 ' + fmtDate(json.data.premiumExpiresAt).slice(0, 10);
+        }
+        applySearch();
+      })
+      .catch(function () {
+        if (msg) { msg.style.color = '#FF3B30'; msg.textContent = '네트워크 오류'; }
+      });
+  }
+
   function openActivity(u) {
     var modal = document.getElementById('actModal');
     var body = document.getElementById('actBody');
     document.getElementById('actTitle').textContent = (u.email || u.nickname || u.id) + ' 활동 내역';
-    body.innerHTML = '<div class="empty">불러오는 중…</div>';
+    // 프리미엄 관리 섹션은 활동 조회와 독립적으로 항상 표시(조회 실패해도 부여 가능)
+    body.innerHTML = premiumSectionHtml(u) + '<div id="actContent"><div class="empty">불러오는 중…</div></div>';
+    wirePremiumButtons(u);
     modal.style.display = 'flex';
 
     fetch(API_BASE + '/api/admin/users/' + encodeURIComponent(u.id) + '/activity', {
@@ -338,7 +418,9 @@
     })
       .then(function (r) { return r.json(); })
       .then(function (json) {
-        if (!json || !json.success) { body.innerHTML = '<div class="empty">조회 실패</div>'; return; }
+        var content = document.getElementById('actContent');
+        if (!content) return;
+        if (!json || !json.success) { content.innerHTML = '<div class="empty">조회 실패</div>'; return; }
         var d = json.data;
         var html = '';
 
@@ -399,9 +481,12 @@
         }
 
         if (d.note) html += '<p class="muted" style="margin-top:14px;font-size:12px;">ⓘ ' + esc(d.note) + '</p>';
-        body.innerHTML = html;
+        content.innerHTML = html;
       })
-      .catch(function () { body.innerHTML = '<div class="empty">네트워크 오류</div>'; });
+      .catch(function () {
+        var content = document.getElementById('actContent');
+        if (content) content.innerHTML = '<div class="empty">네트워크 오류</div>';
+      });
   }
 
   function renderSummary(summary) {
