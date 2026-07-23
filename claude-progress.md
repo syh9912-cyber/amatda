@@ -1,5 +1,24 @@
 # 아맞다(A-matda) 개발 진행 현황
-> 최종 업데이트: 2026-07-23 — 음성 아기시간 3개 버그 수정(기상/진행중수면/fast-path) + Flash 실험 기각(flash-lite 유지)
+> 최종 업데이트: 2026-07-23 — 음성 파서 #1 활성수면 상태주입(flash-lite 유지, 라이브검증 후 배포)
+
+---
+
+## 2026-07-23 — 음성 파서 #1 활성 수면 세션 "상태 주입" (flash-lite 유지, 배포)
+
+- **목적**: stateless 파서에 "진행 중(종료 미정) 수면 세션"을 컨텍스트로 주입해 정확도 향상. 모델 교체 없이(flash-lite 유지) 프롬프트에 additive 블록만 추가. (Flash 실험 기각 후 남은 저위험 옵션 — 사용자 승인.)
+- **수정 파일 (3개)**:
+  - `backend/src/routes/tracker.ts` `/voice-parse`: `activeSleep{time,date}` optional 스키마 추가(값은 저장 세션 파생 — 자유입력 아님, injection 위험 없음). **있을 때만** 기존 튜닝 프롬프트 본문 뒤에 additive 블록 부착(locale hint와 동일 방식, 본문 불변).
+  - `frontend/services/api.ts`: `voiceParse(text, locale, activeSleep?)` 3번째 인자 추가.
+  - `frontend/app/voice.tsx`: AI 파서 호출 직전 `loadSleepSession(선택아이)`로 활성 세션 읽어 `{time,date}` 전달. fast-path/기상 경로는 파서 미호출이라 무관.
+- **주입 범위(의도적으로 2개로 국한)**:
+  1. **환각 방지**: 다른 기록만 있고 기상 표현 없으면 활성 수면 때문에 sleep record 새로 만들지 말 것 → "수면 2개" 재발 차단.
+  2. **재진술 시작시각 유지**: "아직 자고 있어/자는 중" → sleep 1건 time=세션시작(지금 시각으로 리셋되던 버그 수정), endTime=null.
+  - '기상→세션종료' 해석은 파서에 위임하지 않음(프론트 isWakeOnly가 소유). 파서가 완결 sleep 을 내면 프론트가 세션을 안 닫아 중복 위험 → 초안의 wake 규칙은 라이브확인 후 **제거**. 재진술 예시도 프론트 isOngoingSleepUtter 가 잡는 표현("자고있어/자는중")으로만 한정("계속 자" 제거).
+- **라이브 검증(필수 — 프롬프트 변경은 tsc로 못 잡음)**:
+  - 직접 Gemini flash-lite 호출(로컬 .env.local 키, Node https): SAFETY 4케이스(분유/똥/분유+응가/2시간전분유) 전부 수면 0건(3/3), VALUE(아직자고있어/자는중)→sleep t=14:24(3/3), 다중사건(Flash가 깨졌던 문장)→3건(3/3, no-session 대조와 동일), 명시시각 완결수면·새 수면은 base 그대로.
+  - 배포된 프로덕션 엔드포인트 E2E(던지기 계정 등록→호출→cascade 삭제): SAFETY PASS(feeding만), VALUE PASS(sleep t=14:24). Zod 통과 + 라우트 배선 확인.
+- **검증**: backend/frontend tsc·expo lint 통과(0 errors). **배포**: 백엔드 Functions 배포 완료, OTA 듀얼런타임(rt2.9.2 + rt2.9.1) `voice-parse-active-sleep-injection`.
+- 관련: [[voice-parse-keep-flash-lite]]
 
 ---
 

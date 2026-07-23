@@ -503,7 +503,26 @@ export default function VoiceScreen() {
         if (fast) {
           records = fast; // 규칙 기반 즉시 파싱 (빠르고 100% 정확 + AI 비용 0)
         } else {
-          const res = await trackerApi.voiceParse(voiceText, i18n.language);
+          // 진행 중(종료 미정) 수면 세션을 파서에 컨텍스트로 전달 — stateless 파서가 활성 수면을 알도록.
+          // (선택된 아이 기준으로 미리 읽음. 아이 이름으로 대상이 바뀌어도 세션 액션은 프론트가 최종 대상으로 처리.)
+          let activeSleepCtx: { time: string; date: string } | undefined;
+          try {
+            const { selectedChild: preSel, children: preChildren } = useChildStore.getState();
+            const preTargetId = preSel?.id ?? preChildren[0]?.id;
+            if (preTargetId) {
+              const sess = await loadSleepSession(preTargetId);
+              if (sess?.startTime && sess?.startDate) {
+                const st = new Date(sess.startTime);
+                if (!isNaN(st.getTime())) {
+                  activeSleepCtx = {
+                    time: `${String(st.getHours()).padStart(2, '0')}:${String(st.getMinutes()).padStart(2, '0')}`,
+                    date: sess.startDate,
+                  };
+                }
+              }
+            }
+          } catch { /* 세션 읽기 실패 → 컨텍스트 없이 파싱 */ }
+          const res = await trackerApi.voiceParse(voiceText, i18n.language, activeSleepCtx);
           const parsedData = res.data?.data as ParsedMulti | ParsedRecord | undefined;
           // 백워드 호환 — 옛 응답(단일 객체) / 새 응답({records:[]}) 모두 처리
           records = Array.isArray((parsedData as ParsedMulti)?.records)

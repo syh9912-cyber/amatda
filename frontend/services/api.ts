@@ -834,13 +834,24 @@ export const babyTrackerApi = {
 };
 
 export const trackerApi = {
-  voiceParse: (text: string, locale?: string) => {
+  voiceParse: (
+    text: string,
+    locale?: string,
+    // 진행 중(종료 미정) 수면 세션 — stateless 파서가 활성 수면을 알도록 컨텍스트로 전달
+    activeSleep?: { time: string; date: string },
+  ) => {
     // 서버(UTC) 시각 오류 방지 — 클라이언트 로컬 시각 + 날짜 전송
     // 날짜는 '어제/오늘/그저께' 상대 표현 정확 해석에 필수
     const now = new Date();
     const clientTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const clientDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    return api.post('/tracker/voice-parse', { text, clientTime, clientDate, locale });
+    return api.post('/tracker/voice-parse', {
+      text,
+      clientTime,
+      clientDate,
+      locale,
+      ...(activeSleep ? { activeSleep } : {}),
+    });
   },
   // 어린이집 알림장/기록지 사진 → 기록 추출 (Gemini 비전)
   photoParse: (imageBase64: string, mimeType?: string, locale?: string) => {
