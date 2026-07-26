@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>아맞다 - AI 육아코칭 앱 받기</title>
+<meta name="robots" content="noindex" />
+<meta property="og:title" content="아맞다 - AI 육아코칭" />
+<meta property="og:description" content="앱 다운로드 페이지" />
+<style>
+  :root{
+    --coral:#FF8C5A; --coral-d:#E67A4A; --cream:#FFF6EF; --ink:#2A2320; --sub:#8B7D6B; --line:#EFE6DD;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Pretendard,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:linear-gradient(180deg,#FFF9F4 0%,#FFEFE4 100%);
+    color:var(--ink); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .card{
+    width:100%; max-width:420px; background:#fff; border:1px solid var(--line); border-radius:24px;
+    box-shadow:0 12px 40px rgba(255,140,90,.14); padding:30px 24px 26px; text-align:center;
+  }
+  .logo{
+    width:76px; height:76px; margin:0 auto 14px; border-radius:20px;
+    background:linear-gradient(135deg,#FFB088,#FF8C5A); display:flex; align-items:center; justify-content:center;
+    font-size:40px; box-shadow:0 6px 18px rgba(255,140,90,.35);
+  }
+  h1{font-size:21px; margin:0 0 4px; font-weight:800;}
+  .tag{font-size:13px; color:var(--sub); margin:0 0 20px;}
+  .btn{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; padding:15px; border-radius:14px; border:none; cursor:pointer;
+    font-size:16px; font-weight:700; text-decoration:none; margin-top:10px;
+  }
+  .btn-primary{background:var(--coral); color:#fff;}
+  .btn-primary:active{background:var(--coral-d);}
+  .btn-line{background:#fff; color:var(--ink); border:1.5px solid var(--line);}
+  .btn .ico{font-size:18px;}
+  /* 인앱 안내 배너 */
+  .guide{
+    display:none; background:#FFF3E9; border:1.5px solid #FFD3B5; border-radius:16px;
+    padding:16px 14px; margin-bottom:18px; text-align:left;
+  }
+  .guide.show{display:block;}
+  .guide b{color:var(--coral-d);}
+  .guide .step{display:flex; gap:9px; align-items:flex-start; font-size:14px; line-height:1.5; margin-top:8px;}
+  .guide .num{flex:0 0 20px; height:20px; border-radius:50%; background:var(--coral); color:#fff; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px;}
+  .guide h2{font-size:15px; margin:0; display:flex; align-items:center; gap:6px;}
+  .copywrap{display:flex; gap:8px; margin-top:12px;}
+  .copywrap input{flex:1; min-width:0; border:1px solid var(--line); border-radius:10px; padding:10px; font-size:12px; color:var(--sub); background:#FCFAF8;}
+  .copywrap button{flex:0 0 auto; border:none; background:var(--ink); color:#fff; border-radius:10px; padding:0 14px; font-size:13px; font-weight:700; cursor:pointer;}
+  .foot{font-size:12px; color:var(--sub); margin-top:18px; line-height:1.5;}
+  .toast{
+    position:fixed; left:50%; bottom:32px; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff; padding:12px 18px; border-radius:999px; font-size:13px; font-weight:600;
+    opacity:0; transition:.25s; pointer-events:none; max-width:90vw;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .hide{display:none !important;}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🍼</div>
+    <h1>아맞다</h1>
+    <p class="tag">AI 육아코칭 · 우리 아이 맞춤</p>
+
+    <!-- 인스타 등 인앱 브라우저 안내 (안드로이드) -->
+    <div class="guide" id="guide">
+      <h2>📣 인스타그램에서는 바로 안 열려요</h2>
+      <div class="step"><span class="num">1</span><span>오른쪽 위 <b>⋯ (점 세 개)</b> 를 눌러요</span></div>
+      <div class="step"><span class="num">2</span><span><b>'외부 브라우저에서 열기'</b> (또는 Chrome에서 열기) 선택</span></div>
+      <div class="step"><span class="num">3</span><span>Play 스토어가 정상적으로 열려요 ✅</span></div>
+      <div class="copywrap">
+        <input id="linkField" readonly />
+        <button id="copyBtn">링크 복사</button>
+      </div>
+    </div>
+
+    <!-- 스토어 버튼 -->
+    <a class="btn btn-primary" id="iosBtn" href="#" style="display:none;"><span class="ico"></span> App Store에서 받기</a>
+    <a class="btn btn-primary" id="androidBtn" href="#" style="display:none;"><span class="ico">▶</span> Play 스토어에서 받기</a>
+
+    <!-- 데스크톱/기타: 둘 다 -->
+    <div id="bothBtns" class="hide">
+      <a class="btn btn-primary" id="iosBtn2" href="#"><span class="ico"></span> App Store</a>
+      <a class="btn btn-line" id="androidBtn2" href="#"><span class="ico">▶</span> Google Play</a>
+    </div>
+
+    <p class="foot">기기에 맞는 스토어로 자동 연결돼요.</p>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var APP_STORE = 'https://apps.apple.com/kr/app/id6775913119';
+  var PLAY = 'https://play.google.com/store/apps/details?id=com.sylabs.amatda';
+  var MARKET = 'market://details?id=com.sylabs.amatda';
+
+  var ua = navigator.userAgent || '';
+  var isIOS = /iPhone|iPad|iPod/i.test(ua);
+  var isAndroid = /Android/i.test(ua);
+  // 인앱 브라우저 감지 (인스타/페북/카톡/네이버/라인 등)
+  var inApp = /Instagram|FBAN|FBAV|FB_IAB|KAKAOTALK|NAVER|Line\/|DaumApps|everytimeApp|Snapchat|Twitter|Whale/i.test(ua);
+
+  function $(id){ return document.getElementById(id); }
+  function toast(msg){
+    var t = $('toast'); t.textContent = msg; t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 2600);
+  }
+
+  // 링크 세팅
+  $('iosBtn').href = APP_STORE; $('iosBtn2').href = APP_STORE;
+  $('androidBtn').href = PLAY; $('androidBtn2').href = PLAY;
+  $('linkField').value = PLAY;
+
+  // 복사 버튼
+  $('copyBtn').addEventListener('click', function(){
+    var f = $('linkField');
+    var done = function(){ toast('링크가 복사됐어요! 브라우저에 붙여넣어 주세요'); };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(PLAY).then(done, function(){ f.select(); document.execCommand && document.execCommand('copy'); done(); });
+    } else {
+      f.select(); try{ document.execCommand('copy'); }catch(e){} done();
+    }
+  });
+
+  if (isIOS){
+    // iOS: 앱스토어는 인스타 안에서도 잘 넘어감 → 버튼 노출 + 자동 이동
+    $('iosBtn').style.display = 'flex';
+    setTimeout(function(){ location.replace(APP_STORE); }, 350);
+  } else if (isAndroid){
+    $('androidBtn').style.display = 'flex';
+    if (inApp){
+      // 인스타 등 인앱 브라우저: play.google.com 이 안 열리므로 자동이동 X, 안내 표시
+      $('guide').classList.add('show');
+      // 버튼을 눌러도 인앱에선 대부분 실패 → market:// 한 번 시도(되는 기기 보너스)
+      $('androidBtn').addEventListener('click', function(e){
+        e.preventDefault();
+        var t = Date.now();
+        try{ location.href = MARKET; }catch(err){}
+        setTimeout(function(){ if (Date.now()-t < 1600) location.href = PLAY; }, 700);
+      });
+    } else {
+      // 일반 브라우저: 바로 플레이스토어
+      setTimeout(function(){ location.replace(PLAY); }, 250);
+    }
+  } else {
+    // 데스크톱/기타
+    $('bothBtns').classList.remove('hide');
+    $('iosBtn').classList.add('hide'); $('androidBtn').classList.add('hide');
+  }
+})();
+</script>
+</body>
+</html>

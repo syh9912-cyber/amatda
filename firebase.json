@@ -10,7 +10,8 @@
       { "source": "/privacy", "destination": "/privacy.html" },
       { "source": "/terms", "destination": "/terms.html" },
       { "source": "/amatda", "destination": "/amatda.html" },
-      { "source": "/invite", "destination": "/invite.html" }
+      { "source": "/invite", "destination": "/invite.html" },
+      { "source": "/app", "destination": "/app.html" }
     ]
   },
   "storage": {
