@@ -10,8 +10,9 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, ImageSourcePropType } 
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadRecords } from '../../features/baby-tracker/storage';
-import { computeSummary } from '../../features/baby-tracker/utils/summary';
+import { loadRecords, saveRecords, loadSleepSession, saveSleepSession } from '../../features/baby-tracker/storage';
+import { computeSummary, estimateBreastMl } from '../../features/baby-tracker/utils/summary';
+import { resolveAuthorMeta, stampAuthor } from '../../features/baby-tracker/author';
 import type { TrackerRecord } from '../../features/baby-tracker/types';
 import { useTrackerStore } from '../../stores/trackerStore';
 import { getDailyReference } from '../../constants/dailyReference';
@@ -104,6 +105,175 @@ export function DenseStatsRow({ child, onTapCheckup }: Props) {
   }
   return <BabyStats child={child} />;
 }
+
+/* ════════════════════════════════════════════════════════════
+   홈 원탭 빠른 기록 줄 (열자마자 기록 — PiyoLog 스타일)
+   ════════════════════════════════════════════════════════════ */
+function pad2(n: number): string { return String(n).padStart(2, '0'); }
+
+function QuickLogRow({ child }: { child: Child }) {
+  const { t } = useTranslation();
+  const ageMonths = child.ageInfo?.months ?? 6;
+  const trackerVer = useTrackerStore((s) => s.version);
+  const [busy, setBusy] = useState(false);
+  const [sleeping, setSleeping] = useState(false);
+  const [toast, setToast] = useState('');
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const defaultsRef = useRef<Record<string, string>>({});
+
+  // 사용자 기본값(분유량·모유시간) 로드
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem('voice_defaults');
+        if (raw) defaultsRef.current = JSON.parse(raw) as Record<string, string>;
+      } catch { /* no defaults */ }
+    })();
+  }, []);
+
+  // 진행 중 수면 세션 여부 (기록 변동 시 재확인)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try { const s = await loadSleepSession(child.id); if (!cancelled) setSleeping(!!s); } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [child.id, trackerVer]);
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(''), 2000);
+  }, []);
+
+  // 단일 기록 저장 (baby-tracker/voice 와 동일 포맷 — saveRecords 가 홈 자동 갱신)
+  const saveOne = useCallback(async (
+    rec: Partial<TrackerRecord> & { type: TrackerRecord['type']; subType: string },
+    label: string,
+  ) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const now = new Date();
+      const dateStr = ymd(now);
+      const authorMeta = await resolveAuthorMeta(child.id);
+      const stamped = stampAuthor({
+        id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        time: `${pad2(now.getHours())}:${pad2(now.getMinutes())}`,
+        createdAt: now.toISOString(),
+        ...rec,
+      } as TrackerRecord, authorMeta);
+      const existing = await loadRecords(child.id, dateStr);
+      await saveRecords(child.id, dateStr, [...existing, stamped]);
+      showToast(label);
+    } catch {
+      showToast(t('components.quickLog.saveFail', { defaultValue: '기록 실패' }));
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, child.id, showToast, t]);
+
+  const logFormula = useCallback(() => {
+    const ml = Number(defaultsRef.current.formulaAmount) || 0;
+    saveOne(
+      { type: 'feeding', subType: 'formula', ...(ml > 0 ? { amount: ml } : {}) },
+      ml > 0 ? t('components.quickLog.formulaMl', { ml, defaultValue: `분유 ${ml}ml 기록됨` }) : t('components.quickLog.formula', { defaultValue: '분유 기록됨' }),
+    );
+  }, [saveOne, t]);
+
+  const logBreast = useCallback((side: 'left' | 'right') => {
+    const sideLabel = side === 'left' ? t('babyTracker.side.left', { defaultValue: '왼쪽' }) : t('babyTracker.side.right', { defaultValue: '오른쪽' });
+    const dur = Number(defaultsRef.current.breastDuration) || 15;
+    const ml = estimateBreastMl(dur, ageMonths);
+    saveOne(
+      { type: 'feeding', subType: 'breast', note: sideLabel, duration: dur },
+      t('components.quickLog.breast', { side: sideLabel, ml, defaultValue: `모유 ${sideLabel} · 예상 ${ml}ml` }),
+    );
+  }, [saveOne, t, ageMonths]);
+
+  const logPee = useCallback(() => saveOne({ type: 'diaper', subType: 'pee' }, t('components.quickLog.pee', { defaultValue: '소변 기록됨' })), [saveOne, t]);
+  const logPoop = useCallback(() => saveOne({ type: 'diaper', subType: 'poop' }, t('components.quickLog.poop', { defaultValue: '대변 기록됨' })), [saveOne, t]);
+
+  // 수면: 세션 토글 (baby-tracker/voice 기상 로직 미러)
+  const toggleSleep = useCallback(async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const now = new Date();
+      const sess = await loadSleepSession(child.id);
+      if (!sess) {
+        await saveSleepSession(child.id, { startTime: now.toISOString(), startDate: ymd(now) });
+        setSleeping(true);
+        showToast(t('components.quickLog.sleepStart', { defaultValue: '수면 시작 💤' }));
+      } else {
+        const start = new Date(sess.startTime);
+        let duration = Math.round((now.getTime() - start.getTime()) / 60000);
+        if (duration < 1) duration = 1;
+        if (duration > 14 * 60) duration = 14 * 60;
+        const startHHMM = `${pad2(start.getHours())}:${pad2(start.getMinutes())}`;
+        const nowHHMM = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+        const crossed = sess.startDate !== ymd(now);
+        const endLabel = crossed ? `${now.getMonth() + 1}/${now.getDate()} ${nowHHMM}` : nowHHMM;
+        const authorMeta = await resolveAuthorMeta(child.id);
+        const wakeRecord = stampAuthor({
+          id: `${Date.now()}_wake_${Math.random().toString(36).slice(2, 7)}`,
+          type: 'sleep',
+          subType: 'sleep_start',
+          time: startHHMM,
+          endTime: endLabel,
+          duration,
+          createdAt: sess.startTime,
+          ...(sess.note ? { note: sess.note } : {}),
+        } as TrackerRecord, authorMeta);
+        const existing = await loadRecords(child.id, sess.startDate);
+        await saveRecords(child.id, sess.startDate, [...existing, wakeRecord]);
+        await saveSleepSession(child.id, null);
+        setSleeping(false);
+        showToast(t('components.quickLog.sleepEnd', { min: duration, defaultValue: `기상 · ${duration}분 수면` }));
+      }
+    } catch {
+      showToast(t('components.quickLog.saveFail', { defaultValue: '기록 실패' }));
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, child.id, showToast, t]);
+
+  return (
+    <View style={qs.wrap}>
+      <View style={qs.rowBtns}>
+        <QuickBtn label={t('components.quickLog.btnFormula', { defaultValue: '분유' })} color="#FF8C5A" onPress={logFormula} disabled={busy} />
+        <QuickBtn label={t('components.quickLog.btnBreastL', { defaultValue: '모유 왼' })} color="#F0976C" onPress={() => logBreast('left')} disabled={busy} />
+        <QuickBtn label={t('components.quickLog.btnBreastR', { defaultValue: '모유 오' })} color="#F0976C" onPress={() => logBreast('right')} disabled={busy} />
+        <QuickBtn label={t('components.quickLog.btnPee', { defaultValue: '소변' })} color="#FDB44B" onPress={logPee} disabled={busy} />
+        <QuickBtn label={t('components.quickLog.btnPoop', { defaultValue: '대변' })} color="#B98B5E" onPress={logPoop} disabled={busy} />
+        <QuickBtn label={sleeping ? t('components.quickLog.btnSleepStop', { defaultValue: '수면종료' }) : t('components.quickLog.btnSleep', { defaultValue: '수면' })} color={sleeping ? '#6C5CE7' : '#9B8CF0'} active={sleeping} onPress={toggleSleep} disabled={busy} />
+      </View>
+      {toast ? <Text style={qs.toast}>{toast}</Text> : null}
+    </View>
+  );
+}
+
+function QuickBtn({ label, color, onPress, disabled, active }: { label: string; color: string; onPress: () => void; disabled?: boolean; active?: boolean }) {
+  return (
+    <TouchableOpacity
+      style={[qs.btn, { backgroundColor: color }, active ? qs.btnActive : null, disabled ? { opacity: 0.55 } : null]}
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.75}
+    >
+      <Text style={qs.btnText} numberOfLines={1}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+const qs = StyleSheet.create({
+  wrap: { marginBottom: 10 },
+  rowBtns: { flexDirection: 'row', gap: 5 },
+  btn: { flex: 1, paddingVertical: 13, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  btnActive: { borderWidth: 2, borderColor: '#4B3FA8' },
+  btnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  toast: { marginTop: 7, textAlign: 'center', fontSize: 13, fontWeight: '700', color: '#2BA89E' },
+});
 
 /* ════════════════════════════════════════════════════════════
    영아 stats
@@ -215,7 +385,9 @@ function BabyStats({ child }: { child: Child }) {
   })();
 
   return (
-    <View style={styles.row}>
+    <View>
+      <QuickLogRow child={child} />
+      <View style={styles.row}>
       <StatCard
         icon={ASSETS.bottle}
         valueBig={feeding.count > 0 ? t('components.denseStatsRow.countTimes', { count: feeding.count }) : t('components.denseStatsRow.countTimes', { count: 0 })}
@@ -239,6 +411,7 @@ function BabyStats({ child }: { child: Child }) {
         valueBig={percentile ? t('components.denseStatsRow.topPercent', { pct: percentile.pct }) : '—'}
         valueSub={t('components.denseStatsRow.heightWeight')}
       />
+      </View>
     </View>
   );
 }
