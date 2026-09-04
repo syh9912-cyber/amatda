@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import * as Updates from 'expo-updates';
+import NetInfo from '@react-native-community/netinfo';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../stores/authStore';
 import { useChildStore } from '../stores/childStore';
@@ -101,6 +102,9 @@ function useOTAUpdate() {
   const checkAndApply = useCallback(async () => {
     if (__DEV__ || checkingRef.current) return;
     checkingRef.current = true;
+
+    const netState = await NetInfo.fetch();
+    if (!netState.isConnected) { checkingRef.current = false; return; }
 
     try {
       setStatus('checking');
