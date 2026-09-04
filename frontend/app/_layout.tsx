@@ -136,11 +136,8 @@ function useOTAUpdate() {
       await new Promise(r => setTimeout(r, 600));
       setStatus('restarting');
       await Updates.reloadAsync();
-    } catch (error) {
-      captureError(
-        error instanceof Error ? error : new Error(String(error)),
-        { context: 'OTA update check' },
-      );
+    } catch {
+      // OTA 업데이트 체크 실패는 오프라인/네트워크 불안정 시 정상 발생 — 무시
       setStatus('idle');
     } finally {
       checkingRef.current = false;
